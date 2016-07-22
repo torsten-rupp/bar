@@ -116,8 +116,8 @@ typedef union
 LOCAL Semaphore          databaseRequestLock;
 LOCAL DatabaseHandleList databaseRequestList;
 LOCAL uint               databaseRequestHighestPiority;
-#endif
 uint transactionCount = 0;
+#endif
 
 #ifndef NDEBUG
   LOCAL uint databaseDebugCounter = 0;
@@ -3029,9 +3029,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     UNUSED_VARIABLE(databaseHandle);
   #endif /* DATABASE_SUPPORT_TRANSACTIONS */
 
-transactionCount++;
-fprintf(stderr,"%s, %d: begin trans %d %p\n",__fileName__,__lineNb__,transactionCount,databaseHandle);
-
   return ERROR_NONE;
 }
 
@@ -3044,10 +3041,6 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle)
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
-
-assert(transactionCount > 0);
-transactionCount--;
-fprintf(stderr,"%s, %d: end trans %d %p\n",__FILE__,__LINE__,transactionCount,databaseHandle);
 
   #ifdef DATABASE_SUPPORT_TRANSACTIONS
     assert(databaseHandle->transaction.fileName != NULL);
@@ -3098,10 +3091,6 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle)
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
-
-assert(transactionCount > 0);
-transactionCount--;
-fprintf(stderr,"%s, %d: rollback trans %d\n",__FILE__,__LINE__,transactionCount);
 
   #ifdef DATABASE_SUPPORT_TRANSACTIONS
     assert(databaseHandle->transaction.fileName != NULL);
