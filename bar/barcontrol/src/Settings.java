@@ -517,6 +517,7 @@ public class Settings
   public static LinkedHashSet<String> serverNames                     = new LinkedHashSet<String>();
   @SettingValue
   public static String                serverKeyFileName               = null;
+  public static boolean               serverForceSSL                  = false;
 
   // file requester shortcuts
   @SettingComment(text={"","Shortcuts"})

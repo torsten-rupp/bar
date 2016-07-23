@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.StringTokenizer;
 
 /****************************** Classes ********************************/
 
@@ -101,6 +102,427 @@ abstract class SettingValueAdapter<String,Value>
    */
   public void Xmigrate(Object value)
   {
+  }
+}
+
+/** simple integer array
+ */
+class SimpleIntegerArray
+{
+  public final int[] intArray;
+
+  /** create simple integer array
+   * @param int integer array
+   */
+  SimpleIntegerArray(int[] intArray)
+  {
+    this.intArray = intArray;
+  }
+
+  /** create simple integer array
+   */
+  SimpleIntegerArray()
+  {
+    this.intArray = null;
+  }
+
+  /** create simple integer array
+   * @param intList integer list
+   */
+  SimpleIntegerArray(ArrayList<Integer> intList)
+  {
+    this.intArray = new int[intList.size()];
+    for (int i = 0; i < intList.size(); i++)
+    {
+      this.intArray[i] = intList.get(i);
+    }
+  }
+
+  /** get integer
+   * @param index index (0..n-1)
+   * @return integer
+   */
+  public int get(int index)
+  {
+    return (index < intArray.length) ? intArray[index] : null;
+  }
+
+  /** get int array
+   * @return int array
+   */
+  public int[] get()
+  {
+    return intArray;
+  }
+
+  /** convert data to string
+   * @return string
+   */
+  public String toString()
+  {
+    StringBuilder buffer = new StringBuilder();
+    for (int i : intArray)
+    {
+      if (buffer.length() > 0) buffer.append(',');
+      buffer.append(Integer.toString(i));
+    }
+    return "Integers {"+buffer.toString()+"}";
+  }
+}
+
+/** config value adapter String <-> integer array
+ */
+class SettingValueAdapterSimpleIntegerArray extends SettingValueAdapter<String,SimpleIntegerArray>
+{
+  /** convert to value
+   * @param string string
+   * @return value
+   */
+  public SimpleIntegerArray toValue(String string) throws Exception
+  {
+    StringTokenizer tokenizer = new StringTokenizer(string,",");
+    ArrayList<Integer> integerList = new ArrayList<Integer>();
+    while (tokenizer.hasMoreTokens())
+    {
+      integerList.add(Integer.parseInt(tokenizer.nextToken()));
+    }
+    return new SimpleIntegerArray(integerList);
+  }
+
+  /** convert to string
+   * @param value value
+   * @return string
+   */
+  public String toString(SimpleIntegerArray simpleIntegerArray) throws Exception
+  {
+    StringBuilder buffer = new StringBuilder();
+    for (int i : simpleIntegerArray.get())
+    {
+      if (buffer.length() > 0) buffer.append(',');
+      buffer.append(Integer.toString(i));
+    }
+    return buffer.toString();
+  }
+}
+
+/** long array
+ */
+class SimpleLongArray
+{
+  public final long[] longArray;
+
+  /** create simple long array
+   * @param longArray long array
+   */
+  SimpleLongArray(long[] longArray)
+  {
+    this.longArray = longArray;
+  }
+
+  /** create simple long array
+   */
+  SimpleLongArray()
+  {
+    this.longArray = null;
+  }
+
+  /** create simple long array
+   * @param widthList with list
+   */
+  SimpleLongArray(ArrayList<Long> longList)
+  {
+    this.longArray = new long[longList.size()];
+    for (int i = 0; i < longList.size(); i++)
+    {
+      this.longArray[i] = longList.get(i);
+    }
+  }
+
+  /** get long
+   * @param index index (0..n-1)
+   * @return long
+   */
+  public long get(int index)
+  {
+    return (index < longArray.length) ? longArray[index] : null;
+  }
+
+  /** get long array
+   * @return long array
+   */
+  public long[] get()
+  {
+    return longArray;
+  }
+
+  /** convert data to string
+   * @return string
+   */
+  public String toString()
+  {
+    StringBuilder buffer = new StringBuilder();
+    for (long l : longArray)
+    {
+      if (buffer.length() > 0) buffer.append(',');
+      buffer.append(Long.toString(l));
+    }
+    return "Longs {"+buffer.toString()+"}";
+  }
+}
+
+/** config value adapter String <-> long array
+ */
+class SettingValueAdapterSimpleLongArray extends SettingValueAdapter<String,SimpleLongArray>
+{
+  /** convert to value
+   * @param string string
+   * @return value
+   */
+  public SimpleLongArray toValue(String string) throws Exception
+  {
+    StringTokenizer tokenizer = new StringTokenizer(string,",");
+    ArrayList<Long> longList = new ArrayList<Long>();
+    while (tokenizer.hasMoreTokens())
+    {
+      longList.add(Long.parseLong(tokenizer.nextToken()));
+    }
+    return new SimpleLongArray(longList);
+  }
+
+  /** convert to string
+   * @param value value
+   * @return string
+   */
+  public String toString(SimpleLongArray simpleLongArray) throws Exception
+  {
+    StringBuilder buffer = new StringBuilder();
+    for (long l : simpleLongArray.get())
+    {
+      if (buffer.length() > 0) buffer.append(',');
+      buffer.append(Long.toString(l));
+    }
+    return buffer.toString();
+  }
+}
+
+/** double array
+ */
+class SimpleDoubleArray
+{
+  public final double[] doubleArray;
+
+  /** create simple double array
+   * @param doubleArray double array
+   */
+  SimpleDoubleArray(double[] doubleArray)
+  {
+    this.doubleArray = doubleArray;
+  }
+
+  /** create simple double array
+   */
+  SimpleDoubleArray()
+  {
+    this.doubleArray = null;
+  }
+
+  /** create simple double array
+   * @param widthList with list
+   */
+  SimpleDoubleArray(ArrayList<Double> doubleList)
+  {
+    this.doubleArray = new double[doubleList.size()];
+    for (int i = 0; i < doubleList.size(); i++)
+    {
+      this.doubleArray[i] = doubleList.get(i);
+    }
+  }
+
+  /** get double
+   * @param index index (0..n-1)
+   * @return string
+   */
+  public double get(int index)
+  {
+    return (index < doubleArray.length) ? doubleArray[index] : null;
+  }
+
+  /** get double array
+   * @return double array
+   */
+  public double[] get()
+  {
+    return doubleArray;
+  }
+
+  /** convert data to string
+   * @return string
+   */
+  public String toString()
+  {
+    StringBuilder buffer = new StringBuilder();
+    for (double d : doubleArray)
+    {
+      if (buffer.length() > 0) buffer.append(',');
+      buffer.append(Double.toString(d));
+    }
+    return "Doubles {"+buffer.toString()+"}";
+  }
+}
+
+/** config value adapter String <-> string array
+ */
+class SettingValueAdapterSimpleDoubleArray extends SettingValueAdapter<String,SimpleDoubleArray>
+{
+  /** convert to value
+   * @param string string
+   * @return value
+   */
+  public SimpleDoubleArray toValue(String string) throws Exception
+  {
+    StringTokenizer tokenizer = new StringTokenizer(string,",");
+    ArrayList<Double> doubleList = new ArrayList<Double>();
+    while (tokenizer.hasMoreTokens())
+    {
+      doubleList.add(Double.parseDouble(tokenizer.nextToken()));
+    }
+    return new SimpleDoubleArray(doubleList);
+  }
+
+  /** convert to string
+   * @param value value
+   * @return string
+   */
+  public String toString(SimpleDoubleArray simpleDoubleArray) throws Exception
+  {
+    StringBuilder buffer = new StringBuilder();
+    for (double d : simpleDoubleArray.get())
+    {
+      if (buffer.length() > 0) buffer.append(',');
+      buffer.append(Double.toString(d));
+    }
+    return buffer.toString();
+  }
+}
+
+/** string array
+ */
+class SimpleStringArray
+{
+  public final String[] stringArray;
+
+  /** create simple string array
+   * @param width width array
+   */
+  SimpleStringArray(String[] stringArray)
+  {
+    this.stringArray = stringArray;
+  }
+
+  /** create simple string array
+   */
+  SimpleStringArray()
+  {
+    this.stringArray = null;
+  }
+
+  /** create simple string array
+   * @param widthList with list
+   */
+  SimpleStringArray(ArrayList<String> stringList)
+  {
+    this.stringArray = stringList.toArray(new String[stringList.size()]);
+  }
+
+  /** get string
+   * @param index index (0..n-1)
+   * @return string or null
+   */
+  public String get(int index)
+  {
+    return (index < stringArray.length) ? stringArray[index] : null;
+  }
+
+  /** get string array
+   * @return string array
+   */
+  public String[] get()
+  {
+    return stringArray;
+  }
+
+  /** get mapped indizes
+   * @return indizes
+   */
+  public int[] getMap(String strings[])
+  {
+    int indizes[] = new int[strings.length];
+    for (int i = 0; i < strings.length; i++)
+    {
+      indizes[i] = i;
+    }
+    if (stringArray != null)
+    {
+      for (int i = 0; i < stringArray.length; i++)
+      {
+        int j = StringUtils.indexOf(strings,stringArray[i]);
+        if (j >= 0)
+        {
+          indizes[i] = j;
+        }
+      }
+    }
+
+    return indizes;
+  }
+
+  /** convert data to string
+   * @return string
+   */
+  public String toString()
+  {
+    StringBuilder buffer = new StringBuilder();
+    for (String string : stringArray)
+    {
+      if (buffer.length() > 0) buffer.append(',');
+      buffer.append(string);
+    }
+    return "Strings {"+buffer.toString()+"}";
+  }
+}
+
+/** config value adapter String <-> string array
+ */
+class SettingValueAdapterSimpleStringArray extends SettingValueAdapter<String,SimpleStringArray>
+{
+  /** convert to value
+   * @param string string
+   * @return value
+   */
+  public SimpleStringArray toValue(String string) throws Exception
+  {
+    StringTokenizer tokenizer = new StringTokenizer(string,",");
+    ArrayList<String> stringList = new ArrayList<String>();
+    while (tokenizer.hasMoreTokens())
+    {
+      stringList.add(tokenizer.nextToken());
+    }
+    return new SimpleStringArray(stringList);
+  }
+
+  /** convert to string
+   * @param value value
+   * @return string
+   */
+  public String toString(SimpleStringArray simpleStringArray) throws Exception
+  {
+    StringBuilder buffer = new StringBuilder();
+    for (String string : simpleStringArray.get())
+    {
+      if (buffer.length() > 0) buffer.append(',');
+      buffer.append(string);
+    }
+    return buffer.toString();
   }
 }
 
@@ -212,6 +634,16 @@ public class SettingUtils
                             long value = Long.parseLong(string);
                             field.set(null,addArrayUniq((Long[])field.get(null),value));
                           }
+                          else if (type == double.class)
+                          {
+                            double value = Double.parseDouble(string);
+                            field.set(null,addArrayUniq((double[])field.get(null),value));
+                          }
+                          else if (type == Double.class)
+                          {
+                            double value = Double.parseDouble(string);
+                            field.set(null,addArrayUniq((Double[])field.get(null),value));
+                          }
                           else if (type == boolean.class)
                           {
                             boolean value = StringUtils.parseBoolean(string);
@@ -281,6 +713,16 @@ Dprintf.dprintf("field.getType()=%s",type);
                           else if (setType == Long.class)
                           {
                             long value = Long.parseLong(string);
+                            ((Set)field.get(null)).add(value);
+                          }
+                          else if (setType == double.class)
+                          {
+                            double value = Double.parseDouble(string);
+                            ((Set)field.get(null)).add(value);
+                          }
+                          else if (setType == Long.class)
+                          {
+                            double value = Double.parseDouble(string);
                             ((Set)field.get(null)).add(value);
                           }
                           else if (setType == boolean.class)
@@ -354,6 +796,16 @@ Dprintf.dprintf("field.getType()=%s",type);
                             long value = Long.parseLong(string);
                             ((List)field.get(null)).add(value);
                           }
+                          else if (listType == double.class)
+                          {
+                            double value = Double.parseDouble(string);
+                            ((List)field.get(null)).add(value);
+                          }
+                          else if (listType == Long.class)
+                          {
+                            double value = Double.parseDouble(string);
+                            ((List)field.get(null)).add(value);
+                          }
                           else if (listType == boolean.class)
                           {
                             boolean value = StringUtils.parseBoolean(string);
@@ -422,6 +874,16 @@ Dprintf.dprintf("field.getType()=%s",type);
                           {
                             long value = Long.parseLong(string);
                             field.set(null,new Long(value));
+                          }
+                          else if (type == double.class)
+                          {
+                            double value = Double.parseDouble(string);
+                            field.setDouble(null,value);
+                          }
+                          else if (type == Double.class)
+                          {
+                            double value = Double.parseDouble(string);
+                            field.set(null,new Double(value));
                           }
                           else if (type == boolean.class)
                           {
@@ -628,6 +1090,20 @@ exception.printStackTrace();
                       output.printf("%s = %ld\n",name,value);
                     }
                   }
+                  else if (type == double.class)
+                  {
+                    for (double value : (double[])field.get(null))
+                    {
+                      output.printf("%s = %f\n",name,value);
+                    }
+                  }
+                  else if (type == Double.class)
+                  {
+                    for (double value : (Double[])field.get(null))
+                    {
+                      output.printf("%s = %f\n",name,value);
+                    }
+                  }
                   else if (type == boolean.class)
                   {
                     for (boolean value : (boolean[])field.get(null))
@@ -721,6 +1197,20 @@ Dprintf.dprintf("field.getType()=%s",type);
                     for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %ld\n",name,(Long)object);
+                    }
+                  }
+                  else if (setType == double.class)
+                  {
+                    for (Object object : (Set)field.get(null))
+                    {
+                      output.printf("%s = %f\n",name,(Double)object);
+                    }
+                  }
+                  else if (setType == Long.class)
+                  {
+                    for (Object object : (Set)field.get(null))
+                    {
+                      output.printf("%s = %double\n",name,(Double)object);
                     }
                   }
                   else if (setType == boolean.class)
@@ -818,6 +1308,20 @@ Dprintf.dprintf("field.getType()=%s",type);
                       output.printf("%s = %ld\n",name,(Long)object);
                     }
                   }
+                  else if (listType == double.class)
+                  {
+                    for (Object object : (List)field.get(null))
+                    {
+                      output.printf("%s = %fn",name,(Double)object);
+                    }
+                  }
+                  else if (listType == Double.class)
+                  {
+                    for (Object object : (List)field.get(null))
+                    {
+                      output.printf("%s = %f\n",name,(Double)object);
+                    }
+                  }
                   else if (listType == boolean.class)
                   {
                     for (Object object : (List)field.get(null))
@@ -899,6 +1403,16 @@ Dprintf.dprintf("field.getType()=%s",type);
                   {
                     long value = (Long)field.get(null);
                     output.printf("%s = %ld\n",name,value);
+                  }
+                  else if (type == double.class)
+                  {
+                    double value = field.getDouble(null);
+                    output.printf("%s = %f\n",name,value);
+                  }
+                  else if (type == Double.class)
+                  {
+                    double value = (Double)field.get(null);
+                    output.printf("%s = %f\n",name,value);
                   }
                   else if (type == boolean.class)
                   {
@@ -1087,7 +1601,49 @@ exception.printStackTrace();
     return array;
   }
 
-  /** unique add element to long array
+  /** unique add element to double array
+   * @param array array
+   * @param n element
+   * @return extended array or array
+   */
+  private static double[] addArrayUniq(double[] array, double n)
+  {
+    int z = 0;
+    while ((z < array.length) && (array[z] != n))
+    {
+      z++;
+    }
+    if (z >= array.length)
+    {
+      array = Arrays.copyOf(array,array.length+1);
+      array[array.length-1] = n;
+    }
+
+    return array;
+  }
+
+  /** unique add element to double array
+   * @param array array
+   * @param n element
+   * @return extended array or array
+   */
+  private static Double[] addArrayUniq(Double[] array, double n)
+  {
+    int z = 0;
+    while ((z < array.length) && (array[z] != n))
+    {
+      z++;
+    }
+    if (z >= array.length)
+    {
+      array = Arrays.copyOf(array,array.length+1);
+      array[array.length-1] = n;
+    }
+
+    return array;
+  }
+
+  /** unique add element to boolean array
    * @param array array
    * @param n element
    * @return extended array or array
@@ -1108,7 +1664,7 @@ exception.printStackTrace();
     return array;
   }
 
-  /** unique add element to long array
+  /** unique add element to boolean array
    * @param array array
    * @param n element
    * @return extended array or array

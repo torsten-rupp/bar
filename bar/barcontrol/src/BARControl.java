@@ -1226,6 +1226,7 @@ public class BARControl
     new Option("--port",                       "-p",Options.Types.INTEGER,    "serverPort"),
     new Option("--tls-port",                   null,Options.Types.INTEGER,    "serverTLSPort"),
     new Option("--key-file",                   null,Options.Types.STRING,     "serverKeyFileName"),
+    new Option("--force-ssl",                  null,Options.Types.BOOLEAN,    "serverForceSSL"),
     new Option("--select-job",                 null,Options.Types.STRING,     "selectedJobName"),
     new Option("--login-dialog",               null,Options.Types.BOOLEAN,    "loginDialogFlag"),
 
@@ -1434,6 +1435,7 @@ public class BARControl
     System.out.println("                                                        "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
     System.out.println("                                                        "+Config.CONFIG_DIR+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME);
     System.out.println("                                                      )" );
+    System.out.println("         --force-ssl                                - force SSL connection");
     System.out.println("");
     System.out.println("         --select-job=<name>                        - select job <name>");
     System.out.println("         -j|--job=<name>                            - start execution of job <name>");

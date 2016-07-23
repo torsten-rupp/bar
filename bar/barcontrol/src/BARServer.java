@@ -1146,8 +1146,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         }
       }
     }
-    if ((socket == null) && (port != 0))
+    if ((socket == null) && (port != 0) && !Settings.serverForceSSL)
     {
+      // try to create plain socket
       try
       {
         Socket plainSocket = new Socket(name,port);
