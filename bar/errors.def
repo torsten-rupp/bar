@@ -73,9 +73,9 @@ ERROR INVALID_RESPONSE                 "invalid response from remote program"
 
 // --- TLS/SSL ----------------------------------------------------------
 ERROR INIT_TLS                         "init TLS (SSL) fail"
-ERROR NO_TLS_CA                        "no TLS (SSL) certificate authority file 'bar-ca.pem'"
-ERROR NO_TLS_CERTIFICATE               "no TLS (SSL) certificate file 'bar-server-cert.pem'"
-ERROR NO_TLS_KEY                       "no or unreadable TLS (SSL) key file 'bar-server-key.pem'"
+ERROR NO_TLS_CA                        "no TLS (SSL) certificate authority file"
+ERROR NO_TLS_CERTIFICATE               "no TLS (SSL) certificate file"
+ERROR NO_TLS_KEY                       "no or unreadable TLS (SSL) key file"
 ERROR INVALID_TLS_CA                   "invalid TLS (SSL) certificate authority"
 ERROR INVALID_TLS_CERTIFICATE          "invalid TLS (SSL) certificate"
 ERROR TLS_CERTIFICATE_EXPIRED

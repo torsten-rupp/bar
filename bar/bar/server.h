@@ -93,9 +93,9 @@ void Server_doneAll(void);
 * Purpose: run network server
 * Input  : serverPort            - server port (or 0 to disable)
 *          serverTLSPort         - server TLS (SSL) port (or 0 to disable)
-*          caFileName            - file with TLS CA or NULL
-*          certFileName          - file with TLS cerificate or NULL
-*          keyFileName           - file with TLS key or NULL
+*          ca                    - CA data or NULL
+*          cert                  - TLS cerificate or NULL
+*          key                   - TLS key or NULL
 *          password              - server authenfication password
 *          maxConnections        - max. number of connections or 0
 *          jobsDirectory         - jobs directory
@@ -108,9 +108,9 @@ void Server_doneAll(void);
 
 Errors Server_run(uint             serverPort,
                   uint             serverTLSPort,
-                  const char       *caFileName,
-                  const char       *certFileName,
-                  const char       *keyFileName,
+                  const Key        *ca,
+                  const Key        *cert,
+                  const Key        *key,
                   const Password   *password,
                   uint             maxConnections,
                   const char       *jobsDirectory,

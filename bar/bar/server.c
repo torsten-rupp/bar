@@ -536,9 +536,9 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 /***************************** Variables *******************************/
 LOCAL AuthorizationFailList authorizationFailList;
 LOCAL uint                  serverPort;
-LOCAL const char            *serverCAFileName;
-LOCAL const char            *serverCertFileName;
-LOCAL const char            *serverKeyFileName;
+LOCAL const Key             *serverCA;
+LOCAL const Key             *serverCert;
+LOCAL const Key             *serverKey;
 LOCAL const Password        *serverPassword;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
@@ -6462,12 +6462,31 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
   UNUSED_VARIABLE(argumentMap);
 
   #ifdef HAVE_GNU_TLS
+    if ((serverCA == NULL) || (serverCA->data == NULL))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_NO_TLS_CA,"no server certificate authority data");
+      return;
+    }
+    if ((serverCert == NULL) || (serverCert->data == NULL))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_NO_TLS_CERTIFICATE,"no server certificate data");
+      return;
+    }
+    if ((serverKey == NULL) || (serverKey->data == NULL))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_NO_TLS_KEY,"no server key data");
+      return;
+    }
+
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
     error = Network_startSSL(&clientInfo->network.socketHandle,
-                             serverCAFileName,
-                             serverCertFileName,
-                             serverKeyFileName
+                             serverCA->data,
+                             serverCA->length,
+                             serverCert->data,
+                             serverCert->length,
+                             serverKey->data,
+                             serverKey->length
                             );
     if (error != ERROR_NONE)
     {
@@ -14118,7 +14137,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
-      return error;
+      return;
     }
   }
 
@@ -14129,7 +14148,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
-      return error;
+      return;
     }
   }
 
@@ -14140,7 +14159,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
-      return error;
+      return;
     }
   }
 
@@ -17767,9 +17786,9 @@ void Server_doneAll(void)
 
 Errors Server_run(uint             port,
                   uint             tlsPort,
-                  const char       *caFileName,
-                  const char       *certFileName,
-                  const char       *keyFileName,
+                  const Key        *ca,
+                  const Key        *cert,
+                  const Key        *key,
                   const Password   *password,
                   uint             maxConnections,
                   const char       *jobsDirectory,
@@ -17801,9 +17820,9 @@ Errors Server_run(uint             port,
   // initialize variables
   AutoFree_init(&autoFreeList);
   serverPort              = port;
-  serverCAFileName        = caFileName;
-  serverCertFileName      = certFileName;
-  serverKeyFileName       = keyFileName;
+  serverCA                = ca;
+  serverCert              = cert;
+  serverKey               = key;
   serverPassword          = password;
   serverJobsDirectory     = jobsDirectory;
   serverDefaultJobOptions = defaultJobOptions;
@@ -17875,12 +17894,18 @@ Errors Server_run(uint             port,
   serverTLSFlag = FALSE;
   if (port != 0)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = Network_initServer(&serverSocketHandle,
-                               port,
+                               port
+#if 0
                                SERVER_SOCKET_TYPE_PLAIN,
                                NULL,
+                               0,
                                NULL,
-                               NULL
+                               0,
+                               NULL,
+                               0
+#endif
                               );
     if (error != ERROR_NONE)
     {
@@ -17897,18 +17922,24 @@ Errors Server_run(uint             port,
   }
   if (tlsPort != 0)
   {
-    if (   File_existsCString(caFileName)
-        && File_existsCString(certFileName)
-        && File_existsCString(keyFileName)
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    if (   ((ca   != NULL) && (ca->data   != NULL))
+        && ((cert != NULL) && (cert->data != NULL))
+        && ((key  != NULL) && (key->data  != NULL))
        )
     {
       #ifdef HAVE_GNU_TLS
         error = Network_initServer(&serverTLSSocketHandle,
-                                   tlsPort,
+                                   tlsPort
+#if 0
                                    SERVER_SOCKET_TYPE_TLS,
-                                   caFileName,
-                                   certFileName,
-                                   keyFileName
+                                   ca->data,
+                                   ca->length,
+                                   cert->data,
+                                   cert->length,
+                                   key->data,
+                                   key->length
+#endif
                                   );
         if (error != ERROR_NONE)
         {
@@ -17916,16 +17947,33 @@ Errors Server_run(uint             port,
                      tlsPort,
                      Error_getText(error)
                     );
-           AutoFree_cleanup(&autoFreeList);
-           return FALSE;
+          AutoFree_cleanup(&autoFreeList);
+          return FALSE;
+        }
+        AUTOFREE_ADD(&autoFreeList,&serverTLSSocketHandle,{ Network_doneServer(&serverTLSSocketHandle); });
+        error = Network_startSSL(&serverTLSSocketHandle,
+                                 ca->data,
+                                 ca->length,
+                                 cert->data,
+                                 cert->length,
+                                 key->data,
+                                 key->length
+                                );
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot initialize TLS/SSL server at port %u (error: %s)!\n",
+                     tlsPort,
+                     Error_getText(error)
+                    );
+          AutoFree_cleanup(&autoFreeList);
+          return FALSE;
         }
         printInfo(1,"Started BAR TLS/SSL server on port %u\n",tlsPort);
         serverTLSFlag = TRUE;
-        AUTOFREE_ADD(&autoFreeList,&serverTLSSocketHandle,{ Network_doneServer(&serverTLSSocketHandle); });
       #else /* not HAVE_GNU_TLS */
-        UNUSED_VARIABLE(caFileName);
-        UNUSED_VARIABLE(certFileName);
-        UNUSED_VARIABLE(keyFileName);
+        UNUSED_VARIABLE(ca);
+        UNUSED_VARIABLE(cert);
+        UNUSED_VARIABLE(key);
 
         printError("TLS/SSL server is not supported!\n");
         if (serverFlag) Network_doneServer(&serverSocketHandle);
@@ -17934,9 +17982,9 @@ Errors Server_run(uint             port,
     }
     else
     {
-      if (!File_existsCString(caFileName)) printWarning("No certificate authority file '%s' (bar-ca.pem file) - TLS server not started.\n",caFileName);
-      if (!File_existsCString(certFileName)) printWarning("No certificate file '%s' (bar-server-cert.pem file) - TLS server not started.\n",certFileName);
-      if (!File_existsCString(keyFileName)) printWarning("No key file '%s' (bar-server-key.pem file) - TLS server not started.\n",keyFileName);
+      if ((ca == NULL) || (ca->data == NULL)) printWarning("No certificate authority data (bar-ca.pem file) - TLS server not started.\n");
+      if ((cert == NULL) || (cert->data == NULL)) printWarning("No certificate data (bar-server-cert.pem file) - TLS server not started.\n");
+      if ((key == NULL) || (key->data == NULL)) printWarning("No key data (bar-server-key.pem file) - TLS server not started.\n");
     }
   }
   if (!serverFlag && !serverTLSFlag)

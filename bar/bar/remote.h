@@ -101,7 +101,7 @@ void Remote_duplicateHost(RemoteHost *toRemoteHost, const RemoteHost *fromRemote
 * Purpose: connect to remote host
 * Input  : remoteHost - remote host
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 

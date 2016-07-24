@@ -514,6 +514,111 @@ ulong getBandWidth(BandWidthList *bandWidthList);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : initCertificate
+* Purpose: init empty certificate
+* Input  : certificate - certificate
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void initCertificate(Certificate *certificate);
+
+/***********************************************************************\
+* Name   : duplicateCertificate
+* Purpose: duplicate certificate
+* Input  : toCertificate   - certificate variable
+*          fromCertificate - from certificate
+* Output : -
+* Return : TRUE iff certificate duplicated
+* Notes  : -
+\***********************************************************************/
+
+bool duplicateCertificate(Certificate *toCertificate, const Certificate *fromCertificate);
+
+/***********************************************************************\
+* Name   : doneCertificate
+* Purpose: free certificate
+* Input  : certificate - certificate
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void doneCertificate(Certificate *certificate);
+
+/***********************************************************************\
+* Name   : isCertificateAvailable
+* Purpose: check if certificate is available
+* Input  : certificate - certificate
+* Output : -
+* Return : TRUE iff certificate is available
+* Notes  : -
+\***********************************************************************/
+
+bool isCertificateAvailable(const Certificate *certificate);
+
+/***********************************************************************\
+* Name   : clearCertificate
+* Purpose: clear certificate
+* Input  : certificate - certificate
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void clearCertificate(Certificate *certificate);
+
+/***********************************************************************\
+* Name   : setCertificate
+* Purpose: set certificate
+* Input  : certificate       - certificate
+*          certificateData   - certificate data
+*          certificateLength - length of certificate data [bytes]
+* Output : -
+* Return : TRUE iff set
+* Notes  : -
+\***********************************************************************/
+
+bool setCertificate(Certificate *certificate, const void *certificateData, uint certificateLength);
+
+/***********************************************************************\
+* Name   : setCertificateString
+* Purpose: set certificate with string
+* Input  : certificate - certificate
+*          string      - certificate data
+* Output : -
+* Return : TRUE iff set
+* Notes  : -
+\***********************************************************************/
+
+bool setCertificateString(Certificate *kecertificatey, ConstString string);
+
+/***********************************************************************\
+* Name   : readCAFile
+* Purpose: read certicate authority file
+* Input  : certificate - certificate variable
+*          fileName    - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors readCAFile(Certificate *certificate, const char *fileName);
+
+/***********************************************************************\
+* Name   : readCertificateFile
+* Purpose: read certificate file
+* Input  : certificate - certificate variable
+*          fileName    - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors readCertificateFile(Certificate *certificate, const char *fileName);
+
+/***********************************************************************\
 * Name   : initKey
 * Purpose: init empty public/private key
 * Input  : key - key

@@ -158,11 +158,18 @@ typedef struct
 // week day sets
 typedef long WeekDaySet;                                      // week days set or WEEKDAY_SET_ANY
 
-// key data
+// certificate data
 typedef struct
 {
-  void *data;                                                 // key data
-  uint length;                                                // length of key data
+  void *data;                                                 // data
+  uint length;                                                // length of data
+} Certificate;
+
+// certificate/key data
+typedef struct
+{
+  void *data;                                                 // data
+  uint length;                                                // length of data
 } Key;
 
 // mount

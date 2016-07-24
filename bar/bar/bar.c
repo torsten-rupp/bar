@@ -212,9 +212,12 @@ LOCAL Server          defaultWebDAVServer;
 LOCAL Device          defaultDevice;
 LOCAL uint            serverPort;
 LOCAL uint            serverTLSPort;
-LOCAL const char      *serverCAFileName;
-LOCAL const char      *serverCertFileName;
-LOCAL const char      *serverKeyFileName;
+//LOCAL const char      *serverCAFileName;
+//LOCAL const char      *serverCertFileName;
+//LOCAL const char      *serverKeyFileName;
+LOCAL Key             serverCA;
+LOCAL Key             serverCert;
+LOCAL Key             serverKey;
 LOCAL Password        *serverPassword;
 LOCAL uint            serverMaxConnections;
 LOCAL const char      *serverJobsDirectory;
@@ -268,6 +271,7 @@ LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, cons
 LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 //TODO
 #ifndef WERROR
@@ -559,9 +563,12 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                                                                           "do not detach in daemon mode"                                             ),
   CMD_OPTION_INTEGER      ("server-port",                  0,  1,1,serverPort,                                      0,65535,NULL,                                          "server port",NULL                                                         ),
   CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,1,serverTLSPort,                                   0,65535,NULL,                                          "TLS (SSL) server port",NULL                                               ),
-  CMD_OPTION_CSTRING      ("server-ca-file",               0,  1,1,serverCAFileName,                                                                                       "TLS (SSL) server certificate authority file (CA file)","file name"        ),
-  CMD_OPTION_CSTRING      ("server-cert-file",             0,  1,1,serverCertFileName,                                                                                     "TLS (SSL) server certificate file","file name"                            ),
-  CMD_OPTION_CSTRING      ("server-key-file",              0,  1,1,serverKeyFileName,                                                                                      "TLS (SSL) server key file","file name"                                    ),
+//  CMD_OPTION_CSTRING      ("server-ca-file",               0,  1,1,serverCAFileName,                                                                                       "TLS (SSL) server certificate authority file (CA file)","file name"        ),
+//  CMD_OPTION_CSTRING      ("server-cert-file",             0,  1,1,serverCertFileName,                                                                                     "TLS (SSL) server certificate file","file name"                            ),
+//  CMD_OPTION_CSTRING      ("server-key-file",              0,  1,1,serverKeyFileName,                                                                                      "TLS (SSL) server key file","file name"                                    ),
+  CMD_OPTION_SPECIAL      ("server-ca-file",               0,  1,1,&serverCA,                                       cmdOptionReadCertificateFile,NULL,                     "TLS (SSL) server certificate authority file (CA file)","file name"        ),
+  CMD_OPTION_SPECIAL      ("server-cert-file",             0,  1,1,&serverCert,                                     cmdOptionReadCertificateFile,NULL,                     "TLS (SSL) server certificate file","file name"                            ),
+  CMD_OPTION_SPECIAL      ("server-key-file",              0,  1,1,&serverKey,                                      cmdOptionReadKeyFile,NULL,                             "TLS (SSL) server key file","file name"                                    ),
   CMD_OPTION_SPECIAL      ("server-password",              0,  1,1,&serverPassword,                                 cmdOptionParsePassword,NULL,                           "server password (use with care!)","password"                              ),
   CMD_OPTION_INTEGER      ("server-max-connections",       0,  1,1,serverMaxConnections,                            0,65535,NULL,                                          "max. concurrent connections to server",NULL                               ),
   CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,1,serverJobsDirectory,                                                                                    "server job directory","path name"                                         ),
@@ -1138,9 +1145,12 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   // server settings
   CONFIG_VALUE_INTEGER           ("server-port",                  &serverPort,-1,                                                0,65535,NULL),
   CONFIG_VALUE_INTEGER           ("server-tls-port",              &serverTLSPort,-1,                                             0,65535,NULL),
-  CONFIG_VALUE_CSTRING           ("server-ca-file",               &serverCAFileName,-1                                           ),
-  CONFIG_VALUE_CSTRING           ("server-cert-file",             &serverCertFileName,-1                                         ),
-  CONFIG_VALUE_CSTRING           ("server-key-file",              &serverKeyFileName,-1                                          ),
+//  CONFIG_VALUE_CSTRING           ("server-ca-file",               &serverCAFileName,-1                                           ),
+//  CONFIG_VALUE_CSTRING           ("server-cert-file",             &serverCertFileName,-1                                         ),
+//  CONFIG_VALUE_CSTRING           ("server-key-file",              &serverKeyFileName,-1                                          ),
+  CONFIG_VALUE_SPECIAL           ("server-ca-file",               &serverCA,-1,                                                  configValueParseKey,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("server-cert-file",             &serverCert,-1,                                                configValueParseKey,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("server-key-file",              &serverKey,-1,                                                 configValueParseKey,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("server-password",              &serverPassword,-1,                                            configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
   CONFIG_VALUE_INTEGER           ("server-max-connections",       &serverMaxConnections,-1,                                      0,65535,NULL),
   CONFIG_VALUE_CSTRING           ("server-jobs-directory",        &serverJobsDirectory,-1                                        ),
@@ -2646,6 +2656,39 @@ LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *na
 }
 
 /***********************************************************************\
+* Name   : cmdOptionReadCertificateFile
+* Purpose: command line option call back for reading certificate file
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  Key    *key = (Key*)variable;
+  Errors error;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  error = readKeyFile(key,value);
+  if (error != ERROR_NONE)
+  {
+    stringCopy(errorMessage,Error_getText(error),errorMessageSize);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : cmdOptionReadKeyFile
 * Purpose: command line option call back for reading key file
 * Input  : -
@@ -2671,6 +2714,7 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
   error = readKeyFile(key,value);
   if (error != ERROR_NONE)
   {
+    stringCopy(errorMessage,Error_getText(error),errorMessageSize);
     return FALSE;
   }
 
@@ -3234,9 +3278,15 @@ LOCAL Errors initAll(void)
   initDevice(&defaultDevice);
   serverPort                             = DEFAULT_SERVER_PORT;
   serverTLSPort                          = DEFAULT_TLS_SERVER_PORT;
-  serverCAFileName                       = DEFAULT_TLS_SERVER_CA_FILE;
-  serverCertFileName                     = DEFAULT_TLS_SERVER_CERTIFICATE_FILE;
-  serverKeyFileName                      = DEFAULT_TLS_SERVER_KEY_FILE;
+//  serverCAFileName                       = DEFAULT_TLS_SERVER_CA_FILE;
+//  serverCertFileName                     = DEFAULT_TLS_SERVER_CERTIFICATE_FILE;
+//  serverKeyFileName                      = DEFAULT_TLS_SERVER_KEY_FILE;
+  serverCA.data                          = NULL;
+  serverCA.length                        = 0;
+  serverCert.data                        = NULL;
+  serverCert.length                      = 0;
+  serverKey.data                         = NULL;
+  serverKey.length                       = 0;
   serverPassword                         = Password_new();
   serverMaxConnections                   = DEFAULT_MAX_SERVER_CONNECTIONS;
   serverJobsDirectory                    = DEFAULT_JOBS_DIRECTORY;
@@ -3279,6 +3329,11 @@ LOCAL Errors initAll(void)
   }
   String_delete(fileName);
 
+  // read default server ca, cert, key
+  (void)readKeyFile(&serverCA,DEFAULT_TLS_SERVER_CA_FILE);
+  (void)readKeyFile(&serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
+  (void)readKeyFile(&serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
+
   // initialize command line options and config values
   ConfigValue_init(CONFIG_VALUES);
   CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
@@ -3305,6 +3360,11 @@ LOCAL void doneAll(void)
   // deinitialize command line options and config values
   CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
   ConfigValue_done(CONFIG_VALUES);
+
+  // done server ca, cert, key
+  doneKey(&serverKey);
+  doneKey(&serverCert);
+  doneKey(&serverCA);
 
   // deinitialize variables
   freelocale(POSIXLocale);
@@ -4712,6 +4772,206 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   return n;
 }
 
+void initCertificate(Certificate *certificate)
+{
+  assert(certificate != NULL);
+
+  certificate->data   = NULL;
+  certificate->length = 0;
+}
+
+bool duplicateCertificate(Certificate *toCertificate, const Certificate *fromCertificate)
+{
+  void *data;
+
+  assert(toCertificate != NULL);
+  assert(fromCertificate != NULL);
+
+  data = malloc(fromCertificate->length);
+  if (data == NULL)
+  {
+    return FALSE;
+  }
+  memcpy(data,fromCertificate->data,fromCertificate->length);
+
+  toCertificate->data   = data;
+  toCertificate->length = fromCertificate->length;
+
+  return TRUE;
+}
+
+void doneCertificate(Certificate *certificate)
+{
+  assert(certificate != NULL);
+
+  if (certificate->data != NULL)
+  {
+    free(certificate->data);
+  }
+}
+
+bool isCertificateAvailable(const Certificate *certificate)
+{
+  assert(certificate != NULL);
+
+  return certificate->data != NULL;
+}
+
+
+void clearCertificate(Certificate *certificate)
+{
+  assert(certificate != NULL);
+
+  if (certificate->data != NULL) free(certificate->data);
+  certificate->data   = NULL;
+  certificate->length = 0;
+}
+
+
+bool setCertificate(Certificate *certificate, const void *certificateData, uint certificateLength)
+{
+  void *data;
+
+  assert(certificate != NULL);
+
+  data = malloc(certificateLength);
+  if (data == NULL)
+  {
+    return FALSE;
+  }
+  memcpy(data,certificateData,certificateLength);
+
+  if (certificate->data != NULL) free(certificate->data);
+  certificate->data   = data;
+  certificate->length = certificateLength;
+
+  return TRUE;
+}
+
+
+bool setCertificateString(Certificate *certificate, ConstString string)
+{
+  return setCertificate(certificate,String_cString(string),String_length(string));
+}
+
+Errors readCAFile(Certificate *certificate, const char *fileName)
+{
+  Errors     error;
+  FileHandle fileHandle;
+  uint64     dataLength;
+  void       *data;
+
+  assert(certificate != NULL);
+  assert(fileName != NULL);
+
+  certificate->data   = NULL;
+  certificate->length = 0;
+
+  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // get file size
+  dataLength = File_getSize(&fileHandle);
+  if (dataLength == 0LL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_NO_TLS_CA;
+  }
+
+  // allocate memory
+  data = malloc((size_t)dataLength);
+  if (data == NULL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+
+  // read file data
+  error = File_read(&fileHandle,
+                    data,
+                    dataLength,
+                    NULL
+                   );
+  if (error != ERROR_NONE)
+  {
+    free(data);
+    (void)File_close(&fileHandle);
+    return error;
+  }
+
+  // close file
+  (void)File_close(&fileHandle);
+
+  // set certificate data
+  if (certificate->data != NULL) free(certificate->data);
+  certificate->data   = data;
+  certificate->length = dataLength;
+
+  return ERROR_NONE;
+}
+
+Errors readCertificateFile(Certificate *certificate, const char *fileName)
+{
+  Errors     error;
+  FileHandle fileHandle;
+  uint64     dataLength;
+  void       *data;
+
+  assert(certificate != NULL);
+  assert(fileName != NULL);
+
+  certificate->data   = NULL;
+  certificate->length = 0;
+
+  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // get file size
+  dataLength = File_getSize(&fileHandle);
+  if (dataLength == 0LL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_NO_TLS_CERTIFICATE;
+  }
+
+  // allocate memory
+  data = malloc((size_t)dataLength);
+  if (data == NULL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+
+  // read file data
+  error = File_read(&fileHandle,
+                    data,
+                    dataLength,
+                    NULL
+                   );
+  if (error != ERROR_NONE)
+  {
+    free(data);
+    (void)File_close(&fileHandle);
+    return error;
+  }
+
+  // close file
+  (void)File_close(&fileHandle);
+
+  // set certificate data
+  if (certificate->data != NULL) free(certificate->data);
+  certificate->data   = data;
+  certificate->length = dataLength;
+
+  return ERROR_NONE;
+}
+
 void initKey(Key *key)
 {
   assert(key != NULL);
@@ -4795,7 +5055,7 @@ Errors readKeyFile(Key *key, const char *fileName)
 {
   Errors     error;
   FileHandle fileHandle;
-  uint       dataLength;
+  uint64     dataLength;
   void       *data;
 
   assert(key != NULL);
@@ -4811,10 +5071,15 @@ Errors readKeyFile(Key *key, const char *fileName)
   }
 
   // get file size
-  dataLength = (uint)File_getSize(&fileHandle);
+  dataLength = File_getSize(&fileHandle);
+  if (dataLength == 0LL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_NO_TLS_KEY;
+  }
 
   // allocate secure memory
-  data = Password_allocSecure(dataLength);
+  data = Password_allocSecure((size_t)dataLength);
   if (data == NULL)
   {
     (void)File_close(&fileHandle);
@@ -7222,9 +7487,12 @@ LOCAL Errors runDaemon(void)
   // run server (not detached)
   error = Server_run(serverPort,
                      serverTLSPort,
-                     serverCAFileName,
-                     serverCertFileName,
-                     serverKeyFileName,
+//                     serverCAFileName,
+//                     serverCertFileName,
+//                     serverKeyFileName,
+                     &serverCA,
+                     &serverCert,
+                     &serverKey,
                      serverPassword,
                      serverMaxConnections,
                      serverJobsDirectory,

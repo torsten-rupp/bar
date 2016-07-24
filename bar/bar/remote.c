@@ -409,6 +409,7 @@ Errors Remote_connect(const RemoteHost *remoteHost)
     String_delete(line);
     return error;
   }
+
 //TODO
 sslFlag = TRUE;
 
