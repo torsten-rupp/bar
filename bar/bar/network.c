@@ -159,28 +159,36 @@ LOCAL void cryptoLockingCallback(int mode, int n, const char *fileName, int line
 * Name   : initSSL
 * Purpose: init SSL encryption on socket
 * Input  : socketHandle - socket handle
-*          caFileName   - file with TLS CA
-*          certFileName - file with TLS cerificate
-*          keyFileName  - file with TLS key
+*          caData       - TLS CA data or NULL
+*          caLength     - TSL CA data length
+*          cert         - TLS cerificate or NULL
+*          certLength   - TSL cerificate data length
+*          key          - TLS key or NULL
+*          keyLength    - TSL key data length
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 LOCAL Errors initSSL(SocketHandle *socketHandle,
-                     const char   *caFileName,
-                     const char   *certFileName,
-                     const char   *keyFileName
+                     const void   *caData,
+                     uint         caDataLength,
+                     const void   *certData,
+                     uint         certLength,
+                     const void   *keyData,
+                     uint         keyLength
                     )
 {
-  int result;
+  gnutls_datum_t caDatum,certDatum,keyDatum;
+  int            result;
 
   assert(socketHandle != NULL);
-  assert(caFileName != NULL);
-  assert(certFileName != NULL);
-  assert(keyFileName != NULL);
+  assert(caData != NULL);
+  assert(certData != NULL);
+  assert(keyData != NULL);
 
-UNUSED_VARIABLE(caFileName);
+UNUSED_VARIABLE(caData);
+UNUSED_VARIABLE(caDataLength);
 
   // init certificate and key
   if (gnutls_certificate_allocate_credentials(&socketHandle->gnuTLS.credentials) != GNUTLS_E_SUCCESS)
@@ -188,12 +196,16 @@ UNUSED_VARIABLE(caFileName);
     return ERROR_INIT_TLS;
   }
 
-  result = gnutls_certificate_set_x509_key_file(socketHandle->gnuTLS.credentials,
-                                                certFileName,
-                                                keyFileName,
-                                                GNUTLS_X509_FMT_PEM
-                                               );
-  if (result < 0)
+  certDatum.data = certData;
+  certDatum.size = certLength;
+  keyDatum.data  = keyData;
+  keyDatum.size  = keyLength;
+  result = gnutls_certificate_set_x509_key_mem(socketHandle->gnuTLS.credentials,
+                                               &certDatum,
+                                               &keyDatum,
+                                               GNUTLS_X509_FMT_PEM
+                                              );
+  if (result != GNUTLS_E_SUCCESS)
   {
     gnutls_certificate_free_credentials(socketHandle->gnuTLS.credentials);
     return ERROR_INVALID_TLS_CERTIFICATE;
@@ -201,7 +213,7 @@ UNUSED_VARIABLE(caFileName);
 
   gnutls_dh_params_init(&socketHandle->gnuTLS.dhParams);
   result = gnutls_dh_params_generate2(socketHandle->gnuTLS.dhParams,DH_BITS);
-  if (result < 0)
+  if (result != GNUTLS_E_SUCCESS)
   {
     gnutls_dh_params_deinit(socketHandle->gnuTLS.dhParams);
     gnutls_certificate_free_credentials(socketHandle->gnuTLS.credentials);
@@ -253,7 +265,7 @@ NYI: how to do certificate verification?
 
   // do handshake
   result = gnutls_handshake(socketHandle->gnuTLS.session);
-  if (result < 0)
+  if (result != GNUTLS_E_SUCCESS)
   {
     gnutls_deinit(socketHandle->gnuTLS.session);
     gnutls_dh_params_deinit(socketHandle->gnuTLS.dhParams);
@@ -264,7 +276,7 @@ NYI: how to do certificate verification?
 #if 0
 NYI: how to enable client authentication?
   result = gnutls_certificate_verify_peers2(socketHandle->gnuTLS.session,&status);
-  if (result < 0)
+  if (result != GNUTLS_E_SUCCESS)
   {
     gnutls_deinit(socketHandle->gnuTLS.session);
     gnutls_dh_params_deinit(socketHandle->gnuTLS.dhParams);
@@ -1254,11 +1266,16 @@ Errors Network_writeLine(SocketHandle *socketHandle,
 }
 
 Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
-                          uint               serverPort,
+                          uint               serverPort
+#if 0
                           ServerSocketTypes  serverSocketType,
-                          const char         *caFileName,
-                          const char         *certFileName,
-                          const char         *keyFileName
+                          const void         *caData,
+                          uint               caLength,
+                          const void         *certData,
+                          uint               certLength,
+                          const void         *keyData,
+                          uint               keyLength
+#endif
                          )
 {
   struct sockaddr_in socketAddress;
@@ -1267,7 +1284,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
 
   assert(serverSocketHandle != NULL);
 
-  serverSocketHandle->socketType = serverSocketType;
+  serverSocketHandle->socketType = SOCKET_TYPE_PLAIN;
 
   // create socket
   serverSocketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
@@ -1301,6 +1318,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
   }
   listen(serverSocketHandle->handle,5);
 
+#if 0
   switch (serverSocketType)
   {
     case SERVER_SOCKET_TYPE_PLAIN:
@@ -1308,49 +1326,39 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
     case SERVER_SOCKET_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
       {
-        void              *certData;
-        ulong             certDataSize;
         gnutls_x509_crt_t cert;
         gnutls_datum_t    datum;
         time_t            certActivationTime,certExpireTime;
         char              buffer[64];
 
-        // check if all key files exists and can be read
-        if ((caFileName == NULL) || !File_isFileCString(caFileName) || !File_isReadableCString(caFileName))
+        // check if all key files exists
+        if (caData == NULL)
         {
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_CA;
         }
-        if ((certFileName == NULL) || !File_isFileCString(certFileName) || !File_isReadableCString(certFileName))
+        if (certData == NULL)
         {
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_CERTIFICATE;
         }
-        if ((keyFileName == NULL) || !File_isFileCString(keyFileName) || !File_isReadableCString(keyFileName))
+        if (keyData == NULL)
         {
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_KEY;
         }
 
         // check if certificate is valid
-        error = File_getDataCString(certFileName,&certData,&certDataSize);
-        if (error != ERROR_NONE)
-        {
-          close(serverSocketHandle->handle);
-          return error;
-        }
         if (gnutls_x509_crt_init(&cert) != GNUTLS_E_SUCCESS)
         {
-          free(certData);
           close(serverSocketHandle->handle);
           return ERROR_INVALID_TLS_CERTIFICATE;
         }
         datum.data = certData;
-        datum.size = certDataSize;
+        datum.size = certLength;
         if (gnutls_x509_crt_import(cert,&datum,GNUTLS_X509_FMT_PEM) != GNUTLS_E_SUCCESS)
         {
           gnutls_x509_crt_deinit(cert);
-          free(certData);
           close(serverSocketHandle->handle);
           return ERROR_INVALID_TLS_CERTIFICATE;
         }
@@ -1360,7 +1368,6 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           if (time(NULL) < certActivationTime)
           {
             gnutls_x509_crt_deinit(cert);
-            free(certData);
             close(serverSocketHandle->handle);
             return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,DATE_TIME_FORMAT_LOCALE));
           }
@@ -1371,7 +1378,6 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           if (time(NULL) > certExpireTime)
           {
             gnutls_x509_crt_deinit(cert);
-            free(certData);
             close(serverSocketHandle->handle);
             return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,DATE_TIME_FORMAT_LOCALE));
           }
@@ -1400,11 +1406,13 @@ or
         }
 #endif /* 0 */
         gnutls_x509_crt_deinit(cert);
-        free(certData);
 
-        serverSocketHandle->caFileName   = caFileName;
-        serverSocketHandle->certFileName = certFileName;
-        serverSocketHandle->keyFileName  = keyFileName;
+        serverSocketHandle->caData     = caData;
+        serverSocketHandle->caLength   = caLength;
+        serverSocketHandle->certData   = certData;
+        serverSocketHandle->certLength = certLength;
+        serverSocketHandle->keyData    = keyData;
+        serverSocketHandle->keyLength  = keyLength;
       }
       #else /* not HAVE_GNU_TLS */
         UNUSED_VARIABLE(caFileName);
@@ -1418,6 +1426,7 @@ or
         break; /* not reached */
     #endif /* NDEBUG */
   }
+#endif
 
   return ERROR_NONE;
 }
@@ -1445,12 +1454,19 @@ void Network_doneServer(ServerSocketHandle *serverSocketHandle)
 }
 
 Errors Network_startSSL(SocketHandle *socketHandle,
-                        const char   *caFileName,
-                        const char   *certFileName,
-                        const char   *keyFileName
+                        const void   *caData,
+                        uint         caLength,
+                        const void   *certData,
+                        uint         certLength,
+                        const void   *keyData,
+                        uint         keyLength
                        )
 {
   #ifdef HAVE_GNU_TLS
+    gnutls_x509_crt_t cert;
+    gnutls_datum_t    datum;
+    time_t            certActivationTime,certExpireTime;
+    char              buffer[64];
     #if  defined(PLATFORM_LINUX)
       long               socketFlags;
     #elif defined(PLATFORM_WINDOWS)
@@ -1462,9 +1478,77 @@ Errors Network_startSSL(SocketHandle *socketHandle,
   assert(socketHandle->type == SOCKET_TYPE_PLAIN);
 
   #ifdef HAVE_GNU_TLS
+    // check if all key files exists
+    if (caData == NULL)
+    {
+      return ERROR_NO_TLS_CA;
+    }
+    if (certData == NULL)
+    {
+      return ERROR_NO_TLS_CERTIFICATE;
+    }
+    if (keyData == NULL)
+    {
+      return ERROR_NO_TLS_KEY;
+    }
+
+    // check if certificate is valid
+    if (gnutls_x509_crt_init(&cert) != GNUTLS_E_SUCCESS)
+    {
+      return ERROR_INVALID_TLS_CERTIFICATE;
+    }
+    datum.data = certData;
+    datum.size = certLength;
+    if (gnutls_x509_crt_import(cert,&datum,GNUTLS_X509_FMT_PEM) != GNUTLS_E_SUCCESS)
+    {
+      gnutls_x509_crt_deinit(cert);
+      return ERROR_INVALID_TLS_CERTIFICATE;
+    }
+    certActivationTime = gnutls_x509_crt_get_activation_time(cert);
+    if (certActivationTime != (time_t)(-1))
+    {
+      if (time(NULL) < certActivationTime)
+      {
+        gnutls_x509_crt_deinit(cert);
+        return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,DATE_TIME_FORMAT_LOCALE));
+      }
+    }
+    certExpireTime = gnutls_x509_crt_get_expiration_time(cert);
+    if (certExpireTime != (time_t)(-1))
+    {
+      if (time(NULL) > certExpireTime)
+      {
+        gnutls_x509_crt_deinit(cert);
+        return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,DATE_TIME_FORMAT_LOCALE));
+      }
+    }
+#if 0
+NYI: how to do certificate verification?
+gnutls_x509_crt_t ca;
+gnutls_x509_crt_init(&ca);
+data=Xread_file("/etc/ssl/certs/bar-ca.pem",&size);
+d.data=data,d.size=size;
+fprintf(stderr,"%s,%d: import=%d\n",__FILE__,__LINE__,gnutls_x509_crt_import(ca,&d,GNUTLS_X509_FMT_PEM));
+
+    if (gnutls_x509_crt_verify(cert,&ca,1,0,&verify));
+
+or
+
+    result = gnutls_certificate_set_x509_trust_file(serverSocketHandle->gnuTLSCredentials,
+                                                    caFileName,
+                                                    GNUTLS_X509_FMT_PEM
+                                                   );
+    if (result < 0)
+    {
+      gnutls_certificate_free_credentials(serverSocketHandle->gnuTLSCredentials);
+      return ERROR_INVALID_TLS_CA;
+    }
+#endif /* 0 */
+    gnutls_x509_crt_deinit(cert);
+
+    // temporary disable non-blocking
     if ((socketHandle->flags & SOCKET_FLAG_NON_BLOCKING) !=  0)
     {
-      // temporary disable non-blocking
       #if  defined(PLATFORM_LINUX)
         socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
         fcntl(socketHandle->handle,F_SETFL,socketFlags & ~O_NONBLOCK);
@@ -1475,15 +1559,15 @@ Errors Network_startSSL(SocketHandle *socketHandle,
     }
 
     // init SSL
-    error = initSSL(socketHandle,caFileName,certFileName,keyFileName);
+    error = initSSL(socketHandle,caData,caLength,certData,certLength,keyData,keyLength);
     if (error == ERROR_NONE)
     {
       socketHandle->type = SOCKET_TYPE_TLS;
     }
 
+    // re-enable temporary non-blocking
     if ((socketHandle->flags & SOCKET_FLAG_NON_BLOCKING) !=  0)
     {
-      // re-enable temporary non-blocking
       #if  defined(PLATFORM_LINUX)
         socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
         fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
@@ -1559,9 +1643,10 @@ Errors Network_accept(SocketHandle             *socketHandle,
       #ifdef HAVE_GNU_TLS
         // init SSL
         error = initSSL(socketHandle,
-                        serverSocketHandle->caFileName,
-                        serverSocketHandle->certFileName,
-                        serverSocketHandle->keyFileName
+//TODO
+NULL,0,//                        serverSocketHandle->caFileName,
+NULL,0,//                        serverSocketHandle->certFileName,
+NULL,0//                        serverSocketHandle->keyFileName
                        );
         if (error != ERROR_NONE)
         {
