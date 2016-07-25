@@ -3275,7 +3275,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   archiveInfo->file.fileName           = String_new();
   archiveInfo->file.openFlag           = FALSE;
   archiveInfo->printableStorageName    = NULL;
-  Semaphore_init(& archiveInfo->chunkIOLock);
+  Semaphore_init(&archiveInfo->chunkIOLock);
   archiveInfo->chunkIO                 = &CHUNK_IO_FILE;
   archiveInfo->chunkIOUserData         = &archiveInfo->file.fileHandle;
 
