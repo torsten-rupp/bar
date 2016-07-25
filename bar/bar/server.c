@@ -3091,7 +3091,7 @@ LOCAL void updateCreateStatusInfo(Errors                 error,
   assert(createStatusInfo->entryName != NULL);
   assert(createStatusInfo->storageName != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*1000L)
   {
     // calculate statics values
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     createStatusInfo->doneCount);
@@ -4425,27 +4425,33 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   {
     return error;
   }
-  while (Index_getNextStorage(&indexQueryHandle,
-                              NULL,  // uuidId
-                              NULL,  // jobUUID
-                              NULL,  // entityId
-                              NULL,  // scheduleUUID
-                              NULL,  // archiveType
-                              &storageId,
-                              NULL,  // storageName
-                              NULL,  // createdDateTime
-                              NULL,  // totalEntryCount
-                              NULL,  // totalEntrySize
-                              NULL,  // indexState
-                              NULL,  // indexMode
-                              NULL,  // lastCheckedDateTime
-                              NULL  // errorMessage
-                             )
+  while (   !quitFlag
+         && !isSomeJobActive()
+         && Index_getNextStorage(&indexQueryHandle,
+                                 NULL,  // uuidId
+                                 NULL,  // jobUUID
+                                 NULL,  // entityId
+                                 NULL,  // scheduleUUID
+                                 NULL,  // archiveType
+                                 &storageId,
+                                 NULL,  // storageName
+                                 NULL,  // createdDateTime
+                                 NULL,  // totalEntryCount
+                                 NULL,  // totalEntrySize
+                                 NULL,  // indexState
+                                 NULL,  // indexMode
+                                 NULL,  // lastCheckedDateTime
+                                 NULL  // errorMessage
+                                )
         )
   {
     (void)deleteStorage(indexHandle,storageId);
   }
   Index_doneList(&indexQueryHandle);
+  if (quitFlag || isSomeJobActive())
+  {
+    return ERROR_INTERRUPTED;
+  }
 
   // delete entity index
   error = Index_deleteEntity(indexHandle,entityId);
@@ -4471,8 +4477,10 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                         ConstString jobUUID
                        )
 {
-  Errors  error;
-  IndexId uuidId;
+  Errors           error;
+  IndexId          uuidId;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          entityId;
 
   assert(indexHandle != NULL);
 
@@ -4494,6 +4502,44 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
   {
 //TODO: which error?
     return ERROR_DATABASE_INDEX_NOT_FOUND;
+  }
+
+  // delete all entities with uuid id
+  error = Index_initListEntities(&indexQueryHandle,
+                                 indexHandle,
+                                 uuidId,
+                                 NULL,  // jobUUID
+                                 NULL,  // scheduleId,
+                                 NULL,  // name
+                                 DATABASE_ORDERING_NONE,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  while (   !quitFlag
+         && !isSomeJobActive()
+         && Index_getNextEntity(&indexQueryHandle,
+                                NULL,  // uuidId
+                                NULL,  // jobUUID
+                                NULL,  // scheduleUUID
+                                &entityId,
+                                NULL,  // archiveType
+                                NULL,  // createdDateTime
+                                NULL,  // lastErrorMessage
+                                NULL,  // entries
+                                NULL  // size
+                               )
+        )
+  {
+    (void)deleteEntity(indexHandle,entityId);
+  }
+  Index_doneList(&indexQueryHandle);
+  if (quitFlag || isSomeJobActive())
+  {
+    return ERROR_INTERRUPTED;
   }
 
   // delete UUID
@@ -4821,6 +4867,7 @@ LOCAL void purgeExpiredThreadCode(void)
 
   while (!quitFlag)
   {
+fprintf(stderr,"%s, %d: start purge\n",__FILE__,__LINE__);
     // check entities
     error = Index_initListEntities(&indexQueryHandle1,
                                    indexHandle,
@@ -4849,6 +4896,7 @@ LOCAL void purgeExpiredThreadCode(void)
                                    )
             )
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         if (!String_isEmpty(scheduleUUID))
         {
           // get job name, schedule min./max. keep, max. age
@@ -4913,7 +4961,6 @@ LOCAL void purgeExpiredThreadCode(void)
                     error = deleteEntity(indexHandle,entityId);
                     if (error == ERROR_NONE)
                     {
-                      ;
                       plogMessage(NULL,  // logHandle,
                                   LOG_TYPE_INDEX,
                                   "INDEX",
@@ -4988,6 +5035,7 @@ LOCAL void purgeExpiredThreadCode(void)
       }
       Index_doneList(&indexQueryHandle1);
     }
+fprintf(stderr,"%s, %d: done purge\n",__FILE__,__LINE__);
 
     // sleep
     delayScheduleThread();
@@ -11812,7 +11860,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
         if (error == ERROR_NONE)
         {
           while (Index_getNextEntity(&indexQueryHandle,
-                                     NULL,  // uudId,
+                                     NULL,  // uuidId,
                                      NULL,  // jobUUID,
                                      NULL,  // scheduleUUID,
                                      NULL,  // entityId,
@@ -18371,7 +18419,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Semaphore_setEnd(&jobList.lock);
   if (Index_isAvailable())
   {
-      Thread_join(&purgeExpiredThread);
+    Thread_join(&purgeExpiredThread);
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
       Thread_join(&autoIndexThread);
