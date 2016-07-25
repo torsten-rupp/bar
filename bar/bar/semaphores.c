@@ -981,10 +981,6 @@ LOCAL bool lock(const char         *fileName,
             __SEMAPHORE_WAIT_TIMEOUT(semaphore,semaphoreLockType,DEBUG_FLAG_READ_WRITE,"R",&semaphore->modified,&semaphore->lock,timeout,lockedFlag);
             if (!lockedFlag)
             {
-              #ifndef NDEBUG
-                assert(semaphore->lockedByCount > 0);
-                semaphore->lockedByCount--;
-              #endif /* not NDEBUG */
               __SEMAPHORE_UNLOCK(semaphore,DEBUG_FLAG_READ,"R",semaphore->readLockCount);
               __SEMAPHORE_REQUEST_LOCK(semaphore);
               {
@@ -1051,7 +1047,7 @@ LOCAL bool lock(const char         *fileName,
       }
       __SEMAPHORE_REQUEST_UNLOCK(semaphore);
 
-      // write: aquire lock permanent
+      // write: aquire permanent lock
       if (timeout != WAIT_FOREVER)
       {
         __SEMAPHORE_LOCK_TIMEOUT(semaphore,semaphoreLockType,DEBUG_FLAG_READ_WRITE,"RW",timeout,lockedFlag);
@@ -1085,10 +1081,6 @@ LOCAL bool lock(const char         *fileName,
           __SEMAPHORE_WAIT_TIMEOUT(DEBUG_FLAG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock,timeout,lockedFlag);
           if (!lockedFlag)
           {
-            #ifndef NDEBUG
-              assert(semaphore->lockedByCount > 0);
-              semaphore->lockedByCount--;
-            #endif /* not NDEBUG */
             __SEMAPHORE_REQUEST_LOCK(semaphore);
             {
               assert(semaphore->readWriteRequestCount > 0);
