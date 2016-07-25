@@ -416,6 +416,7 @@ public class TabStatus
   };
 
   // colors
+  private final Color COLOR_RUNNING;
   private final Color COLOR_ERROR;
 
   // date/time format
@@ -496,7 +497,8 @@ public class TabStatus
     display = shell.getDisplay();
 
     // get colors
-    COLOR_ERROR = new Color(null,0xFF,0xA0,0xA0);
+    COLOR_RUNNING = new Color(null,0xA0,0xFF,0xA0);
+    COLOR_ERROR   = new Color(null,0xFF,0xA0,0xA0);
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Status")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
@@ -1667,7 +1669,17 @@ public class TabStatus
                   tableItem.setData(jobData);
                 }
 
-                tableItem.setBackground((jobData.state == JobData.States.ERROR) ? COLOR_ERROR : null);
+                switch (jobData.state)
+                {
+                  case RUNNING:
+                    tableItem.setBackground(COLOR_RUNNING);
+                    break;
+                  case ERROR:
+                    tableItem.setBackground(COLOR_ERROR);
+                    break;
+                  default:
+                    break;
+                }
               }
 
               // remove not existing entries
