@@ -1678,6 +1678,7 @@ public class TabStatus
                     tableItem.setBackground(COLOR_ERROR);
                     break;
                   default:
+                    tableItem.setBackground(null);
                     break;
                 }
               }
