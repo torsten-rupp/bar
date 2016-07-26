@@ -144,7 +144,7 @@ abstract class ProcessResult
 class Command
 {
   // --------------------------- constants --------------------------------
-  public final static int TIMEOUT      = 5*1000;   // default timeout [ms]
+  public final static int TIMEOUT      = 30*1000;   // default timeout [ms]
   public final static int WAIT_FOREVER = -1;
 
   // --------------------------- variables --------------------------------

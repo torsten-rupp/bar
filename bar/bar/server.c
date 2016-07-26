@@ -534,7 +534,7 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 );
 
 /***************************** Variables *******************************/
-LOCAL AuthorizationFailList authorizationFailList;
+LOCAL AuthorizationFailList authorizationFailList;  // list with failed client authorizations
 LOCAL uint                  serverPort;
 LOCAL const Key             *serverCA;
 LOCAL const Key             *serverCert;
@@ -542,26 +542,27 @@ LOCAL const Key             *serverKey;
 LOCAL const Password        *serverPassword;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
-LOCAL JobList               jobList;
-LOCAL Thread                jobThread;
-LOCAL Thread                schedulerThread;
+LOCAL JobList               jobList;                // job list
+LOCAL Semaphore             statusLock;             // status update lock
+LOCAL Thread                jobThread;              // thread executing jobs create/restore
+LOCAL Thread                schedulerThread;        // thread scheduling jobs
 LOCAL Thread                pauseThread;
-LOCAL Thread                remoteConnectThread;
-LOCAL Thread                remoteThread;
-LOCAL Thread                indexThread;
-LOCAL Thread                autoIndexThread;
-LOCAL Thread                purgeExpiredThread;
+LOCAL Thread                remoteConnectThread;    // thread to connect remote BAR instances
+LOCAL Thread                remoteThread;           // thread to execute remote jobs
+LOCAL Thread                indexThread;            // thread to add/update index
+LOCAL Thread                autoIndexThread;        // thread to collect BAR files for auto-index
+LOCAL Thread                purgeExpiredThread;     // thread to purge expired archive files
 LOCAL Semaphore             serverStateLock;
-LOCAL ServerStates          serverState;  // current server state
+LOCAL ServerStates          serverState;            // current server state
 LOCAL struct
       {
         bool create;
         bool storage;
         bool restore;
         bool indexUpdate;
-      } pauseFlags;                                // TRUE iff pause
-LOCAL uint64                pauseEndDateTime;      // pause end date/time [s]
-LOCAL bool                  quitFlag;              // TRUE iff quit requested
+      } pauseFlags;                                 // TRUE iff pause
+LOCAL uint64                pauseEndDateTime;       // pause end date/time [s]
+LOCAL bool                  quitFlag;               // TRUE iff quit requested
 
 /****************************** Macros *********************************/
 
@@ -1536,7 +1537,7 @@ LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
 
   storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&statusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // request volume, set job state
     assert(jobNode->state == JOB_STATE_RUNNING);
@@ -1549,7 +1550,7 @@ LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
     storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
     do
     {
-      Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
+      Semaphore_waitModified(&statusLock,LOCK_TIMEOUT);
 
       if      (jobNode->volumeUnloadFlag)
       {
@@ -1565,7 +1566,9 @@ LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
         storageRequestResult = STORAGE_REQUEST_VOLUME_ABORTED;
       }
     }
-    while (storageRequestResult == STORAGE_REQUEST_VOLUME_NONE);
+    while (   !quitFlag
+           && (storageRequestResult == STORAGE_REQUEST_VOLUME_NONE)
+          );
 
     // clear request volume, reset job state
     String_clear(jobNode->runningInfo.message);
@@ -2273,6 +2276,8 @@ LOCAL JobNode *findJobByName(ConstString name)
 {
   JobNode *jobNode;
 
+  assert(Semaphore_isLocked(&jobList.lock));
+
 //TODO: LIST_FIND
   jobNode = jobList.head;
   while ((jobNode != NULL) && !String_equals(jobNode->name,name))
@@ -2300,6 +2305,8 @@ LOCAL JobNode *findJobByName(ConstString name)
 LOCAL JobNode *findJobByUUID(ConstString uuid)
 {
   JobNode *jobNode;
+
+  assert(Semaphore_isLocked(&jobList.lock));
 
 // TODO: list find
   jobNode = jobList.head;
@@ -2329,6 +2336,8 @@ LOCAL JobNode *findJobByUUID(ConstString uuid)
 LOCAL ScheduleNode *findScheduleByUUID(const JobNode *jobNode, ConstString scheduleUUID)
 {
   ScheduleNode *scheduleNode;
+
+  assert(Semaphore_isLocked(&jobList.lock));
 
   if (jobNode != NULL)
   {
@@ -3091,7 +3100,8 @@ LOCAL void updateCreateStatusInfo(Errors                 error,
   assert(createStatusInfo->entryName != NULL);
   assert(createStatusInfo->storageName != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*1000L)
+  // Note: only try for 2s
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&statusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*1000L)
   {
     // calculate statics values
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     createStatusInfo->doneCount);
@@ -3177,7 +3187,7 @@ LOCAL void restoreUpdateStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
   assert(restoreStatusInfo->storageName != NULL);
   assert(restoreStatusInfo->entryName != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&statusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*1000L)
   {
     // calculate estimated rest time
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     restoreStatusInfo->doneCount);
@@ -4610,6 +4620,7 @@ LOCAL void schedulerThreadCode(void)
     Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT);
     {
       currentDateTime = Misc_getCurrentDateTime();
+//TODO: LIST_ITERATEX()
       jobNode         = jobList.head;
       while (!quitFlag && !pendingFlag && (jobNode != NULL))
       {
@@ -4867,7 +4878,6 @@ LOCAL void purgeExpiredThreadCode(void)
 
   while (!quitFlag)
   {
-fprintf(stderr,"%s, %d: start purge\n",__FILE__,__LINE__);
     // check entities
     error = Index_initListEntities(&indexQueryHandle1,
                                    indexHandle,
@@ -4896,7 +4906,6 @@ fprintf(stderr,"%s, %d: start purge\n",__FILE__,__LINE__);
                                    )
             )
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         if (!String_isEmpty(scheduleUUID))
         {
           // get job name, schedule min./max. keep, max. age
@@ -5035,7 +5044,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
       Index_doneList(&indexQueryHandle1);
     }
-fprintf(stderr,"%s, %d: done purge\n",__FILE__,__LINE__);
 
     // sleep
     delayScheduleThread();
@@ -9166,6 +9174,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
+//TODO: LIST_ITERATEX()
     jobNode = jobList.head;
     while (   (jobNode != NULL)
            && !isCommandAborted(clientInfo,id)
@@ -13062,6 +13071,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
 
     // set volume number
     jobNode->volumeNumber = volumeNumber;
+    Semaphore_signalModified(&statusLock);
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -14688,6 +14698,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   uint64           lastCreatedDateTime;
   ulong            totalEntryCount;
   uint64           totalEntrySize;
+  SemaphoreLock    semaphoreLock;
   JobNode          *jobNode;
 
   assert(clientInfo != NULL);
@@ -14734,16 +14745,18 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
                              )
         )
   {
-    jobNode = findJobByUUID(jobUUID);
-    if (jobNode != NULL)
+    // get job name
+    String_set(name,jobUUID);
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
-      String_set(name,jobNode->name);
-    }
-    else
-    {
-      String_set(name,jobUUID);
+      jobNode = findJobByUUID(jobUUID);
+      if (jobNode != NULL)
+      {
+        String_set(name,jobNode->name);
+      }
     }
 
+    // send result
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                      "uuidId=%llu jobUUID=%S name=%'S lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%llu totalEntrySize=%llu",
                      uuidId,
@@ -15214,6 +15227,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   IndexStates      indexState;
   IndexModes       indexMode;
   uint64           lastCheckedDateTime;
+  SemaphoreLock    semaphoreLock;
   JobNode          *jobNode;
 
   assert(clientInfo != NULL);
@@ -15337,14 +15351,14 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
         )
   {
     // get job name
-    jobNode = findJobByUUID(jobUUID);
-    if (jobNode != NULL)
+    String_set(jobName,jobUUID);
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
-      String_set(jobName,jobNode->name);
-    }
-    else
-    {
-      String_clear(jobName);
+      jobNode = findJobByUUID(jobUUID);
+      if (jobNode != NULL)
+      {
+        String_set(jobName,jobNode->name);
+      }
     }
 
     // get printable name (if possible)
@@ -17867,6 +17881,7 @@ Errors Server_run(uint             port,
 
   // initialize variables
   AutoFree_init(&autoFreeList);
+  List_init(&authorizationFailList);
   serverPort              = port;
   serverCA                = ca;
   serverCert              = cert;
@@ -17874,20 +17889,22 @@ Errors Server_run(uint             port,
   serverPassword          = password;
   serverJobsDirectory     = jobsDirectory;
   serverDefaultJobOptions = defaultJobOptions;
+  List_init(&jobList);
   Semaphore_init(&jobList.lock);
   jobList.activeCount     = 0;
-  List_init(&jobList);
+  Semaphore_init(&statusLock);
   Semaphore_init(&serverStateLock);
-  List_init(&authorizationFailList);
   serverState             = SERVER_STATE_RUNNING;
   pauseFlags.create       = FALSE;
   pauseFlags.restore      = FALSE;
   pauseFlags.indexUpdate  = FALSE;
   pauseEndDateTime        = 0LL;
   quitFlag                = FALSE;
-  AUTOFREE_ADD(&autoFreeList,&jobList.lock,{ Semaphore_done(&jobList.lock); });
-  AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&jobList, { List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&jobList.lock,{ Semaphore_done(&jobList.lock); });
+  AUTOFREE_ADD(&autoFreeList,&statusLock,{ Semaphore_done(&serverStateLock); });
+  AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
@@ -18114,6 +18131,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   clientName = String_new();
   while (!quitFlag)
   {
+int i;
+
     // wait for connect or command
     FD_ZERO(&selectSet);
     if (serverFlag    && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))) FD_SET(Network_getServerSocket(&serverSocketHandle),   &selectSet);
@@ -18146,11 +18165,21 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
     selectTimeout.tv_sec  = (long)(waitTimeout / 1000000LL);
     selectTimeout.tv_nsec = (long)((waitTimeout % 1000000LL) * 1000LL);
+fprintf(stderr,"%s, %d: ask ",__FILE__,__LINE__);
+for (i = 0; i < FD_SETSIZE; i++)
+if (FD_ISSET(i,&selectSet)) fprintf(stderr," %d",i);
+fprintf(stderr,"\n");
+errno=0;
     n = pselect(FD_SETSIZE,&selectSet,NULL,NULL,&selectTimeout,&signalMask);
+fprintf(stderr,"%s, %d: got ",__FILE__,__LINE__);
+for (i = 0; i < FD_SETSIZE; i++)
+if (FD_ISSET(i,&selectSet)) fprintf(stderr," %d",i);
+fprintf(stderr,"\n");
     if (n < 0)
     {
       FD_ZERO(&selectSet);
     }
+fprintf(stderr,"%s, %d: select n=%d errno=%d %s\n",__FILE__,__LINE__,n,errno,strerror(errno));
 
     // connect new clients
     if (   serverFlag
@@ -18165,6 +18194,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error == ERROR_NONE)
       {
         Network_getRemoteInfo(&socketHandle,clientName,&clientPort);
+fprintf(stderr,"%s, %d: connect %d\n",__FILE__,__LINE__,Network_getSocket(&socketHandle));
 
         // initialize network for client
         clientNode = newNetworkClient(clientName,clientPort,socketHandle);
@@ -18203,6 +18233,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error == ERROR_NONE)
       {
         Network_getRemoteInfo(&socketHandle,clientName,&clientPort);
+fprintf(stderr,"%s, %d: connect %d\n",__FILE__,__LINE__,Network_getSocket(&socketHandle));
 
         // initialize network for client
         clientNode = newNetworkClient(clientName,clientPort,socketHandle);
@@ -18268,6 +18299,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           clientNode = List_remove(&clientList,disconnectClientNode);
 
           // disconnect
+fprintf(stderr,"%s, %d: disconnect %d\n",__FILE__,__LINE__,Network_getSocket(&disconnectClientNode->clientInfo.network.socketHandle));
           Network_disconnect(&disconnectClientNode->clientInfo.network.socketHandle);
 
           // update authorization fail info
@@ -18456,10 +18488,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Thread_done(&jobThread);
   Semaphore_done(&serverStateLock);
   if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
-  List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
+  Semaphore_done(&statusLock);
   Semaphore_done(&jobList.lock);
   List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
+  List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   AutoFree_done(&autoFreeList);
 
   logMessage(NULL,  // logHandle,

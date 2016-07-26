@@ -2579,6 +2579,15 @@ Dprintf.dprintf("cirrect?");
       {
         storageCount = valueMap.getInt("storageCount");
       }
+//TODO
+      if (storageCount < 0)
+      {
+        if (Settings.debugLevel > 0)
+        {
+          System.err.println("Warning: storageCount %d"+storageCount);
+        }
+        storageCount = 0;
+      }
 
       // set count
       display.syncExec(new Runnable()
@@ -7523,40 +7532,49 @@ Dprintf.dprintf("remove");
    */
   private void deleteStorage()
   {
-    HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
-    if (!indexDataHashSet.isEmpty())
+    if (!selectedIndexIdSet.isEmpty())
     {
-      // get number of entries
-      int  entries = 0;
-      long size    = 0L;
-      for (IndexData indexData : indexDataHashSet)
+      // set storage achives to restore
+      setStorageList(indexIdSet);
+
+      // get total number entries, size
+      int  totalEntryCount = 0;
+      long totalEntrySize  = 0L;
+      if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
+                                   1,  // debugLevel
+                                   errorMessage,
+                                   valueMap
+                                  ) == Errors.NONE
+         )
       {
-        entries += indexData.getEntryCount();
-        size    += indexData.getEntrySize();
+        totalEntryCount = valueMap.getLong("totalEntryCount");
+        totalEntrySize  = valueMap.getLong("totalEntrySize" );
       }
 
       // confirm
-      if (Dialogs.confirm(shell,BARControl.tr("Delete {0} {0,choice,0#jobs/entities/storage files|1#job/entity/storage file|1<jobs/entities/storage files} with {1} {1,choice,0#entries|1#entry|1<entries}/{2} {2,choice,0#bytes|1#byte|1<bytes}?",indexDataHashSet.size(),entries,size)))
+      if (Dialogs.confirm(shell,BARControl.tr("Delete {0} {0,choice,0#jobs/entities/storage files|1#job/entity/storage file|1<jobs/entities/storage files} with {1} {1,choice,0#entries|1#entry|1<entries}/{2} {2,choice,0#bytes|1#byte|1<bytes}?",indexDataHashSet.size(),totalEntryCount,totalEntrySize)))
       {
         final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and storage files",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
         busyDialog.setMaximum(indexDataHashSet.size());
 
-        new BackgroundTask(busyDialog,new Object[]{indexDataHashSet})
+        new BackgroundTask(busyDialog,new Object[]{selectedIndexIdSet})
         {
           @Override
           public void run(final BusyDialog busyDialog, Object userData)
           {
-            HashSet<IndexData> indexDataHashSet = (HashSet<IndexData>)((Object[])userData)[0];
+            IndexIdSet indexIdSet = (IndexIdSet)((Object[])userData)[0];
 
             try
             {
               boolean ignoreAllErrorsFlag = false;
               boolean abortFlag           = false;
               long    n                   = 0;
-              for (IndexData indexData : indexDataHashSet)
+Dprintf.dprintf("indexDataHashSet.size=%d",indexDataHashSet.size());
+              for (Long indexId : indexIdSet)
               {
                 // get index info
                 final String info = indexData.getInfo();
+Dprintf.dprintf("info=%s",info);
 
                 // update busy dialog
                 busyDialog.updateText(0,"%s",info);
