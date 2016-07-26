@@ -804,6 +804,7 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
 );
 CREATE INDEX ON directoryEntries (storageId,name);
 CREATE INDEX ON directoryEntries (entryId);
+CREATE INDEX ON directoryEntries (name);
 
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON directoryEntries
