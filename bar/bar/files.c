@@ -255,6 +255,16 @@ LOCAL void fileCheckValid(const char       *fileName,
   }
   pthread_mutex_unlock(&debugFileLock);
 
+//TODO
+#warning remove
+if (!(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file))))
+{
+fprintf(stderr,"%s, %d: %d %llu %llu\n",__FILE__,__LINE__,
+((fileHandle->mode & FILE_STREAM) == FILE_STREAM),
+fileHandle->index,
+(uint64)FTELL(fileHandle->file)
+);
+}
   assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
 }
 #endif /* NDEBUG */

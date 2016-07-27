@@ -1560,8 +1560,10 @@ or
 
     // init SSL
     error = initSSL(socketHandle,caData,caLength,certData,certLength,keyData,keyLength);
+fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     if (error == ERROR_NONE)
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       socketHandle->type = SOCKET_TYPE_TLS;
     }
 
@@ -1641,12 +1643,16 @@ Errors Network_accept(SocketHandle             *socketHandle,
       break;
     case SERVER_SOCKET_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         // init SSL
         error = initSSL(socketHandle,
 //TODO
-NULL,0,//                        serverSocketHandle->caFileName,
-NULL,0,//                        serverSocketHandle->certFileName,
-NULL,0//                        serverSocketHandle->keyFileName
+                        serverSocketHandle->caData,
+                        serverSocketHandle->caLength,
+                        serverSocketHandle->certData,
+                        serverSocketHandle->certLength,
+                        serverSocketHandle->keyData,
+                        serverSocketHandle->keyLength
                        );
         if (error != ERROR_NONE)
         {

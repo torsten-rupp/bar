@@ -13,9 +13,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#ifdef HAVE_SYS_SELECT_H
-  #include <sys/select.h>
-#endif /* HAVE_SYS_SELECT_H */
+#include <poll.h>
 #include <pthread.h>
 #include <locale.h>
 #include <time.h>
@@ -562,6 +560,7 @@ LOCAL struct
         bool indexUpdate;
       } pauseFlags;                                 // TRUE iff pause
 LOCAL uint64                pauseEndDateTime;       // pause end date/time [s]
+LOCAL IndexHandle           *indexHandle;           // index handle
 LOCAL bool                  quitFlag;               // TRUE iff quit requested
 
 /****************************** Macros *********************************/
@@ -17284,7 +17283,6 @@ LOCAL bool parseCommand(CommandMsg  *commandMsg,
 LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 {
   String      result;
-  IndexHandle *indexHandle;
   CommandMsg  commandMsg;
   #ifdef SERVER_DEBUG
     uint64 t0,t1;
@@ -17294,9 +17292,6 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 
   // init variables
   result = String_new();
-
-  // init index
-  indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
 
   while (   !clientInfo->quitFlag
          && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg),WAIT_FOREVER)
@@ -17329,9 +17324,6 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
     // free resources
     freeCommandMsg(&commandMsg,NULL);
   }
-
-  // done index
-  Index_close(indexHandle);
 
   // free resources
   String_delete(result);
@@ -17651,6 +17643,7 @@ LOCAL ClientNode *newClient(void)
 
 LOCAL ClientNode *newNetworkClient(ConstString  name,
                                    uint         port,
+//TODO pointer?
                                    SocketHandle socketHandle
                                   )
 {
@@ -17846,16 +17839,16 @@ void Server_doneAll(void)
 {
 }
 
-Errors Server_run(uint             port,
-                  uint             tlsPort,
-                  const Key        *ca,
-                  const Key        *cert,
-                  const Key        *key,
-                  const Password   *password,
-                  uint             maxConnections,
-                  const char       *jobsDirectory,
-                  const char       *indexDatabaseFileName,
-                  const JobOptions *defaultJobOptions
+Errors Server_run(uint              port,
+                  uint              tlsPort,
+                  const Certificate *ca,
+                  const Certificate *cert,
+                  const Key         *key,
+                  const Password    *password,
+                  uint              maxConnections,
+                  const char        *jobsDirectory,
+                  const char        *indexDatabaseFileName,
+                  const JobOptions  *defaultJobOptions
                  )
 {
   AutoFreeList          autoFreeList;
@@ -17863,7 +17856,10 @@ Errors Server_run(uint             port,
   bool                  serverFlag,serverTLSFlag;
   ServerSocketHandle    serverSocketHandle,serverTLSSocketHandle;
   sigset_t              signalMask;
-  fd_set                selectSet;
+  struct pollfd         *pollfds;
+  uint                  maxPollfdCount;
+  uint                  pollfdCount;
+  uint                  pollServerSocketIndex,pollServerTLSSocketIndex;
   uint64                nowTimestamp,waitTimeout,nextTimestamp;
   bool                  clientOkFlag;
   struct timespec       selectTimeout;
@@ -17874,9 +17870,10 @@ Errors Server_run(uint             port,
   ClientList            clientList;
   String                clientName;
   uint                  clientPort;
-  char                  buffer[256];
+  uint                  pollfdIndex;
+  char                  buffer[2028];
   ulong                 receivedBytes;
-  ulong                 z;
+  ulong                 i;
   ClientNode            *disconnectClientNode;
 
   // initialize variables
@@ -17899,6 +17896,7 @@ Errors Server_run(uint             port,
   pauseFlags.restore      = FALSE;
   pauseFlags.indexUpdate  = FALSE;
   pauseEndDateTime        = 0LL;
+  indexHandle             = NULL;
   quitFlag                = FALSE;
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&jobList, { List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL)); });
@@ -17959,7 +17957,6 @@ Errors Server_run(uint             port,
   serverTLSFlag = FALSE;
   if (port != 0)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = Network_initServer(&serverSocketHandle,
                                port
 #if 0
@@ -17987,10 +17984,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
   if (tlsPort != 0)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    if (   ((ca   != NULL) && (ca->data   != NULL))
-        && ((cert != NULL) && (cert->data != NULL))
-        && ((key  != NULL) && (key->data  != NULL))
+    if (   isCertificateAvailable(ca)
+        && isCertificateAvailable(cert)
+        && isKeyAvailable(key)
        )
     {
       #ifdef HAVE_GNU_TLS
@@ -18047,9 +18043,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
     else
     {
-      if ((ca == NULL) || (ca->data == NULL)) printWarning("No certificate authority data (bar-ca.pem file) - TLS server not started.\n");
-      if ((cert == NULL) || (cert->data == NULL)) printWarning("No certificate data (bar-server-cert.pem file) - TLS server not started.\n");
-      if ((key == NULL) || (key->data == NULL)) printWarning("No key data (bar-server-key.pem file) - TLS server not started.\n");
+      if (!isCertificateAvailable(ca)) printWarning("No certificate authority data (bar-ca.pem file) - TLS server not started.\n");
+      if (!isCertificateAvailable(cert)) printWarning("No certificate data (bar-server-cert.pem file) - TLS server not started.\n");
+      if (!isKeyAvailable(key)) printWarning("No key data (bar-server-key.pem file) - TLS server not started.\n");
     }
   }
   if (!serverFlag && !serverTLSFlag)
@@ -18117,26 +18113,60 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
   }
 
-  // run server
+  // init index
+  indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
+
+  // run as server
   if (globalOptions.serverDebugFlag)
   {
     printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!\n");
   }
 
-  // Note: ignore SIGALRM in pselect()
+  // Note: ignore SIGALRM in ppoll()
   sigemptyset(&signalMask);
   sigaddset(&signalMask,SIGALRM);
 
+  // process client requests
+  maxPollfdCount = 64;
+  pollfds = (struct pollfd*)malloc(maxPollfdCount * sizeof(struct pollfd));
+  if (pollfds == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
   List_init(&clientList);
   clientName = String_new();
   while (!quitFlag)
   {
-int i;
-
     // wait for connect or command
-    FD_ZERO(&selectSet);
-    if (serverFlag    && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))) FD_SET(Network_getServerSocket(&serverSocketHandle),   &selectSet);
-    if (serverTLSFlag && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))) FD_SET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet);
+    pollfdCount = 0;
+
+    if (serverFlag    && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
+    {
+      if (pollfdCount >= pollfdCount)
+      {
+        maxPollfdCount += 64;
+        pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
+        if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
+      }
+      pollfds[pollfdCount].fd     = Network_getServerSocket(&serverSocketHandle);
+      pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
+      pollServerSocketIndex = pollfdCount;
+      pollfdCount++;
+    }
+    if (serverTLSFlag && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
+    {
+      if (pollfdCount >= maxPollfdCount)
+      {
+        maxPollfdCount += 64;
+        pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
+        if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
+      }
+      pollfds[pollfdCount].fd     = Network_getServerSocket(&serverTLSSocketHandle);
+      pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
+      pollServerTLSSocketIndex = pollfdCount;
+      pollfdCount++;
+    }
+
     nowTimestamp = Misc_getTimestamp();
     waitTimeout  = 60LL*60LL*1000000LL; // wait for network connection max. 60min [us]
     LIST_ITERATE(&clientList,clientNode)
@@ -18157,34 +18187,31 @@ int i;
         }
       }
 
-      // add client to be served to select set
+      // add clients to be served to select set
       if (clientOkFlag)
       {
-        FD_SET(Network_getSocket(&clientNode->clientInfo.network.socketHandle),&selectSet);
+        if (pollfdCount >= maxPollfdCount)
+        {
+          maxPollfdCount += 64;
+          pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
+          if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
+        }
+        pollfds[pollfdCount].fd     = Network_getSocket(&clientNode->clientInfo.network.socketHandle);
+        pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
+        pollfdCount++;
       }
     }
     selectTimeout.tv_sec  = (long)(waitTimeout / 1000000LL);
     selectTimeout.tv_nsec = (long)((waitTimeout % 1000000LL) * 1000LL);
-fprintf(stderr,"%s, %d: ask ",__FILE__,__LINE__);
-for (i = 0; i < FD_SETSIZE; i++)
-if (FD_ISSET(i,&selectSet)) fprintf(stderr," %d",i);
-fprintf(stderr,"\n");
-errno=0;
-    n = pselect(FD_SETSIZE,&selectSet,NULL,NULL,&selectTimeout,&signalMask);
-fprintf(stderr,"%s, %d: got ",__FILE__,__LINE__);
-for (i = 0; i < FD_SETSIZE; i++)
-if (FD_ISSET(i,&selectSet)) fprintf(stderr," %d",i);
-fprintf(stderr,"\n");
-    if (n < 0)
-    {
-      FD_ZERO(&selectSet);
-    }
-fprintf(stderr,"%s, %d: select n=%d errno=%d %s\n",__FILE__,__LINE__,n,errno,strerror(errno));
+//fprintf(stderr,"%s, %d: poll count=%d\n",__FILE__,__LINE__,pollfdCount);
+    n = ppoll(pollfds,pollfdCount,&selectTimeout,&signalMask);
+//fprintf(stderr,"%s, %d: poll n=%d\n",__FILE__,__LINE__,n);
+//for (pollfdIndex = 0; pollfdIndex < pollfdCount; pollfdIndex++) if (pollfds[pollfdIndex].revents != 0) fprintf(stderr,"%s, %d: got z=%d: %d %x\n",__FILE__,__LINE__,pollfdIndex,pollfds[pollfdIndex].fd,pollfds[pollfdIndex].revents);
 
     // connect new clients
     if (   serverFlag
         && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
-        && FD_ISSET(Network_getServerSocket(&serverSocketHandle),&selectSet)
+        && (pollfds[pollServerSocketIndex].revents == POLLIN)
        )
     {
       error = Network_accept(&socketHandle,
@@ -18194,7 +18221,6 @@ fprintf(stderr,"%s, %d: select n=%d errno=%d %s\n",__FILE__,__LINE__,n,errno,str
       if (error == ERROR_NONE)
       {
         Network_getRemoteInfo(&socketHandle,clientName,&clientPort);
-fprintf(stderr,"%s, %d: connect %d\n",__FILE__,__LINE__,Network_getSocket(&socketHandle));
 
         // initialize network for client
         clientNode = newNetworkClient(clientName,clientPort,socketHandle);
@@ -18223,7 +18249,7 @@ fprintf(stderr,"%s, %d: connect %d\n",__FILE__,__LINE__,Network_getSocket(&socke
     }
     if (   serverTLSFlag
         && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
-        && FD_ISSET(Network_getServerSocket(&serverTLSSocketHandle),&selectSet)
+        && (pollfds[pollServerTLSSocketIndex].revents == POLLIN)
        )
     {
       error = Network_accept(&socketHandle,
@@ -18233,7 +18259,6 @@ fprintf(stderr,"%s, %d: connect %d\n",__FILE__,__LINE__,Network_getSocket(&socke
       if (error == ERROR_NONE)
       {
         Network_getRemoteInfo(&socketHandle,clientName,&clientPort);
-fprintf(stderr,"%s, %d: connect %d\n",__FILE__,__LINE__,Network_getSocket(&socketHandle));
 
         // initialize network for client
         clientNode = newNetworkClient(clientName,clientPort,socketHandle);
@@ -18262,87 +18287,141 @@ fprintf(stderr,"%s, %d: connect %d\n",__FILE__,__LINE__,Network_getSocket(&socke
     }
 
     // process client commands/disconnect clients
-    clientNode = clientList.head;
-    while (clientNode != NULL)
+    for (pollfdIndex = 0; pollfdIndex < pollfdCount; pollfdIndex++)
     {
-      if (FD_ISSET(Network_getSocket(&clientNode->clientInfo.network.socketHandle),&selectSet))
+      if (pollfds[pollfdIndex].revents != 0)
       {
-        // receive data from client
-        Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),WAIT_FOREVER,&receivedBytes);
-        if (receivedBytes > 0)
+        // find client node
+        clientNode = LIST_FIND(&clientList,
+                               clientNode,
+                               pollfds[pollfdIndex].fd == Network_getSocket(&clientNode->clientInfo.network.socketHandle)
+                              );
+        if (clientNode != NULL)
         {
-          // received data -> process
-          do
+          if ((pollfds[pollfdIndex].revents & POLLIN) != 0)
           {
-            for (z = 0; z < receivedBytes; z++)
+            // receive data from client
+            Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),WAIT_FOREVER,&receivedBytes);
+            if (receivedBytes > 0)
             {
-              if (buffer[z] != '\n')
+              // received data -> process
+              do
               {
-                String_appendChar(clientNode->commandString,buffer[z]);
+                for (i = 0; i < receivedBytes; i++)
+                {
+                  if (buffer[i] != '\n')
+                  {
+                    String_appendChar(clientNode->commandString,buffer[i]);
+                  }
+                  else
+                  {
+                    processCommand(&clientNode->clientInfo,clientNode->commandString);
+                    String_clear(clientNode->commandString);
+                  }
+                }
+                error = Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),WAIT_FOREVER,&receivedBytes);
               }
-              else
-              {
-                processCommand(&clientNode->clientInfo,clientNode->commandString);
-                String_clear(clientNode->commandString);
-              }
+              while ((error == ERROR_NONE) && (receivedBytes > 0));
             }
-            error = Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),WAIT_FOREVER,&receivedBytes);
-          }
-          while ((error == ERROR_NONE) && (receivedBytes > 0));
+            else
+            {
+              // remove from client list
+              disconnectClientNode = clientNode;
+              List_remove(&clientList,disconnectClientNode);
 
-          clientNode = clientNode->next;
-        }
-        else
-        {
-          // remove from client list
-          disconnectClientNode = clientNode;
-          clientNode = List_remove(&clientList,disconnectClientNode);
+              // disconnect
+              Network_disconnect(&disconnectClientNode->clientInfo.network.socketHandle);
 
-          // disconnect
-fprintf(stderr,"%s, %d: disconnect %d\n",__FILE__,__LINE__,Network_getSocket(&disconnectClientNode->clientInfo.network.socketHandle));
-          Network_disconnect(&disconnectClientNode->clientInfo.network.socketHandle);
-
-          // update authorization fail info
-          switch (disconnectClientNode->clientInfo.authorizationState)
-          {
-            case AUTHORIZATION_STATE_WAITING:
-              break;
-            case AUTHORIZATION_STATE_OK:
-              // remove from authorization fail list
+              // update authorization fail info
+              switch (disconnectClientNode->clientInfo.authorizationState)
+              {
+                case AUTHORIZATION_STATE_WAITING:
+                  break;
+                case AUTHORIZATION_STATE_OK:
+                  // remove from authorization fail list
 #ifndef WERROR
 #warning ERRRORRRRRR: two clients from same host, then disconnect: node is deleted twice
 #endif
-              authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
-              if (authorizationFailNode != NULL)
-              {
-                List_removeAndFree(&authorizationFailList,
-                                   authorizationFailNode,
-                                   CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
-                                  );
+                  authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
+                  if (authorizationFailNode != NULL)
+                  {
+                    List_removeAndFree(&authorizationFailList,
+                                       authorizationFailNode,
+                                       CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
+                                      );
+                  }
+                  break;
+                case AUTHORIZATION_STATE_FAIL:
+                  // add to/update authorization fail list
+                  authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
+                  if (authorizationFailNode == NULL)
+                  {
+                    authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.network.name);
+                    assert(authorizationFailNode != NULL);
+                    List_append(&authorizationFailList,authorizationFailNode);
+                  }
+                  authorizationFailNode->count++;
+                  authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+                  break;
               }
-              break;
-            case AUTHORIZATION_STATE_FAIL:
-              // add to/update authorization fail list
-              authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
-              if (authorizationFailNode == NULL)
-              {
-                authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.network.name);
-                assert(authorizationFailNode != NULL);
-                List_append(&authorizationFailList,authorizationFailNode);
-              }
-              authorizationFailNode->count++;
-              authorizationFailNode->lastTimestamp = Misc_getTimestamp();
-              break;
-          }
-          printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.network.name),disconnectClientNode->clientInfo.network.port);
+              printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.network.name),disconnectClientNode->clientInfo.network.port);
 
-          // free resources
-          deleteClient(disconnectClientNode);
+              // free resources
+              deleteClient(disconnectClientNode);
+            }
+          }
+          else if ((pollfds[pollfdIndex].revents & (POLLERR|POLLNVAL)) != 0)
+          {
+            // error/disconnect -> remove from client list
+            disconnectClientNode = clientNode;
+            clientNode = List_remove(&clientList,disconnectClientNode);
+
+            // disconnect
+            Network_disconnect(&disconnectClientNode->clientInfo.network.socketHandle);
+
+            // update authorization fail info
+            switch (disconnectClientNode->clientInfo.authorizationState)
+            {
+              case AUTHORIZATION_STATE_WAITING:
+                break;
+              case AUTHORIZATION_STATE_OK:
+                // remove from authorization fail list
+#ifndef WERROR
+#warning ERRRORRRRRR: two clients from same host, then disconnect: node is deleted twice
+#endif
+                authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
+                if (authorizationFailNode != NULL)
+                {
+                  List_removeAndFree(&authorizationFailList,
+                                     authorizationFailNode,
+                                     CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
+                                    );
+                }
+                break;
+              case AUTHORIZATION_STATE_FAIL:
+                // add to/update authorization fail list
+                authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
+                if (authorizationFailNode == NULL)
+                {
+                  authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.network.name);
+                  assert(authorizationFailNode != NULL);
+                  List_append(&authorizationFailList,authorizationFailNode);
+                }
+                authorizationFailNode->count++;
+                authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+                break;
+            }
+            printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.network.name),disconnectClientNode->clientInfo.network.port);
+
+            // free resources
+            deleteClient(disconnectClientNode);
+          }
+          else
+          {
+//TODO: remove unknown
+  fprintf(stderr,"%s, %d: %x\n",__FILE__,__LINE__,pollfds[pollfdIndex].revents);
+          }
         }
-      }
-      else
-      {
-        clientNode = clientNode->next;
       }
     }
 
@@ -18437,6 +18516,9 @@ fprintf(stderr,"%s, %d: disconnect %d\n",__FILE__,__LINE__,Network_getSocket(&di
   }
   String_delete(clientName);
   List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
+#ifndef USE_POLL
+  free(pollfds);
+#endif
 
   // disconnect all clients
   while (!List_isEmpty(&clientList))
@@ -18446,6 +18528,9 @@ fprintf(stderr,"%s, %d: disconnect %d\n",__FILE__,__LINE__,Network_getSocket(&di
     Network_disconnect(&clientNode->clientInfo.network.socketHandle);
     deleteClient(clientNode);
   }
+
+  // done index
+  Index_close(indexHandle);
 
   // wait for thread exit
   Semaphore_setEnd(&jobList.lock);
@@ -18539,6 +18624,15 @@ fprintf(stderr,"%s, %d: %x\n",__FILE__,__LINE__,error);
   }
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
+  // init index
+  indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
+
+  // run in batch mode
+  if (globalOptions.serverDebugFlag)
+  {
+    printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!\n");
+  }
+
   // init client
   initClient(&clientInfo);
   initBatchClient(&clientInfo,&outputFileHandle);
@@ -18551,7 +18645,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 );
   File_flush(&outputFileHandle);
 
-  // run server
+  // process client requests
   commandString = String_new();
 #if 1
   while (!quitFlag && !File_eof(&inputFileHandle))
@@ -18572,6 +18666,9 @@ String_setCString(commandString,"3 ARCHIVE_LIST name=test.bar");processCommand(&
 processCommand(&clientInfo,commandString);
 #endif /* 0 */
   String_delete(commandString);
+
+  // done index
+  Index_close(indexHandle);
 
   // free resources
   doneClient(&clientInfo);

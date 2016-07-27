@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <poll.h>
 #ifdef HAVE_SYS_INOTIFY_H
   #include <sys/inotify.h>
 #endif
@@ -1623,6 +1624,7 @@ LOCAL void continuousThreadCode(void)
   void                       *buffer;
   String                     absoluteName;
   sigset_t                   signalMask;
+  struct pollfd              pollfds[1];
   fd_set                     selectSet;
   struct timespec            selectTimeout;
   ssize_t                    n;
@@ -1640,7 +1642,7 @@ LOCAL void continuousThreadCode(void)
   }
   absoluteName = String_new();
 
-  // Note: ignore SIGALRM in pselect()
+  // Note: ignore SIGALRM in ppoll()
   sigemptyset(&signalMask);
   sigaddset(&signalMask,SIGALRM);
 
@@ -1651,17 +1653,14 @@ LOCAL void continuousThreadCode(void)
     do
     {
       // wait for event or timeout
-      FD_ZERO(&selectSet);
-      FD_SET(inotifyHandle,&selectSet);
+      pollfds[0].fd     = inotifyHandle;
+      pollfds[0].events = POLLIN;
       selectTimeout.tv_sec  = 10L;
       selectTimeout.tv_nsec = 0L;
-      if (pselect(FD_SETSIZE,&selectSet,NULL,NULL,&selectTimeout,&signalMask) < 0)
-      {
-        FD_ZERO(&selectSet);
-      }
+      n = ppoll(pollfds,1,&selectTimeout,&signalMask);
 
       // read events
-      if (FD_ISSET(inotifyHandle,&selectSet))
+      if ((pollfds[0].revents & POLLIN) != 0)
       {
         n = read(inotifyHandle,buffer,BUFFER_SIZE);
       }

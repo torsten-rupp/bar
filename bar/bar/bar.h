@@ -1645,8 +1645,8 @@ void configValueFormatDoneCompressAlgorithms(void **formatUserData, void *userDa
 bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
-* Name   : configValueParseKeyFile
-* Purpose: config value option call back for reading key
+* Name   : configValueParseCertificate
+* Purpose: config value option call back for parsing certificate
 * Input  : userData - user data
 *          variable - config variable
 *          name     - config name
@@ -1654,7 +1654,22 @@ bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, 
 * Output : -
 * Return : TRUE if config value parsed and stored into variable, FALSE
 *          otherwise
-* Notes  : -
+* Notes  : read from file or decode base64 data
+\***********************************************************************/
+
+bool configValueParseCertificate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
+/***********************************************************************\
+* Name   : configValueParseKeyFile
+* Purpose: config value option call back for parsing key
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : read from file or decode base64 data
 \***********************************************************************/
 
 bool configValueParseKey(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);

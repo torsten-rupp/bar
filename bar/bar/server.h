@@ -106,16 +106,16 @@ void Server_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-Errors Server_run(uint             serverPort,
-                  uint             serverTLSPort,
-                  const Key        *ca,
-                  const Key        *cert,
-                  const Key        *key,
-                  const Password   *password,
-                  uint             maxConnections,
-                  const char       *jobsDirectory,
-                  const char       *indexDatabaseFileName,
-                  const JobOptions *defaultJobOptions
+Errors Server_run(uint              serverPort,
+                  uint              serverTLSPort,
+                  const Certificate *ca,
+                  const Certificate *cert,
+                  const Key         *key,
+                  const Password    *password,
+                  uint              maxConnections,
+                  const char        *jobsDirectory,
+                  const char        *indexDatabaseFileName,
+                  const JobOptions  *defaultJobOptions
                  );
 
 /***********************************************************************\
