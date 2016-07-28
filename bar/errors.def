@@ -94,7 +94,14 @@ ERROR TLS_CERTIFICATE_NOT_ACTIVE
     stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
   }
 
-ERROR TLS_HANDSHAKE                    "TLS (SSL) handshake failure"
+ERROR TLS_HANDSHAKE
+  stringCopy(errorText,"TLS (SSL) handshake failure",sizeof(errorText));
+  if (!stringIsEmpty(ERROR_TEXT))
+  {
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+  }
+
 ERROR INVALID_SSH_SPECIFIER            "invalid SSH specifier"
 ERROR NO_SSH_PUBLIC_KEY                "no SSh public key"
 ERROR NO_SSH_PRIVATE_KEY               "no SSh private key"

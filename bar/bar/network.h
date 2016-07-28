@@ -366,8 +366,8 @@ Errors Network_writeLine(SocketHandle *socketHandle,
 \***********************************************************************/
 
 Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
-                          uint               serverPort
-//                          ServerSocketTypes  serverSocketType,
+                          uint               serverPort,
+                          ServerSocketTypes  serverSocketType
 #if 0
                           const void         *caData,
                           uint               caLength,

@@ -7532,6 +7532,7 @@ Dprintf.dprintf("remove");
    */
   private void deleteStorage()
   {
+/*
     if (!selectedIndexIdSet.isEmpty())
     {
       // set storage achives to restore
@@ -7722,6 +7723,7 @@ Dprintf.dprintf("info=%s",info);
         };
       }
     }
+*/
   }
 
   //-----------------------------------------------------------------------

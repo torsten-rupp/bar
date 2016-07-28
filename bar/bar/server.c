@@ -17958,9 +17958,9 @@ Errors Server_run(uint              port,
   if (port != 0)
   {
     error = Network_initServer(&serverSocketHandle,
-                               port
+                               port,
+                               SERVER_SOCKET_TYPE_PLAIN
 #if 0
-                               SERVER_SOCKET_TYPE_PLAIN,
                                NULL,
                                0,
                                NULL,
@@ -17991,15 +17991,15 @@ Errors Server_run(uint              port,
     {
       #ifdef HAVE_GNU_TLS
         error = Network_initServer(&serverTLSSocketHandle,
-                                   tlsPort
+                                   tlsPort,
+                                   SERVER_SOCKET_TYPE_TLS
 #if 0
-                                   SERVER_SOCKET_TYPE_TLS,
-                                   ca->data,
-                                   ca->length,
-                                   cert->data,
-                                   cert->length,
-                                   key->data,
-                                   key->length
+                                   serverCA->data,
+                                   serverCA->length,
+                                   serverCert->data,
+                                   serverCert->length,
+                                   serverKey->data,
+                                   serverKey->length
 #endif
                                   );
         if (error != ERROR_NONE)
@@ -18012,23 +18012,6 @@ Errors Server_run(uint              port,
           return FALSE;
         }
         AUTOFREE_ADD(&autoFreeList,&serverTLSSocketHandle,{ Network_doneServer(&serverTLSSocketHandle); });
-        error = Network_startSSL(&serverTLSSocketHandle,
-                                 ca->data,
-                                 ca->length,
-                                 cert->data,
-                                 cert->length,
-                                 key->data,
-                                 key->length
-                                );
-        if (error != ERROR_NONE)
-        {
-          printError("Cannot initialize TLS/SSL server at port %u (error: %s)!\n",
-                     tlsPort,
-                     Error_getText(error)
-                    );
-          AutoFree_cleanup(&autoFreeList);
-          return FALSE;
-        }
         printInfo(1,"Started BAR TLS/SSL server on port %u\n",tlsPort);
         serverTLSFlag = TRUE;
       #else /* not HAVE_GNU_TLS */
@@ -18259,6 +18242,28 @@ Errors Server_run(uint              port,
       if (error == ERROR_NONE)
       {
         Network_getRemoteInfo(&socketHandle,clientName,&clientPort);
+
+        // start SSL
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+        error = Network_startSSL(&socketHandle,
+                                 serverCA->data,
+                                 serverCA->length,
+                                 serverCert->data,
+                                 serverCert->length,
+                                 serverKey->data,
+                                 serverKey->length
+                                );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!\n",
+                     String_cString(clientName),
+                     clientPort,
+                     Error_getText(error)
+                    );
+          AutoFree_cleanup(&autoFreeList);
+          return FALSE;
+        }
 
         // initialize network for client
         clientNode = newNetworkClient(clientName,clientPort,socketHandle);
