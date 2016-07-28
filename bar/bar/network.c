@@ -68,6 +68,8 @@
 
 /****************** Conditional compilation switches *******************/
 
+#define _GNUTLS_DEBUG     // enable for GNU TLS debug output
+
 /***************************** Constants *******************************/
 #ifdef HAVE_GNU_TLS
   #define DH_BITS 1024
@@ -99,7 +101,12 @@
   extern "C" {
 #endif
 
-void tlslog(int level, char *s) { fprintf(stderr,"%s,%d: %d %s",__FILE__,__LINE__,level,s); }
+#ifdef GNUTLS_DEBUG
+LOCAL void gnuTLSLog(int level, char *s)
+{
+  fprintf(stderr,"DEBUG GNU TLS %d: %s",level,s);
+}
+#endif /* GNUTLS_DEBUG */
 
 #ifdef HAVE_SSH2
 /***********************************************************************\
@@ -274,13 +281,24 @@ UNUSED_VARIABLE(caDataLength);
     return ERROR_INIT_TLS;
   }
 
-#if 1
+#if 0
   result = gnutls_certificate_set_x509_key_file(socketHandle->gnuTLS.credentials,
                                                 "/tmp/bar-server-cert.pem",
                                                 "/tmp/bar-server-key.pem",
                                                 GNUTLS_X509_FMT_PEM
                                                );
+#elif 0
+  result = gnutls_certificate_set_x509_key_file(socketHandle->gnuTLS.credentials,
+                                                "/tmp/x509-server.pem",
+                                                "/tmp/x509-server-key.pem",
+                                                GNUTLS_X509_FMT_PEM
+                                               );
 #else
+  #ifdef GNUTLS_DEBUG
+    fprintf(stderr,"DEBUG GNU TLS: certificate: ");write(2,certData,certLength);fprintf(stderr,"\n");
+    fprintf(stderr,"DEBUG GNU TLS: key:");write(2,keyData,keyLength);fprintf(stderr,"\n");
+  #endif /* GNUTLS_DEBUG */
+
   certDatum.data = certData;
   certDatum.size = certLength;
   keyDatum.data  = keyData;
@@ -417,8 +435,10 @@ Errors Network_initAll(void)
   #endif /* HAVE_GCRYPT */
   #ifdef HAVE_GNU_TLS
     gnutls_global_init();
-gnutls_global_set_log_level(10);
-gnutls_global_set_log_function(tlslog);
+    #ifdef GNUTLS_DEBUG
+      gnutls_global_set_log_level(10);
+      gnutls_global_set_log_function(tlslog);
+    #endif /* GNUTLS_DEBUG */
   #endif /* HAVE_GNU_TLS */
 
   #ifdef HAVE_SIGPIP
@@ -1412,6 +1432,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
   }
   listen(serverSocketHandle->handle,5);
 
+//TODO: remove
 #if 0
   switch (serverSocketType)
   {
@@ -1570,7 +1591,6 @@ Errors Network_startSSL(SocketHandle *socketHandle,
   #endif /* HAVE_GNU_TLS */
 
   assert(socketHandle->type == SOCKET_TYPE_PLAIN);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   #ifdef HAVE_GNU_TLS
     // check if all key files exists
@@ -1594,7 +1614,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return error;
     }
 
-#if 0
+#if 1
     // temporary disable non-blocking
     if ((socketHandle->flags & SOCKET_FLAG_NON_BLOCKING) !=  0)
     {
@@ -1610,14 +1630,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // init SSL
     error = initSSL(socketHandle,caData,caLength,certData,certLength,keyData,keyLength);
-fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     if (error == ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       socketHandle->type = SOCKET_TYPE_TLS;
     }
 
-#if 0
+#if 1
     // re-enable temporary non-blocking
     if ((socketHandle->flags & SOCKET_FLAG_NON_BLOCKING) !=  0)
     {
@@ -1688,6 +1706,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
     return error;
   }
 
+#if 0
   switch (serverSocketHandle->socketType)
   {
     case SERVER_SOCKET_TYPE_PLAIN:
@@ -1726,6 +1745,9 @@ fprintf(stderr,"%s, %d: call initSSL\n",__FILE__,__LINE__);
           break; /* not reached */
       #endif /* NDEBUG */
   }
+#else
+      socketHandle->type = SOCKET_TYPE_PLAIN;
+#endif
 
   if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
   {

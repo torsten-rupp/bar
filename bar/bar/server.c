@@ -18244,7 +18244,6 @@ Errors Server_run(uint              port,
         Network_getRemoteInfo(&socketHandle,clientName,&clientPort);
 
         // start SSL
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = Network_startSSL(&socketHandle,
                                  serverCA->data,
                                  serverCA->length,
@@ -18253,7 +18252,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                  serverKey->data,
                                  serverKey->length
                                 );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         if (error != ERROR_NONE)
         {
           printError("Cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!\n",
