@@ -26,6 +26,7 @@ WGET_OPTIONS="--timeout=30 --tries=3"
 UNZIP="unzip"
 XZ="xz"
 
+BZIP2_VERSION=1.0.6
 LZO_VERSION=2.09
 LIBGPG_ERROR_VERSION=1.20
 LIBGCRYPT_VERSION=1.6.4
@@ -402,18 +403,18 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $bzip2Flag -eq 1; then
-    # bzip2 1.0.5
+    # bzip2
     (
      cd $destination/packages
-     if test ! -f bzip2-1.0.5.tar.gz; then
-       $WGET $WGET_OPTIONS 'http://www.bzip.org/1.0.5/bzip2-1.0.5.tar.gz'
+     if test ! -f bzip2-$BZIP2_VERSION.tar.gz; then
+       $WGET $WGET_OPTIONS "http://www.bzip.org/$BZIP2_VERSION/bzip2-$BZIP2_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf bzip2-1.0.5.tar.gz
+       $TAR xzf bzip2-$BZIP2_VERSION.tar.gz
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/bzip2-1.0.5 bzip2)
+      (cd $destination; $LN -sfT packages/bzip2-$BZIP2_VERSION bzip2)
     fi
   fi
 
