@@ -33,9 +33,7 @@
 #ifdef HAVE_SYS_IOCTL_H
   #include <sys/ioctl.h>
 #endif /* HAVE_SYS_IOCTL_H */
-#ifdef HAVE_SYS_SELECT_H
-  #include <sys/select.h>
-#endif /* HAVE_SYS_SELECT_H */
+#include <poll.h>
 #include <signal.h>
 #ifdef HAVE_SSH2
   #include <openssl/crypto.h>
@@ -1151,8 +1149,8 @@ Errors Network_receive(SocketHandle *socketHandle,
                       )
 {
   sigset_t        signalMask;
-  struct timespec ts;
-  fd_set          fdSet;
+  struct timespec pollTimeout;
+  struct pollfd   pollfds[1];
   long            n;
 
   assert(socketHandle != NULL);
@@ -1164,23 +1162,29 @@ Errors Network_receive(SocketHandle *socketHandle,
     case SOCKET_TYPE_PLAIN:
       if (timeout == WAIT_FOREVER)
       {
+        // receive
         n = recv(socketHandle->handle,buffer,maxLength,0);
       }
       else
       {
-        // Note: ignore SIGALRM in pselect()
+        // Note: ignore SIGALRM in ppoll()
         sigemptyset(&signalMask);
         sigaddset(&signalMask,SIGALRM);
 
-        ts.tv_sec  = timeout/1000L;
-        ts.tv_nsec = (timeout%1000L)*1000000L;
-        FD_ZERO(&fdSet);
-        assert(socketHandle->handle < FD_SETSIZE);
-        FD_SET(socketHandle->handle,&fdSet);
-        if (pselect(socketHandle->handle+1,&fdSet,NULL,NULL,&ts,&signalMask) > 0)
+        // wait for data
+        pollTimeout.tv_sec  = timeout/1000L;
+        pollTimeout.tv_nsec = (timeout%1000L)*1000000L;
+        pollfds[0].fd     = socketHandle->handle;
+        pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
+        if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) == -1)
+            || ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
+           )
         {
-          n = recv(socketHandle->handle,buffer,maxLength,0);
+          break;
         }
+
+        // receive
+        n = recv(socketHandle->handle,buffer,maxLength,0);
       }
       break;
     case SOCKET_TYPE_SSH:
@@ -1194,11 +1198,27 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #ifdef HAVE_GNU_TLS
         if (timeout == WAIT_FOREVER)
         {
+          // receive
           n = gnutls_record_recv(socketHandle->gnuTLS.session,buffer,maxLength);
         }
         else
         {
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          // Note: ignore SIGALRM in ppoll()
+          sigemptyset(&signalMask);
+          sigaddset(&signalMask,SIGALRM);
+
+          // wait for data
+          pollfds[0].fd     = socketHandle->handle;
+          pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
+          if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) == -1)
+              || ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
+             )
+          {
+            break;
+          }
+
+          // receive
+          n = gnutls_record_recv(socketHandle->gnuTLS.session,buffer,maxLength);
         }
       #else /* not HAVE_GNU_TLS */
       #endif /* HAVE_GNU_TLS */
@@ -1221,8 +1241,8 @@ Errors Network_send(SocketHandle *socketHandle,
 {
   ulong           sentBytes;
   sigset_t        signalMask;
-  struct timespec ts;
-  fd_set          fdSetInput,fdSetOutput,fdSetError;
+  struct timespec pollTimeout;
+  struct pollfd   pollfds[1];
   long            n;
 
   assert(socketHandle != NULL);
@@ -1237,20 +1257,21 @@ Errors Network_send(SocketHandle *socketHandle,
           {
             assert(socketHandle->handle < FD_SETSIZE);
 
-            // Note: ignore SIGALRM in pselect()
+            // Note: ignore SIGALRM in ppoll()
             sigemptyset(&signalMask);
             sigaddset(&signalMask,SIGALRM);
 
             // wait until space in buffer is available
-            ts.tv_sec  = SEND_TIMEOUT/1000L;
-            ts.tv_nsec = (SEND_TIMEOUT%1000L)*1000000L;
-            FD_ZERO(&fdSetInput);
-            FD_SET(socketHandle->handle,&fdSetInput);
-            FD_ZERO(&fdSetOutput);
-            FD_SET(socketHandle->handle,&fdSetOutput);
-            FD_ZERO(&fdSetError);
-            FD_SET(socketHandle->handle,&fdSetError);
-            pselect(socketHandle->handle+1,NULL,&fdSetOutput,NULL,&ts,&signalMask);
+            pollTimeout.tv_sec  = SEND_TIMEOUT/1000L;
+            pollTimeout.tv_nsec = (SEND_TIMEOUT%1000L)*1000000L;
+            pollfds[0].fd     = socketHandle->handle;
+            pollfds[0].events = POLLOUT|POLLERR|POLLNVAL;
+            if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) == -1)
+                || ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
+               )
+            {
+              break;
+            }
 
             // send data
             n = send(socketHandle->handle,((byte*)buffer)+sentBytes,length-sentBytes,MSG_NOSIGNAL);
@@ -1272,20 +1293,21 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           {
             assert(socketHandle->handle < FD_SETSIZE);
 
-            // Note: ignore SIGALRM in pselect()
+            // Note: ignore SIGALRM in ppoll()
             sigemptyset(&signalMask);
             sigaddset(&signalMask,SIGALRM);
 
             // wait until space in buffer is available
-            ts.tv_sec  = SEND_TIMEOUT/1000L;
-            ts.tv_nsec = (SEND_TIMEOUT%1000L)*1000000L;
-            FD_ZERO(&fdSetInput);
-            FD_SET(socketHandle->handle,&fdSetInput);
-            FD_ZERO(&fdSetOutput);
-            FD_SET(socketHandle->handle,&fdSetOutput);
-            FD_ZERO(&fdSetError);
-            FD_SET(socketHandle->handle,&fdSetError);
-            pselect(socketHandle->handle+1,NULL,&fdSetOutput,NULL,&ts,&signalMask);
+            pollTimeout.tv_sec  = SEND_TIMEOUT/1000L;
+            pollTimeout.tv_nsec = (SEND_TIMEOUT%1000L)*1000000L;
+            pollfds[0].fd     = socketHandle->handle;
+            pollfds[0].events = POLLOUT|POLLERR|POLLNVAL;
+            if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) == -1)
+                || ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
+               )
+            {
+              break;
+            }
 
             // send data
             n = gnutls_record_send(socketHandle->gnuTLS.session,((byte*)buffer)+sentBytes,length-sentBytes);
