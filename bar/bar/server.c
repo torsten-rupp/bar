@@ -17862,7 +17862,7 @@ Errors Server_run(uint              port,
   uint                  pollServerSocketIndex,pollServerTLSSocketIndex;
   uint64                nowTimestamp,waitTimeout,nextTimestamp;
   bool                  clientOkFlag;
-  struct timespec       selectTimeout;
+  struct timespec       pollTimeout;
   int                   n;
   AuthorizationFailNode *authorizationFailNode,*oldestAuthorizationFailNode;
   ClientNode            *clientNode;
@@ -17993,14 +17993,6 @@ Errors Server_run(uint              port,
         error = Network_initServer(&serverTLSSocketHandle,
                                    tlsPort,
                                    SERVER_SOCKET_TYPE_TLS
-#if 0
-                                   serverCA->data,
-                                   serverCA->length,
-                                   serverCert->data,
-                                   serverCert->length,
-                                   serverKey->data,
-                                   serverKey->length
-#endif
                                   );
         if (error != ERROR_NONE)
         {
@@ -18110,7 +18102,7 @@ Errors Server_run(uint              port,
   sigaddset(&signalMask,SIGALRM);
 
   // process client requests
-  maxPollfdCount = 64;
+  maxPollfdCount = 64;  // initial max. number of parallel connections
   pollfds = (struct pollfd*)malloc(maxPollfdCount * sizeof(struct pollfd));
   if (pollfds == NULL)
   {
@@ -18151,7 +18143,7 @@ Errors Server_run(uint              port,
     }
 
     nowTimestamp = Misc_getTimestamp();
-    waitTimeout  = 60LL*60LL*1000000LL; // wait for network connection max. 60min [us]
+    waitTimeout  = 60LL*MISC_US_PER_MINUTE; // wait for network connection max. 60min [us]
     LIST_ITERATE(&clientList,clientNode)
     {
       clientOkFlag = TRUE;
@@ -18184,12 +18176,9 @@ Errors Server_run(uint              port,
         pollfdCount++;
       }
     }
-    selectTimeout.tv_sec  = (long)(waitTimeout / 1000000LL);
-    selectTimeout.tv_nsec = (long)((waitTimeout % 1000000LL) * 1000LL);
-//fprintf(stderr,"%s, %d: poll count=%d\n",__FILE__,__LINE__,pollfdCount);
-    n = ppoll(pollfds,pollfdCount,&selectTimeout,&signalMask);
-//fprintf(stderr,"%s, %d: poll n=%d\n",__FILE__,__LINE__,n);
-//for (pollfdIndex = 0; pollfdIndex < pollfdCount; pollfdIndex++) if (pollfds[pollfdIndex].revents != 0) fprintf(stderr,"%s, %d: got z=%d: %d %x\n",__FILE__,__LINE__,pollfdIndex,pollfds[pollfdIndex].fd,pollfds[pollfdIndex].revents);
+    pollTimeout.tv_sec  = (long)(waitTimeout / 1000000LL);
+    pollTimeout.tv_nsec = (long)((waitTimeout % 1000000LL) * 1000LL);
+    (void)ppoll(pollfds,pollfdCount,&pollTimeout,&signalMask);
 
     // connect new clients
     if (   serverFlag

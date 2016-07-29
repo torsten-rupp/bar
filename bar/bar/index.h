@@ -716,6 +716,8 @@ long Index_countState(IndexHandle *indexHandle,
                       IndexStates indexState
                      );
 
+// ---------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : Index_initListHistory
 * Purpose: list history
@@ -833,6 +835,8 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
                            IndexId     historyId
                           );
 
+// ---------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : Index_initListUUIDs
 * Purpose: list uuid entries and aggregated data of entities
@@ -918,6 +922,8 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
 Errors Index_isEmptyUUID(IndexHandle *indexHandle,
                          IndexId     uuidId
                         );
+
+// ---------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : Index_initListEntities
@@ -1026,6 +1032,8 @@ Errors Index_isEmptyEntity(IndexHandle *indexHandle,
                            IndexId     entityId
                           );
 
+// ---------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : Index_getStoragesInfo
 * Purpose: get storages info
@@ -1063,6 +1071,20 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                              uint64        *totalEntrySize,
                              uint64        *totalEntryContentSize
                             );
+
+/***********************************************************************\
+* Name   : Index_updateStoragesInfo
+* Purpose: update storages info (aggregated values)
+* Input  : indexHandle - index handle
+*          IndexId     - storageId
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_updateStoragesInfo(IndexHandle *indexHandle,
+                                IndexId     storageId
+                               );
 
 /***********************************************************************\
 * Name   : Index_initListStorages
@@ -1247,7 +1269,7 @@ Errors Index_getStorage(IndexHandle  *indexHandle,
 
 /***********************************************************************\
 * Name   : Index_storageUpdate
-* Purpose: update storage index name/entries/size
+* Purpose: update storage index name/size
 * Input  : indexHandle - index handle
 *          storageId   - index id of storage index
 *          storageName - storage name (can be NULL)
@@ -1262,6 +1284,8 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
                            ConstString storageName,
                            uint64      storageSize
                           );
+
+// ---------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : Index_getEntriesInfo
@@ -1394,6 +1418,8 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                          IndexId     entryId
                         );
 
+// ---------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : Index_initListFiles
 * Purpose: list file entries
@@ -1463,6 +1489,8 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
                         IndexId     indexId
                        );
 
+// ---------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : Index_initListImages
 * Purpose: list image entries
@@ -1523,6 +1551,8 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
 Errors Index_deleteImage(IndexHandle *indexHandle,
                          IndexId     indexId
                         );
+
+// ---------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : Index_initListDirectories
@@ -1585,6 +1615,8 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
 Errors Index_deleteDirectory(IndexHandle *indexHandle,
                              IndexId     indexId
                             );
+
+// ---------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : Index_initListLinks
@@ -1649,6 +1681,8 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
 Errors Index_deleteLink(IndexHandle *indexHandle,
                         IndexId     indexId
                        );
+
+// ---------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : Index_initListHardLinks
@@ -1719,6 +1753,8 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
                             IndexId     indexId
                            );
 
+// ---------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : Index_initListSpecial
 * Purpose: list special entries
@@ -1781,6 +1817,8 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
                            IndexId     indexId
                           );
 
+// ---------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : Index_doneList
 * Purpose: done index list
@@ -1791,6 +1829,8 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
 \***********************************************************************/
 
 void Index_doneList(IndexQueryHandle *indexQueryHandle);
+
+// ---------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : Index_addFile

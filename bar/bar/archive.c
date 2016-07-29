@@ -11162,7 +11162,7 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
     Index_setState(indexHandle,
                    storageId,
                    INDEX_STATE_ERROR,
-                   0LL,
+                   0LL,  // lastCheckedTimestamp
                    "aborted"
                   );
 
@@ -11172,11 +11172,12 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
   {
     printInfo(4,"Interrupted create index for '%s'\n",String_cString(printableStorageName));
 
+    // set index state
     Index_setState(indexHandle,
                    storageId,
                    INDEX_STATE_UPDATE_REQUESTED,
-                   0LL,
-                   NULL
+                   0LL,  // lastCheckedTimestamp
+                   NULL  // error text
                   );
 
     error = ERROR_INTERRUPTED;
@@ -11185,21 +11186,36 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
   {
     printInfo(4,"Done create index for '%s'\n",String_cString(printableStorageName));
 
-    // set index state 'OK', last checked time
-    Index_setState(indexHandle,
-                   storageId,
-                   INDEX_STATE_OK,
-                   Misc_getCurrentDateTime(),
-                   NULL
-                  );
+    // update storages info (aggregated values)
+    if (error == ERROR_NONE)
+    {
+      error = Index_updateStoragesInfo(indexHandle,
+                                       storageId
+                                      );
+    }
 
-    // update name/entries/size
-    error = Index_storageUpdate(indexHandle,
-                                storageId,
-                                storageName,
-                                Archive_getSize(&archiveInfo)
-                               );
-    if (error != ERROR_NONE)
+    // update name/size
+    if (error == ERROR_NONE)
+    {
+      error = Index_storageUpdate(indexHandle,
+                                  storageId,
+                                  storageName,
+                                  Archive_getSize(&archiveInfo)
+                                 );
+    }
+
+    // set index state, last checked time
+    if (error == ERROR_NONE)
+    {
+      // set index state 'OK', last checked time
+      Index_setState(indexHandle,
+                     storageId,
+                     INDEX_STATE_OK,
+                     Misc_getCurrentDateTime(),
+                     NULL
+                    );
+    }
+    else
     {
       Index_setState(indexHandle,
                      storageId,
@@ -11210,6 +11226,8 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
                      Error_getCode(error)
                     );
     }
+
+    // get total time last changed/entries/size
     if (totalTimeLastChanged != NULL) (*totalTimeLastChanged) = timeLastChanged;
     if (totalEntries != NULL) (*totalEntries) = Archive_getEntries(&archiveInfo);
     if (totalSize != NULL) (*totalSize) = Archive_getSize(&archiveInfo);

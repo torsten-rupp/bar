@@ -1159,7 +1159,7 @@ Dprintf.dprintf("");
       {
         StorageIndexData storageIndexData = (StorageIndexData)indexData;
 
- Widgets.updateTreeItem(treeItem,
+        Widgets.updateTreeItem(treeItem,
                                (Object)storageIndexData,
                                storageIndexData.name,
                                Units.formatByteSize(storageIndexData.totalEntrySize),

@@ -7582,6 +7582,207 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   return ERROR_NONE;
 }
 
+Errors Index_updateStoragesInfo(IndexHandle *indexHandle,
+                                IndexId     storageId
+                               )
+{
+  Errors              error;
+  ulong               totalFileCount;
+  uint64              totalFileSize;
+  ulong               totalImageCount;
+  uint64              totalImageSize;
+  ulong               totalDirectoryCount;
+  ulong               totalLinkCount;
+  ulong               totalHardlinkCount;
+  uint64              totalHardlinkSize;
+  ulong               totalSpecialCount;
+  DatabaseQueryHandle databaseQueryHandle;
+  double              totalEntrySize_;
+  double              totalFileSize_;
+  double              totalImageSize_;
+  double              totalHardlinkSize_;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    // get file aggregate data
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT COUNT(id),TOTAL(fragmentSize) \
+                              FROM fileEntries \
+                              WHERE id=%lld; \
+                             ",
+                             Index_getDatabaseId(storageId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    Database_getNextRow(&databaseQueryHandle,
+                        "%lu %lf",
+                        &totalFileCount,
+                        &totalFileSize_
+                       );
+    totalFileSize = (uint64)totalFileSize_;
+    Database_finalize(&databaseQueryHandle);
+
+    // get image aggregate data
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT COUNT(id),TOTAL(blockSize*blockCount) \
+                              FROM imageEntries \
+                              WHERE id=%lld; \
+                             ",
+                             Index_getDatabaseId(storageId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    Database_getNextRow(&databaseQueryHandle,
+                        "%lu %lf",
+                        &totalImageCount,
+                        &totalImageSize_
+                       );
+    totalImageSize = (uint64)totalImageSize_;
+    Database_finalize(&databaseQueryHandle);
+
+    // get directory aggregate data
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT COUNT(id) \
+                              FROM directoryEntries \
+                              WHERE id=%lld; \
+                             ",
+                             Index_getDatabaseId(storageId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    Database_getNextRow(&databaseQueryHandle,
+                        "%lu",
+                        &totalDirectoryCount
+                       );
+    Database_finalize(&databaseQueryHandle);
+
+    // get link aggregate data
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT COUNT(id) \
+                              FROM linkEntries \
+                              WHERE id=%lld; \
+                             ",
+                             Index_getDatabaseId(storageId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    Database_getNextRow(&databaseQueryHandle,
+                        "%lu",
+                        &totalLinkCount
+                       );
+    Database_finalize(&databaseQueryHandle);
+
+    // get hardlink aggregate data
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT COUNT(id),TOTAL(fragmentSize) \
+                              FROM hardlinkEntries \
+                              WHERE id=%lld; \
+                             ",
+                             Index_getDatabaseId(storageId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    Database_getNextRow(&databaseQueryHandle,
+                        "%lu %lf",
+                        &totalHardlinkCount,
+                        &totalHardlinkSize_
+                       );
+    totalHardlinkSize = (uint64)totalHardlinkSize_;
+    Database_finalize(&databaseQueryHandle);
+
+    // get special aggregate data
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT COUNT(id) \
+                              FROM specialEntries \
+                              WHERE id=%lld; \
+                             ",
+                             Index_getDatabaseId(storageId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    Database_getNextRow(&databaseQueryHandle,
+                        "%lu",
+                        &totalSpecialCount
+                       );
+    Database_finalize(&databaseQueryHandle);
+
+    // update aggregate data
+fprintf(stderr,"%s, %d: %lld: %llu %llu\n  %llu %llu %llu %llu %llu %llu %llu %llu %llu\n",__FILE__,__LINE__,Index_getDatabaseId(storageId),
+                             totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
+                             totalFileSize+totalImageSize+totalHardlinkSize,
+                             totalFileCount,
+                             totalFileSize,
+                             totalImageCount,
+                             totalImageSize,
+                             totalDirectoryCount,
+                             totalLinkCount,
+                             totalHardlinkCount,
+                             totalHardlinkSize,
+                             totalSpecialCount
+);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "UPDATE storage \
+                              SET totalEntryCount=%llu, \
+                                  totalEntrySize=%llu, \
+                                  totalFileCount=%llu, \
+                                  totalFileSize=%llu, \
+                                  totalImageCount=%llu, \
+                                  totalImageSize=%llu, \
+                                  totalDirectoryCount=%llu, \
+                                  totalLinkCount=%llu, \
+                                  totalHardlinkCount=%llu, \
+                                  totalHardlinkSize=%llu, \
+                                  totalSpecialCount=%llu \
+                              WHERE id=%lld; \
+                             ",
+                             totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
+                             totalFileSize+totalImageSize+totalHardlinkSize,
+                             totalFileCount,
+                             totalFileSize,
+                             totalImageCount,
+                             totalImageSize,
+                             totalDirectoryCount,
+                             totalLinkCount,
+                             totalHardlinkCount,
+                             totalHardlinkSize,
+                             totalSpecialCount,
+                             Index_getDatabaseId(storageId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
+}
+
 Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               IndexHandle           *indexHandle,
                               IndexId               uuidId,

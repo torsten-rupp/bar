@@ -17,7 +17,9 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <poll.h>
 #include <time.h>
+#include <sys/select.h>
 #ifdef HAVE_CURL
   #include <curl/curl.h>
 #endif /* HAVE_CURL */
@@ -170,10 +172,6 @@ LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
 
   assert(curlMultiHandle != NULL);
 
-  // Note: ignore SIGALRM in pselect()
-  sigemptyset(&signalMask);
-  sigaddset(&signalMask,SIGALRM);
-
   // get file descriptors from the transfers
   FD_ZERO(&fdSetRead);
   FD_ZERO(&fdSetWrite);
@@ -194,6 +192,11 @@ LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
     ts.tv_nsec = (READ_TIMEOUT%1000L)*1000000L;
   }
 
+  // Note: ignore SIGALRM in pselect()
+  sigemptyset(&signalMask);
+  sigaddset(&signalMask,SIGALRM);
+
+//TODO: replace by ppoll()
   // wait
   switch (pselect(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&ts,&signalMask))
   {
@@ -539,8 +542,8 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 {
   LIBSSH2_SESSION *session;
   sigset_t        signalMask;
-  struct timespec ts;
-  fd_set          fdSet;
+  struct timespec pollTimeout;
+  struct pollfd   pollfds[1];
 
   assert(socketHandle != NULL);
 
@@ -553,8 +556,17 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
   sigaddset(&signalMask,SIGALRM);
 
   // wait for max. 60s
-  ts.tv_sec  = 60L;
-  ts.tv_nsec = 0L;
+#if 1
+  pollTimeout.tv_sec  = 60L;
+  pollTimeout.tv_nsec = 0L;
+  pollfds[0].fd     = socketHandle->handle;
+  pollfds[0].events = POLLERR|POLLNVAL;
+  if ((libssh2_session_block_directions(session) & LIBSSH2_SESSION_BLOCK_INBOUND ) != 0) pollfds[0].events |= POLLIN;
+  if ((libssh2_session_block_directions(session) & LIBSSH2_SESSION_BLOCK_OUTBOUND) != 0) pollfds[0].events |= POLLOUT;
+  return (   (ppoll(pollfds,1,&pollTimeout,&signalMask) > 0)
+          && ((pollfds[0].revents & (POLLERR|POLLNVAL)) == 0)
+         );
+#else
   FD_ZERO(&fdSet);
   FD_SET(socketHandle->handle,&fdSet);
   return (pselect(socketHandle->handle+1,
@@ -565,6 +577,7 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
                  &signalMask
                 ) > 0
          );
+#endif
 }
 #endif /* HAVE_SSH2 */
 

@@ -1871,6 +1871,10 @@ public class BARControl
           {
             Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
           }
+          catch (CommunicationError error)
+          {
+            Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
+          }
           Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
         }
       });
@@ -2324,6 +2328,13 @@ public class BARControl
                 break;
               }
             }
+            catch (CommunicationError reconnectError)
+            {
+              if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+              {
+                break;
+              }
+            }
           }
           while (   !connectOkFlag
                  && getLoginData(loginData)
@@ -2343,6 +2354,13 @@ public class BARControl
               Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
             }
             catch (ConnectionError reconnectError)
+            {
+              if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+              {
+                break;
+              }
+            }
+            catch (CommunicationError reconnectError)
             {
               if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
               {
@@ -3217,6 +3235,13 @@ Dprintf.dprintf("still not supported");
             if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
             {
               System.exit(1);
+            }
+          }
+          catch (CommunicationError error)
+          {
+            if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+            {
+              break;
             }
           }
         }

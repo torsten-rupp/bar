@@ -673,6 +673,7 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
           size  =NEW.fragmentSize
       WHERE id=NEW.entryId;
 
+/*
     // update count/size in storage
 // insert into log values('trigger fileEntries: before UPDATE storage totalEntryCount='||(select totalEntryCount from storage where id=NEW.storageId)||' totalEntrySize='||(select totalEntrySize from storage where id=NEW.storageId));
     UPDATE storage
@@ -682,7 +683,7 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
           totalFileSize  =totalFileSize  +NEW.fragmentSize
       WHERE id=NEW.storageId;
 // insert into log values('trigger fileEntries: after UPDATE storage totalEntryCount='||(select totalEntryCount from storage where id=NEW.storageId)||' totalEntrySize='||(select totalEntrySize from storage where id=NEW.storageId));
-
+*/
     // update count/size in parent directories
     UPDATE directoryEntries
       SET totalEntryCount=totalEntryCount+1,
@@ -694,6 +695,7 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
 CREATE TRIGGER BEFORE DELETE ON fileEntries
   BEGIN
 // insert into log values('trigger fileEntries: DELETE entryId='||OLD.entryId||' storageId='||OLD.storageId||' fragmentSize='||OLD.fragmentSize);
+/*
     // update count/size in storage
     UPDATE storage
       SET totalEntryCount=totalEntryCount-1,
@@ -701,6 +703,7 @@ CREATE TRIGGER BEFORE DELETE ON fileEntries
           totalFileCount =totalFileCount -1,
           totalFileSize  =totalFileSize  -OLD.fragmentSize
       WHERE id=OLD.storageId;
+*/
 
     // update count/size in parent directories
     UPDATE directoryEntries
@@ -711,6 +714,7 @@ CREATE TRIGGER BEFORE DELETE ON fileEntries
 // insert into log values('done');
   END;
 
+/*
 CREATE TRIGGER AFTER UPDATE OF storageId,fragmentSize ON fileEntries
   BEGIN
     // update count/size in storage
@@ -727,6 +731,7 @@ CREATE TRIGGER AFTER UPDATE OF storageId,fragmentSize ON fileEntries
           totalFileSize  =totalFileSize  +NEW.fragmentSize
       WHERE id=NEW.storageId;
   END;
+*/
 
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS imageEntries(
@@ -742,6 +747,7 @@ CREATE TABLE IF NOT EXISTS imageEntries(
 CREATE INDEX ON imageEntries (storageId);
 CREATE INDEX ON imageEntries (entryId);
 
+/*
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON imageEntries
   BEGIN
@@ -759,7 +765,9 @@ CREATE TRIGGER AFTER INSERT ON imageEntries
           totalImageSize =totalImageSize +NEW.blockCount*NEW.blockSize
       WHERE id=NEW.storageId;
   END;
+*/
 
+/*
 CREATE TRIGGER BEFORE DELETE ON imageEntries
   BEGIN
     // update count/size in storage
@@ -770,7 +778,9 @@ CREATE TRIGGER BEFORE DELETE ON imageEntries
           totalImageSize =totalImageSize -OLD.blockSize*OLD.blockCount
       WHERE id=OLD.storageId;
   END;
+*/
 
+/*
 CREATE TRIGGER AFTER UPDATE OF storageId,blockSize,blockCount ON imageEntries
   BEGIN
     // update count in storage
@@ -787,6 +797,7 @@ CREATE TRIGGER AFTER UPDATE OF storageId,blockSize,blockCount ON imageEntries
           totalImageSize =totalImageSize +NEW.blockSize*NEW.blockCount
       WHERE id=NEW.storageId;
   END;
+*/
 
 // --- directories -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS directoryEntries(
@@ -815,11 +826,13 @@ CREATE TRIGGER AFTER INSERT ON directoryEntries
           size  =0
       WHERE id=NEW.entryId;
 
+/*
     // update count in storage
     UPDATE storage
       SET totalEntryCount    =totalEntryCount    +1,
           totalDirectoryCount=totalDirectoryCount+1
       WHERE storage.id=NEW.storageId;
+*/
 
     // update count in parent directories
     UPDATE directoryEntries
@@ -829,6 +842,7 @@ CREATE TRIGGER AFTER INSERT ON directoryEntries
 // insert into log values('incremtn parent '||DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId)));
   END;
 
+/*
 CREATE TRIGGER BEFORE DELETE ON directoryEntries
   BEGIN
     // update count/size in storage
@@ -837,7 +851,9 @@ CREATE TRIGGER BEFORE DELETE ON directoryEntries
           totalDirectoryCount=totalDirectoryCount-1
       WHERE storage.id=OLD.storageId;
   END;
+*/
 
+/*
 CREATE TRIGGER AFTER UPDATE OF storageId ON directoryEntries
   BEGIN
     // update count in storage
@@ -850,6 +866,7 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON directoryEntries
           totalDirectoryCount=totalDirectoryCount+1
       WHERE storage.id=NEW.storageId;
   END;
+*/
 
 CREATE TRIGGER AFTER UPDATE OF totalEntryCount,totalEntrySize ON directoryEntries
   BEGIN
@@ -892,11 +909,13 @@ CREATE TRIGGER AFTER INSERT ON linkEntries
           size  =0
       WHERE id=NEW.entryId;
 
+/*
     // update count in storage
     UPDATE storage
       SET totalEntryCount=totalEntryCount+1,
           totalLinkCount =totalLinkCount +1
       WHERE id=NEW.storageId;
+*/
 
     // update count in parent directories
     UPDATE directoryEntries
@@ -905,6 +924,7 @@ CREATE TRIGGER AFTER INSERT ON linkEntries
             AND name=DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId));
   END;
 
+/*
 CREATE TRIGGER BEFORE DELETE ON linkEntries
   BEGIN
     // update count/size in storage
@@ -913,7 +933,9 @@ CREATE TRIGGER BEFORE DELETE ON linkEntries
           totalLinkCount =totalLinkCount -1
       WHERE storage.id=OLD.storageId;
   END;
+*/
 
+/*
 CREATE TRIGGER AFTER UPDATE OF storageId ON linkEntries
   BEGIN
     // update count in storage
@@ -926,6 +948,7 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON linkEntries
           totalLinkCount =totalLinkCount +1
       WHERE id=NEW.storageId;
   END;
+*/
 
 // --- hardlinks -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hardlinkEntries(
@@ -948,6 +971,7 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
           size  =NEW.fragmentSize
       WHERE id=NEW.entryId;
 
+/*
     // update count/size in storage
     UPDATE storage
       SET totalEntryCount   =totalEntryCount   +1,
@@ -955,6 +979,7 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
           totalHardlinkCount=totalHardlinkCount+1,
           totalHardlinkSize =totalHardlinkSize +NEW.fragmentSize
       WHERE id=NEW.storageId;
+*/
 
     // update count/size in parent directories
     UPDATE directoryEntries
@@ -975,6 +1000,7 @@ CREATE TRIGGER BEFORE DELETE ON hardlinkEntries
       WHERE id=OLD.storageId;
   END;
 
+/*
 CREATE TRIGGER AFTER UPDATE OF storageId,fragmentSize ON hardlinkEntries
   BEGIN
     // update count in storage
@@ -991,6 +1017,7 @@ CREATE TRIGGER AFTER UPDATE OF storageId,fragmentSize ON hardlinkEntries
           totalHardlinkSize =totalHardlinkSize +NEW.fragmentSize
       WHERE id=NEW.storageId;
   END;
+*/
 
 // --- special ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS specialEntries(
@@ -1013,11 +1040,13 @@ CREATE TRIGGER AFTER INSERT ON specialEntries
           size  =0
       WHERE id=NEW.entryId;
 
+/*
     // update count in storage
     UPDATE storage
       SET totalEntryCount  =totalEntryCount  +1,
           totalSpecialCount=totalSpecialCount+1
       WHERE id=NEW.storageId;
+*/
 
     // update count in parent directories
     UPDATE directoryEntries
@@ -1035,6 +1064,7 @@ CREATE TRIGGER BEFORE DELETE ON specialEntries
       WHERE id=OLD.storageId;
   END;
 
+/*
 CREATE TRIGGER AFTER UPDATE OF storageId ON specialEntries
   BEGIN
     // update count in storage
@@ -1047,6 +1077,7 @@ CREATE TRIGGER AFTER UPDATE OF storageId ON specialEntries
           totalSpecialCount=totalSpecialCount+1
       WHERE id=NEW.storageId;
   END;
+*/
 
 // --- history ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS history(
