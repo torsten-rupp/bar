@@ -310,6 +310,9 @@
 /* pipe() available */
 #undef HAVE_PIPE
 
+/* Define to 1 if you have the <poll.h> header file. */
+#undef HAVE_POLL_H
+
 /* posix_fadvise() available */
 #undef HAVE_POSIX_FADVISE
 
