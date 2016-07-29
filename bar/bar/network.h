@@ -43,8 +43,8 @@
 typedef enum
 {
   SOCKET_TYPE_PLAIN,
-  SOCKET_TYPE_SSH,
   SOCKET_TYPE_TLS,
+  SOCKET_TYPE_SSH
 } SocketTypes;
 
 typedef struct

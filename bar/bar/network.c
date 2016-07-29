@@ -636,6 +636,9 @@ Errors Network_connect(SocketHandle *socketHandle,
         }
       }
       break;
+    case SOCKET_TYPE_TLS:
+      return ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
     case SOCKET_TYPE_SSH:
       #ifdef HAVE_SSH2
       {
@@ -847,9 +850,6 @@ Errors Network_connect(SocketHandle *socketHandle,
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
-    case SOCKET_TYPE_TLS:
-      return ERROR_FUNCTION_NOT_SUPPORTED;
-      break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -869,14 +869,6 @@ void Network_disconnect(SocketHandle *socketHandle)
   {
     case SOCKET_TYPE_PLAIN:
       break;
-    case SOCKET_TYPE_SSH:
-      #ifdef HAVE_SSH2
-        libssh2_session_disconnect(socketHandle->ssh2.session,"");
-        libssh2_session_free(socketHandle->ssh2.session);
-        Misc_udelay(1000*1000);
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
-      break;
     case SOCKET_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
         gnutls_deinit(socketHandle->gnuTLS.session);
@@ -884,6 +876,14 @@ void Network_disconnect(SocketHandle *socketHandle)
         gnutls_certificate_free_credentials(socketHandle->gnuTLS.credentials);
       #else /* not HAVE_GNU_TLS */
       #endif /* HAVE_GNU_TLS */
+      break;
+    case SOCKET_TYPE_SSH:
+      #ifdef HAVE_SSH2
+        libssh2_session_disconnect(socketHandle->ssh2.session,"");
+        libssh2_session_free(socketHandle->ssh2.session);
+        Misc_udelay(1000*1000);
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
       break;
     #ifndef NDEBUG
       default:
@@ -1067,17 +1067,17 @@ bool Network_eof(SocketHandle *socketHandle)
         #endif /* PLATFORM_... */
       }
       break;
-    case SOCKET_TYPE_SSH:
-      #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
-      break;
     case SOCKET_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #else /* not HAVE_GNU_TLS */
       #endif /* HAVE_GNU_TLS */
+      break;
+    case SOCKET_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
       break;
     #ifndef NDEBUG
       default:
@@ -1119,17 +1119,17 @@ ulong Network_getAvaibleBytes(SocketHandle *socketHandle)
         #endif /* PLATFORM_... */
       }
       break;
-    case SOCKET_TYPE_SSH:
-      #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
-      break;
     case SOCKET_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #else /* not HAVE_GNU_TLS */
       #endif /* HAVE_GNU_TLS */
+      break;
+    case SOCKET_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
       break;
     #ifndef NDEBUG
       default:
@@ -1187,13 +1187,6 @@ Errors Network_receive(SocketHandle *socketHandle,
         n = recv(socketHandle->handle,buffer,maxLength,0);
       }
       break;
-    case SOCKET_TYPE_SSH:
-      #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-      #else /* not HAVE_SSH2 */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
-      break;
     case SOCKET_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
         if (timeout == WAIT_FOREVER)
@@ -1222,6 +1215,13 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         }
       #else /* not HAVE_GNU_TLS */
       #endif /* HAVE_GNU_TLS */
+      break;
+    case SOCKET_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
       break;
     #ifndef NDEBUG
       default:
@@ -1280,13 +1280,6 @@ Errors Network_send(SocketHandle *socketHandle,
           }
           while (sentBytes < length);
         break;
-      case SOCKET_TYPE_SSH:
-        #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-        #else /* not HAVE_SSH2 */
-          return ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_SSH2 */
-        break;
       case SOCKET_TYPE_TLS:
         #ifdef HAVE_GNU_TLS
           do
@@ -1318,6 +1311,13 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         #else /* not HAVE_GNU_TLS */
           sentBytes = 0L;
         #endif /* HAVE_GNU_TLS */
+        break;
+      case SOCKET_TYPE_SSH:
+        #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+        #else /* not HAVE_SSH2 */
+          return ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_SSH2 */
         break;
       #ifndef NDEBUG
         default:
