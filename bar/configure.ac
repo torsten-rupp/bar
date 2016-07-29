@@ -3048,6 +3048,7 @@ AC_CHECK_HEADERS(\
                  netdb.h \
                  netinet/in.h \
                  pwd.h \
+                 poll.h \
                  regex.h \
                  stdbool.h \
                  sys/inotify.h \
