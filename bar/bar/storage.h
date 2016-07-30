@@ -748,6 +748,25 @@ void Storage_doneAll(void);
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Storage_isPatternSpecifier
+* Purpose: check if specifiers contain pattern
+* Input  : storageSpecifier - storage specifier
+* Output : -
+* Return : TRUE iff pattern
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Storage_isPatternSpecifier(const StorageSpecifier *storageSpecifier);
+#if defined(NDEBUG) || defined(__STORAGE_IMPLEMENATION__)
+INLINE bool Storage_isPatternSpecifier(const StorageSpecifier *storageSpecifier)
+{
+  assert(storageSpecifier != NULL);
+
+  return storageSpecifier->archivePatternString != NULL;
+}
+#endif /* NDEBUG || __STORAGE_IMPLEMENATION__ */
+
+/***********************************************************************\
 * Name   : Storage_equalSpecifiers
 * Purpose: compare specifiers if equals
 * Input  : storageSpecifier1,storageSpecifier2 - specifiers
@@ -782,7 +801,6 @@ INLINE bool Storage_isInFileSystem(const StorageSpecifier *storageSpecifier)
   return storageSpecifier->type == STORAGE_TYPE_FILESYSTEM;
 }
 #endif /* NDEBUG || __STORAGE_IMPLEMENATION__ */
-
 
 /***********************************************************************\
 * Name   : Storage_parseFTPSpecifier
