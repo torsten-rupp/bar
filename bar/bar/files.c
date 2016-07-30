@@ -255,17 +255,8 @@ LOCAL void fileCheckValid(const char       *fileName,
   }
   pthread_mutex_unlock(&debugFileLock);
 
-//TODO
-#warning remove
-if (!(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file))))
-{
-fprintf(stderr,"%s, %d: %d %llu %llu\n",__FILE__,__LINE__,
-((fileHandle->mode & FILE_STREAM) == FILE_STREAM),
-fileHandle->index,
-(uint64)FTELL(fileHandle->file)
-);
-}
-  assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
+  // Note: real file index may be different, because of buffer in stream object
+  // assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
 }
 #endif /* NDEBUG */
 
@@ -434,7 +425,6 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
     fileHandle->deleteOnCloseFlag = FALSE;
   #endif /* not NDEBUG */
   StringList_init(&fileHandle->lineBufferList);
-  assert((((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || fileHandle->index == (uint64)FTELL(fileHandle->file)));
 
   #ifndef NDEBUG
     pthread_once(&debugFileInitFlag,debugFileInit);
@@ -2025,7 +2015,8 @@ Errors File_write(FileHandle *fileHandle,
   if (n > 0)
   {
     fileHandle->index += (uint64)n;
-    assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
+    // Note: real file index may be different, because of buffer in stream object
+    // assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
   }
   if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
   if (n != (ssize_t)bufferLength)
@@ -2302,7 +2293,8 @@ Errors File_tell(const FileHandle *fileHandle, uint64 *offset)
   {
     return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
   }
-  assert(fileHandle->index == (uint64)n);
+  // Note: real file index may be different, because of buffer in stream object
+  // assert(fileHandle->index == (uint64)n);
 
   (*offset) = fileHandle->index;
 
@@ -2321,6 +2313,7 @@ Errors File_seek(FileHandle *fileHandle,
   }
   fileHandle->index = offset;
   assert(fileHandle->index == (uint64)FTELL(fileHandle->file));
+  if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
 
   return ERROR_NONE;
 }
