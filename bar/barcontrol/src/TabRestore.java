@@ -4287,7 +4287,11 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           if (widgetStorageTreeToolTip != null)
           {
             // check if inside sub-widget
-            Point point = new Point(mouseEvent.x,mouseEvent.y);
+            Point point = widgetStorageTreeToolTip.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
+            if (widgetStorageTreeToolTip.getBounds().contains(point))
+            {
+              return;
+            }
             for (Control control : widgetStorageTreeToolTip.getChildren())
             {
               if (control.getBounds().contains(point))
@@ -4423,7 +4427,11 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           if (widgetStorageTreeToolTip != null)
           {
             // check if inside sub-widget
-            Point point = new Point(mouseEvent.x,mouseEvent.y);
+            Point point = widgetStorageTreeToolTip.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
+            if (widgetStorageTreeToolTip.getBounds().contains(point))
+            {
+              return;
+            }
             for (Control control : widgetStorageTreeToolTip.getChildren())
             {
               if (control.getBounds().contains(point))
@@ -4589,7 +4597,11 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           if (widgetStorageTableToolTip != null)
           {
             // check if inside sub-widget
-            Point point = new Point(mouseEvent.x,mouseEvent.y);
+            Point point = widgetStorageTableToolTip.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
+            if (widgetStorageTableToolTip.getBounds().contains(point))
+            {
+              return;
+            }
             for (Control control : widgetStorageTableToolTip.getChildren())
             {
               if (control.getBounds().contains(point))
@@ -4740,7 +4752,11 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           if (widgetEntryTableToolTip != null)
           {
             // check if inside sub-widget
-            Point point = new Point(mouseEvent.x,mouseEvent.y);
+            Point point = widgetEntryTableToolTip.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
+            if (widgetEntryTableToolTip.getBounds().contains(point))
+            {
+              return;
+            }
             for (Control control : widgetEntryTableToolTip.getChildren())
             {
               if (control.getBounds().contains(point))
