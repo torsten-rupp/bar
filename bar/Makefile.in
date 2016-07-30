@@ -22,32 +22,33 @@ PLATFORM        = @PLATFORM@
 
 #------------------------------------ paths ----------------------------------
 
-SOURCE_DIR         = @srcdir@
+SOURCE_DIR             = @srcdir@
 
-ETC_DIR            = /etc
+ETC_DIR                = /etc
 
 ifeq ($(DESTDIR),)
-INSTALL_DIR        = $(if $(prefix),$(prefix),@INSTALL_DIR@)
-INSTALL_BIN_DIR    = $(if $(bindir),$(bindir),@INSTALL_BIN_DIR@)
-INSTALL_LIB_DIR    = $(if $(libdir),$(libdir),/usr/lib)
-INSTALL_LOCALE_DIR = $(if $(datadir),$(datadir)/locale,@LOCALE_DIR@)
-INSTALL_ETC_DIR    = $(if $(sysconfdir),$(sysconfdir),$(ETC_DIR))
-#INSTALL_INITD_DIR  = $(INSTALL_ETC_DIR)/$(if $(wildcard $(ETC_DIR)/rc.d),rc.d/init.d,init.d)
-INSTALL_INITD_DIR  = $(INSTALL_ETC_DIR)/init.d
-INSTALL_CONFIG_DIR = $(if $(sysconfdir),$(sysconfdir)/bar,@CONFIG_DIR@)
-INSTALL_MAN_DIR    = $(if $(mandir),$(mandir),@MAN_DIR@)
+INSTALL_DIR            = $(if $(prefix),$(prefix),@INSTALL_DIR@)
+INSTALL_BIN_DIR        = $(if $(bindir),$(bindir),@INSTALL_BIN_DIR@)
+INSTALL_LIB_DIR        = $(if $(libdir),$(libdir),/usr/lib)
+INSTALL_LOCALE_DIR     = $(if $(datadir),$(datadir)/locale,@LOCALE_DIR@)
+INSTALL_ETC_DIR        = $(if $(sysconfdir),$(sysconfdir),$(ETC_DIR))
+#INSTALL_INITD_DIR      = $(INSTALL_ETC_DIR)/$(if $(wildcard $(ETC_DIR)/rc.d),rc.d/init.d,init.d)
+INSTALL_INITD_DIR      = $(INSTALL_ETC_DIR)/init.d
+INSTALL_LOGROTATED_DIR = $(INSTALL_ETC_DIR)/logrotate.d
+INSTALL_CONFIG_DIR     = $(if $(sysconfdir),$(sysconfdir)/bar,@CONFIG_DIR@)
+INSTALL_MAN_DIR        = $(if $(mandir),$(mandir),@MAN_DIR@)
 else
-INSTALL_DIR        = @INSTALL_DIR@
-INSTALL_BIN_DIR    = @INSTALL_BIN_DIR@
-INSTALL_LIB_DIR    = /usr/lib
-INSTALL_LOCALE_DIR = @LOCALE_DIR@
-INSTALL_ETC_DIR    = $(ETC_DIR)
-#INSTALL_INITD_DIR  = $(INSTALL_ETC_DIR)/$(if $(wildcard $(ETC_DIR)/rc.d),rc.d/init.d,init.d)
-INSTALL_INITD_DIR  = $(INSTALL_ETC_DIR)/init.d
-INSTALL_CONFIG_DIR = @CONFIG_DIR@
-INSTALL_MAN_DIR    = @MAN_DIR@
+INSTALL_DIR            = @INSTALL_DIR@
+INSTALL_BIN_DIR        = @INSTALL_BIN_DIR@
+INSTALL_LIB_DIR        = /usr/lib
+INSTALL_LOCALE_DIR     = @LOCALE_DIR@
+INSTALL_ETC_DIR        = $(ETC_DIR)
+#INSTALL_INITD_DIR      = $(INSTALL_ETC_DIR)/$(if $(wildcard $(ETC_DIR)/rc.d),rc.d/init.d,init.d)
+INSTALL_INITD_DIR      = $(INSTALL_ETC_DIR)/init.d
+INSTALL_CONFIG_DIR     = @CONFIG_DIR@
+INSTALL_MAN_DIR        = @MAN_DIR@
 endif
-INSTALL_TLS_DIR    = @TLS_DIR@
+INSTALL_TLS_DIR        = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
@@ -417,6 +418,7 @@ install_scripts: \
             echo "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver NOT installed - file already exists!"; \
           fi; \
         fi
+	$(INSTALL) -m 644 scripts/logrotate.conf "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
 
 # install man-page
 install_man: \
@@ -455,6 +457,7 @@ uninstall:
           $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.jks"; \
           ) \
           $(RMF) "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+          $(RMF) "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
           $(RMF) "$(DESTDIR)$(INSTALL_MAN_DIR)/man7/bar.7"; \
         fi
 
