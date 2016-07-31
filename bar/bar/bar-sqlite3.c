@@ -60,7 +60,7 @@ LOCAL bool verbose       = FALSE;
 
 LOCAL void printUsage(const char *programName)
 {
-  printf("Usage %s: [<options>] <database file>\n",programName);
+  printf("Usage %s: [<options>] <database file> [<command>...]\n",programName);
   printf("\n");
   printf("Options:  -c|--create  - create database file\n");
   printf("          -n|--names   - named values\n");
@@ -354,14 +354,15 @@ int main(int argc, const char *argv[])
 {
   int        i,n;
   const char *databaseFileName;
-  const char *sqlCommand;
+  String     sqlCommands;
+  char       line[2048];
   int        sqliteMode;
   int        sqliteResult;
   sqlite3    *handle;
   char       *errorMessage;
 
   databaseFileName = NULL;
-  sqlCommand       = NULL;
+  sqlCommands      = String_new();
   i = 1;
   n = 0;
   while (i < argc)
@@ -405,8 +406,9 @@ int main(int argc, const char *argv[])
       switch (n)
       {
         case 0: databaseFileName = argv[i]; n++; break;
-        case 1: sqlCommand       = argv[i]; n++; break;
-        default:                                 break;
+        default:
+          String_appendCString(sqlCommands,argv[i]);
+          break;
       }
     }
     i++;
@@ -416,8 +418,9 @@ int main(int argc, const char *argv[])
     switch (n)
     {
       case 0: databaseFileName = argv[i]; n++; break;
-      case 1: sqlCommand       = argv[i]; n++; break;
-      default:                                 break;
+      default:
+        String_appendCString(sqlCommands,argv[i]);
+        break;
     }
     i++;
   }
@@ -425,6 +428,15 @@ int main(int argc, const char *argv[])
   {
     fprintf(stderr,"ERROR: no database file name given!\n");
     exit(1);
+  }
+
+  if (String_isEmpty(sqlCommands))
+  {
+    // get commands from stdin
+    while (fgets(line,sizeof(line),stdin) != NULL)
+    {
+      String_appendCString(sqlCommands,line);
+    }
   }
 
   // open database
@@ -513,29 +525,32 @@ int main(int argc, const char *argv[])
                                );
     if (sqliteResult != SQLITE_OK)
     {
-      fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",sqlCommand,errorMessage);
+      fprintf(stderr,"ERROR: create database fail: %s!\n",errorMessage);
       exit(1);
     }
   }
 
-  if (sqlCommand != NULL)
+  if (!String_isEmpty(sqlCommands))
   {
     // execute command
     sqliteResult = sqlite3_exec(handle,
-                                sqlCommand,
+                                String_cString(sqlCommands),
                                 CALLBACK(printRow,NULL),
                                 &errorMessage
                                );
     if (verbose) printf("Result: %d\n",sqliteResult);
     if (sqliteResult != SQLITE_OK)
     {
-      fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",sqlCommand,errorMessage);
+      fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",String_cString(sqlCommands),errorMessage);
       exit(1);
     }
   }
 
   // close database
   sqlite3_close(handle);
+
+  // free resources
+  String_delete(sqlCommands);
 
   return 0;
 }
