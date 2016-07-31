@@ -882,7 +882,7 @@ rundev1 rundevd: bar-debug@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-s
         --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
         --server-jobs-directory=jobs \
         --server-port=39909 --server-tls-port=39910 \
-        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
         --log-file=/tmp/bar.log --log=all
 
 rundevd2: bar-debug@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -892,7 +892,7 @@ rundevd2: bar-debug@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-k
         --continuous-database=bar-continuous2.db --index-database=bar-index2.db --index-database-keep-time=365days \
         --server-jobs-directory=jobs2 \
         --server-port=39999 --server-tls-port=0 \
-        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
         --log-file=/tmp/bar2.log --log=all --server-debug
 
 rundevddd: bar-debug@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -912,7 +912,7 @@ rundevvalgrind: bar-valgrind ../bar-ca.pem ../bar-server-cert.pem ../bar-server-
         --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
         --server-jobs-directory=jobs \
         --server-port=39909 --server-tls-port=39910 \
-        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
         --log-file=/tmp/bar.log --log=all
 
 rundev_en: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -922,7 +922,7 @@ rundev_en: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pe
         --index-database=bar-index.db --index-database-keep-time=365days \
         --server-jobs-directory=jobs \
         --server-port=39909 --server-tls-port=39910 \
-        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
         --log-file=/tmp/bar.log --log=all
 
 rundev_de: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -932,28 +932,27 @@ rundev_de: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pe
         --index-database=bar-index.db \
         --server-jobs-directory=jobs \
         --server-port=39909 --server-tls-port=39910 \
-        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
         --log-file=/tmp/bar.log --log=all
 
 rundev_jp: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	$(INSTALL) bar.cfg /tmp/bar.cfg
-	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=ja_JP nice ./bar@EXEEXT@ --daemon -D --index-database=bar-index.db \
-        --index-database-keep-time=365days \
+	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=ja_JP nice ./bar@EXEEXT@ --daemon -D \
+        --index-database=bar-index.db --index-database-keep-time=365days \
         --server-jobs-directory=jobs \
         --server-port=39909 --server-tls-port=39910 \
-        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
         --log-file=/tmp/bar.log --log=all
 
 rundev_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	$(INSTALL) bar.cfg /tmp/bar.cfg
-	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg --index-database=bar-index.db \
-        --index-database-keep-time=365days \
+	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+        --index-database=bar-index.db --index-database-keep-time=365days \
         --server-jobs-directory=jobs \
-        --server-ca-file=../bar-ca.pem \
-        --server-port=0 --server-tls-port=39910 \
-        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+        --server-port=39909 --server-tls-port=39910 \
+        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
         --log-file=/tmp/bar.log --log=all
 
 ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem:
