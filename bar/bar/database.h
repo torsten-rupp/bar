@@ -177,7 +177,7 @@ typedef struct
 
 typedef Errors(*DatabaseCopyTableFunction)(const DatabaseColumnList *fromColumnList,
                                            const DatabaseColumnList *toColumnList,
-                                           void *userData
+                                           void                     *userData
                                           );
 
 /***********************************************************************\
