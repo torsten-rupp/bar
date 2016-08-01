@@ -157,11 +157,8 @@ typedef struct
 /* example
 
 CONFIG_VALUE_INTEGER        (<name>,<variable>,<offset>|-1,<min>,<max>,<units>                                  )
-CONFIG_VALUE_INTEGER_RANGE  (<name>,<variable>,<offset>|-1,<min>,<max>,<units>                                  )
 CONFIG_VALUE_INTEGER64      (<name>,<variable>,<offset>|-1,<min>,<max>,<units>                                  )
-CONFIG_VALUE_INTEGER64_RANGE(<name>,<variable>,<offset>|-1,<min>,<max>,<units>                                  )
 CONFIG_VALUE_DOUBLE         (<name>,<variable>,<offset>|-1,                                                     )
-CONFIG_VALUE_DOUBLE_RANGE   (<name>,<variable>,<offset>|-1,<min>,<max>,<units>                                  )
 CONFIG_VALUE_BOOLEAN        (<name>,<variable>,<offset>|-1,                                                     )
 CONFIG_VALUE_BOOLEAN_YESNO  (<name>,<variable>,<offset>|-1,                                                     )
 CONFIG_VALUE_ENUM           (<name>,<variable>,<offset>|-1,<value>                                              )
@@ -191,10 +188,8 @@ const ConfigValue CONFIG_VALUES[] =
 {
   CONFIG_VALUE_INTEGER      ("integer", &intValue,     offsetof(X,a),0,0,123,NULL,                   ),
   CONFIG_VALUE_INTEGER      ("unit",    &intValue,     NULL,-1,      0,0,123,COMMAND_LINE_UNITS      ),
-  CONFIG_VALUE_INTEGER_RANGE("range1",  &intValue,     offsetof(X,b),0,0,123,COMMAND_LINE_UNITS      ),
 
   CONFIG_VALUE_DOUBLE       ("double",  &doubleValue,  NULL,-1,      0.0,-2.0,4.0,                   ),
-  CONFIG_VALUE_DOUBLE_RANGE ("range2",  &doubleValue,  NULL,-1,      0.0,-2.0,4.0,                   ),
 
   CONFIG_VALUE_BOOLEAN_YESNO("bool",    &boolValue,    NULL,-1,      FALSE,                          ),
 
@@ -221,7 +216,6 @@ const ConfigValue CONFIG_STRUCT_VALUES[] =
 {
   CONFIG_VALUE_INTEGER      ("integer", X,intValue,     0,0,123,NULL,              ),
   CONFIG_VALUE_INTEGER      ("unit",    X,intValue      0,0,123,COMMAND_LINE_UNITS ),
-  CONFIG_VALUE_INTEGER_RANGE("range1",  X,intValue,     0,0,123,COMMAND_LINE_UNITS ),
 };
 
 or
