@@ -11189,7 +11189,7 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
     // update storages info (aggregated values)
     if (error == ERROR_NONE)
     {
-      error = Index_updateStoragesInfo(indexHandle,
+      error = Index_updateStorageInfos(indexHandle,
                                        storageId
                                       );
     }

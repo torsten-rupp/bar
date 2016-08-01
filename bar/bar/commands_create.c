@@ -4393,7 +4393,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       // update storages info (aggregated values)
       if (error == ERROR_NONE)
       {
-        error = Index_updateStoragesInfo(createInfo->indexHandle,
+        error = Index_updateStorageInfos(createInfo->indexHandle,
                                          storageId
                                         );
       }
