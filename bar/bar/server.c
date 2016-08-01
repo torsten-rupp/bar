@@ -3942,7 +3942,6 @@ LOCAL void remoteConnectThreadCode(void)
       // try to connect
       if (tryConnectFlag)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         (void)Remote_connect(&remoteHost);
       }
     }
@@ -15467,63 +15466,63 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   // try to open as storage file
   if (error != ERROR_NONE)
   {
-    if (Storage_parseName(&storageSpecifier,pattern) == ERROR_NONE)
+    if (   (Storage_parseName(&storageSpecifier,pattern) == ERROR_NONE)
+        && !Storage_isPatternSpecifier(&storageSpecifier)
+//        && String_endsWithCString(storageSpecifier.archiveName,FILE_NAME_EXTENSION_ARCHIVE_FILE)
+       )
     {
-      if (String_endsWithCString(storageSpecifier.archiveName,FILE_NAME_EXTENSION_ARCHIVE_FILE))
+      if (Storage_init(&storageHandle,
+                       &storageSpecifier,
+                       NULL, // jobOptions
+                       &globalOptions.indexDatabaseMaxBandWidthList,
+                       SERVER_CONNECTION_PRIORITY_LOW,
+                       CALLBACK(NULL,NULL),  // updateStatusInfo
+                       CALLBACK(NULL,NULL),  // getPassword
+                       CALLBACK(NULL,NULL)  // requestVolume
+                      ) == ERROR_NONE
+         )
       {
-        if (Storage_init(&storageHandle,
-                         &storageSpecifier,
-                         NULL, // jobOptions
-                         &globalOptions.indexDatabaseMaxBandWidthList,
-                         SERVER_CONNECTION_PRIORITY_LOW,
-                         CALLBACK(NULL,NULL),  // updateStatusInfo
-                         CALLBACK(NULL,NULL),  // getPassword
-                         CALLBACK(NULL,NULL)  // requestVolume
-                        ) == ERROR_NONE
+        if (Index_findStorageByName(indexHandle,
+                                    &storageSpecifier,
+                                    NULL,  // archiveName
+                                    NULL,  // uuidId
+                                    NULL,  // entityId
+                                    NULL,  // jobUUID
+                                    NULL,  // scheduleUUID
+                                    &storageId,
+                                    NULL,  // indexState,
+                                    NULL  // lastCheckedDateTime
+                                   )
            )
         {
-          if (Index_findStorageByName(indexHandle,
-                                      &storageSpecifier,
-                                      NULL,  // archiveName
-                                      NULL,  // uuidId
-                                      NULL,  // entityId
-                                      NULL,  // jobUUID
-                                      NULL,  // scheduleUUID
-                                      &storageId,
-                                      NULL,  // indexState,
-                                      NULL  // lastCheckedDateTime
-                                     )
-             )
+          if (forceRefresh)
           {
-            if (forceRefresh)
-            {
-              Index_setState(indexHandle,
-                             storageId,
-                             INDEX_STATE_UPDATE_REQUESTED,
-                             Misc_getCurrentDateTime(),
-                             NULL
-                            );
-            }
+            Index_setState(indexHandle,
+                           storageId,
+                           INDEX_STATE_UPDATE_REQUESTED,
+                           Misc_getCurrentDateTime(),
+                           NULL
+                          );
           }
-          else
-          {
-            error = Index_newStorage(indexHandle,
-                                     INDEX_ID_NONE, // entityId
-                                     Storage_getPrintableName(&storageSpecifier,NULL),
-                                     INDEX_STATE_UPDATE_REQUESTED,
-                                     INDEX_MODE_MANUAL,
-                                     &storageId
-                                    );
-            if (error == ERROR_NONE)
-            {
-              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
-                               storageId,
-                               Storage_getPrintableName(&storageSpecifier,NULL)
-                              );
-            }
-          }
-          Storage_done(&storageHandle);
         }
+        else
+        {
+          error = Index_newStorage(indexHandle,
+                                   INDEX_ID_NONE, // entityId
+                                   Storage_getPrintableName(&storageSpecifier,NULL),
+                                   INDEX_STATE_UPDATE_REQUESTED,
+                                   INDEX_MODE_MANUAL,
+                                   &storageId
+                                  );
+          if (error == ERROR_NONE)
+          {
+            sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+                             storageId,
+                             Storage_getPrintableName(&storageSpecifier,NULL)
+                            );
+          }
+        }
+        Storage_done(&storageHandle);
       }
     }
   }
@@ -15599,7 +15598,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,error,"add storage to index fail: %s",Error_getText(error));
+    sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
   }
 
   // free resources
