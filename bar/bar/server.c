@@ -17058,6 +17058,7 @@ SERVER_COMMANDS[] =
   { "SERVER_LIST_ADD",             serverCommand_serverListAdd,            AUTHORIZATION_STATE_OK      },
   { "SERVER_LIST_UPDATE",          serverCommand_serverListUpdate,         AUTHORIZATION_STATE_OK      },
   { "SERVER_LIST_REMOVE",          serverCommand_serverListRemove,         AUTHORIZATION_STATE_OK      },
+//TODO: obsolete?
   { "GET",                         serverCommand_get,                      AUTHORIZATION_STATE_OK      },
   { "ABORT",                       serverCommand_abort,                    AUTHORIZATION_STATE_OK      },
   { "STATUS",                      serverCommand_status,                   AUTHORIZATION_STATE_OK      },
