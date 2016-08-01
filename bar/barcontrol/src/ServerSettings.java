@@ -358,6 +358,7 @@ public class ServerSettings
     WidgetVariable          serverKeyFile              = new WidgetVariable<String >("server-key-file",               ""   );
     WidgetVariable          serverPassword             = new WidgetVariable<String >("server-password",               ""   );
 
+    WidgetVariable          verbose                    = new WidgetVariable<Long   >("verbose",                       0    );
     WidgetVariable          log                        = new WidgetVariable<String >("log",                           ""   );
     WidgetVariable          logFile                    = new WidgetVariable<String >("log-file",                      ""   );
     WidgetVariable          logFormat                  = new WidgetVariable<String >("log-format",                    ""   );
@@ -1517,17 +1518,27 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       }
     }
 
-    // log
-    composite = Widgets.addTab(tabFolder,BARControl.tr("Log"));
+    // verbosity+log
+    composite = Widgets.addTab(tabFolder,BARControl.tr("Verbosity && Log"));
     composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
     Widgets.layout(composite,0,0,TableLayoutData.NSWE);
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Log")+":");
       Widgets.layout(label,0,0,TableLayoutData.NW);
+      spinner = BARWidgets.newNumber(composite,
+                                     BARControl.tr("Verbosity level."),
+                                     verbose,
+                                     0,
+                                     6
+                                    );
+      Widgets.layout(spinner,0,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+
+      label = Widgets.newLabel(composite,BARControl.tr("Log")+":");
+      Widgets.layout(label,1,0,TableLayoutData.NW);
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,0.0}));
-      Widgets.layout(subComposite,0,1,TableLayoutData.WE);
+      Widgets.layout(subComposite,1,1,TableLayoutData.WE);
       {
         row = 0;
 
@@ -1931,7 +1942,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       }
 
       label = Widgets.newLabel(composite,BARControl.tr("Log file")+":");
-      Widgets.layout(label,1,0,TableLayoutData.W);
+      Widgets.layout(label,2,0,TableLayoutData.W);
       subComposite = BARWidgets.newFile(composite,
                                         BARControl.tr("Log file name."),
                                         logFile,
@@ -1940,18 +1951,18 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                                                     },
                                         "*.log"
                                        );
-      Widgets.layout(subComposite,1,1,TableLayoutData.WE);
+      Widgets.layout(subComposite,2,1,TableLayoutData.WE);
 
       label = Widgets.newLabel(composite,BARControl.tr("Log format")+":");
-      Widgets.layout(label,2,0,TableLayoutData.W);
+      Widgets.layout(label,3,0,TableLayoutData.W);
       text = BARWidgets.newText(composite,
                                 BARControl.tr("Log format string."),
                                 logFormat
                                );
-      Widgets.layout(text,2,1,TableLayoutData.WE);
+      Widgets.layout(text,3,1,TableLayoutData.WE);
 
       label = Widgets.newLabel(composite,BARControl.tr("Log post command")+":");
-      Widgets.layout(label,3,0,TableLayoutData.W);
+      Widgets.layout(label,4,0,TableLayoutData.W);
       subComposite = BARWidgets.newFile(composite,
                                         BARControl.tr("Log post command."),
                                         logPostCommand,
@@ -1959,7 +1970,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
                                                     },
                                         "*"
                                        );
-      Widgets.layout(subComposite,3,1,TableLayoutData.WE);
+      Widgets.layout(subComposite,4,1,TableLayoutData.WE);
     }
 
     // buttons
@@ -2117,6 +2128,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
     BARServer.getServerOption(serverPassword             );
     BARServer.getServerOption(serverJobsDirectory        );
 
+    BARServer.getServerOption(verbose                    );
     BARServer.getServerOption(log                        );
     BARServer.getServerOption(logFile                    );
     BARServer.getServerOption(logFormat                  );
@@ -2279,7 +2291,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
       BARServer.setServerOption(serverPassword             );
       BARServer.setServerOption(serverJobsDirectory        );
 
-Dprintf.dprintf("log=%s",log);
+      BARServer.setServerOption(verbose                    );
       BARServer.setServerOption(log                        );
       BARServer.setServerOption(logFile                    );
       BARServer.setServerOption(logFormat                  );
