@@ -4390,34 +4390,34 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 #endif
       }
 
-      // update index database archive name and size
-      error = Index_storageUpdate(createInfo->indexHandle,
-                                  storageId,
-                                  printableStorageName,
-                                  archiveSize
-                                 );
-      if (error != ERROR_NONE)
+      // update storages info (aggregated values)
+      if (error == ERROR_NONE)
       {
-        printError("Cannot update index for storage '%s' (error: %s)!\n",
-                   String_cString(printableStorageName),
-                   Error_getText(error)
-                  );
-        if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
-
-        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-        continue;
+        error = Index_updateStoragesInfo(createInfo->indexHandle,
+                                         storageId
+                                        );
       }
-      DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); }
-
+      // update index database archive name and size
+      if (error == ERROR_NONE)
+      {
+        error = Index_storageUpdate(createInfo->indexHandle,
+                                    storageId,
+                                    printableStorageName,
+                                    archiveSize
+                                   );
+      }
       // set index database state and time stamp
-      error = Index_setState(createInfo->indexHandle,
-                             storageId,
-                             ((createInfo->failError == ERROR_NONE) && !isAborted(createInfo))
-                               ? INDEX_STATE_OK
-                               : INDEX_STATE_ERROR,
-                             Misc_getCurrentDateTime(),
-                             NULL // errorMessage
-                            );
+      if (error == ERROR_NONE)
+      {
+        error = Index_setState(createInfo->indexHandle,
+                               storageId,
+                               ((createInfo->failError == ERROR_NONE) && !isAborted(createInfo))
+                                 ? INDEX_STATE_OK
+                                 : INDEX_STATE_ERROR,
+                               Misc_getCurrentDateTime(),
+                               NULL // errorMessage
+                              );
+      }
       if (error != ERROR_NONE)
       {
         printError("Cannot update index for storage '%s' (error: %s)!\n",
