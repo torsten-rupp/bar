@@ -250,7 +250,7 @@ CREATE TABLE IF NOT EXISTS storage(
 );
 CREATE INDEX ON storage (entityId,name,created,state);
 CREATE INDEX ON storage (name,totalEntryCount,created,state);
-CREATE INDEX ON storage (totalEntryCount,name,created,state);
+//CREATE INDEX ON storage (totalEntryCount,name,created,state);
 CREATE INDEX ON storage (created,name,totalEntryCount,state);
 CREATE INDEX ON storage (state,name,totalEntryCount,created);
 
@@ -1011,6 +1011,7 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
             AND name=DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId));
   END;
 
+/*
 CREATE TRIGGER BEFORE DELETE ON hardlinkEntries
   BEGIN
     // update count/size in storage
@@ -1022,7 +1023,6 @@ CREATE TRIGGER BEFORE DELETE ON hardlinkEntries
       WHERE id=OLD.storageId;
   END;
 
-/*
 CREATE TRIGGER AFTER UPDATE OF storageId,fragmentSize ON hardlinkEntries
   BEGIN
     // update count in storage
@@ -1077,6 +1077,7 @@ CREATE TRIGGER AFTER INSERT ON specialEntries
             AND name=DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId));
   END;
 
+/*
 CREATE TRIGGER BEFORE DELETE ON specialEntries
   BEGIN
     // update count/size in storage
@@ -1086,7 +1087,6 @@ CREATE TRIGGER BEFORE DELETE ON specialEntries
       WHERE id=OLD.storageId;
   END;
 
-/*
 CREATE TRIGGER AFTER UPDATE OF storageId ON specialEntries
   BEGIN
     // update count in storage
