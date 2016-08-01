@@ -24,6 +24,10 @@ use Getopt::Long;
 
 my $PREFIX_CONST_NAME = "INDEX_CONST_";
 
+my $TYPE_TABLE="TABLE";
+my $TYPE_INDEX="INDEX";
+my $TYPE_TRIGGER="TRIGGER";
+
 # --------------------------------- includes ---------------------------------
 
 # -------------------------------- functions ---------------------------------
@@ -36,9 +40,12 @@ print "\n";
 
 my $commentFlag=0;
 my %constants;
+my $type="";
 my $allDatabaseTableDefinitions = "";
+my $allDatabaseTriggerDefinitions = "";
 my $databaseTableDefinitionName="";
 my $databaseTableDefinition="";
+my $databaseTriggerDefinitionName="";
 my $id=0;
 while ($line=<STDIN>)
 {
@@ -70,9 +77,16 @@ while ($line=<STDIN>)
         $1 =~ s/"/\\"/g;
 
         $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$1\\\n";
-        if ($databaseTableDefinitionName ne "")
+        if    ($type eq $TYPE_TABLE)
         {
           $databaseTableDefinition=$databaseTableDefinition."$1\\\n";
+        }
+        elsif ($type eq $TYPE_INDEX)
+        {
+        }
+        elsif ($type eq $TYPE_TRIGGER)
+        {
+          $allDatabaseTriggerDefinitions=$allDatabaseTriggerDefinitions."$1\\\n";
         }
       }
     }
@@ -91,9 +105,16 @@ while ($line=<STDIN>)
         $1 =~ s/"/\\"/g;
 
         $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$1\\\n";
-        if ($databaseTableDefinitionName ne "")
+        if    ($type eq $TYPE_TABLE)
         {
           $databaseTableDefinition=$databaseTableDefinition."$1\\\n";
+        }
+        elsif ($type eq $TYPE_INDEX)
+        {
+        }
+        elsif ($type eq $TYPE_TRIGGER)
+        {
+          $allDatabaseTriggerDefinitions=$allDatabaseTriggerDefinitions."$1\\\n";
         }
       }
 
@@ -117,6 +138,7 @@ while ($line=<STDIN>)
     elsif ($line =~ /\s*CREATE\s+TABLE\s+.*?(\S+)\s*\(/)
     {
       # create table
+      $type=$TYPE_TABLE;
 
       # replace macros
       foreach $name (keys %constants)
@@ -126,12 +148,14 @@ while ($line=<STDIN>)
       $line =~ s/"/\\"/g;
 
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$line\\\n";
+
       $databaseTableDefinitionName=$1;
       $databaseTableDefinition=$line;
     }
     elsif ($line =~ /\s*CREATE\s+INDEX\s+ON\s+(\S+)\s+(.*?)$/)
     {
       # create anonymous index
+      $type=$TYPE_INDEX;
 
       # replace macros
       my $table=$1;
@@ -151,14 +175,21 @@ while ($line=<STDIN>)
       my $index="index$id"; $id++;
 
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."CREATE INDEX $index ON $table $definition\\\n";
-      if ($databaseTableDefinitionName ne "")
+      if    ($type eq $TYPE_TABLE)
       {
         $databaseTableDefinition=$databaseTableDefinition."CREATE INDEX $index ON $table $definition\\\n";
+      }
+      elsif ($type eq $TYPE_INDEX)
+      {
+      }
+      elsif ($type eq $TYPE_TRIGGER)
+      {
       }
     }
     elsif ($line =~ /\s*CREATE\s+TRIGGER\s+(BEFORE|AFTER)\s+(.*?)$/)
     {
       # create anonymous trigger
+      $type=$TYPE_TRIGGER;
 
       # replace macros
       my $definition=$2;
@@ -172,12 +203,50 @@ while ($line=<STDIN>)
       my $trigger="trigger$id"; $id++;
 
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."CREATE TRIGGER $trigger $1 $definition\\\n";
-      if ($databaseTableDefinitionName ne "")
+      if    ($type eq $TYPE_TABLE)
       {
         $databaseTableDefinition=$databaseTableDefinition."CREATE TRIGGER $trigger $1 $2\\\n";
       }
+      elsif ($type eq $TYPE_INDEX)
+      {
+      }
+      elsif ($type eq $TYPE_TRIGGER)
+      {
+        $allDatabaseTriggerDefinitions=$allDatabaseTriggerDefinitions."CREATE TRIGGER $trigger $1 $2\\\n";
+      }
     }
-    elsif ($line =~ /\);/)
+    elsif ($line =~ /.*END.*/)
+    {
+      # end trigger
+
+      # replace macros
+      foreach $name (keys %constants)
+      {
+        $line =~ s/\$$name/$constants{$name}/g;
+      }
+      $line =~ s/"/\\"/g;
+
+      $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$line\\\n";
+      if    ($type eq $TYPE_TABLE)
+      {
+        $databaseTableDefinition=$databaseTableDefinition."$line\\\n";
+
+        print "\n";
+        print "#define INDEX_DEFINITION_".uc($databaseTableDefinitionName)." \\\n\"\\\n";
+        print $databaseTableDefinition;
+        print "\"\n";
+      }
+      elsif ($type eq $TYPE_INDEX)
+      {
+      }
+      elsif ($type eq $TYPE_TRIGGER)
+      {
+        $allDatabaseTriggerDefinitions=$allDatabaseTriggerDefinitions."$line\\\n";
+      }
+
+      $type="";
+    }
+    elsif ((($type eq $TYPE_TABLE) || ($type eq $TYPE_INDEX)) && ($line =~ /\);/))
     {
       # end table/index
 
@@ -189,7 +258,7 @@ while ($line=<STDIN>)
       $line =~ s/"/\\"/g;
 
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$line\\\n";
-      if ($databaseTableDefinitionName ne "")
+      if    ($type eq $TYPE_TABLE)
       {
         $databaseTableDefinition=$databaseTableDefinition."$line\\\n";
 
@@ -197,9 +266,16 @@ while ($line=<STDIN>)
         print "#define INDEX_DEFINITION_".uc($databaseTableDefinitionName)." \\\n\"\\\n";
         print $databaseTableDefinition;
         print "\"\n";
-
-        $databaseTableDefinitionName="";
       }
+      elsif ($type eq $TYPE_INDEX)
+      {
+      }
+      elsif ($type eq $TYPE_TRIGGER)
+      {
+        $allDatabaseTriggerDefinitions=$allDatabaseTriggerDefinitions."$line\\\n";
+      }
+
+      $type="";
     }
     else
     {
@@ -211,9 +287,16 @@ while ($line=<STDIN>)
       $line =~ s/"/\\"/g;
 
       $allDatabaseTableDefinitions=$allDatabaseTableDefinitions."$line\\\n";
-      if ($databaseTableDefinitionName ne "")
+      if    ($type eq $TYPE_TABLE)
       {
         $databaseTableDefinition=$databaseTableDefinition."$line\\\n";
+      }
+      elsif ($type eq $TYPE_INDEX)
+      {
+      }
+      elsif ($type eq $TYPE_TRIGGER)
+      {
+        $allDatabaseTriggerDefinitions=$allDatabaseTriggerDefinitions."$line\\\n";
       }
     }
   }
@@ -223,6 +306,10 @@ while ($line=<STDIN>)
 print "\n";
 print "#define INDEX_DEFINITION \\\n\"\\\n";
 print $allDatabaseTableDefinitions;
+print "\"\n";
+print "\n";
+print "#define INDEX_TRIGGER_DEFINITION \\\n\"\\\n";
+print $allDatabaseTriggerDefinitions;
 print "\"\n";
 
 print "\n";
