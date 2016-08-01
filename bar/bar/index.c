@@ -4741,8 +4741,8 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
   String           storageName;
   String           printableStorageName;
   ulong            n;
-  IndexId          storageId;
   IndexQueryHandle indexQueryHandle;
+  IndexId          storageId;
 
   assert(indexHandle != NULL);
 
@@ -5115,6 +5115,302 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
     }
     Database_finalize(&databaseQueryHandle);
   }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : recreateTriggers
+* Purpose: recreate trigger definitions
+* Input  : databaseFileName - database file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors recreateTriggers(const char *databaseFileName)
+{
+  Errors              error;
+  DatabaseHandle      databaseHandle;
+  DatabaseQueryHandle databaseQueryHandle;
+  char                name[64];
+
+  assert(databaseFileName != NULL);
+
+  // init variables
+
+  // open index database
+  error = Database_open(&databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,INDEX_PRIORITY_HIGH,NO_WAIT);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // delete all triggers
+  error = Database_prepare(&databaseQueryHandle,
+                           &databaseHandle,
+                           "SELECT name FROM sqlite_master WHERE type='trigger'"
+                          );
+  if (error == ERROR_NONE)
+  {
+    while (   (error == ERROR_NONE)
+           && Database_getNextRow(&databaseQueryHandle,
+                                  "%64s",
+                                  &name
+                                 )
+          )
+    {
+      error = Database_execute(&databaseHandle,
+                               CALLBACK(NULL,NULL),
+                               "DROP TRIGGER %s",
+                               name
+                              );
+fprintf(stderr,"%s, %d: drop tri %s\n",__FILE__,__LINE__,name);
+    }
+    Database_finalize(&databaseQueryHandle);
+  }
+  if (error != ERROR_NONE)
+  {
+    Database_close(&databaseHandle);
+    return error;
+  }
+
+  // create new triggeres
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  error = Database_execute(&databaseHandle,
+                           CALLBACK(NULL,NULL),
+                           INDEX_TRIGGER_DEFINITION
+                          );
+  if (error != ERROR_NONE)
+  {
+    Database_close(&databaseHandle);
+    return error;
+  }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  // close index datbase
+  Database_close(&databaseHandle);
+
+  // free resource
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : refreshStoragesInfos
+* Purpose: refresh storages info
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors refreshStoragesInfos(IndexHandle *indexHandle)
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          storageId;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+
+  // clean-up
+  error = Index_initListStorages(&indexQueryHandle,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 INDEX_ID_ANY,  // entityId
+                                 NULL,  // jobUUID
+                                 NULL,  // indexIds
+                                 0,  // storageIdCount,
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // name
+                                 INDEX_STORAGE_SORT_MODE_NONE,
+                                 DATABASE_ORDERING_NONE,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextStorage(&indexQueryHandle,
+                                NULL,  // uuidId
+                                NULL,  // jobUUID
+                                NULL,  // entityId
+                                NULL,  // scheduleUUID
+                                NULL,  // archiveType
+                                &storageId,
+                                NULL,  // storageName,
+                                NULL,  // createdDateTime
+                                NULL,  // entries
+                                NULL,  // size
+                                NULL,  // indexState
+                                NULL,  // indexMode
+                                NULL,  // lastCheckedDateTime
+                                NULL  // errorMessage
+                               )
+          )
+    {
+      error = Index_updateStorageInfos(indexHandle,storageId);
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  if (error == ERROR_NONE)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Refreshed storages infos\n"
+               );
+  }
+  else
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Refreshed storages infos fail (error: %s)\n",
+                Error_getText(error)
+               );
+  }
+
+  // free resource
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : refreshEntitiesInfos
+* Purpose: refresh entities infos
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          entityId;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+
+  // clean-up
+  error = Index_initListEntities(&indexQueryHandle,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 NULL,  // jobUUID,
+                                 NULL,  // scheduldUUID
+                                 NULL,  // name
+                                 DATABASE_ORDERING_ASCENDING,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextEntity(&indexQueryHandle,
+                               NULL,  // uuidId,
+                               NULL,  // jobUUID,
+                               NULL,  // scheduleUUID,
+                               &entityId,
+                               NULL,  // archiveType,
+                               NULL,  // createdDateTime,
+                               NULL,  // lastErrorMessage
+                               NULL,  // totalEntryCount,
+                               NULL  // totalEntrySize,
+                              )
+          )
+    {
+      error = Index_updateEntityInfos(indexHandle,entityId);
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  if (error == ERROR_NONE)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Refreshed entities infos\n"
+               );
+  }
+  else
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Refreshed entities infos fail (error: %s)\n",
+                Error_getText(error)
+               );
+  }
+
+  // free resource
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : refreshUUIDsInfos
+* Purpose: refresh UUIDs infos
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors refreshUUIDsInfos(IndexHandle *indexHandle)
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          uuidId;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+
+  // clean-up
+  error = Index_initListUUIDs(&indexQueryHandle,
+                              indexHandle,
+                              NULL,  // name
+                              0LL,  // offset
+                              INDEX_UNLIMITED
+                             );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextUUID(&indexQueryHandle,
+                             &uuidId,
+                             NULL,  // jobUUID
+                             NULL,  // lastCheckedDateTime
+                             NULL,  // lastErrorMessage
+                             NULL,  // totalEntryCount
+                             NULL  // totalEntrySize
+                            )
+          )
+    {
+      error = Index_updateUUIDInfos(indexHandle,uuidId);
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  if (error == ERROR_NONE)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Refreshed UUID infos\n"
+               );
+  }
+  else
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Refreshed UUID infos fail (error: %s)\n",
+                Error_getText(error)
+               );
+  }
+
+  // free resource
 
   return error;
 }
@@ -5504,6 +5800,7 @@ LOCAL void cleanupIndexThreadCode(void)
   (void)pruneStorages(&indexHandle);
   (void)pruneEntities(&indexHandle);
   (void)pruneUUIDs(&indexHandle);
+  (void)refreshStoragesInfos(&indexHandle);
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
@@ -6544,6 +6841,9 @@ Errors Index_init(const char *fileName)
         if (error == ERROR_NONE)
         {
           error = Database_compare(&indexHandleReference.databaseHandle,&indexHandle.databaseHandle);
+#warning remove
+//TODO
+error=ERROR_NONE;
           closeIndex(&indexHandle);
         }
         closeIndex(&indexHandleReference);
@@ -6607,6 +6907,21 @@ Errors Index_init(const char *fileName)
   }
   else
   {
+    // recreate triggers
+    error = recreateTriggers(indexDatabaseFileName);
+    if (error != ERROR_NONE)
+    {
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_ERROR,
+                  "INDEX",
+                  "Recreate index database '%s' triggers fail: %s\n",
+                  indexDatabaseFileName,
+                  Error_getText(error)
+                 );
+      return error;
+    }
+
+    // get index version
     error = getIndexVersion(indexDatabaseFileName,&indexVersion);
     if (error != ERROR_NONE)
     {
@@ -6619,7 +6934,6 @@ Errors Index_init(const char *fileName)
                  );
       return error;
     }
-
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
@@ -7672,6 +7986,13 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
   return error;
 }
 
+Errors Index_updateUUIDInfos(IndexHandle *indexHandle,
+                             IndexId     uuidId
+                            )
+{
+  return ERROR_NONE;
+}
+
 Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            IndexHandle      *indexHandle,
                            ConstString      name,
@@ -7730,7 +8051,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            offset,
                            limit
                           );
-#else
+#elif 0
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT uuids.id, \
@@ -7739,6 +8060,26 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                                    uuids.lastErrorMessage, \
                                    (SELECT TOTAL(storage.totalEntryCount) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID), \
                                    (SELECT TOTAL(storage.totalEntrySize) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID) \
+                            FROM uuids \
+                              LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                              LEFT JOIN storage ON storage.entityId=entities.id \
+                            WHERE %S \
+                            GROUP BY uuids.id \
+                            LIMIT %llu,%llu \
+                           ",
+                           filterString,
+                           offset,
+                           limit
+                          );
+#else
+  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT uuids.id, \
+                                   uuids.jobUUID, \
+                                   UNIXTIMESTAMP(uuids.lastCreated), \
+                                   uuids.lastErrorMessage, \
+                                   0, \
+                                   0 \
                             FROM uuids \
                               LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
                               LEFT JOIN storage ON storage.entityId=entities.id \
@@ -7970,6 +8311,13 @@ Errors Index_isEmptyUUID(IndexHandle *indexHandle,
   return emptyFlag;
 }
 
+Errors Index_updateEntityInfos(IndexHandle *indexHandle,
+                               IndexId     entityId
+                              )
+{
+  return ERROR_NONE;
+}
+
 Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               IndexHandle      *indexHandle,
                               IndexId          uuidId,
@@ -8043,7 +8391,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                            offset,
                            limit
                           );
-#else
+#elif 0
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT uuids.id,\
@@ -8055,6 +8403,29 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                    (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1), \
                                    (SELECT TOTAL(storage.totalEntryCount) FROM storage WHERE storage.entityId=entities.id), \
                                    (SELECT TOTAL(storage.totalEntrySize) FROM storage WHERE storage.entityId=entities.id) \
+                            FROM entities \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                            WHERE %S \
+                            %S \
+                            LIMIT %llu,%llu \
+                           ",
+                           filterString,
+                           orderString,
+                           offset,
+                           limit
+                          );
+#else
+  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT uuids.id,\
+                                   entities.id, \
+                                   entities.jobUUID, \
+                                   entities.scheduleUUID, \
+                                   UNIXTIMESTAMP(entities.created), \
+                                   entities.type, \
+                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1), \
+                                   0, \
+                                   0 \
                             FROM entities \
                               LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                             WHERE %S \
@@ -8515,7 +8886,7 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   return ERROR_NONE;
 }
 
-Errors Index_updateStoragesInfo(IndexHandle *indexHandle,
+Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                                 IndexId     storageId
                                )
 {
@@ -8669,7 +9040,7 @@ Errors Index_updateStoragesInfo(IndexHandle *indexHandle,
     Database_finalize(&databaseQueryHandle);
 
     // update aggregate data
-fprintf(stderr,"%s, %d: %lld: %llu %llu\n  %llu %llu %llu %llu %llu %llu %llu %llu %llu\n",__FILE__,__LINE__,Index_getDatabaseId(storageId),
+fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %llu %llu %llu %llu %llu %llu %llu\n",__FILE__,__LINE__,Index_getDatabaseId(storageId),
                              totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
                              totalFileSize+totalImageSize+totalHardlinkSize,
                              totalFileCount,
@@ -8845,7 +9216,7 @@ fprintf(stderr,"%s, %d: %lld: %llu %llu\n  %llu %llu %llu %llu %llu %llu %llu %l
     Database_finalize(&databaseQueryHandle);
 
     // update newest aggregate data
-fprintf(stderr,"%s, %d: %lld: %llu %llu\n  %llu %llu %llu %llu %llu %llu %llu %llu %llu\n",__FILE__,__LINE__,Index_getDatabaseId(storageId),
+fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %llu %llu %llu %llu %llu %llu %llu\n",__FILE__,__LINE__,Index_getDatabaseId(storageId),
                              totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
                              totalFileSize+totalImageSize+totalHardlinkSize,
                              totalFileCount,

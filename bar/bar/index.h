@@ -838,6 +838,20 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
 // ---------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : Index_updateUUIDInfos
+* Purpose: update UUID infos (aggregated values)
+* Input  : indexHandle - index handle
+*          uuidId      - UUID Id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_updateUUIDInfos(IndexHandle *indexHandle,
+                             IndexId     uuidId
+                            );
+
+/***********************************************************************\
 * Name   : Index_initListUUIDs
 * Purpose: list uuid entries and aggregated data of entities
 * Input  : IndexQueryHandle - index query handle variable
@@ -924,6 +938,20 @@ Errors Index_isEmptyUUID(IndexHandle *indexHandle,
                         );
 
 // ---------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : Index_updateEntityInfos
+* Purpose: update storages info (aggregated values)
+* Input  : indexHandle - index handle
+*          entityId    - entity Id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_updateEntityInfos(IndexHandle *indexHandle,
+                               IndexId     entityId
+                              );
 
 /***********************************************************************\
 * Name   : Index_initListEntities
@@ -1073,16 +1101,16 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                             );
 
 /***********************************************************************\
-* Name   : Index_updateStoragesInfo
+* Name   : Index_updateStorageInfos
 * Purpose: update storages info (aggregated values)
 * Input  : indexHandle - index handle
-*          IndexId     - storageId
+*          storageId   - storage id
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_updateStoragesInfo(IndexHandle *indexHandle,
+Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                                 IndexId     storageId
                                );
 
