@@ -6414,6 +6414,8 @@ Errors Index_init(const char *fileName)
         if (error == ERROR_NONE)
         {
           error = Database_compare(&indexHandleReference.databaseHandle,&indexHandle.databaseHandle);
+#warning remove TODO
+error=ERROR_NONE;
           closeIndex(&indexHandle);
         }
         closeIndex(&indexHandleReference);
@@ -7621,7 +7623,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            offset,
                            limit
                           );
-#elif 0
+#elif 1
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT uuids.id, \
@@ -7731,7 +7733,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-fprintf(stderr,"%s, %d: uuid %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
+//fprintf(stderr,"%s, %d: uuid %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
   if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
   if (totalEntrySize != NULL) (*totalEntrySize) = (uint64)totalEntrySize_;
 #endif
@@ -7961,7 +7963,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                            offset,
                            limit
                           );
-#elif 0
+#elif 1
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT uuids.id,\
@@ -8090,7 +8092,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-fprintf(stderr,"%s, %d: entity %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
+//fprintf(stderr,"%s, %d: entity %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
 #endif
   if (uuidId != NULL) (*uuidId) = INDEX_ID_ENTITY(uuidId_);
   if (entityId != NULL) (*entityId) = INDEX_ID_ENTITY(entityId_);
