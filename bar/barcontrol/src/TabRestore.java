@@ -793,23 +793,23 @@ public class TabRestore
     }
   }
 
-  /** index id set
+  /** index data set
    */
   class IndexIdSet extends HashSet<Long>
   {
     /** add/remove id
-     * @param id id
+     * @param indexId index id
      * @param enabled true to add, false to remove
      */
-    public void set(long id, boolean enabled)
+    public void set(long indexId, boolean enabled)
     {
       if (enabled)
       {
-        add(id);
+        add(indexId);
       }
       else
       {
-        remove(id);
+        remove(indexId);
       }
     }
 
@@ -819,7 +819,7 @@ public class TabRestore
     public String toString()
     {
       StringBuilder buffer = new StringBuilder();
-      for (long indexId : this)
+      for (Long indexId : this)
       {
         if (buffer.length() > 0) buffer.append(',');
         buffer.append(indexId);
@@ -4957,7 +4957,8 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           // remove all selected sub-ids
           for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
           {
-            setStorageList(((IndexData)subTreeItem.getData()).id,false);
+            IndexData indexData = (IndexData)subTreeItem.getData();
+            setStorageList(indexData.id,false);
           }
 
           // close sub-tree
@@ -5631,7 +5632,7 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            deleteStorage();
+            deleteStorages();
           }
         });
 
@@ -7544,18 +7545,22 @@ Dprintf.dprintf("remove");
     }
   }
 
-  /** delete storage
+  /** delete storages
    */
-  private void deleteStorage()
+  private void deleteStorages()
   {
-/*
     if (!selectedIndexIdSet.isEmpty())
     {
       // set storage achives to restore
-      setStorageList(indexIdSet);
+      setStorageList(selectedIndexIdSet);
+
+      // get list
+      final HashMap<Long,String> indexMap = new HashMap<Long,String>();
 
       // get total number entries, size
-      int  totalEntryCount = 0;
+      final String[] errorMessage = new String[1];
+      ValueMap       valueMap     = new ValueMap();
+      long totalEntryCount = 0L;
       long totalEntrySize  = 0L;
       if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
                                    1,  // debugLevel
@@ -7569,10 +7574,16 @@ Dprintf.dprintf("remove");
       }
 
       // confirm
-      if (Dialogs.confirm(shell,BARControl.tr("Delete {0} {0,choice,0#jobs/entities/storage files|1#job/entity/storage file|1<jobs/entities/storage files} with {1} {1,choice,0#entries|1#entry|1<entries}/{2} {2,choice,0#bytes|1#byte|1<bytes}?",indexDataHashSet.size(),totalEntryCount,totalEntrySize)))
+      if (Dialogs.confirm(shell,
+                          BARControl.tr("Delete {0} {0,choice,0#jobs/entities/storage files|1#job/entity/storage file|1<jobs/entities/storage files} with {1} {1,choice,0#entries|1#entry|1<entries}/{2} {2,choice,0#bytes|1#byte|1<bytes}?",
+                          selectedIndexIdSet.size(),
+                          totalEntryCount,
+                          totalEntrySize)
+                         )
+         )
       {
         final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and storage files",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
-        busyDialog.setMaximum(indexDataHashSet.size());
+        busyDialog.setMaximum(selectedIndexIdSet.size());
 
         new BackgroundTask(busyDialog,new Object[]{selectedIndexIdSet})
         {
@@ -7586,16 +7597,18 @@ Dprintf.dprintf("remove");
               boolean ignoreAllErrorsFlag = false;
               boolean abortFlag           = false;
               long    n                   = 0;
-Dprintf.dprintf("indexDataHashSet.size=%d",indexDataHashSet.size());
-              for (Long indexId : indexIdSet)
+Dprintf.dprintf("selectedIndexIdSet.size=%d",selectedIndexIdSet.size());
+              for (long indexId : indexIdSet)
               {
                 // get index info
-                final String info = indexData.getInfo();
+                final String info = indexMap.get(indexId);//.getInfo();
 Dprintf.dprintf("info=%s",info);
 
                 // update busy dialog
                 busyDialog.updateText(0,"%s",info);
 
+//TODO
+/*
                 // delete storage
                 int            error        = Errors.UNKNOWN;
                 final String[] errorMessage = new String[1];
@@ -7638,7 +7651,7 @@ Dprintf.dprintf("info=%s",info);
                   if (!ignoreAllErrorsFlag)
                   {
                     final int[] selection = new int[1];
-                    if (indexDataHashSet.size() > (n+1))
+                    if (indexIdSet.size() > (n+1))
                     {
                       display.syncExec(new Runnable()
                       {
@@ -7680,6 +7693,7 @@ Dprintf.dprintf("info=%s",info);
                     }
                   }
                 }
+*/
 
                 // update progress bar
                 n++;
@@ -7739,7 +7753,6 @@ Dprintf.dprintf("info=%s",info);
         };
       }
     }
-*/
   }
 
   //-----------------------------------------------------------------------
@@ -7773,6 +7786,7 @@ Dprintf.dprintf("info=%s",info);
                                0  // debugLevel
                               );
     }
+    selectedIndexIdSet.set(entryId,checked);
   }
 
   /** set selected storage entry
@@ -7784,7 +7798,7 @@ Dprintf.dprintf("info=%s",info);
   }
 
   /** set selected storage entries
-   * @param indexIdSet index id set
+   * @param entryDataSet index data set
    */
   private void setEntryList(IndexIdSet entryIdSet)
   {
