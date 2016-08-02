@@ -8093,7 +8093,7 @@ exit(1);
   }
 
   // if daemon then print info
-  printInfoFlag = daemonFlag;
+  printInfoFlag = !globalOptions.quietFlag && daemonFlag;
 
   // read all configuration files
   STRINGLIST_ITERATE(&configFileNameList,stringNode,fileName)
