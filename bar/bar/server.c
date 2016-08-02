@@ -14888,280 +14888,6 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 }
 
 /***********************************************************************\
-* Name   : serverCommand_indexEntityAdd
-* Purpose: add entity to index database
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            jobUUID=<uuid>
-*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
-*            [createdDateTime=<time stamp [s]>]
-*          Result:
-*            entityId=<id>
-\***********************************************************************/
-
-LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveTypes archiveType;
-  uint64       createdDateTime;
-  IndexId      entityId;
-  Errors       error;
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  // get jobUUID, archive type
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
-    return;
-  }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
-    return;
-  }
-  StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
-
-  // check if index database is available
-  if (indexHandle == NULL)
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    return;
-  }
-
-  // create new entity
-  error = Index_newEntity(indexHandle,
-                           jobUUID,
-                           NULL,  // scheduleUUID,
-                           archiveType,
-                           createdDateTime,
-                           &entityId
-                          );
-  if (error != ERROR_NONE)
-  {
-    sendClientResult(clientInfo,id,TRUE,error,"add entity fail");
-    return;
-  }
-
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"entityId=%llu",entityId);
-
-  // free resources
-}
-
-//TODO: obsolete
-#if 0
-/***********************************************************************\
-* Name   : serverCommand_indexEntitySet
-* Purpose: set entity type in index database
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            entityId=<id>
-*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
-*            [createdDateTime=<time stamp [s]>]
-*          Result:
-\***********************************************************************/
-
-LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveTypes archiveType;
-  uint64       createdDateTime;
-  IndexId      entityId;
-  Errors       error;
-
-#ifndef WERROR
-#warning TODO
-#endif
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(argumentMap);
-
-  // get jobUUID, archive type, created
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
-    return;
-  }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
-    return;
-  }
-  StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
-
-  // check if index database is available
-  if (indexHandle == NULL)
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    return;
-  }
-
-  // create new entity
-  error = Index_newEntity(indexHandle,
-                           jobUUID,
-                           NULL,  // scheduleUUID,
-                           archiveType,
-                           createdDateTime,
-                           &entityId
-                          );
-  if (error != ERROR_NONE)
-  {
-    sendClientResult(clientInfo,id,TRUE,error,"add entity fail");
-    return;
-  }
-
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"entityId=%llu",entityId);
-
-  // free resources
-}
-#endif
-
-/***********************************************************************\
-* Name   : serverCommand_indexStoragesInfo
-* Purpose: get index database storage info
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            entityId=<id>|0|*
-*            name=<text>
-*            indexStateSet=<state set>|*
-*            indexModeSet=<mode set>|*
-*          Result:
-*            storageCount=<n> \
-*            totalEntryCount=<n> \
-*            totalEntrySize=<n> [bytes]
-*            totalEntryContentSize=<n> [bytes]
-\***********************************************************************/
-
-LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  uint64        n;
-  IndexId       entityId;
-  String        name;
-  bool          indexStateAny;
-  IndexStateSet indexStateSet;
-  bool          indexModeAny;
-  IndexModeSet  indexModeSet;
-  Errors        error;
-  ulong         storageCount,totalEntryCount;
-  uint64        totalEntrySize,totalEntryContentSize;
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(argumentMap);
-
-  // get entryId, name, index state set, index mode set
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"entityId","*"),"*"))
-  {
-    entityId = INDEX_ID_ANY;
-  }
-  else if (stringEquals(StringMap_getTextCString(argumentMap,"entityId","NONE"),"NONE"))
-  {
-    entityId = INDEX_ID_ENTITY_NONE;
-  }
-  else if (StringMap_getUInt64(argumentMap,"entityId",&n,INDEX_ID_ANY))
-  {
-    entityId = (IndexId)n;
-  }
-  else
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
-    return;
-  }
-  name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
-    String_delete(name);
-    return;
-  }
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
-  {
-    indexStateAny = TRUE;
-  }
-  else if (StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
-  {
-    indexStateAny = FALSE;
-  }
-  else
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
-    String_delete(name);
-    return;
-  }
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
-  {
-    indexModeAny = TRUE;
-  }
-  if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
-  {
-    indexModeAny = FALSE;
-  }
-  else
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
-    String_delete(name);
-    return;
-  }
-
-  // check if index database is available
-  if (indexHandle == NULL)
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    String_delete(name);
-    return;
-  }
-
-  // get index info
-  error = Index_getStoragesInfo(indexHandle,
-                                INDEX_ID_ANY,  // uuidId
-                                entityId,
-                                NULL,  // jobUUID
-                                NULL,  // indexIds,
-                                0,  // indexIdCount,
-                                indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
-                                indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
-                                name,
-                                &storageCount,
-                                &totalEntryCount,
-                                &totalEntrySize,
-                                &totalEntryContentSize
-                              );
-  if (error != ERROR_NONE)
-  {
-    sendClientResult(clientInfo,id,TRUE,error,"get storages info from index database fail: %s",Error_getText(error));
-    String_delete(name);
-    return;
-  }
-
-  // send data
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",storageCount,totalEntryCount,totalEntrySize,totalEntryContentSize);
-
-  // free resources
-  String_delete(name);
-}
-
-/***********************************************************************\
 * Name   : serverCommand_indexStorageList
 * Purpose: get index database storage list
 * Input  : clientInfo    - client info
@@ -15403,6 +15129,411 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
 }
 
 /***********************************************************************\
+* Name   : serverCommand_indexEntryList
+* Purpose: get index database entry list
+* Input  : clientInfo    - client info
+*          indexHandle   - index handle
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            name=<text>
+*            indexType=<text>|*
+*            newestOnly=yes|no
+*            [offset=<n>]
+*            [limit=<n>]
+*          Result:
+*            jobName=<name> archiveType=<type> \
+*            storageName=<name> storageDateTime=<time stamp> entryId=<n> name=<name> entryType=FILE size=<n [bytes]> dateTime=<time stamp> \
+*            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
+*
+*            jobName=<name> archiveType=<type> \
+*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=IMAGE name=<name> size=<n [bztes]> dateTime=<time stamp> \
+*            blockOffset=<n [bytes]> blockCount=<n>
+*
+*            jobName=<name> archiveType=<type> \
+*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=DIRECTORY name=<name> size=<n [bztes]> dateTime=<time stamp> \
+*            userId=<n> groupId=<n> permission=<n>
+*
+*            jobName=<name> archiveType=<type> \
+*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=LINK linkName=<name> name=<name> \
+*            dateTime=<time stamp> userId=<n> groupId=<n> permission=<n>
+*
+*            jobName=<name> archiveType=<type> \
+*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=HARDLINK name=<name> dateTime=<time stamp>
+*            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
+*
+*            jobName=<name> archiveType=<type> \
+*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=SPECIAL name=<name> dateTime=<time stamp> \
+*            userId=<n> groupId=<n> permission=<n>
+\***********************************************************************/
+
+LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  #define SEND_FILE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
+    do \
+    { \
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
+                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=FILE name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
+                       jobName, \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                       storageName, \
+                       storageDateTime, \
+                       entryId, \
+                       name, \
+                       size, \
+                       dateTime, \
+                       userId, \
+                       groupId, \
+                       permission, \
+                       fragmentOffset, \
+                       fragmentSize \
+                      ); \
+    } \
+    while (0)
+  #define SEND_IMAGE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,fileSystemType,size,blockOffset,blockCount) \
+    do \
+    { \
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
+                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=IMAGE name=%'S fileSystemType=%s size=%llu blockOffset=%llu blockCount=%llu", \
+                       jobName, \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                       storageName, \
+                       storageDateTime, \
+                       entryId, \
+                       name, \
+                       FileSystem_getName(fileSystemType), \
+                       size, \
+                       blockOffset, \
+                       blockCount \
+                      ); \
+    } \
+    while (0)
+  #define SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission) \
+    do \
+    { \
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
+                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=DIRECTORY name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u", \
+                       jobName, \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                       storageName, \
+                       storageDateTime, \
+                       entryId, \
+                       name, \
+                       size, \
+                       dateTime, \
+                       userId, \
+                       groupId, \
+                       permission \
+                      ); \
+    } \
+    while (0)
+  #define SEND_LINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,destinationName,dateTime,userId,groupId,permission) \
+    do \
+    { \
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
+                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=LINK name=%'S destinationName=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                       jobName, \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                       storageName, \
+                       storageDateTime, \
+                       entryId, \
+                       name, \
+                       destinationName, \
+                       dateTime, \
+                       userId, \
+                       groupId, \
+                       permission \
+                      ); \
+    } \
+    while (0)
+  #define SEND_HARDLINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
+    do \
+    { \
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
+                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=HARDLINK name=%'S size=%lld dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
+                       jobName, \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                       storageName, \
+                       storageDateTime, \
+                       entryId, \
+                       name, \
+                       size, \
+                       dateTime, \
+                       userId, \
+                       groupId, \
+                       permission, \
+                       fragmentOffset, \
+                       fragmentSize \
+                      ); \
+    } \
+    while (0)
+  #define SEND_SPECIAL_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,dateTime,userId,groupId,permission) \
+    do \
+    { \
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
+                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=SPECIAL name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                       jobName, \
+                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
+                       storageName, \
+                       storageDateTime, \
+                       entryId, \
+                       name, \
+                       dateTime, \
+                       userId, \
+                       groupId, \
+                       permission \
+                      ); \
+    } \
+    while (0)
+
+  String           name;
+  bool             indexTypeAny;
+  IndexTypes       indexType;
+  bool             newestOnly;
+  uint64           offset;
+  uint64           limit;
+  IndexId          prevUUIDId;
+  String           jobName;
+  String           storageName;
+  uint64           storageDateTime;
+  String           entryName;
+  String           destinationName;
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  FileSystemTypes  fileSystemType;
+  IndexId          uuidId,entityId,storageId,entryId;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes     archiveType;
+  uint64           size;
+  uint64           timeModified;
+  uint             userId,groupId;
+  uint             permission;
+  uint64           fragmentOrBlockOffset,fragmentSizeOrBlockCount;
+  SemaphoreLock    semaphoreLock;
+  const JobNode    *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // filter entry pattern, index type, new entries only, offset, limit
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
+    String_delete(name);
+    return;
+  }
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexType","*"),"*"))
+  {
+    indexTypeAny = TRUE;
+  }
+  else if (StringMap_getEnum(argumentMap,"indexType",&indexType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_FILE))
+  {
+    indexTypeAny = FALSE;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
+    String_delete(name);
+    return;
+  }
+  if (!StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestOnly=yes|no");
+    String_delete(name);
+    return;
+  }
+  StringMap_getUInt64(argumentMap,"offset",&offset,0);
+  StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
+
+  // check if index database is available, check if index database is ready
+  if (indexHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    String_delete(name);
+    return;
+  }
+
+  // initialize variables
+  prevUUIDId      = INDEX_ID_NONE;
+  jobName         = String_new();
+  storageName     = String_new();
+  entryName       = String_new();
+  destinationName = String_new();
+  error = Index_initListEntries(&indexQueryHandle,
+                                indexHandle,
+                                Array_cArray(&clientInfo->indexIdArray),
+                                Array_length(&clientInfo->indexIdArray),
+                                NULL,  // entryIds
+                                0,  // entryIdCount
+                                indexTypeAny ? INDEX_TYPE_SET_ANY_ENTRY : SET_VALUE(indexType),
+                                name,
+                                DATABASE_ORDERING_NONE,
+                                newestOnly,
+                                offset,
+                                limit
+                               );
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list entries fail: %s",Error_getText(error));
+    String_delete(name);
+    String_delete(storageName);
+    String_delete(name);
+    return;
+  }
+  while (   !isCommandAborted(clientInfo,id)
+         && Index_getNextEntry(&indexQueryHandle,
+                               &uuidId,
+                               jobUUID,
+                               &entityId,
+                               NULL,  // scheduleUUID,
+                               &archiveType,
+                               &storageId,
+                               storageName,
+                               &storageDateTime,
+                               &entryId,
+                               entryName,
+                               destinationName,
+                               &fileSystemType,
+                               &size,
+                               &timeModified,
+                               &userId,
+                               &groupId,
+                               &permission,
+                               &fragmentOrBlockOffset,
+                               &fragmentSizeOrBlockCount
+                              )
+        )
+  {
+    // get job name
+    if (uuidId != prevUUIDId)
+    {
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      {
+        jobNode = findJobByUUID(jobUUID);
+        if (jobNode != NULL)
+        {
+          String_set(jobName,jobNode->name);
+        }
+        else
+        {
+          String_clear(jobName);
+        }
+      }
+      prevUUIDId = uuidId;
+    }
+    if (String_isEmpty(jobName)) String_set(jobName,jobUUID);
+
+    // send entry data
+    switch (Index_getType(entryId))
+    {
+      case INDEX_TYPE_FILE:
+        SEND_FILE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
+        break;
+      case INDEX_TYPE_IMAGE:
+        SEND_IMAGE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,fileSystemType,size,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
+        break;
+      case INDEX_TYPE_DIRECTORY:
+        SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission);
+        break;
+      case INDEX_TYPE_LINK:
+        SEND_LINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,destinationName,timeModified,userId,groupId,permission);
+        break;
+      case INDEX_TYPE_HARDLINK:
+        SEND_HARDLINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
+        break;
+      case INDEX_TYPE_SPECIAL:
+        SEND_SPECIAL_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,timeModified,userId,groupId,permission);
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break;
+    }
+  }
+  Index_doneList(&indexQueryHandle);
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(destinationName);
+  String_delete(entryName);
+  String_delete(storageName);
+  String_delete(name);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_indexEntityAdd
+* Purpose: add entity to index database
+* Input  : clientInfo    - client info
+*          indexHandle   - index handle
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
+*            [createdDateTime=<time stamp [s]>]
+*          Result:
+*            entityId=<id>
+\***********************************************************************/
+
+LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes archiveType;
+  uint64       createdDateTime;
+  IndexId      entityId;
+  Errors       error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get jobUUID, archive type
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
+    return;
+  }
+  StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
+
+  // check if index database is available
+  if (indexHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  // create new entity
+  error = Index_newEntity(indexHandle,
+                           jobUUID,
+                           NULL,  // scheduleUUID,
+                           archiveType,
+                           createdDateTime,
+                           &entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,error,"add entity fail");
+    return;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"entityId=%llu",entityId);
+
+  // free resources
+}
+
+/***********************************************************************\
 * Name   : serverCommand_indexStorageAdd
 * Purpose: add storage to index database (if not already exists)
 * Input  : clientInfo    - client info
@@ -15605,6 +15736,81 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(pattern);
 }
+
+//TODO: obsolete
+#if 0
+/***********************************************************************\
+* Name   : serverCommand_indexEntitySet
+* Purpose: set entity type in index database
+* Input  : clientInfo    - client info
+*          indexHandle   - index handle
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            entityId=<id>
+*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
+*            [createdDateTime=<time stamp [s]>]
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes archiveType;
+  uint64       createdDateTime;
+  IndexId      entityId;
+  Errors       error;
+
+#ifndef WERROR
+#warning TODO
+#endif
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
+
+  // get jobUUID, archive type, created
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
+    return;
+  }
+  StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
+
+  // check if index database is available
+  if (indexHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  // create new entity
+  error = Index_newEntity(indexHandle,
+                           jobUUID,
+                           NULL,  // scheduleUUID,
+                           archiveType,
+                           createdDateTime,
+                           &entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,error,"add entity fail");
+    return;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"entityId=%llu",entityId);
+
+  // free resources
+}
+#endif
 
 /***********************************************************************\
 * Name   : serverCommand_indexAssign
@@ -16421,6 +16627,137 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
 }
 
 /***********************************************************************\
+* Name   : serverCommand_indexStoragesInfo
+* Purpose: get index database storage info
+* Input  : clientInfo    - client info
+*          indexHandle   - index handle
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            entityId=<id>|0|*
+*            name=<text>
+*            indexStateSet=<state set>|*
+*            indexModeSet=<mode set>|*
+*          Result:
+*            storageCount=<n> \
+*            totalEntryCount=<n> \
+*            totalEntrySize=<n> [bytes]
+*            totalEntryContentSize=<n> [bytes]
+\***********************************************************************/
+
+LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  uint64        n;
+  IndexId       entityId;
+  String        name;
+  bool          indexStateAny;
+  IndexStateSet indexStateSet;
+  bool          indexModeAny;
+  IndexModeSet  indexModeSet;
+  Errors        error;
+  ulong         storageCount,totalEntryCount;
+  uint64        totalEntrySize,totalEntryContentSize;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
+
+  // get entryId, name, index state set, index mode set
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"entityId","*"),"*"))
+  {
+    entityId = INDEX_ID_ANY;
+  }
+  else if (stringEquals(StringMap_getTextCString(argumentMap,"entityId","NONE"),"NONE"))
+  {
+    entityId = INDEX_ID_ENTITY_NONE;
+  }
+  else if (StringMap_getUInt64(argumentMap,"entityId",&n,INDEX_ID_ANY))
+  {
+    entityId = (IndexId)n;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
+    return;
+  }
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
+    String_delete(name);
+    return;
+  }
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
+  {
+    indexStateAny = TRUE;
+  }
+  else if (StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
+  {
+    indexStateAny = FALSE;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    String_delete(name);
+    return;
+  }
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
+  {
+    indexModeAny = TRUE;
+  }
+  if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
+  {
+    indexModeAny = FALSE;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
+    String_delete(name);
+    return;
+  }
+
+  // check if index database is available
+  if (indexHandle == NULL)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    String_delete(name);
+    return;
+  }
+
+  // get index info
+  error = Index_getStoragesInfo(indexHandle,
+                                INDEX_ID_ANY,  // uuidId
+                                entityId,
+                                NULL,  // jobUUID
+                                NULL,  // indexIds,
+                                0,  // indexIdCount,
+                                indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
+                                indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
+                                name,
+                                &storageCount,
+                                &totalEntryCount,
+                                &totalEntrySize,
+                                &totalEntryContentSize
+                              );
+  if (error != ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,error,"get storages info from index database fail: %s",Error_getText(error));
+    String_delete(name);
+    return;
+  }
+
+  // send data
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",storageCount,totalEntryCount,totalEntrySize,totalEntryContentSize);
+
+  // free resources
+  String_delete(name);
+}
+
+/***********************************************************************\
 * Name   : serverCommand_indexEntriesInfo
 * Purpose: get index database entries info
 * Input  : clientInfo    - client info
@@ -16513,343 +16850,6 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",totalEntryCount,totalEntrySize,totalEntryContentSize);
 
   // free resources
-  String_delete(name);
-}
-
-/***********************************************************************\
-* Name   : serverCommand_indexEntryList
-* Purpose: get index database entry list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            name=<text>
-*            indexType=<text>|*
-*            newestOnly=yes|no
-*            [offset=<n>]
-*            [limit=<n>]
-*          Result:
-*            jobName=<name> archiveType=<type> \
-*            storageName=<name> storageDateTime=<time stamp> entryId=<n> name=<name> entryType=FILE size=<n [bytes]> dateTime=<time stamp> \
-*            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
-*
-*            jobName=<name> archiveType=<type> \
-*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=IMAGE name=<name> size=<n [bztes]> dateTime=<time stamp> \
-*            blockOffset=<n [bytes]> blockCount=<n>
-*
-*            jobName=<name> archiveType=<type> \
-*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=DIRECTORY name=<name> size=<n [bztes]> dateTime=<time stamp> \
-*            userId=<n> groupId=<n> permission=<n>
-*
-*            jobName=<name> archiveType=<type> \
-*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=LINK linkName=<name> name=<name> \
-*            dateTime=<time stamp> userId=<n> groupId=<n> permission=<n>
-*
-*            jobName=<name> archiveType=<type> \
-*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=HARDLINK name=<name> dateTime=<time stamp>
-*            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
-*
-*            jobName=<name> archiveType=<type> \
-*            storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=SPECIAL name=<name> dateTime=<time stamp> \
-*            userId=<n> groupId=<n> permission=<n>
-\***********************************************************************/
-
-LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  #define SEND_FILE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
-    do \
-    { \
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=FILE name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
-                       jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
-                       storageName, \
-                       storageDateTime, \
-                       entryId, \
-                       name, \
-                       size, \
-                       dateTime, \
-                       userId, \
-                       groupId, \
-                       permission, \
-                       fragmentOffset, \
-                       fragmentSize \
-                      ); \
-    } \
-    while (0)
-  #define SEND_IMAGE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,fileSystemType,size,blockOffset,blockCount) \
-    do \
-    { \
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=IMAGE name=%'S fileSystemType=%s size=%llu blockOffset=%llu blockCount=%llu", \
-                       jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
-                       storageName, \
-                       storageDateTime, \
-                       entryId, \
-                       name, \
-                       FileSystem_getName(fileSystemType), \
-                       size, \
-                       blockOffset, \
-                       blockCount \
-                      ); \
-    } \
-    while (0)
-  #define SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission) \
-    do \
-    { \
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=DIRECTORY name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u", \
-                       jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
-                       storageName, \
-                       storageDateTime, \
-                       entryId, \
-                       name, \
-                       size, \
-                       dateTime, \
-                       userId, \
-                       groupId, \
-                       permission \
-                      ); \
-    } \
-    while (0)
-  #define SEND_LINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,destinationName,dateTime,userId,groupId,permission) \
-    do \
-    { \
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=LINK name=%'S destinationName=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
-                       jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
-                       storageName, \
-                       storageDateTime, \
-                       entryId, \
-                       name, \
-                       destinationName, \
-                       dateTime, \
-                       userId, \
-                       groupId, \
-                       permission \
-                      ); \
-    } \
-    while (0)
-  #define SEND_HARDLINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
-    do \
-    { \
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=HARDLINK name=%'S size=%lld dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
-                       jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
-                       storageName, \
-                       storageDateTime, \
-                       entryId, \
-                       name, \
-                       size, \
-                       dateTime, \
-                       userId, \
-                       groupId, \
-                       permission, \
-                       fragmentOffset, \
-                       fragmentSize \
-                      ); \
-    } \
-    while (0)
-  #define SEND_SPECIAL_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,dateTime,userId,groupId,permission) \
-    do \
-    { \
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=SPECIAL name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
-                       jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
-                       storageName, \
-                       storageDateTime, \
-                       entryId, \
-                       name, \
-                       dateTime, \
-                       userId, \
-                       groupId, \
-                       permission \
-                      ); \
-    } \
-    while (0)
-
-  String           name;
-  bool             indexTypeAny;
-  IndexTypes       indexType;
-  bool             newestOnly;
-  uint64           offset;
-  uint64           limit;
-  IndexId          prevUUIDId;
-  String           jobName;
-  String           storageName;
-  uint64           storageDateTime;
-  String           entryName;
-  String           destinationName;
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  FileSystemTypes  fileSystemType;
-  IndexId          uuidId,entityId,storageId,entryId;
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveTypes     archiveType;
-  uint64           size;
-  uint64           timeModified;
-  uint             userId,groupId;
-  uint             permission;
-  uint64           fragmentOrBlockOffset,fragmentSizeOrBlockCount;
-  SemaphoreLock    semaphoreLock;
-  const JobNode    *jobNode;
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  // filter entry pattern, index type, new entries only, offset, limit
-  name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
-    String_delete(name);
-    return;
-  }
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexType","*"),"*"))
-  {
-    indexTypeAny = TRUE;
-  }
-  else if (StringMap_getEnum(argumentMap,"indexType",&indexType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_FILE))
-  {
-    indexTypeAny = FALSE;
-  }
-  else
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
-    String_delete(name);
-    return;
-  }
-  if (!StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestOnly=yes|no");
-    String_delete(name);
-    return;
-  }
-  StringMap_getUInt64(argumentMap,"offset",&offset,0);
-  StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
-
-  // check if index database is available, check if index database is ready
-  if (indexHandle == NULL)
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    String_delete(name);
-    return;
-  }
-
-  // initialize variables
-  prevUUIDId      = INDEX_ID_NONE;
-  jobName         = String_new();
-  storageName     = String_new();
-  entryName       = String_new();
-  destinationName = String_new();
-  error = Index_initListEntries(&indexQueryHandle,
-                                indexHandle,
-                                Array_cArray(&clientInfo->indexIdArray),
-                                Array_length(&clientInfo->indexIdArray),
-                                NULL,  // entryIds
-                                0,  // entryIdCount
-                                indexTypeAny ? INDEX_TYPE_SET_ANY_ENTRY : SET_VALUE(indexType),
-                                name,
-                                DATABASE_ORDERING_NONE,
-                                newestOnly,
-                                offset,
-                                limit
-                               );
-  if (error != ERROR_NONE)
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list entries fail: %s",Error_getText(error));
-    String_delete(name);
-    String_delete(storageName);
-    String_delete(name);
-    return;
-  }
-  while (   !isCommandAborted(clientInfo,id)
-         && Index_getNextEntry(&indexQueryHandle,
-                               &uuidId,
-                               jobUUID,
-                               &entityId,
-                               NULL,  // scheduleUUID,
-                               &archiveType,
-                               &storageId,
-                               storageName,
-                               &storageDateTime,
-                               &entryId,
-                               entryName,
-                               destinationName,
-                               &fileSystemType,
-                               &size,
-                               &timeModified,
-                               &userId,
-                               &groupId,
-                               &permission,
-                               &fragmentOrBlockOffset,
-                               &fragmentSizeOrBlockCount
-                              )
-        )
-  {
-    // get job name
-    if (uuidId != prevUUIDId)
-    {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-      {
-        jobNode = findJobByUUID(jobUUID);
-        if (jobNode != NULL)
-        {
-          String_set(jobName,jobNode->name);
-        }
-        else
-        {
-          String_clear(jobName);
-        }
-      }
-      prevUUIDId = uuidId;
-    }
-    if (String_isEmpty(jobName)) String_set(jobName,jobUUID);
-
-    // send entry data
-    switch (Index_getType(entryId))
-    {
-      case INDEX_TYPE_FILE:
-        SEND_FILE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
-        break;
-      case INDEX_TYPE_IMAGE:
-        SEND_IMAGE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,fileSystemType,size,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
-        break;
-      case INDEX_TYPE_DIRECTORY:
-        SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission);
-        break;
-      case INDEX_TYPE_LINK:
-        SEND_LINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,destinationName,timeModified,userId,groupId,permission);
-        break;
-      case INDEX_TYPE_HARDLINK:
-        SEND_HARDLINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
-        break;
-      case INDEX_TYPE_SPECIAL:
-        SEND_SPECIAL_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,entryName,timeModified,userId,groupId,permission);
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
-    }
-  }
-  Index_doneList(&indexQueryHandle);
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
-
-  // free resources
-  String_delete(destinationName);
-  String_delete(entryName);
-  String_delete(storageName);
   String_delete(name);
 }
 
@@ -17134,6 +17134,7 @@ SERVER_COMMANDS[] =
 
   { "ARCHIVE_LIST",                serverCommand_archiveList,              AUTHORIZATION_STATE_OK      },
 
+//TODO: replace by single list?
   { "STORAGE_LIST",                serverCommand_storageList,              AUTHORIZATION_STATE_OK      },
   { "STORAGE_LIST_CLEAR",          serverCommand_storageListClear,         AUTHORIZATION_STATE_OK      },
   { "STORAGE_LIST_ADD",            serverCommand_storageListAdd,           AUTHORIZATION_STATE_OK      },
@@ -17152,18 +17153,20 @@ SERVER_COMMANDS[] =
 
   { "INDEX_UUID_LIST",             serverCommand_indexUUIDList,            AUTHORIZATION_STATE_OK      },
   { "INDEX_ENTITY_LIST",           serverCommand_indexEntityList,          AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_LIST",          serverCommand_indexStorageList,         AUTHORIZATION_STATE_OK      },
+  { "INDEX_ENTRY_LIST",            serverCommand_indexEntryList,           AUTHORIZATION_STATE_OK      },
+
   { "INDEX_ENTITY_ADD",            serverCommand_indexEntityAdd,           AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_ADD",           serverCommand_indexStorageAdd,          AUTHORIZATION_STATE_OK      },
+
 //TODO: obsolete
 //  { "INDEX_ENTITY_SET",            serverCommand_indexEntitySet,           AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGES_INFO",         serverCommand_indexStoragesInfo,        AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGE_LIST",          serverCommand_indexStorageList,         AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGE_ADD",           serverCommand_indexStorageAdd,          AUTHORIZATION_STATE_OK      },
   { "INDEX_ASSIGN",                serverCommand_indexAssign,              AUTHORIZATION_STATE_OK      },
   { "INDEX_REFRESH",               serverCommand_indexRefresh,             AUTHORIZATION_STATE_OK      },
   { "INDEX_REMOVE",                serverCommand_indexRemove,              AUTHORIZATION_STATE_OK      },
 
+  { "INDEX_STORAGES_INFO",         serverCommand_indexStoragesInfo,        AUTHORIZATION_STATE_OK      },
   { "INDEX_ENTRIES_INFO",          serverCommand_indexEntriesInfo,         AUTHORIZATION_STATE_OK      },
-  { "INDEX_ENTRY_LIST",            serverCommand_indexEntryList,           AUTHORIZATION_STATE_OK      },
 
   // obsolete
   { "OPTION_GET",                  serverCommand_jobOptionGet,             AUTHORIZATION_STATE_OK      },
