@@ -6831,7 +6831,7 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
                              ",
                              jobUUID
                             );
-//Database_debugPrintQueryInfo(&databaseQueryHandle);
+Database_debugPrintQueryInfo(&databaseQueryHandle);
     if (error != ERROR_NONE)
     {
       return error;
@@ -6861,6 +6861,8 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
   }
 
   if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(uuidId_);
+if (!result)
+fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID));
 
   // free resources
 
@@ -7576,7 +7578,9 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-    return Database_execute(&indexHandle->databaseHandle,
+    Errors error;
+
+    error = Database_execute(&indexHandle->databaseHandle,
                             CALLBACK(NULL,NULL),
                             "INSERT INTO history \
                                ( \
@@ -7625,12 +7629,19 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                             errorEntryCount,
                             errorEntrySize
                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    if (historyId != NULL) (*historyId) = INDEX_ID_HISTORY(Database_getLastRowId(&indexHandle->databaseHandle));
+
+    return ERROR_NONE;
   });
   if (error != ERROR_NONE)
   {
     return error;
   }
-  if (historyId != NULL) (*historyId) = INDEX_ID_HISTORY(Database_getLastRowId(&indexHandle->databaseHandle));
 
   return ERROR_NONE;
 }
@@ -7853,9 +7864,11 @@ Errors Index_newUUID(IndexHandle *indexHandle,
                      IndexId     *uuidId
                     )
 {
-  Errors error;
+  Errors     error;
+  DatabaseId uuidId_;
 
   assert(indexHandle != NULL);
+  assert(uuidId != NULL);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -7885,14 +7898,14 @@ Errors Index_newUUID(IndexHandle *indexHandle,
       return error;
     }
 
+    (*uuidId) = INDEX_ID_UUID(Database_getLastRowId(&indexHandle->databaseHandle));
+
     return ERROR_NONE;
   });
   if (error != ERROR_NONE)
   {
     return error;
   }
-
-  if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(Database_getLastRowId(&indexHandle->databaseHandle));
 
   return ERROR_NONE;
 }
@@ -8280,14 +8293,14 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
       return error;
     }
 
+    (*entityId) = INDEX_ID_ENTITY(Database_getLastRowId(&indexHandle->databaseHandle));
+
     return ERROR_NONE;
   });
   if (error != ERROR_NONE)
   {
     return error;
   }
-
-  (*entityId) = INDEX_ID_ENTITY(Database_getLastRowId(&indexHandle->databaseHandle));
 
   return ERROR_NONE;
 }
