@@ -559,6 +559,7 @@ public class Settings
   // version, help
   public static boolean               versionFlag                     = false;
   public static boolean               helpFlag                        = false;
+  public static boolean               xhelpFlag                       = false;
 
   // server name
   public static String                serverName                      = null;

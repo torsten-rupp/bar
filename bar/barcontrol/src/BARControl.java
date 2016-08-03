@@ -1249,11 +1249,12 @@ public class BARControl
     new Option("--destination",                null,Options.Types.STRING,     "destination"),
     new Option("--overwrite-entries",          null,Options.Types.BOOLEAN,    "overwriteEntriesFlag"),
 
-    new Option("--debug",                      "-d",Options.Types.INCREMENT,  "debugLevel"),
-    new Option("--debug-quit-server",          null,Options.Types.BOOLEAN,    "debugQuitServerFlag"),
-
     new Option("--version",                    null,Options.Types.BOOLEAN,    "versionFlag"),
     new Option("--help",                       "-h",Options.Types.BOOLEAN,    "helpFlag"),
+    new Option("--xhelp",                      null,Options.Types.BOOLEAN,    "xhelpFlag"),
+
+    new Option("--debug",                      "-d",Options.Types.INCREMENT,  "debugLevel"),
+    new Option("--debug-quit-server",          null,Options.Types.BOOLEAN,    "debugQuitServerFlag"),
 
     // ignored
     new Option("--swing",                      null, Options.Types.BOOLEAN,   null),
@@ -1463,6 +1464,12 @@ public class BARControl
     System.out.println("");
     System.out.println("         --version                                  - output version");
     System.out.println("         -h|--help                                  - print this help");
+    if (Settings.xhelpFlag)
+    {
+      System.out.println("");
+      System.out.println("         -d|--debug                                 - enable debug mode");
+      System.out.println("         --debug-quit-server                        - send quit-command to server");
+    }
   }
 
   /** print program version
@@ -1504,7 +1511,7 @@ public class BARControl
     }
 
     // help
-    if (Settings.helpFlag)
+    if (Settings.helpFlag || Settings.xhelpFlag)
     {
       printUsage();
       System.exit(0);

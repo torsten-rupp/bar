@@ -990,7 +990,6 @@ public class BARServer
 
             input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
             output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
-Dprintf.dprintf("");
 
 /*
 String[] ss;
