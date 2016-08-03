@@ -13618,7 +13618,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 * Return : -
 * Notes  : Arguments:
 *          Result:
-*            id=<n> name=<text> totalEntryCount=<n> totalEntrySize=<n>
+*            storageId=<n> name=<text> totalEntryCount=<n> totalEntrySize=<n>
 \***********************************************************************/
 
 LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)

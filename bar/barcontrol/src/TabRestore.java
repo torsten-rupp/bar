@@ -7551,15 +7551,39 @@ Dprintf.dprintf("remove");
   {
     if (!selectedIndexIdSet.isEmpty())
     {
+      final String[] errorMessage = new String[1];
+      ValueMap       valueMap     = new ValueMap();
+
       // set storage achives to restore
       setStorageList(selectedIndexIdSet);
 
       // get list
-      final HashMap<Long,String> indexMap = new HashMap<Long,String>();
+      final HashMap<Long,String> storageMap = new HashMap<Long,String>();
+      int error = BARServer.executeCommand("STORAGE_LIST",
+                                           1,  // debugLevel
+                                           errorMessage,
+                                           new CommandResultHandler()
+                                           {
+                                             public int handleResult(int i, ValueMap valueMap)
+                                             {
+                                               long   storageId       = valueMap.getLong  ("storageId");
+                                               String name            = valueMap.getString("name");
+                                               long   totalEntryCount = valueMap.getLong  ("totalEntryCount");
+                                               long   totalEntrySize  = valueMap.getLong  ("totalEntrySize");
+
+                                               storageMap.put(storageId,String.format("#%d: %s, %d entries, %s",storageId,name,totalEntryCount,Units.formatByteSize(totalEntrySize)));
+
+                                               return Errors.NONE;
+                                             }
+                                           }
+                                          );
+      if (error != Errors.NONE)
+      {
+        Dialogs.error(shell,BARControl.tr("Cannot get storages list!\n\n(error: {0})",errorMessage[0]));
+        return;
+      }
 
       // get total number entries, size
-      final String[] errorMessage = new String[1];
-      ValueMap       valueMap     = new ValueMap();
       long totalEntryCount = 0L;
       long totalEntrySize  = 0L;
       if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
@@ -7576,21 +7600,21 @@ Dprintf.dprintf("remove");
       // confirm
       if (Dialogs.confirm(shell,
                           BARControl.tr("Delete {0} {0,choice,0#jobs/entities/storage files|1#job/entity/storage file|1<jobs/entities/storage files} with {1} {1,choice,0#entries|1#entry|1<entries}/{2} {2,choice,0#bytes|1#byte|1<bytes}?",
-                          selectedIndexIdSet.size(),
+                          storageMap.size(),
                           totalEntryCount,
                           totalEntrySize)
                          )
          )
       {
         final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and storage files",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
-        busyDialog.setMaximum(selectedIndexIdSet.size());
+        busyDialog.setMaximum(storageMap.size());
 
-        new BackgroundTask(busyDialog,new Object[]{selectedIndexIdSet})
+        new BackgroundTask(busyDialog,new Object[]{storageMap})
         {
           @Override
           public void run(final BusyDialog busyDialog, Object userData)
           {
-            IndexIdSet indexIdSet = (IndexIdSet)((Object[])userData)[0];
+            HashMap<Long,String> storageMap = (HashMap<Long,String>)((Object[])userData)[0];
 
             try
             {
@@ -7598,14 +7622,67 @@ Dprintf.dprintf("remove");
               boolean abortFlag           = false;
               long    n                   = 0;
 Dprintf.dprintf("selectedIndexIdSet.size=%d",selectedIndexIdSet.size());
-              for (long indexId : indexIdSet)
+              for (Long storageId : storageMap.keySet())
               {
-                // get index info
-                final String info = indexMap.get(indexId);//.getInfo();
-Dprintf.dprintf("info=%s",info);
+                // get info
+                final String info = storageMap.get(storageId);
 
                 // update busy dialog
                 busyDialog.updateText(0,"%s",info);
+
+                int error = BARServer.executeCommand(StringParser.format("STORAGE_DELETE storageId=%lld",
+                                                                         storageId
+                                                                        ),
+                                                     0,  // debugLevel
+                                                     errorMessage
+                                                    );
+                if (error != Errors.NONE)
+                {
+                  if (!ignoreAllErrorsFlag)
+                  {
+                    final int[] selection = new int[1];
+                    if (storageMap.size() > (n+1))
+                    {
+                      display.syncExec(new Runnable()
+                      {
+                        @Override
+                        public void run()
+                        {
+                          selection[0] = Dialogs.select(shell,
+                                                        BARControl.tr("Confirmation"),
+                                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]),
+                                                        new String[]{BARControl.tr("Continue"),BARControl.tr("Continue with all"),BARControl.tr("Abort")},
+                                                        0
+                                                       );
+                        }
+                      });
+                    }
+                    else
+                    {
+                      display.syncExec(new Runnable()
+                      {
+                        @Override
+                        public void run()
+                        {
+                          Dialogs.error(shell,BARControl.tr("Cannot delete storage:\n\n''{0}''\n\n(error: {1})",info,errorMessage[0]));
+                        }
+                      });
+                    }
+                    switch (selection[0])
+                    {
+                      case 0:
+                        break;
+                      case 1:
+                        ignoreAllErrorsFlag = true;
+                        break;
+                      case 2:
+                        abortFlag = true;
+                        break;
+                      default:
+                        break;
+                    }
+                  }
+                }
 
 //TODO
 /*
