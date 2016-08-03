@@ -6598,7 +6598,14 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 //fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
 
   // check password
-  okFlag = checkPassword(clientInfo,encryptType,encryptedPassword,serverPassword);
+  if (!globalOptions.serverDebugFlag)
+  {
+    okFlag = checkPassword(clientInfo,encryptType,encryptedPassword,serverPassword);
+  }
+  else
+  {
+    okFlag = TRUE;
+  }
 
   // authorization state
   if (okFlag)
