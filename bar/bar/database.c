@@ -2248,7 +2248,7 @@ xxx++;
               // can not be set
               break;
             case DATABASE_TYPE_INT64:
-  //fprintf(stderr,"%s, %d: DATABASE_TYPE_INT64 %d %s: %s %d\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.i),sqlite3_column_type(fromStatementHandle,n));
+//fprintf(stderr,"%s, %d: DATABASE_TYPE_INT64 %d %s: %s %d\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.i),sqlite3_column_type(fromStatementHandle,n));
               sqlite3_bind_text(toStatementHandle,n,String_cString(columnNode->value.i),-1,NULL);
               break;
             case DATABASE_TYPE_DOUBLE:
@@ -2258,7 +2258,7 @@ xxx++;
               sqlite3_bind_text(toStatementHandle,n,String_cString(columnNode->value.i),-1,NULL);
               break;
             case DATABASE_TYPE_TEXT:
-  //fprintf(stderr,"%s, %d: DATABASE_TYPE_TEXT %d %s: %s\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.text));
+//fprintf(stderr,"%s, %d: DATABASE_TYPE_TEXT %d %s: %s\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.text));
               sqlite3_bind_text(toStatementHandle,n,String_cString(columnNode->value.text),-1,NULL);
               break;
             case DATABASE_TYPE_BLOB:
@@ -2277,7 +2277,7 @@ xxx++;
       // insert row
       if (sqliteStep(toDatabaseHandle->handle,toStatementHandle,toDatabaseHandle->timeout) != SQLITE_DONE)
       {
-fprintf(stderr,"%s, %d: 4 %s %s\n",__FILE__,__LINE__,sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
+//fprintf(stderr,"%s, %d: 4 %s %s\n",__FILE__,__LINE__,sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
         error = ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
         sqlite3_finalize(toStatementHandle);
         sqlite3_finalize(fromStatementHandle);
