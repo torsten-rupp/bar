@@ -374,7 +374,6 @@ NYI: how to do certificate verification?
   while ((result < 0) && gnutls_error_is_fatal(result) == 0);
   if (result != GNUTLS_E_SUCCESS)
   {
-fprintf(stderr,"%s, %d: result=%d\n",__FILE__,__LINE__,result);
     gnutls_deinit(socketHandle->gnuTLS.session);
     gnutls_dh_params_deinit(socketHandle->gnuTLS.dhParams);
     gnutls_certificate_free_credentials(socketHandle->gnuTLS.credentials);
