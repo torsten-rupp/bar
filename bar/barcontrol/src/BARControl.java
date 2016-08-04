@@ -1267,12 +1267,12 @@ public class BARControl
   private static Cursor  waitCursor;
   private static int     waitCursorCount = 0;
 
-  private LoginData  loginData;
-  private Menu       serverMenu;
-  private TabFolder  tabFolder;
-  private TabStatus  tabStatus;
-  private TabJobs    tabJobs;
-  private TabRestore tabRestore;
+  private LoginData       loginData;
+  private Menu            serverMenu;
+  private TabFolder       tabFolder;
+  private TabStatus       tabStatus;
+  private TabJobs         tabJobs;
+  private TabRestore      tabRestore;
 
   // ------------------------ native functions ----------------------------
 
@@ -1678,9 +1678,11 @@ public class BARControl
       widgetLoginButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT));
       widgetLoginButton.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           loginData.serverName = widgetServerName.getText();
@@ -1695,9 +1697,11 @@ public class BARControl
       button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
@@ -1709,10 +1713,12 @@ public class BARControl
     // install handlers
     widgetServerName.addSelectionListener(new SelectionListener()
     {
+      @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
         widgetPassword.forceFocus();
       }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Settings.Server server = servers[widgetServerName.getSelectionIndex()];
@@ -1723,10 +1729,12 @@ public class BARControl
     });
     widgetPassword.addSelectionListener(new SelectionListener()
     {
+      @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
         widgetLoginButton.forceFocus();
       }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
       }
@@ -1746,10 +1754,13 @@ public class BARControl
       widgetServerName.forceFocus();
     }
     Boolean result = (Boolean)Dialogs.run(dialog);
-    if ((result != null) && result)
+    if ((result != null) && result && ((loginData.serverPort != 0) || (loginData.serverTLSPort != 0)))
     {
       // store new name+port, shorten list
-      Settings.addServer(loginData.serverName,loginData.serverPort,loginData.password);
+      Settings.addServer(loginData.serverName,
+                         (loginData.serverPort != 0) ? loginData.serverPort : loginData.serverTLSPort,
+                         loginData.password
+                        );
 
       return true;
     }
@@ -1848,41 +1859,92 @@ public class BARControl
     });
 
     // create server menu items
-    for (final Settings.Server server : servers)
+    for (Settings.Server server : servers)
     {
       MenuItem menuItem = Widgets.addMenuRadio(serverMenu,server.name+":"+server.port);
       menuItem.setData(server);
       menuItem.setSelection(server.name.equals(BARServer.getName()) && (server.port == BARServer.getPort()));
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          loginData = new LoginData((server != null) ? server.name : Settings.DEFAULT_SERVER_NAME,
-                                    (server != null) ? server.port : Settings.DEFAULT_SERVER_PORT,
-                                    (server != null) ? server.port : Settings.DEFAULT_SERVER_PORT
+          MenuItem        menuItem = (MenuItem)selectionEvent.widget;
+          Settings.Server server   = (Settings.Server)menuItem.getData();
+
+          if (menuItem.getSelection())
+          {
+            boolean connectOkFlag = false;
+
+            // try to connect to server with current credentials
+            if (!connectOkFlag)
+            {
+              loginData = new LoginData((!server.name.isEmpty()) ? server.name : Settings.DEFAULT_SERVER_NAME,
+                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
+                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT
+                                       );
+              try
+              {
+                BARServer.connect(loginData.serverName,
+                                  loginData.serverPort,
+                                  loginData.serverTLSPort,
+                                  loginData.password,
+                                  Settings.serverKeyFileName
+                                 );
+                shell.setText("BAR control: "+BARServer.getInfo());
+                Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+
+                connectOkFlag = true;
+              }
+              catch (ConnectionError error)
+              {
+                Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
+              }
+              catch (CommunicationError error)
+              {
+                Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
+              }
+            }
+
+            // try to connect to server with new credentials
+            if (!connectOkFlag)
+            {
+              loginData = new LoginData((!server.name.isEmpty()) ? server.name : Settings.DEFAULT_SERVER_NAME,
+                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
+                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT
+                                       );
+              if (getLoginData(loginData))
+              {
+                try
+                {
+                  BARServer.connect(loginData.serverName,
+                                    loginData.serverPort,
+                                    loginData.serverTLSPort,
+                                    loginData.password,
+                                    Settings.serverKeyFileName
                                    );
-          try
-          {
-            BARServer.connect(loginData.serverName,
-                              loginData.serverPort,
-                              loginData.serverTLSPort,
-                              loginData.password,
-                              Settings.serverKeyFileName
-                             );
-            shell.setText("BAR control: "+BARServer.getInfo());
+                  shell.setText("BAR control: "+BARServer.getInfo());
+                  Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+
+                  connectOkFlag = true;
+                }
+                catch (ConnectionError error)
+                {
+                  Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
+                }
+                catch (CommunicationError error)
+                {
+                  Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
+                }
+              }
+            }
+
+            updateServerMenu();
           }
-          catch (ConnectionError error)
-          {
-            Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
-          }
-          catch (CommunicationError error)
-          {
-            Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
-          }
-          Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
         }
       });
     }
@@ -1906,9 +1968,11 @@ public class BARControl
         menuItem = Widgets.addMenuItem(serverMenu,"\u2026",SWT.CTRL+'O');
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             final Settings.Server defaultServer = Settings.getLastServer();
@@ -1926,8 +1990,8 @@ public class BARControl
                                   Settings.serverKeyFileName
                                  );
                 shell.setText("BAR control: "+BARServer.getInfo());
+
                 Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
-                updateServerMenu();
               }
               catch (ConnectionError error)
               {
@@ -1937,6 +2001,8 @@ public class BARControl
               {
                 Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
               }
+
+              updateServerMenu();
             }
           }
         });
@@ -1951,9 +2017,11 @@ public class BARControl
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("Start")+"\u2026",SWT.CTRL+'S');
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Widgets.notify(tabStatus.widgetButtonStart);
@@ -1963,9 +2031,11 @@ public class BARControl
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("Abort")+"\u2026",SWT.CTRL+'A');
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Widgets.notify(tabStatus.widgetButtonAbort);
@@ -1977,9 +2047,11 @@ public class BARControl
         menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("10min"));
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
             tabStatus.jobPause(10*60);
@@ -1989,9 +2061,11 @@ public class BARControl
         menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("60min"),SWT.CTRL+'P');
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -2002,9 +2076,11 @@ public class BARControl
         menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("120min"));
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -2017,9 +2093,11 @@ public class BARControl
         menuItem = Widgets.addMenuCheckbox(subMenu,BARControl.tr("Create operation"),Settings.pauseCreateFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -2031,9 +2109,11 @@ public class BARControl
         menuItem = Widgets.addMenuCheckbox(subMenu,BARControl.tr("Storage operation"),Settings.pauseStorageFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -2045,9 +2125,11 @@ public class BARControl
         menuItem = Widgets.addMenuCheckbox(subMenu,BARControl.tr("Restore operation"),Settings.pauseRestoreFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -2058,9 +2140,11 @@ public class BARControl
         menuItem = Widgets.addMenuCheckbox(subMenu,BARControl.tr("Index update operation"),Settings.pauseIndexUpdateFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -2072,9 +2156,11 @@ public class BARControl
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("Toggle suspend/continue"),SWT.CTRL+'T');
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Widgets.notify(tabStatus.widgetButtonSuspendContinue);
@@ -2084,9 +2170,11 @@ public class BARControl
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clear stored passwords on server"),SWT.NONE);
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           String[] errorMessage = new String[1];
@@ -2103,9 +2191,11 @@ public class BARControl
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("Server settings")+"\u2026",SWT.CTRL+'W');
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           ServerSettings.serverSettings(shell);
@@ -2117,9 +2207,11 @@ public class BARControl
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("Quit"),SWT.CTRL+'Q');
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Widgets.notify(tabStatus.widgetButtonQuit);
@@ -2132,9 +2224,11 @@ public class BARControl
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("About")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Dialogs.info(shell,
@@ -2152,9 +2246,11 @@ public class BARControl
         menuItem = Widgets.addMenuItem(menu,"Print debug statistics");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -2165,9 +2261,11 @@ public class BARControl
         menuItem = Widgets.addMenuItem(menu,"Print debug memory info");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -2220,9 +2318,11 @@ public class BARControl
         menuItem = Widgets.addMenuItem(menu,"Dump debug memory info");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -2313,10 +2413,9 @@ public class BARControl
         // try to reconnect
         if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection lost"),BARControl.tr("Error: ")+error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
         {
-          while (   !connectOkFlag
-                )
+          // try to connect to last server
+          while (!connectOkFlag)
           {
-            // try to connect to server
             try
             {
               BARServer.connect(loginData.serverName,
@@ -2325,7 +2424,6 @@ public class BARControl
                                 loginData.password,
                                 Settings.serverKeyFileName
                                );
-              connectOkFlag = true;
               Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
             }
             catch (ConnectionError reconnectError)
@@ -2343,6 +2441,8 @@ public class BARControl
               }
             }
           }
+
+          // try to connect to new server
           while (   !connectOkFlag
                  && getLoginData(loginData)
                  && ((loginData.serverPort != 0) || (loginData.serverTLSPort != 0))
@@ -2357,8 +2457,10 @@ public class BARControl
                                 loginData.password,
                                 Settings.serverKeyFileName
                                );
-              connectOkFlag = true;
+              shell.setText("BAR control: "+BARServer.getInfo());
               Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+
+              connectOkFlag = true;
             }
             catch (ConnectionError reconnectError)
             {

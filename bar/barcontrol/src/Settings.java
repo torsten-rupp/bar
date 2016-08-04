@@ -614,6 +614,23 @@ public class Settings
     return SettingUtils.isModified(new File(DEFAULT_BARCONTROL_CONFIG_FILE_NAME));
   }
 
+  /** get server
+   * @param name server name
+   * @param port server port
+   * @return server
+   */
+  public static Server getServer(String name, int port)
+  {
+    for (Server server : servers)
+    {
+      if (server.name.equals(name) && (server.port == port))
+      {
+        return server;
+      }
+    }
+    return null;
+  }
+
   /** get last used server or default server
    * @return server
    */
