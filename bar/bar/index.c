@@ -4874,6 +4874,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
+//TODO: not used, remove
 /***********************************************************************\
 * Name   : refreshStoragesInfos
 * Purpose: refresh storages info
@@ -5479,7 +5480,8 @@ LOCAL void cleanupIndexThreadCode(void)
   (void)pruneStorages(&indexHandle);
   (void)pruneEntities(&indexHandle);
   (void)pruneUUIDs(&indexHandle);
-  (void)refreshStoragesInfos(&indexHandle);
+//TODO: too slow
+//  (void)refreshStoragesInfos(&indexHandle);
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
@@ -8533,6 +8535,8 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                              "SELECT TOTAL(directoryEntries.totalEntrySize) \
                               FROM storage \
                                 LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
+                                LEFT JOIN entities ON entities.id=storage.entityId \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                               WHERE %S \
                              ",
                              filterString
@@ -8653,7 +8657,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                              &indexHandle->databaseHandle,
                              "SELECT COUNT(entries.id) \
                               FROM entries \
-                              LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
                               WHERE entries.storageId=%lld; \
                              ",
                              Index_getDatabaseId(storageId)
@@ -8829,7 +8833,7 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              &indexHandle->databaseHandle,
                              "SELECT COUNT(entriesNewest.id) \
                               FROM entriesNewest \
-                              LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.id \
+                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.id \
                               WHERE entriesNewest.storageId=%lld; \
                              ",
                              Index_getDatabaseId(storageId)
@@ -9258,7 +9262,7 @@ fprintf(stderr,"%s, %d: storageId=%lld\n",__FILE__,__LINE__,storageId);
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-fprintf(stderr,"%s, %d: %llu Index_deleteStorage file\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+//fprintf(stderr,"%s, %d: %llu Index_deleteStorage file\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM fileEntries WHERE storageId=%lld",
@@ -9268,7 +9272,7 @@ fprintf(stderr,"%s, %d: %llu Index_deleteStorage file\n",__FILE__,__LINE__,Misc_
     {
       return error;
     }
-fprintf(stderr,"%s, %d: %llu Index_deleteStorage file e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+//fprintf(stderr,"%s, %d: %llu Index_deleteStorage file e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -9279,7 +9283,7 @@ fprintf(stderr,"%s, %d: %llu Index_deleteStorage file e\n",__FILE__,__LINE__,Mis
     {
       return error;
     }
-fprintf(stderr,"%s, %d: %llu Index_deleteStorage image\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+//fprintf(stderr,"%s, %d: %llu Index_deleteStorage image\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM imageEntries WHERE storageId=%lld",
@@ -9289,7 +9293,7 @@ fprintf(stderr,"%s, %d: %llu Index_deleteStorage image\n",__FILE__,__LINE__,Misc
     {
       return error;
     }
-fprintf(stderr,"%s, %d: %llu Index_deleteStorage image e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+//fprintf(stderr,"%s, %d: %llu Index_deleteStorage image e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -9300,7 +9304,7 @@ fprintf(stderr,"%s, %d: %llu Index_deleteStorage image e\n",__FILE__,__LINE__,Mi
     {
       return error;
     }
-fprintf(stderr,"%s, %d: %llu Index_deleteStorage dir\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+//fprintf(stderr,"%s, %d: %llu Index_deleteStorage dir\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM directoryEntries WHERE storageId=%lld",
@@ -9310,7 +9314,7 @@ fprintf(stderr,"%s, %d: %llu Index_deleteStorage dir\n",__FILE__,__LINE__,Misc_g
     {
       return error;
     }
-fprintf(stderr,"%s, %d: %llu Index_deleteStorage dir e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+//fprintf(stderr,"%s, %d: %llu Index_deleteStorage dir e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -9321,7 +9325,7 @@ fprintf(stderr,"%s, %d: %llu Index_deleteStorage dir e\n",__FILE__,__LINE__,Misc
     {
       return error;
     }
-fprintf(stderr,"%s, %d: %llu Index_deleteStorage link\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+//fprintf(stderr,"%s, %d: %llu Index_deleteStorage link\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM linkEntries WHERE storageId=%lld",
@@ -9331,7 +9335,7 @@ fprintf(stderr,"%s, %d: %llu Index_deleteStorage link\n",__FILE__,__LINE__,Misc_
     {
       return error;
     }
-fprintf(stderr,"%s, %d: %llu Index_deleteStorage link e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+//fprintf(stderr,"%s, %d: %llu Index_deleteStorage link e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -9342,7 +9346,7 @@ fprintf(stderr,"%s, %d: %llu Index_deleteStorage link e\n",__FILE__,__LINE__,Mis
     {
       return error;
     }
-fprintf(stderr,"%s, %d: %llu Index_deleteStorage hardlink\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+//fprintf(stderr,"%s, %d: %llu Index_deleteStorage hardlink\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM hardlinkEntries WHERE storageId=%lld",
@@ -9352,7 +9356,7 @@ fprintf(stderr,"%s, %d: %llu Index_deleteStorage hardlink\n",__FILE__,__LINE__,M
     {
       return error;
     }
-fprintf(stderr,"%s, %d: %llu Index_deleteStorage hardlink e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+//fprintf(stderr,"%s, %d: %llu Index_deleteStorage hardlink e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -9363,7 +9367,7 @@ fprintf(stderr,"%s, %d: %llu Index_deleteStorage hardlink e\n",__FILE__,__LINE__
     {
       return error;
     }
-fprintf(stderr,"%s, %d: %llu Index_deleteStorage special\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+//fprintf(stderr,"%s, %d: %llu Index_deleteStorage special\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM specialEntries WHERE storageId=%lld",
@@ -9373,7 +9377,7 @@ fprintf(stderr,"%s, %d: %llu Index_deleteStorage special\n",__FILE__,__LINE__,Mi
     {
       return error;
     }
-fprintf(stderr,"%s, %d: %llu Index_deleteStorage special e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+//fprintf(stderr,"%s, %d: %llu Index_deleteStorage special e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -9384,7 +9388,7 @@ fprintf(stderr,"%s, %d: %llu Index_deleteStorage special e\n",__FILE__,__LINE__,
     {
       return error;
     }
-fprintf(stderr,"%s, %d: %llu Index_deleteStorage storage\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+//fprintf(stderr,"%s, %d: %llu Index_deleteStorage storage\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM storage WHERE id=%lld",
