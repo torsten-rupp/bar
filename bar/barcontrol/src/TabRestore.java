@@ -2075,7 +2075,7 @@ Dprintf.dprintf("cirrect?");
                                                        );
 //TODO
 //uuidIndexData.setTreeItem(uuidTreeItem);
-                  uuidTreeItem.setChecked(selectedIndexIdSet.contains(uuidIndexData.id));
+                  uuidTreeItem.setChecked(checkedIndexIdSet.contains(uuidIndexData.id));
                 }
                 else
                 {
@@ -2111,7 +2111,7 @@ Dprintf.dprintf("cirrect?");
                                                            );
 //TODO
 //uuidIndexData.setTreeItem(uuidTreeItem);
-                uuidTreeItem.setChecked(selectedIndexIdSet.contains(uuidIndexData.id));
+                uuidTreeItem.setChecked(checkedIndexIdSet.contains(uuidIndexData.id));
                 if (uuidTreeItem.getExpanded())
                 {
                   uuidTreeItems.add(uuidTreeItem);
@@ -2274,7 +2274,7 @@ Dprintf.dprintf("cirrect?");
                                                        );
 //TODO
 //entityIndexData.setTreeItem(entityTreeItem);
-                entityTreeItem.setChecked(selectedIndexIdSet.contains(entityIndexData.id));
+                entityTreeItem.setChecked(checkedIndexIdSet.contains(entityIndexData.id));
               }
               else
               {
@@ -2309,7 +2309,7 @@ Dprintf.dprintf("cirrect?");
               {
                 IndexData indexData = (IndexData)treeItem.getData();
                 Widgets.removeTreeItem(widgetStorageTree,treeItem);
-                setStorageList(indexData.id,false);
+                checkedIndexIdSet.set(indexData.id,false);
 //TODO: remove?
                 indexData.clearTreeItem();
               }
@@ -2472,7 +2472,7 @@ Dprintf.dprintf("cirrect?");
                                                            (storageIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
                                                            storageIndexData.indexState.toString()
                                                           );
-                  storageTreeItem.setChecked(selectedIndexIdSet.contains(storageIndexData.id));
+                  storageTreeItem.setChecked(checkedIndexIdSet.contains(storageIndexData.id));
                 }
                 else
                 {
@@ -2501,7 +2501,7 @@ Dprintf.dprintf("cirrect?");
             {
               IndexData indexData = (IndexData)treeItem.getData();
               Widgets.removeTreeItem(widgetStorageTree,treeItem);
-              setStorageList(indexData.id,false);
+              checkedIndexIdSet.set(indexData.id,false);
 //TODO: remove?
               indexData.clearTreeItem();
             }
@@ -2699,7 +2699,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                                                    SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
                                                                    storageIndexData.indexState.toString()
                                                                   );
-                                           tableItem.setChecked(selectedIndexIdSet.contains(storageIndexData.id));
+                                           tableItem.setChecked(checkedIndexIdSet.contains(storageIndexData.id));
                                          }
                                        });
                                      }
@@ -3841,7 +3841,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                                                        Units.formatByteSize(entryIndexData.size),
                                                                        SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
+                                               tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
                                              }
                                            });
                                          }
@@ -3880,7 +3880,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                                                        Units.formatByteSize(entryIndexData.size),
                                                                        SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
+                                               tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
                                              }
                                            });
                                          }
@@ -3918,7 +3918,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                                                        "",
                                                                        SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
+                                               tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
                                              }
                                            });
                                          }
@@ -3955,7 +3955,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                                                        "",
                                                                        SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
+                                               tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
                                              }
                                            });
                                          }
@@ -3995,7 +3995,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                                                        Units.formatByteSize(entryIndexData.size),
                                                                        SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
+                                               tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
                                              }
                                            });
                                          }
@@ -4031,7 +4031,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                                                        Units.formatByteSize(entryIndexData.size),
                                                                        SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
-                                               tableItem.setChecked(selectedEntryIdSet.contains(entryIndexData.id));
+                                               tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
                                              }
                                            });
                                          }
@@ -4165,10 +4165,10 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
 
   private UpdateStorageTreeTableThread updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
   private IndexData                    selectedIndexData = null;
-  final private IndexIdSet             selectedIndexIdSet = new IndexIdSet();
+  final private IndexIdSet             checkedIndexIdSet = new IndexIdSet();
 
   private UpdateEntryTableThread       updateEntryTableThread = new UpdateEntryTableThread();
-  final private IndexIdSet             selectedEntryIdSet = new IndexIdSet();
+  final private IndexIdSet             checkedEntryIdSet = new IndexIdSet();
 
   // ------------------------ native functions ----------------------------
 
@@ -4958,7 +4958,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
           {
             IndexData indexData = (IndexData)subTreeItem.getData();
-            setStorageList(indexData.id,false);
+            checkedIndexIdSet.set(indexData.id,false);
           }
 
           // close sub-tree
@@ -4996,9 +4996,11 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
             }
             else if (treeItem.getData() instanceof StorageIndexData)
             {
-              // toggled check
+              boolean          isChecked        = treeItem.getChecked();
               StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
-              setStorageList(storageIndexData.id,treeItem.getChecked());
+
+              // get check
+              checkedIndexIdSet.set(storageIndexData.id,isChecked);
 
               // trigger update checked
               checkedStorageEvent.trigger();
@@ -5020,18 +5022,21 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           {
             if (selectionEvent.detail == SWT.CHECK)
             {
-              boolean   isChecked = treeItem.getChecked();
               IndexData indexData = (IndexData)treeItem.getData();
-
-              // set/reset checked in sub-tree
-              for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
+              if (indexData != null)
               {
-                subTreeItem.setChecked(isChecked);
-              }
-              setStorageList(indexData.id,isChecked);
+                boolean isChecked = treeItem.getChecked();
 
-              // trigger update checked
-              checkedStorageEvent.trigger();
+                // set/reset checked in sub-tree
+                for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
+                {
+                  subTreeItem.setChecked(isChecked);
+                }
+                checkedIndexIdSet.set(indexData.id,isChecked);
+
+                // trigger update checked
+                checkedStorageEvent.trigger();
+              }
             }
           }
         }
@@ -5289,8 +5294,10 @@ Dprintf.dprintf("dropTargetEvent.data=%s",dropTargetEvent.data);
             StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
             if (storageIndexData != null)
             {
+              boolean isChecked = tabletem.getChecked();
+
               // set/reset checked
-              setStorageList(storageIndexData.id,tabletem.getChecked());
+              checkedIndexIdSet.set(storageIndexData.id,isChecked);
 
               // trigger update checked
               checkedStorageEvent.trigger();
@@ -5313,8 +5320,10 @@ Dprintf.dprintf("dropTargetEvent.data=%s",dropTargetEvent.data);
             StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
             if (storageIndexData != null)
             {
+              boolean isChecked = tabletem.getChecked();
+
               // set/reset checked
-              setStorageList(storageIndexData.id,tabletem.getChecked());
+              checkedIndexIdSet.set(storageIndexData.id,isChecked);
 
               // trigger update checked
               checkedStorageEvent.trigger();
@@ -5604,7 +5613,7 @@ Dprintf.dprintf("");
           @Override
           public void trigger(MenuItem menuItem)
           {
-            menuItem.setEnabled(!selectedIndexIdSet.isEmpty());
+            menuItem.setEnabled(!checkedIndexIdSet.isEmpty());
           }
         });
         menuItem.addSelectionListener(new SelectionListener()
@@ -5616,7 +5625,7 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            restore(RestoreTypes.ARCHIVES,selectedIndexIdSet);
+            restore(RestoreTypes.ARCHIVES,checkedIndexIdSet);
           }
         });
 
@@ -5742,7 +5751,7 @@ Dprintf.dprintf("");
           public void trigger(Control control)
           {
             Button button = (Button)control;
-            if (!selectedIndexIdSet.isEmpty())
+            if (!checkedIndexIdSet.isEmpty())
             {
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText(BARControl.tr("Unmark all entries in list."));
@@ -5764,7 +5773,7 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
-            if (!selectedIndexIdSet.isEmpty())
+            if (!checkedIndexIdSet.isEmpty())
             {
               setAllCheckedStorage(false);
               button.setImage(IMAGE_MARK_ALL);
@@ -5878,7 +5887,7 @@ Dprintf.dprintf("");
           @Override
           public void trigger(Control control)
           {
-            control.setEnabled(!selectedIndexIdSet.isEmpty());
+            control.setEnabled(!checkedIndexIdSet.isEmpty());
           }
         });
         button.addSelectionListener(new SelectionListener()
@@ -5895,7 +5904,7 @@ Dprintf.dprintf("remove");
 //            getCheckedIndexData(indexDataHashSet);
 //            getSelectedIndexData(indexDataHashSet);
 
-            restore(RestoreTypes.ARCHIVES,selectedIndexIdSet);
+            restore(RestoreTypes.ARCHIVES,checkedIndexIdSet);
           }
         });
       }
@@ -6012,12 +6021,18 @@ Dprintf.dprintf("remove");
           TableItem tableItem = widgetEntryTable.getItem(new Point(event.x,event.y));
           if (tableItem != null)
           {
-            tableItem.setChecked(!tableItem.getChecked());
-
             EntryIndexData entryIndexData = (EntryIndexData)tableItem.getData();
-            selectedEntryIdSet.set(entryIndexData.id,tableItem.getChecked());
+            if (entryIndexData != null)
+            {
+              boolean isChecked = tableItem.getChecked();
 
-            checkedEntryEvent.trigger();
+              // toggle check
+              tableItem.setChecked(!isChecked);
+              checkedEntryIdSet.set(entryIndexData.id,!isChecked);
+
+              // trigger update entries
+              checkedEntryEvent.trigger();
+            }
           }
         }
       });
@@ -6036,13 +6051,16 @@ Dprintf.dprintf("remove");
             EntryIndexData entryIndexData = (EntryIndexData)tableItem.getData();
             if (entryIndexData != null)
             {
-              tableItem.setChecked(!tableItem.getChecked());
-              selectedEntryIdSet.set(entryIndexData.id,tableItem.getChecked());
+              boolean isChecked = tableItem.getChecked();
+
+              // toggle check
+              tableItem.setChecked(!isChecked);
+              checkedEntryIdSet.set(entryIndexData.id,!isChecked);
+
+              // trigger update entries
+              checkedEntryEvent.trigger();
             }
           }
-
-          // trigger update entries
-          checkedEntryEvent.trigger();
         }
       });
       widgetEntryTable.addMouseTrackListener(new MouseTrackListener()
@@ -6130,7 +6148,7 @@ Dprintf.dprintf("remove");
           @Override
           public void trigger(MenuItem menuItem)
           {
-            menuItem.setEnabled(!selectedEntryIdSet.isEmpty());
+            menuItem.setEnabled(!checkedEntryIdSet.isEmpty());
           }
         });
         menuItem.addSelectionListener(new SelectionListener()
@@ -6143,7 +6161,7 @@ Dprintf.dprintf("remove");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            restore(RestoreTypes.ENTRIES,selectedEntryIdSet);
+            restore(RestoreTypes.ENTRIES,checkedEntryIdSet);
           }
         });
 
@@ -6219,7 +6237,7 @@ Dprintf.dprintf("remove");
           public void trigger(Control control)
           {
             Button button = (Button)control;
-            if (!selectedEntryIdSet.isEmpty())
+            if (!checkedEntryIdSet.isEmpty())
             {
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText(BARControl.tr("Unmark all entries in list."));
@@ -6241,8 +6259,8 @@ Dprintf.dprintf("remove");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
-            setAllCheckedEntries(selectedEntryIdSet.isEmpty());
-            if (!selectedEntryIdSet.isEmpty())
+            setAllCheckedEntries(checkedEntryIdSet.isEmpty());
+            if (!checkedEntryIdSet.isEmpty())
             {
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText(BARControl.tr("Unmark all entries in list."));
@@ -6331,7 +6349,7 @@ Dprintf.dprintf("remove");
             Combo      widget    = (Combo)selectionEvent.widget;
             EntryTypes entryType = Widgets.getSelectedOptionMenuItem(widget,EntryTypes.ANY);
 
-            selectedEntryIdSet.clear();
+            checkedEntryIdSet.clear();
             checkedEntryEvent.trigger();
 
             updateEntryTableThread.triggerUpdateEntryType(entryType);
@@ -6353,7 +6371,7 @@ Dprintf.dprintf("remove");
             Button widget = (Button)selectionEvent.widget;
             boolean newestOnly = widget.getSelection();
 
-            selectedEntryIdSet.clear();
+            checkedEntryIdSet.clear();
             checkedEntryEvent.trigger();
 
             updateEntryTableThread.triggerUpdateNewestOnly(newestOnly);
@@ -6369,7 +6387,7 @@ Dprintf.dprintf("remove");
           @Override
           public void trigger(Control control)
           {
-            control.setEnabled(!selectedEntryIdSet.isEmpty());
+            control.setEnabled(!checkedEntryIdSet.isEmpty());
           }
         });
         button.addSelectionListener(new SelectionListener()
@@ -6382,7 +6400,7 @@ Dprintf.dprintf("remove");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
-            restore(RestoreTypes.ENTRIES,selectedEntryIdSet);
+            restore(RestoreTypes.ENTRIES,checkedEntryIdSet);
           }
         });
       }
@@ -6442,7 +6460,6 @@ Dprintf.dprintf("remove");
                                0  // debugLevel
                               );
     }
-    selectedIndexIdSet.set(indexId,checked);
   }
 
   /** set selected storage entry
@@ -6476,36 +6493,34 @@ Dprintf.dprintf("remove");
     final String[] errorMessage = new String[1];
     ValueMap       valueMap     = new ValueMap();
 
-    clearStorageList();
-
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
       case 0:
         // tree view
         for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
         {
-          uuidTreeItem.setChecked(checked);
-
           UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
-          setStorageList(uuidIndexData.id,checked);
+
+          uuidTreeItem.setChecked(checked);
+          checkedIndexIdSet.set(uuidIndexData.id,checked);
 
           if (uuidTreeItem.getExpanded())
           {
             for (TreeItem entityTreeItem : uuidTreeItem.getItems())
             {
-              entityTreeItem.setChecked(checked);
-
               EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
-              setStorageList(entityIndexData.id,checked);
+
+              entityTreeItem.setChecked(checked);
+              checkedIndexIdSet.set(entityIndexData.id,checked);
 
               if (entityTreeItem.getExpanded())
               {
                 for (TreeItem storageTreeItem : entityTreeItem.getItems())
                 {
-                  storageTreeItem.setChecked(checked);
-
                   StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-                  setStorageList(storageIndexData.id,checked);
+
+                  storageTreeItem.setChecked(checked);
+                  checkedIndexIdSet.set(storageIndexData.id,checked);
                 }
               }
             }
@@ -6572,7 +6587,7 @@ Dprintf.dprintf("remove");
                                                    {
                                                      long storageId = valueMap.getLong("storageId");
 
-                                                     setStorageList(storageId,checked);
+                                                     checkedIndexIdSet.set(storageId,checked);
 
                                                      n[0]++;
                                                      busyDialog.updateProgressBar(n[0]);
@@ -6597,7 +6612,7 @@ Dprintf.dprintf("remove");
         }
         else
         {
-          selectedIndexIdSet.clear();
+          checkedIndexIdSet.clear();
 
           // refresh table
           Widgets.refreshVirtualTable(widgetStorageTable);
@@ -7549,13 +7564,59 @@ Dprintf.dprintf("remove");
    */
   private void deleteStorages()
   {
-    if (!selectedIndexIdSet.isEmpty())
+    // get checked and selected index ids
+    final IndexIdSet indexIdSet = (IndexIdSet)checkedIndexIdSet.clone();
+    switch (widgetStorageTabFolder.getSelectionIndex())
+    {
+      case 0:
+        // tree view
+/*
+        for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
+        {
+          UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
+          if (uuidTreeItem.getExpanded())
+          {
+            for (TreeItem entityTreeItem : uuidTreeItem.getItems())
+            {
+              EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
+              if (entityTreeItem.getExpanded())
+              {
+                for (TreeItem storageTreeItem : entityTreeItem.getItems())
+                {
+                  StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
+Dprintf.dprintf("storageIndexData=%s: %s",storageIndexData,storageTreeItem.getSelection());
+                }
+              }
+            }
+          }
+        }
+*/
+        for (TreeItem treeItem : widgetStorageTree.getSelection())
+        {
+          if (treeItem.getData() instanceof StorageIndexData)
+          {
+            StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
+            indexIdSet.add(storageIndexData.id);
+          }
+        }
+        break;
+      case 1:
+        for (TableItem tableItem : widgetStorageTable.getSelection())
+        {
+          StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
+          indexIdSet.add(storageIndexData.id);
+        }
+        break;
+    }
+Dprintf.dprintf("indexIdSet=%s %d",indexIdSet,indexIdSet.size());
+
+    if (!indexIdSet.isEmpty())
     {
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
 
       // set storage achives to restore
-      setStorageList(selectedIndexIdSet);
+      setStorageList(indexIdSet);
 
       // get list
       final HashMap<Long,String> storageMap = new HashMap<Long,String>();
@@ -7621,7 +7682,7 @@ Dprintf.dprintf("remove");
               boolean ignoreAllErrorsFlag = false;
               boolean abortFlag           = false;
               long    n                   = 0;
-Dprintf.dprintf("selectedIndexIdSet.size=%d",selectedIndexIdSet.size());
+Dprintf.dprintf("indexIdSet.size=%d",indexIdSet.size());
               for (Long storageId : storageMap.keySet())
               {
                 // get info
@@ -7828,6 +7889,8 @@ Dprintf.dprintf("selectedIndexIdSet.size=%d",selectedIndexIdSet.size());
             }
           }
         };
+
+        setAllCheckedStorage(false);
       }
     }
   }
@@ -7863,7 +7926,7 @@ Dprintf.dprintf("selectedIndexIdSet.size=%d",selectedIndexIdSet.size());
                                0  // debugLevel
                               );
     }
-    selectedIndexIdSet.set(entryId,checked);
+    checkedEntryIdSet.set(entryId,checked);
   }
 
   /** set selected storage entry
@@ -7896,8 +7959,6 @@ Dprintf.dprintf("selectedIndexIdSet.size=%d",selectedIndexIdSet.size());
 
     final String[] errorMessage = new String[1];
     ValueMap       valueMap     = new ValueMap();
-
-//TODO: use setEntryList
 
     // confirm check if there are many entries
     final int     totalEntryCount[] = new int[]{0};
@@ -7955,7 +8016,7 @@ Dprintf.dprintf("selectedIndexIdSet.size=%d",selectedIndexIdSet.size());
                                                {
                                                  long entryId = valueMap.getLong("entryId");
 
-                                                 selectedEntryIdSet.set(entryId,checked);
+                                                 checkedEntryIdSet.set(entryId,checked);
 
                                                  n[0]++;
                                                  busyDialog.updateProgressBar(n[0]);
@@ -7985,7 +8046,7 @@ Dprintf.dprintf("selectedIndexIdSet.size=%d",selectedIndexIdSet.size());
     }
     else
     {
-      selectedEntryIdSet.clear();
+      checkedEntryIdSet.clear();
 
       // refresh table
       Widgets.refreshVirtualTable(widgetEntryTable);
