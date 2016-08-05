@@ -116,7 +116,7 @@
         \
         pthread_mutex_lock(&debugSemaphoreLock); \
         { \
-debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
+          debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
           __locked = (pthread_mutex_trylock(&semaphore->lock) == 0); \
           if (0&& !__locked) \
           { \
@@ -222,7 +222,7 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
       do \
       { \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) signal %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
-        pthread_cond_signal(condition); \
+        pthread_cond_broadcast(condition); \
       } \
       while (0)
   #elif defined(PLATFORM_WINDOWS)
@@ -316,7 +316,7 @@ debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
       do \
       { \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) signal %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
-        pthread_cond_signal(condition); \
+        pthread_cond_broadcast(condition); \
       } \
       while (0)
   #endif /* PLATFORM_... */
@@ -1581,7 +1581,6 @@ void __Semaphore_signalModified(const char *fileName,
 #endif /* NDEBUG */
 {
   assert(semaphore != NULL);
-  assert(semaphore->lockType == SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
   __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified);
 }
