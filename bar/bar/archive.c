@@ -10625,9 +10625,17 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     return error;
   }
 
-fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStorageName));
+  // set state 'update'
+  Index_setState(indexHandle,
+                 storageId,
+                 INDEX_STATE_UPDATE,
+                 0LL,
+                 NULL
+                );
+
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
+#if 0
   error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
@@ -10644,6 +10652,7 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
+#endif
 
   // clear index
   error = Index_clearStorage(indexHandle,
@@ -10653,7 +10662,7 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
 
-    (void)Index_rollbackTransaction(indexHandle);
+//    (void)Index_rollbackTransaction(indexHandle);
     Archive_close(&archiveInfo);
     Index_setState(indexHandle,
                    storageId,
@@ -10667,14 +10676,6 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
-
-  // set state 'update'
-  Index_setState(indexHandle,
-                 storageId,
-                 INDEX_STATE_UPDATE,
-                 0LL,
-                 NULL
-                );
 
   // read archive content
   timeLastChanged             = 0LL;
@@ -10697,12 +10698,14 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
     // pause
     if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
     {
+#if 0
       // end transaction
       error = Index_endTransaction(indexHandle);
       if (error != ERROR_NONE)
       {
         break;
       }
+#endif
 
 #if 0
       // temporarly close storage
@@ -10729,12 +10732,14 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
       }
 #endif /* 0 */
 
+#if 0
       // start transaction
       error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
       if (error != ERROR_NONE)
       {
         break;
       }
+#endif
     }
 #endif
 
@@ -11083,12 +11088,14 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
 #if 1
     if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
     {
+#if 0
       // end transaction
       error = Index_endTransaction(indexHandle);
       if (error != ERROR_NONE)
       {
         break;
       }
+#endif
 
 #if 0
       // temporarly close storage
@@ -11115,12 +11122,14 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
       }
 #endif /* 0 */
 
+#if 0
       // start transacation
       error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
       if (error != ERROR_NONE)
       {
         break;
       }
+#endif
     }
 #endif
 
@@ -11133,6 +11142,7 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
   String_delete(directoryName);
   String_delete(imageName);
   String_delete(fileName);
+#if 0
   if (error == ERROR_NONE)
   {
     error = Index_endTransaction(indexHandle);
@@ -11141,6 +11151,7 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
   {
     (void)Index_rollbackTransaction(indexHandle);
   }
+#endif
 
   if      (error != ERROR_NONE)
   {
