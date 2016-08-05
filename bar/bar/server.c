@@ -5118,7 +5118,7 @@ LOCAL bool indexPauseCallback(void *userData)
 {
   UNUSED_VARIABLE(userData);
 
-  return pauseFlags.indexUpdate;
+  return pauseFlags.indexUpdate || isSomeJobActive();
 }
 
 /***********************************************************************\
@@ -5173,15 +5173,15 @@ LOCAL void delayIndexThread(void)
   sleepTime = 0;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&indexThreadTrigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
+fprintf(stderr,"%s, %d: wait delayIndexThread \n",__FILE__,__LINE__);
     while (   !quitFlag
            && (sleepTime < SLEEP_TIME_INDEX_THREAD)
            && !Semaphore_waitModified(&indexThreadTrigger,10*MS_PER_SECOND)
           )
     {
-      Misc_udelay(10LL*US_PER_SECOND);
       sleepTime += 10;
     }
-fprintf(stderr,"%s, %d: delayIndexThread DOOOOOOOOOOOOOOOOO\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: delayIndexThread done OOOOOOOOOOOOOO\n",__FILE__,__LINE__);
   }
 }
 
