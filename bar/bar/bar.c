@@ -3313,9 +3313,9 @@ LOCAL Errors initAll(void)
   }
   String_delete(fileName);
 
-  // read default server ca, cert, key
-  (void)readKeyFile(&serverCA,DEFAULT_TLS_SERVER_CA_FILE);
-  (void)readKeyFile(&serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
+  // read default server CA, certificate, key
+  (void)readCertificateFile(&serverCA,DEFAULT_TLS_SERVER_CA_FILE);
+  (void)readCertificateFile(&serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
   (void)readKeyFile(&serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
 
   // initialize command line options and config values
@@ -3347,8 +3347,8 @@ LOCAL void doneAll(void)
 
   // done server ca, cert, key
   doneKey(&serverKey);
-  doneKey(&serverCert);
-  doneKey(&serverCA);
+  doneCertificate(&serverCert);
+  doneCertificate(&serverCA);
 
   // deinitialize variables
   freelocale(POSIXLocale);
@@ -5663,7 +5663,7 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
           {
             // request low priority connection
             serverNode->connection.lowPriorityRequestCount++;
-            Semaphore_signalModified(&globalOptions.serverList);
+            Semaphore_signalModified(&globalOptions.serverList.lock);
 
             // wait for free connection
             while (serverNode->connection.count >= maxConnectionCount)
@@ -5687,7 +5687,7 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
           {
             // request high priority connection
             serverNode->connection.highPriorityRequestCount++;
-            Semaphore_signalModified(&globalOptions.serverList);
+            Semaphore_signalModified(&globalOptions.serverList.lock);
 
             // wait for free connection
             while (serverNode->connection.count >= maxConnectionCount)
