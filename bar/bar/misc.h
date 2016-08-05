@@ -56,12 +56,6 @@ typedef enum
   WEEKDAY_SUN = 6,
 } WeekDays;
 
-#define MISC_US_PER_MS     1000LL
-#define MISC_US_PER_SECOND (1000LL*MISC_US_PER_MS)
-#define MISC_US_PER_MINUTE (60LL*MISC_US_PER_SECOND)
-#define MISC_US_PER_HOUR   (60LL*MISC_US_PER_MINUTE)
-#define MISC_US_PER_DAY    (24LL*MISC_US_PER_HOUR)
-
 // length of UUID string (xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx)
 #define MISC_UUID_STRING_LENGTH 36
 

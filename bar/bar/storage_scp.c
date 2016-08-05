@@ -889,7 +889,7 @@ LOCAL void StorageSCP_close(StorageArchiveHandle *storageArchiveHandle)
             do
             {
               result = libssh2_channel_send_eof(storageArchiveHandle->scp.channel);
-              if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
+              if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
             }
             while (result == LIBSSH2_ERROR_EAGAIN);
           }
@@ -898,7 +898,7 @@ LOCAL void StorageSCP_close(StorageArchiveHandle *storageArchiveHandle)
             do
             {
               result = libssh2_channel_wait_eof(storageArchiveHandle->scp.channel);
-              if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
+              if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
             }
             while (result == LIBSSH2_ERROR_EAGAIN);
           }
@@ -907,7 +907,7 @@ LOCAL void StorageSCP_close(StorageArchiveHandle *storageArchiveHandle)
             do
             {
               result = libssh2_channel_close(storageArchiveHandle->scp.channel);
-              if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
+              if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
             }
             while (result == LIBSSH2_ERROR_EAGAIN);
           }
@@ -916,7 +916,7 @@ LOCAL void StorageSCP_close(StorageArchiveHandle *storageArchiveHandle)
             do
             {
               result = libssh2_channel_wait_closed(storageArchiveHandle->scp.channel);
-              if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
+              if (result == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
             }
             while (result == LIBSSH2_ERROR_EAGAIN);
           }
@@ -1046,7 +1046,7 @@ LOCAL Errors StorageSCP_read(StorageArchiveHandle *storageArchiveHandle,
                                        (char*)storageArchiveHandle->scp.readAheadBuffer.data,
                                        MIN((size_t)(storageArchiveHandle->scp.size-storageArchiveHandle->scp.index),MAX_BUFFER_SIZE)
                                      );
-              if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
+              if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
             }
             while (n == LIBSSH2_ERROR_EAGAIN);
             if (n < 0)
@@ -1078,7 +1078,7 @@ LOCAL Errors StorageSCP_read(StorageArchiveHandle *storageArchiveHandle,
                                                buffer,
                                                length
                                               );
-              if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
+              if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
             }
             while (n == LIBSSH2_ERROR_EAGAIN);
             if (n < 0)
@@ -1182,7 +1182,7 @@ LOCAL Errors StorageSCP_write(StorageArchiveHandle *storageArchiveHandle,
                                     buffer,
                                     length
                                    );
-          if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
+          if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
         }
         while (n == LIBSSH2_ERROR_EAGAIN);
 

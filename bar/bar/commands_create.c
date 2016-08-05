@@ -722,7 +722,7 @@ LOCAL void pauseCreate(const CreateInfo *createInfo)
          && !isAborted(createInfo)
         )
   {
-    Misc_udelay(500LL*MISC_US_PER_MS);
+    Misc_udelay(500LL*US_PER_MS);
   }
 }
 
@@ -743,7 +743,7 @@ LOCAL void pauseStorage(const CreateInfo *createInfo)
          && !isAborted(createInfo)
         )
   {
-    Misc_udelay(500LL*MISC_US_PER_MS);
+    Misc_udelay(500LL*US_PER_MS);
   }
 }
 
@@ -895,7 +895,7 @@ LOCAL void updateStatusInfo(CreateInfo *createInfo, bool forceUpdate)
   if (createInfo->createStatusInfoFunction != NULL)
   {
     timestamp = Misc_getTimestamp();
-    if (forceUpdate || (timestamp > (lastTimestamp+500LL*MISC_US_PER_MS)))
+    if (forceUpdate || (timestamp > (lastTimestamp+500LL*US_PER_MS)))
     {
       createInfo->createStatusInfoFunction(createInfo->failError,
                                            &createInfo->statusInfo,

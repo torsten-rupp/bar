@@ -298,7 +298,7 @@ error = ERROR_NONE;
 
       if (sleepFlag)
       {
-        Misc_udelay(1000LL*1000LL);
+        Misc_udelay(1LL*US_PER_SECOND);
       }
     }
     while (readProcessIO(pipeStdout[0],stdoutLine))

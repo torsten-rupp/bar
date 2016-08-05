@@ -1172,7 +1172,7 @@ LOCAL Errors StorageSFTP_write(StorageArchiveHandle *storageArchiveHandle,
                                    buffer,
                                    length
                                   );
-            if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*MISC_US_PER_MS);
+            if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
           }
           while (n == LIBSSH2_ERROR_EAGAIN);
 

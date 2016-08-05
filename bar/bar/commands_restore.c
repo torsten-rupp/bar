@@ -346,7 +346,7 @@ LOCAL void updateStatusInfo(RestoreInfo *restoreInfo, bool forceUpdate)
   if (restoreInfo->updateStatusInfoFunction != NULL)
   {
     timestamp = Misc_getTimestamp();
-    if (forceUpdate || (timestamp > (lastTimestamp+500LL*MISC_US_PER_MS)))
+    if (forceUpdate || (timestamp > (lastTimestamp+500LL*US_PER_MS)))
     {
       restoreInfo->updateStatusInfoFunction(&restoreInfo->statusInfo,
                                             restoreInfo->updateStatusInfoUserData

@@ -5495,7 +5495,7 @@ LOCAL void cleanupIndexThreadCode(void)
     sleepTime = 0;
     while ((sleepTime < SLEEP_TIME_INDEX_CLEANUP_THREAD) && !quitFlag)
     {
-      Misc_udelay(10LL*MISC_US_PER_SECOND);
+      Misc_udelay(10LL*US_PER_SECOND);
       sleepTime += 10;
     }
 
@@ -8613,7 +8613,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                              &indexHandle->databaseHandle,
                              "SELECT COUNT(entries.id),TOTAL(fileEntries.fragmentSize) \
                               FROM entries \
-                              LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
+                                LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
                               WHERE entries.storageId=%lld; \
                              ",
                              Index_getDatabaseId(storageId)
@@ -8635,7 +8635,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                              &indexHandle->databaseHandle,
                              "SELECT COUNT(entries.id),TOTAL(imageEntries.blockSize*imageEntries.blockCount) \
                               FROM entries \
-                              LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
+                                LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
                               WHERE entries.storageId=%lld; \
                              ",
                              Index_getDatabaseId(storageId)
@@ -8677,7 +8677,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                              &indexHandle->databaseHandle,
                              "SELECT COUNT(entries.id) \
                               FROM entries \
-                              LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
+                                LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
                               WHERE entries.storageId=%lld; \
                              ",
                              Index_getDatabaseId(storageId)
@@ -8697,7 +8697,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                              &indexHandle->databaseHandle,
                              "SELECT COUNT(entries.id),TOTAL(hardlinkEntries.fragmentSize) \
                               FROM entries \
-                              LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
+                                LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
                               WHERE entries.storageId=%lld; \
                              ",
                              Index_getDatabaseId(storageId)
@@ -8719,7 +8719,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                              &indexHandle->databaseHandle,
                              "SELECT COUNT(entries.id) \
                               FROM entries \
-                              LEFT JOIN specialEntries ON specialEntries.entryId=entries.id \
+                                LEFT JOIN specialEntries ON specialEntries.entryId=entries.id \
                               WHERE entries.storageId=%lld; \
                              ",
                              Index_getDatabaseId(storageId)
@@ -8789,7 +8789,7 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              &indexHandle->databaseHandle,
                              "SELECT COUNT(entriesNewest.id),TOTAL(fileEntries.fragmentSize) \
                               FROM entriesNewest \
-                              LEFT JOIN fileEntries ON fileEntries.entryId=entriesNewest.id \
+                                LEFT JOIN fileEntries ON fileEntries.entryId=entriesNewest.id \
                               WHERE entriesNewest.storageId=%lld; \
                              ",
                              Index_getDatabaseId(storageId)
@@ -8811,7 +8811,7 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              &indexHandle->databaseHandle,
                              "SELECT COUNT(entriesNewest.id),TOTAL(imageEntries.blockSize*imageEntries.blockCount) \
                               FROM entriesNewest \
-                              LEFT JOIN imageEntries ON imageEntries.entryId=entriesNewest.id \
+                                LEFT JOIN imageEntries ON imageEntries.entryId=entriesNewest.id \
                               WHERE entriesNewest.storageId=%lld; \
                              ",
                              Index_getDatabaseId(storageId)
@@ -8853,7 +8853,7 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              &indexHandle->databaseHandle,
                              "SELECT COUNT(entriesNewest.id) \
                               FROM entriesNewest \
-                              LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.id \
+                                LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.id \
                               WHERE entriesNewest.storageId=%lld; \
                              ",
                              Index_getDatabaseId(storageId)
@@ -8873,7 +8873,7 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              &indexHandle->databaseHandle,
                              "SELECT COUNT(entriesNewest.id),TOTAL(hardlinkEntries.fragmentSize) \
                               FROM entriesNewest \
-                              LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.id \
+                                LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.id \
                               WHERE entriesNewest.storageId=%lld; \
                              ",
                              Index_getDatabaseId(storageId)
@@ -8895,7 +8895,7 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              &indexHandle->databaseHandle,
                              "SELECT COUNT(entriesNewest.id) \
                               FROM entriesNewest \
-                              LEFT JOIN specialEntries ON specialEntries.entryId=entriesNewest.id \
+                                LEFT JOIN specialEntries ON specialEntries.entryId=entriesNewest.id \
                               WHERE entriesNewest.storageId=%lld; \
                              ",
                              Index_getDatabaseId(storageId)
@@ -8911,7 +8911,8 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
     Database_finalize(&databaseQueryHandle);
 
     // update newest aggregate data
-fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %llu %llu %llu %llu %llu %llu %llu\n",__FILE__,__LINE__,Index_getDatabaseId(storageId),
+fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %llu %llu %llu %llu %llu %llu %llu\n",__FILE__,__LINE__,
+Index_getDatabaseId(storageId),
                              totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
                              totalFileSize+totalImageSize+totalHardlinkSize,
                              totalFileCount,

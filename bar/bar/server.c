@@ -547,6 +547,7 @@ LOCAL Thread                schedulerThread;        // thread scheduling jobs
 LOCAL Thread                pauseThread;
 LOCAL Thread                remoteConnectThread;    // thread to connect remote BAR instances
 LOCAL Thread                remoteThread;           // thread to execute remote jobs
+LOCAL Semaphore             indexThreadTrigger;
 LOCAL Thread                indexThread;            // thread to add/update index
 LOCAL Thread                autoIndexThread;        // thread to collect BAR files for auto-index
 LOCAL Thread                purgeExpiredThread;     // thread to purge expired archive files
@@ -3816,7 +3817,7 @@ LOCAL void delayRemoteConnectThread(void)
   sleepTime = 0;
   while (!quitFlag && (sleepTime < SLEEP_TIME_REMOTE_THREAD))
   {
-    Misc_udelay(10LL*MISC_US_PER_SECOND);
+    Misc_udelay(10LL*US_PER_SECOND);
     sleepTime += 10;
   }
 }
@@ -4017,7 +4018,7 @@ LOCAL void delayRemoteThread(void)
   sleepTime = 0;
   while (!quitFlag && (sleepTime < SLEEP_TIME_REMOTE_THREAD))
   {
-    Misc_udelay(10LL*MISC_US_PER_SECOND);
+    Misc_udelay(10LL*US_PER_SECOND);
     sleepTime += 10;
   }
 }
@@ -4576,7 +4577,7 @@ LOCAL void delayScheduleThread(void)
   sleepTime = 0;
   while (!quitFlag && (sleepTime < SLEEP_TIME_SCHEDULER_THREAD))
   {
-    Misc_udelay(10LL*MISC_US_PER_SECOND);
+    Misc_udelay(10LL*US_PER_SECOND);
     sleepTime += 10;
   }
 }
@@ -4751,7 +4752,7 @@ LOCAL void schedulerThreadCode(void)
     else
     {
       // short sleep
-      Misc_udelay(1LL*MISC_US_PER_SECOND);
+      Misc_udelay(1LL*US_PER_SECOND);
     }
   }
 
@@ -4797,7 +4798,7 @@ LOCAL void pauseThreadCode(void)
     sleepTime = 0;
     while (!quitFlag && (sleepTime < SLEEP_TIME_PAUSE_THREAD))
     {
-      Misc_udelay(10LL*MISC_US_PER_SECOND);
+      Misc_udelay(10LL*US_PER_SECOND);
       sleepTime += 10;
     }
   }
@@ -4821,7 +4822,7 @@ LOCAL void delayPurgeExpiredThread(void)
   sleepTime = 0;
   while (!quitFlag && (sleepTime < SLEEP_TIME_PURGE_EXPIRED_THREAD))
   {
-    Misc_udelay(10LL*MISC_US_PER_SECOND);
+    Misc_udelay(10LL*US_PER_SECOND);
     sleepTime += 10;
   }
 }
@@ -5166,13 +5167,21 @@ LOCAL void pauseIndexUpdate(void)
 
 LOCAL void delayIndexThread(void)
 {
-  uint sleepTime;
+  SemaphoreLock semaphoreLock;
+  uint          sleepTime;
 
   sleepTime = 0;
-  while (!quitFlag && (sleepTime < SLEEP_TIME_INDEX_THREAD))
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&indexThreadTrigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    Misc_udelay(10LL*MISC_US_PER_SECOND);
-    sleepTime += 10;
+    while (   !quitFlag
+           && (sleepTime < SLEEP_TIME_INDEX_THREAD)
+           && !Semaphore_waitModified(&indexThreadTrigger,10*MS_PER_SECOND)
+          )
+    {
+      Misc_udelay(10LL*US_PER_SECOND);
+      sleepTime += 10;
+    }
+fprintf(stderr,"%s, %d: delayIndexThread DOOOOOOOOOOOOOOOOO\n",__FILE__,__LINE__);
   }
 }
 
@@ -5351,7 +5360,7 @@ LOCAL void indexThreadCode(void)
                       BYTES_SHORT(totalEntrySize),
                       BYTES_UNIT(totalEntrySize),
                       totalEntrySize,
-                      (endTimestamp-startTimestamp)/MISC_US_PER_SECOND
+                      (endTimestamp-startTimestamp)/US_PER_SECOND
                      );
         }
         else if (Error_getCode(error) == ERROR_INTERRUPTED)
@@ -5449,7 +5458,7 @@ LOCAL void delayAutoIndexThread(void)
   sleepTime = 0;
   while (!quitFlag && (sleepTime < SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD))
   {
-    Misc_udelay(10LL*MISC_US_PER_SECOND);
+    Misc_udelay(10LL*US_PER_SECOND);
     sleepTime += 10;
   }
 }
@@ -16432,6 +16441,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
+  // trigger index thread
+  Semaphore_signalModified(&indexThreadTrigger);
+
   // free resources
   String_delete(storageName);
   String_delete(name);
@@ -17873,7 +17885,6 @@ Errors Server_run(uint              port,
   uint64                nowTimestamp,waitTimeout,nextTimestamp;
   bool                  clientOkFlag;
   struct timespec       pollTimeout;
-  int                   n;
   AuthorizationFailNode *authorizationFailNode,*oldestAuthorizationFailNode;
   ClientNode            *clientNode;
   SocketHandle          socketHandle;
@@ -18081,6 +18092,7 @@ Errors Server_run(uint              port,
   }
   if (Index_isAvailable())
   {
+    Semaphore_init(&indexThreadTrigger);
     if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize index thread!");
@@ -18153,7 +18165,7 @@ Errors Server_run(uint              port,
     }
 
     nowTimestamp = Misc_getTimestamp();
-    waitTimeout  = 60LL*MISC_US_PER_MINUTE; // wait for network connection max. 60min [us]
+    waitTimeout  = 60LL*US_PER_MINUTE; // wait for network connection max. 60min [us]
     LIST_ITERATE(&clientList,clientNode)
     {
       clientOkFlag = TRUE;
@@ -18567,6 +18579,7 @@ Errors Server_run(uint              port,
       Thread_done(&autoIndexThread);
     }
     Thread_done(&indexThread);
+    Semaphore_done(&indexThreadTrigger);
   }
   Thread_done(&remoteThread);
   Thread_done(&remoteConnectThread);

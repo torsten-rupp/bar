@@ -10692,7 +10692,7 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
         )
   {
 //TODO
-//fprintf(stderr,"%s, %d: add i\n",__FILE__,__LINE__); Misc_udelay(1L*MISC_US_PER_SECOND);
+//fprintf(stderr,"%s, %d: add i\n",__FILE__,__LINE__); Misc_udelay(1L*US_PER_SECOND);
 #if 1
     // pause
     if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
@@ -10716,7 +10716,7 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
       // wait
       do
       {
-        Misc_udelay(10LL*MISC_US_PER_SECOND);
+        Misc_udelay(10LL*US_PER_SECOND);
       }
       while (pauseCallbackFunction(pauseCallbackUserData));
 
@@ -11102,7 +11102,7 @@ fprintf(stderr,"%s, %d: in %s\n",__FILE__,__LINE__,String_cString(printableStora
       // wait
       do
       {
-        Misc_udelay(10LL*MISC_US_PER_SECOND);
+        Misc_udelay(10LL*US_PER_SECOND);
       }
       while (pauseCallbackFunction(pauseCallbackUserData));
 

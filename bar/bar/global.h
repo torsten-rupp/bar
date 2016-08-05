@@ -74,8 +74,16 @@
 #define BITS_TO_BYTES(n) ((n)/8LL)
 
 // time constants, time conversions
-#define MS_PER_SECOND 1000L
-#define US_PER_SECOND 1000000LL
+#define US_PER_MS     1000LL
+#define US_PER_SECOND (1000LL*US_PER_MS)
+#define US_PER_MINUTE (60LL*US_PER_SECOND)
+#define US_PER_HOUR   (60LL*US_PER_MINUTE)
+#define US_PER_DAY    (24LL*US_PER_HOUR)
+
+#define MS_PER_SECOND 1000LL
+#define MS_PER_MINUTE (60LL*MS_PER_SECOND)
+#define MS_PER_HOUR   (60LL*MS_PER_MINUTE)
+#define MS_PER_DAY    (24LL*MS_PER_HOUR)
 
 #define S_TO_MS(n) ((n)*1000L)
 #define S_TO_US(n) ((n)*1000000LL)

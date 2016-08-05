@@ -2350,7 +2350,7 @@ xxx++;
         // wait
         do
         {
-          Misc_udelay(10LL*MISC_US_PER_SECOND);
+          Misc_udelay(10LL*US_PER_SECOND);
         }
         while (pauseCallbackFunction(pauseCallbackUserData));
 
