@@ -2309,7 +2309,8 @@ Dprintf.dprintf("cirrect?");
               {
                 IndexData indexData = (IndexData)treeItem.getData();
                 Widgets.removeTreeItem(widgetStorageTree,treeItem);
-                checkedIndexIdSet.set(indexData.id,false);
+
+                setStorageList(indexData.id,false);
 //TODO: remove?
                 indexData.clearTreeItem();
               }
@@ -2501,7 +2502,8 @@ Dprintf.dprintf("cirrect?");
             {
               IndexData indexData = (IndexData)treeItem.getData();
               Widgets.removeTreeItem(widgetStorageTree,treeItem);
-              checkedIndexIdSet.set(indexData.id,false);
+
+              setStorageList(indexData.id,false);
 //TODO: remove?
               indexData.clearTreeItem();
             }
@@ -2638,8 +2640,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           }
         });
       }
-      final String[] errorMessage = new String[1];
-      final int[]    n            = new int[1];
+      final int[] n = new int[1];
       try
       {
         BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d",
@@ -4153,7 +4154,8 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
   private Menu                         widgetStorageTableAssignToMenu;
   private Text                         widgetStorageFilter;
   private Combo                        widgetStorageStateFilter;
-  private WidgetEvent                  checkedStorageEvent = new WidgetEvent();     // triggered when checked-state of some storage changed
+  final private IndexIdSet             checkedIndexIdSet = new IndexIdSet();
+  private WidgetEvent                  checkedIndexEvent = new WidgetEvent();       // triggered when checked-state of some uuid/enity/storage changed
 
   private Label                        widgetEntryTableTitle;
   private Table                        widgetEntryTable;
@@ -4161,14 +4163,13 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
   private Text                         widgetEntryFilter;
   private Combo                        widgetEntryTypeFilter;
   private Button                       widgetEntryNewestOnly;
+  final private IndexIdSet             checkedEntryIdSet = new IndexIdSet();
   private WidgetEvent                  checkedEntryEvent = new WidgetEvent();       // triggered when checked-state of some entry changed
 
   private UpdateStorageTreeTableThread updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
   private IndexData                    selectedIndexData = null;
-  final private IndexIdSet             checkedIndexIdSet = new IndexIdSet();
 
   private UpdateEntryTableThread       updateEntryTableThread = new UpdateEntryTableThread();
-  final private IndexIdSet             checkedEntryIdSet = new IndexIdSet();
 
   // ------------------------ native functions ----------------------------
 
@@ -4958,7 +4959,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
           {
             IndexData indexData = (IndexData)subTreeItem.getData();
-            checkedIndexIdSet.set(indexData.id,false);
+            setStorageList(indexData.id,false);
           }
 
           // close sub-tree
@@ -4967,7 +4968,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           treeItem.setExpanded(false);
 
           // trigger update checked
-          checkedStorageEvent.trigger();
+          checkedIndexEvent.trigger();
         }
       });
       widgetStorageTree.addListener(SWT.MouseDoubleClick,new Listener()
@@ -5000,10 +5001,10 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
               StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
 
               // get check
-              checkedIndexIdSet.set(storageIndexData.id,isChecked);
+              setStorageList(storageIndexData.id,isChecked);
 
               // trigger update checked
-              checkedStorageEvent.trigger();
+              checkedIndexEvent.trigger();
             }
           }
         }
@@ -5031,11 +5032,18 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                 for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
                 {
                   subTreeItem.setChecked(isChecked);
+                  IndexData subIndexData = (IndexData)subTreeItem.getData();
+                  if (subIndexData != null)
+                  {
+                    checkedIndexIdSet.set(subIndexData.id,isChecked);
+                    setStorageList(subIndexData.id,isChecked);
+                  }
                 }
                 checkedIndexIdSet.set(indexData.id,isChecked);
+                setStorageList(indexData.id,isChecked);
 
                 // trigger update checked
-                checkedStorageEvent.trigger();
+                checkedIndexEvent.trigger();
               }
             }
           }
@@ -5288,19 +5296,21 @@ Dprintf.dprintf("dropTargetEvent.data=%s",dropTargetEvent.data);
         @Override
         public void handleEvent(final Event event)
         {
-          TableItem tabletem = widgetStorageTable.getItem(new Point(event.x,event.y));
-          if (tabletem != null)
+          TableItem tableItem = widgetStorageTable.getItem(new Point(event.x,event.y));
+          if (tableItem != null)
           {
-            StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
+            StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
             if (storageIndexData != null)
             {
-              boolean isChecked = tabletem.getChecked();
+              boolean isChecked = tableItem.getChecked();
 
-              // set/reset checked
-              checkedIndexIdSet.set(storageIndexData.id,isChecked);
+              // toggle check
+              tableItem.setChecked(!isChecked);
+              checkedIndexIdSet.set(storageIndexData.id,!isChecked);
+              setStorageList(storageIndexData.id,!isChecked);
 
               // trigger update checked
-              checkedStorageEvent.trigger();
+              checkedIndexEvent.trigger();
             }
           }
         }
@@ -5314,19 +5324,20 @@ Dprintf.dprintf("dropTargetEvent.data=%s",dropTargetEvent.data);
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          TableItem tabletem = (TableItem)selectionEvent.item;
-          if ((tabletem != null) && (selectionEvent.detail == SWT.NONE))
+          TableItem tableItem = (TableItem)selectionEvent.item;
+          if ((tableItem != null) && (selectionEvent.detail == SWT.NONE))
           {
-            StorageIndexData storageIndexData = (StorageIndexData)tabletem.getData();
+            StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
             if (storageIndexData != null)
             {
-              boolean isChecked = tabletem.getChecked();
+              boolean isChecked = tableItem.getChecked();
 
-              // set/reset checked
+              // set/reset check
               checkedIndexIdSet.set(storageIndexData.id,isChecked);
+              setStorageList(storageIndexData.id,isChecked);
 
               // trigger update checked
-              checkedStorageEvent.trigger();
+              checkedIndexEvent.trigger();
             }
           }
         }
@@ -5608,7 +5619,7 @@ Dprintf.dprintf("");
         Widgets.addMenuSeparator(menu);
 
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Restore")+"\u2026");
-        Widgets.addEventListener(new WidgetEventListener(menuItem,checkedStorageEvent)
+        Widgets.addEventListener(new WidgetEventListener(menuItem,checkedIndexEvent)
         {
           @Override
           public void trigger(MenuItem menuItem)
@@ -5745,7 +5756,7 @@ Dprintf.dprintf("");
       {
         button = Widgets.newButton(composite,IMAGE_MARK_ALL);
         Widgets.layout(button,0,0,TableLayoutData.W);
-        Widgets.addEventListener(new WidgetEventListener(button,checkedStorageEvent)
+        Widgets.addEventListener(new WidgetEventListener(button,checkedIndexEvent)
         {
           @Override
           public void trigger(Control control)
@@ -5882,7 +5893,7 @@ Dprintf.dprintf("");
         button.setToolTipText(BARControl.tr("Start restoring selected archives."));
         button.setEnabled(false);
         Widgets.layout(button,0,5,TableLayoutData.DEFAULT,0,0,0,0,140,SWT.DEFAULT);
-        Widgets.addEventListener(new WidgetEventListener(button,checkedStorageEvent)
+        Widgets.addEventListener(new WidgetEventListener(button,checkedIndexEvent)
         {
           @Override
           public void trigger(Control control)
@@ -6029,6 +6040,7 @@ Dprintf.dprintf("remove");
               // toggle check
               tableItem.setChecked(!isChecked);
               checkedEntryIdSet.set(entryIndexData.id,!isChecked);
+              setEntryList(entryIndexData.id,!isChecked);
 
               // trigger update entries
               checkedEntryEvent.trigger();
@@ -6053,9 +6065,9 @@ Dprintf.dprintf("remove");
             {
               boolean isChecked = tableItem.getChecked();
 
-              // toggle check
-              tableItem.setChecked(!isChecked);
-              checkedEntryIdSet.set(entryIndexData.id,!isChecked);
+              // set/reset check
+              checkedEntryIdSet.set(entryIndexData.id,isChecked);
+              setEntryList(entryIndexData.id,isChecked);
 
               // trigger update entries
               checkedEntryEvent.trigger();
@@ -6098,7 +6110,7 @@ Dprintf.dprintf("remove");
           }
         }
       });
-      Widgets.addEventListener(new WidgetEventListener(widgetEntryTable,checkedStorageEvent)
+      Widgets.addEventListener(new WidgetEventListener(widgetEntryTable,checkedIndexEvent)
       {
         @Override
         public void trigger(Control control)
@@ -6431,13 +6443,6 @@ Dprintf.dprintf("remove");
 
   //-----------------------------------------------------------------------
 
-  /** clear selected storage entries
-   */
-  private void clearStorageList()
-  {
-    BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
-  }
-
   /** set/clear selected storage entry
    * @param indexId index id
    * @param checked true for set checked, false for clear checked
@@ -6462,24 +6467,16 @@ Dprintf.dprintf("remove");
     }
   }
 
-  /** set selected storage entry
-   * @param indexId index id
-   */
-  private void setStorageList(long indexId)
-  {
-    setStorageList(indexId,true);
-  }
-
   /** set selected storage entries
    * @param indexIdSet index id set
    */
   private void setStorageList(IndexIdSet indexIdSet)
   {
-    clearStorageList();
+    BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
 //TODO: optimize send more than one entry?
     for (Long indexId : indexIdSet)
     {
-      setStorageList(indexId);
+      setStorageList(indexId,true);
     }
   }
 
@@ -6497,6 +6494,9 @@ Dprintf.dprintf("remove");
     {
       case 0:
         // tree view
+
+        // check/uncheck all entries
+        checkedIndexIdSet.clear();
         for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
         {
           UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
@@ -6526,11 +6526,13 @@ Dprintf.dprintf("remove");
             }
           }
         }
+        setStorageList(checkedIndexIdSet);
 
         // trigger update storage
-        checkedStorageEvent.trigger();
+        checkedIndexEvent.trigger();
         break;
       case 1:
+        // table view
         final int     totalEntryCount[] = new int[]{0};
         final boolean doit[]            = new boolean[]{true};
 
@@ -6570,6 +6572,7 @@ Dprintf.dprintf("remove");
           if (doit[0])
           {
             // check/uncheck all entries
+            checkedIndexIdSet.clear();
             final int n[] = new int[]{0};
             final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE);
             busyDialog.setMaximum(totalEntryCount[0]);
@@ -6602,23 +6605,26 @@ Dprintf.dprintf("remove");
               Dialogs.error(shell,BARControl.tr("Cannot mark all storages!\n\n(error: {0})",errorMessage[0]));
               return;
             }
+            setStorageList(checkedIndexIdSet);
 
             // refresh table
             Widgets.refreshVirtualTable(widgetStorageTable);
 
             // trigger update storage
-            checkedStorageEvent.trigger();
+            checkedIndexEvent.trigger();
           }
         }
         else
         {
+          // clear all checked ids
           checkedIndexIdSet.clear();
+          setStorageList(checkedIndexIdSet);
 
           // refresh table
           Widgets.refreshVirtualTable(widgetStorageTable);
 
           // trigger update storage
-          checkedStorageEvent.trigger();
+          checkedIndexEvent.trigger();
         }
         break;
     }
@@ -7593,7 +7599,17 @@ Dprintf.dprintf("storageIndexData=%s: %s",storageIndexData,storageTreeItem.getSe
 */
         for (TreeItem treeItem : widgetStorageTree.getSelection())
         {
-          if (treeItem.getData() instanceof StorageIndexData)
+          if      (treeItem.getData() instanceof UUIDIndexData)
+          {
+            UUIDIndexData uuidIndexData = (UUIDIndexData)treeItem.getData();
+            indexIdSet.add(uuidIndexData.id);
+          }
+          else if (treeItem.getData() instanceof EntityIndexData)
+          {
+            EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
+            indexIdSet.add(entityIndexData.id);
+          }
+          else if (treeItem.getData() instanceof StorageIndexData)
           {
             StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
             indexIdSet.add(storageIndexData.id);
@@ -7897,13 +7913,6 @@ Dprintf.dprintf("indexIdSet.size=%d",indexIdSet.size());
 
   //-----------------------------------------------------------------------
 
-  /** clear selected entries
-   */
-  private void clearEntryList()
-  {
-    BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),0);
-  }
-
   /** set/clear selected storage entry
    * @param entryId entry id
    * @param checked true for set checked, false for clear checked
@@ -7929,24 +7938,16 @@ Dprintf.dprintf("indexIdSet.size=%d",indexIdSet.size());
     checkedEntryIdSet.set(entryId,checked);
   }
 
-  /** set selected storage entry
-   * @param entryId entry id
-   */
-  private void setEntryList(long entryId)
-  {
-    setEntryList(entryId,true);
-  }
-
   /** set selected storage entries
    * @param entryDataSet index data set
    */
   private void setEntryList(IndexIdSet entryIdSet)
   {
-    clearEntryList();
+    BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),0);
 //TODO: optimize send more than one entry?
     for (Long entryId : entryIdSet)
     {
-      setEntryList(entryId);
+      setEntryList(entryId,true);
     }
   }
 
@@ -8000,6 +8001,7 @@ Dprintf.dprintf("indexIdSet.size=%d",indexIdSet.size());
     {
       if (doit[0])
       {
+        checkedEntryIdSet.clear();
         final int n[] = new int[]{0};
         final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE);
         busyDialog.setMaximum(totalEntryCount[0]);
@@ -8036,6 +8038,7 @@ Dprintf.dprintf("indexIdSet.size=%d",indexIdSet.size());
           Dialogs.error(shell,BARControl.tr("Cannot mark all index entries!\n\n(error: {0})",errorMessage[0]));
           return;
         }
+        setEntryList(checkedEntryIdSet);
 
         // refresh table
         Widgets.refreshVirtualTable(widgetEntryTable);
@@ -8047,6 +8050,7 @@ Dprintf.dprintf("indexIdSet.size=%d",indexIdSet.size());
     else
     {
       checkedEntryIdSet.clear();
+      setEntryList(checkedEntryIdSet);
 
       // refresh table
       Widgets.refreshVirtualTable(widgetEntryTable);
@@ -8063,7 +8067,6 @@ Dprintf.dprintf("indexIdSet.size=%d",indexIdSet.size());
   {
     ArrayList<EntryIndexData> entryIndexDataArray = new ArrayList<EntryIndexData>();
 
-Dprintf.dprintf("");
     for (TableItem tableItem : widgetEntryTable.getItems())
     {
       if (tableItem.getChecked())
