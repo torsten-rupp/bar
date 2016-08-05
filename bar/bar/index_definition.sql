@@ -369,20 +369,20 @@ CREATE TRIGGER AFTER UPDATE OF name ON storage
 
 // --- entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entries(
-  id                    INTEGER PRIMARY KEY,
-  storageId             INTEGER NOT NULL REFERENCES storage(id),
-  name                  TEXT,
-  type                  INTEGER,
-  timeLastAccess        INTEGER,
-  timeModified          INTEGER,
-  timeLastChanged       INTEGER,
-  userId                INTEGER,
-  groupId               INTEGER,
-  permission            INTEGER,
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER NOT NULL REFERENCES storage(id),
+  name            TEXT NOT NULL,
+  type            INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
 
   // updated by triggers
-  offset                INTEGER DEFAULT 0,  // Note: redundancy for faster access
-  size                  INTEGER DEFAULT 0   // Note: redundancy for faster access
+  offset          INTEGER DEFAULT 0,  // Note: redundancy for faster access
+  size            INTEGER DEFAULT 0   // Note: redundancy for faster access
 );
 CREATE INDEX ON entries (storageId,type,name);
 CREATE INDEX ON entries (name,offset,size);
@@ -394,12 +394,13 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   entryId         INTEGER REFERENCES entries(id),  // no 'NOT NULL'
 
   storageId       INTEGER DEFAULT 0,       // Note: redundancy for faster access
+  name            TEXT NOT NULL,           // Note: redundancy for faster access
   type            INTEGER DEFAULT 0,       // Note: redundancy for faster access
-  name            TEXT NOT NULL,
   timeLastChanged INTEGER DEFAULT 0,       // Note: redundancy for faster access
   userId          INTEGER DEFAULT 0,       // Note: redundancy for faster access
   groupId         INTEGER DEFAULT 0,       // Note: redundancy for faster access
   permission      INTEGER DEFAULT 0,       // Note: redundancy for faster access
+
   offset          INTEGER DEFAULT 0,       // Note: redundancy for faster access
   size            INTEGER DEFAULT 0,       // Note: redundancy for faster access
 
