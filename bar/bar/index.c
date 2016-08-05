@@ -8552,7 +8552,8 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
                            )
           )
     {
-      assert(totalEntryContentSize_ >= 0.0);
+//TODO: may happen?
+//      assert(totalEntryContentSize_ >= 0.0);
       if (totalEntryContentSize != NULL) (*totalEntryContentSize) = (totalEntryContentSize_ >= 0LL) ? (uint64)totalEntryContentSize_ : 0LL;
     }
     Database_finalize(&databaseQueryHandle);
@@ -8614,8 +8615,10 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                              "SELECT COUNT(entries.id),TOTAL(fileEntries.fragmentSize) \
                               FROM entries \
                                 LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
-                              WHERE entries.storageId=%lld; \
+                              WHERE     entries.type=%d \
+                                    AND entries.storageId=%lld; \
                              ",
+                             INDEX_TYPE_FILE,
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
@@ -8636,8 +8639,10 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                              "SELECT COUNT(entries.id),TOTAL(imageEntries.blockSize*imageEntries.blockCount) \
                               FROM entries \
                                 LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
-                              WHERE entries.storageId=%lld; \
+                              WHERE     entries.type=%d \
+                                    AND entries.storageId=%lld; \
                              ",
+                             INDEX_TYPE_IMAGE,
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
@@ -8658,8 +8663,10 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                              "SELECT COUNT(entries.id) \
                               FROM entries \
                                 LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                              WHERE entries.storageId=%lld; \
+                              WHERE     entries.type=%d \
+                                    AND entries.storageId=%lld; \
                              ",
+                             INDEX_TYPE_DIRECTORY,
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
@@ -8678,8 +8685,10 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                              "SELECT COUNT(entries.id) \
                               FROM entries \
                                 LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
-                              WHERE entries.storageId=%lld; \
+                              WHERE     entries.type=%d \
+                                    AND entries.storageId=%lld; \
                              ",
+                             INDEX_TYPE_LINK,
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
@@ -8698,8 +8707,10 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                              "SELECT COUNT(entries.id),TOTAL(hardlinkEntries.fragmentSize) \
                               FROM entries \
                                 LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
-                              WHERE entries.storageId=%lld; \
+                              WHERE     entries.type=%d \
+                                    AND entries.storageId=%lld; \
                              ",
+                             INDEX_TYPE_HARDLINK,
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
@@ -8720,8 +8731,10 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                              "SELECT COUNT(entries.id) \
                               FROM entries \
                                 LEFT JOIN specialEntries ON specialEntries.entryId=entries.id \
-                              WHERE entries.storageId=%lld; \
+                              WHERE     entries.type=%d \
+                                    AND entries.storageId=%lld; \
                              ",
+                             INDEX_TYPE_SPECIAL,
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
@@ -8790,8 +8803,10 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              "SELECT COUNT(entriesNewest.id),TOTAL(fileEntries.fragmentSize) \
                               FROM entriesNewest \
                                 LEFT JOIN fileEntries ON fileEntries.entryId=entriesNewest.id \
-                              WHERE entriesNewest.storageId=%lld; \
+                              WHERE     entriesNewest.type=%d \
+                                    AND entriesNewest.storageId=%lld; \
                              ",
+                             INDEX_TYPE_FILE,
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
@@ -8812,8 +8827,10 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              "SELECT COUNT(entriesNewest.id),TOTAL(imageEntries.blockSize*imageEntries.blockCount) \
                               FROM entriesNewest \
                                 LEFT JOIN imageEntries ON imageEntries.entryId=entriesNewest.id \
-                              WHERE entriesNewest.storageId=%lld; \
+                              WHERE     entriesNewest.type=%d \
+                                    AND entriesNewest.storageId=%lld; \
                              ",
+                             INDEX_TYPE_IMAGE,
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
@@ -8834,8 +8851,10 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              "SELECT COUNT(entriesNewest.id) \
                               FROM entriesNewest \
                                 LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.id \
-                              WHERE entriesNewest.storageId=%lld; \
+                              WHERE     entriesNewest.type=%d \
+                                    AND entriesNewest.storageId=%lld; \
                              ",
+                             INDEX_TYPE_DIRECTORY,
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
@@ -8854,8 +8873,10 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              "SELECT COUNT(entriesNewest.id) \
                               FROM entriesNewest \
                                 LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.id \
-                              WHERE entriesNewest.storageId=%lld; \
+                              WHERE     entriesNewest.type=%d \
+                                    AND entriesNewest.storageId=%lld; \
                              ",
+                             INDEX_TYPE_LINK,
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
@@ -8874,8 +8895,10 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              "SELECT COUNT(entriesNewest.id),TOTAL(hardlinkEntries.fragmentSize) \
                               FROM entriesNewest \
                                 LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.id \
-                              WHERE entriesNewest.storageId=%lld; \
+                              WHERE     entriesNewest.type=%d \
+                                    AND entriesNewest.storageId=%lld; \
                              ",
+                             INDEX_TYPE_HARDLINK,
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
@@ -8896,8 +8919,10 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              "SELECT COUNT(entriesNewest.id) \
                               FROM entriesNewest \
                                 LEFT JOIN specialEntries ON specialEntries.entryId=entriesNewest.id \
-                              WHERE entriesNewest.storageId=%lld; \
+                              WHERE     entriesNewest.type=%d \
+                                    AND entriesNewest.storageId=%lld; \
                              ",
+                             INDEX_TYPE_SPECIAL,
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE)
@@ -9927,7 +9952,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                )
            )
         {
-          assert(totalEntryContentSize_ >= 0.0);
+// TODO: may happen?
+//          assert(totalEntryContentSize_ >= 0.0);
           if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
         }
         Database_finalize(&databaseQueryHandle);
@@ -10148,7 +10174,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                              )
          )
       {
-        assert(totalEntryContentSize_ >= 0.0);
+//TODO: may happend?
+//        assert(totalEntryContentSize_ >= 0.0);
         if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
       }
       Database_finalize(&databaseQueryHandle);
@@ -10650,7 +10677,8 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   assert(imageSize_ >= 0LL);
   assert(blockOffset_ >= 0LL);
   assert(blockCount_ >= 0LL);
-  assert(directorySize_ >= 0LL);
+//TODO: may happen
+//  assert(directorySize_ >= 0LL);
   assert(hardlinkSize_ >= 0LL);
   if (uuidId    != NULL) (*uuidId   ) = INDEX_ID_(INDEX_TYPE_UUID,   uuidId_   );
   if (entityId  != NULL) (*entityId ) = INDEX_ID_(INDEX_TYPE_ENTITY, entityId_ );
@@ -10660,11 +10688,11 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   {
     switch (indexType)
     {
-      case INDEX_TYPE_FILE:      (*size) = fileSize_;      break;
-      case INDEX_TYPE_IMAGE:     (*size) = imageSize_;     break;
-      case INDEX_TYPE_DIRECTORY: (*size) = directorySize_; break;
-      case INDEX_TYPE_HARDLINK:  (*size) = hardlinkSize_;  break;
-      default:                   (*size) = 0LL;            break;
+      case INDEX_TYPE_FILE:      (*size) = fileSize_;                                      break;
+      case INDEX_TYPE_IMAGE:     (*size) = imageSize_;                                     break;
+      case INDEX_TYPE_DIRECTORY: (*size) = (directorySize_ >= 0LL) ? directorySize_ : 0LL; break;
+      case INDEX_TYPE_HARDLINK:  (*size) = hardlinkSize_;                                  break;
+      default:                   (*size) = 0LL;                                            break;
     }
   }
   if (fragmentOrBlockOffset != NULL)
