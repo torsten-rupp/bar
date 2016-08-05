@@ -1035,13 +1035,6 @@ Errors Network_startSSLSession(SocketHandle *socketHandle,
 }
 #endif
 
-int Network_getSocket(SocketHandle *socketHandle)
-{
-  assert(socketHandle != NULL);
-
-  return socketHandle->handle;
-}
-
 bool Network_eof(SocketHandle *socketHandle)
 {
   bool eofFlag;

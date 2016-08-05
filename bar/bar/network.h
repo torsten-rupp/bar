@@ -236,7 +236,15 @@ void Network_disconnect(SocketHandle *socketHandle);
 * Notes  : -
 \***********************************************************************/
 
-int Network_getSocket(SocketHandle *socketHandle);
+INLINE int Network_getSocket(const SocketHandle *socketHandle);
+#if defined(NDEBUG) || defined(__NETWORK_IMPLEMENATION__)
+INLINE int Network_getSocket(const SocketHandle *socketHandle)
+{
+  assert(socketHandle != NULL);
+
+  return socketHandle->handle;
+}
+#endif /* NDEBUG || __NETWORK_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Network_getSSHSession
