@@ -5173,7 +5173,6 @@ LOCAL void delayIndexThread(void)
   sleepTime = 0;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&indexThreadTrigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-fprintf(stderr,"%s, %d: wait delayIndexThread \n",__FILE__,__LINE__);
     while (   !quitFlag
            && (sleepTime < SLEEP_TIME_INDEX_THREAD)
            && !Semaphore_waitModified(&indexThreadTrigger,10*MS_PER_SECOND)
@@ -5181,7 +5180,6 @@ fprintf(stderr,"%s, %d: wait delayIndexThread \n",__FILE__,__LINE__);
     {
       sleepTime += 10;
     }
-fprintf(stderr,"%s, %d: delayIndexThread done OOOOOOOOOOOOOO\n",__FILE__,__LINE__);
   }
 }
 
@@ -5741,6 +5739,7 @@ LOCAL void autoIndexThreadCode(void)
                       "Deleted index for '%s', last checked %s -- xxxx %d\n",
                       String_cString(printableStorageName),
                       String_cString(Misc_formatDateTime(string,lastCheckedDateTime,NULL)),
+//TODO: remove
 globalOptions.indexDatabaseKeepTime
                      );
         }
