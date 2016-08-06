@@ -4797,83 +4797,6 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
   return error;
 }
 
-/***********************************************************************\
-* Name   : recreateTriggers
-* Purpose: recreate trigger definitions
-* Input  : databaseFileName - database file name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors recreateTriggers(const char *databaseFileName)
-{
-  Errors              error;
-  DatabaseHandle      databaseHandle;
-  DatabaseQueryHandle databaseQueryHandle;
-  char                name[64];
-
-  assert(databaseFileName != NULL);
-
-  // init variables
-
-  // open index database
-  error = Database_open(&databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,INDEX_PRIORITY_HIGH,NO_WAIT);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // delete all triggers
-  error = Database_prepare(&databaseQueryHandle,
-                           &databaseHandle,
-                           "SELECT name FROM sqlite_master WHERE type='trigger'"
-                          );
-  if (error == ERROR_NONE)
-  {
-    while (   (error == ERROR_NONE)
-           && Database_getNextRow(&databaseQueryHandle,
-                                  "%64s",
-                                  &name
-                                 )
-          )
-    {
-      error = Database_execute(&databaseHandle,
-                               CALLBACK(NULL,NULL),
-                               "DROP TRIGGER %s",
-                               name
-                              );
-fprintf(stderr,"%s, %d: drop tri %s\n",__FILE__,__LINE__,name);
-    }
-    Database_finalize(&databaseQueryHandle);
-  }
-  if (error != ERROR_NONE)
-  {
-    Database_close(&databaseHandle);
-    return error;
-  }
-
-  // create new triggeres
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  error = Database_execute(&databaseHandle,
-                           CALLBACK(NULL,NULL),
-                           INDEX_TRIGGER_DEFINITION
-                          );
-  if (error != ERROR_NONE)
-  {
-    Database_close(&databaseHandle);
-    return error;
-  }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-
-  // close index datbase
-  Database_close(&databaseHandle);
-
-  // free resource
-
-  return ERROR_NONE;
-}
-
 //TODO: not used, remove
 /***********************************************************************\
 * Name   : refreshStoragesInfos
@@ -4957,6 +4880,7 @@ LOCAL Errors refreshStoragesInfos(IndexHandle *indexHandle)
   return error;
 }
 
+//TODO: not used, remove
 /***********************************************************************\
 * Name   : refreshEntitiesInfos
 * Purpose: refresh entities infos
@@ -5029,6 +4953,7 @@ LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
   return error;
 }
 
+//TODO: not used, remove
 /***********************************************************************\
 * Name   : refreshUUIDsInfos
 * Purpose: refresh UUIDs infos
@@ -5437,14 +5362,9 @@ LOCAL void cleanupIndexThreadCode(void)
       error = importIndex(&indexHandle,oldDatabaseFileName);
       if (error == ERROR_NONE)
       {
-#warning remove TODO xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-//        (void)File_delete(oldDatabaseFileName,FALSE);
         oldDatabaseCount++;
       }
-      else
-      {
-        if (&indexHandle.upgradeError == ERROR_NONE) indexHandle.upgradeError = error;
-      }
+      (void)File_delete(oldDatabaseFileName,FALSE);
 
       i++;
     }
@@ -6587,20 +6507,6 @@ error=ERROR_NONE;
   }
   else
   {
-    // recreate triggers
-    error = recreateTriggers(indexDatabaseFileName);
-    if (error != ERROR_NONE)
-    {
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_ERROR,
-                  "INDEX",
-                  "Recreate index database '%s' triggers fail: %s\n",
-                  indexDatabaseFileName,
-                  Error_getText(error)
-                 );
-      return error;
-    }
-
     // get index version
     error = getIndexVersion(indexDatabaseFileName,&indexVersion);
     if (error != ERROR_NONE)
@@ -6815,6 +6721,7 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+#if 0
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
                              "SELECT uuids.id, \
@@ -6833,7 +6740,27 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
                              ",
                              jobUUID
                             );
-Database_debugPrintQueryInfo(&databaseQueryHandle);
+#else
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT uuids.id, \
+                                     (SELECT UNIXTIMESTAMP(storage.created) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
+                                     (SELECT storage.errorMessage FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
+                                     (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID), \
+                                     (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
+                                     uuids.totalEntityCount, \
+                                     uuids.totalStorageCount, \
+                                     uuids.totalStorageSize, \
+                                     uuids.totalEntryCount, \
+                                     uuids.totalEntrySize \
+                              FROM uuids \
+                              WHERE uuids.jobUUID=%'S \
+                              GROUP BY uuids.id \
+                             ",
+                             jobUUID
+                            );
+#endif
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
     if (error != ERROR_NONE)
     {
       return error;
@@ -7747,8 +7674,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT uuids.id, \
                                    uuids.jobUUID, \
-                                   UNIXTIMESTAMP(uuids.lastCreated), \
-                                   uuids.lastErrorMessage, \
+                                   (SELECT UNIXTIMESTAMP(storage.created) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
+                                   (SELECT storage.errorMessage FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
                                    (SELECT TOTAL(storage.totalEntryCount) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID), \
                                    (SELECT TOTAL(storage.totalEntrySize) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID) \
                             FROM uuids \
@@ -9428,7 +9355,6 @@ fprintf(stderr,"%s, %d: storageId=%lld\n",__FILE__,__LINE__,storageId);
     return ERROR_NONE;
   });
 fprintf(stderr,"%s, %d: Index_deleteStorage done error=%x\n",__FILE__,__LINE__,error);
-fprintf(stderr,"%s, %d: error %s\n",__FILE__,__LINE__,Error_getText(error));
 
   return error;
 }
