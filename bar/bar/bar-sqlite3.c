@@ -32,12 +32,14 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL bool create        = FALSE;
-LOCAL bool showNames     = FALSE;
-LOCAL bool showHeader    = FALSE;
-LOCAL bool headerPrinted = FALSE;
-LOCAL bool foreignKeys   = TRUE;
-LOCAL bool verbose       = FALSE;
+LOCAL bool create         = FALSE;
+LOCAL bool createIndizes  = FALSE;
+LOCAL bool createTriggers = FALSE;
+LOCAL bool showNames      = FALSE;
+LOCAL bool showHeader     = FALSE;
+LOCAL bool headerPrinted  = FALSE;
+LOCAL bool foreignKeys    = TRUE;
+LOCAL bool verbose        = FALSE;
 
 /****************************** Macros *********************************/
 
@@ -62,11 +64,13 @@ LOCAL void printUsage(const char *programName)
 {
   printf("Usage %s: [<options>] <database file> [<command>...]\n",programName);
   printf("\n");
-  printf("Options:  -c|--create  - create database file\n");
-  printf("          -n|--names   - named values\n");
-  printf("          -H|--header  - print headers\n");
-  printf("          -v|--verbose - verbose output\n");
-  printf("          -h|--help    - print this help\n");
+  printf("Options:  -c|--create       - create index file\n");
+  printf("          --create-indizes  - re-create indizes\n");
+  printf("          --create-triggers - re-create triggers\n");
+  printf("          -n|--names        - print named values\n");
+  printf("          -H|--header       - print headers\n");
+  printf("          -v|--verbose      - verbose output\n");
+  printf("          -h|--help         - print this help\n");
 }
 
 /***********************************************************************\
@@ -297,31 +301,34 @@ LOCAL void printSpaces(int n)
 
 /***********************************************************************\
 * Name   : printRow
-* Purpose: print row
-* Input  : -
+* Purpose: print row call back
+* Input  : userData - user data
+*          count    - number of values
+*          values   - values
+*          columns  - column names
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL int printRow(void *userData, int argc, char *argv[], char *columns[])
+LOCAL int printRow(void *userData, int count, char *values[], char *columns[])
 {
   int    i;
   size_t *widths;
 
-  assert(argc >= 0);
-  assert(argv != NULL);
+  assert(count >= 0);
+  assert(values != NULL);
   assert(columns != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  widths = (size_t*)malloc(argc*sizeof(size_t));
+  widths = (size_t*)malloc(count*sizeof(size_t));
   assert(widths != NULL);
-  getColumnsWidth(widths,argc,argv,columns);
+  getColumnsWidth(widths,count,values,columns);
 
   if (showHeader && !headerPrinted)
   {
-    for (i = 0; i < argc; i++)
+    for (i = 0; i < count; i++)
     {
       printf("%s ",columns[i]); printSpaces(widths[i]-strlen(columns[i]));
     }
@@ -329,12 +336,12 @@ LOCAL int printRow(void *userData, int argc, char *argv[], char *columns[])
 
     headerPrinted = TRUE;
   }
-  for (i = 0; i < argc; i++)
+  for (i = 0; i < count; i++)
   {
-    if (argv[i] != NULL)
+    if (values[i] != NULL)
     {
       if (showNames) printf("%s=",columns[i]);
-      printf("%s ",argv[i]); if (showHeader) { printSpaces(widths[i]-strlen(argv[i])); }
+      printf("%s ",values[i]); if (showHeader) { printSpaces(widths[i]-strlen(values[i])); }
     }
     else
     {
@@ -345,7 +352,7 @@ LOCAL int printRow(void *userData, int argc, char *argv[], char *columns[])
 
   free(widths);
 
-  return 0;
+  return SQLITE_OK;
 }
 
 /*---------------------------------------------------------------------*/
@@ -357,6 +364,8 @@ int main(int argc, const char *argv[])
   String     sqlCommands;
   char       line[2048];
   int        sqliteMode;
+  char       command[1024];
+  char       name[1024];
   int        sqliteResult;
   sqlite3    *handle;
   char       *errorMessage;
@@ -370,6 +379,14 @@ int main(int argc, const char *argv[])
     if      (stringEquals(argv[i],"-c") || stringEquals(argv[i],"--create"))
     {
       create = TRUE;
+    }
+    else if (stringEquals(argv[i],"--create-indizes"))
+    {
+      createIndizes = TRUE;
+    }
+    else if (stringEquals(argv[i],"--create-triggers"))
+    {
+      createTriggers = TRUE;
     }
     else if (stringEquals(argv[i],"-n") || stringEquals(argv[i],"--names"))
     {
@@ -424,6 +441,8 @@ int main(int argc, const char *argv[])
     }
     i++;
   }
+
+  // check arguments
   if (databaseFileName == NULL)
   {
     fprintf(stderr,"ERROR: no database file name given!\n");
@@ -516,8 +535,11 @@ int main(int argc, const char *argv[])
                                         );
   assert(sqliteResult == SQLITE_OK);
 
+  // create database
   if (create)
   {
+    if (verbose) printf("Create...");
+
     sqliteResult = sqlite3_exec(handle,
                                 INDEX_DEFINITION,
                                 CALLBACK(NULL,NULL),
@@ -528,11 +550,123 @@ int main(int argc, const char *argv[])
       fprintf(stderr,"ERROR: create database fail: %s!\n",errorMessage);
       exit(1);
     }
+
+    if (verbose) printf("OK\n");
   }
 
+  // recreate indizes
+  if (createIndizes)
+  {
+    if (verbose) printf("Create indizes...");
+
+    // delete all existing indizes
+    do
+    {
+      stringClear(name);
+      sqliteResult = sqlite3_exec(handle,
+                                  "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'index%'",
+                                  CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                  {
+                                    assert(count == 1);
+                                    assert(values[0] != NULL);
+
+                                    stringCopy(name,values[0],sizeof(name));
+
+                                    return SQLITE_OK;
+                                  },NULL),
+                                  &errorMessage
+                                 );
+
+      if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
+      {
+        stringFormat(command,sizeof(command),"DROP INDEX %s",name);
+        sqliteResult = sqlite3_exec(handle,
+                                    command,
+                                    CALLBACK(NULL,NULL),
+                                    &errorMessage
+                                   );
+      }
+    }
+    while ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name));
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+      exit(1);
+    }
+
+    // create new triggeres
+    sqliteResult = sqlite3_exec(handle,
+                                INDEX_INDIZES_DEFINITION,
+                                CALLBACK(NULL,NULL),
+                                &errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+      exit(1);
+    }
+
+    if (verbose) printf("OK\n");
+  }
+
+  // recreate triggeres
+  if (createTriggers)
+  {
+    if (verbose) printf("Create triggers...");
+
+    // delete all existing triggers
+    do
+    {
+      stringClear(name);
+      sqliteResult = sqlite3_exec(handle,
+                                  "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'trigger%'",
+                                  CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                  {
+                                    assert(count == 1);
+                                    assert(values[0] != NULL);
+
+                                    stringCopy(name,values[0],sizeof(name));
+
+                                    return SQLITE_OK;
+                                  },NULL),
+                                  &errorMessage
+                                 );
+
+      if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
+      {
+        stringFormat(command,sizeof(command),"DROP TRIGGER %s",name);
+        sqliteResult = sqlite3_exec(handle,
+                                    command,
+                                    CALLBACK(NULL,NULL),
+                                    &errorMessage
+                                   );
+      }
+    }
+    while ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name));
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: create triggers fail: %s!\n",errorMessage);
+      exit(1);
+    }
+
+    // create new triggeres
+    sqliteResult = sqlite3_exec(handle,
+                                INDEX_TRIGGERS_DEFINITION,
+                                CALLBACK(NULL,NULL),
+                                &errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: create triggers fail: %s!\n",errorMessage);
+      exit(1);
+    }
+
+    if (verbose) printf("OK\n");
+  }
+
+  // execute command
   if (!String_isEmpty(sqlCommands))
   {
-    // execute command
     sqliteResult = sqlite3_exec(handle,
                                 String_cString(sqlCommands),
                                 CALLBACK(printRow,NULL),
@@ -542,6 +676,7 @@ int main(int argc, const char *argv[])
     if (sqliteResult != SQLITE_OK)
     {
       fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",String_cString(sqlCommands),errorMessage);
+
       exit(1);
     }
   }
