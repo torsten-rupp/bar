@@ -1994,11 +1994,22 @@ ulong xxx=0;
   {
     return error;
   }
+  if (List_isEmpty(&fromColumnList))
+  {
+    freeTableColumnList(&fromColumnList);
+    return ERRORX_(DATABASE_MISSING_TABLE,0,fromTableName);
+  }
   error = getTableColumnList(&toColumnList,toDatabaseHandle,toTableName);
   if (error != ERROR_NONE)
   {
     freeTableColumnList(&fromColumnList);
     return error;
+  }
+  if (List_isEmpty(&toColumnList))
+  {
+    freeTableColumnList(&toColumnList);
+    freeTableColumnList(&fromColumnList);
+    return ERRORX_(DATABASE_MISSING_TABLE,0,toTableName);
   }
 
   // create SQL select statement string
