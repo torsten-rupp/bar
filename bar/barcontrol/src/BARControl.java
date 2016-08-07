@@ -2424,7 +2424,10 @@ public class BARControl
                                 loginData.password,
                                 Settings.serverKeyFileName
                                );
+              shell.setText("BAR control: "+BARServer.getInfo());
               Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+
+              connectOkFlag = true;
             }
             catch (ConnectionError reconnectError)
             {
