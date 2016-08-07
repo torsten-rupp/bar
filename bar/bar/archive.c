@@ -10534,6 +10534,9 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            LogHandle                    *logHandle
                           )
 {
+//TODO: remove?
+#define _ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
+
   StorageSpecifier  storageSpecifier;
   String            printableStorageName;
   Errors            error;
@@ -10635,7 +10638,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
-#if 0
+#if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
   error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
@@ -10662,7 +10665,9 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
 
-//    (void)Index_rollbackTransaction(indexHandle);
+#if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
+    (void)Index_rollbackTransaction(indexHandle);
+#endif
     Archive_close(&archiveInfo);
     Index_setState(indexHandle,
                    storageId,
@@ -10698,7 +10703,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     // pause
     if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
     {
-#if 0
+#if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
       // end transaction
       error = Index_endTransaction(indexHandle);
       if (error != ERROR_NONE)
@@ -10732,7 +10737,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       }
 #endif /* 0 */
 
-#if 0
+#if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
       // start transaction
       error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
       if (error != ERROR_NONE)
@@ -11088,7 +11093,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 #if 1
     if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
     {
-#if 0
+#if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
       // end transaction
       error = Index_endTransaction(indexHandle);
       if (error != ERROR_NONE)
@@ -11122,7 +11127,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       }
 #endif /* 0 */
 
-#if 0
+#if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
       // start transacation
       error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
       if (error != ERROR_NONE)
@@ -11142,7 +11147,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   String_delete(directoryName);
   String_delete(imageName);
   String_delete(fileName);
-#if 0
+#if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
   if (error == ERROR_NONE)
   {
     error = Index_endTransaction(indexHandle);
