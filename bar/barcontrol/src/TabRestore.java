@@ -2555,6 +2555,9 @@ Dprintf.dprintf("cirrect?");
     {
       assert storageName != null;
 
+      // get current entry count
+      final long oldStorageCount = storageCount;
+
       // set update inidicator
       display.syncExec(new Runnable()
       {
@@ -2581,7 +2584,7 @@ Dprintf.dprintf("cirrect?");
       {
         storageCount = valueMap.getInt("storageCount");
       }
-//TODO
+//TODO: remove
       if (storageCount < 0)
       {
         if (Settings.debugLevel > 0)
@@ -2599,15 +2602,16 @@ Dprintf.dprintf("cirrect?");
           widgetStorageTabFolderTitle.setForeground(null);
           widgetStorageTabFolderTitle.redraw();
 
-          widgetStorageTable.setRedraw(false);
+          if (oldStorageCount != storageCount)
+          {
+            widgetStorageTable.setRedraw(false);
 
-          widgetStorageTable.setItemCount(0);
-          widgetStorageTable.clearAll();
+Dprintf.dprintf("clearAll");
+            widgetStorageTable.clearAll();
+            widgetStorageTable.setItemCount(storageCount);
 
-          widgetStorageTable.setItemCount(storageCount);
-          widgetStorageTable.setTopIndex(0);
-
-          widgetStorageTable.setRedraw(true);
+            widgetStorageTable.setRedraw(true);
+          }
         }
       });
     }
@@ -2643,6 +2647,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
       final int[] n = new int[1];
       try
       {
+Dprintf.dprintf("rrrrrrrrrrrrrrr");
         BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d",
                                                      (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
                                                      storageIndexStateSet.nameList("|"),
@@ -3696,6 +3701,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
     {
       assert entryName != null;
 
+      // get current entry count
       final long oldTotalEntryCount = totalEntryCount;
 
       // set update indicator
@@ -3753,11 +3759,8 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
           {
             widgetEntryTable.setRedraw(false);
 
-            widgetEntryTable.setItemCount(0);
             widgetEntryTable.clearAll();
-
             widgetEntryTable.setItemCount((int)Math.min(totalEntryCount,MAX_SHOWN_ENTRIES));
-            widgetEntryTable.setTopIndex(0);
 
             widgetEntryTable.setRedraw(true);
           }
@@ -5257,7 +5260,6 @@ Dprintf.dprintf("dropTargetEvent.data=%s",dropTargetEvent.data);
 
             widgetStorageTable.setItemCount(0);
             widgetStorageTable.clearAll();
-
             widgetStorageTable.setItemCount(count);
             widgetStorageTable.setTopIndex(topItemIndex);
 
@@ -5429,7 +5431,6 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             refreshStorageIndex();
           }
         });
@@ -5444,7 +5445,6 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             refreshAllWithErrorStorageIndex();
           }
         });
@@ -5466,8 +5466,6 @@ Dprintf.dprintf("");
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-
               setEntityType(Settings.ArchiveTypes.NORMAL);
             }
           });
@@ -5482,8 +5480,6 @@ Dprintf.dprintf("");
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-
               setEntityType(Settings.ArchiveTypes.FULL);
             }
           });
@@ -5498,8 +5494,6 @@ Dprintf.dprintf("");
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-
               setEntityType(Settings.ArchiveTypes.INCREMENTAL);
             }
           });
@@ -5514,8 +5508,6 @@ Dprintf.dprintf("");
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-
               setEntityType(Settings.ArchiveTypes.DIFFERENTIAL);
             }
           });
@@ -5530,8 +5522,6 @@ Dprintf.dprintf("");
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-
               setEntityType(Settings.ArchiveTypes.CONTINUOUS);
             }
           });
@@ -5549,7 +5539,6 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             addStorageIndex();
           }
         });
@@ -5564,7 +5553,6 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             removeStorageIndex();
           }
         });
@@ -5575,7 +5563,6 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             removeAllWithErrorStorageIndex();
           }
           @Override
@@ -5596,7 +5583,6 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             setAllCheckedStorage(true);
           }
         });
@@ -5611,7 +5597,6 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             setAllCheckedStorage(false);
           }
         });
@@ -6675,6 +6660,27 @@ Dprintf.dprintf("remove");
     return indexDataHashSet;
   }
 
+  /** request refresh selected storage
+   */
+  private void refreshSelectedIndexData()
+  {
+    switch (widgetStorageTabFolder.getSelectionIndex())
+    {
+      case 0:
+        // tree view
+        IndexData indexData;
+        for (TreeItem treeItem : widgetStorageTree.getSelection())
+        {
+          treeItem.clearAll(true);
+        }
+        break;
+      case 1:
+        // table view
+        widgetStorageTable.clear(widgetStorageTable.getSelectionIndices());
+        break;
+    }
+  }
+
   /** create entity for job and assing selected/checked job/entity/storage to job
    * @param toUUIDIndexData UUID index data
    * @param archiveType archive type
@@ -7034,6 +7040,7 @@ Dprintf.dprintf("remove");
           }
         }
       }
+      refreshSelectedIndexData();
     }
     catch (CommunicationError error)
     {
