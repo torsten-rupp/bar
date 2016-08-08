@@ -1516,6 +1516,42 @@ LOCAL_INLINE bool isServerRunning(void)
 }
 
 /***********************************************************************\
+* Name   : getClientInfo
+* Purpose: get client info string
+* Input  : clientInfo - client info
+*          buffer     - info string variable
+*          bufferSize - buffer size
+* Output : buffer - info string
+* Return : buffer - info string
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint bufferSize)
+{
+  assert(clientInfo != NULL);
+
+  switch (clientInfo->type)
+  {
+    case CLIENT_TYPE_NONE:
+      stringClear(buffer);
+      break;
+    case CLIENT_TYPE_BATCH:
+      stringFormat(buffer,bufferSize,"local file");
+      break;
+    case CLIENT_TYPE_NETWORK:
+      stringFormat(buffer,bufferSize,"%s:%d",String_cString(clientInfo->network.name),clientInfo->network.port);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
+  return buffer;
+}
+
+/***********************************************************************\
 * Name   : storageRequestVolume
 * Purpose: request volume call-back
 * Input  : volumeNumber - volume number
@@ -7669,6 +7705,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
   SemaphoreLock   semaphoreLock;
   StringTokenizer stringTokenizer;
   ConstString     token;
+  char            buffer[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7739,7 +7776,8 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
     if (pauseFlags.indexUpdate) String_joinCString(modeMask,"indexUpdate",',');
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Pause server for %dmin: %s\n",
+               "Pause server by '%s' for %dmin: %s\n",
+               getClientInfo(clientInfo,buffer,sizeof(buffer)),
                pauseTime/60,
                String_cString(modeMask)
               );
@@ -7772,6 +7810,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
   SemaphoreLock   semaphoreLock;
   StringTokenizer stringTokenizer;
   ConstString     token;
+  char            buffer[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7820,7 +7859,8 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
     }
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Suspended server\n"
+               "Suspended server by '%s'\n",
+               getClientInfo(clientInfo,buffer,sizeof(buffer))
               );
   }
 
@@ -7847,6 +7887,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
 LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   SemaphoreLock semaphoreLock;
+  char          buffer[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7864,7 +7905,8 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
     pauseFlags.indexUpdate = FALSE;
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Continued server\n"
+               "Continued server by '%s'\n",
+               getClientInfo(clientInfo,buffer,sizeof(buffer))
               );
   }
 
