@@ -1681,13 +1681,13 @@ Dprintf.dprintf("cirrect?");
       setName("BARControl Update Storage");
     }
 
-    /** run update storage list thread
+    /** run update storage tree/list thread
      */
     public void run()
     {
-      boolean          updateStorageCount = true;
-      HashSet<Integer> updateOffsets      = new HashSet<Integer>();
-      boolean          setUpdateIndicator = true;
+      boolean                updateStorageCount = true;
+      final HashSet<Integer> updateOffsets      = new HashSet<Integer>();
+      boolean                setUpdateIndicator = true;
       try
       {
         for (;;)
@@ -1716,7 +1716,9 @@ Dprintf.dprintf("cirrect?");
             try
             {
               // update count
-              if (!this.requestUpdateStorageCount && updateStorageCount)
+              if (   !this.requestUpdateStorageCount  // new update request pending
+                  && updateStorageCount               // updated requested
+                 )
               {
                 updateStorageTableCount();
               }
@@ -1738,7 +1740,9 @@ Dprintf.dprintf("cirrect?");
               }
 
               // update table
-              if (!this.requestUpdateStorageCount && !updateOffsets.isEmpty())
+              if (   !this.requestUpdateStorageCount  // new update request pending
+                  && !updateOffsets.isEmpty()         // updated requested
+                 )
               {
                 updateStorageTable(updateOffsets);
               }
@@ -1815,6 +1819,20 @@ Dprintf.dprintf("cirrect?");
               updateOffsets.addAll(this.requestUpdateOffsets);
             }
             while (this.requestUpdateStorageCount || !this.requestUpdateOffsets.isEmpty());
+
+            if (updateOffsets.isEmpty())
+            {
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+Dprintf.dprintf("");
+//TODO
+                  updateOffsets.add(widgetStorageTable.getTopIndex());
+Dprintf.dprintf("updateOffsets=%s",updateOffsets);
+                }
+              });
+            }
           }
         }
       }
@@ -3439,9 +3457,9 @@ Dprintf.dprintf("rrrrrrrrrrrrrrr");
      */
     public void run()
     {
-      boolean          updateTotalEntryCount = true;
-      HashSet<Integer> updateOffsets         = new HashSet<Integer>();
-      boolean          setUpdateIndicator    = true;
+      boolean                updateTotalEntryCount = true;
+      final HashSet<Integer> updateOffsets         = new HashSet<Integer>();
+      boolean                setUpdateIndicator    = true;
       try
       {
         for (;;)
@@ -3465,11 +3483,15 @@ Dprintf.dprintf("rrrrrrrrrrrrrrr");
           }
           try
           {
-            if (!this.requestUpdateTotalEntryCount && updateTotalEntryCount)
+            if (   !this.requestUpdateTotalEntryCount  // new update request pending
+                && updateTotalEntryCount               // updated requested
+               )
             {
               updateEntryTableTotalEntryCount();
             }
-            if (!this.requestUpdateTotalEntryCount && !updateOffsets.isEmpty())
+            if (   !this.requestUpdateTotalEntryCount  // new update request pending
+                && !updateOffsets.isEmpty()            // updated requested
+               )
             {
               updateEntryTable(updateOffsets);
             }
@@ -3530,6 +3552,18 @@ Dprintf.dprintf("rrrrrrrrrrrrrrr");
               updateOffsets.addAll(this.requestUpdateOffsets);
             }
             while (this.requestUpdateTotalEntryCount || !this.requestUpdateOffsets.isEmpty());
+
+            if (updateOffsets.isEmpty())
+            {
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+//TODO
+                  updateOffsets.add(widgetEntryTable.getTopIndex());
+                }
+              });
+            }
           }
         }
       }
