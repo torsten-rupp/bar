@@ -7762,7 +7762,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE
+*            [modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE]
 *          Result:
 \***********************************************************************/
 
@@ -7781,17 +7781,13 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
 
   // get mode
   modeMask = String_new();
-  if (!StringMap_getString(argumentMap,"modeMask",modeMask,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE");
-    return;
-  }
+  StringMap_getString(argumentMap,"modeMask",modeMask,NULL);
 
   // set suspend
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     serverState = SERVER_STATE_SUSPENDED;
-    if (modeMask == NULL)
+    if (String_isEmpty(modeMask))
     {
       pauseFlags.create      = TRUE;
       pauseFlags.storage     = TRUE;
@@ -7824,7 +7820,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
     }
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "suspend server\n"
+               "Suspended server\n"
               );
   }
 
@@ -7868,7 +7864,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
     pauseFlags.indexUpdate = FALSE;
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Continue server\n"
+               "Continued server\n"
               );
   }
 
