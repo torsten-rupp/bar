@@ -351,7 +351,7 @@ LOCAL int debugPrintQueryPlanCallback(void *userData, int argc, char *argv[], ch
 #endif
 
 /***********************************************************************\
-* Name   : Database_vformatSQLString
+* Name   : vformatSQLString
 * Purpose: format SQL string from command
 * Input  : sqlString - SQL string variable
 *          command   - command string with %[l]d, %S, %s
