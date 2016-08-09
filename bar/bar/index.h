@@ -838,6 +838,31 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
 // ---------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : Index_getUUIDsInfos
+* Purpose: get UUIDs infos
+* Input  : indexQueryHandle - index query handle variable
+*          indexHandle      - index handle
+*          uuidId           - index id of UUID entry or INDEX_ID_ANY
+*          jobUUID          - unique job id or NULL
+*          name             - name pattern (glob, can be NULL)
+* Output : entityCount     - number of storages (can be NULL)
+*          totalEntryCount - total entry count (can be NULL)
+*          totalEntrySize  - total size [bytes] (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
+                           IndexId       uuidId,
+//TODO: remove?
+                           ConstString   jobUUID,
+                           ConstString   name,
+                           ulong         *entityCount,
+                           ulong         *totalEntryCount,
+                           uint64        *totalEntrySize
+                          );
+
+/***********************************************************************\
 * Name   : Index_updateUUIDInfos
 * Purpose: update UUID infos (aggregated values)
 * Input  : indexHandle - index handle
@@ -938,6 +963,37 @@ Errors Index_isEmptyUUID(IndexHandle *indexHandle,
                         );
 
 // ---------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : Index_getEntitiesInfos
+* Purpose: get entities infos
+* Input  : indexQueryHandle - index query handle variable
+*          indexHandle      - index handle
+*          uuidId           - index id of UUID entry or INDEX_ID_ANY
+*          entityId         - index id of entity entry id or INDEX_ID_ANY
+*          jobUUID          - unique job id or NULL
+*          indexIds         - index ids or NULL
+*          indexIdCount     - index id count or 0
+*          name             - name pattern (glob, can be NULL)
+* Output : storageCount    - number of storages (can be NULL)
+*          totalEntryCount - total entry count (can be NULL)
+*          totalEntrySize  - total size [bytes] (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_getEntitiesInfos(IndexHandle   *indexHandle,
+                              IndexId       uuidId,
+                              IndexId       entityId,
+//TODO: remove?
+                              ConstString   jobUUID,
+                              const IndexId indexIds[],
+                              uint          indexIdCount,
+                              ConstString   name,
+                              ulong         *storageCount,
+                              ulong         *totalEntryCount,
+                              uint64        *totalEntrySize
+                             );
 
 /***********************************************************************\
 * Name   : Index_updateEntityInfos
@@ -1063,7 +1119,7 @@ Errors Index_isEmptyEntity(IndexHandle *indexHandle,
 // ---------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : Index_getStoragesInfo
+* Name   : Index_getStoragesInfos
 * Purpose: get storages info
 * Input  : indexQueryHandle - index query handle variable
 *          indexHandle      - index handle
@@ -1084,21 +1140,21 @@ Errors Index_isEmptyEntity(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
-                             IndexId       uuidId,
-                             IndexId       entityId,
+Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
+                              IndexId       uuidId,
+                              IndexId       entityId,
 //TODO: remove?
-                             ConstString   jobUUID,
-                             const IndexId indexIds[],
-                             uint          indexIdCount,
-                             IndexStateSet indexStateSet,
-                             IndexModeSet  indexModeSet,
-                             ConstString   name,
-                             ulong         *storageCount,
-                             ulong         *totalEntryCount,
-                             uint64        *totalEntrySize,
-                             uint64        *totalEntryContentSize
-                            );
+                              ConstString   jobUUID,
+                              const IndexId indexIds[],
+                              uint          indexIdCount,
+                              IndexStateSet indexStateSet,
+                              IndexModeSet  indexModeSet,
+                              ConstString   name,
+                              ulong         *storageCount,
+                              ulong         *totalEntryCount,
+                              uint64        *totalEntrySize,
+                              uint64        *totalEntryContentSize
+                             );
 
 /***********************************************************************\
 * Name   : Index_updateStorageInfos

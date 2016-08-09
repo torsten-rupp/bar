@@ -7604,11 +7604,109 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
   return error;
 }
 
+Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
+                           IndexId       uuidId,
+//TODO: remove?
+                           ConstString   jobUUID,
+                           ConstString   name,
+                           ulong         *entityCount,
+                           ulong         *totalEntryCount,
+                           uint64        *totalEntrySize
+                          )
+{
+  String              ftsName;
+  String              regexpName;
+  String              filterString;
+  DatabaseQueryHandle databaseQueryHandle;
+  Errors              error;
+  double              totalEntryCount_,totalEntrySize_;
+
+  assert(indexHandle != NULL);
+  assert((uuidId == INDEX_ID_ANY) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
+
+  // init variables
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  // init variables
+  ftsName      = String_new();
+  regexpName   = String_new();
+  filterString = String_new();
+
+  // get FTS/regex patterns
+  getFTSString(ftsName,name);
+  getREGEXPString(regexpName,name);
+
+  filterAppend(filterString,(uuidId != INDEX_ID_ANY),"AND","entity.uuidId=%lld",Index_getDatabaseId(uuidId));
+  filterAppend(filterString,!String_isEmpty(jobUUID),"AND","uuids.jobUUID='%S'",jobUUID);
+  filterAppend(filterString,!String_isEmpty(ftsName),"AND","uuids.id IN (SELECT uuidId FROM FTS_uuids WHERE FTS_uuids MATCH %S)",ftsName);
+//  filterAppend(filterString,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,uuids.name)",regexpName);
+
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    // get storage count, entry count, entry size
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT COUNT(entities.id),\
+                                     TOTAL(storage.totalEntryCount), \
+                                     TOTAL(storage.totalEntrySize) \
+                              FROM uuids \
+                                LEFT JOIN entities ON entities.uuidId=uuids.id \
+                                LEFT JOIN storage ON storage.entityId=entities.id \
+                              WHERE %S \
+                             ",
+                             filterString
+                            );
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    if (Database_getNextRow(&databaseQueryHandle,
+                            "%lu %lf %lf",
+                            entityCount,
+                            &totalEntryCount_,
+                            &totalEntrySize_
+                           )
+          )
+    {
+      assert(totalEntryCount_ >= 0.0);
+      assert(totalEntrySize_ >= 0.0);
+      if (totalEntryCount != NULL) (*totalEntryCount) = (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+      if (totalEntrySize != NULL) (*totalEntrySize) = (totalEntrySize_ >= 0LL) ? (uint64)totalEntrySize_ : 0LL;
+    }
+    Database_finalize(&databaseQueryHandle);
+
+    return ERROR_NONE;
+  });
+  if (error != ERROR_NONE)
+  {
+    String_delete(filterString);
+    String_delete(regexpName);
+    String_delete(ftsName);
+    return error;
+  }
+
+  // free resources
+  String_delete(filterString);
+  String_delete(regexpName);
+  String_delete(ftsName);
+
+  return ERROR_NONE;
+}
+
+//TODO: remove
 Errors Index_updateUUIDInfos(IndexHandle *indexHandle,
                              IndexId     uuidId
                             )
 {
-  return ERROR_NONE;
+  return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
@@ -7633,8 +7731,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  regexpName   = String_new();
+  ftsName    = String_new();
+  regexpName = String_new();
 
   // get FTS/regex patterns
   getFTSString(ftsName,name);
@@ -7931,11 +8029,28 @@ Errors Index_isEmptyUUID(IndexHandle *indexHandle,
   return emptyFlag;
 }
 
+Errors Index_getEntitiesInfos(IndexHandle   *indexHandle,
+                              IndexId       uuidId,
+                              IndexId       entityId,
+//TODO: remove?
+                              ConstString   jobUUID,
+                              const IndexId indexIds[],
+                              uint          indexIdCount,
+                              ConstString   name,
+                              ulong         *storageCount,
+                              ulong         *totalEntryCount,
+                              uint64        *totalEntrySize
+                             )
+{
+return ERROR_STILL_NOT_IMPLEMENTED;
+}
+
+//TODO: remove
 Errors Index_updateEntityInfos(IndexHandle *indexHandle,
                                IndexId     entityId
                               )
 {
-  return ERROR_NONE;
+  return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
@@ -8324,20 +8439,20 @@ Errors Index_isEmptyEntity(IndexHandle *indexHandle,
   return emptyFlag;
 }
 
-Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
-                             IndexId       uuidId,
-                             IndexId       entityId,
-                             ConstString   jobUUID,
-                             const IndexId indexIds[],
-                             uint          indexIdCount,
-                             IndexStateSet indexStateSet,
-                             IndexModeSet  indexModeSet,
-                             ConstString   name,
-                             ulong         *storageCount,
-                             ulong         *totalEntryCount,
-                             uint64        *totalEntrySize,
-                             uint64        *totalEntryContentSize
-                            )
+Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
+                              IndexId       uuidId,
+                              IndexId       entityId,
+                              ConstString   jobUUID,
+                              const IndexId indexIds[],
+                              uint          indexIdCount,
+                              IndexStateSet indexStateSet,
+                              IndexModeSet  indexModeSet,
+                              ConstString   name,
+                              ulong         *storageCount,
+                              ulong         *totalEntryCount,
+                              uint64        *totalEntrySize,
+                              uint64        *totalEntryContentSize
+                             )
 {
   String              ftsName;
   String              regexpName;
@@ -8357,6 +8472,9 @@ Errors Index_getStoragesInfo(IndexHandle   *indexHandle,
   assert((indexIdCount == 0) || (indexIds != NULL));
 
   // init variables
+  if (totalEntryCount       != NULL) (*totalEntryCount      ) = 0L;
+  if (totalEntrySize        != NULL) (*totalEntrySize       ) = 0LL;
+  if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -8863,7 +8981,7 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
     Database_finalize(&databaseQueryHandle);
 
     // update newest aggregate data
-fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %llu %llu %llu %llu %llu %llu %llu\n",__FILE__,__LINE__,
+fprintf(stderr,"%s, %d: Index_updateStorageInfos newest %lld: %llu %llu\n  %llu %llu %llu %llu %llu %llu %llu %llu %llu\n",__FILE__,__LINE__,
 Index_getDatabaseId(storageId),
                              totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
                              totalFileSize+totalImageSize+totalHardlinkSize,
@@ -9699,8 +9817,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  regexpName   = String_new();
+  ftsName    = String_new();
+  regexpName = String_new();
 
   // get FTS/regex patterns
   getFTSString(ftsName,name);
@@ -10783,9 +10901,8 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  regexpName   = String_new();
-
+  ftsName    = String_new();
+  regexpName = String_new();
 
   // get FTS/regex patterns
   getFTSString(ftsName,name);
@@ -11003,8 +11120,8 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  regexpName   = String_new();
+  ftsName    = String_new();
+  regexpName = String_new();
 
   // get FTS/regex patterns
   getFTSString(ftsName,name);
@@ -11212,8 +11329,8 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  regexpName   = String_new();
+  ftsName    = String_new();
+  regexpName = String_new();
 
   // get FTS/regex patterns
   getFTSString(ftsName,name);
@@ -11417,8 +11534,8 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  regexpName   = String_new();
+  ftsName    = String_new();
+  regexpName = String_new();
 
   // get FTS/regex patterns
   getFTSString(ftsName,name);
@@ -11624,8 +11741,8 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  regexpName   = String_new();
+  ftsName    = String_new();
+  regexpName = String_new();
 
   // get FTS/regex patterns
   getFTSString(ftsName,name);
@@ -11842,8 +11959,8 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  regexpName   = String_new();
+  ftsName    = String_new();
+  regexpName = String_new();
 
   // get FTS/regex patterns
   getFTSString(ftsName,name);
