@@ -13895,20 +13895,20 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  error = Index_getStoragesInfo(indexHandle,
-                                INDEX_ID_ANY,  // uuidId
-                                INDEX_ID_ANY,  // entityId,
-                                NULL,  // jobUUID
-                                Array_cArray(&clientInfo->indexIdArray),
-                                Array_length(&clientInfo->indexIdArray),
-                                INDEX_STATE_SET_ALL,
-                                INDEX_MODE_SET_ALL,
-                                NULL,
-                                &storageCount,
-                                &totalEntryCount,
-                                &totalEntrySize,
-                                &totalEntryContentSize
-                               );
+  error = Index_getStoragesInfos(indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 INDEX_ID_ANY,  // entityId,
+                                 NULL,  // jobUUID
+                                 Array_cArray(&clientInfo->indexIdArray),
+                                 Array_length(&clientInfo->indexIdArray),
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,
+                                 &storageCount,
+                                 &totalEntryCount,
+                                 &totalEntrySize,
+                                 &totalEntryContentSize
+                                );
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,error,"get storages info from index database fail: %s",Error_getText(error));
@@ -16785,20 +16785,20 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   }
 
   // get index info
-  error = Index_getStoragesInfo(indexHandle,
-                                INDEX_ID_ANY,  // uuidId
-                                entityId,
-                                NULL,  // jobUUID
-                                NULL,  // indexIds,
-                                0,  // indexIdCount,
-                                indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
-                                indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
-                                name,
-                                &storageCount,
-                                &totalEntryCount,
-                                &totalEntrySize,
-                                &totalEntryContentSize
-                              );
+  error = Index_getStoragesInfos(indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 entityId,
+                                 NULL,  // jobUUID
+                                 NULL,  // indexIds,
+                                 0,  // indexIdCount,
+                                 indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
+                                 indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
+                                 name,
+                                 &storageCount,
+                                 &totalEntryCount,
+                                 &totalEntrySize,
+                                 &totalEntryContentSize
+                                );
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,error,"get storages info from index database fail: %s",Error_getText(error));
