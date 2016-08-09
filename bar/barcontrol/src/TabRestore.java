@@ -2594,7 +2594,7 @@ Dprintf.dprintf("updateOffsets=%s",updateOffsets);
                                                        storageIndexStateSet.nameList("|"),
                                                        storageName
                                                       ),
-                                   1,  // debugLevel
+                                   0,  // debugLevel
                                    errorMessage,
                                    valueMap
                                   ) == Errors.NONE
@@ -2624,7 +2624,7 @@ Dprintf.dprintf("updateOffsets=%s",updateOffsets);
           {
             widgetStorageTable.setRedraw(false);
 
-Dprintf.dprintf("clearAll");
+Dprintf.dprintf("clearAll %d",storageCount);
             widgetStorageTable.clearAll();
             widgetStorageTable.setItemCount(storageCount);
 
