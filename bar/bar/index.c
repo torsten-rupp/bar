@@ -6721,26 +6721,6 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-#if 0
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-                             "SELECT uuids.id, \
-                                     UNIXTIMESTAMP(uuids.lastCreated), \
-                                     uuids.lastErrorMessage, \
-                                     (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID), \
-                                     (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
-                                     uuids.totalEntityCount, \
-                                     uuids.totalStorageCount, \
-                                     uuids.totalStorageSize, \
-                                     uuids.totalEntryCount, \
-                                     uuids.totalEntrySize \
-                              FROM uuids \
-                              WHERE uuids.jobUUID=%'S \
-                              GROUP BY uuids.id \
-                             ",
-                             jobUUID
-                            );
-#else
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
                              "SELECT uuids.id, \
@@ -6759,7 +6739,6 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
                              ",
                              jobUUID
                             );
-#endif
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
     if (error != ERROR_NONE)
     {
@@ -7747,27 +7726,6 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
-#if 0
-  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT uuids.id, \
-                                   uuids.jobUUID, \
-                                   UNIXTIMESTAMP(uuids.lastCreated), \
-                                   uuids.lastErrorMessage, \
-                                   uuids.totalEntryCount, \
-                                   uuids.totalEntrySize \
-                            FROM uuids \
-                              LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                              LEFT JOIN storage ON storage.entityId=entities.id \
-                            WHERE %S \
-                            GROUP BY uuids.id \
-                            LIMIT %llu,%llu \
-                           ",
-                           filterString,
-                           offset,
-                           limit
-                          );
-#elif 1
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT uuids.id, \
@@ -7787,27 +7745,6 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            offset,
                            limit
                           );
-#else
-  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT uuids.id, \
-                                   uuids.jobUUID, \
-                                   UNIXTIMESTAMP(uuids.lastCreated), \
-                                   uuids.lastErrorMessage, \
-                                   0, \
-                                   0 \
-                            FROM uuids \
-                              LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                              LEFT JOIN storage ON storage.entityId=entities.id \
-                            WHERE %S \
-                            GROUP BY uuids.id \
-                            LIMIT %llu,%llu \
-                           ",
-                           filterString,
-                           offset,
-                           limit
-                          );
-#endif
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   if (error != ERROR_NONE)
   {
@@ -7849,21 +7786,6 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
     return FALSE;
   }
 
-#if 0
-  if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %llu %S %lu %llu",
-                           &databaseId,
-                           jobUUID,
-                           lastCreatedDateTime,
-                           lastErrorMessage,
-                           totalEntryCount,
-                           totalEntrySize
-                          )
-     )
-  {
-    return FALSE;
-  }
-#else
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                            "%lld %S %llu %S %lf %lf",
                            &databaseId,
@@ -7877,11 +7799,9 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-//fprintf(stderr,"%s, %d: uuid %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
   if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
-  if (totalEntrySize != NULL) (*totalEntrySize) = (uint64)totalEntrySize_;
-#endif
-  if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(databaseId);
+  if (totalEntrySize  != NULL) (*totalEntrySize ) = (uint64)totalEntrySize_;
+  if (uuidId          != NULL) (*uuidId         ) = INDEX_ID_UUID(databaseId);
 
   return TRUE;
 }
