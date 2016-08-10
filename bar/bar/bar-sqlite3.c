@@ -65,12 +65,13 @@ LOCAL void printUsage(const char *programName)
 {
   printf("Usage %s: [<options>] <database file> [<command>...]\n",programName);
   printf("\n");
-  printf("Options:  -c|--create       - create index file\n");
-  printf("          --create-indizes  - re-create indizes\n");
-  printf("          --create-triggers - re-create triggers\n");
-  printf("          -n|--names        - print named values\n");
-  printf("          -H|--header       - print headers\n");
-  printf("          -v|--verbose      - verbose output\n");
+  printf("Options:  -c|--create         - create index file\n");
+  printf("          --create-indizes    - re-create indizes\n");
+  printf("          --create-triggers   - re-create triggers\n");
+  printf("          --create-aggregates - re-create aggregates data\n");
+  printf("          -n|--names          - print named values\n");
+  printf("          -H|--header         - print headers\n");
+  printf("          -v|--verbose        - verbose output\n");
   printf("          -h|--help         - print this help\n");
 }
 
