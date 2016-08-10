@@ -6468,21 +6468,32 @@ Dprintf.dprintf("remove");
    */
   private void setStorageList(long indexId, boolean checked)
   {
-    if (checked)
+    try
     {
-      BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
-                                                   indexId
-                                                  ),
-                               0  // debugLevel
-                              );
+      if (checked)
+      {
+        BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
+                                                     indexId
+                                                    ),
+                                 0  // debugLevel
+                                );
+      }
+      else
+      {
+        BARServer.executeCommand(StringParser.format("STORAGE_LIST_REMOVE indexId=%ld",
+                                                     indexId
+                                                    ),
+                                 0  // debugLevel
+                                );
+      }
     }
-    else
+    catch (CommunicationError error)
     {
-      BARServer.executeCommand(StringParser.format("STORAGE_LIST_REMOVE indexId=%ld",
-                                                   indexId
-                                                  ),
-                               0  // debugLevel
-                              );
+      // ignored
+    }
+    catch (ConnectionError error)
+    {
+      // ignored
     }
   }
 
