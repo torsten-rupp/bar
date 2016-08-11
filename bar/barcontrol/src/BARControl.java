@@ -1453,10 +1453,10 @@ public class BARControl
     System.out.println("         -l|--list                                  - list jobs");
     System.out.println("");
     System.out.println("         --index-database-add=<name|directory>      - add storage archive <name> or all .bar files to index");
-    System.out.println("         --index-database-remove=<pattern>          - remove storage archive <pattern> from index");
-    System.out.println("         --index-database-refresh=<pattern>         - refresh storage archive <pattern> in index");
-    System.out.println("         -a|--index-database-storage-list=<pattern> - list storage archives matching pattern <pattern>");
-    System.out.println("         -e|--index-database-entries-list=<pattern> - list entries matching pattern <pattern>");
+    System.out.println("         --index-database-remove=<text>             - remove matching storage archives from index");
+    System.out.println("         --index-database-refresh=<text>            - refresh matching storage archive in index");
+    System.out.println("         -a|--index-database-storage-list=<text>    - list matching storage archives");
+    System.out.println("         -e|--index-database-entries-list=<text>    - list matching entries");
     System.out.println("");
     System.out.println("         --restore=<name>                           - restore storage <name>");
     System.out.println("         --destination=<directory>                  - destination to restore entries");
