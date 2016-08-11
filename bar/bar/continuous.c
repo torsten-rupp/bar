@@ -1057,7 +1057,7 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
         )
   {
     // get next entry to process
-    StringList_getLast(&directoryList,name);
+    StringList_removeLast(&directoryList,name);
 
     if (!isNoBackup(name))
     {

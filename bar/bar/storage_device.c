@@ -469,7 +469,7 @@ LOCAL Errors StorageDevice_done(StorageHandle *storageHandle)
   fileName = String_new();
   while (!StringList_isEmpty(&storageHandle->device.fileNameList))
   {
-    StringList_getFirst(&storageHandle->device.fileNameList,fileName);
+    StringList_removeFirst(&storageHandle->device.fileNameList,fileName);
     tmpError = File_delete(fileName,FALSE);
     if (tmpError != ERROR_NONE)
     {
@@ -698,7 +698,7 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
       fileName = String_new();
       while (!StringList_isEmpty(&storageHandle->device.fileNameList))
       {
-        StringList_getFirst(&storageHandle->device.fileNameList,fileName);
+        StringList_removeFirst(&storageHandle->device.fileNameList,fileName);
         error = File_delete(fileName,FALSE);
         if (error != ERROR_NONE)
         {

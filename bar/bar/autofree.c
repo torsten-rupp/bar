@@ -73,7 +73,7 @@ void AutoFree_restore(AutoFreeList *autoFreeList, void *savePoint, bool freeFlag
   while (autoFreeList->tail != savePoint)
   {
     // remove last from list
-    autoFreeNode = (AutoFreeNode*)List_getLast(autoFreeList);
+    autoFreeNode = (AutoFreeNode*)List_removeLast(autoFreeList);
 
     // free resource
     if (freeFlag && (autoFreeNode->autoFreeFunction != NULL))
@@ -259,7 +259,7 @@ void AutoFree_freeAll(AutoFreeList *autoFreeList)
     while (!List_isEmpty(autoFreeList))
     {
       // remove from list
-      autoFreeNode = (AutoFreeNode*)List_getLast(autoFreeList);
+      autoFreeNode = (AutoFreeNode*)List_removeLast(autoFreeList);
 
       // free resource
       if (autoFreeNode->autoFreeFunction != NULL)

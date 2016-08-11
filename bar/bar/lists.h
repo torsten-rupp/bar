@@ -731,26 +731,26 @@ INLINE Node *List_last(const void *list)
 #endif /* NDEBUG || __LISTS_IMPLEMENATION__ */
 
 /***********************************************************************\
-* Name   : List_getFirst
-* Purpose: remove first node from list
+* Name   : List_removeFirst
+* Purpose: remove and return first node from list
 * Input  : list - list
 * Output : -
 * Return : removed node or NULL if list is empty
 * Notes  : -
 \***********************************************************************/
 
-Node *List_getFirst(void *list);
+Node *List_removeFirst(void *list);
 
 /***********************************************************************\
-* Name   : List_getLast
-* Purpose: remove last node from list
+* Name   : List_removeLast
+* Purpose: remove and return last node from list
 * Input  : list - list
 * Output : -
 * Return : removed node or NULL if list is empty
 * Notes  : -
 \***********************************************************************/
 
-Node *List_getLast(void *list);
+Node *List_removeLast(void *list);
 
 /***********************************************************************\
 * Name   : List_contains

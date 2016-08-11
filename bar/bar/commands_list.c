@@ -3667,7 +3667,7 @@ Errors Command_list(StringList          *storageNameList,
   failError = ERROR_NONE;
   while (!StringList_isEmpty(storageNameList))
   {
-    StringList_getFirst(storageNameList,storageName);
+    StringList_removeFirst(storageNameList,storageName);
 
     // parse storage name
     error = Storage_parseName(&storageSpecifier,storageName);

@@ -3958,7 +3958,7 @@ LOCAL void remoteConnectThreadCode(void)
 
     while (!StringList_isEmpty(&jobUUIDList))
     {
-      StringList_getFirst(&jobUUIDList,jobUUID);
+      StringList_removeFirst(&jobUUIDList,jobUUID);
 
       // check if remote job and currently not connected
       tryConnectFlag = FALSE;
@@ -5568,7 +5568,7 @@ LOCAL void autoIndexThreadCode(void)
     initDuplicateJobOptions(&jobOptions,serverDefaultJobOptions);
     while (!StringList_isEmpty(&storageDirectoryList))
     {
-      storageDirectoryName = StringList_getFirst(&storageDirectoryList,NULL);
+      storageDirectoryName = StringList_removeFirst(&storageDirectoryList,NULL);
 
       error = Storage_parseName(&storageSpecifier,storageDirectoryName);
       if (error == ERROR_NONE)
@@ -6413,7 +6413,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
     if (!directoryInfoNode->directoryOpenFlag)
     {
       // process FIFO for deep-first search; this keep the directory list shorter
-      StringList_getLast(&directoryInfoNode->pathNameList,pathName);
+      StringList_removeLast(&directoryInfoNode->pathNameList,pathName);
 
       // open directory for reading
       error = File_openDirectoryList(&directoryInfoNode->directoryListHandle,pathName);
@@ -18569,7 +18569,7 @@ Errors Server_run(uint              port,
   // disconnect all clients
   while (!List_isEmpty(&clientList))
   {
-    clientNode = (ClientNode*)List_getFirst(&clientList);
+    clientNode = (ClientNode*)List_removeFirst(&clientList);
     deleteClient(clientNode);
   }
 

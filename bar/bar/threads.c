@@ -837,7 +837,7 @@ void Thread_doneLocalVariable(ThreadLocalStorage *threadLocalStorage, ThreadLoca
   {
     while (!List_isEmpty(&threadLocalStorage->instanceList))
     {
-      threadLocalStorageInstanceNode = (ThreadLocalStorageInstanceNode*)List_getFirst(&threadLocalStorage->instanceList);
+      threadLocalStorageInstanceNode = (ThreadLocalStorageInstanceNode*)List_removeFirst(&threadLocalStorage->instanceList);
       if (threadLocalStorageFreeFunction != NULL) threadLocalStorageFreeFunction(threadLocalStorageInstanceNode->p,threadLocalStorageFreeUserData);
       LIST_DELETE_NODE(threadLocalStorageInstanceNode);
     }

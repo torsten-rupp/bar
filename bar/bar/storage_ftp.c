@@ -3770,7 +3770,7 @@ LOCAL bool StorageFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDire
     while (!storageDirectoryListHandle->ftp.entryReadFlag && !StringList_isEmpty(&storageDirectoryListHandle->ftp.lineList))
     {
       // get next line
-      line = StringList_getFirst(&storageDirectoryListHandle->ftp.lineList,NULL);
+      line = StringList_removeFirst(&storageDirectoryListHandle->ftp.lineList,NULL);
 
       // parse
       storageDirectoryListHandle->ftp.entryReadFlag = parseFTPDirectoryLine(line,
@@ -3836,7 +3836,7 @@ LOCAL Errors StorageFTP_readDirectoryList(StorageDirectoryListHandle *storageDir
       while (!storageDirectoryListHandle->ftp.entryReadFlag && !StringList_isEmpty(&storageDirectoryListHandle->ftp.lineList))
       {
         // get next line
-        line = StringList_getFirst(&storageDirectoryListHandle->ftp.lineList,NULL);
+        line = StringList_removeFirst(&storageDirectoryListHandle->ftp.lineList,NULL);
 
         // parse
         storageDirectoryListHandle->ftp.entryReadFlag = parseFTPDirectoryLine(line,

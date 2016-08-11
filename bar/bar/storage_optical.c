@@ -778,7 +778,7 @@ LOCAL Errors StorageOptical_done(StorageHandle *storageHandle)
   fileName = String_new();
   while (!StringList_isEmpty(&storageHandle->opticalDisk.write.fileNameList))
   {
-    StringList_getFirst(&storageHandle->opticalDisk.write.fileNameList,fileName);
+    StringList_removeFirst(&storageHandle->opticalDisk.write.fileNameList,fileName);
     tmpError = File_delete(fileName,FALSE);
     if (tmpError != ERROR_NONE)
     {
@@ -1102,7 +1102,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
       fileName = String_new();
       while (!StringList_isEmpty(&storageHandle->opticalDisk.write.fileNameList))
       {
-        StringList_getFirst(&storageHandle->opticalDisk.write.fileNameList,fileName);
+        StringList_removeFirst(&storageHandle->opticalDisk.write.fileNameList,fileName);
         error = File_delete(fileName,FALSE);
         if (error != ERROR_NONE)
         {

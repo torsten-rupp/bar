@@ -3127,7 +3127,7 @@ Errors Storage_forAll(ConstString     storagePatternString,
     StringList_append(&directoryList,storageSpecifier.archiveName);
     while (!StringList_isEmpty(&directoryList))
     {
-      StringList_getLast(&directoryList,fileName);
+      StringList_removeLast(&directoryList,fileName);
 
       // open directory
       error = Storage_openDirectoryList(&storageDirectoryListHandle,

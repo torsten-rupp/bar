@@ -4375,7 +4375,7 @@ LOCAL void executeIOlogPostProcess(ConstString line,
   StringList_append(stringList,line);
   while (StringList_count(stringList) > 5)
   {
-    String_delete(StringList_getFirst(stringList,NULL));
+    String_delete(StringList_removeFirst(stringList,NULL));
   }
 }
 

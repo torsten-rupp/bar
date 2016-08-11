@@ -615,7 +615,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
       // shorten free list
       while (debugResourceFreeList.count > DEBUG_MAX_FREE_LIST)
       {
-        debugResourceNode = (DebugResourceNode*)List_getFirst(&debugResourceFreeList);
+        debugResourceNode = (DebugResourceNode*)List_removeFirst(&debugResourceFreeList);
         LIST_DELETE_NODE(debugResourceNode);
       }
     }

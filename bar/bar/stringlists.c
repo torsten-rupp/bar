@@ -314,16 +314,16 @@ StringNode *__StringList_remove(const char *__fileName__, ulong __lineNb__, Stri
 }
 
 #ifdef NDEBUG
-String StringList_getFirst(StringList *stringList, String string)
+String StringList_removeFirst(StringList *stringList, String string)
 #else /* not NDEBUG */
-String __StringList_getFirst(const char *__fileName__, ulong __lineNb__, StringList *stringList, String string)
+String __StringList_removeFirst(const char *__fileName__, ulong __lineNb__, StringList *stringList, String string)
 #endif /* NDEBUG */
 {
   StringNode *stringNode;
 
   assert(stringList != NULL);
 
-  stringNode = (StringNode*)List_getFirst(stringList);
+  stringNode = (StringNode*)List_removeFirst(stringList);
   if (stringNode != NULL)
   {
     if (string != NULL)
@@ -359,16 +359,16 @@ String __StringList_getFirst(const char *__fileName__, ulong __lineNb__, StringL
 }
 
 #ifdef NDEBUG
-String StringList_getLast(StringList *stringList, String string)
+String StringList_removeLast(StringList *stringList, String string)
 #else /* not NDEBUG */
-String __StringList_getLast(const char *__fileName__, ulong __lineNb__, StringList *stringList, String string)
+String __StringList_removeLast(const char *__fileName__, ulong __lineNb__, StringList *stringList, String string)
 #endif /* NDEBUG */
 {
   StringNode *stringNode;
 
   assert(stringList != NULL);
 
-  stringNode = (StringNode*)List_getLast(stringList);
+  stringNode = (StringNode*)List_removeLast(stringList);
   if (stringNode != NULL)
   {
     if (string != NULL)

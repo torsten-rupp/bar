@@ -564,7 +564,7 @@ LOCAL void doneFileHandle(const char  *__fileName__,
         // shorten closed list
         while (debugClosedFileList.count > DEBUG_MAX_CLOSED_LIST)
         {
-          debugFileNode = (DebugFileNode*)List_getFirst(&debugClosedFileList);
+          debugFileNode = (DebugFileNode*)List_removeFirst(&debugClosedFileList);
           LIST_DELETE_NODE(debugFileNode);
         }
       }
@@ -2084,7 +2084,7 @@ Errors File_readLine(FileHandle *fileHandle,
   }
   else
   {
-    StringList_getLast(&fileHandle->lineBufferList,line);
+    StringList_removeLast(&fileHandle->lineBufferList,line);
   }
 
   return ERROR_NONE;
@@ -2247,7 +2247,7 @@ bool File_getLine(FileHandle *fileHandle,
     else
     {
       // get next line from line buffer
-      StringList_getLast(&fileHandle->lineBufferList,line);
+      StringList_removeLast(&fileHandle->lineBufferList,line);
     }
     if (lineNb != NULL) (*lineNb)++;
 
@@ -3148,7 +3148,7 @@ Errors File_deleteCString(const char *fileName, bool recursiveFlag)
       name = File_newFileName();
       while (!StringList_isEmpty(&directoryList) && (error == ERROR_NONE))
       {
-        StringList_getFirst(&directoryList,directoryName);
+        StringList_removeFirst(&directoryList,directoryName);
 
         dir = opendir(String_cString(directoryName));
         if (dir != NULL)

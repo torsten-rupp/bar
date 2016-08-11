@@ -215,7 +215,7 @@ void MsgQueue_done(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFu
   // discard all remaining messages
   while (!List_isEmpty(&msgQueue->list))
   {
-    msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
+    msgNode = (MsgNode*)List_removeFirst(&msgQueue->list);
 
     if (msgQueueMsgFreeFunction != NULL)
     {
@@ -271,7 +271,7 @@ void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeF
     // discard all remaining messages
     while (!List_isEmpty(&msgQueue->list))
     {
-      msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
+      msgNode = (MsgNode*)List_removeFirst(&msgQueue->list);
 
       if (msgQueueMsgFreeFunction != NULL)
       {
@@ -331,7 +331,7 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
     }
 
     // get message
-    msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
+    msgNode = (MsgNode*)List_removeFirst(&msgQueue->list);
 
     // signal modify
     msgQueue->modifiedFlag = TRUE;

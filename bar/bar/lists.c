@@ -972,7 +972,7 @@ void *List_removeAndFree(void                 *list,
   return nextNode;
 }
 
-Node *List_getFirst(void *list)
+Node *List_removeFirst(void *list)
 {
   Node *node;
 
@@ -984,7 +984,7 @@ Node *List_getFirst(void *list)
   return node;
 }
 
-Node *List_getLast(void *list)
+Node *List_removeLast(void *list)
 {
   Node *node;
 
@@ -1220,11 +1220,11 @@ void List_debugDone(void)
   {
     while (!List_isEmpty(&debugListFreeNodeList))
     {
-      free(List_getFirst(&debugListFreeNodeList));
+      free(List_removeFirst(&debugListFreeNodeList));
     }
     while (!List_isEmpty(&debugListFreeNodeList))
     {
-      free(List_getFirst(&debugListFreeNodeList));
+      free(List_removeFirst(&debugListFreeNodeList));
     }
   }
   pthread_mutex_unlock(&debugListLock);

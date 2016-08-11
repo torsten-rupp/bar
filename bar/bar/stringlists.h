@@ -68,8 +68,8 @@ typedef bool(*StringListNodeEqualsFunction)(const StringNode *stringNode, void *
   #define StringList_appendChar(...)    __StringList_appendChar(__FILE__,__LINE__, ## __VA_ARGS__)
   #define StringList_appendBuffer(...)  __StringList_appendBuffer(__FILE__,__LINE__, ## __VA_ARGS__)
   #define StringList_remove(...)        __StringList_remove(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define StringList_getFirst(...)      __StringList_getFirst(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define StringList_getLast(...)       __StringList_getLast(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define StringList_removeFirst(...)   __StringList_removeFirst(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define StringList_removeLast(...)    __StringList_removeLast(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***********************************************************************\
@@ -453,7 +453,7 @@ INLINE String StringList_last(const StringList *stringList, String string)
 #endif /* NDEBUG || __STRINGLISTS_IMPLEMENATION__ */
 
 /***********************************************************************\
-* Name   : StringList_getFirst
+* Name   : StringList_removeFirst
 * Purpose: remove and return first string from list
 * Input  : stringList - string list
 *          string     - string variable (can be NULL)
@@ -464,13 +464,13 @@ INLINE String StringList_last(const StringList *stringList, String string)
 \***********************************************************************/
 
 #ifdef NDEBUG
-String StringList_getFirst(StringList *stringList, String string);
+String StringList_removeFirst(StringList *stringList, String string);
 #else /* not NDEBUG */
-String __StringList_getFirst(const char *fileName, ulong lineNb, StringList *stringList, String string);
+String __StringList_removeFirst(const char *fileName, ulong lineNb, StringList *stringList, String string);
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : StringList_getLast
+* Name   : StringList_removeLast
 * Purpose: remove and return last string from list
 * Input  : stringList - string list
 *          string     - string variable (can be NULL)
@@ -481,9 +481,9 @@ String __StringList_getFirst(const char *fileName, ulong lineNb, StringList *str
 \***********************************************************************/
 
 #ifdef NDEBUG
-String StringList_getLast(StringList *stringList, String string);
+String StringList_removeLast(StringList *stringList, String string);
 #else /* not NDEBUG */
-String __StringList_getLast(const char *fileName, ulong lineNb, StringList *stringList, String string);
+String __StringList_removeLast(const char *fileName, ulong lineNb, StringList *stringList, String string);
 #endif /* NDEBUG */
 
 /***********************************************************************\

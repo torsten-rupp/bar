@@ -1611,7 +1611,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         pauseCreate(createInfo);
 
         // get next file/directory to process
-        StringList_getLast(&nameList,name);
+        StringList_removeLast(&nameList,name);
 
         // read file info
         error = File_getFileInfo(name,&fileInfo);
@@ -2407,7 +2407,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         pauseCreate(createInfo);
 
         // get next entry to process
-        StringList_getLast(&nameList,name);
+        StringList_removeLast(&nameList,name);
 
         // read file info
         error = File_getFileInfo(name,&fileInfo);
