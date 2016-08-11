@@ -8392,6 +8392,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   assert((indexIdCount == 0) || (indexIds != NULL));
 
   // init variables
+  if (storageCount          != NULL) (*storageCount         ) = 0L;
   if (totalEntryCount       != NULL) (*totalEntryCount      ) = 0L;
   if (totalEntrySize        != NULL) (*totalEntrySize       ) = 0LL;
   if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
