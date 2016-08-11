@@ -17615,6 +17615,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
           HALT_INTERNAL_ERROR("Cannot stop client thread!");
         }
       }
+      Network_disconnect(&clientInfo->network.socketHandle);
 
       // free resources
       doneSession(clientInfo);
@@ -18380,9 +18381,6 @@ Errors Server_run(uint              port,
               disconnectClientNode = clientNode;
               List_remove(&clientList,disconnectClientNode);
 
-              // disconnect
-              Network_disconnect(&disconnectClientNode->clientInfo.network.socketHandle);
-
               // update authorization fail info
               switch (disconnectClientNode->clientInfo.authorizationState)
               {
@@ -18417,7 +18415,7 @@ Errors Server_run(uint              port,
               }
               printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.network.name),disconnectClientNode->clientInfo.network.port);
 
-              // free resources
+              // done client and free resources
               deleteClient(disconnectClientNode);
             }
           }
@@ -18426,9 +18424,6 @@ Errors Server_run(uint              port,
             // error/disconnect -> remove from client list
             disconnectClientNode = clientNode;
             clientNode = List_remove(&clientList,disconnectClientNode);
-
-            // disconnect
-            Network_disconnect(&disconnectClientNode->clientInfo.network.socketHandle);
 
             // update authorization fail info
             switch (disconnectClientNode->clientInfo.authorizationState)
@@ -18464,7 +18459,7 @@ Errors Server_run(uint              port,
             }
             printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.network.name),disconnectClientNode->clientInfo.network.port);
 
-            // free resources
+            // done client and free resources
             deleteClient(disconnectClientNode);
           }
           else
@@ -18575,8 +18570,6 @@ Errors Server_run(uint              port,
   while (!List_isEmpty(&clientList))
   {
     clientNode = (ClientNode*)List_getFirst(&clientList);
-
-    Network_disconnect(&clientNode->clientInfo.network.socketHandle);
     deleteClient(clientNode);
   }
 
