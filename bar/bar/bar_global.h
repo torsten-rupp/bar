@@ -124,7 +124,7 @@ typedef enum
   ARCHIVE_FILE_MODE_OVERWRITE
 } ArchiveFileModes;
 
-#define INDEX_TIMEOUT (2L*60L*1000L)  // index timeout [ms]
+#define INDEX_TIMEOUT (10L*60L*1000L)  // index timeout [ms]
 
 /***************************** Datatypes *******************************/
 
