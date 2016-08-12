@@ -3490,6 +3490,30 @@ LOCAL void closeLog(void)
   }
 }
 
+/***********************************************************************\
+* Name   : reopenLog
+* Purpose: re-open log file
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void reopenLog(void)
+{
+  SemaphoreLock semaphoreLock;
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    if (logFileName != NULL)
+    {
+      fclose(logFile);
+      logFile = fopen(logFileName,"a");
+      if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!\n",logFileName,strerror(errno));
+    }
+  }
+}
+
 /*---------------------------------------------------------------------*/
 
 String getConfigFileName(String fileName)
@@ -4022,9 +4046,12 @@ void doneLog(LogHandle *logHandle)
 
 void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const char *text, va_list arguments)
 {
+  static uint64 lastReopenTimestamp = 0LL;
+
   SemaphoreLock semaphoreLock;
   String        dateTime;
   va_list       tmpArguments;
+  uint64        nowTimestamp;
 
   assert(text != NULL);
 
@@ -4036,6 +4063,7 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
       {
         dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),logFormat);
 
+        // log to session log file
         if (logHandle != NULL)
         {
           // append to job log file (if possible)
@@ -4053,8 +4081,17 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
           }
         }
 
+        // log to global log file
         if (logFile != NULL)
         {
+          // re-open log for log-rotation
+          nowTimestamp = Misc_getTimestamp();
+          if (nowTimestamp > (lastReopenTimestamp+30LL*US_PER_SECOND))
+          {
+            reopenLog();
+            lastReopenTimestamp = nowTimestamp;
+          }
+
           // append to log file
           (void)fprintf(logFile,"%s> ",String_cString(dateTime));
           if (prefix != NULL)

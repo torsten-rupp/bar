@@ -312,7 +312,7 @@ void printInfo(uint verboseLevel, const char *format, ...);
 
 /***********************************************************************\
 * Name   : initLog
-* Purpose: init log
+* Purpose: init job log
 * Input  : logHandle - log handle variable
 * Output : -
 * Return : ERROR_NONE or error code
@@ -323,7 +323,7 @@ Errors initLog(LogHandle *logHandle);
 
 /***********************************************************************\
 * Name   : doneLog
-* Purpose: done log
+* Purpose: done job log
 * Input  : logHandle - log handle
 * Output : -
 * Return : -
@@ -334,7 +334,7 @@ void doneLog(LogHandle *logHandle);
 
 /***********************************************************************\
 * Name   : vlogMessage, plogMessage, logMessage
-* Purpose: log message
+* Purpose: log message into job log and global log
 * Input  : logHandle - log handle
 *          logType   - log type; see LOG_TYPES_*
 *          prefix    - prefix text
