@@ -884,6 +884,7 @@ public class BARServer
   };
 
   // --------------------------- variables --------------------------------
+  private static Object         lock = new Object();
   private static String         name;
   private static int            port;
 
@@ -1251,17 +1252,20 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
 
     // disconnect (if connected)
-    if (BARServer.socket != null)
+    synchronized(lock)
     {
-      disconnect();
-    }
+      if (BARServer.socket != null)
+      {
+        disconnect();
+      }
 
-    // setup new connection
-    BARServer.name   = name;
-    BARServer.port   = socket.getPort();
-    BARServer.socket = socket;
-    BARServer.input  = input;
-    BARServer.output = output;
+      // setup new connection
+      BARServer.name   = name;
+      BARServer.port   = socket.getPort();
+      BARServer.socket = socket;
+      BARServer.input  = input;
+      BARServer.output = output;
+    }
 
     // start read thread
     readThread = new ReadThread(input);
@@ -1295,29 +1299,31 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
     }
 
-    try
+    synchronized(lock)
     {
-      // close connection, stop read thread
-      readThread.quit();
-      BARServer.socket.close(); BARServer.socket = null;
-      try { readThread.join(); } catch (InterruptedException exception) { /* ignored */ }; readThread = null;
-
-      // free resources
-      BARServer.input.close(); BARServer.input = null;
-      BARServer.output.close(); BARServer.output = null;
-    }
-    catch (IOException exception)
-    {
-      // ignored
-    }
-    catch (Throwable throwable)
-    {
-      if (Settings.debugLevel > 0)
+      try
       {
-        BARServer.disconnect();
-        System.err.println("ERROR: "+throwable.getMessage());
-        BARControl.printStackTrace(throwable);
-        System.exit(1);
+        // close connection, stop read thread
+        readThread.quit();
+        BARServer.socket.close(); BARServer.socket = null;
+        try { readThread.join(); } catch (InterruptedException exception) { /* ignored */ }; readThread = null;
+
+        // free resources
+        BARServer.input.close(); BARServer.input = null;
+        BARServer.output.close(); BARServer.output = null;
+      }
+      catch (IOException exception)
+      {
+        // ignored
+      }
+      catch (Throwable throwable)
+      {
+        if (Settings.debugLevel > 0)
+        {
+          System.err.println("ERROR: "+throwable.getMessage());
+          BARControl.printStackTrace(throwable);
+          System.exit(1);
+        }
       }
     }
   }
@@ -3152,7 +3158,7 @@ throw new Error("NYI");
     }
 
     // send command
-    synchronized(output)
+    synchronized(lock)
     {
       try
       {
@@ -3216,7 +3222,13 @@ throw new Error("NYI");
     }
 
     // free command
-    readThread.commandRemove(command);
+    synchronized(lock)
+    {
+      if (readThread != null)
+      {
+        readThread.commandRemove(command);
+      }
+    }
 
     // check if aborted
     if (busyIndicator != null)

@@ -1116,15 +1116,16 @@ public class BARControl
      * @param serverName server name
      * @param port server port
      * @param tlsPort server TLS port
+     * @param password server password
      */
-    LoginData(String name, int port, int tlsPort)
+    LoginData(String name, int port, int tlsPort, String password)
     {
       final Settings.Server defaultServer = Settings.getLastServer();
 
-      this.serverName    = !name.equals("") ? name : ((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME);
-      this.serverPort    = (port != 0) ? port    : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT);
-      this.serverTLSPort = (port != 0) ? tlsPort : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT);
-      this.password      = (defaultServer != null) ? defaultServer.password : "";
+      this.serverName    = !name.isEmpty()     ? name     : ((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME);
+      this.serverPort    = (port != 0        ) ? port     : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT);
+      this.serverTLSPort = (port != 0        ) ? tlsPort  : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT);
+      this.password      = !password.isEmpty() ? password : "";
 
       // get last used server if no name given
 //TODO
@@ -1132,6 +1133,16 @@ public class BARControl
 //      {
 //        this.serverName = Settings.serverNames.toArray(new String[Settings.serverNames.size()])[Settings.serverNames.size()-1];
 //      }
+    }
+
+    /** create login data
+     * @param serverName server name
+     * @param port server port
+     * @param tlsPort server TLS port
+     */
+    LoginData(String name, int port, int tlsPort)
+    {
+      this(name,port,tlsPort,"");
     }
 
     /** create login data
@@ -1883,9 +1894,10 @@ public class BARControl
             // try to connect to server with current credentials
             if (!connectOkFlag)
             {
-              loginData = new LoginData((!server.name.isEmpty()) ? server.name : Settings.DEFAULT_SERVER_NAME,
-                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
-                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT
+              loginData = new LoginData((!server.name.isEmpty()    ) ? server.name     : Settings.DEFAULT_SERVER_NAME,
+                                        (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
+                                        (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
+                                        (!server.password.isEmpty()) ? server.password : ""
                                        );
               try
               {
