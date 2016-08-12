@@ -857,6 +857,7 @@ int main(int argc, const char *argv[])
   }
 
   // open database
+  if (verbose) { printf("Open database '%s'...",databaseFileName); fflush(stdout); }
   if (create)
   {
     sqliteMode = SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE;
@@ -869,9 +870,11 @@ int main(int argc, const char *argv[])
   sqliteResult = sqlite3_open_v2(databaseFileName,&databaseHandle,sqliteMode,NULL);
   if (sqliteResult != SQLITE_OK)
   {
+    if (verbose) printf("FAIL\n");
     fprintf(stderr,"ERROR: cannot open database '%s' (error: %d)!\n",databaseFileName,sqliteResult);
     exit(1);
   }
+  if (verbose) printf("OK\n");
 
   sqliteResult = sqlite3_exec(databaseHandle,
                               "PRAGMA synchronous=OFF",
@@ -936,7 +939,7 @@ int main(int argc, const char *argv[])
   // create database
   if (create)
   {
-    if (verbose) printf("Create...");
+    if (verbose) { printf("Create..."); fflush(stdout); }
 
     sqliteResult = sqlite3_exec(databaseHandle,
                                 INDEX_DEFINITION,
@@ -955,7 +958,7 @@ int main(int argc, const char *argv[])
   // recreate indizes
   if (createIndizes)
   {
-    if (verbose) printf("Create indizes...");
+    if (verbose) { printf("Create indizes..."); fflush(stdout); }
 
     // delete all existing indizes
     do
@@ -1010,7 +1013,7 @@ int main(int argc, const char *argv[])
   // recreate triggeres
   if (createTriggers)
   {
-    if (verbose) printf("Create triggers...");
+    if (verbose) { printf("Create triggers..."); fflush(stdout); }
 
     // delete all existing triggers
     do
@@ -1076,7 +1079,7 @@ int main(int argc, const char *argv[])
 
                                   storageId = (ulong)atol(values[0]);
 
-                                  if (verbose) printf("Create aggregates for storage #%llu...",storageId);
+                                  if (verbose) { printf("Create aggregates for storage #%llu...",storageId); fflush(stdout); }
 
                                   // total count/size
                                   sqliteResult = sqlExecute(databaseHandle,
@@ -1231,7 +1234,9 @@ int main(int argc, const char *argv[])
   }
 
   // close database
+  if (verbose) { printf("Close database..."); fflush(stdout); }
   sqlite3_close(databaseHandle);
+  if (verbose) printf("OK\n");
 
   // free resources
   String_delete(sqlCommands);
