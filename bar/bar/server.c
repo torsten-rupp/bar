@@ -6465,7 +6465,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
       // check for timeout
       if ((timeout >= 0) && (timedOut != NULL))
       {
-        (*timedOut) = (Misc_getTimestamp() >= (startTimestamp+timeout*1000));
+        (*timedOut) = (Misc_getTimestamp() >= (startTimestamp+timeout*US_PER_MS));
       }
     }
 
@@ -6479,7 +6479,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
     // check for timeout
     if ((timeout >= 0) && (timedOut != NULL))
     {
-      (*timedOut) = (Misc_getTimestamp() >= (startTimestamp+timeout*1000));
+      (*timedOut) = (Misc_getTimestamp() >= (startTimestamp+timeout*US_PER_MS));
     }
   }
   String_delete(pathName);
@@ -16805,6 +16805,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
     String_delete(name);
     return;
   }
+fprintf(stderr,"%s, %d: storageCount=%lu totalEntryCount=%lu\n",__FILE__,__LINE__,storageCount,totalEntryCount);
 
   // send data
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",storageCount,totalEntryCount,totalEntrySize,totalEntryContentSize);
@@ -17370,7 +17371,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
                                       );
       #ifdef SERVER_DEBUG
         t1 = Misc_getTimestamp();
-        fprintf(stderr,"DEBUG: time=%llums\n",(t1-t0)/1000LL);
+        fprintf(stderr,"DEBUG: time=%llums\n",(t1-t0)/US_PER_MS);
       #endif /* SERVER_DEBUG */
     }
     else
