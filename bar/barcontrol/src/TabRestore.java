@@ -1826,10 +1826,7 @@ Dprintf.dprintf("cirrect?");
               {
                 public void run()
                 {
-Dprintf.dprintf("");
-//TODO
                   updateOffsets.add(widgetStorageTable.getTopIndex());
-Dprintf.dprintf("updateOffsets=%s",updateOffsets);
                 }
               });
             }
@@ -2665,7 +2662,6 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
       final int[] n = new int[1];
       try
       {
-Dprintf.dprintf("rrrrrrrrrrrrrrr");
         BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d",
                                                      (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
                                                      storageIndexStateSet.nameList("|"),
