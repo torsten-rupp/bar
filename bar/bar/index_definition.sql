@@ -119,7 +119,7 @@ CREATE TRIGGER AFTER INSERT ON entities
 // --- storage ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage(
   id                        INTEGER PRIMARY KEY,
-  entityId                  INTEGER NOT NULL REFERENCES entities(id),
+  entityId                  INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
   name                      TEXT NOT NULL,
   created                   INTEGER,
   size                      INTEGER DEFAULT 0,
@@ -188,7 +188,7 @@ CREATE TRIGGER AFTER UPDATE OF name ON storage
 // --- entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entries(
   id              INTEGER PRIMARY KEY,
-  storageId       INTEGER NOT NULL REFERENCES storage(id),
+  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,
   name            TEXT NOT NULL,
   type            INTEGER,
   timeLastAccess  INTEGER,
@@ -209,7 +209,7 @@ CREATE INDEX ON entries (type,name);
 // newest entries (updated by triggers)
 CREATE TABLE IF NOT EXISTS entriesNewest(
   id              INTEGER PRIMARY KEY,
-  entryId         INTEGER REFERENCES entries(id),  // no 'NOT NULL'
+  entryId         INTEGER REFERENCES entries(id) ON DELETE CASCADE,  // no 'NOT NULL'
 
   storageId       INTEGER DEFAULT 0,       // Note: redundancy for faster access
   name            TEXT NOT NULL,           // Note: redundancy for faster access
@@ -227,6 +227,7 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
 CREATE INDEX ON entriesNewest (entryId,name,offset,size,timeLastChanged);
 CREATE INDEX ON entriesNewest (name,offset,size,timeLastChanged);
 CREATE INDEX ON entriesNewest (type,name);
+CREATE INDEX ON entriesNewest (storageId,type);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_entries USING FTS4(
@@ -402,8 +403,8 @@ CREATE INDEX ON skippedEntries (type,name);
 // --- files -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fileEntries(
   id              INTEGER PRIMARY KEY,
-  storageId       INTEGER NOT NULL REFERENCES storage(id),  // Note: redundancy for faster access
-  entryId         INTEGER NOT NULL REFERENCES entries(id),
+  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   size            INTEGER,
   fragmentOffset  INTEGER,
   fragmentSize    INTEGER
@@ -446,8 +447,8 @@ CREATE TRIGGER BEFORE DELETE ON fileEntries
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS imageEntries(
   id              INTEGER PRIMARY KEY,
-  storageId       INTEGER NOT NULL REFERENCES storage(id),  // Note: redundancy for faster access
-  entryId         INTEGER NOT NULL REFERENCES entries(id),
+  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   size            INTEGER,
   fileSystemType  INTEGER,
   blockSize       INTEGER,                 // size of image block
@@ -517,8 +518,8 @@ CREATE TRIGGER AFTER UPDATE OF totalEntryCountNewest,totalEntrySizeNewest ON dir
 // --- links -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS linkEntries(
   id              INTEGER PRIMARY KEY,
-  storageId       INTEGER NOT NULL REFERENCES storage(id),  // Note: redundancy for faster access
-  entryId         INTEGER NOT NULL REFERENCES entries(id),
+  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   destinationName TEXT
 );
 CREATE INDEX ON linkEntries (storageId);
@@ -543,8 +544,8 @@ CREATE TRIGGER AFTER INSERT ON linkEntries
 // --- hardlinks -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hardlinkEntries(
   id              INTEGER PRIMARY KEY,
-  storageId       INTEGER NOT NULL REFERENCES storage(id),  // Note: redundancy for faster access
-  entryId         INTEGER NOT NULL REFERENCES entries(id),
+  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   size            INTEGER,
   fragmentOffset  INTEGER,
   fragmentSize    INTEGER
@@ -572,8 +573,8 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
 // --- special ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS specialEntries(
   id              INTEGER PRIMARY KEY,
-  storageId       INTEGER NOT NULL REFERENCES storage(id),  // Note: redundancy for faster access
-  entryId         INTEGER NOT NULL REFERENCES entries(id),
+  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   specialType     INTEGER,
   major           INTEGER,
   minor           INTEGER
