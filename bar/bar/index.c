@@ -6728,12 +6728,14 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
                                      (SELECT storage.errorMessage FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
                                      (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID), \
                                      (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
-                                     uuids.totalEntityCount, \
-                                     uuids.totalStorageCount, \
-                                     uuids.totalStorageSize, \
-                                     uuids.totalEntryCount, \
-                                     uuids.totalEntrySize \
+                                     (SELECT COUNT(entities.id) FROM entities WHERE entities.jobUUID=uuids.jobUUID), \
+                                     (SELECT COUNT(storage.id) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID), \
+                                     (SELECT TOTAL(storage.size) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID), \
+                                     (SELECT TOTAL(storage.totalEntryCount) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID), \
+                                     (SELECT TOTAL(storage.totalEntrySize) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID) \
                               FROM uuids \
+                                LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                                LEFT JOIN storage ON storage.entityId=entities.id \
                               WHERE uuids.jobUUID=%'S \
                               GROUP BY uuids.id \
                              ",
@@ -6820,9 +6822,10 @@ bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
                                      UNIXTIMESTAMP(entities.created), \
                                      entities.type, \
                                      '', \
-                                     entities.totalEntryCount, \
-                                     entities.totalEntrySize \
+                                     (SELECT TOTAL(storage.totalEntryCount) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID), \
+                                     (SELECT TOTAL(storage.totalEntrySize) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID) \
                               FROM entities \
+                                LEFT JOIN storage ON storage.entityId=entities.id \
                                 LEFT JOIN uuids ON uuids.jobUUID=entityId.jobUUID \
                               WHERE %S \
                               GROUP BY entities.id \
@@ -8023,30 +8026,6 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
-#if 0
-  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT uuids.id,\
-                                   entities.id, \
-                                   entities.jobUUID, \
-                                   entities.scheduleUUID, \
-                                   UNIXTIMESTAMP(entities.created), \
-                                   entities.type, \
-                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1), \
-                                   entities.totalEntryCount, \
-                                   entities.totalEntrySize \
-                            FROM entities \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                            WHERE %S \
-                            %S \
-                            LIMIT %llu,%llu \
-                           ",
-                           filterString,
-                           orderString,
-                           offset,
-                           limit
-                          );
-#elif 1
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT uuids.id,\
@@ -8069,30 +8048,6 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                            offset,
                            limit
                           );
-#else
-  error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT uuids.id,\
-                                   entities.id, \
-                                   entities.jobUUID, \
-                                   entities.scheduleUUID, \
-                                   UNIXTIMESTAMP(entities.created), \
-                                   entities.type, \
-                                   (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1), \
-                                   0, \
-                                   0 \
-                            FROM entities \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                            WHERE %S \
-                            %S \
-                            LIMIT %llu,%llu \
-                           ",
-                           filterString,
-                           orderString,
-                           offset,
-                           limit
-                          );
-#endif
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   if (error != ERROR_NONE)
   {
@@ -8769,8 +8724,8 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              "SELECT COUNT(entriesNewest.id),TOTAL(fileEntries.fragmentSize) \
                               FROM entriesNewest \
                                 LEFT JOIN fileEntries ON fileEntries.entryId=entriesNewest.id \
-                              WHERE     entriesNewest.type=%d \
-                                    AND entriesNewest.storageId=%lld; \
+                              WHERE     entriesNewest.storageId=%lld \
+                                    AND entriesNewest.type=%d; \
                              ",
                              INDEX_TYPE_FILE,
                              Index_getDatabaseId(storageId)
@@ -8793,8 +8748,8 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              "SELECT COUNT(entriesNewest.id),TOTAL(imageEntries.blockSize*imageEntries.blockCount) \
                               FROM entriesNewest \
                                 LEFT JOIN imageEntries ON imageEntries.entryId=entriesNewest.id \
-                              WHERE     entriesNewest.type=%d \
-                                    AND entriesNewest.storageId=%lld; \
+                              WHERE     entriesNewest.storageId=%lld \
+                                    AND entriesNewest.type=%d; \
                              ",
                              INDEX_TYPE_IMAGE,
                              Index_getDatabaseId(storageId)
@@ -8817,8 +8772,8 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              "SELECT COUNT(entriesNewest.id) \
                               FROM entriesNewest \
                                 LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.id \
-                              WHERE     entriesNewest.type=%d \
-                                    AND entriesNewest.storageId=%lld; \
+                              WHERE     entriesNewest.storageId=%lld \
+                                    AND entriesNewest.type=%d; \
                              ",
                              INDEX_TYPE_DIRECTORY,
                              Index_getDatabaseId(storageId)
@@ -8839,8 +8794,8 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              "SELECT COUNT(entriesNewest.id) \
                               FROM entriesNewest \
                                 LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.id \
-                              WHERE     entriesNewest.type=%d \
-                                    AND entriesNewest.storageId=%lld; \
+                              WHERE     entriesNewest.storageId=%lld \
+                                    AND entriesNewest.type=%d; \
                              ",
                              INDEX_TYPE_LINK,
                              Index_getDatabaseId(storageId)
@@ -8861,8 +8816,8 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              "SELECT COUNT(entriesNewest.id),TOTAL(hardlinkEntries.fragmentSize) \
                               FROM entriesNewest \
                                 LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.id \
-                              WHERE     entriesNewest.type=%d \
-                                    AND entriesNewest.storageId=%lld; \
+                              WHERE     entriesNewest.storageId=%lld \
+                                    AND entriesNewest.type=%d; \
                              ",
                              INDEX_TYPE_HARDLINK,
                              Index_getDatabaseId(storageId)
@@ -8885,8 +8840,8 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
                              "SELECT COUNT(entriesNewest.id) \
                               FROM entriesNewest \
                                 LEFT JOIN specialEntries ON specialEntries.entryId=entriesNewest.id \
-                              WHERE     entriesNewest.type=%d \
-                                    AND entriesNewest.storageId=%lld; \
+                              WHERE     entriesNewest.storageId=%lld \
+                                    AND entriesNewest.type=%d; \
                              ",
                              INDEX_TYPE_SPECIAL,
                              Index_getDatabaseId(storageId)
@@ -9260,136 +9215,145 @@ fprintf(stderr,"%s, %d: storageId=%lld\n",__FILE__,__LINE__,storageId);
                              "DELETE FROM fileEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    if (error != ERROR_NONE) return error;
 //fprintf(stderr,"%s, %d: %llu Index_deleteStorage file e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
+                             Index_getDatabaseId(storageId),
+                             INDEX_TYPE_FILE
+                            );
+    if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_FILE
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    if (error != ERROR_NONE) return error;
+
 //fprintf(stderr,"%s, %d: %llu Index_deleteStorage image\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM imageEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    if (error != ERROR_NONE) return error;
 //fprintf(stderr,"%s, %d: %llu Index_deleteStorage image e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
+                             Index_getDatabaseId(storageId),
+                             INDEX_TYPE_IMAGE
+                            );
+    if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_IMAGE
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    if (error != ERROR_NONE) return error;
+
 //fprintf(stderr,"%s, %d: %llu Index_deleteStorage dir\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM directoryEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    if (error != ERROR_NONE) return error;
 //fprintf(stderr,"%s, %d: %llu Index_deleteStorage dir e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
+                             Index_getDatabaseId(storageId),
+                             INDEX_TYPE_DIRECTORY
+                            );
+    if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_DIRECTORY
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    if (error != ERROR_NONE) return error;
+
 //fprintf(stderr,"%s, %d: %llu Index_deleteStorage link\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM linkEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    if (error != ERROR_NONE) return error;
 //fprintf(stderr,"%s, %d: %llu Index_deleteStorage link e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
+                             Index_getDatabaseId(storageId),
+                             INDEX_TYPE_LINK
+                            );
+    if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_LINK
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    if (error != ERROR_NONE) return error;
+
 //fprintf(stderr,"%s, %d: %llu Index_deleteStorage hardlink\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM hardlinkEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    if (error != ERROR_NONE) return error;
 //fprintf(stderr,"%s, %d: %llu Index_deleteStorage hardlink e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
+                             Index_getDatabaseId(storageId),
+                             INDEX_TYPE_HARDLINK
+                            );
+    if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_HARDLINK
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    if (error != ERROR_NONE) return error;
+
 //fprintf(stderr,"%s, %d: %llu Index_deleteStorage special\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM specialEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    if (error != ERROR_NONE) return error;
 //fprintf(stderr,"%s, %d: %llu Index_deleteStorage special e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
+                             Index_getDatabaseId(storageId),
+                             INDEX_TYPE_SPECIAL
+                            );
+    if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_SPECIAL
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    if (error != ERROR_NONE) return error;
+
 //fprintf(stderr,"%s, %d: %llu Index_deleteStorage storage\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM storage WHERE id=%lld",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    if (error != ERROR_NONE) return error;
 
     return ERROR_NONE;
   });
@@ -9451,6 +9415,13 @@ fprintf(stderr,"%s, %d: Index_clearStorage file e\n",__FILE__,__LINE__);
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
+                             Index_getDatabaseId(storageId),
+                             INDEX_TYPE_FILE
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_FILE
@@ -9465,6 +9436,13 @@ fprintf(stderr,"%s, %d: Index_clearStorage image\n",__FILE__,__LINE__);
                             );
     if (error != ERROR_NONE) return error;
 fprintf(stderr,"%s, %d: Index_clearStorage image e\n",__FILE__,__LINE__);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
+                             Index_getDatabaseId(storageId),
+                             INDEX_TYPE_IMAGE
+                            );
+    if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -9483,6 +9461,13 @@ fprintf(stderr,"%s, %d: Index_clearStorage directory\n",__FILE__,__LINE__);
 fprintf(stderr,"%s, %d: Index_clearStorage directory e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
+                             Index_getDatabaseId(storageId),
+                             INDEX_TYPE_DIRECTORY
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_DIRECTORY
@@ -9497,6 +9482,13 @@ fprintf(stderr,"%s, %d: Index_clearStorage link\n",__FILE__,__LINE__);
                             );
     if (error != ERROR_NONE) return error;
 fprintf(stderr,"%s, %d: Index_clearStorage link e\n",__FILE__,__LINE__);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
+                             Index_getDatabaseId(storageId),
+                             INDEX_TYPE_LINK
+                            );
+    if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -9515,6 +9507,13 @@ fprintf(stderr,"%s, %d: Index_clearStorage hardlink\n",__FILE__,__LINE__);
 fprintf(stderr,"%s, %d: Index_clearStorage hardlink e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
+                             Index_getDatabaseId(storageId),
+                             INDEX_TYPE_HARDLINK
+                            );
+    if (error != ERROR_NONE) return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
                              Index_getDatabaseId(storageId),
                              INDEX_TYPE_HARDLINK
@@ -9529,6 +9528,13 @@ fprintf(stderr,"%s, %d: Index_clearStorage special\n",__FILE__,__LINE__);
                             );
     if (error != ERROR_NONE) return error;
 fprintf(stderr,"%s, %d: Index_clearStorage special e\n",__FILE__,__LINE__);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
+                             Index_getDatabaseId(storageId),
+                             INDEX_TYPE_SPECIAL
+                            );
+    if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE storageId=%lld AND type=%d",
@@ -10762,6 +10768,15 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
 
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE entryId=%lld;",
+                             Index_getDatabaseId(entryId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE id=%lld;",
                              Index_getDatabaseId(entryId)
                             );
@@ -10985,7 +11000,15 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
     {
       return error;
     }
-
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE entryId=%lld;",
+                             Index_getDatabaseId(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE id=%lld;",
@@ -11189,6 +11212,15 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM imageEntries WHERE entryId=%lld;",
+                             Index_getDatabaseId(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
@@ -11403,6 +11435,15 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
     }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE entryId=%lld;",
+                             Index_getDatabaseId(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE id=%lld;",
                              Index_getDatabaseId(indexId)
                             );
@@ -11602,6 +11643,15 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM linkEntries WHERE entryId=%lld;",
+                             Index_getDatabaseId(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
@@ -11827,6 +11877,15 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
     }
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE entryId=%lld;",
+                             Index_getDatabaseId(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
                              "DELETE FROM entries WHERE id=%lld;",
                              Index_getDatabaseId(indexId)
                             );
@@ -12023,6 +12082,15 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM specialEntries WHERE entryId=%lld;",
+                             Index_getDatabaseId(indexId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
                             );
     if (error != ERROR_NONE)
