@@ -63,7 +63,7 @@ LOCAL bool verbose          = FALSE;
 
 LOCAL void printUsage(const char *programName)
 {
-  printf("Usage %s: [<options>] <database file> [<command>...]\n",programName);
+  printf("Usage %s: [<options>] <database file> [<command>...|-]\n",programName);
   printf("\n");
   printf("Options:  -c|--create         - create index file\n");
   printf("          --create-indizes    - re-create indizes\n");
@@ -490,6 +490,8 @@ LOCAL String vformatSQLString(String     sqlString,
   return sqlString;
 }
 
+#if 0
+still not used
 /***********************************************************************\
 * Name   : sqlPrepare
 * Purpose: prepare SQL command
@@ -576,11 +578,31 @@ LOCAL int sqlStep(sqlite3_stmt *statementHandle)
 }
 
 /***********************************************************************\
-* Name   : sqlExecute
-* Purpose: execute SQL command
+* Name   : finalize
+* Purpose: finalize SQL command
 * Input  : statementHandle - statement handle
 * Output : -
 * Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void finalize(sqlite3_stmt *statementHandle)
+{
+  assert(statementHandle != NULL);
+
+  sqlite3_finalize(statementHandle);
+}
+#endif /* 0 */
+
+/***********************************************************************\
+* Name   : sqlExecute
+* Purpose: execute SQL command
+* Input  : databaseHandle - database handle
+*          errorMessage   - error message variable (can be NULL)
+*          command        - SQL command
+*          ...            - optional arguments for SQL command
+* Output : -
+* Return : SQLITE_OK or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -632,22 +654,6 @@ LOCAL int sqlExecute(sqlite3    *databaseHandle,
   String_delete(sqlString);
 
   return SQLITE_OK;
-}
-
-/***********************************************************************\
-* Name   : finalize
-* Purpose: finalize SQL command
-* Input  : statementHandle - statement handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void finalize(sqlite3_stmt *statementHandle)
-{
-  assert(statementHandle != NULL);
-
-  sqlite3_finalize(statementHandle);
 }
 
 /***********************************************************************\
@@ -752,17 +758,16 @@ LOCAL int printRow(void *userData, int count, char *values[], char *columns[])
 
 int main(int argc, const char *argv[])
 {
-  int          i,n;
-  const char   *databaseFileName;
-  String       sqlCommands;
-  char         line[2048];
-  int          sqliteMode;
-  char         command[1024];
-  char         name[1024];
-  int          sqliteResult;
-  sqlite3      *databaseHandle;
-  sqlite3_stmt *statementHandle;
-  char         *errorMessage;
+  int        i,n;
+  const char *databaseFileName;
+  String     sqlCommands;
+  char       line[2048];
+  int        sqliteMode;
+  char       command[1024];
+  char       name[1024];
+  int        sqliteResult;
+  sqlite3    *databaseHandle;
+  const char *errorMessage;
 
   databaseFileName = NULL;
   sqlCommands      = String_new();
@@ -847,9 +852,10 @@ int main(int argc, const char *argv[])
     exit(1);
   }
 
-  if (String_isEmpty(sqlCommands))
+  if (String_equalsCString(sqlCommands,"-"))
   {
     // get commands from stdin
+    String_clear(sqlCommands);
     while (fgets(line,sizeof(line),stdin) != NULL)
     {
       String_appendCString(sqlCommands,line);
@@ -874,24 +880,33 @@ int main(int argc, const char *argv[])
     fprintf(stderr,"ERROR: cannot open database '%s' (error: %d)!\n",databaseFileName,sqliteResult);
     exit(1);
   }
-  if (verbose) printf("OK\n");
 
   sqliteResult = sqlite3_exec(databaseHandle,
                               "PRAGMA synchronous=OFF",
                               CALLBACK(NULL,NULL),
-                              &errorMessage
+                              (char**)&errorMessage
                              );
-  assert(sqliteResult == SQLITE_OK);
+  if (sqliteResult != SQLITE_OK)
+  {
+    if (verbose) printf("FAIL\n");
+    fprintf(stderr,"ERROR: cannot open database '%s' (error: %d)!\n",databaseFileName,sqliteResult);
+    exit(1);
+  }
   sqliteResult = sqlite3_exec(databaseHandle,
                               "PRAGMA journal_mode=WAL",
                               CALLBACK(NULL,NULL),
-                              &errorMessage
+                              (char**)&errorMessage
                              );
-  assert(sqliteResult == SQLITE_OK);
+  if (sqliteResult != SQLITE_OK)
+  {
+    if (verbose) printf("FAIL\n");
+    fprintf(stderr,"ERROR: cannot open database '%s' (error: %d)!\n",databaseFileName,sqliteResult);
+    exit(1);
+  }
   sqliteResult = sqlite3_exec(databaseHandle,
                               "PRAGMA recursive_triggers=ON",
                               CALLBACK(NULL,NULL),
-                              &errorMessage
+                              (char**)&errorMessage
                              );
   assert(sqliteResult == SQLITE_OK);
   if (foreignKeys)
@@ -899,10 +914,16 @@ int main(int argc, const char *argv[])
     sqliteResult = sqlite3_exec(databaseHandle,
                                 "PRAGMA foreign_keys=ON;",
                                 CALLBACK(NULL,NULL),
-                                &errorMessage
+                                (char**)&errorMessage
                                );
-    assert(sqliteResult == SQLITE_OK);
+    if (sqliteResult != SQLITE_OK)
+    {
+      if (verbose) printf("FAIL\n");
+      fprintf(stderr,"ERROR: cannot open database '%s' (error: %d)!\n",databaseFileName,sqliteResult);
+      exit(1);
+    }
   }
+  if (verbose) printf("OK\n");
 
   // register special functions
   sqliteResult = sqlite3_create_function(databaseHandle,
@@ -944,7 +965,7 @@ int main(int argc, const char *argv[])
     sqliteResult = sqlite3_exec(databaseHandle,
                                 INDEX_DEFINITION,
                                 CALLBACK(NULL,NULL),
-                                &errorMessage
+                                (char**)&errorMessage
                                );
     if (sqliteResult != SQLITE_OK)
     {
@@ -971,11 +992,14 @@ int main(int argc, const char *argv[])
                                     assert(count == 1);
                                     assert(values[0] != NULL);
 
+                                    UNUSED_VARIABLE(userData);
+                                    UNUSED_VARIABLE(columns);
+
                                     stringCopy(name,values[0],sizeof(name));
 
                                     return SQLITE_OK;
                                   },NULL),
-                                  &errorMessage
+                                  (char**)&errorMessage
                                  );
 
       if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
@@ -984,7 +1008,7 @@ int main(int argc, const char *argv[])
         sqliteResult = sqlite3_exec(databaseHandle,
                                     command,
                                     CALLBACK(NULL,NULL),
-                                    &errorMessage
+                                    (char**)&errorMessage
                                    );
       }
     }
@@ -999,7 +1023,7 @@ int main(int argc, const char *argv[])
     sqliteResult = sqlite3_exec(databaseHandle,
                                 INDEX_INDIZES_DEFINITION,
                                 CALLBACK(NULL,NULL),
-                                &errorMessage
+                                (char**)&errorMessage
                                );
     if (sqliteResult != SQLITE_OK)
     {
@@ -1026,11 +1050,14 @@ int main(int argc, const char *argv[])
                                     assert(count == 1);
                                     assert(values[0] != NULL);
 
+                                    UNUSED_VARIABLE(userData);
+                                    UNUSED_VARIABLE(columns);
+
                                     stringCopy(name,values[0],sizeof(name));
 
                                     return SQLITE_OK;
                                   },NULL),
-                                  &errorMessage
+                                  (char**)&errorMessage
                                  );
 
       if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
@@ -1039,7 +1066,7 @@ int main(int argc, const char *argv[])
         sqliteResult = sqlite3_exec(databaseHandle,
                                     command,
                                     CALLBACK(NULL,NULL),
-                                    &errorMessage
+                                    (char**)&errorMessage
                                    );
       }
     }
@@ -1054,7 +1081,7 @@ int main(int argc, const char *argv[])
     sqliteResult = sqlite3_exec(databaseHandle,
                                 INDEX_TRIGGERS_DEFINITION,
                                 CALLBACK(NULL,NULL),
-                                &errorMessage
+                                (char**)&errorMessage
                                );
     if (sqliteResult != SQLITE_OK)
     {
@@ -1072,12 +1099,15 @@ int main(int argc, const char *argv[])
                                 "SELECT id FROM storage",
                                 CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
                                 {
-                                  ulong storageId;
+                                  uint64 storageId;
 
                                   assert(count == 1);
                                   assert(values[0] != NULL);
 
-                                  storageId = (ulong)atol(values[0]);
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  storageId = (ulong)atoll(values[0]);
 
                                   if (verbose) { printf("Create aggregates for storage #%llu...",storageId); fflush(stdout); }
 
@@ -1207,7 +1237,7 @@ int main(int argc, const char *argv[])
 
                                   return SQLITE_OK;
                                 },NULL),
-                                &errorMessage
+                                (char**)&errorMessage
                                );
     if (sqliteResult != SQLITE_OK)
     {
@@ -1222,7 +1252,7 @@ int main(int argc, const char *argv[])
     sqliteResult = sqlite3_exec(databaseHandle,
                                 String_cString(sqlCommands),
                                 CALLBACK(printRow,NULL),
-                                &errorMessage
+                                (char**)&errorMessage
                                );
     if (verbose) printf("Result: %d\n",sqliteResult);
     if (sqliteResult != SQLITE_OK)
