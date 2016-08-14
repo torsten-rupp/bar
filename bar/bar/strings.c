@@ -49,10 +49,12 @@
 #ifndef NDEBUG
   #define DEBUG_LIST_HASH_SIZE   65537
   // max. string check: print warning if to many strings allocated/strings become to long
-  #define MAX_STRINGS_CHECK
-  #define WARN_MAX_STRINGS       2000
-  #define WARN_MAX_STRINGS_DELTA 500
-  #define WARN_MAX_STRING_LENGTH (1024*1024)
+  #ifdef TRACE_STRING_ALLOCATIONS
+    #define MAX_STRINGS_CHECK
+    #define WARN_MAX_STRINGS       2000
+    #define WARN_MAX_STRINGS_DELTA 500
+    #define WARN_MAX_STRING_LENGTH (1024*1024)
+  #endif /* TRACE_STRING_ALLOCATIONS */
 #endif /* not NDEBUG */
 
 /***************************** Constants *******************************/
@@ -280,6 +282,8 @@ LOCAL void debugStringInit(void)
   #endif /* MAX_STRINGS_CHECK */
 }
 
+#ifdef TRACE_STRING_ALLOCATIONS
+
 /***********************************************************************\
 * Name   : debugStringHashIndex
 * Purpose: get string hash index
@@ -391,6 +395,8 @@ LOCAL void debugRemoveString(DebugStringList *debugStringList, DebugStringNode *
   }
 }
 
+#endif /* TRACE_STRING_ALLOCATIONS */
+
 #endif /* not NDEBUG */
 
 /***********************************************************************\
@@ -405,7 +411,9 @@ LOCAL void debugRemoveString(DebugStringList *debugStringList, DebugStringNode *
 LOCAL void printErrorConstString(const struct __String *string)
 {
   #ifndef NDEBUG
-    DebugStringNode *debugStringNode;
+    #ifdef TRACE_STRING_ALLOCATIONS
+      DebugStringNode *debugStringNode;
+    #endif /* TRACE_STRING_ALLOCATIONS */
 
     pthread_once(&debugStringInitFlag,debugStringInit);
 
@@ -506,7 +514,9 @@ LOCAL_INLINE struct __String* allocTmpString(const char *__fileName__, ulong __l
 {
   String tmpString;
   #ifndef NDEBUG
-    DebugStringNode *debugStringNode;
+    #ifdef TRACE_STRING_ALLOCATIONS
+      DebugStringNode *debugStringNode;
+    #endif /* TRACE_STRING_ALLOCATIONS */
   #endif /* not NDEBUG */
 
   tmpString = allocString();
@@ -545,6 +555,9 @@ LOCAL_INLINE struct __String* allocTmpString(const char *__fileName__, ulong __l
         debugAddString(&debugStringAllocList,debugStringNode);
       }
       pthread_mutex_unlock(&debugStringLock);
+    #else /* not TRACE_STRING_ALLOCATIONS */
+      UNUSED_VARIABLE(__fileName__);
+      UNUSED_VARIABLE(__lineNb__);
     #endif /* TRACE_STRING_ALLOCATIONS */
   #endif /* not NDEBUG */
 
@@ -564,7 +577,9 @@ LOCAL_INLINE struct __String* allocTmpString(const char *__fileName__, ulong __l
 LOCAL_INLINE void assignTmpString(struct __String *string, struct __String *tmpString)
 {
   #ifndef NDEBUG
-    DebugStringNode *debugStringNode;
+    #ifdef TRACE_STRING_ALLOCATIONS
+      DebugStringNode *debugStringNode;
+    #endif /* TRACE_STRING_ALLOCATIONS */
   #endif /* not NDEBUG */
 
   assert(string != NULL);
@@ -2296,7 +2311,9 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
 {
   struct __String *string;
   #ifndef NDEBUG
-    DebugStringNode *debugStringNode;
+    #ifdef TRACE_STRING_ALLOCATIONS
+      DebugStringNode *debugStringNode;
+    #endif /* TRACE_STRING_ALLOCATIONS */
     #ifdef MAX_STRINGS_CHECK
       ulong debugStringCount;
     #endif /* MAX_STRINGS_CHECK */
@@ -2360,6 +2377,9 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
   //          sleep(1);
           }
         #endif /* MAX_STRINGS_CHECK */
+      #else /* not TRACE_STRING_ALLOCATIONS */
+        UNUSED_VARIABLE(__fileName__);
+        UNUSED_VARIABLE(__lineNb__);
       #endif /* TRACE_STRING_ALLOCATIONS */
     }
     pthread_mutex_unlock(&debugStringLock);
@@ -2536,7 +2556,9 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
 #endif /* NDEBUG */
 {
   #ifndef NDEBUG
-    DebugStringNode *debugStringNode;
+    #ifdef TRACE_STRING_ALLOCATIONS
+      DebugStringNode *debugStringNode;
+    #endif /* TRACE_STRING_ALLOCATIONS */
   #endif /* not NDEBUG */
 
   #ifdef NDEBUG
@@ -5259,7 +5281,9 @@ void String_debugDone(void)
 
 void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstString string)
 {
-  DebugStringNode *debugStringNode;
+  #ifdef TRACE_STRING_ALLOCATIONS
+    DebugStringNode *debugStringNode;
+  #endif /* TRACE_STRING_ALLOCATIONS */
 
   if ((string != NULL) && (string != STRING_EMPTY))
   {

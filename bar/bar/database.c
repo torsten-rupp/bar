@@ -42,7 +42,6 @@
 #include "database.h"
 
 /****************** Conditional compilation switches *******************/
-#warning TODO
 #define DATABASE_SUPPORT_TRANSACTIONS
 
 /***************************** Constants *******************************/

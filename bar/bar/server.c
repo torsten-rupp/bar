@@ -534,8 +534,8 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 /***************************** Variables *******************************/
 LOCAL AuthorizationFailList authorizationFailList;  // list with failed client authorizations
 LOCAL uint                  serverPort;
-LOCAL const Key             *serverCA;
-LOCAL const Key             *serverCert;
+LOCAL const Certificate     *serverCA;
+LOCAL const Certificate     *serverCert;
 LOCAL const Key             *serverKey;
 LOCAL const Password        *serverPassword;
 LOCAL const char            *serverJobsDirectory;
@@ -1501,6 +1501,8 @@ LOCAL ScheduleNode *parseScheduleDateTime(ConstString date,
   return scheduleNode;
 }
 
+#if 0
+not used
 /***********************************************************************\
 * Name   : isServerRunning
 * Purpose: check if server is runnging
@@ -1514,6 +1516,7 @@ LOCAL_INLINE bool isServerRunning(void)
 {
   return serverState == SERVER_STATE_RUNNING;
 }
+#endif
 
 /***********************************************************************\
 * Name   : getClientInfo
@@ -2031,6 +2034,8 @@ LOCAL_INLINE bool isJobRunning(const JobNode *jobNode)
          );
 }
 
+#if 0
+not used
 /***********************************************************************\
 * Name   : isSomeJobRunning
 * Purpose: check if some job is runnging
@@ -2061,6 +2066,7 @@ LOCAL bool isSomeJobRunning(void)
 
   return runningFlag;
 }
+#endif
 
 /***********************************************************************\
 * Name   : triggerJob
@@ -5081,7 +5087,7 @@ LOCAL void purgeExpiredThreadCode(void)
     }
 
     // sleep
-    delayScheduleThread();
+    delayPurgeExpiredThread();
   }
 
   // done index
@@ -18170,7 +18176,9 @@ Errors Server_run(uint              port,
     HALT_INSUFFICIENT_MEMORY();
   }
   List_init(&clientList);
-  clientName = String_new();
+  clientName               = String_new();
+  pollServerSocketIndex    = 0;
+  pollServerTLSSocketIndex = 0;
   while (!quitFlag)
   {
     // wait for connect or command

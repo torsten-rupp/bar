@@ -161,7 +161,6 @@ LOCAL Errors serverConnect(SocketHandle *socketHandle,
     String_delete(line);
     return error;
   }
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
 
   // free resources
   String_delete(line);
@@ -169,6 +168,8 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
   return ERROR_NONE;
 }
 
+#if 0
+not used
 /***********************************************************************\
 * Name   : serverDisconnect
 * Purpose: disconnect from server
@@ -184,6 +185,7 @@ LOCAL void serverDisconnect(SocketHandle *socketHandle)
 
   Network_disconnect(socketHandle);
 }
+#endif
 
 /***********************************************************************\
 * Name   :

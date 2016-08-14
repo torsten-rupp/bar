@@ -1571,14 +1571,7 @@ void __Semaphore_unlock(const char *fileName, ulong lineNb, Semaphore *semaphore
   #endif /* NDEBUG */
 }
 
-#ifdef NDEBUG
 void Semaphore_signalModified(Semaphore *semaphore)
-#else /* not NDEBUG */
-void __Semaphore_signalModified(const char *fileName,
-                                ulong      lineNb,
-                                Semaphore  *semaphore
-                               )
-#endif /* NDEBUG */
 {
   assert(semaphore != NULL);
 
@@ -1590,8 +1583,8 @@ bool Semaphore_waitModified(Semaphore *semaphore,
                             long      timeout
                            )
 #else /* not NDEBUG */
-bool __Semaphore_waitModified(const char *fileName,
-                              ulong      lineNb,
+bool __Semaphore_waitModified(const char *__fileName__,
+                              ulong      __lineNb__,
                               Semaphore  *semaphore,
                               long       timeout
                              )
@@ -1604,7 +1597,7 @@ bool __Semaphore_waitModified(const char *fileName,
     #ifdef NDEBUG
       return waitModified(semaphore,timeout);
     #else /* not NDEBUG */
-      return waitModified(fileName,lineNb,semaphore,timeout);
+      return waitModified(__fileName__,__lineNb__,semaphore,timeout);
     #endif /* NDEBUG */
   }
   else

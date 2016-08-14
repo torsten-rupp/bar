@@ -1625,7 +1625,6 @@ LOCAL void continuousThreadCode(void)
   String                     absoluteName;
   sigset_t                   signalMask;
   struct pollfd              pollfds[1];
-  fd_set                     selectSet;
   struct timespec            selectTimeout;
   ssize_t                    n;
   const struct inotify_event *inotifyEvent;
@@ -1900,6 +1899,9 @@ Errors Continuous_initAll(void)
                   {
                     NotifyInfo *notifyInfo = (NotifyInfo*)data;
                     assert(notifyInfo != NULL);
+
+                    UNUSED_VARIABLE(length);
+                    UNUSED_VARIABLE(userData);
 
                     freeNotifyInfo(notifyInfo,NULL);
                     free(notifyInfo);

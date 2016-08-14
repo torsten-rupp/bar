@@ -144,7 +144,6 @@ typedef bool SemaphoreLock;
   #define Semaphore_lock(...)         __Semaphore_lock(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Semaphore_forceLock(...)    __Semaphore_forceLock(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Semaphore_unlock(...)       __Semaphore_unlock(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Semaphore_signalModified(...) __Semaphore_signalModified(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Semaphore_waitModified(...) __Semaphore_waitModified(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
@@ -375,14 +374,7 @@ INLINE bool Semaphore_isOwned(const Semaphore *semaphore)
 * Notes  : -
 \***********************************************************************/
 
-#ifdef NDEBUG
 void Semaphore_signalModified(Semaphore *semaphore);
-#else /* not NDEBUG */
-void __Semaphore_signalModified(const char *fileName,
-                                ulong      lineNb,
-                                Semaphore  *semaphore
-                               );
-#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Semaphore_waitModified

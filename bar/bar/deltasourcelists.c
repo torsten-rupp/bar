@@ -176,7 +176,11 @@ void DeltaSourceList_doneAll(void)
   assert(deltaSourceList != NULL);
   assert(fromDeltaSourceList != NULL);
 
-  DeltaSourceList_init(deltaSourceList);
+  #ifdef NDEBUG
+    DeltaSourceList_init(deltaSourceList);
+  #else /* not NDEBUG */
+    __DeltaSourceList_init(__fileName__,__lineNb__,deltaSourceList);
+  #endif /* NDEBUG */
   DeltaSourceList_copy(fromDeltaSourceList,deltaSourceList,fromDeltaSourceListFromNode,fromDeltaSourceListToNode);
 }
 
@@ -191,7 +195,11 @@ void DeltaSourceList_doneAll(void)
 {
   assert(deltaSourceList != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(deltaSourceList,sizeof(DeltaSourceList));
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(deltaSourceList,sizeof(DeltaSourceList));
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,deltaSourceList,sizeof(DeltaSourceList));
+  #endif /* NDEBUG */
 
   Semaphore_done(&deltaSourceList->lock);
   List_done(deltaSourceList,(ListNodeFreeFunction)freeDeltaSourceNode,NULL);

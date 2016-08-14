@@ -185,7 +185,7 @@ LOCAL Errors validateCertificate(const void *certData,
   {
     return ERROR_INVALID_TLS_CERTIFICATE;
   }
-  datum.data = certData;
+  datum.data = (void*)certData;
   datum.size = certLength;
   if (gnutls_x509_crt_import(cert,&datum,GNUTLS_X509_FMT_PEM) != GNUTLS_E_SUCCESS)
   {
@@ -270,6 +270,7 @@ LOCAL Errors initSSL(SocketHandle *socketHandle,
 //  assert(certData != NULL);
 //  assert(keyData != NULL);
 
+UNUSED_VARIABLE(caDatum);
 UNUSED_VARIABLE(caData);
 UNUSED_VARIABLE(caDataLength);
 
@@ -297,9 +298,9 @@ UNUSED_VARIABLE(caDataLength);
     fprintf(stderr,"DEBUG GNU TLS: key:");write(2,keyData,keyLength);fprintf(stderr,"\n");
   #endif /* GNUTLS_DEBUG */
 
-  certDatum.data = certData;
+  certDatum.data = (void*)certData;
   certDatum.size = certLength;
-  keyDatum.data  = keyData;
+  keyDatum.data  = (void*)keyData;
   keyDatum.size  = keyLength;
   result = gnutls_certificate_set_x509_key_mem(socketHandle->gnuTLS.credentials,
                                                &certDatum,
@@ -1592,10 +1593,6 @@ Errors Network_startSSL(SocketHandle *socketHandle,
                        )
 {
   #ifdef HAVE_GNU_TLS
-    gnutls_x509_crt_t cert;
-    gnutls_datum_t    datum;
-    time_t            certActivationTime,certExpireTime;
-    char              buffer[64];
     #if  defined(PLATFORM_LINUX)
       long               socketFlags;
     #elif defined(PLATFORM_WINDOWS)
@@ -1628,7 +1625,6 @@ Errors Network_startSSL(SocketHandle *socketHandle,
       return error;
     }
 
-#if 1
     // temporary disable non-blocking
     if ((socketHandle->flags & SOCKET_FLAG_NON_BLOCKING) !=  0)
     {
@@ -1640,7 +1636,6 @@ Errors Network_startSSL(SocketHandle *socketHandle,
         ioctlsocket(socketHandle->handle,FIONBIO,&n);
       #endif /* PLATFORM_... */
     }
-#endif
 
     // init SSL
     error = initSSL(socketHandle,caData,caLength,certData,certLength,keyData,keyLength);
@@ -1649,7 +1644,6 @@ Errors Network_startSSL(SocketHandle *socketHandle,
       socketHandle->type = SOCKET_TYPE_TLS;
     }
 
-#if 1
     // re-enable temporary non-blocking
     if ((socketHandle->flags & SOCKET_FLAG_NON_BLOCKING) !=  0)
     {
@@ -1661,7 +1655,6 @@ Errors Network_startSSL(SocketHandle *socketHandle,
         ioctlsocket(socketHandle->handle,FIONBIO,&n);
       #endif /* PLATFORM_... */
     }
-#endif
 
     return ERROR_NONE;
   #else /* not HAVE_GNU_TLS */

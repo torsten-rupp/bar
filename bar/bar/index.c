@@ -87,6 +87,8 @@ LOCAL const char *INDEX_STORAGE_SORT_MODE_COLUMNS[] =
   [INDEX_STORAGE_SORT_MODE_STATE  ] = "storage.state"
 };
 
+#if 0
+still not used
 LOCAL const char *INDEX_ENTRY_SORT_MODE_COLUMNS[] =
 {
   [INDEX_ENTRY_SORT_MODE_NONE    ] = NULL,
@@ -96,6 +98,7 @@ LOCAL const char *INDEX_ENTRY_SORT_MODE_COLUMNS[] =
   [INDEX_ENTRY_SORT_MODE_SIZE    ] = "size",
   [INDEX_ENTRY_SORT_MODE_MODIFIED] = "timeModified"
 };
+#endif
 
 // sleep time [s]
 #define SLEEP_TIME_INDEX_CLEANUP_THREAD (4*60*60)
@@ -352,9 +355,9 @@ LOCAL void verify(IndexHandle *indexHandle,
                   ...
                  )
 {
-  va_list arguments;
+//  va_list arguments;
 //  Errors  error;
-  int64   n;
+//  int64   n;
 
   assert(indexHandle != NULL);
   assert(tableName != NULL);
@@ -3522,6 +3525,8 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                              // pre: transfer entity
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
+                               UNUSED_VARIABLE(fromColumnList);
+                               UNUSED_VARIABLE(toColumnList);
                                UNUSED_VARIABLE(userData);
 
                                return ERROR_NONE;
@@ -3530,13 +3535,12 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                IndexId fromEntityId;
-                               IndexId toEntityId;
 
+                               UNUSED_VARIABLE(toColumnList);
                                UNUSED_VARIABLE(userData);
 
 //fprintf(stderr,"%s, %d: copy st\n",__FILE__,__LINE__);
                                fromEntityId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
-                               toEntityId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
 //fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"jobUUID",NULL));
 
                                // transfer storages of entity
@@ -3549,6 +3553,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                          {
                                                            UNUSED_VARIABLE(fromColumnList);
+                                                           UNUSED_VARIABLE(toColumnList);
                                                            UNUSED_VARIABLE(userData);
 
                                                            return ERROR_NONE;
@@ -4797,6 +4802,7 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
   return error;
 }
 
+#if 0
 //TODO: not used, remove
 /***********************************************************************\
 * Name   : refreshStoragesInfos
@@ -5018,6 +5024,7 @@ LOCAL Errors refreshUUIDsInfos(IndexHandle *indexHandle)
 
   return error;
 }
+#endif
 
 /***********************************************************************\
 * Name   : rebuildNewestInfo
@@ -5030,6 +5037,7 @@ LOCAL Errors refreshUUIDsInfos(IndexHandle *indexHandle)
 
 //TODO
 #if 0
+// not used
 LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
 {
   Errors           error;
@@ -6442,7 +6450,9 @@ Errors Index_init(const char *fileName)
         if (error == ERROR_NONE)
         {
           error = Database_compare(&indexHandleReference.databaseHandle,&indexHandle.databaseHandle);
+#ifndef WERROR
 #warning remove TODO xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+#endif
 error=ERROR_NONE;
           closeIndex(&indexHandle);
         }
@@ -6647,6 +6657,8 @@ Errors __Index_beginTransaction(const char  *__fileName__,
 #endif /* NDEBUG */
 {
   assert(indexHandle != NULL);
+
+  UNUSED_VARIABLE(timeout);
 
   #ifdef NDEBUG
     return Database_beginTransaction(&indexHandle->databaseHandle);
@@ -7688,7 +7700,9 @@ Errors Index_updateUUIDInfos(IndexHandle *indexHandle,
                              IndexId     uuidId
                             )
 {
-  return ERROR_STILL_NOT_IMPLEMENTED;
+UNUSED_VARIABLE(indexHandle);
+UNUSED_VARIABLE(uuidId);
+return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
@@ -7814,8 +7828,7 @@ Errors Index_newUUID(IndexHandle *indexHandle,
                      IndexId     *uuidId
                     )
 {
-  Errors     error;
-  DatabaseId uuidId_;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(uuidId != NULL);
@@ -7965,6 +7978,17 @@ Errors Index_getEntitiesInfos(IndexHandle   *indexHandle,
                               uint64        *totalEntrySize
                              )
 {
+UNUSED_VARIABLE(indexHandle);
+UNUSED_VARIABLE(uuidId);
+UNUSED_VARIABLE(entityId);
+UNUSED_VARIABLE(jobUUID);
+UNUSED_VARIABLE(indexIds);
+UNUSED_VARIABLE(indexIdCount);
+UNUSED_VARIABLE(name);
+UNUSED_VARIABLE(storageCount);
+UNUSED_VARIABLE(totalEntryCount);
+UNUSED_VARIABLE(totalEntrySize);
+
 return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
@@ -7973,7 +7997,10 @@ Errors Index_updateEntityInfos(IndexHandle *indexHandle,
                                IndexId     entityId
                               )
 {
-  return ERROR_STILL_NOT_IMPLEMENTED;
+UNUSED_VARIABLE(indexHandle);
+UNUSED_VARIABLE(entityId);
+
+return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
@@ -8518,7 +8545,6 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
   uint64              totalHardlinkSize;
   ulong               totalSpecialCount;
   DatabaseQueryHandle databaseQueryHandle;
-  double              totalEntrySize_;
   double              totalFileSize_;
   double              totalImageSize_;
   double              totalHardlinkSize_;
@@ -8669,19 +8695,6 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
     Database_finalize(&databaseQueryHandle);
 
     // update aggregate data
-fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %llu %llu %llu %llu %llu %llu %llu\n",__FILE__,__LINE__,Index_getDatabaseId(storageId),
-                             totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
-                             totalFileSize+totalImageSize+totalHardlinkSize,
-                             totalFileCount,
-                             totalFileSize,
-                             totalImageCount,
-                             totalImageSize,
-                             totalDirectoryCount,
-                             totalLinkCount,
-                             totalHardlinkCount,
-                             totalHardlinkSize,
-                             totalSpecialCount
-);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE storage \
@@ -8857,20 +8870,6 @@ fprintf(stderr,"%s, %d: Index_updateStorageInfos %lld: %llu %llu\n  %llu %llu %l
     Database_finalize(&databaseQueryHandle);
 
     // update newest aggregate data
-fprintf(stderr,"%s, %d: Index_updateStorageInfos newest %lld: %llu %llu\n  %llu %llu %llu %llu %llu %llu %llu %llu %llu\n",__FILE__,__LINE__,
-Index_getDatabaseId(storageId),
-                             totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
-                             totalFileSize+totalImageSize+totalHardlinkSize,
-                             totalFileCount,
-                             totalFileSize,
-                             totalImageCount,
-                             totalImageSize,
-                             totalDirectoryCount,
-                             totalLinkCount,
-                             totalHardlinkCount,
-                             totalHardlinkSize,
-                             totalSpecialCount
-);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "UPDATE storage \
