@@ -41,8 +41,14 @@ bar (0.20) stable; urgency=low
   * improved parsing configuration files: reject unknown
     values
   * fixed init script on CentOS
+  * added option --server-max-connections: limit max.
+    number of concurrent server connections, default 8
+  * BARControl: added option --force-ssl
+  * Upgrade bzip2 to 1.0.6
+  * added bar-sqlite3 tool
+  * added logrotate script, support for log rotate
 
- -- Torsten Rupp <torsten.rupp@gmx.net>  Fri, 15 Jul 2016 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Mon, 15 Aug 2016 00:00:00 +0200
 
 bar (0.19d) stable; urgency=low
   * fixed include of multiple entries with pattern: store

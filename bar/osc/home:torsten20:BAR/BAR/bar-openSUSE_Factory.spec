@@ -162,7 +162,7 @@ mkdir packages
 %doc %{_mandir}/man7/bar.7.gz
 
 %changelog
-* Fri Jul 15 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20
+* Mon Aug 15 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20
   - TLS port is now optional: if possible as SSL protected
     connection is establed via the standard plain port, too.
   - added option --archive-file-mode: stop, append or
@@ -205,6 +205,12 @@ mkdir packages
   - improved parsing configuration files: reject unknown
     values
   - fixed init script on CentOS
+  - added option --server-max-connections: limit max.
+    number of concurrent server connections, default 8
+  - BARControl: added option --force-ssl
+  - Upgrade bzip2 to 1.0.6
+  - added bar-sqlite3 tool
+  - added logrotate script, support for log rotate
 
 * Sat Jan 09 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.19d
   - fixed include of multiple entries with pattern: store
