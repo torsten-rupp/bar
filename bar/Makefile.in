@@ -130,6 +130,7 @@ SCRIPTS              = scripts/barserver-SuSE \
                        scripts/barserver-debian \
                        scripts/barserver-CentOS \
                        scripts/barserver.service \
+                       scripts/logrotate.conf \
 
 #------------------------------ dependencies ---------------------------------
 
