@@ -488,6 +488,7 @@ TARGETS              = bar@EXEEXT@ \
                        $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
                        $(if @HAVE_BREAKPAD@,release/bar.sym debug/bar.sym) \
                        bar-keygen \
+                       bar-sqlite3@EXEEXT@ \
                        destroyer@EXEEXT@ \
                        $(if @HAVE_BREAKPAD@,bar-minidump@EXEEXT@) \
 
@@ -4116,6 +4117,7 @@ install: \
 	$(INSTALL) bar-debug@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) -m 644 bar-debug@EXEEXT@.sym "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar-keygen@SHELLEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) bar-sqlite3@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)"
 	if test ! -f "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"; then \
           $(INSTALL) -m 600 bar.cfg "$(DESTDIR)$(INSTALL_CONFIG_DIR)"; \
@@ -4132,6 +4134,7 @@ install: \
 uninstall:
 	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"
 	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-keygen@SHELLEXT@"
+	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-sqlite2@EXEEXT@"
 	$(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol" \
                                                     "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
                                                     "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
