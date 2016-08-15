@@ -4134,7 +4134,7 @@ install: \
 uninstall:
 	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"
 	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-keygen@SHELLEXT@"
-	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-sqlite2@EXEEXT@"
+	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-sqlite3@EXEEXT@"
 	$(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol" \
                                                     "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
                                                     "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
