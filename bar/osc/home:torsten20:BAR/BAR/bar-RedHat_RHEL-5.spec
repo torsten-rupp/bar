@@ -171,6 +171,7 @@ mkdir packages
 %dir %attr(0700,root,root) /etc/bar/jobs
 
 %config(noreplace) %attr(0600,root,root) /etc/bar/bar.cfg
+%config(noreplace) %attr(0600,root,root) /etc/logrotate.d/bar
 
 %lang(de) %dir %{_datadir}/locale/jp
 %lang(jp) %dir %{_datadir}/locale/jp/LC_MESSAGES
