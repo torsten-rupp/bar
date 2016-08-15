@@ -4880,13 +4880,22 @@ LOCAL void delayPurgeExpiredThread(void)
 
 LOCAL void purgeExpiredThreadCode(void)
 {
-  const uint64 SECONDS_PER_DAY = 24*60*60;
+  typedef struct
+  {
+    IndexId      entityId;
+    String       jobName;
+    ArchiveTypes archiveType;
+    uint64       createdDateTime;
+    ulong        totalEntryCount;
+    uint64       totalEntrySize;
+  } PurgeInfo;
 
   String             jobName;
   String             string;
-  uint64             now;
+  PurgeInfo          expiredInfo,surplusInfo;
   IndexHandle        *indexHandle;
   Errors             error;
+  uint64             now;
   IndexQueryHandle   indexQueryHandle1,indexQueryHandle2;
   IndexId            entityId;
   StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
@@ -4901,8 +4910,18 @@ LOCAL void purgeExpiredThreadCode(void)
   uint64             totalEntrySize;
 
   // init variables
-  jobName = String_new();
-  string  = String_new();
+  jobName                     = String_new();
+  string                      = String_new();
+  expiredInfo.jobName         = String_new();
+  expiredInfo.createdDateTime = 0LL;
+  expiredInfo.archiveType     = ARCHIVE_TYPE_NONE;
+  expiredInfo.totalEntryCount = 0L;
+  expiredInfo.totalEntryCount = 0LL;
+  surplusInfo.jobName         = String_new();
+  surplusInfo.createdDateTime = 0LL;
+  surplusInfo.archiveType     = ARCHIVE_TYPE_NONE;
+  surplusInfo.totalEntryCount = 0L;
+  surplusInfo.totalEntryCount = 0LL;
 
   // init index
   indexHandle = Index_open(INDEX_PRIORITY_MEDIUM,INDEX_TIMEOUT);
@@ -4918,173 +4937,225 @@ LOCAL void purgeExpiredThreadCode(void)
 
   while (!quitFlag)
   {
-    // check entities
-    error = Index_initListEntities(&indexQueryHandle1,
-                                   indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   NULL,  // jobUUID
-                                   NULL,  // scheduldUUID,
-                                   NULL,  // name
-                                   DATABASE_ORDERING_ASCENDING,
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error == ERROR_NONE)
+    do
     {
-      while (   !quitFlag
-             && !isSomeJobActive()
-             && Index_getNextEntity(&indexQueryHandle1,
-                                    NULL,  // uudId,
-                                    jobUUID,
-                                    scheduleUUID,
-                                    &entityId,
-                                    NULL,  // archiveType,
-                                    NULL,  // createdDateTime,
-                                    NULL,  // lastErrorMessage
-                                    NULL,  // totalEntryCount,
-                                    NULL  // totalEntrySize,
-                                   )
-            )
-      {
-        if (!String_isEmpty(scheduleUUID))
-        {
-          // get job name, schedule min./max. keep, max. age
-          minKeep = 0;
-          maxKeep = 0;
-          maxAge  = 0;
-          SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-          {
-            jobNode = findJobByUUID(jobUUID);
-            if (jobNode != NULL)
-            {
-              String_set(jobName,jobNode->name);
-            }
-            else
-            {
-              String_clear(jobName);
-            }
-            scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
-            if (scheduleNode != NULL)
-            {
-              minKeep = scheduleNode->minKeep;
-              maxKeep = scheduleNode->maxKeep;
-              maxAge  = scheduleNode->maxAge;
-            }
-          }
+      expiredInfo.entityId = INDEX_ID_NONE;
+      surplusInfo.entityId = INDEX_ID_NONE;
 
-          // check if expired
-          if ((maxKeep > 0) || (maxAge > 0))
+      // check entities
+      error = Index_initListEntities(&indexQueryHandle1,
+                                     indexHandle,
+                                     INDEX_ID_ANY,  // uuidId
+                                     NULL,  // jobUUID
+                                     NULL,  // scheduldUUID,
+                                     NULL,  // name
+                                     DATABASE_ORDERING_ASCENDING,
+                                     0LL,  // offset
+                                     INDEX_UNLIMITED
+                                    );
+      if (error == ERROR_NONE)
+      {
+        while (   !quitFlag
+               && !isSomeJobActive()
+               && Index_getNextEntity(&indexQueryHandle1,
+                                      NULL,  // uudId,
+                                      jobUUID,
+                                      scheduleUUID,
+                                      &entityId,
+                                      NULL,  // archiveType,
+                                      NULL,  // createdDateTime,
+                                      NULL,  // lastErrorMessage
+                                      NULL,  // totalEntryCount,
+                                      NULL  // totalEntrySize,
+                                     )
+              )
+        {
+          if (!String_isEmpty(scheduleUUID))
           {
-            // delete expired entities
-            if (maxAge > 0)
+            // get job name, schedule min./max. keep, max. age
+            minKeep = 0;
+            maxKeep = 0;
+            maxAge  = 0;
+            SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
             {
-              error = Index_initListEntities(&indexQueryHandle2,
-                                             indexHandle,
-                                             INDEX_ID_ANY,  // uuidId
-                                             jobUUID,
-                                             scheduleUUID,
-                                             NULL,  // name
-                                             DATABASE_ORDERING_DESCENDING,
-                                             (ulong)minKeep,
-                                             INDEX_UNLIMITED
-                                            );
-              if (error == ERROR_NONE)
+              jobNode = findJobByUUID(jobUUID);
+              if (jobNode != NULL)
               {
-                now = Misc_getCurrentDateTime();
-                while (   !quitFlag
-                       && !isSomeJobActive()
-                       && Index_getNextEntity(&indexQueryHandle2,
-                                              NULL,  // uudId,
-                                              NULL,  // jobUUID
-                                              NULL,  // scheduleUUID
-                                              &entityId,
-                                              &archiveType,
-                                              &createdDateTime,
-                                              NULL,  // lastErrorMessage
-                                              &totalEntryCount,
-                                              &totalEntrySize
-                                             )
-                      )
-                {
-                  if (now > (createdDateTime+maxAge*SECONDS_PER_DAY))
-                  {
-                    error = deleteEntity(indexHandle,entityId);
-                    if (error == ERROR_NONE)
-                    {
-                      plogMessage(NULL,  // logHandle,
-                                  LOG_TYPE_INDEX,
-                                  "INDEX",
-                                  "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
-                                  String_cString(jobName),
-                                  ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
-                                  String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
-                                  totalEntryCount,
-                                  BYTES_SHORT(totalEntrySize),
-                                  BYTES_UNIT(totalEntrySize),
-                                  totalEntrySize
-                                 );
-                    }
-                  }
-                }
-                Index_doneList(&indexQueryHandle2);
+                String_set(jobName,jobNode->name);
+              }
+              else
+              {
+                String_clear(jobName);
+              }
+              scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+              if (scheduleNode != NULL)
+              {
+                minKeep = scheduleNode->minKeep;
+                maxKeep = scheduleNode->maxKeep;
+                maxAge  = scheduleNode->maxAge;
               }
             }
 
-            // delete surplus entities
-            if ((maxKeep > 0) && (maxKeep >= minKeep))
+            // check if expired
+            if ((maxKeep > 0) || (maxAge > 0))
             {
-              error = Index_initListEntities(&indexQueryHandle2,
-                                             indexHandle,
-                                             INDEX_ID_ANY,  // uuidId
-                                             jobUUID,
-                                             scheduleUUID,
-                                             NULL,  // name
-                                             DATABASE_ORDERING_DESCENDING,
-                                             (ulong)maxKeep,
-                                             INDEX_UNLIMITED
-                                            );
-              if (error == ERROR_NONE)
+              if (maxAge > 0)
               {
-                while (   !quitFlag
-                       && !isSomeJobActive()
-                       && Index_getNextEntity(&indexQueryHandle2,
-                                              NULL,  // uudId,
-                                              NULL,  // jobUUID
-                                              NULL,  // scheduleUUID
-                                              &entityId,
-                                              &archiveType,
-                                              &createdDateTime,
-                                              NULL,  // lastErrorMessage
-                                              &totalEntryCount,
-                                              &totalEntrySize
-                                             )
-                      )
+                // find expired entity
+                error = Index_initListEntities(&indexQueryHandle2,
+                                               indexHandle,
+                                               INDEX_ID_ANY,  // uuidId
+                                               jobUUID,
+                                               scheduleUUID,
+                                               NULL,  // name
+                                               DATABASE_ORDERING_DESCENDING,
+                                               (ulong)minKeep,
+                                               INDEX_UNLIMITED
+                                              );
+                if (error == ERROR_NONE)
                 {
-                  error = deleteEntity(indexHandle,entityId);
-                  if (error == ERROR_NONE)
+                  now = Misc_getCurrentDateTime();
+                  while (   !quitFlag
+                         && !isSomeJobActive()
+                         && Index_getNextEntity(&indexQueryHandle2,
+                                                NULL,  // uudId,
+                                                NULL,  // jobUUID
+                                                NULL,  // scheduleUUID
+                                                &entityId,
+                                                &archiveType,
+                                                &createdDateTime,
+                                                NULL,  // lastErrorMessage
+                                                &totalEntryCount,
+                                                &totalEntrySize
+                                               )
+                        )
                   {
-                    plogMessage(NULL,  // logHandle,
-                                LOG_TYPE_INDEX,
-                                "INDEX",
-                                "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
-                                String_cString(jobName),
-                                ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
-                                String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
-                                totalEntryCount,
-                                BYTES_SHORT(totalEntrySize),
-                                BYTES_UNIT(totalEntrySize),
-                                totalEntrySize
-                               );
+                    if (now > (createdDateTime+maxAge*S_PER_DAY))
+                    {
+                      // mark for delete
+                      (void)Index_setState(indexHandle,entityId,INDEX_STATE_DELETE,0LL,NULL);
+
+                      // get purge info
+                      expiredInfo.entityId        = entityId;
+                      String_set(expiredInfo.jobName,jobName);
+                      expiredInfo.archiveType     = archiveType;
+                      expiredInfo.createdDateTime = createdDateTime;
+                      expiredInfo.totalEntryCount = totalEntryCount;
+                      expiredInfo.totalEntrySize  = totalEntrySize;
+                      break;
+                    }
                   }
+                  Index_doneList(&indexQueryHandle2);
                 }
-                Index_doneList(&indexQueryHandle2);
+              }
+
+              if ((maxKeep > 0) && (maxKeep >= minKeep))
+              {
+                // find surplus entity
+                error = Index_initListEntities(&indexQueryHandle2,
+                                               indexHandle,
+                                               INDEX_ID_ANY,  // uuidId
+                                               jobUUID,
+                                               scheduleUUID,
+                                               NULL,  // name
+                                               DATABASE_ORDERING_DESCENDING,
+                                               (ulong)maxKeep,
+                                               INDEX_UNLIMITED
+                                              );
+                if (error == ERROR_NONE)
+                {
+                  while (   !quitFlag
+                         && !isSomeJobActive()
+                         && Index_getNextEntity(&indexQueryHandle2,
+                                                NULL,  // uudId,
+                                                NULL,  // jobUUID
+                                                NULL,  // scheduleUUID
+                                                &entityId,
+                                                &archiveType,
+                                                &createdDateTime,
+                                                NULL,  // lastErrorMessage
+                                                &totalEntryCount,
+                                                &totalEntrySize
+                                               )
+                        )
+                  {
+                    // mark for delete
+                    (void)Index_setState(indexHandle,entityId,INDEX_STATE_DELETE,0LL,NULL);
+
+                    // get purge info
+                    surplusInfo.entityId        = entityId;
+                    String_set(surplusInfo.jobName,jobName);
+                    surplusInfo.archiveType     = archiveType;
+                    surplusInfo.createdDateTime = createdDateTime;
+                    surplusInfo.totalEntryCount = totalEntryCount;
+                    surplusInfo.totalEntrySize  = totalEntrySize;
+                    break;
+                  }
+                  Index_doneList(&indexQueryHandle2);
+                }
               }
             }
           }
         }
+        Index_doneList(&indexQueryHandle1);
+
+        // purge expired entity
+        if (expiredInfo.entityId != INDEX_ID_NONE)
+        {
+          error = deleteEntity(indexHandle,expiredInfo.entityId);
+          if (error == ERROR_NONE)
+          {
+            plogMessage(NULL,  // logHandle,
+                        LOG_TYPE_INDEX,
+                        "INDEX",
+                        "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
+                        String_cString(expiredInfo.jobName),
+                        ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,expiredInfo.archiveType,"normal"),
+                        String_cString(Misc_formatDateTime(string,expiredInfo.createdDateTime,NULL)),
+                        expiredInfo.totalEntryCount,
+                        BYTES_SHORT(expiredInfo.totalEntrySize),
+                        BYTES_UNIT(expiredInfo.totalEntrySize),
+                        expiredInfo.totalEntrySize
+                       );
+          }
+          else
+          {
+            expiredInfo.entityId = INDEX_ID_NONE;
+          }
+        }
+
+        // purge surplus entity
+        if (surplusInfo.entityId != INDEX_ID_NONE)
+        {
+          error = deleteEntity(indexHandle,surplusInfo.entityId);
+          if (error == ERROR_NONE)
+          {
+            plogMessage(NULL,  // logHandle,
+                        LOG_TYPE_INDEX,
+                        "INDEX",
+                        "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
+                        String_cString(surplusInfo.jobName),
+                        ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,surplusInfo.archiveType,"normal"),
+                        String_cString(Misc_formatDateTime(string,surplusInfo.createdDateTime,NULL)),
+                        surplusInfo.totalEntryCount,
+                        BYTES_SHORT(surplusInfo.totalEntrySize),
+                        BYTES_UNIT(surplusInfo.totalEntrySize),
+                        surplusInfo.totalEntrySize
+                       );
+          }
+          else
+          {
+            surplusInfo.entityId = INDEX_ID_NONE;
+          }
+        }
       }
-      Index_doneList(&indexQueryHandle1);
+//TODO
+#warning remove
+fprintf(stderr,"%s, %d: %llu %llu\n",__FILE__,__LINE__,expiredInfo.entityId,surplusInfo.entityId);
     }
+    while (   !quitFlag
+           && ((expiredInfo.entityId != INDEX_ID_NONE) || (surplusInfo.entityId != INDEX_ID_NONE))
+          );
 
     // sleep
     delayPurgeExpiredThread();
@@ -5094,6 +5165,8 @@ LOCAL void purgeExpiredThreadCode(void)
   Index_close(indexHandle);
 
   // free resources
+  String_delete(surplusInfo.jobName);
+  String_delete(expiredInfo.jobName);
   String_delete(string);
   String_delete(jobName);
 }
@@ -11802,14 +11875,14 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
   ScheduleNode     *scheduleNode;
   String           date,weekDays,time;
   uint64           lastExecutedDateTime;
-  ulong            totalEntities;
+  ulong            entityCount;
   ulong            totalEntryCount;
   uint64           totalEntrySize;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   uint64           createdDateTime;
-  ulong            entries;
-  uint64           size;
+  ulong            entryCount;
+  uint64           entrySize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11908,11 +11981,23 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 
       // get last executed date/time, total entities, entries, size
       lastExecutedDateTime = 0LL;
-      totalEntities        = 0L;
+      entityCount          = 0L;
       totalEntryCount      = 0L;
       totalEntrySize       = 0LL;
       if ((indexHandle != NULL))
       {
+#if 1
+        (void)Index_getUUIDsInfos(indexHandle,
+                                  INDEX_ID_ANY,
+                                  NULL,  // jobUUID,
+                                  scheduleNode->uuid,
+                                  NULL,  // name
+                                  &lastExecutedDateTime,
+                                  &entityCount,
+                                  &totalEntryCount,
+                                  &totalEntrySize
+                                 );
+#else
         error = Index_initListEntities(&indexQueryHandle,
                                        indexHandle,
                                        INDEX_ID_ANY,  // uuidId
@@ -11933,18 +12018,19 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
                                      NULL,  // archiveType,
                                      &createdDateTime,  // createdDateTime,
                                      NULL,  // lastErrorMessage
-                                     &entries,
-                                     &size
+                                     &entryCount,
+                                     &entrySize
                                     )
                 )
           {
             if (createdDateTime > lastExecutedDateTime) lastExecutedDateTime = createdDateTime;
-            totalEntities   += 1;
+            entityCount     += 1;
             totalEntryCount += entries;
             totalEntrySize  += size;
           }
           Index_doneList(&indexQueryHandle);
         }
+#endif
       }
 
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
@@ -11962,7 +12048,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
                        scheduleNode->noStorage,
                        scheduleNode->enabled,
                        lastExecutedDateTime,
-                       totalEntities,
+                       entityCount,
                        totalEntryCount,
                        totalEntrySize
                       );
