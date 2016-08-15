@@ -45,6 +45,7 @@ INSTALL_LOCALE_DIR     = @LOCALE_DIR@
 INSTALL_ETC_DIR        = $(ETC_DIR)
 #INSTALL_INITD_DIR      = $(INSTALL_ETC_DIR)/$(if $(wildcard $(ETC_DIR)/rc.d),rc.d/init.d,init.d)
 INSTALL_INITD_DIR      = $(INSTALL_ETC_DIR)/init.d
+INSTALL_LOGROTATED_DIR = $(INSTALL_ETC_DIR)/logrotate.d
 INSTALL_CONFIG_DIR     = @CONFIG_DIR@
 INSTALL_MAN_DIR        = @MAN_DIR@
 endif
