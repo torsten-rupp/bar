@@ -4903,7 +4903,6 @@ LOCAL void purgeExpiredThreadCode(void)
   // init variables
   jobName = String_new();
   string  = String_new();
-  now     = Misc_getCurrentDateTime();
 
   // init index
   indexHandle = Index_open(INDEX_PRIORITY_MEDIUM,INDEX_TIMEOUT);
@@ -4991,6 +4990,7 @@ LOCAL void purgeExpiredThreadCode(void)
                                             );
               if (error == ERROR_NONE)
               {
+                now = Misc_getCurrentDateTime();
                 while (   !quitFlag
                        && !isSomeJobActive()
                        && Index_getNextEntity(&indexQueryHandle2,
