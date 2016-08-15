@@ -4698,6 +4698,9 @@ LOCAL Errors pruneStorages(IndexHandle *indexHandle)
   DatabaseQueryHandle databaseQueryHandle;
   DatabaseId          storageId;
 
+  assert(indexHandle != NULL);
+  assert(Database_isLocked(&indexHandle->databaseHandle));
+
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT id \
@@ -4737,6 +4740,9 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle)
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   DatabaseId          entityId;
+
+  assert(indexHandle != NULL);
+  assert(Database_isLocked(&indexHandle->databaseHandle));
 
   // Note: keep default entity with id 0!
   error = Database_prepare(&databaseQueryHandle,
@@ -4778,6 +4784,9 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   DatabaseId          uuidId;
+
+  assert(indexHandle != NULL);
+  assert(Database_isLocked(&indexHandle->databaseHandle));
 
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
@@ -5400,14 +5409,18 @@ LOCAL void cleanupIndexThreadCode(void)
               "INDEX",
               "Started initial clean-up index database\n"
              );
-  (void)cleanUpDuplicateMeta(&indexHandle);
-  (void)cleanUpIncompleteUpdate(&indexHandle);
-  (void)cleanUpIncompleteCreate(&indexHandle);
-  (void)cleanUpStorageNoName(&indexHandle);
-  (void)cleanUpStorageNoEntity(&indexHandle);
-  (void)pruneStorages(&indexHandle);
-  (void)pruneEntities(&indexHandle);
-  (void)pruneUUIDs(&indexHandle);
+  BLOCK_DO(Database_lock(&indexHandle.databaseHandle),
+           Database_unlock(&indexHandle.databaseHandle),
+  {
+    (void)cleanUpDuplicateMeta(&indexHandle);
+    (void)cleanUpIncompleteUpdate(&indexHandle);
+    (void)cleanUpIncompleteCreate(&indexHandle);
+    (void)cleanUpStorageNoName(&indexHandle);
+    (void)cleanUpStorageNoEntity(&indexHandle);
+    (void)pruneStorages(&indexHandle);
+    (void)pruneEntities(&indexHandle);
+    (void)pruneUUIDs(&indexHandle);
+  });
 //TODO: too slow
 //  (void)refreshStoragesInfos(&indexHandle);
   plogMessage(NULL,  // logHandle
@@ -10316,16 +10329,38 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
   filterAppend(filterString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
   filterAppend(filterString,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
   filterAppend(filterString,!String_isEmpty(uuidIdsString),"OR","storage.id IN (%S)",storageIdsString);
-  error = Database_prepare(&databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT storage.id \
-                            FROM storage \
-                              LEFT JOIN entities ON entities.id=storage.entityId \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                            WHERE %S; \
-                           ",
-                           filterString
-                          );
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT storage.id \
+                              FROM storage \
+                                LEFT JOIN entities ON entities.id=storage.entityId \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                              WHERE %S; \
+                             ",
+                             filterString
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
+    while (Database_getNextRow(&databaseQueryHandle,
+                               "%llu",
+                               &storageId
+                              )
+          )
+    {
+      if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
+      String_format(storageIdsString,"%lld",storageId);
+    }
+    Database_finalize(&databaseQueryHandle);
+
+    return ERROR_NONE;
+  });
   if (error != ERROR_NONE)
   {
     String_delete(string);
@@ -10339,17 +10374,6 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     String_delete(ftsName);
     return error;
   }
-//Database_debugPrintQueryInfo(&databaseQueryHandle);
-  while (Database_getNextRow(&databaseQueryHandle,
-                             "%llu",
-                             &storageId
-                            )
-        )
-  {
-    if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
-    String_format(storageIdsString,"%lld",storageId);
-  }
-  Database_finalize(&databaseQueryHandle);
 
   // get filters
   String_setCString(filterString,"1");
