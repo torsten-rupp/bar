@@ -167,6 +167,7 @@ systemctl disable barserver.service 1>/dev/null 2>/dev/null
 %{_bindir}/barcontrol-linux.jar
 %{_bindir}/barcontrol-linux_64.jar
 %{_bindir}/bar-keygen
+%{_bindir}/bar-sqlite3
 /usr/lib/systemd/system/barserver.service
 
 %dir /etc/bar

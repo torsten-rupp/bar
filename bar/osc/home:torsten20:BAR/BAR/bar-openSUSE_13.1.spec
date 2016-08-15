@@ -175,6 +175,7 @@ service barserver stop 1>/dev/null || echo "Warning: Cannot stop barserver with 
 %{_bindir}/barcontrol-linux.jar
 %{_bindir}/barcontrol-linux_64.jar
 %{_bindir}/bar-keygen
+%{_bindir}/bar-sqlite3
 /usr/lib/systemd/system/barserver.service
 /usr/sbin/rcbarserver
 

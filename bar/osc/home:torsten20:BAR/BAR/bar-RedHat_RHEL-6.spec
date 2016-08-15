@@ -161,6 +161,7 @@ mkdir packages
 %{_bindir}/barcontrol-linux.jar
 %{_bindir}/barcontrol-linux_64.jar
 %{_bindir}/bar-keygen
+%{_bindir}/bar-sqlite3
 %dir /usr/lib/systemd
 %dir /usr/lib/systemd/system
 /usr/lib/systemd/system/barserver.service
