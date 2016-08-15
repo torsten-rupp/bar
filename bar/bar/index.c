@@ -7203,7 +7203,7 @@ Errors Index_getState(IndexHandle *indexHandle,
 }
 
 Errors Index_setState(IndexHandle *indexHandle,
-                      IndexId     storageId,
+                      IndexId     indexId,
                       IndexStates indexState,
                       uint64      lastCheckedDateTime,
                       const char  *errorMessage,
@@ -7215,7 +7215,7 @@ Errors Index_setState(IndexHandle *indexHandle,
   String  errorText;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+  assert((Index_getType(indexId) == INDEX_TYPE_ENTITY) || (Index_getType(indexId) == INDEX_TYPE_STORAGE));
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -7223,6 +7223,7 @@ Errors Index_setState(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
+  // format error message
   if (errorMessage != NULL)
   {
     va_start(arguments,errorMessage);
@@ -7238,53 +7239,111 @@ Errors Index_setState(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "UPDATE storage \
-                              SET state=%d, \
-                                  errorMessage=NULL \
-                              WHERE id=%lld; \
-                             ",
-                             indexState,
-                             Index_getDatabaseId(storageId)
-                            );
-    if (error != ERROR_NONE)
+    switch (Index_getType(indexId))
     {
-      return error;
-    }
+      case INDEX_TYPE_ENTITY:
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "UPDATE storage \
+                                  SET state=%d, \
+                                      errorMessage=NULL \
+                                  WHERE entityId=%lld; \
+                                 ",
+                                 indexState,
+                                 Index_getDatabaseId(indexId)
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
 
-    if (lastCheckedDateTime != 0LL)
-    {
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),
-                               "UPDATE storage \
-                                SET lastChecked=DATETIME(%llu,'unixepoch') \
-                                WHERE id=%lld; \
-                               ",
-                               lastCheckedDateTime,
-                               Index_getDatabaseId(storageId)
-                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-    }
+        if (lastCheckedDateTime != 0LL)
+        {
+          error = Database_execute(&indexHandle->databaseHandle,
+                                   CALLBACK(NULL,NULL),
+                                   "UPDATE storage \
+                                    SET lastChecked=DATETIME(%llu,'unixepoch') \
+                                    WHERE entityId=%lld; \
+                                   ",
+                                   lastCheckedDateTime,
+                                   Index_getDatabaseId(indexId)
+                                  );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
 
-    if (errorText != NULL)
-    {
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),
-                               "UPDATE storage \
-                                SET errorMessage=%'S \
-                                WHERE id=%lld; \
-                               ",
-                               errorText,
-                               Index_getDatabaseId(storageId)
-                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+        if (errorText != NULL)
+        {
+          error = Database_execute(&indexHandle->databaseHandle,
+                                   CALLBACK(NULL,NULL),
+                                   "UPDATE storage \
+                                    SET errorMessage=%'S \
+                                    WHERE entityId=%lld; \
+                                   ",
+                                   errorText,
+                                   Index_getDatabaseId(indexId)
+                                  );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+        break;
+      case INDEX_TYPE_STORAGE:
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),
+                                 "UPDATE storage \
+                                  SET state=%d, \
+                                      errorMessage=NULL \
+                                  WHERE id=%lld; \
+                                 ",
+                                 indexState,
+                                 Index_getDatabaseId(indexId)
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        if (lastCheckedDateTime != 0LL)
+        {
+          error = Database_execute(&indexHandle->databaseHandle,
+                                   CALLBACK(NULL,NULL),
+                                   "UPDATE storage \
+                                    SET lastChecked=DATETIME(%llu,'unixepoch') \
+                                    WHERE id=%lld; \
+                                   ",
+                                   lastCheckedDateTime,
+                                   Index_getDatabaseId(indexId)
+                                  );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+
+        if (errorText != NULL)
+        {
+          error = Database_execute(&indexHandle->databaseHandle,
+                                   CALLBACK(NULL,NULL),
+                                   "UPDATE storage \
+                                    SET errorMessage=%'S \
+                                    WHERE id=%lld; \
+                                   ",
+                                   errorText,
+                                   Index_getDatabaseId(indexId)
+                                  );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+        break;
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
     }
 
     return ERROR_NONE;
@@ -7602,7 +7661,9 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
                            IndexId       uuidId,
 //TODO: remove?
                            ConstString   jobUUID,
+                           ConstString   scheduleUUID,
                            ConstString   name,
+                           uint64        *lastExecutedDateTime,
                            ulong         *entityCount,
                            ulong         *totalEntryCount,
                            uint64        *totalEntrySize
@@ -7635,8 +7696,9 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
   getFTSString(ftsName,name);
   getREGEXPString(regexpName,name);
 
-  filterAppend(filterString,(uuidId != INDEX_ID_ANY),"AND","entity.uuidId=%lld",Index_getDatabaseId(uuidId));
+  filterAppend(filterString,(uuidId != INDEX_ID_ANY),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
   filterAppend(filterString,!String_isEmpty(jobUUID),"AND","uuids.jobUUID='%S'",jobUUID);
+  filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID='%S'",scheduleUUID);
   filterAppend(filterString,!String_isEmpty(ftsName),"AND","uuids.id IN (SELECT uuidId FROM FTS_uuids WHERE FTS_uuids MATCH %S)",ftsName);
 //  filterAppend(filterString,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,uuids.name)",regexpName);
 
@@ -7647,11 +7709,12 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
     // get storage count, entry count, entry size
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
-                             "SELECT COUNT(entities.id),\
+                             "SELECT MAX(UNIXTIMESTAMP(entities.created)), \
+                                     COUNT(entities.id),\
                                      TOTAL(storage.totalEntryCount), \
                                      TOTAL(storage.totalEntrySize) \
                               FROM uuids \
-                                LEFT JOIN entities ON entities.uuidId=uuids.id \
+                                LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
                                 LEFT JOIN storage ON storage.entityId=entities.id \
                               WHERE %S \
                              ",
@@ -7663,7 +7726,8 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
       return error;
     }
     if (Database_getNextRow(&databaseQueryHandle,
-                            "%lu %lf %lf",
+                            "%llu %lu %lf %lf",
+                            lastExecutedDateTime,
                             entityCount,
                             &totalEntryCount_,
                             &totalEntrySize_

@@ -76,6 +76,7 @@ typedef enum
   INDEX_STATE_UPDATE_REQUESTED = INDEX_CONST_STATE_UPDATE_REQUESTED,
   INDEX_STATE_UPDATE           = INDEX_CONST_STATE_UPDATE,
   INDEX_STATE_ERROR            = INDEX_CONST_STATE_ERROR,
+  INDEX_STATE_DELETE           = INDEX_CONST_STATE_DELETE,
 
   INDEX_STATE_UNKNOWN
 } IndexStates;
@@ -511,7 +512,7 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 * Name   : Index_findUUIDByJobUUID
 * Purpose: find uuid info by job UUID
 * Input  : indexHandle - index handle
-*          jobUUID     - unique job id
+*          jobUUID     - unique job UUID
 * Output : uuidId              - index id of UUID entry (can be NULL)
 *          lastCreatedDateTime - created date/time stamp [s] (can be
 *                                NULL)
@@ -548,8 +549,8 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
 * Name   : Index_findEntityByJobUUID
 * Purpose: find entity info by job UUID
 * Input  : indexHandle      - index handle
-*          jobUUID          - unique job id
-*          scheduleUUID     - unique schedule id (can be NULL)
+*          jobUUID          - unique job UUID
+*          scheduleUUID     - unique schedule UUID (can be NULL)
 * Output : uuidId           - index id of UUID entry (can be NULL)
 *          entityId         - index id of entity entry (can be NULL)
 *          archiveType      - archive type (can be NULL)
@@ -578,8 +579,8 @@ bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
 * Purpose: find info by storage id
 * Input  : indexHandle - index handle
 *          storageId   - index id of storage
-* Output : jobUUID             - unique job id (can be NULL)
-*          scheduleUUID        - unique schedule id (can be NULL)
+* Output : jobUUID             - unique job UUID (can be NULL)
+*          scheduleUUID        - unique schedule UUID (can be NULL)
 *          uuidId              - index id of UUID entry (can be NULL)
 *          entityId            - index id of entity entry (can be NULL)
 *          storageName         - storage name (can be NULL)
@@ -608,8 +609,8 @@ bool Index_findStorageById(IndexHandle *indexHandle,
 *          storageSpecifier - storage specifier
 *          archiveName      - archive name or NULL
 * Output : entityId            - index id of entity (can be NULL)
-*          jobUUID             - unique job id (can be NULL)
-*          scheduleUUID        - unique schedule id (can be NULL)
+*          jobUUID             - unique job UUID (can be NULL)
+*          scheduleUUID        - unique schedule UUID (can be NULL)
 *          uuidId              - index id of UUID entry (can be NULL)
 *          entityId            - index id of entity entry (can be NULL)
 *          storageId           - index id of storage entry (can be NULL)
@@ -637,8 +638,8 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 * Purpose: find storage info by state
 * Input  : indexHandle   - index handle
 *          indexStateSet - index state set
-* Output : jobUUID             - unique job id (can be NULL)
-*          scheduleUUID        - unique schedule id (can be NULL)
+* Output : jobUUID             - unique job UUID (can be NULL)
+*          scheduleUUID        - unique schedule UUID (can be NULL)
 *          entityId            - index id of entity (can be NULL)
 *          storageId           - index id of storage (can be NULL)
 *          storageName         - storage name (can be NULL)
@@ -723,7 +724,7 @@ long Index_countState(IndexHandle *indexHandle,
 * Purpose: list history
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
-*          jobUUID          - unique job id (can be NULL)
+*          jobUUID          - unique job UUID (can be NULL)
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
 *                             INDEX_UNLIMITED
@@ -746,8 +747,8 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
 * Input  : IndexQueryHandle - index query handle
 * Output : historyId         - index history id
 *          uuidId            - index UUID id
-*          jobUUID           - unique job id (can be NULL)
-*          scheduleUUID      - unique schedule id (can be NULL)
+*          jobUUID           - unique job UUID (can be NULL)
+*          scheduleUUID      - unique schedule UUID (can be NULL)
 *          hostName          - host name (can be NULL)
 *          createdDateTime   - create date/time stamp [s] (can be NULL)
 *          errorMessage      - last storage error message (can be NULL)
@@ -786,8 +787,8 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_newHistory
 * Purpose: create new history entry
 * Input  : indexHandle  - index handle
-*          jobUUID           - unique job id
-*          scheduleUUID      - unique schedule id (can be NULL)
+*          jobUUID           - unique job UUID
+*          scheduleUUID      - unique schedule UUID (can be NULL)
 *          hostName          - hostname (can be NULL)
 *          archiveType       - archive type
 *          createdDateTime   - create date/time stamp [s]
@@ -826,7 +827,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
 * Name   : Index_deleteHistory
 * Purpose: delete history entry
 * Input  : indexQueryHandle - index query handle
-*          jobUUID          - unique job id
+*          jobUUID          - unique job UUID
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -843,11 +844,13 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
 * Input  : indexQueryHandle - index query handle variable
 *          indexHandle      - index handle
 *          uuidId           - index id of UUID entry or INDEX_ID_ANY
-*          jobUUID          - unique job id or NULL
+*          jobUUID          - unique job UUID or NULL
+*          scheduleUUID     - unique schedule UUID or NULL
 *          name             - name pattern (glob, can be NULL)
-* Output : entityCount     - number of storages (can be NULL)
-*          totalEntryCount - total entry count (can be NULL)
-*          totalEntrySize  - total size [bytes] (can be NULL)
+* Output : lastExecutedDateTime - last executed date/time (can be NULL)
+*          entityCount          - number of storages (can be NULL)
+*          totalEntryCount      - total entry count (can be NULL)
+*          totalEntrySize       - total size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -856,7 +859,9 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
                            IndexId       uuidId,
 //TODO: remove?
                            ConstString   jobUUID,
+                           ConstString   scheduleUUID,
                            ConstString   name,
+                           uint64        *lastExecutedDateTime,
                            ulong         *entityCount,
                            ulong         *totalEntryCount,
                            uint64        *totalEntrySize
@@ -902,7 +907,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 * Purpose: get next index uuid entry
 * Input  : IndexQueryHandle - index query handle
 * Output : uuidId              - index id of UUID entry
-*          jobUUID             - unique job id (can be NULL)
+*          jobUUID             - unique job UUID (can be NULL)
 *          lastCreatedDateTime - last storage date/time stamp [s] (can be NULL)
 *          lastErrorMessage    - last storage error message (can be NULL)
 *          totalEntryCount     - total number of entries (can be NULL)
@@ -924,7 +929,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_newUUID
 * Purpose: create new UUID index
 * Input  : indexHandle  - index handle
-*          jobUUID      - unique job id (can be NULL)
+*          jobUUID      - unique job UUID (can be NULL)
 * Output : uuidId - index id of new UUID entry (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -971,7 +976,7 @@ Errors Index_isEmptyUUID(IndexHandle *indexHandle,
 *          indexHandle      - index handle
 *          uuidId           - index id of UUID entry or INDEX_ID_ANY
 *          entityId         - index id of entity entry id or INDEX_ID_ANY
-*          jobUUID          - unique job id or NULL
+*          jobUUID          - unique job UUID or NULL
 *          indexIds         - index ids or NULL
 *          indexIdCount     - index id count or 0
 *          name             - name pattern (glob, can be NULL)
@@ -1015,8 +1020,8 @@ Errors Index_updateEntityInfos(IndexHandle *indexHandle,
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
 *          uuidId           - index uuid id
-*          jobUUID          - unique job id (can be NULL)
-*          scheduleUUID     - unique schedule id (can be NULL)
+*          jobUUID          - unique job UUID (can be NULL)
+*          scheduleUUID     - unique schedule UUID (can be NULL)
 *          name             - storage name pattern (glob, can be NULL)
 *          ordering         - ordering mode
 *          offset           - offset or 0
@@ -1044,8 +1049,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 * Purpose: get next index entity entry
 * Input  : IndexQueryHandle - index query handle
 * Output : uuidId           - index id of UUID entry (can be NULL)
-*          jobUUID          - unique job id (can be NULL)
-*          scheduleUUID     - unique schedule id (can be NULL)
+*          jobUUID          - unique job UUID (can be NULL)
+*          scheduleUUID     - unique schedule UUID (can be NULL)
 *          entityId         - index id of entity entry
 *          archiveType      - archive type (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
@@ -1072,8 +1077,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_newEntity
 * Purpose: create new uuid index (if need) and new entity index
 * Input  : indexHandle     - index handle
-*          jobUUID         - unique job id (can be NULL)
-*          scheduleUUID    - unique schedule id (can be NULL)
+*          jobUUID         - unique job UUID (can be NULL)
+*          scheduleUUID    - unique schedule UUID (can be NULL)
 *          archiveType     - archive type
 *          createdDateTime - created date/time stamp or 0
 * Output : entityId - index id of new entity index
@@ -1125,7 +1130,7 @@ Errors Index_isEmptyEntity(IndexHandle *indexHandle,
 *          indexHandle      - index handle
 *          uuidId           - index id of UUID entry or INDEX_ID_ANY
 *          entityId         - index id of entity entry id or INDEX_ID_ANY
-*          jobUUID          - unique job id or NULL
+*          jobUUID          - unique job UUID or NULL
 *          indexIds         - index ids or NULL
 *          indexIdCount     - index id count or 0
 *          indexStateSet    - index state set or INDEX_STATE_SET_ANY
@@ -1177,7 +1182,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
 *          indexHandle      - index handle
 *          uuidId           - index id of UUID entry or INDEX_ID_ANY
 *          entityId         - index id of entity entry id or INDEX_ID_ANY
-*          jobUUID          - unique job id or NULL
+*          jobUUID          - unique job UUID or NULL
 *          indexIds         - index ids or NULL
 *          indexIdCount     - index id count or 0
 *          indexStateSet    - index state set
