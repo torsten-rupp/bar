@@ -85,6 +85,10 @@
 #define MS_PER_HOUR   (60LL*MS_PER_MINUTE)
 #define MS_PER_DAY    (24LL*MS_PER_HOUR)
 
+#define S_PER_MINUTE (60LL)
+#define S_PER_HOUR   (60LL*S_PER_MINUTE)
+#define S_PER_DAY    (24LL*S_PER_HOUR)
+
 #define S_TO_MS(n) ((n)*1000L)
 #define S_TO_US(n) ((n)*1000000LL)
 #define MS_TO_US(n) ((n)*1000LL)
