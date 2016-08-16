@@ -2172,6 +2172,7 @@ LOCAL JobNode *findJobByName(ConstString name)
   assert(Semaphore_isLocked(&jobList.lock));
 
 //TODO: LIST_FIND
+  jobNode = LIST_FIND(&jobList,jobNode,String_equals(jobNode->name,name));
   jobNode = jobList.head;
   while ((jobNode != NULL) && !String_equals(jobNode->name,name))
   {
@@ -2230,10 +2231,12 @@ LOCAL ScheduleNode *findScheduleByUUID(const JobNode *jobNode, ConstString sched
 {
   ScheduleNode *scheduleNode;
 
-  assert(Semaphore_isLocked(&jobList.lock));
+//  assert(Semaphore_isLocked(&jobList.lock));
+  assert(jobNode != NULL);
 
   if (jobNode != NULL)
   {
+//TODO: listFind
     scheduleNode = jobNode->scheduleList.head;
     while ((scheduleNode != NULL) && !String_equals(scheduleNode->uuid,scheduleUUID))
     {
@@ -2243,15 +2246,14 @@ LOCAL ScheduleNode *findScheduleByUUID(const JobNode *jobNode, ConstString sched
   else
   {
     scheduleNode = NULL;
-    jobNode      = jobList.head;
-    while ((jobNode != NULL) && (scheduleNode == NULL))
+    LIST_ITERATEX(&jobList,jobNode,scheduleNode == NULL)
     {
+//TODO: listFind
       scheduleNode = jobNode->scheduleList.head;
       while ((scheduleNode != NULL) && !String_equals(scheduleNode->uuid,scheduleUUID))
       {
         scheduleNode = scheduleNode->next;
       }
-      jobNode = jobNode->next;
     }
   }
 
@@ -2344,23 +2346,39 @@ LOCAL void startJob(JobNode *jobNode)
 /***********************************************************************\
 * Name   : doneJob
 * Purpose: done job (store running data, free job data, e. g. passwords)
-* Input  : jobNode      - job node
-*          scheduleUUID - schedule UUID or NULL
+* Input  : jobNode - job node
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void doneJob(JobNode *jobNode, ConstString scheduleUUID)
+LOCAL void doneJob(JobNode *jobNode)
 {
   ScheduleNode *scheduleNode;
 
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
-  // decrement active counter
-  assert(jobList.activeCount > 0);
-  jobList.activeCount--;
+  // clear passwords
+  if (jobNode->cryptPassword != NULL)
+  {
+    Password_delete(jobNode->cryptPassword);
+    jobNode->cryptPassword = NULL;
+  }
+  if (jobNode->cryptPassword != NULL)
+  {
+    Password_delete(jobNode->sshPassword);
+    jobNode->sshPassword = NULL;
+  }
+  if (jobNode->cryptPassword != NULL)
+  {
+    Password_delete(jobNode->ftpPassword);
+    jobNode->ftpPassword = NULL;
+  }
+
+  // clear schedule
+  String_clear(jobNode->schedule.uuid);
+  String_clear(jobNode->schedule.customText);
 
   // set state
   if      (jobNode->requestedAbortFlag)
@@ -2375,6 +2393,27 @@ LOCAL void doneJob(JobNode *jobNode, ConstString scheduleUUID)
   {
     jobNode->state = JOB_STATE_DONE;
   }
+
+  // decrement active counter
+  assert(jobList.activeCount > 0);
+  jobList.activeCount--;
+}
+
+/***********************************************************************\
+* Name   : updateJob
+* Purpose: update job (store running data, free job data, e. g. passwords)
+* Input  : jobNode      - job node
+*          scheduleUUID - schedule UUID or NULL
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void updateJob(JobNode *jobNode, ConstString scheduleUUID)
+{
+  ScheduleNode *scheduleNode;
+
+  assert(jobNode != NULL);
 
   // set last executed date/time
   jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
@@ -2440,27 +2479,6 @@ LOCAL void doneJob(JobNode *jobNode, ConstString scheduleUUID)
       }
     }
   }
-
-  // clear passwords
-  if (jobNode->cryptPassword != NULL)
-  {
-    Password_delete(jobNode->cryptPassword);
-    jobNode->cryptPassword = NULL;
-  }
-  if (jobNode->cryptPassword != NULL)
-  {
-    Password_delete(jobNode->sshPassword);
-    jobNode->sshPassword = NULL;
-  }
-  if (jobNode->cryptPassword != NULL)
-  {
-    Password_delete(jobNode->ftpPassword);
-    jobNode->ftpPassword = NULL;
-  }
-
-  // clear schedule
-  String_clear(jobNode->schedule.uuid);
-  String_clear(jobNode->schedule.customText);
 }
 
 /***********************************************************************\
@@ -2563,6 +2581,60 @@ LOCAL void jobDeleted(JobNode *jobNode)
 #endif
 
 /***********************************************************************\
+* Name   : writeJobScheduleInfo
+* Purpose: write job schedule info
+* Input  : jobNode - job node
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
+{
+  String     fileName,pathName,baseName;
+  FileHandle fileHandle;
+  Errors     error;
+
+  assert(jobNode != NULL);
+
+  if (!String_isEmpty(jobNode->fileName))
+  {
+    // get filename
+    fileName = String_new();
+    File_splitFileName(jobNode->fileName,&pathName,&baseName);
+    File_setFileName(fileName,pathName);
+    File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
+    String_delete(baseName);
+    String_delete(pathName);
+
+    // create file .name
+    error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
+    if (error != ERROR_NONE)
+    {
+      String_delete(fileName);
+      return error;
+    }
+
+    // write file
+    error = File_printLine(&fileHandle,"%lld",jobNode->lastExecutedDateTime);
+    if (error != ERROR_NONE)
+    {
+      File_close(&fileHandle);
+      String_delete(fileName);
+      return error;
+    }
+
+    // close file
+    File_close(&fileHandle);
+
+    // free resources
+    String_delete(fileName);
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : readJobScheduleInfo
 * Purpose: read job schedule info
 * Input  : jobNode - job node
@@ -2632,69 +2704,15 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
 }
 
 /***********************************************************************\
-* Name   : writeJobScheduleInfo
-* Purpose: write job schedule info
+* Name   : writeJob
+* Purpose: write (update) job file
 * Input  : jobNode - job node
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
-{
-  String     fileName,pathName,baseName;
-  FileHandle fileHandle;
-  Errors     error;
-
-  assert(jobNode != NULL);
-
-  if (!String_isEmpty(jobNode->fileName))
-  {
-    // get filename
-    fileName = String_new();
-    File_splitFileName(jobNode->fileName,&pathName,&baseName);
-    File_setFileName(fileName,pathName);
-    File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
-    String_delete(baseName);
-    String_delete(pathName);
-
-    // create file .name
-    error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
-    if (error != ERROR_NONE)
-    {
-      String_delete(fileName);
-      return error;
-    }
-
-    // write file
-    error = File_printLine(&fileHandle,"%lld",jobNode->lastExecutedDateTime);
-    if (error != ERROR_NONE)
-    {
-      File_close(&fileHandle);
-      String_delete(fileName);
-      return error;
-    }
-
-    // close file
-    File_close(&fileHandle);
-
-    // free resources
-    String_delete(fileName);
-  }
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : updateJob
-* Purpose: update job file
-* Input  : jobNode - job node
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors updateJob(JobNode *jobNode)
+LOCAL Errors writeJob(JobNode *jobNode)
 {
   StringList        jobLinesList;
   String            line;
@@ -2804,15 +2822,15 @@ LOCAL Errors updateJob(JobNode *jobNode)
 }
 
 /***********************************************************************\
-* Name   : updateAllJobs
-* Purpose: update all job files
+* Name   : writeModifiedJobs
+* Purpose: write (update) modified job files
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : update jobList
 \***********************************************************************/
 
-LOCAL void updateAllJobs(void)
+LOCAL void writeModifiedJobs(void)
 {
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
@@ -2824,7 +2842,7 @@ LOCAL void updateAllJobs(void)
     {
       if (jobNode->modifiedFlag)
       {
-        error = updateJob(jobNode);
+        error = writeJob(jobNode);
         if (error != ERROR_NONE)
         {
           printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
@@ -3075,7 +3093,7 @@ LOCAL bool readJob(JobNode *jobNode)
   // save job if modified
   if (jobNode->modifiedFlag)
   {
-    error = updateJob(jobNode);
+    error = writeJob(jobNode);
     if (error != ERROR_NONE)
     {
       printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
@@ -3546,6 +3564,7 @@ LOCAL void jobThreadCode(void)
       do
       {
         // first check for continuous
+//TODO: listFind
         jobNode = jobList.head;
         while (   !quitFlag
                && (jobNode != NULL)
@@ -3560,6 +3579,7 @@ LOCAL void jobThreadCode(void)
         if (jobNode == NULL)
         {
           // next check for other types
+//TODO: listFind
           jobNode = jobList.head;
           while (   !quitFlag
                  && (jobNode != NULL)
@@ -4018,6 +4038,9 @@ NULL,//                                                        scheduleTitle,
     // done log
     doneLog(&logHandle);
 
+    // update job
+    updateJob(jobNode,scheduleUUID);
+
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // free resources
@@ -4029,7 +4052,7 @@ NULL,//                                                        scheduleTitle,
       EntryList_clear(&includeEntryList);
 
       // done job
-      doneJob(jobNode,scheduleUUID);
+      doneJob(jobNode);
 
       if (!jobNode->jobOptions.dryRunFlag)
       {
@@ -4096,7 +4119,6 @@ LOCAL void remoteConnectThreadCode(void)
 
     String     jobUUID;
     RemoteHost remoteHost;
-
   } RemoteJobInfoNode;
 
   typedef struct
@@ -4297,7 +4319,6 @@ LOCAL void remoteThreadCode(void)
 
     String     jobUUID;
     RemoteHost remoteHost;
-
   } RemoteJobInfoNode;
 
   typedef struct
@@ -4866,8 +4887,8 @@ LOCAL void schedulerThreadCode(void)
 
   while (!quitFlag)
   {
-    // update job files
-    updateAllJobs();
+    // write job files
+    writeModifiedJobs();
 
     // re-read job config files
     rereadAllJobs(serverJobsDirectory);
@@ -4877,9 +4898,8 @@ LOCAL void schedulerThreadCode(void)
     Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT);
     {
       currentDateTime = Misc_getCurrentDateTime();
-//TODO: LIST_ITERATEX()
-      jobNode         = jobList.head;
-      while (!quitFlag && !pendingFlag && (jobNode != NULL))
+
+      LIST_ITERATEX(&jobList,jobNode,!quitFlag && !pendingFlag)
       {
         if (!isJobActive(jobNode))
         {
@@ -4991,9 +5011,6 @@ LOCAL void schedulerThreadCode(void)
           // check if another thread is pending for job list
           pendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
         }
-
-        // next job
-        jobNode = jobNode->next;
       }
     }
     Semaphore_unlock(&jobList.lock);
@@ -9516,11 +9533,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
-//TODO: LIST_ITERATEX()
-    jobNode = jobList.head;
-    while (   (jobNode != NULL)
-           && !isCommandAborted(clientInfo,id)
-          )
+    LIST_ITERATEX(&jobList,jobNode,!isCommandAborted(clientInfo,id))
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                        "jobUUID=%S name=%'S state=%'s remoteHostName=%'S remoteHostPort=%d remoteHostForceSSL=%y archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
@@ -9548,8 +9561,6 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                        jobNode->lastExecutedDateTime,
                        jobNode->runningInfo.estimatedRestTime
                       );
-
-      jobNode = jobNode->next;
     }
   }
 
@@ -9710,7 +9721,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       String_delete(fileName);
 
       // write job to file
-      error = updateJob(jobNode);
+      error = writeJob(jobNode);
       if (error != ERROR_NONE)
       {
         printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
@@ -9831,7 +9842,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     String_delete(fileName);
 
     // write job to file
-    error = updateJob(jobNode);
+    error = writeJob(jobNode);
     if (error != ERROR_NONE)
     {
       printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
@@ -10153,7 +10164,8 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
          jobNode->runningInfo.error = Remote_jobAbort(&jobNode->remoteHost,
                                                       jobNode->uuid
                                                      );
-         doneJob(jobNode,NULL);
+         updateJob(jobNode,NULL);
+         doneJob(jobNode);
       }
     }
     else if (isJobActive(jobNode))
@@ -10190,8 +10202,8 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  // update all job files
-  updateAllJobs();
+  // write all job files
+  writeModifiedJobs();
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -15009,15 +15021,55 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
 LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  typedef struct UUIDNode
+  {
+    LIST_NODE_HEADER(struct UUIDNode);
+
+    IndexId            uuidId;
+    String             jobUUID;
+    uint64             lastExecutedDateTime;
+    String             lastErrorMessage;
+    ulong              totalEntryCount;
+    uint64             totalEntrySize;
+  } UUIDNode;
+
+  typedef struct
+  {
+    LIST_HEADER(UUIDNode);
+  } UUIDList;
+
+  /***********************************************************************\
+  * Name   : freeUUIDNode
+  * Purpose: free UUID node
+  * Input  : remoteJobInfoNode - UUID node
+  *          userData          - not used
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  void freeUUIDNode(UUIDNode *uuidNode, void *userData)
+  {
+    assert(uuidNode != NULL);
+    assert(uuidNode->jobUUID != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    String_delete(uuidNode->lastErrorMessage);
+    String_delete(uuidNode->jobUUID);
+  }
+
   String           name;
+  UUIDList         uuidList;
   String           lastErrorMessage;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   IndexId          uuidId;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint64           lastCreatedDateTime;
+  uint64           lastExecutedDateTime;
   ulong            totalEntryCount;
   uint64           totalEntrySize;
+  UUIDNode         *uuidNode;
   SemaphoreLock    semaphoreLock;
   JobNode          *jobNode;
 
@@ -15037,8 +15089,10 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   }
 
   // init variables
+  List_init(&uuidList);
   lastErrorMessage = String_new();
 
+  // get UUIDs (Note: use list to avoid dead-lock in job list)
   error = Index_initListUUIDs(&indexQueryHandle,
                               indexHandle,
                               name,
@@ -15048,6 +15102,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   if (error != ERROR_NONE)
   {
     String_delete(lastErrorMessage);
+    List_done(&uuidList,(ListNodeFreeFunction)freeUUIDNode,NULL);
 
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init uuid list fail: %s",Error_getText(error));
 
@@ -15058,42 +15113,64 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
          && Index_getNextUUID(&indexQueryHandle,
                               &uuidId,
                               jobUUID,
-                              &lastCreatedDateTime,
+                              &lastExecutedDateTime,
                               lastErrorMessage,
                               &totalEntryCount,
                               &totalEntrySize
                              )
         )
   {
-    // get job name
-    String_set(name,jobUUID);
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    uuidNode = LIST_NEW_NODE(UUIDNode);
+    if (uuidNode == NULL)
     {
-      jobNode = findJobByUUID(jobUUID);
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    uuidNode->uuidId               = uuidId;
+    uuidNode->jobUUID              = String_duplicate(jobUUID);
+    uuidNode->lastExecutedDateTime = lastExecutedDateTime;
+    uuidNode->lastErrorMessage     = String_duplicate(lastErrorMessage);
+    uuidNode->totalEntryCount      = totalEntryCount;
+    uuidNode->totalEntrySize       = totalEntrySize;
+
+    List_append(&uuidList,uuidNode);
+  }
+  Index_doneList(&indexQueryHandle);
+
+  // get job names and send list
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    LIST_ITERATE(&uuidList,uuidNode)
+    {
+      // get job name
+      jobNode = findJobByUUID(uuidNode->jobUUID);
       if (jobNode != NULL)
       {
         String_set(name,jobNode->name);
       }
-    }
+      else
+      {
+        String_set(name,uuidNode->jobUUID);
+      }
 
-    // send result
-    sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "uuidId=%llu jobUUID=%S name=%'S lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%llu totalEntrySize=%llu",
-                     uuidId,
-                     jobUUID,
-                     name,
-                     lastCreatedDateTime,
-                     lastErrorMessage,
-                     totalEntryCount,
-                     totalEntrySize
-                    );
+      // send result
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                       "uuidId=%llu jobUUID=%S name=%'S lastExecutedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%llu totalEntrySize=%llu",
+                       uuidNode->uuidId,
+                       uuidNode->jobUUID,
+                       name,
+                       uuidNode->lastExecutedDateTime,
+                       uuidNode->lastErrorMessage,
+                       uuidNode->totalEntryCount,
+                       uuidNode->totalEntrySize
+                      );
+    }
   }
-  Index_doneList(&indexQueryHandle);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(lastErrorMessage);
+  List_done(&uuidList,(ListNodeFreeFunction)freeUUIDNode,NULL);
   String_delete(name);
 }
 
@@ -17074,7 +17151,6 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
     String_delete(name);
     return;
   }
-fprintf(stderr,"%s, %d: storageCount=%lu totalEntryCount=%lu\n",__FILE__,__LINE__,storageCount,totalEntryCount);
 
   // send data
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",storageCount,totalEntryCount,totalEntrySize,totalEntryContentSize);
@@ -18737,7 +18813,7 @@ Errors Server_run(uint              port,
           else
           {
 //TODO: remove unknown
-  fprintf(stderr,"%s, %d: %x\n",__FILE__,__LINE__,pollfds[pollfdIndex].revents);
+fprintf(stderr,"%s, %d: %x\n",__FILE__,__LINE__,pollfds[pollfdIndex].revents);
           }
         }
       }
@@ -18782,6 +18858,7 @@ Errors Server_run(uint              port,
     while (authorizationFailNode != NULL)
     {
       // find active client
+//TODO: listFind
       LIST_ITERATE(&clientList,clientNode)
       {
         if (clientNode->clientInfo.authorizationFailNode == authorizationFailNode) break;
@@ -18845,9 +18922,6 @@ Errors Server_run(uint              port,
     deleteClient(clientNode);
   }
 
-  // done index
-  Index_close(indexHandle);
-
   // wait for thread exit
   Semaphore_setEnd(&jobList.lock);
   if (Index_isAvailable())
@@ -18868,6 +18942,9 @@ Errors Server_run(uint              port,
 //TODO
   // done database pause callbacks
   Index_setPauseCallback(CALLBACK(NULL,NULL));
+
+  // done index
+  Index_close(indexHandle);
 
   // done server
   if (serverFlag   ) Network_doneServer(&serverSocketHandle);
