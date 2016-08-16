@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-08-15 20:06+0200\n"
+"POT-Creation-Date: 2016-08-16 01:58+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2035,8 +2035,8 @@ msgstr ""
 msgid "Schedule"
 msgstr ""
 
-#: src/TabJobs.java:7976 src/TabStatus.java:589 src/TabStatus.java:705
-msgid "Last executed"
+#: src/TabJobs.java:7976 src/TabRestore.java:4267 src/TabRestore.java:4407
+msgid "Last created"
 msgstr ""
 
 #: src/TabJobs.java:7986
@@ -2573,10 +2573,6 @@ msgstr ""
 
 #: src/TabRestore.java:4256 src/TabRestore.java:4386
 msgid "Job UUID"
-msgstr ""
-
-#: src/TabRestore.java:4267 src/TabRestore.java:4407 src/TabStatus.java:2346
-msgid "Last created"
 msgstr ""
 
 #: src/TabRestore.java:4277 src/TabRestore.java:4417
@@ -3215,6 +3211,10 @@ msgstr ""
 
 #: src/TabStatus.java:587
 msgid "Click to sort for used encryption algorithm."
+msgstr ""
+
+#: src/TabStatus.java:589 src/TabStatus.java:705 src/TabStatus.java:2346
+msgid "Last executed"
 msgstr ""
 
 #: src/TabStatus.java:590
