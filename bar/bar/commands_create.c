@@ -6617,6 +6617,7 @@ Errors Command_create(ConstString                  jobUUID,
     // get/create index job UUID
     if (!Index_findUUIDByJobUUID(indexHandle,
                                  jobUUID,
+                                 NULL,  // scheduleUUID
                                  &uuidId,
                                  NULL,  // lastCreatedDateTime,
                                  NULL,  // lastErrorMessage,

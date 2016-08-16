@@ -92,34 +92,44 @@ typedef enum
 // schedule
 typedef struct
 {
-  int year;                                    // year or SCHEDULE_ANY
-  int month;                                   // month or SCHEDULE_ANY
-  int day;                                     // day or SCHEDULE_ANY
+  int year;                                             // year or SCHEDULE_ANY
+  int month;                                            // month or SCHEDULE_ANY
+  int day;                                              // day or SCHEDULE_ANY
 } ScheduleDate;
 typedef WeekDaySet ScheduleWeekDaySet;
 typedef struct
 {
-  int hour;                                    // hour or SCHEDULE_ANY
-  int minute;                                  // minute or SCHEDULE_ANY
+  int hour;                                             // hour or SCHEDULE_ANY
+  int minute;                                           // minute or SCHEDULE_ANY
 } ScheduleTime;
 typedef struct ScheduleNode
 {
   LIST_NODE_HEADER(struct ScheduleNode);
 
-  String             uuid;                     // unique id
-  String             parentUUID;               // unique parent id or NULL
+  String             uuid;                              // unique id
+  String             parentUUID;                        // unique parent id or NULL
   ScheduleDate       date;
   ScheduleWeekDaySet weekDaySet;
   ScheduleTime       time;
-  ArchiveTypes       archiveType;              // archive type to create
-  uint               interval;                 // continuous interval [min]
-  String             customText;               // custom text
-  uint               minKeep,maxKeep;          // min./max keep count
-  uint               maxAge;                   // max. age [days]
-  bool               noStorage;                // TRUE to skip storage, only create incremental data file
-  bool               enabled;                  // TRUE iff enabled
-  String             preProcessScript;         // script to execute before start of job
-  String             postProcessScript;        // script to execute after after termination of job
+  ArchiveTypes       archiveType;                       // archive type to create
+  uint               interval;                          // continuous interval [min]
+  String             customText;                        // custom text
+  uint               minKeep,maxKeep;                   // min./max keep count
+  uint               maxAge;                            // max. age [days]
+  bool               noStorage;                         // TRUE to skip storage, only create incremental data file
+  bool               enabled;                           // TRUE iff enabled
+  String             preProcessScript;                  // script to execute before start of job
+  String             postProcessScript;                 // script to execute after after termination of job
+
+  uint64             lastExecutedDateTime;              // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
+  String             lastErrorMessage;                  // last error message
+  ulong              executionCount;                    // number of executions
+  uint64             averageDuration;                   // average durcation [s]
+  ulong              totalEntityCount;                  // total number of entities
+  ulong              totalStorageCount;                 // total number of storage files
+  uint64             totalStorageSize;                  // total size of storage files
+  ulong              totalEntryCount;                   // total number of entries
+  uint64             totalEntrySize;                    // total size of entities
 } ScheduleNode;
 
 typedef struct
@@ -183,7 +193,6 @@ typedef struct JobNode
 //  uint64          lastScheduleModified;
 
   // schedule info
-  uint64          lastExecutedDateTime;                 // last execution date/time (timestamp)
   uint64          lastCheckDateTime;                    // last check date/time (timestamp)
 
   // comment
@@ -212,6 +221,16 @@ typedef struct JobNode
   uint            requestedVolumeNumber;                // requested volume number
   uint            volumeNumber;                         // loaded volume number
   bool            volumeUnloadFlag;                     // TRUE to unload volume
+
+  uint64          lastExecutedDateTime;                 // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
+  String          lastErrorMessage;                     // last error message
+  ulong           executionCount;                       // number of executions
+  uint64          averageDuration;                      // average durcation [s]
+  ulong           totalEntityCount;                     // total number of entities
+  ulong           totalStorageCount;                    // total number of storage files
+  uint64          totalStorageSize;                     // total size of storage files
+  ulong           totalEntryCount;                      // total number of entries
+  uint64          totalEntrySize;                       // total size of entities
 
   // running info
   struct
@@ -650,6 +669,7 @@ LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
+  String_delete(scheduleNode->lastErrorMessage);
   String_delete(scheduleNode->customText);
   String_delete(scheduleNode->parentUUID);
   String_delete(scheduleNode->uuid);
@@ -673,22 +693,32 @@ LOCAL ScheduleNode *newScheduleNode(void)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  scheduleNode->uuid        = String_new();
-  scheduleNode->parentUUID  = NULL;
-  scheduleNode->date.year   = DATE_ANY;
-  scheduleNode->date.month  = DATE_ANY;
-  scheduleNode->date.day    = DATE_ANY;
-  scheduleNode->weekDaySet  = WEEKDAY_SET_ANY;
-  scheduleNode->time.hour   = TIME_ANY;
-  scheduleNode->time.minute = TIME_ANY;
-  scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
-  scheduleNode->interval    = 0;
-  scheduleNode->customText  = String_new();
-  scheduleNode->minKeep     = 0;
-  scheduleNode->maxKeep     = 0;
-  scheduleNode->maxAge      = 0;
-  scheduleNode->noStorage   = FALSE;
-  scheduleNode->enabled     = FALSE;
+  scheduleNode->uuid                 = String_new();
+  scheduleNode->parentUUID           = NULL;
+  scheduleNode->date.year            = DATE_ANY;
+  scheduleNode->date.month           = DATE_ANY;
+  scheduleNode->date.day             = DATE_ANY;
+  scheduleNode->weekDaySet           = WEEKDAY_SET_ANY;
+  scheduleNode->time.hour            = TIME_ANY;
+  scheduleNode->time.minute          = TIME_ANY;
+  scheduleNode->archiveType          = ARCHIVE_TYPE_NORMAL;
+  scheduleNode->interval             = 0;
+  scheduleNode->customText           = String_new();
+  scheduleNode->minKeep              = 0;
+  scheduleNode->maxKeep              = 0;
+  scheduleNode->maxAge               = 0;
+  scheduleNode->noStorage            = FALSE;
+  scheduleNode->enabled              = FALSE;
+
+  scheduleNode->lastExecutedDateTime = 0LL;
+  scheduleNode->lastErrorMessage     = String_new();
+  scheduleNode->executionCount       = 0L;
+  scheduleNode->averageDuration      = 0LL;
+  scheduleNode->totalEntityCount     = 0L;
+  scheduleNode->totalStorageCount    = 0L;
+  scheduleNode->totalStorageSize     = 0LL;
+  scheduleNode->totalEntryCount      = 0LL;
+  scheduleNode->totalEntrySize       = 0LL;
 
   return scheduleNode;
 }
@@ -718,22 +748,32 @@ LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  scheduleNode->uuid        = Misc_getUUID(String_new());
-  scheduleNode->parentUUID  = String_duplicate(fromScheduleNode->parentUUID);
-  scheduleNode->date.year   = fromScheduleNode->date.year;
-  scheduleNode->date.month  = fromScheduleNode->date.month;
-  scheduleNode->date.day    = fromScheduleNode->date.day;
-  scheduleNode->weekDaySet  = fromScheduleNode->weekDaySet;
-  scheduleNode->time.hour   = fromScheduleNode->time.hour;
-  scheduleNode->time.minute = fromScheduleNode->time.minute;
-  scheduleNode->archiveType = fromScheduleNode->archiveType;
-  scheduleNode->interval    = fromScheduleNode->interval;
-  scheduleNode->customText  = String_duplicate(fromScheduleNode->customText);
-  scheduleNode->minKeep     = fromScheduleNode->minKeep;
-  scheduleNode->maxKeep     = fromScheduleNode->maxKeep;
-  scheduleNode->maxAge      = fromScheduleNode->maxAge;
-  scheduleNode->noStorage   = fromScheduleNode->noStorage;
-  scheduleNode->enabled     = fromScheduleNode->enabled;
+  scheduleNode->uuid                 = Misc_getUUID(String_new());
+  scheduleNode->parentUUID           = String_duplicate(fromScheduleNode->parentUUID);
+  scheduleNode->date.year            = fromScheduleNode->date.year;
+  scheduleNode->date.month           = fromScheduleNode->date.month;
+  scheduleNode->date.day             = fromScheduleNode->date.day;
+  scheduleNode->weekDaySet           = fromScheduleNode->weekDaySet;
+  scheduleNode->time.hour            = fromScheduleNode->time.hour;
+  scheduleNode->time.minute          = fromScheduleNode->time.minute;
+  scheduleNode->archiveType          = fromScheduleNode->archiveType;
+  scheduleNode->interval             = fromScheduleNode->interval;
+  scheduleNode->customText           = String_duplicate(fromScheduleNode->customText);
+  scheduleNode->minKeep              = fromScheduleNode->minKeep;
+  scheduleNode->maxKeep              = fromScheduleNode->maxKeep;
+  scheduleNode->maxAge               = fromScheduleNode->maxAge;
+  scheduleNode->noStorage            = fromScheduleNode->noStorage;
+  scheduleNode->enabled              = fromScheduleNode->enabled;
+
+  scheduleNode->lastExecutedDateTime = 0LL;
+  scheduleNode->lastErrorMessage     = String_new();
+  scheduleNode->executionCount       = 0L;
+  scheduleNode->averageDuration      = 0LL;
+  scheduleNode->totalEntityCount     = 0L;
+  scheduleNode->totalStorageCount    = 0L;
+  scheduleNode->totalStorageSize     = 0LL;
+  scheduleNode->totalEntryCount      = 0LL;
+  scheduleNode->totalEntrySize       = 0LL;
 
   return scheduleNode;
 }
@@ -1420,6 +1460,34 @@ LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, co
   }
   String_delete(s);
 
+  // get schedule info (if possible)
+  scheduleNode->lastExecutedDateTime = 0LL;
+  String_clear(scheduleNode->lastErrorMessage);
+  scheduleNode->executionCount       = 0L;
+  scheduleNode->averageDuration      = 0LL;
+  scheduleNode->totalEntityCount     = 0L;
+  scheduleNode->totalStorageCount    = 0L;
+  scheduleNode->totalStorageSize     = 0LL;
+  scheduleNode->totalEntryCount      = 0L;
+  scheduleNode->totalEntrySize       = 0LL;
+  if (indexHandle != NULL)
+  {
+    (void)Index_findUUIDByJobUUID(indexHandle,
+                                  NULL, // jobUUID
+                                  scheduleNode->uuid,
+                                  NULL,  // uuidId,
+                                  &scheduleNode->lastExecutedDateTime,
+                                  scheduleNode->lastErrorMessage,
+                                  &scheduleNode->executionCount,
+                                  &scheduleNode->averageDuration,
+                                  &scheduleNode->totalEntityCount,
+                                  &scheduleNode->totalStorageCount,
+                                  &scheduleNode->totalStorageSize,
+                                  &scheduleNode->totalEntryCount,
+                                  &scheduleNode->totalEntrySize
+                                 );
+  }
+
   // append to list
   List_append((ScheduleList*)variable,scheduleNode);
 
@@ -1687,6 +1755,8 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   String_delete(jobNode->runningInfo.storageName);
   String_delete(jobNode->runningInfo.entryName);
 
+  String_delete(jobNode->lastErrorMessage);
+
   String_delete(jobNode->schedule.customText);
   String_delete(jobNode->schedule.uuid);
 
@@ -1765,7 +1835,6 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
   jobNode->modifiedFlag                   = FALSE;
   jobNode->scheduleModifiedFlag           = FALSE;
 
-  jobNode->lastExecutedDateTime           = 0LL;
   jobNode->lastCheckDateTime              = 0LL;
 
   jobNode->comment                        = String_new();
@@ -1786,6 +1855,16 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
   jobNode->requestedVolumeNumber          = 0;
   jobNode->volumeNumber                   = 0;
   jobNode->volumeUnloadFlag               = FALSE;
+
+  jobNode->lastExecutedDateTime           = 0LL;
+  jobNode->lastErrorMessage               = String_new();
+  jobNode->executionCount                 = 0L;
+  jobNode->averageDuration                = 0LL;
+  jobNode->totalEntityCount               = 0L;
+  jobNode->totalStorageCount              = 0L;
+  jobNode->totalStorageSize               = 0LL;
+  jobNode->totalEntryCount                = 0L;
+  jobNode->totalEntrySize                 = 0LL;
 
   jobNode->runningInfo.entryName          = String_new();
   jobNode->runningInfo.storageName        = String_new();
@@ -1865,7 +1944,6 @@ LOCAL JobNode *copyJob(JobNode     *jobNode,
   newJobNode->modifiedFlag                   = TRUE;
   newJobNode->scheduleModifiedFlag           = TRUE;
 
-  newJobNode->lastExecutedDateTime           = 0LL;
   newJobNode->lastCheckDateTime              = 0LL;
 
   newJobNode->comment                        = String_duplicate(jobNode->comment);
@@ -1886,6 +1964,16 @@ LOCAL JobNode *copyJob(JobNode     *jobNode,
   newJobNode->requestedVolumeNumber          = 0;
   newJobNode->volumeNumber                   = 0;
   newJobNode->volumeUnloadFlag               = FALSE;
+
+  newJobNode->lastExecutedDateTime           = 0LL;
+  newJobNode->lastErrorMessage               = String_new();
+  newJobNode->executionCount                 = 0L;
+  newJobNode->averageDuration                = 0LL;
+  newJobNode->totalEntityCount               = 0L;
+  newJobNode->totalStorageCount              = 0L;
+  newJobNode->totalStorageSize               = 0LL;
+  newJobNode->totalEntryCount                = 0L;
+  newJobNode->totalEntrySize                 = 0LL;
 
   newJobNode->runningInfo.entryName          = String_new();
   newJobNode->runningInfo.storageName        = String_new();
@@ -2069,6 +2157,108 @@ LOCAL bool isSomeJobRunning(void)
 #endif
 
 /***********************************************************************\
+* Name   : findJobByName
+* Purpose: find job by name
+* Input  : name - job name
+* Output : -
+* Return : job node or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL JobNode *findJobByName(ConstString name)
+{
+  JobNode *jobNode;
+
+  assert(Semaphore_isLocked(&jobList.lock));
+
+//TODO: LIST_FIND
+  jobNode = jobList.head;
+  while ((jobNode != NULL) && !String_equals(jobNode->name,name))
+  {
+    jobNode = jobNode->next;
+  }
+
+  if (jobNode != NULL)
+  {
+    jobNode->timestamp = Misc_getTimestamp();
+  }
+
+  return jobNode;
+}
+
+/***********************************************************************\
+* Name   : findJobByUUID
+* Purpose: find job by uuid
+* Input  : uuid - job uuid
+* Output : -
+* Return : job node or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL JobNode *findJobByUUID(ConstString uuid)
+{
+  JobNode *jobNode;
+
+  assert(Semaphore_isLocked(&jobList.lock));
+
+// TODO: list find
+  jobNode = jobList.head;
+  while ((jobNode != NULL) && !String_equals(jobNode->uuid,uuid))
+  {
+    jobNode = jobNode->next;
+  }
+
+  if (jobNode != NULL)
+  {
+    jobNode->timestamp = Misc_getTimestamp();
+  }
+
+  return jobNode;
+}
+
+/***********************************************************************\
+* Name   : findScheduleByUUID
+* Purpose: find schedule by uuid
+* Input  : jobNode      - job node (can be NULL)
+*          scheduleUUID - schedule UUID
+* Output : -
+* Return : schedule node or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ScheduleNode *findScheduleByUUID(const JobNode *jobNode, ConstString scheduleUUID)
+{
+  ScheduleNode *scheduleNode;
+
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  if (jobNode != NULL)
+  {
+    scheduleNode = jobNode->scheduleList.head;
+    while ((scheduleNode != NULL) && !String_equals(scheduleNode->uuid,scheduleUUID))
+    {
+      scheduleNode = scheduleNode->next;
+    }
+  }
+  else
+  {
+    scheduleNode = NULL;
+    jobNode      = jobList.head;
+    while ((jobNode != NULL) && (scheduleNode == NULL))
+    {
+      scheduleNode = jobNode->scheduleList.head;
+      while ((scheduleNode != NULL) && !String_equals(scheduleNode->uuid,scheduleUUID))
+      {
+        scheduleNode = scheduleNode->next;
+      }
+      jobNode = jobNode->next;
+    }
+  }
+
+  return scheduleNode;
+}
+
+/***********************************************************************\
 * Name   : triggerJob
 * Purpose: trogger job run
 * Input  : jobNode - job node
@@ -2154,14 +2344,17 @@ LOCAL void startJob(JobNode *jobNode)
 /***********************************************************************\
 * Name   : doneJob
 * Purpose: done job (store running data, free job data, e. g. passwords)
-* Input  : jobNode - job node
+* Input  : jobNode      - job node
+*          scheduleUUID - schedule UUID or NULL
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void doneJob(JobNode *jobNode)
+LOCAL void doneJob(JobNode *jobNode, ConstString scheduleUUID)
 {
+  ScheduleNode *scheduleNode;
+
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
@@ -2169,8 +2362,7 @@ LOCAL void doneJob(JobNode *jobNode)
   assert(jobList.activeCount > 0);
   jobList.activeCount--;
 
-  // set executed time, state
-  jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
+  // set state
   if      (jobNode->requestedAbortFlag)
   {
     jobNode->state = JOB_STATE_ABORTED;
@@ -2182,6 +2374,71 @@ LOCAL void doneJob(JobNode *jobNode)
   else
   {
     jobNode->state = JOB_STATE_DONE;
+  }
+
+  // set last executed date/time
+  jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
+
+  // update job info (if possible)
+  String_clear(jobNode->lastErrorMessage);
+  jobNode->executionCount    = 0L;
+  jobNode->averageDuration   = 0LL;
+  jobNode->totalEntityCount  = 0L;
+  jobNode->totalStorageCount = 0L;
+  jobNode->totalStorageSize  = 0LL;
+  jobNode->totalEntryCount   = 0L;
+  jobNode->totalEntrySize    = 0LL;
+  if (indexHandle != NULL)
+  {
+    (void)Index_findUUIDByJobUUID(indexHandle,
+                                  jobNode->uuid,
+                                  NULL, // scheduleUUID
+                                  NULL,  // uuidId,
+                                  NULL, // lastExecutedDateTime
+                                  jobNode->lastErrorMessage,
+                                  &jobNode->executionCount,
+                                  &jobNode->averageDuration,
+                                  &jobNode->totalEntityCount,
+                                  &jobNode->totalStorageCount,
+                                  &jobNode->totalStorageSize,
+                                  &jobNode->totalEntryCount,
+                                  &jobNode->totalEntrySize
+                                 );
+  }
+
+  if (!String_isEmpty(scheduleUUID))
+  {
+    // update schedule info (if possible)
+    scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+    if (scheduleNode != NULL)
+    {
+      scheduleNode->lastExecutedDateTime = 0LL;
+      String_clear(scheduleNode->lastErrorMessage);
+      scheduleNode->executionCount       = 0L;
+      scheduleNode->averageDuration      = 0LL;
+      scheduleNode->totalEntityCount     = 0L;
+      scheduleNode->totalStorageCount    = 0L;
+      scheduleNode->totalStorageSize     = 0LL;
+      scheduleNode->totalEntryCount      = 0L;
+      scheduleNode->totalEntrySize       = 0LL;
+      if (indexHandle != NULL)
+      {
+        (void)Index_findUUIDByJobUUID(indexHandle,
+                                      NULL, // jobUUID
+                                      scheduleUUID,
+                                      NULL,  // uuidId,
+                                      &scheduleNode->lastExecutedDateTime,
+                                      scheduleNode->lastErrorMessage,
+                                      &scheduleNode->executionCount,
+                                      &scheduleNode->averageDuration,
+                                      &scheduleNode->totalEntityCount,
+                                      &scheduleNode->totalStorageCount,
+                                      &scheduleNode->totalStorageSize,
+                                      &scheduleNode->totalEntryCount,
+                                      &scheduleNode->totalEntrySize
+                                     );
+      }
+    }
   }
 
   // clear passwords
@@ -2306,108 +2563,6 @@ LOCAL void jobDeleted(JobNode *jobNode)
 #endif
 
 /***********************************************************************\
-* Name   : findJobByName
-* Purpose: find job by name
-* Input  : name - job name
-* Output : -
-* Return : job node or NULL if not found
-* Notes  : -
-\***********************************************************************/
-
-LOCAL JobNode *findJobByName(ConstString name)
-{
-  JobNode *jobNode;
-
-  assert(Semaphore_isLocked(&jobList.lock));
-
-//TODO: LIST_FIND
-  jobNode = jobList.head;
-  while ((jobNode != NULL) && !String_equals(jobNode->name,name))
-  {
-    jobNode = jobNode->next;
-  }
-
-  if (jobNode != NULL)
-  {
-    jobNode->timestamp = Misc_getTimestamp();
-  }
-
-  return jobNode;
-}
-
-/***********************************************************************\
-* Name   : findJobByUUID
-* Purpose: find job by uuid
-* Input  : uuid - job uuid
-* Output : -
-* Return : job node or NULL if not found
-* Notes  : -
-\***********************************************************************/
-
-LOCAL JobNode *findJobByUUID(ConstString uuid)
-{
-  JobNode *jobNode;
-
-  assert(Semaphore_isLocked(&jobList.lock));
-
-// TODO: list find
-  jobNode = jobList.head;
-  while ((jobNode != NULL) && !String_equals(jobNode->uuid,uuid))
-  {
-    jobNode = jobNode->next;
-  }
-
-  if (jobNode != NULL)
-  {
-    jobNode->timestamp = Misc_getTimestamp();
-  }
-
-  return jobNode;
-}
-
-/***********************************************************************\
-* Name   : findScheduleByUUID
-* Purpose: find schedule by uuid
-* Input  : jobNode      - job node (can be NULL)
-*          scheduleUUID - schedule UUID
-* Output : -
-* Return : schedule node or NULL if not found
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ScheduleNode *findScheduleByUUID(const JobNode *jobNode, ConstString scheduleUUID)
-{
-  ScheduleNode *scheduleNode;
-
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  if (jobNode != NULL)
-  {
-    scheduleNode = jobNode->scheduleList.head;
-    while ((scheduleNode != NULL) && !String_equals(scheduleNode->uuid,scheduleUUID))
-    {
-      scheduleNode = scheduleNode->next;
-    }
-  }
-  else
-  {
-    scheduleNode = NULL;
-    jobNode      = jobList.head;
-    while ((jobNode != NULL) && (scheduleNode == NULL))
-    {
-      scheduleNode = jobNode->scheduleList.head;
-      while ((scheduleNode != NULL) && !String_equals(scheduleNode->uuid,scheduleUUID))
-      {
-        scheduleNode = scheduleNode->next;
-      }
-      jobNode = jobNode->next;
-    }
-  }
-
-  return scheduleNode;
-}
-
-/***********************************************************************\
 * Name   : readJobScheduleInfo
 * Purpose: read job schedule info
 * Input  : jobNode - job node
@@ -2426,6 +2581,7 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
 
   assert(jobNode != NULL);
 
+  // reset variables
   jobNode->lastExecutedDateTime = 0LL;
 
   // get filename
@@ -2453,8 +2609,8 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
       // parse
       if (String_parse(line,STRING_BEGIN,"%lld",NULL,&n))
       {
-        jobNode->lastExecutedDateTime = n;
         jobNode->lastCheckDateTime    = n;
+        jobNode->lastExecutedDateTime = n;
       }
     }
     String_delete(line);
@@ -2769,6 +2925,7 @@ LOCAL bool readJob(JobNode *jobNode)
     {
       ScheduleNode *scheduleNode;
 
+      // new schedule
       scheduleNode = newScheduleNode();
       while (   File_getLine(&fileHandle,line,&lineNb,"#")
              && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
@@ -2811,12 +2968,43 @@ LOCAL bool readJob(JobNode *jobNode)
         }
       }
       File_ungetLine(&fileHandle,line,&lineNb);
+
+      // init schedule uuid
       if (String_isEmpty(scheduleNode->uuid))
       {
         Misc_getUUID(scheduleNode->uuid);
         jobNode->modifiedFlag = TRUE;
       }
 
+      // get schedule info (if possible)
+      scheduleNode->lastExecutedDateTime = 0LL;
+      String_clear(scheduleNode->lastErrorMessage);
+      scheduleNode->executionCount       = 0L;
+      scheduleNode->averageDuration      = 0LL;
+      scheduleNode->totalEntityCount     = 0L;
+      scheduleNode->totalStorageCount    = 0L;
+      scheduleNode->totalStorageSize     = 0LL;
+      scheduleNode->totalEntryCount      = 0L;
+      scheduleNode->totalEntrySize       = 0LL;
+      if (indexHandle != NULL)
+      {
+        (void)Index_findUUIDByJobUUID(indexHandle,
+                                      jobNode->uuid,
+                                      scheduleNode->uuid,
+                                      NULL,  // uuidId,
+                                      &scheduleNode->lastExecutedDateTime,
+                                      scheduleNode->lastErrorMessage,
+                                      &scheduleNode->executionCount,
+                                      &scheduleNode->averageDuration,
+                                      &scheduleNode->totalEntityCount,
+                                      &scheduleNode->totalStorageCount,
+                                      &scheduleNode->totalStorageSize,
+                                      &scheduleNode->totalEntryCount,
+                                      &scheduleNode->totalEntrySize
+                                     );
+      }
+
+      // append to list (if not duplicate)
       if (!List_appendUniq(&jobNode->scheduleList,scheduleNode,CALLBACK((ListNodeEqualsFunction)equalsScheduleNode,scheduleNode)))
       {
         deleteScheduleNode(scheduleNode);
@@ -2896,6 +3084,33 @@ LOCAL bool readJob(JobNode *jobNode)
 
   // save time modified
   jobNode->fileModified = File_getFileTimeModified(jobNode->fileName);
+
+  // get job info (if possible)
+  String_clear(jobNode->lastErrorMessage);
+  jobNode->executionCount    = 0L;
+  jobNode->averageDuration   = 0LL;
+  jobNode->totalEntityCount  = 0L;
+  jobNode->totalStorageCount = 0L;
+  jobNode->totalStorageSize  = 0LL;
+  jobNode->totalEntryCount   = 0L;
+  jobNode->totalEntrySize    = 0LL;
+  if (indexHandle != NULL)
+  {
+    (void)Index_findUUIDByJobUUID(indexHandle,
+                                  jobNode->uuid,
+                                  NULL,  // scheduleUUID,
+                                  NULL,  // uuidId,
+                                  NULL,  // lastExecutedDateTime
+                                  jobNode->lastErrorMessage,
+                                  &jobNode->executionCount,
+                                  &jobNode->averageDuration,
+                                  &jobNode->totalEntityCount,
+                                  &jobNode->totalStorageCount,
+                                  &jobNode->totalStorageSize,
+                                  &jobNode->totalEntryCount,
+                                  &jobNode->totalEntrySize
+                                 );
+  }
 
   // read schedule info
   (void)readJobScheduleInfo(jobNode);
@@ -3814,7 +4029,7 @@ NULL,//                                                        scheduleTitle,
       EntryList_clear(&includeEntryList);
 
       // done job
-      doneJob(jobNode);
+      doneJob(jobNode,scheduleUUID);
 
       if (!jobNode->jobOptions.dryRunFlag)
       {
@@ -4538,6 +4753,7 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
   // find UUID
   if (!Index_findUUIDByJobUUID(indexHandle,
                                jobUUID,
+                               NULL,  // scheduleUUID
                                &uuidId,
                                NULL,  // lastCreatedDateTime,
                                NULL,  // lastErrorMessage,
@@ -4692,8 +4908,7 @@ LOCAL void schedulerThreadCode(void)
                                 );
 
               // check if matching with some schedule list node
-              scheduleNode = jobNode->scheduleList.head;
-              while ((scheduleNode != NULL) && (executeScheduleNode == NULL))
+              LIST_ITERATEX(&jobNode->scheduleList,scheduleNode,executeScheduleNode == NULL)
               {
                 if (   scheduleNode->enabled
                     && (scheduleNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
@@ -4707,7 +4922,6 @@ LOCAL void schedulerThreadCode(void)
                 {
                   executeScheduleNode = scheduleNode;
                 }
-                scheduleNode = scheduleNode->next;
               }
 
               // check if another thread is pending for job list
@@ -4733,8 +4947,7 @@ LOCAL void schedulerThreadCode(void)
                               );
 
             // check if matching with some schedule list node
-            scheduleNode = jobNode->scheduleList.head;
-            while ((scheduleNode != NULL) && (executeScheduleNode == NULL))
+            LIST_ITERATEX(&jobNode->scheduleList,scheduleNode,executeScheduleNode == NULL)
             {
               if (   scheduleNode->enabled
                   && (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
@@ -4751,7 +4964,6 @@ LOCAL void schedulerThreadCode(void)
                 executeScheduleNode = scheduleNode;
               }
 //fprintf(stderr,"%s, %d: check %s %llu %llu -> %llu: scheduleNode %d %d %p\n",__FILE__,__LINE__,String_cString(jobNode->name),currentDateTime,jobNode->lastExecutedDateTime,currentDateTime-jobNode->lastExecutedDateTime,scheduleNode->archiveType,scheduleNode->interval,executeScheduleNode);
-              scheduleNode = scheduleNode->next;
             }
           }
 
@@ -9281,14 +9493,14 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
 *            hostName=<name> \
 *            hostPort=<n> \
 *            archiveType=<type> \
-*            archivePartSize=<part size> \
+*            archivePartSize=<n> \
 *            deltaCompressAlgorithm=<delta compress algorithm> \
 *            byteCompressAlgorithm=<byte compress alrogithm> \
 *            cryptAlgorithm=<crypt algorithm> \
 *            cryptType=<crypt type> \
 *            cryptPasswordMode=<password mode> \
-*            lastExecutedDateTime=<last executed time> \
-*            estimatedRestTime=<estimated rest time>
+*            lastExecutedDateTime=<timestamp> \
+*            estimatedRestTime=<n [s]>
 \***********************************************************************/
 
 LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
@@ -9357,7 +9569,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *          Result:
-*            lastCreatedDateTime=<time stamp>
+*            lastExecutedDateTime=<time stamp>
 *            lastErrorMessage=<text>
 *            executionCount=<n>
 *            averageDuration=<n>
@@ -9373,15 +9585,6 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
-  String        lastErrorMessage;
-  uint64        lastCreatedDateTime;
-  ulong         executionCount;
-  uint64        averageDuration;
-  ulong         totalEntityCount;
-  ulong         totalStorageCount;
-  uint64        totalStorageSize;
-  ulong         totalEntryCount;
-  uint64        totalEntrySize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9395,9 +9598,6 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
     return;
   }
 
-  // init variables
-  lastErrorMessage = String_new();
-
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
@@ -9409,50 +9609,20 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
       return;
     }
 
-    // get job info
-    if (!Index_findUUIDByJobUUID(indexHandle,
-                                 jobNode->uuid,
-                                 NULL,  // uuidId,
-                                 &lastCreatedDateTime,
-                                 lastErrorMessage,
-                                 &executionCount,
-                                 &averageDuration,
-                                 &totalEntityCount,
-                                 &totalStorageCount,
-                                 &totalStorageSize,
-                                 &totalEntryCount,
-                                 &totalEntrySize
-                                )
-       )
-    {
-      lastCreatedDateTime = 0LL;
-      String_clear(lastErrorMessage);
-      executionCount      = 0L;
-      averageDuration     = 0LL;
-      totalEntityCount    = 0L;
-      totalStorageCount   = 0L;
-      totalStorageSize    = 0LL;
-      totalEntryCount     = 0L;
-      totalEntrySize      = 0LL;
-    }
-
     // format and send result
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                     "lastCreatedDateTime=%llu lastErrorMessage=%'S executionCount=%lu averageDuration=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
-                     lastCreatedDateTime,
-                     lastErrorMessage,
-                     executionCount,
-                     averageDuration,
-                     totalEntityCount,
-                     totalStorageCount,
-                     totalStorageSize,
-                     totalEntryCount,
-                     totalEntrySize
+                     "lastExecutedDateTime=%llu lastErrorMessage=%'S executionCount=%lu averageDuration=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
+                     jobNode->lastExecutedDateTime,
+                     jobNode->lastErrorMessage,
+                     jobNode->executionCount,
+                     jobNode->averageDuration,
+                     jobNode->totalEntityCount,
+                     jobNode->totalStorageCount,
+                     jobNode->totalStorageSize,
+                     jobNode->totalEntryCount,
+                     jobNode->totalEntrySize
                     );
   }
-
-  // free resources
-  String_delete(lastErrorMessage);
 }
 
 /***********************************************************************\
@@ -9983,13 +10153,12 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
          jobNode->runningInfo.error = Remote_jobAbort(&jobNode->remoteHost,
                                                       jobNode->uuid
                                                      );
-         doneJob(jobNode);
+         doneJob(jobNode,NULL);
       }
     }
     else if (isJobActive(jobNode))
     {
-      jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
-      jobNode->state                = JOB_STATE_NONE;
+      jobNode->state = JOB_STATE_NONE;
     }
 
     // store schedule info
@@ -11878,7 +12047,6 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
   ulong            entityCount;
   ulong            totalEntryCount;
   uint64           totalEntrySize;
-  Errors           error;
   IndexQueryHandle indexQueryHandle;
   uint64           createdDateTime;
   ulong            entryCount;
@@ -11980,6 +12148,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
       }
 
       // get last executed date/time, total entities, entries, size
+#if 0
       lastExecutedDateTime = 0LL;
       entityCount          = 0L;
       totalEntryCount      = 0L;
@@ -12032,6 +12201,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
         }
 #endif
       }
+#endif
 
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                        "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%llu totalEntities=%lu totalEntryCount=%lu totalEntrySize=%llu",
@@ -12047,10 +12217,17 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
                        scheduleNode->maxAge,
                        scheduleNode->noStorage,
                        scheduleNode->enabled,
+#if 0
                        lastExecutedDateTime,
                        entityCount,
                        totalEntryCount,
                        totalEntrySize
+#else
+                       scheduleNode->lastExecutedDateTime,
+                       scheduleNode->totalEntityCount,
+                       scheduleNode->totalEntryCount,
+                       scheduleNode->totalEntrySize
+#endif
                       );
     }
     String_delete(time);
@@ -18193,12 +18370,11 @@ Errors Server_run(uint              port,
     printWarning("No server password set!\n");
   }
 
+  // init index
+  indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
+
   // read job list
   rereadAllJobs(serverJobsDirectory);
-
-//TODO
-  // init database pause callbacks
-  Index_setPauseCallback(CALLBACK(indexPauseCallback,NULL));
 
   // start threads
   if (!Thread_init(&jobThread,"BAR job",globalOptions.niceLevel,jobThreadCode,NULL))
@@ -18223,6 +18399,10 @@ Errors Server_run(uint              port,
   }
   if (Index_isAvailable())
   {
+//TODO
+    // init database pause callbacks
+    Index_setPauseCallback(CALLBACK(indexPauseCallback,NULL));
+
     Semaphore_init(&indexThreadTrigger);
     if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
     {
@@ -18240,9 +18420,6 @@ Errors Server_run(uint              port,
       HALT_FATAL_ERROR("Cannot initialize purge expire thread!");
     }
   }
-
-  // init index
-  indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
 
   // run as server
   if (globalOptions.serverDebugFlag)
