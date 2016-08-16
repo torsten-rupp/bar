@@ -835,7 +835,7 @@ public class TabRestore
   {
     public String jobUUID;                        // job UUID
     public String name;
-    public long   lastCreatedDateTime;            // last date/time when some storage was created
+    public long   lastExecutedDateTime;           // last executed date/time stamp [s]
     public String lastErrorMessage;               // last error message
     public long   totalEntryCount;
     public long   totalEntrySize;
@@ -850,7 +850,7 @@ public class TabRestore
                                (Object)uuidIndexData,
                                uuidIndexData.name,
                                Units.formatByteSize(uuidIndexData.totalEntrySize),
-                               (uuidIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
+                               (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
                                ""
                               );
       }
@@ -870,7 +870,7 @@ public class TabRestore
      * @param indexId index id
      * @param jobUUID job uuid
      * @param name job name
-     * @param lastCreatedDateTime last date/time (timestamp) when some storage was created
+     * @param lastExecutedDateTime last executed date/time tamp [s]
      * @param lastErrorMessage last error message text
      * @param totalEntryCount total number of entries of storage
      * @param totalEntrySize total size of storage [byte]
@@ -878,19 +878,19 @@ public class TabRestore
     UUIDIndexData(long   indexId,
                   String jobUUID,
                   String name,
-                  long   lastCreatedDateTime,
+                  long   lastExecutedDateTime,
                   String lastErrorMessage,
                   long   totalEntryCount,
                   long   totalEntrySize
                  )
     {
       super(indexId);
-      this.jobUUID             = jobUUID;
-      this.name                = name;
-      this.lastCreatedDateTime = lastCreatedDateTime;
-      this.lastErrorMessage    = lastErrorMessage;
-      this.totalEntryCount     = totalEntryCount;
-      this.totalEntrySize      = totalEntrySize;
+      this.jobUUID              = jobUUID;
+      this.name                 = name;
+      this.lastExecutedDateTime = lastExecutedDateTime;
+      this.lastErrorMessage     = lastErrorMessage;
+      this.totalEntryCount      = totalEntryCount;
+      this.totalEntrySize       = totalEntrySize;
     }
 
     /** get name
@@ -908,7 +908,7 @@ public class TabRestore
     @Override
     public long getDateTime()
     {
-      return lastCreatedDateTime;
+      return lastExecutedDateTime;
     }
 
     /** get total number of entries
@@ -959,7 +959,7 @@ public class TabRestore
      */
     public String toString()
     {
-      return "UUIDIndexData {"+id+", jobUUID="+jobUUID+", name="+name+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntryCount="+totalEntryCount+", totalEntrySize="+totalEntrySize+" bytes}";
+      return "UUIDIndexData {"+id+", jobUUID="+jobUUID+", name="+name+", lastExecutedDateTime="+lastExecutedDateTime+", totalEntryCount="+totalEntryCount+", totalEntrySize="+totalEntrySize+" bytes}";
     }
   }
 
@@ -2006,18 +2006,18 @@ Dprintf.dprintf("cirrect?");
                                  {
                                    try
                                    {
-                                     long   uuidId              = valueMap.getLong  ("uuidId"             );
-                                     String jobUUID             = valueMap.getString("jobUUID"            );
-                                     String name                = valueMap.getString("name"               );
-                                     long   lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime");
-                                     String lastErrorMessage    = valueMap.getString("lastErrorMessage"   );
-                                     long   totalEntryCount     = valueMap.getLong  ("totalEntryCount"    );
-                                     long   totalEntrySize      = valueMap.getLong  ("totalEntrySize"     );
+                                     long   uuidId               = valueMap.getLong  ("uuidId"              );
+                                     String jobUUID              = valueMap.getString("jobUUID"             );
+                                     String name                 = valueMap.getString("name"                );
+                                     long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
+                                     String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
+                                     long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
+                                     long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
 
                                      uuidIndexDataList.add(new UUIDIndexData(uuidId,
                                                                              jobUUID,
                                                                              name,
-                                                                             lastCreatedDateTime,
+                                                                             lastExecutedDateTime,
                                                                              lastErrorMessage,
                                                                              totalEntryCount,
                                                                              totalEntrySize
@@ -2085,7 +2085,7 @@ Dprintf.dprintf("cirrect?");
                                                         true,  // folderFlag
                                                         uuidIndexData.name,
                                                         Units.formatByteSize(uuidIndexData.totalEntrySize),
-                                                        (uuidIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
+                                                        (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
                                                         ""
                                                        );
 //TODO
@@ -2100,7 +2100,7 @@ Dprintf.dprintf("cirrect?");
                                          (Object)uuidIndexData,
                                          uuidIndexData.name,
                                          Units.formatByteSize(uuidIndexData.totalEntrySize),
-                                         (uuidIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
+                                         (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
                                          ""
                                         );
                   removeUUIDTreeItemSet.remove(uuidTreeItem);
@@ -2121,7 +2121,7 @@ Dprintf.dprintf("cirrect?");
                                                             true,  // folderFlag
                                                             uuidIndexData.name,
                                                             Units.formatByteSize(uuidIndexData.totalEntrySize),
-                                                            (uuidIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-",
+                                                            (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
                                                             ""
                                                            );
 //TODO
@@ -2831,19 +2831,19 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
                                  {
                                    try
                                    {
-                                     long         uuidId              = valueMap.getLong  ("uuidId"             );
-                                     final String jobUUID             = valueMap.getString("jobUUID"            );
-                                     String       name                = valueMap.getString("name"               );
-                                     long         lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime");
-                                     String       lastErrorMessage    = valueMap.getString("lastErrorMessage"   );
-                                     long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"    );
-                                     long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"     );
+                                     long         uuidId               = valueMap.getLong  ("uuidId"              );
+                                     final String jobUUID              = valueMap.getString("jobUUID"             );
+                                     String       name                 = valueMap.getString("name"                );
+                                     long         lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
+                                     String       lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
+                                     long         totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
+                                     long         totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
 
                                      // add UUID index data
                                      final UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
                                                                                            jobUUID,
                                                                                            name,
-                                                                                           lastCreatedDateTime,
+                                                                                           lastExecutedDateTime,
                                                                                            lastErrorMessage,
                                                                                            totalEntryCount,
                                                                                            totalEntrySize
@@ -4264,11 +4264,11 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
         row++;
       }
 
-      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last created")+":");
+      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last executed")+":");
       label.setForeground(COLOR_INFO_FORGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTreeToolTip,(uuidIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastCreatedDateTime*1000L)) : "-");
+      label = Widgets.newLabel(widgetStorageTreeToolTip,(uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-");
       label.setForeground(COLOR_INFO_FORGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -7672,7 +7672,6 @@ Dprintf.dprintf("storageIndexData=%s: %s",storageIndexData,storageTreeItem.getSe
         }
         break;
     }
-Dprintf.dprintf("indexIdSet=%s %d",indexIdSet,indexIdSet.size());
 
     if (!indexIdSet.isEmpty())
     {
@@ -7696,7 +7695,14 @@ Dprintf.dprintf("indexIdSet=%s %d",indexIdSet,indexIdSet.size());
                                                long   totalEntryCount = valueMap.getLong  ("totalEntryCount");
                                                long   totalEntrySize  = valueMap.getLong  ("totalEntrySize");
 
-                                               storageMap.put(storageId,String.format("#%d: %s, %d entries, %s",storageId,name,totalEntryCount,Units.formatByteSize(totalEntrySize)));
+                                               storageMap.put(storageId,BARControl.tr("#{0}: {1}, {2} {2,choice,0#entries|1#entry|1<entries}, {3} ({4} {4,choice,0#bytes|1#byte|1<bytes})",
+                                                                                      storageId,
+                                                                                      name,
+                                                                                      totalEntryCount,
+                                                                                      Units.formatByteSize(totalEntrySize),
+                                                                                      totalEntrySize
+                                                                                     )
+                                                             );
 
                                                return Errors.NONE;
                                              }
@@ -7724,10 +7730,12 @@ Dprintf.dprintf("indexIdSet=%s %d",indexIdSet,indexIdSet.size());
 
       // confirm
       if (Dialogs.confirm(shell,
-                          BARControl.tr("Delete {0} {0,choice,0#jobs/entities/storage files|1#job/entity/storage file|1<jobs/entities/storage files} with {1} {1,choice,0#entries|1#entry|1<entries}/{2} {2,choice,0#bytes|1#byte|1<bytes}?",
-                          storageMap.size(),
-                          totalEntryCount,
-                          totalEntrySize)
+                          BARControl.tr("Delete {0} {0,choice,0#jobs/entities/storage files|1#job/entity/storage file|1<jobs/entities/storage files} with {1} {1,choice,0#entries|1#entry|1<entries}, {2} ({3} {3,choice,0#bytes|1#byte|1<bytes})?",
+                                        storageMap.size(),
+                                        totalEntryCount,
+                                        Units.formatByteSize(totalEntrySize),
+                                        totalEntrySize
+                                       )
                          )
          )
       {
@@ -7746,7 +7754,6 @@ Dprintf.dprintf("indexIdSet=%s %d",indexIdSet,indexIdSet.size());
               boolean ignoreAllErrorsFlag = false;
               boolean abortFlag           = false;
               long    n                   = 0;
-Dprintf.dprintf("indexIdSet.size=%d",indexIdSet.size());
               for (Long storageId : storageMap.keySet())
               {
                 // get info
