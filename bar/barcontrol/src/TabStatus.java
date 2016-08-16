@@ -2311,7 +2311,7 @@ public class TabStatus
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
-    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Storage")+":");
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Storages")+":");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
