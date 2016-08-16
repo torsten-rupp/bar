@@ -420,6 +420,7 @@ install_scripts: \
             echo "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver NOT installed - file already exists!"; \
           fi; \
         fi
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)"; \
 	$(INSTALL) -m 644 scripts/logrotate.conf "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
 
 # install man-page
