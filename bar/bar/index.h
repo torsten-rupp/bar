@@ -908,12 +908,12 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextUUID
 * Purpose: get next index uuid entry
 * Input  : IndexQueryHandle - index query handle
-* Output : uuidId              - index id of UUID entry
-*          jobUUID             - unique job UUID (can be NULL)
-*          lastCreatedDateTime - last storage date/time stamp [s] (can be NULL)
-*          lastErrorMessage    - last storage error message (can be NULL)
-*          totalEntryCount     - total number of entries (can be NULL)
-*          totalEntrySize      - total storage size [bytes] (can be NULL)
+* Output : uuidId               - index id of UUID entry
+*          jobUUID              - unique job UUID (can be NULL)
+*          lastExecutedDateTime - last executed date/time stamp [s] (can be NULL)
+*          lastErrorMessage     - last error message (can be NULL)
+*          totalEntryCount      - total number of entries (can be NULL)
+*          totalEntrySize       - total storage size [bytes] (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -921,7 +921,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        IndexId          *uuidId,
                        String           jobUUID,
-                       uint64           *lastCreatedDateTime,
+                       uint64           *lastExecutedDateTime,
                        String           lastErrorMessage,
                        ulong            *totalEntryCount,
                        uint64           *totalEntrySize
