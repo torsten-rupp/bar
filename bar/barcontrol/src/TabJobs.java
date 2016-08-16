@@ -7973,7 +7973,7 @@ widgetArchivePartSize.setListVisible(true);
                 }
               });
 
-              label = Widgets.newLabel(widgetScheduleTableToolTip,BARControl.tr("Last executed")+":");
+              label = Widgets.newLabel(widgetScheduleTableToolTip,BARControl.tr("Last created")+":");
               label.setForeground(COLOR_INFO_FORGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,0,0,TableLayoutData.W);
