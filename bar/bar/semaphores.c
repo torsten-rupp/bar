@@ -116,12 +116,8 @@
         \
         pthread_mutex_lock(&debugSemaphoreLock); \
         { \
-          debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
+          debugCheckForDeadLock(__FILE__,__LINE__,semaphore,lockType); \
           __locked = (pthread_mutex_trylock(&semaphore->lock) == 0); \
-          if (0&& !__locked) \
-          { \
-            /* debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); */\
-          } \
         } \
         pthread_mutex_unlock(&debugSemaphoreLock); \
         \
@@ -144,7 +140,7 @@
         \
         pthread_mutex_lock(&debugSemaphoreLock); \
         { \
-          debugCheckForDeadLock(NULL,0/*fileName,lineNb*/,semaphore,lockType); \
+          debugCheckForDeadLock(__FILE__,__LINE__,semaphore,lockType); \
         } \
         pthread_mutex_unlock(&debugSemaphoreLock); \
         \
@@ -159,7 +155,7 @@
         } \
         else \
         { \
-          debugCheckForDeadLock(NULL,0/*fileName,lineNb*/,semaphore,lockType); \
+          debugCheckForDeadLock(__FILE__,__LINE__,semaphore,lockType); \
         } \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
@@ -175,7 +171,7 @@
         } \
         else \
         { \
-          debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
+          debugCheckForDeadLock(__FILE__,__LINE__,semaphore,lockType); \
         } \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
@@ -251,7 +247,7 @@
         } \
         else \
         { \
-          debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
+          debugCheckForDeadLock(__FILE__,__LINE__,semaphore,lockType); \
         } \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
@@ -267,7 +263,7 @@
         } \
         else \
         { \
-          debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
+          debugCheckForDeadLock(__FILE__,__LINE__,semaphore,lockType); \
         } \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
@@ -306,7 +302,7 @@
         } \
         else \
         { \
-          debugCheckForDeadLock(fileName,lineNb,semaphore,lockType); \
+          debugCheckForDeadLock(__FILE__,__LINE__,semaphore,lockType); \
         } \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) waited+locked %s done\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
