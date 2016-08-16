@@ -6716,8 +6716,9 @@ bool Index_containsType(const IndexId indexIds[],
 
 bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
                              ConstString  jobUUID,
+                             ConstString  scheduleUUID,
                              IndexId      *uuidId,
-                             uint64       *lastCreatedDateTime,
+                             uint64       *lastExecutedDateTime,
                              String       lastErrorMessage,
                              ulong        *executionCount,
                              uint64       *averageDuration,
@@ -6728,6 +6729,7 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
                              uint64       *totalEntrySize
                             )
 {
+  String              filterString;
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   bool                result;
@@ -6740,6 +6742,11 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
   {
     return FALSE;
   }
+
+  // filters
+  filterString = String_newCString("1");
+  filterAppend(filterString,!String_isEmpty(jobUUID),"AND","uuids.jobUUID=%'S",jobUUID);
+  filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
 
 //TODO get errorMessage
   BLOCK_DOX(error,
@@ -6761,10 +6768,10 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
                               FROM uuids \
                                 LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
                                 LEFT JOIN storage ON storage.entityId=entities.id \
-                              WHERE uuids.jobUUID=%'S \
+                              WHERE %S \
                               GROUP BY uuids.id \
                              ",
-                             jobUUID
+                             filterString
                             );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
     if (error != ERROR_NONE)
@@ -6775,7 +6782,7 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
     result = Database_getNextRow(&databaseQueryHandle,
                                  "%lld %lld %S %lu %llu %lu %lu %llu %lu %llu",
                                  &uuidId_,
-                                 lastCreatedDateTime,
+                                 lastExecutedDateTime,
                                  lastErrorMessage,
                                  executionCount,
                                  averageDuration,
@@ -6792,14 +6799,14 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
   });
   if (error != ERROR_NONE)
   {
+    String_delete(filterString);
     return FALSE;
   }
 
   if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(uuidId_);
-if (!result)
-fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID));
 
   // free resources
+  String_delete(filterString);
 
   return result;
 }

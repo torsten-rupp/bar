@@ -510,31 +510,33 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 
 /***********************************************************************\
 * Name   : Index_findUUIDByJobUUID
-* Purpose: find uuid info by job UUID
-* Input  : indexHandle - index handle
-*          jobUUID     - unique job UUID
-* Output : uuidId              - index id of UUID entry (can be NULL)
-*          lastCreatedDateTime - created date/time stamp [s] (can be
-*                                NULL)
-*          lastErrorMessage    - last error message (can be NULL)
-*          executionCount      - number job execution (can be NULL)
-*          averageDuration     - average execution time [s] (entries
-*                                without error, can be NULL)
-*          totalEntityCount    - total number of entities (can be NULL)
-*          totalStorageCount   - total number of storage archives (can be
-*                                NULL)
-*          totalStorageSize    - total size of storage archives [bytes]
-*                                (can be NULL)
-*          totalEntryCount     - total number of entries (can be NULL)
-*          totalEntrySize      - total size [bytes] (can be NULL)
+* Purpose: find uuid info by job/schedule UUID
+* Input  : indexHandle  - index handle
+*          jobUUID      - unique job UUID
+*          scheduleUUID - unique schedule UUID or NULL
+* Output : uuidId               - index id of UUID entry (can be NULL)
+*          lastExecutedDateTime - last executed date/time stamp [s] (can
+*                                 be NULL)
+*          lastErrorMessage     - last error message (can be NULL)
+*          executionCount       - number job execution (can be NULL)
+*          averageDuration      - average execution time [s] (entries
+*                                 without error, can be NULL)
+*          totalEntityCount     - total number of entities (can be NULL)
+*          totalStorageCount    - total number of storage archives (can
+*                                 be NULL)
+*          totalStorageSize     - total size of storage archives [bytes]
+*                                 (can be NULL)
+*          totalEntryCount      - total number of entries (can be NULL)
+*          totalEntrySize       - total size [bytes] (can be NULL)
 * Return : TRUE if index found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
                              ConstString  jobUUID,
+                             ConstString  scheduleUUID,
                              IndexId      *uuidId,
-                             uint64       *lastCreatedDateTime,
+                             uint64       *lastExecutedDateTime,
                              String       lastErrorMessage,
                              ulong        *executionCount,
                              uint64       *averageDuration,
@@ -548,11 +550,11 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
 /***********************************************************************\
 * Name   : Index_findEntityByJobUUID
 * Purpose: find entity info by job UUID
-* Input  : indexHandle      - index handle
-*          jobUUID          - unique job UUID
-*          scheduleUUID     - unique schedule UUID (can be NULL)
+* Input  : indexHandle - index handle
+*          jobUUID     - unique job UUID
 * Output : uuidId           - index id of UUID entry (can be NULL)
 *          entityId         - index id of entity entry (can be NULL)
+*          scheduleUUID     - unique schedule UUID (can be NULL)
 *          archiveType      - archive type (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          lastErrorMessage - last error message (can be NULL)
