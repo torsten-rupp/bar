@@ -20,9 +20,10 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.security.KeyStore;
-import java.text.SimpleDateFormat;
+import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -791,11 +792,20 @@ class Units
    */
   public static String getByteSize(double n)
   {
+/*
     if      (n >= 1024L*1024L*1024L*1024L) return String.format("%.1f",n/(1024L*1024L*1024L*1024L));
     else if (n >=       1024L*1024L*1024L) return String.format("%.1f",n/(      1024L*1024L*1024L));
     else if (n >=             1024L*1024L) return String.format("%.1f",n/(            1024L*1024L));
     else if (n >=                   1024L) return String.format("%.1f",n/(                  1024L));
     else                                   return String.format("%d"  ,(long)n                    );
+*/
+    DecimalFormat decimalFormat = new DecimalFormat(".#");
+
+    if      (n >= 1024L*1024L*1024L*1024L) return decimalFormat.format(n/(1024L*1024L*1024L*1024L));
+    else if (n >=       1024L*1024L*1024L) return decimalFormat.format(n/(      1024L*1024L*1024L));
+    else if (n >=             1024L*1024L) return decimalFormat.format(n/(            1024L*1024L));
+    else if (n >=                   1024L) return decimalFormat.format(n/(                  1024L));
+    else                                   return String.format("%d",(long)n);
   }
 
   /** get byte size unit
