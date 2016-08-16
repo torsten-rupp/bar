@@ -2274,14 +2274,14 @@ public class TabStatus
     {
       return;
     }
-    long lastCreatedDateTime = resultMap.getLong("lastCreatedDateTime");
-    long executionCount      = resultMap.getLong("executionCount");
-    long averageDuration     = resultMap.getLong("averageDuration");
-    long totalEntityCount    = resultMap.getLong("totalEntityCount");
-    long totalStorageCount   = resultMap.getLong("totalStorageCount");
-    long totalStorageSize    = resultMap.getLong("totalStorageSize");
-    long totalEntryCount     = resultMap.getLong("totalEntryCount");
-    long totalEntrySize      = resultMap.getLong("totalEntrySize");
+    long lastExecutedDateTime = resultMap.getLong("lastExecutedDateTime");
+    long executionCount       = resultMap.getLong("executionCount");
+    long averageDuration      = resultMap.getLong("averageDuration");
+    long totalEntityCount     = resultMap.getLong("totalEntityCount");
+    long totalStorageCount    = resultMap.getLong("totalStorageCount");
+    long totalStorageSize     = resultMap.getLong("totalStorageSize");
+    long totalEntryCount      = resultMap.getLong("totalEntryCount");
+    long totalEntrySize       = resultMap.getLong("totalEntrySize");
 
 
     widgetJobTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
@@ -2343,11 +2343,11 @@ public class TabStatus
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
-    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Last created")+":");
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Last executed")+":");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,(lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(lastCreatedDateTime*1000)) : "");
+    label = Widgets.newLabel(widgetJobTableToolTip,(lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)) : "");
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
