@@ -9287,7 +9287,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-fprintf(stderr,"%s, %d: storageId=%lld\n",__FILE__,__LINE__,storageId);
+//fprintf(stderr,"%s, %d: storageId=%lld\n",__FILE__,__LINE__,storageId);
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
@@ -9440,7 +9440,6 @@ fprintf(stderr,"%s, %d: storageId=%lld\n",__FILE__,__LINE__,storageId);
 
     return ERROR_NONE;
   });
-fprintf(stderr,"%s, %d: Index_deleteStorage done error=%x\n",__FILE__,__LINE__,error);
 
   return error;
 }
