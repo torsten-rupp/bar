@@ -3971,14 +3971,16 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   AUTOFREE_ADD(&autoFreeList,&existingStorageSpecifier,{ Storage_doneSpecifier(&existingStorageSpecifier); });
 
   // initial storage pre-processing
-  if (!isAborted(createInfo))
+  if (   !isAborted(createInfo)
+      && (createInfo->failError == ERROR_NONE)
+     )
   {
-    if (createInfo->failError == ERROR_NONE)
-    {
-      // pause
-      pauseStorage(createInfo);
+    // pause
+    pauseStorage(createInfo);
 
-      // initial pre-process
+    // pre-process
+    if (!isAborted(createInfo))
+    {
       error = Storage_preProcess(&createInfo->storageHandle,NULL,createInfo->startTime,TRUE);
       if (error != ERROR_NONE)
       {
@@ -3999,6 +4001,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
     // pause
     pauseStorage(createInfo);
+    if (isAborted(createInfo)) break;
 
     // get next archive to store
     if (!MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg),WAIT_FOREVER))
@@ -4111,6 +4114,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
       // pause
       pauseStorage(createInfo);
+      if (isAborted(createInfo)) break;
 
       // check if append to storage
       appendFlag =    (createInfo->storageHandle.jobOptions != NULL)
@@ -4155,6 +4159,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         // pause
         pauseStorage(createInfo);
+        if (isAborted(createInfo)) break;
 
         // read data from local file
         error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
@@ -4496,13 +4501,17 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // pause
     pauseStorage(createInfo);
 
-    error = Storage_postProcess(&createInfo->storageHandle,NULL,createInfo->startTime,TRUE);
-    if (error != ERROR_NONE)
+    // post-processing
+    if (!isAborted(createInfo))
     {
-      printError("Cannot post-process storage (error: %s)!\n",
-                 Error_getText(error)
-                );
-      if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+      error = Storage_postProcess(&createInfo->storageHandle,NULL,createInfo->startTime,TRUE);
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot post-process storage (error: %s)!\n",
+                   Error_getText(error)
+                  );
+        if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+      }
     }
   }
 
