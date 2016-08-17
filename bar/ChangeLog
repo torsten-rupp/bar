@@ -47,6 +47,7 @@
   * Upgrade bzip2 to 1.0.6
   * added bar-sqlite3 tool
   * added logrotate script, support for log rotate
+  * fixed auto-index: search for .bar files
 
 2016-01-09 0.19d
   * fixed include of multiple entries with pattern: store
