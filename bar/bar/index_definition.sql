@@ -320,6 +320,7 @@ CREATE TRIGGER AFTER UPDATE OF offset,size ON entries
 CREATE TRIGGER BEFORE DELETE ON entries
   BEGIN
 // insert into log values('trigger entries DELETE: id='||OLD.id||' name='||OLD.name||' size='||OLD.size);
+/*
     // delete *Entries
     DELETE FROM fileEntries      WHERE OLD.type=$TYPE_FILE      AND entryId=OLD.id;
     DELETE FROM imageEntries     WHERE OLD.type=$TYPE_IMAGE     AND entryId=OLD.id;
@@ -327,7 +328,7 @@ CREATE TRIGGER BEFORE DELETE ON entries
     DELETE FROM linkEntries      WHERE OLD.type=$TYPE_LINK      AND entryId=OLD.id;
     DELETE FROM hardlinkEntries  WHERE OLD.type=$TYPE_HARDLINK  AND entryId=OLD.id;
     DELETE FROM specialEntries   WHERE OLD.type=$TYPE_SPECIAL   AND entryId=OLD.id;
-
+*/
     // delete/update newest info
     DELETE FROM entriesNewest WHERE entryId=OLD.id;
     INSERT OR IGNORE INTO entriesNewest
@@ -376,6 +377,7 @@ CREATE TRIGGER AFTER UPDATE OF entryId ON entriesNewest
             AND directoryEntries.name=DIRNAME(NEW.name);
   END;
 
+/*
 CREATE TRIGGER BEFORE DELETE ON entriesNewest
   BEGIN
 // insert into log values('trigger entriesNewest: DELETE: name='||OLD.name||' entryId='||OLD.entryId||' offset='||OLD.offset||' size='||OLD.size);
@@ -387,6 +389,7 @@ CREATE TRIGGER BEFORE DELETE ON entriesNewest
       WHERE     directoryEntries.storageId=OLD.storageId
             AND directoryEntries.name=DIRNAME(OLD.name);
   END;
+*/
 
 //TODO
 // --- skipped entries ---------------------------------------------------------
@@ -431,6 +434,7 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
             AND name=DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId));
   END;
 
+/*
 CREATE TRIGGER BEFORE DELETE ON fileEntries
   BEGIN
 // insert into log values('trigger fileEntries: DELETE entryId='||OLD.entryId||' storageId='||OLD.storageId||' fragmentSize='||OLD.fragmentSize);
@@ -443,6 +447,7 @@ CREATE TRIGGER BEFORE DELETE ON fileEntries
             AND name=DIRNAME((SELECT name FROM entries WHERE id=OLD.entryId));
 // insert into log values('done');
   END;
+*/
 
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS imageEntries(
