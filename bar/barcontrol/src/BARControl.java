@@ -2547,14 +2547,18 @@ public class BARControl
       parseArguments(args);
 
       // server login data
-      final Settings.Server defaultServer = Settings.getLastServer();
-      loginData = new LoginData((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME,
-                                (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
-                                (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
+      Settings.Server server = null;
+      if ((server == null)) server = Settings.getServer(Settings.serverName,(Settings.serverPort    != -1) ? Settings.serverPort    : Settings.DEFAULT_SERVER_PORT);
+      if ((server == null)) server = Settings.getServer(Settings.serverName,(Settings.serverTLSPort != -1) ? Settings.serverTLSPort : Settings.DEFAULT_SERVER_PORT);
+      loginData = new LoginData((server != null) ? server.name     : Settings.DEFAULT_SERVER_NAME,
+                                (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
+                                (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
+                                (server != null) ? server.password : ""
                                );
-      if (Settings.serverName    != null) loginData.serverName    = Settings.serverName;
-      if (Settings.serverPort    != -1  ) loginData.serverPort    = Settings.serverPort;
-      if (Settings.serverTLSPort != -1  ) loginData.serverTLSPort = Settings.serverTLSPort;
+      if (Settings.serverName     != null) loginData.serverName    = Settings.serverName;
+      if (Settings.serverPort     != -1  ) loginData.serverPort    = Settings.serverPort;
+      if (Settings.serverTLSPort  != -1  ) loginData.serverTLSPort = Settings.serverTLSPort;
+      if (Settings.serverPassword != null) loginData.password      = Settings.serverPassword;
 
       // commands
       if (   (Settings.runJobName != null)
