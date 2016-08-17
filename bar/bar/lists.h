@@ -754,7 +754,7 @@ Node *List_removeLast(void *list);
 
 /***********************************************************************\
 * Name   : List_contains
-* Purpose: check if list contain node
+* Purpose: check if list contains node
 * Input  : list                   - list
 *          node                   - node
 *          listNodeEqualsFunction - equals function or NULL
