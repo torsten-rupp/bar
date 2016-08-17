@@ -634,6 +634,7 @@ ERROR DATABASE_CREATE_INDEX            "error creating index"
 ERROR DATABASE_INDEX_NOT_FOUND         "index not found"
 ERROR DATABASE_INDEX_NOT_READY         "index still not initialized"
 ERROR DATABASE_INVALID_INDEX           "invalid index"
+ERROR DATABASE_TIMEOUT                 "timeout accessing index"
 
 // --- debugging only ---------------------------------------------------
 ERROR TESTCODE
