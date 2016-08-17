@@ -973,8 +973,6 @@ String File_getFilePathNameCString(String pathName, const char *fileName)
 
   assert(pathName != NULL);
 
-  String_clear(pathName);
-
   if (fileName != NULL)
   {
     // find last path separator
@@ -985,6 +983,10 @@ String File_getFilePathNameCString(String pathName, const char *fileName)
     {
       String_setBuffer(pathName,fileName,lastPathSeparator-fileName);
     }
+  }
+  else
+  {
+    String_clear(pathName);
   }
 
   return pathName;
@@ -1061,12 +1063,17 @@ String File_getRootFileNameCString(String rootName, const char *fileName)
                && (strncmp(fileName,"\\\\",2) == 0)
               )
       {
+        String_clear(rootName);
       }
       if ((n >= 3) && (String_index(fileName,2) == FILES_PATHNAME_SEPARATOR_CHAR))
       {
         String_appendChar(rootName,FILES_PATHNAME_SEPARATOR_CHAR);
       }
     #endif /* PLATFORM_... */
+  }
+  else
+  {
+    String_clear(rootName);
   }
 
   return rootName;
@@ -1090,7 +1097,6 @@ String File_getAbsoluteFileNameCString(String absoluteFileName, const char *file
   assert(absoluteFileName != NULL);
   assert(fileName != NULL);
 
-  String_clear(absoluteFileName);
   #if   defined(PLATFORM_LINUX)
     buffer = realpath(fileName,NULL);
     String_setCString(absoluteFileName,buffer);
