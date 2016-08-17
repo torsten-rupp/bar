@@ -2621,7 +2621,6 @@ Dprintf.dprintf("cirrect?");
           {
             widgetStorageTable.setRedraw(false);
 
-Dprintf.dprintf("clearAll %d",storageCount);
             widgetStorageTable.clearAll();
             widgetStorageTable.setItemCount(storageCount);
 
