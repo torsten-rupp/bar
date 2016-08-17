@@ -403,6 +403,20 @@ String __StringList_removeLast(const char *__fileName__, ulong __lineNb__, Strin
   }
 }
 
+bool StringList_contains(const StringList *stringList, ConstString string)
+{
+  assert(stringList != NULL);
+
+  return (StringList_find(stringList,string) != NULL);
+}
+
+bool StringList_containsCString(const StringList *stringList, const char *s)
+{
+  assert(stringList != NULL);
+
+  return (StringList_findCString(stringList,s) != NULL);
+}
+
 StringNode *StringList_find(const StringList *stringList, ConstString string)
 {
   assert(stringList != NULL);
@@ -425,20 +439,6 @@ StringNode *StringList_findCString(const StringList *stringList, const char *s)
   }
 
   return stringNode;
-}
-
-bool StringList_contain(const StringList *stringList, ConstString string)
-{
-  assert(stringList != NULL);
-
-  return (StringList_find(stringList,string) != NULL);
-}
-
-bool StringList_containCString(const StringList *stringList, const char *s)
-{
-  assert(stringList != NULL);
-
-  return (StringList_findCString(stringList,s) != NULL);
 }
 
 StringNode *StringList_match(const StringList *stringList, const String pattern)

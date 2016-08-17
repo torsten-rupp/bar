@@ -5496,7 +5496,7 @@ LOCAL void pauseIndexUpdate(void)
          && !quitFlag
         )
   {
-    Misc_udelay(500L*1000L);
+    Misc_udelay(500L*US_PER_MS);
   }
 }
 
@@ -5581,6 +5581,7 @@ LOCAL void indexThreadCode(void)
   {
     // pause
     pauseIndexUpdate();
+    if (quitFlag) break;
 
     // get all job crypt passwords and crypt private keys (including no password and default crypt password)
     addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
@@ -5612,6 +5613,7 @@ LOCAL void indexThreadCode(void)
     {
       // pause
       pauseIndexUpdate();
+      if (quitFlag) break;
 
       // parse storage name, get printable name
       error = Storage_parseName(&storageSpecifier,storageName);
@@ -5774,7 +5776,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
       File_getFilePathName(storagePathName,jobNode->archiveName);
       if (!String_isEmpty(storagePathName))
       {
-        if (StringList_find(storageDirectoryList,storagePathName) == NULL)
+        if (!StringList_contains(storageDirectoryList,storagePathName))
         {
           StringList_append(storageDirectoryList,storagePathName);
         }
@@ -5868,6 +5870,7 @@ LOCAL void autoIndexThreadCode(void)
   {
     // pause
     pauseIndexUpdate();
+    if (quitFlag) break;
 
     // collect storage locations to check for BAR files
     getStorageDirectories(&storageDirectoryList);
@@ -14911,7 +14914,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                     )
               )
         {
-          if (!StringList_contain(&storageNameList,storageName))
+          if (!StringList_contains(&storageNameList,storageName))
           {
             StringList_append(&storageNameList,storageName);
           }

@@ -558,7 +558,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
             continue;
           }
 
-          if (StringList_contain(&fileNameList,name))
+          if (StringList_contains(&fileNameList,name))
           {
 //              abortFlag = !updateStatusInfo(&restoreInfo);
 

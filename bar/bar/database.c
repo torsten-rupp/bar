@@ -959,6 +959,7 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
       waitUnlockNotify(handle);
       sqlite3_reset(statementHandle);
     }
+//TODO: correct? abort here?
     else if (sqliteResult == SQLITE_BUSY)
     {
       delay(SLEEP_TIME);
@@ -997,125 +998,144 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
 {
   #define SLEEP_TIME 1000L
 
-  const char   *nextSqlCommand;
+  uint         maxRetryCount;
+  uint         retryCount;
+  const char   *sqlCommand,*nextSqlCommand;
   Errors       error;
   int          sqliteResult;
   sqlite3_stmt *statementHandle;
   uint         count;
   const char   **names,**values;
-  uint         n;
   uint         i;
 
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 
-  nextSqlCommand = stringTrim(sqlString);
-  error          = ERROR_NONE;
+  maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
+  sqlCommand    = stringTrim(sqlString);
+  error         = ERROR_NONE;
+  retryCount    = 0;
   while (   (error == ERROR_NONE)
-         && !stringIsEmpty(nextSqlCommand)
+         && !stringIsEmpty(sqlCommand)
+         && (retryCount <= maxRetryCount)
         )
   {
 //fprintf(stderr,"%s, %d: sqlCommands='%s'\n",__FILE__,__LINE__,sqlCommands);
+    // prepare SQL statement
     sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
-                                      nextSqlCommand,
+                                      sqlCommand,
                                       -1,
                                       &statementHandle,
                                       &nextSqlCommand
                                      );
-    if (sqliteResult == SQLITE_OK)
-    {
-      assert(statementHandle != NULL);
-
-      // allocate call-back data
-      names  = NULL;
-      values = NULL;
-      count  = 0;
-      if (databaseRowFunction != NULL)
-      {
-        count = sqlite3_column_count(statementHandle);
-        names = (const char**)malloc(count*sizeof(const char*));
-        if (names == NULL)
-        {
-          HALT_INSUFFICIENT_MEMORY();
-        }
-        values = (const char**)malloc(count*sizeof(const char*));
-        if (values == NULL)
-        {
-          HALT_INSUFFICIENT_MEMORY();
-        }
-      }
-
-      // step and process rows
-      do
-      {
-        // step
-        n = 0;
-        do
-        {
-          sqliteResult = sqlite3_step(statementHandle);
-          if      (sqliteResult == SQLITE_LOCKED)
-          {
-            waitUnlockNotify(databaseHandle->handle);
-            sqlite3_reset(statementHandle);
-          }
-          else if (sqliteResult == SQLITE_BUSY)
-          {
-            delay(SLEEP_TIME);
-            sqlite3_reset(statementHandle);
-            n++;
-          }
-          else if (sqliteResult == SQLITE_MISUSE)
-          {
-            HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
-          }
-        }
-        while (   ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
-               && ((timeout == WAIT_FOREVER) || (n < (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME)))
-              );
-
-        // process row
-        if      (sqliteResult == SQLITE_ROW)
-        {
-          if (databaseRowFunction != NULL)
-          {
-            for (i = 0; i < count; i++)
-            {
-              names[i]  = sqlite3_column_name(statementHandle,i);
-              values[i] = (const char*)sqlite3_column_text(statementHandle,i);
-            }
-            error = databaseRowFunction(count,names,values,databaseRowUserData);
-//TODO callback
-          }
-        }
-      }
-      while ((error == ERROR_NONE) && (sqliteResult == SQLITE_ROW));
-      if (sqliteResult != SQLITE_DONE)
-      {
-        error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
-      }
-
-      // free call-back data
-      if (databaseRowFunction != NULL)
-      {
-        free(values);
-        free(names);
-      }
-    }
-    else if (sqliteResult == SQLITE_MISUSE)
+    if      (sqliteResult == SQLITE_MISUSE)
     {
       HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
     }
-    else
+    else if (sqliteResult != SQLITE_OK)
     {
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
+      break;
+    }
+    assert(statementHandle != NULL);
+
+    // allocate call-back data
+    names  = NULL;
+    values = NULL;
+    count  = 0;
+    if (databaseRowFunction != NULL)
+    {
+      count = sqlite3_column_count(statementHandle);
+      names = (const char**)malloc(count*sizeof(const char*));
+      if (names == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      values = (const char**)malloc(count*sizeof(const char*));
+      if (values == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
     }
 
-    nextSqlCommand = stringTrim(nextSqlCommand);
+    // step and process rows
+    do
+    {
+      // step
+      do
+      {
+        sqliteResult = sqlite3_step(statementHandle);
+        if      (sqliteResult == SQLITE_LOCKED)
+        {
+          waitUnlockNotify(databaseHandle->handle);
+          sqlite3_reset(statementHandle);
+        }
+        else if (sqliteResult == SQLITE_MISUSE)
+        {
+          HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
+        }
+      }
+      while (sqliteResult == SQLITE_LOCKED);
+
+      // process row
+      if      (sqliteResult == SQLITE_ROW)
+      {
+        if (databaseRowFunction != NULL)
+        {
+          for (i = 0; i < count; i++)
+          {
+            names[i]  = sqlite3_column_name(statementHandle,i);
+            values[i] = (const char*)sqlite3_column_text(statementHandle,i);
+          }
+          error = databaseRowFunction(count,names,values,databaseRowUserData);
+//TODO callback
+        }
+      }
+    }
+    while ((error == ERROR_NONE) && (sqliteResult == SQLITE_ROW));
+
+    // free call-back data
+    if (databaseRowFunction != NULL)
+    {
+      free(values);
+      free(names);
+    }
+
+    // done SQL statement
+    sqlite3_finalize(statementHandle);
+
+    // check result
+    if      (sqliteResult == SQLITE_BUSY)
+    {
+      // try again
+      delay(SLEEP_TIME);
+      retryCount++;
+      continue;
+    }
+    else if (sqliteResult != SQLITE_DONE)
+    {
+      // report error
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
+    }
+    else
+    {
+      // next SQL command part
+      sqlCommand = stringTrim(nextSqlCommand);
+    }
   }
 
-  sqlite3_finalize(statementHandle);
-
-  return error;
+  if      (error != ERROR_NONE)
+  {
+    return error;
+  }
+  else if (retryCount > maxRetryCount)
+  {
+    return ERROR_DATABASE_TIMEOUT;
+  }
+  else
+  {
+    return ERROR_NONE;
+  }
 
   #undef SLEEP_TIME
 }
@@ -1884,7 +1904,7 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
   // compare tables
   STRINGLIST_ITERATEX(&tableListReference,tableNameNodeReference,tableNameReference,error == ERROR_NONE)
   {
-    if (StringList_contain(&tableList,tableNameReference))
+    if (StringList_contains(&tableList,tableNameReference))
     {
       // get column lists
       error = getTableColumnList(&columnListReference,databaseHandleReference,String_cString(tableNameReference));
@@ -1938,7 +1958,7 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
   // check for obsolete tables
   STRINGLIST_ITERATEX(&tableList,tableNameNode,tableName,error == ERROR_NONE)
   {
-    if (!StringList_contain(&tableListReference,tableName))
+    if (!StringList_contains(&tableListReference,tableName))
     {
       error = ERRORX_(DATABASE_OBSOLETE_TABLE,0,String_cString(tableName));
     }

@@ -386,7 +386,7 @@ StringNode *__StringList_remove(const char *__fileName__, ulong __lineNb__, Stri
 * Input  : stringList - string list
 *          string     - string variable (can be NULL)
 * Output : -
-* Return : string or NULL if no strings
+* Return : string or NULL if no string list is empty
 * Notes  : if no string variable is supplied, the string from the list
 *          is returned directly and must not be freed!
 \***********************************************************************/
@@ -422,7 +422,7 @@ INLINE String StringList_first(const StringList *stringList, String string)
 * Input  : stringList - string list
 *          string     - string variable (can be NULL)
 * Output : -
-* Return : string or NULL if no strings
+* Return : string or NULL if no string list is empty
 * Notes  : if no string variable is supplied, the string from the list
 *          is returned directly and must not be freed!
 \***********************************************************************/
@@ -487,6 +487,19 @@ String __StringList_removeLast(const char *fileName, ulong lineNb, StringList *s
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : StringList_contains, StringList_containsCString
+* Purpose: check if string list contains string
+* Input  : stringList - string list
+*          string,s   - string to find
+* Output : -
+* Return : TRUE if string found, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool StringList_contains(const StringList *stringList, ConstString string);
+bool StringList_containsCString(const StringList *stringList, const char *s);
+
+/***********************************************************************\
 * Name   : StringList_find, StringList_findCString
 * Purpose: find string in string list
 * Input  : stringList - string list
@@ -498,19 +511,6 @@ String __StringList_removeLast(const char *fileName, ulong lineNb, StringList *s
 
 StringNode *StringList_find(const StringList *stringList, ConstString string);
 StringNode *StringList_findCString(const StringList *stringList, const char *s);
-
-/***********************************************************************\
-* Name   : StringList_contain, StringList_containCString
-* Purpose: check if string list contain string
-* Input  : stringList - string list
-*          string,s   - string to find
-* Output : -
-* Return : TRUE if string found, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool StringList_contain(const StringList *stringList, ConstString string);
-bool StringList_containCString(const StringList *stringList, const char *s);
 
 /***********************************************************************\
 * Name   : StringList_match, StringList_matchCString
