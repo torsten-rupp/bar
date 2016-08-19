@@ -1867,7 +1867,7 @@ fprintf(stderr,"\n");
           else
           {
             #ifndef NDEBUG
-              fprintf(stderr,"%s, %d: Warning: unknown inotify event received %d!\n",__FILE__,__LINE__,inotifyEvent->wd);
+              fprintf(stderr,"%s, %d: Warning: unknown inotify event 0x%08x received for %d!\n",__FILE__,__LINE__,inotifyEvent->mask,inotifyEvent->wd);
             #endif /* not NDEBUG */
           }
         }
