@@ -5386,9 +5386,6 @@ LOCAL void purgeExpiredThreadCode(void)
           }
         }
       }
-//TODO
-#warning remove
-fprintf(stderr,"%s, %d: %llu %llu\n",__FILE__,__LINE__,expiredInfo.entityId,surplusInfo.entityId);
     }
     while (   !quitFlag
            && ((expiredInfo.entityId != INDEX_ID_NONE) || (surplusInfo.entityId != INDEX_ID_NONE))
