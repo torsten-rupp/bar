@@ -1996,7 +1996,9 @@ Dprintf.dprintf("cirrect?");
 
       // get UUID list
       final ArrayList<UUIDIndexData> uuidIndexDataList = new ArrayList<UUIDIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST name=%'S",
+      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST indexStateSet=%s indexModeSet=%s name=%'S",
+                                                   storageIndexStateSet.nameList("|"),
+                                                   "*",
                                                    storageName
                                                   ),
                                1,  // debugLevel
@@ -2198,8 +2200,10 @@ Dprintf.dprintf("cirrect?");
 
       // get entity list
       final ArrayList<EntityIndexData> entityIndexDataList = new ArrayList<EntityIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST uuidId=%lld pattern=%'S",
+      BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST uuidId=%lld indexStateSet=%s indexModeSet=%s name=%'S",
                                                    uuidIndexData[0].id,
+                                                   storageIndexStateSet.nameList("|"),
+                                                   "*",
                                                    storageName
                                                   ),
                                1,  // debug level
@@ -2822,7 +2826,7 @@ Dprintf.dprintf("/TODO: updateStorageTable sort");
 
       // get and update UUIDs menu items
       final HashMap<String,Menu> uuidMenuMap = new HashMap<String,Menu>();
-      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST"),
+      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST indexStateSet=* indexModeSet=*"),
                                1,  // debugLevel
                                new CommandResultHandler()
                                {
@@ -5877,6 +5881,7 @@ Dprintf.dprintf("");
           @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
+Dprintf.dprintf("");
           }
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -5898,6 +5903,7 @@ Dprintf.dprintf("");
               default: storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               storageEntityState = EntityStates.ANY;  break;
 
             }
+Dprintf.dprintf("");
             updateStorageTreeTableThread.triggerUpdateStorageState(storageIndexStateSet,storageEntityState);
           }
         });

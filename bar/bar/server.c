@@ -4798,6 +4798,8 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                                  uuidId,
                                  NULL,  // jobUUID
                                  NULL,  // scheduleId,
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
                                  NULL,  // name
                                  DATABASE_ORDERING_NONE,
                                  0LL,  // offset
@@ -5177,6 +5179,8 @@ LOCAL void purgeExpiredThreadCode(void)
                                      INDEX_ID_ANY,  // uuidId
                                      NULL,  // jobUUID
                                      NULL,  // scheduldUUID,
+                                     INDEX_STATE_SET_ALL,
+                                     INDEX_MODE_SET_ALL,
                                      NULL,  // name
                                      DATABASE_ORDERING_ASCENDING,
                                      0LL,  // offset
@@ -5236,6 +5240,8 @@ LOCAL void purgeExpiredThreadCode(void)
                                                INDEX_ID_ANY,  // uuidId
                                                jobUUID,
                                                scheduleUUID,
+                                               INDEX_STATE_SET_ALL,
+                                               INDEX_MODE_SET_ALL,
                                                NULL,  // name
                                                DATABASE_ORDERING_DESCENDING,
                                                (ulong)minKeep,
@@ -5286,6 +5292,8 @@ LOCAL void purgeExpiredThreadCode(void)
                                                INDEX_ID_ANY,  // uuidId
                                                jobUUID,
                                                scheduleUUID,
+                                               INDEX_STATE_SET_ALL,
+                                               INDEX_MODE_SET_ALL,
                                                NULL,  // name
                                                DATABASE_ORDERING_DESCENDING,
                                                (ulong)maxKeep,
@@ -12187,6 +12195,8 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
                                        INDEX_ID_ANY,  // uuidId
                                        NULL,  // jobUUID,
                                        scheduleNode->uuid,
+                                       INDEX_STATE_SET_ALL,
+                                       INDEX_MODE_SET_ALL,
                                        NULL,  // name
                                        DATABASE_ORDERING_ASCENDING,
                                        0LL,  // offset
@@ -15010,6 +15020,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            indexStateSet=<state set>|*
+*            indexModeSet=<mode set>|*
 *            [name=<text>]
 *          Result:
 *            uuidId=<n>
@@ -15062,6 +15074,10 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
     String_delete(uuidNode->jobUUID);
   }
 
+  bool             indexStateAny;
+  IndexStateSet    indexStateSet;
+  bool             indexModeAny;
+  IndexModeSet     indexModeSet;
   String           name;
   UUIDList         uuidList;
   String           lastErrorMessage;
@@ -15079,7 +15095,33 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // filter name
+  // filter index state set, index mode set, name
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
+  {
+    indexStateAny = TRUE;
+  }
+  else if (StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
+  {
+    indexStateAny = FALSE;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    return;
+  }
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
+  {
+    indexModeAny = TRUE;
+  }
+  else if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
+  {
+    indexModeAny = FALSE;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
+    return;
+  }
   name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
 
@@ -15098,6 +15140,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   // get UUIDs (Note: use list to avoid dead-lock in job list)
   error = Index_initListUUIDs(&indexQueryHandle,
                               indexHandle,
+                              indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
+                              indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
                               name,
                               0LL,  // offset
                               INDEX_UNLIMITED
@@ -15189,6 +15233,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 * Return : -
 * Notes  : Arguments:
 *            [uuidId=<id>]
+*            indexStateSet=<state set>|*
+*            indexModeSet=<mode set>|*
 *            [name=<text>]
 *          Result:
 *            jobUUID=<uuid> \
@@ -15205,11 +15251,15 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId          uuidId;
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  bool             indexStateAny;
+  IndexStateSet    indexStateSet;
+  bool             indexModeAny;
+  IndexModeSet     indexModeSet;
   String           name;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   IndexId          entityId;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
   uint64           createdDateTime;
   ArchiveTypes     archiveType;
@@ -15220,9 +15270,35 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get uuid, name
-  name = String_new();
+  // get uuid, index state set, index mode set, name, name
   StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_ANY);
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
+  {
+    indexStateAny = TRUE;
+  }
+  else if (StringMap_getEnumSet(argumentMap,"indexStateSet",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_SET_ALL,"|",INDEX_STATE_NONE))
+  {
+    indexStateAny = FALSE;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    return;
+  }
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
+  {
+    indexModeAny = TRUE;
+  }
+  else if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
+  {
+    indexModeAny = FALSE;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
+    return;
+  }
+  name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
 
   // check if index database is available
@@ -15242,6 +15318,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                                  uuidId,
                                  NULL,  // jobUUID,
                                  NULL,  // scheduldUUID
+                                 indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
+                                 indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
                                  name,
                                  DATABASE_ORDERING_ASCENDING,
                                  0LL,  // offset
@@ -15301,9 +15379,9 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 * Return : -
 * Notes  : Arguments:
 *            entityId=<id>|0|*
-*            name=<text>
 *            indexStateSet=<state set>|*
 *            indexModeSet=<mode set>|*
+*            [name=<text>]
 *            [offset=<n>]
 *            [limit=<n>]
 *            [sortBy=]
@@ -15329,11 +15407,11 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
 {
   uint64           n;
   IndexId          entityId;
-  String           name;
   bool             indexStateAny;
   IndexStateSet    indexStateSet;
   bool             indexModeAny;
   IndexModeSet     indexModeSet;
+  String           name;
   uint64           offset;
   uint64           limit;
   Errors           error;
@@ -15377,13 +15455,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
     return;
   }
-  name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
-    String_delete(name);
-    return;
-  }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
   {
     indexStateAny = TRUE;
@@ -15395,23 +15466,23 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   else
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
-    String_delete(name);
     return;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
   {
     indexModeAny = TRUE;
   }
-  if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
+  else if (StringMap_getEnumSet(argumentMap,"indexModeSet",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_SET_ALL,"|",INDEX_MODE_UNKNOWN))
   {
     indexModeAny = FALSE;
   }
   else
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
-    String_delete(name);
     return;
   }
+  name = String_new();
+  StringMap_getString(argumentMap,"name",name,NULL);
   StringMap_getUInt64(argumentMap,"offset",&offset,0);
   StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
 
