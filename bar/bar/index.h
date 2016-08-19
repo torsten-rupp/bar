@@ -888,6 +888,8 @@ Errors Index_updateUUIDInfos(IndexHandle *indexHandle,
 * Purpose: list uuid entries and aggregated data of entities
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
+*          indexStateSet    - index state set or INDEX_STATE_SET_ANY
+*          IndexModeSet     - index mode set
 *          name             - storage name pattern (glob, can be NULL)
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
@@ -899,6 +901,8 @@ Errors Index_updateUUIDInfos(IndexHandle *indexHandle,
 
 Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            IndexHandle      *indexHandle,
+                           IndexStateSet    indexStateSet,
+                           IndexModeSet     indexModeSet,
                            ConstString      name,
                            uint64           offset,
                            uint64           limit
@@ -1024,6 +1028,8 @@ Errors Index_updateEntityInfos(IndexHandle *indexHandle,
 *          uuidId           - index uuid id
 *          jobUUID          - unique job UUID (can be NULL)
 *          scheduleUUID     - unique schedule UUID (can be NULL)
+*          indexStateSet    - index state set or INDEX_STATE_SET_ANY
+*          IndexModeSet     - index mode set
 *          name             - storage name pattern (glob, can be NULL)
 *          ordering         - ordering mode
 *          offset           - offset or 0
@@ -1040,6 +1046,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 //TODO: remove?
                               ConstString      jobUUID,
                               ConstString      scheduleUUID,
+                              IndexStateSet    indexStateSet,
+                              IndexModeSet     indexModeSet,
                               ConstString      name,
                               DatabaseOrdering ordering,
                               ulong            offset,

@@ -4921,6 +4921,8 @@ LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
                                  INDEX_ID_ANY,  // uuidId
                                  NULL,  // jobUUID,
                                  NULL,  // scheduldUUID
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
                                  NULL,  // name
                                  DATABASE_ORDERING_ASCENDING,
                                  0LL,  // offset
@@ -4991,6 +4993,8 @@ LOCAL Errors refreshUUIDsInfos(IndexHandle *indexHandle)
   // clean-up
   error = Index_initListUUIDs(&indexQueryHandle,
                               indexHandle,
+                              INDEX_STATE_SET_ALL,
+                              INDEX_MODE_SET_ALL,
                               NULL,  // name
                               0LL,  // offset
                               INDEX_UNLIMITED
@@ -5969,6 +5973,8 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
                                  INDEX_ID_ANY,  // uuidId
                                  jobUUID,
                                  NULL, // scheduldUUID
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
                                  NULL,  // name
                                  DATABASE_ORDERING_ASCENDING,
                                  0LL,  // offset
@@ -6146,6 +6152,8 @@ LOCAL Errors assignJobToEntity(IndexHandle  *indexHandle,
                                  INDEX_ID_ANY,  // uuidId
                                  jobUUID,
                                  NULL, // scheduldUUID
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
                                  NULL,  // name
                                  DATABASE_ORDERING_ASCENDING,
                                  0LL,  // offset
@@ -7791,6 +7799,8 @@ return ERROR_STILL_NOT_IMPLEMENTED;
 
 Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            IndexHandle      *indexHandle,
+                           IndexStateSet    indexStateSet,
+                           IndexModeSet     indexModeSet,
                            ConstString      name,
                            uint64           offset,
                            uint64           limit
@@ -7799,6 +7809,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   String ftsName;
   String regexpName;
   String filterString;
+  String string;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -7820,7 +7831,11 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   // get filters
   filterString = String_newCString("1");
+  string = String_new();
   filterAppend(filterString,!String_isEmpty(name),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
+  filterAppend(filterString,indexStateSet != INDEX_STATE_SET_ALL,"AND","storage.state IN (%S)",getIndexStateSetString(string,indexStateSet));
+  filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storage.mode IN (%S)",getIndexModeSetString(string,indexModeSet));
+  String_delete(string);
 
   // lock
   Database_lock(&indexHandle->databaseHandle);
@@ -7831,7 +7846,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT uuids.id, \
                                    uuids.jobUUID, \
-                                   (SELECT UNIXTIMESTAMP(storage.created) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
+                                   (SELECT MAX(UNIXTIMESTAMP(entities.created)) FROM entities WHERE entities.jobUUID=uuids.jobUUID), \
                                    (SELECT storage.errorMessage FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
                                    (SELECT TOTAL(storage.totalEntryCount) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID), \
                                    (SELECT TOTAL(storage.totalEntrySize) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID) \
@@ -8092,6 +8107,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               IndexId          uuidId,
                               ConstString      jobUUID,
                               ConstString      scheduleUUID,
+                              IndexStateSet    indexStateSet,
+                              IndexModeSet     indexModeSet,
                               ConstString      name,
                               DatabaseOrdering ordering,
                               ulong            offset,
@@ -8100,7 +8117,9 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 {
   String ftsName;
   String regexpName;
-  String filterString,orderString;
+  String filterString;
+  String string;
+  String orderString;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -8124,10 +8143,14 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   getREGEXPString(regexpName,name);
 
   // get filters
+  string = String_new();
   filterAppend(filterString,(uuidId != INDEX_ID_ANY),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
   filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
   filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
   filterAppend(filterString,!String_isEmpty(name),"AND","EXISTS(SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
+  filterAppend(filterString,indexStateSet != INDEX_STATE_SET_ALL,"AND","storage.state IN (%S)",getIndexStateSetString(string,indexStateSet));
+  filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storage.mode IN (%S)",getIndexModeSetString(string,indexModeSet));
+  String_delete(string);
 
   // get ordering
   appendOrdering(orderString,TRUE,"entities.created",ordering);
@@ -8150,6 +8173,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                    (SELECT TOTAL(storage.totalEntrySize) FROM storage WHERE storage.entityId=entities.id) \
                             FROM entities \
                               LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                              LEFT JOIN storage ON storage.entityId=entities.id \
                             WHERE %S \
                             %S \
                             LIMIT %llu,%llu \
@@ -8207,24 +8231,6 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
     return FALSE;
   }
 
-#if 0
-  if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %lld %S %S %llu %u %S %lu %llu",
-                           &uuidId_,
-                           &entityId_,
-                           jobUUID,
-                           scheduleUUID,
-                           createdDateTime,
-                           archiveType,
-                           lastErrorMessage,
-                           totalEntryCount,
-                           totalEntrySize
-                          )
-     )
-  {
-    return FALSE;
-  }
-#else
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
                            "%lld %lld %S %S %llu %u %S %lf %lf",
                            &uuidId_,
@@ -8241,8 +8247,6 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
-//fprintf(stderr,"%s, %d: entity %lf %lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
-#endif
   if (uuidId != NULL) (*uuidId) = INDEX_ID_ENTITY(uuidId_);
   if (entityId != NULL) (*entityId) = INDEX_ID_ENTITY(entityId_);
   if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
@@ -9013,8 +9017,8 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   String ftsName;
   String regexpName;
   String filterString;
-  String orderString;
   String string;
+  String orderString;
   String uuidIdsString,entityIdsString,storageIdsString;
   String filterIdsString;
   Errors error;
@@ -9037,7 +9041,6 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   regexpName   = String_new();
   filterString = String_newCString("1");
   orderString  = String_new();
-  string       = String_new();
 
   // get FTS/regex patterns
   getFTSString(ftsName,name);
@@ -9071,6 +9074,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 
   // get filters
   filterIdsString = String_new();
+  string = String_new();
   filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
   filterAppend(filterIdsString,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
   filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","storage.id IN (%S)",storageIdsString);
@@ -9080,8 +9084,9 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   filterAppend(filterString,!String_isEmpty(ftsName),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
 //  filterAppend(filterString,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,storage.name)",regexpName);
-  filterAppend(filterString,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(string,indexStateSet));
-  filterAppend(filterString,TRUE,"AND","storage.mode IN (%S)",getIndexModeSetString(string,indexModeSet));
+  filterAppend(filterString,indexStateSet != INDEX_STATE_SET_ALL,"AND","storage.state IN (%S)",getIndexStateSetString(string,indexStateSet));
+  filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storage.mode IN (%S)",getIndexModeSetString(string,indexModeSet));
+  String_delete(string);
   String_delete(filterIdsString);
 
   // get sort mode, ordering
@@ -9127,7 +9132,6 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   {
     doneIndexQueryHandle(indexQueryHandle);
     Database_unlock(&indexHandle->databaseHandle);
-    String_delete(string);
     String_delete(orderString);
     String_delete(filterString);
     String_delete(storageIdsString);
@@ -9139,7 +9143,6 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   }
 
   // free resources
-  String_delete(string);
   String_delete(orderString);
   String_delete(filterString);
   String_delete(storageIdsString);
@@ -9487,13 +9490,11 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-fprintf(stderr,"%s, %d: Index_clearStorage file\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM fileEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
-fprintf(stderr,"%s, %d: Index_clearStorage file e\n",__FILE__,__LINE__);
     if (error != ERROR_NONE) return error;
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
@@ -9517,7 +9518,6 @@ fprintf(stderr,"%s, %d: Index_clearStorage image\n",__FILE__,__LINE__);
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: Index_clearStorage image e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
@@ -9533,14 +9533,12 @@ fprintf(stderr,"%s, %d: Index_clearStorage image e\n",__FILE__,__LINE__);
                             );
     if (error != ERROR_NONE) return error;
 
-fprintf(stderr,"%s, %d: Index_clearStorage directory\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM directoryEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: Index_clearStorage directory e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
@@ -9556,14 +9554,12 @@ fprintf(stderr,"%s, %d: Index_clearStorage directory e\n",__FILE__,__LINE__);
                             );
     if (error != ERROR_NONE) return error;
 
-fprintf(stderr,"%s, %d: Index_clearStorage link\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM linkEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: Index_clearStorage link e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
@@ -9579,14 +9575,12 @@ fprintf(stderr,"%s, %d: Index_clearStorage link e\n",__FILE__,__LINE__);
                             );
     if (error != ERROR_NONE) return error;
 
-fprintf(stderr,"%s, %d: Index_clearStorage hardlink\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM hardlinkEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: Index_clearStorage hardlink e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
@@ -9602,14 +9596,12 @@ fprintf(stderr,"%s, %d: Index_clearStorage hardlink e\n",__FILE__,__LINE__);
                             );
     if (error != ERROR_NONE) return error;
 
-fprintf(stderr,"%s, %d: Index_clearStorage special\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM specialEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
     if (error != ERROR_NONE) return error;
-fprintf(stderr,"%s, %d: Index_clearStorage special e\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
@@ -13074,6 +13066,8 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
                                    uuidId,
                                    NULL,  // jobUUID
                                    NULL,  // scheduldUUID
+                                   INDEX_STATE_SET_ALL,
+                                   INDEX_MODE_SET_ALL,
                                    NULL,  // name
                                    DATABASE_ORDERING_ASCENDING,
                                    0LL,  // offset
