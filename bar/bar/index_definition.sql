@@ -47,29 +47,6 @@ INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 CREATE TABLE IF NOT EXISTS uuids(
   id                  INTEGER PRIMARY KEY,
   jobUUID             TEXT UNIQUE NOT NULL
-
-/*
-  // updated by triggers
-  totalEntityCount    INTEGER DEFAULT 0,  // total number of entities
-  lastCreated         INTEGER DEFAULT 0,  // date/time last created entity
-  lastErrorMessage    TEXT DEFAULT '',    // last entity error message
-
-  totalStorageCount   INTEGER DEFAULT 0,  // total number of storages
-  totalStorageSize    INTEGER DEFAULT 0,  // total size of storages [bytes]
-
-  totalEntryCount     INTEGER DEFAULT 0,  // total number of entries
-  totalEntrySize      INTEGER DEFAULT 0,  // total size of entries [bytes]
-
-  totalFileCount      INTEGER DEFAULT 0,  // total number of file entries
-  totalFileSize       INTEGER DEFAULT 0,  // total size of file entries [bytes]
-  totalImageCount     INTEGER DEFAULT 0,  // total number of image entries
-  totalImageSize      INTEGER DEFAULT 0,  // total size of image entries [bytes]
-  totalDirectoryCount INTEGER DEFAULT 0,  // total number of directory entries
-  totalLinkCount      INTEGER DEFAULT 0,  // total number of link entries
-  totalHardlinkCount  INTEGER DEFAULT 0,  // total number of hardlink entries
-  totalHardlinkSize   INTEGER DEFAULT 0,  // total size of hardlink entries [bytes]
-  totalSpecialCount   INTEGER DEFAULT 0   // total number of file entries
-*/
 );
 CREATE INDEX ON uuids (jobUUID);
 
@@ -82,27 +59,6 @@ CREATE TABLE IF NOT EXISTS entities(
   type                INTEGER,
   parentJobUUID       INTEGER,
   bidFlag             INTEGER
-
-/*
-  // updated by triggers
-  totalStorageCount   INTEGER DEFAULT 0,  // total number of storages
-  totalStorageSize    INTEGER DEFAULT 0,  // total size of storages [bytes]
-  lastCreated         INTEGER DEFAULT 0,  // date/time last created storage
-  lastErrorMessage    TEXT DEFAULT ''     // last storage error message
-
-  totalEntryCount     INTEGER DEFAULT 0,  // total number of entries
-  totalEntrySize      INTEGER DEFAULT 0,  // total size of entries (sum of fragments) [bytes]
-
-  totalFileCount      INTEGER DEFAULT 0,  // total number of file entries
-  totalFileSize       INTEGER DEFAULT 0,  // total size of file entries (sum of fragments) [bytes]
-  totalImageCount     INTEGER DEFAULT 0,  // total number of image entries
-  totalImageSize      INTEGER DEFAULT 0,  // total size of image entries (sum of fragments) [bytes]
-  totalDirectoryCount INTEGER DEFAULT 0,  // total number of directory entries
-  totalLinkCount      INTEGER DEFAULT 0,  // total number of link entries
-  totalHardlinkCount  INTEGER DEFAULT 0,  // total number of hardlink entries
-  totalHardlinkSize   INTEGER DEFAULT 0,  // total size of hardlink entries (sum of fragments) [bytes]
-  totalSpecialCount   INTEGER DEFAULT 0   // total number of file entries
-*/
 );
 CREATE INDEX ON entities (jobUUID,created,type);
 
