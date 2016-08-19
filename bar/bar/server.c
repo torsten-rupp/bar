@@ -15511,7 +15511,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                                  indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
                                  indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
                                  name,
-                                 INDEX_STORAGE_SORT_MODE_NONE,
+                                 sortMode,
+//TODO
                                  DATABASE_ORDERING_NONE,
                                  offset,
                                  limit
