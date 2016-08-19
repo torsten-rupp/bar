@@ -77,6 +77,30 @@ LOCAL const struct
   { "SPECIAL",   INDEX_TYPE_SPECIAL   },
 };
 
+LOCAL const struct
+{
+  const char            *name;
+  IndexStorageSortModes sortMode;
+} INDEX_STORAGE_SORT_MODES[] =
+{
+  { "NAME",    INDEX_STORAGE_SORT_MODE_NAME    },
+  { "SIZE",    INDEX_STORAGE_SORT_MODE_SIZE    },
+  { "CREATED", INDEX_STORAGE_SORT_MODE_CREATED },
+  { "STATE",   INDEX_STORAGE_SORT_MODE_STATE   },
+};
+
+LOCAL const struct
+{
+  const char          *name;
+  IndexEntrySortModes sortMode;
+} INDEX_ENTRY_SORT_MODES[] =
+{
+  { "NAME",     INDEX_ENTRY_SORT_MODE_NAME     },
+  { "TYPE",     INDEX_ENTRY_SORT_MODE_TYPE     },
+  { "SIZE",     INDEX_ENTRY_SORT_MODE_SIZE     },
+  { "MODIFIED", INDEX_ENTRY_SORT_MODE_MODIFIED },
+};
+
 LOCAL const char *INDEX_STORAGE_SORT_MODE_COLUMNS[] =
 {
   [INDEX_STORAGE_SORT_MODE_NONE   ] = NULL,
@@ -87,8 +111,6 @@ LOCAL const char *INDEX_STORAGE_SORT_MODE_COLUMNS[] =
   [INDEX_STORAGE_SORT_MODE_STATE  ] = "storage.state"
 };
 
-#if 0
-still not used
 LOCAL const char *INDEX_ENTRY_SORT_MODE_COLUMNS[] =
 {
   [INDEX_ENTRY_SORT_MODE_NONE    ] = NULL,
@@ -98,7 +120,6 @@ LOCAL const char *INDEX_ENTRY_SORT_MODE_COLUMNS[] =
   [INDEX_ENTRY_SORT_MODE_SIZE    ] = "size",
   [INDEX_ENTRY_SORT_MODE_MODIFIED] = "timeModified"
 };
-#endif
 
 // sleep time [s]
 #define SLEEP_TIME_INDEX_CLEANUP_THREAD (4*60*60)
@@ -6371,6 +6392,56 @@ bool Index_parseType(const char *name, IndexTypes *indexType)
   if (i < SIZE_OF_ARRAY(INDEX_TYPES))
   {
     (*indexType) = INDEX_TYPES[i].indexType;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+bool Index_parseStorageSortMode(const char *name, IndexStorageSortModes *indexStorageSortMode)
+{
+  uint i;
+
+  assert(name != NULL);
+  assert(indexStorageSortMode != NULL);
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(INDEX_STORAGE_SORT_MODES))
+         && !stringEqualsIgnoreCase(INDEX_STORAGE_SORT_MODES[i].name,name)
+        )
+  {
+    i++;
+  }
+  if (i < SIZE_OF_ARRAY(INDEX_STORAGE_SORT_MODES))
+  {
+    (*indexStorageSortMode) = INDEX_STORAGE_SORT_MODES[i].sortMode;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+bool Index_parseEntrySortMode(const char *name, IndexEntrySortModes *indexEntrySortMode)
+{
+  uint i;
+
+  assert(name != NULL);
+  assert(indexEntrySortMode != NULL);
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(INDEX_ENTRY_SORT_MODES))
+         && !stringEqualsIgnoreCase(INDEX_ENTRY_SORT_MODES[i].name,name)
+        )
+  {
+    i++;
+  }
+  if (i < SIZE_OF_ARRAY(INDEX_ENTRY_SORT_MODES))
+  {
+    (*indexEntrySortMode) = INDEX_ENTRY_SORT_MODES[i].sortMode;
     return TRUE;
   }
   else

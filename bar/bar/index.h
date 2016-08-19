@@ -335,6 +335,28 @@ bool Index_parseMode(const char *name, IndexModes *indexMode);
 bool Index_parseType(const char *name, IndexTypes *indexType);
 
 /***********************************************************************\
+* Name   : Index_parseStorageSortMode
+* Purpose: parse index storage sort mode string
+* Input  : name - name
+* Output : indexStorageSortMode - index storage sort mode
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Index_parseStorageSortMode(const char *name, IndexStorageSortModes *indexStorageSortMode);
+
+/***********************************************************************\
+* Name   : Index_parseEntrySortMode
+* Purpose: parse index entry sort mode string
+* Input  : name - name
+* Output : indexEntrySortMode - index entry sort mode
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Index_parseEntrySortMode(const char *name, IndexEntrySortModes *indexEntrySortMode);
+
+/***********************************************************************\
 * Name   : Index_init
 * Purpose: initialize index database
 * Input  : fileName - database file name

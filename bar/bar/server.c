@@ -15381,7 +15381,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 *            [name=<text>]
 *            [offset=<n>]
 *            [limit=<n>]
-*            [sortBy=]
+*            [sortMode=NAME|SIZE|CREATED|STATE]
 *          Result:
 *            uuidId=<id>
 *            jobUUID=<uuid>
@@ -15402,34 +15402,35 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint64           n;
-  IndexId          entityId;
-  bool             indexStateAny;
-  IndexStateSet    indexStateSet;
-  bool             indexModeAny;
-  IndexModeSet     indexModeSet;
-  String           name;
-  uint64           offset;
-  uint64           limit;
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  StorageSpecifier storageSpecifier;
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String           jobName;
-  String           storageName;
-  String           printableStorageName;
-  String           errorMessage;
-  IndexId          uuidId,storageId;
-  ArchiveTypes     archiveType;
-  uint64           dateTime;
-  ulong            totalEntryCount;
-  uint64           totalEntrySize;
-  IndexStates      indexState;
-  IndexModes       indexMode;
-  uint64           lastCheckedDateTime;
-  SemaphoreLock    semaphoreLock;
-  JobNode          *jobNode;
+  uint64                n;
+  IndexId               entityId;
+  bool                  indexStateAny;
+  IndexStateSet         indexStateSet;
+  bool                  indexModeAny;
+  IndexModeSet          indexModeSet;
+  String                name;
+  uint64                offset;
+  uint64                limit;
+  IndexStorageSortModes sortMode;
+  Errors                error;
+  IndexQueryHandle      indexQueryHandle;
+  StorageSpecifier      storageSpecifier;
+  StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString          (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  String                jobName;
+  String                storageName;
+  String                printableStorageName;
+  String                errorMessage;
+  IndexId               uuidId,storageId;
+  ArchiveTypes          archiveType;
+  uint64                dateTime;
+  ulong                 totalEntryCount;
+  uint64                totalEntrySize;
+  IndexStates           indexState;
+  IndexModes            indexMode;
+  uint64                lastCheckedDateTime;
+  SemaphoreLock         semaphoreLock;
+  JobNode               *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -15482,6 +15483,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   StringMap_getString(argumentMap,"name",name,NULL);
   StringMap_getUInt64(argumentMap,"offset",&offset,0);
   StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
+  StringMap_getEnum(argumentMap,"sortMode",&sortMode,(StringMapParseEnumFunction)Index_parseStorageSortMode,INDEX_STORAGE_SORT_MODE_NAME);
 
   // check if index database is available
   if (indexHandle == NULL)
