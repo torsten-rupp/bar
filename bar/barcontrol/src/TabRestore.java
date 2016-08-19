@@ -6739,6 +6739,10 @@ Dprintf.dprintf("remove");
       if (archiveType != Settings.ArchiveTypes.NONE)
       {
         dateTime = Dialogs.date(shell,"New entity date",(String)null,"New");
+        if (dateTime == 0)
+        {
+          return;
+        }
       }
 
       try
@@ -7629,43 +7633,31 @@ Dprintf.dprintf("remove");
     {
       case 0:
         // tree view
-/*
-        for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
-        {
-          UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
-          if (uuidTreeItem.getExpanded())
-          {
-            for (TreeItem entityTreeItem : uuidTreeItem.getItems())
-            {
-              EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
-              if (entityTreeItem.getExpanded())
-              {
-                for (TreeItem storageTreeItem : entityTreeItem.getItems())
-                {
-                  StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
-Dprintf.dprintf("storageIndexData=%s: %s",storageIndexData,storageTreeItem.getSelection());
-                }
-              }
-            }
-          }
-        }
-*/
         for (TreeItem treeItem : widgetStorageTree.getSelection())
         {
           if      (treeItem.getData() instanceof UUIDIndexData)
           {
             UUIDIndexData uuidIndexData = (UUIDIndexData)treeItem.getData();
-            indexIdSet.add(uuidIndexData.id);
+            if (uuidIndexData != null)
+            {
+              indexIdSet.add(uuidIndexData.id);
+            }
           }
           else if (treeItem.getData() instanceof EntityIndexData)
           {
             EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
-            indexIdSet.add(entityIndexData.id);
+            if (entityIndexData != null)
+            {
+              indexIdSet.add(entityIndexData.id);
+            }
           }
           else if (treeItem.getData() instanceof StorageIndexData)
           {
             StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
-            indexIdSet.add(storageIndexData.id);
+            if (storageIndexData != null)
+            {
+              indexIdSet.add(storageIndexData.id);
+            }
           }
         }
         break;
@@ -7673,7 +7665,10 @@ Dprintf.dprintf("storageIndexData=%s: %s",storageIndexData,storageTreeItem.getSe
         for (TableItem tableItem : widgetStorageTable.getSelection())
         {
           StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
-          indexIdSet.add(storageIndexData.id);
+          if (storageIndexData != null)
+          {
+            indexIdSet.add(storageIndexData.id);
+          }
         }
         break;
     }

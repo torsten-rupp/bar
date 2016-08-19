@@ -5383,7 +5383,7 @@ class Dialogs
    * @param cancelText cancel button text
    * @param toolTipText tooltip text (can be null)
    * @param style widget style (SWT.CALENDAR, SWT.TIME)
-   * @return string or null on cancel
+   * @return date/time [s] or 0
    */
   public static long dateTime(Shell  parentShell,
                               String title,
@@ -5532,7 +5532,7 @@ class Dialogs
       });
 
       widgetDate.setFocus();
-      return (Long)run(dialog,null);
+      return (Long)run(dialog,new Long(0));
     }
     else
     {
@@ -5548,7 +5548,7 @@ class Dialogs
    * @param okText OK button text
    * @param cancelText cancel button text
    * @param style widget style (SWT.CALENDAR, SWT.TIME)
-   * @return string or null on cancel
+   * @return date [s] or 0
    */
   public static long dateTime(Shell  parentShell,
                               String title,
@@ -5569,7 +5569,7 @@ class Dialogs
    * @param value value to edit (can be 0)
    * @param okText OK button text
    * @param style widget style (SWT.CALENDAR, SWT.TIME)
-   * @return string or null on cancel
+   * @return date [s] or 0
    */
   public static long dateTime(Shell  parentShell,
                               String title,
@@ -5588,7 +5588,7 @@ class Dialogs
    * @param text text before input element
    * @param okText OK button text
    * @param style widget style (SWT.CALENDAR, SWT.TIME)
-   * @return string or null on cancel
+   * @return date/time [s] or 0
    */
   public static long dateTime(Shell  parentShell,
                               String title,
@@ -5605,7 +5605,7 @@ class Dialogs
    * @param title title string
    * @param okText OK button text
    * @param style widget style (SWT.CALENDAR, SWT.TIME)
-   * @return string or null on cancel
+   * @return date [s] or 0
    */
   public static long dateTime(Shell  parentShell,
                               String title,
@@ -5624,7 +5624,7 @@ class Dialogs
    * @param okText OK button text
    * @param cancelText cancel button text
    * @param toolTipText tooltip text (can be null)
-   * @return string or null on cancel
+   * @return date/time [s] or 0
    */
   public static long date(Shell  parentShell,
                           String title,
@@ -5645,7 +5645,7 @@ class Dialogs
    * @param value value to edit (can be 0)
    * @param okText OK button text
    * @param cancelText cancel button text
-   * @return string or null on cancel
+   * @return date [s] or 0
    */
   public static long date(Shell  parentShell,
                           String title,
@@ -5664,7 +5664,7 @@ class Dialogs
    * @param text text before input element
    * @param value value to edit (can be 0)
    * @param okText OK button text
-   * @return string or null on cancel
+   * @return date [s] or 0
    */
   public static long date(Shell  parentShell,
                           String title,
@@ -5681,7 +5681,7 @@ class Dialogs
    * @param title title string
    * @param text text before input element
    * @param okText OK button text
-   * @return string or null on cancel
+   * @return date [s] or 0
    */
   public static long date(Shell  parentShell,
                           String title,
@@ -5696,7 +5696,7 @@ class Dialogs
    * @param parentShell parent shell
    * @param title title string
    * @param okText OK button text
-   * @return string or null on cancel
+   * @return date [s] or 0
    */
   public static long date(Shell  parentShell,
                           String title,
@@ -5714,7 +5714,7 @@ class Dialogs
    * @param okText OK button text
    * @param cancelText cancel button text
    * @param toolTipText tooltip text (can be null)
-   * @return string or null on cancel
+   * @return time [s] or 0
    */
   public static long time(Shell  parentShell,
                           String title,
@@ -5735,7 +5735,7 @@ class Dialogs
    * @param value value to edit (can be 0)
    * @param okText OK button text
    * @param cancelText cancel button text
-   * @return string or null on cancel
+   * @return time [s] or 0
    */
   public static long time(Shell  parentShell,
                           String title,
@@ -5754,7 +5754,7 @@ class Dialogs
    * @param text text before input element
    * @param value value to edit (can be 0)
    * @param okText OK button text
-   * @return string or null on cancel
+   * @return time [s] or 0
    */
   public static long time(Shell  parentShell,
                           String title,
@@ -5771,7 +5771,7 @@ class Dialogs
    * @param title title string
    * @param text text before input element
    * @param okText OK button text
-   * @return string or null on cancel
+   * @return time [s] or 0
    */
   public static long time(Shell  parentShell,
                           String title,
@@ -5786,7 +5786,7 @@ class Dialogs
    * @param parentShell parent shell
    * @param title title string
    * @param okText OK button text
-   * @return string or null on cancel
+   * @return time [s] or 0
    */
   public static long time(Shell  parentShell,
                           String title,
