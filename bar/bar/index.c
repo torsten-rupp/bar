@@ -115,10 +115,19 @@ LOCAL const char *INDEX_ENTRY_SORT_MODE_COLUMNS[] =
 {
   [INDEX_ENTRY_SORT_MODE_NONE    ] = NULL,
 
-  [INDEX_ENTRY_SORT_MODE_NAME    ] = "name",
-  [INDEX_ENTRY_SORT_MODE_TYPE    ] = "type",
-  [INDEX_ENTRY_SORT_MODE_SIZE    ] = "size",
-  [INDEX_ENTRY_SORT_MODE_MODIFIED] = "timeModified"
+  [INDEX_ENTRY_SORT_MODE_NAME    ] = "entries.name",
+  [INDEX_ENTRY_SORT_MODE_TYPE    ] = "entries.type",
+  [INDEX_ENTRY_SORT_MODE_SIZE    ] = "entries.size",
+  [INDEX_ENTRY_SORT_MODE_MODIFIED] = "entries.timeModified"
+};
+LOCAL const char *INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[] =
+{
+  [INDEX_ENTRY_SORT_MODE_NONE    ] = NULL,
+
+  [INDEX_ENTRY_SORT_MODE_NAME    ] = "entriesNewest.name",
+  [INDEX_ENTRY_SORT_MODE_TYPE    ] = "entriesNewest.type",
+  [INDEX_ENTRY_SORT_MODE_SIZE    ] = "entriesNewest.size",
+  [INDEX_ENTRY_SORT_MODE_MODIFIED] = "entriesNewest.timeModified"
 };
 
 // sleep time [s]
@@ -4370,6 +4379,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                 0,  // entryIdCount
                                 INDEX_TYPE_SET_ANY_ENTRY,
                                 NULL,  // entryPattern,
+                                INDEX_ENTRY_SORT_MODE_NONE,
                                 DATABASE_ORDERING_NONE,
                                 FALSE,  // newestOnly
                                 0LL,  // offset
@@ -5090,6 +5100,8 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                                 0,  // entryIdCount
                                 INDEX_TYPE_SET_ANY_ENTRY,
                                 NULL,  // entryPattern,
+                                INDEX_ENTRY_SORT_MODE_NONE,
+                                DATABASE_ORDERING_NONE,
                                 FALSE,  // newestOnly
                                 0LL,  // offset
                                 INDEX_UNLIMITED
@@ -10313,18 +10325,19 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   return error;
 }
 
-Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
-                             IndexHandle      *indexHandle,
-                             const IndexId    indexIds[],
-                             uint             indexIdCount,
-                             const IndexId    entryIds[],
-                             uint             entryIdCount,
-                             IndexTypeSet     indexTypeSet,
-                             ConstString      name,
-                             DatabaseOrdering ordering,
-                             bool             newestOnly,
-                             uint64           offset,
-                             uint64           limit
+Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
+                             IndexHandle         *indexHandle,
+                             const IndexId       indexIds[],
+                             uint                indexIdCount,
+                             const IndexId       entryIds[],
+                             uint                entryIdCount,
+                             IndexTypeSet        indexTypeSet,
+                             ConstString         name,
+                             IndexEntrySortModes sortMode,
+                             DatabaseOrdering    ordering,
+                             bool                newestOnly,
+                             uint64              offset,
+                             uint64              limit
                             )
 {
   String ftsName;
@@ -10457,14 +10470,14 @@ Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
     filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(string,indexTypeSet));
   }
 
-  // get ordering
+  // get sort mode, ordering
   if (newestOnly)
   {
-    appendOrdering(orderString,TRUE,"entriesNewest.name",ordering);
+    appendOrdering(orderString,sortMode != INDEX_ENTRY_SORT_MODE_NONE,INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[sortMode],ordering);
   }
   else
   {
-    appendOrdering(orderString,TRUE,"entries.name",ordering);
+    appendOrdering(orderString,sortMode != INDEX_ENTRY_SORT_MODE_NONE,INDEX_ENTRY_SORT_MODE_COLUMNS[sortMode],ordering);
   }
 
   // lock

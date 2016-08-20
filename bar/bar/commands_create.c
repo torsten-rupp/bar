@@ -4102,6 +4102,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
     // write data to storage
     retryCount  = 0;
+    appendFlag  = FALSE;
     archiveSize = 0LL;
     do
     {

@@ -2354,8 +2354,6 @@ LOCAL void startJob(JobNode *jobNode)
 
 LOCAL void doneJob(JobNode *jobNode)
 {
-  ScheduleNode *scheduleNode;
-
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
@@ -12058,19 +12056,15 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
 
 LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock    semaphoreLock;
-  const JobNode    *jobNode;
-  ScheduleNode     *scheduleNode;
-  String           date,weekDays,time;
-  uint64           lastExecutedDateTime;
-  ulong            entityCount;
-  ulong            totalEntryCount;
-  uint64           totalEntrySize;
-  IndexQueryHandle indexQueryHandle;
-  uint64           createdDateTime;
-  ulong            entryCount;
-  uint64           entrySize;
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  SemaphoreLock semaphoreLock;
+  const JobNode *jobNode;
+  ScheduleNode  *scheduleNode;
+  String        date,weekDays,time;
+  uint64        lastExecutedDateTime;
+  ulong         entityCount;
+  ulong         totalEntryCount;
+  uint64        totalEntrySize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -12168,14 +12162,13 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
       }
 
       // get last executed date/time, total entities, entries, size
-#if 0
+#if 1
       lastExecutedDateTime = 0LL;
       entityCount          = 0L;
       totalEntryCount      = 0L;
       totalEntrySize       = 0LL;
       if ((indexHandle != NULL))
       {
-#if 1
         (void)Index_getUUIDsInfos(indexHandle,
                                   INDEX_ID_ANY,
                                   NULL,  // jobUUID,
@@ -12186,42 +12179,6 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
                                   &totalEntryCount,
                                   &totalEntrySize
                                  );
-#else
-        error = Index_initListEntities(&indexQueryHandle,
-                                       indexHandle,
-                                       INDEX_ID_ANY,  // uuidId
-                                       NULL,  // jobUUID,
-                                       scheduleNode->uuid,
-                                       INDEX_STATE_SET_ALL,
-                                       INDEX_MODE_SET_ALL,
-                                       NULL,  // name
-                                       DATABASE_ORDERING_ASCENDING,
-                                       0LL,  // offset
-                                       INDEX_UNLIMITED
-                                      );
-        if (error == ERROR_NONE)
-        {
-          while (Index_getNextEntity(&indexQueryHandle,
-                                     NULL,  // uuidId,
-                                     NULL,  // jobUUID,
-                                     NULL,  // scheduleUUID,
-                                     NULL,  // entityId,
-                                     NULL,  // archiveType,
-                                     &createdDateTime,  // createdDateTime,
-                                     NULL,  // lastErrorMessage
-                                     &entryCount,
-                                     &entrySize
-                                    )
-                )
-          {
-            if (createdDateTime > lastExecutedDateTime) lastExecutedDateTime = createdDateTime;
-            entityCount     += 1;
-            totalEntryCount += entries;
-            totalEntrySize  += size;
-          }
-          Index_doneList(&indexQueryHandle);
-        }
-#endif
       }
 #endif
 
@@ -12239,17 +12196,10 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
                        scheduleNode->maxAge,
                        scheduleNode->noStorage,
                        scheduleNode->enabled,
-#if 0
-                       lastExecutedDateTime,
-                       entityCount,
-                       totalEntryCount,
-                       totalEntrySize
-#else
                        scheduleNode->lastExecutedDateTime,
                        scheduleNode->totalEntityCount,
                        scheduleNode->totalEntryCount,
                        scheduleNode->totalEntrySize
-#endif
                       );
     }
     String_delete(time);
@@ -14250,6 +14200,7 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
                                 Array_length(&clientInfo->entryIdArray),
                                 INDEX_TYPE_SET_ANY_ENTRY,
                                 NULL, // name
+                                INDEX_ENTRY_SORT_MODE_NONE,
                                 DATABASE_ORDERING_NONE,
                                 FALSE,  // newestOnly,
                                 0,
@@ -14890,6 +14841,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                     Array_length(&clientInfo->entryIdArray),
                                     INDEX_TYPE_SET_ANY_ENTRY,
                                     NULL, // name
+                                    INDEX_ENTRY_SORT_MODE_NONE,
                                     DATABASE_ORDERING_NONE,
                                     FALSE,  // newestOnly,
                                     0,
@@ -15844,6 +15796,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                 0,  // entryIdCount
                                 indexTypeAny ? INDEX_TYPE_SET_ANY_ENTRY : SET_VALUE(indexType),
                                 name,
+                                INDEX_ENTRY_SORT_MODE_NONE,
                                 DATABASE_ORDERING_NONE,
                                 newestOnly,
                                 offset,

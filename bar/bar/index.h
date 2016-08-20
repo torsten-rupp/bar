@@ -1220,6 +1220,8 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
 *          indexStateSet    - index state set
 *          IndexModeSet     - index mode set
 *          name             - name pattern (glob, can be NULL)
+*          sortMode         - sort mode; see IndexStorageSortModes
+*          ordering         - ordering
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
 *                             INDEX_UNLIMITED
@@ -1452,6 +1454,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 *          entryIdCount     - entry id count or 0
 *          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
 *          name             - name pattern (glob, can be NULL)
+*          sortMode         - sort mode; see IndexStorageSortModes
+*          ordering         - ordering
 *          newestOnly       - TRUE for newest entries only
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
@@ -1461,18 +1465,19 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_initListEntries(IndexQueryHandle *indexQueryHandle,
-                             IndexHandle      *indexHandle,
-                             const IndexId    indexIds[],
-                             uint             indexIdCount,
-                             const IndexId    entryIds[],
-                             uint             entryIdCount,
-                             IndexTypeSet     indexTypeSet,
-                             ConstString      name,
-                             DatabaseOrdering ordering,
-                             bool             newestOnly,
-                             uint64           offset,
-                             uint64           limit
+Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
+                             IndexHandle         *indexHandle,
+                             const IndexId       indexIds[],
+                             uint                indexIdCount,
+                             const IndexId       entryIds[],
+                             uint                entryIdCount,
+                             IndexTypeSet        indexTypeSet,
+                             ConstString         name,
+                             IndexEntrySortModes sortMode,
+                             DatabaseOrdering    ordering,
+                             bool                newestOnly,
+                             uint64              offset,
+                             uint64              limit
                             );
 
 /***********************************************************************\
