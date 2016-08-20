@@ -237,6 +237,9 @@ systemctl disable barserver.service 1>/dev/null 2>/dev/null
   - Upgrade bzip2 to 1.0.6
   - added bar-sqlite3 tool
   - added logrotate script, support for log rotate
+  - fixed auto-index: search for .bar files
+  - BARControl: fixed login credentials on command line
+  - BARControl: fixed archive name editor %%S, %%s, _
 
 * Sat Jan 09 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.19d
   - fixed include of multiple entries with pattern: store
