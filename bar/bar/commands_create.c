@@ -6502,6 +6502,7 @@ Errors Command_create(ConstString                  jobUUID,
                  requestedAbortFlag,
                  logHandle
                 );
+  AUTOFREE_ADD(&autoFreeList,&createInfo,{ doneCreateInfo(&createInfo); });
 
   // init threads
   createThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
@@ -6510,7 +6511,6 @@ Errors Command_create(ConstString                  jobUUID,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  AUTOFREE_ADD(&autoFreeList,&createInfo,{ doneCreateInfo(&createInfo); });
   AUTOFREE_ADD(&autoFreeList,createThreads,{ free(createThreads); });
 
   // mount devices
@@ -6527,7 +6527,7 @@ Errors Command_create(ConstString                  jobUUID,
       }
       mountNode->mounted = TRUE;
     }
-    AUTOFREE_ADD(&autoFreeList,mountNode,{ if (Device_isMounted(mountNode->name) && (mountNode->alwaysUnmount || mountNode->mounted)) Device_umount(mountNode->name); });
+    AUTOFREE_ADDX(&autoFreeList,mountNode,(MountNode *mountNode),{ if (Device_isMounted(mountNode->name) && (mountNode->alwaysUnmount || mountNode->mounted)) Device_umount(mountNode->name); });
   }
 
   // init storage
@@ -6622,7 +6622,7 @@ Errors Command_create(ConstString                  jobUUID,
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_rollbackTransaction(indexHandle); });
+    AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_rollbackTransaction(indexHandle); });
 
     // get/create index job UUID
     if (!Index_findUUIDByJobUUID(indexHandle,
@@ -6671,6 +6671,7 @@ Errors Command_create(ConstString                  jobUUID,
       return error;
     }
     assert(entityId != INDEX_ID_NONE);
+    DEBUG_TESTCODE() { Index_deleteEntity(indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
     AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
   }
 
