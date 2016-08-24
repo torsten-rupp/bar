@@ -2627,7 +2627,6 @@ Errors Storage_pruneDirectories(StorageHandle *storageHandle, ConstString archiv
   {
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(archiveName));
 
   name = File_getFilePathName(String_new(),archiveName);
   do
