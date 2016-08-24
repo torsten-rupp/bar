@@ -834,6 +834,7 @@ public class TabRestore
   class UUIDIndexData extends IndexData
   {
     public String jobUUID;                        // job UUID
+    public String scheduleUUID;                   // schedule UUID
     public String name;
     public long   lastExecutedDateTime;           // last executed date/time stamp [s]
     public String lastErrorMessage;               // last error message
@@ -869,6 +870,36 @@ public class TabRestore
     /** create UUID data index
      * @param indexId index id
      * @param jobUUID job uuid
+     * @param scheduleUUID schedule uuid
+     * @param name job name
+     * @param lastExecutedDateTime last executed date/time tamp [s]
+     * @param lastErrorMessage last error message text
+     * @param totalEntryCount total number of entries of storage
+     * @param totalEntrySize total size of storage [byte]
+     */
+    UUIDIndexData(long   indexId,
+                  String jobUUID,
+                  String scheduleUUID,
+                  String name,
+                  long   lastExecutedDateTime,
+                  String lastErrorMessage,
+                  long   totalEntryCount,
+                  long   totalEntrySize
+                 )
+    {
+      super(indexId);
+      this.jobUUID              = jobUUID;
+      this.scheduleUUID         = scheduleUUID;
+      this.name                 = name;
+      this.lastExecutedDateTime = lastExecutedDateTime;
+      this.lastErrorMessage     = lastErrorMessage;
+      this.totalEntryCount      = totalEntryCount;
+      this.totalEntrySize       = totalEntrySize;
+    }
+
+    /** create UUID data index
+     * @param indexId index id
+     * @param jobUUID job uuid
      * @param name job name
      * @param lastExecutedDateTime last executed date/time tamp [s]
      * @param lastErrorMessage last error message text
@@ -884,13 +915,7 @@ public class TabRestore
                   long   totalEntrySize
                  )
     {
-      super(indexId);
-      this.jobUUID              = jobUUID;
-      this.name                 = name;
-      this.lastExecutedDateTime = lastExecutedDateTime;
-      this.lastErrorMessage     = lastErrorMessage;
-      this.totalEntryCount      = totalEntryCount;
-      this.totalEntrySize       = totalEntrySize;
+      this(indexId,jobUUID,(String)null,name,lastExecutedDateTime,lastErrorMessage,totalEntryCount,totalEntrySize);
     }
 
     /** get name
@@ -959,7 +984,7 @@ public class TabRestore
      */
     public String toString()
     {
-      return "UUIDIndexData {"+id+", jobUUID="+jobUUID+", name="+name+", lastExecutedDateTime="+lastExecutedDateTime+", totalEntryCount="+totalEntryCount+", totalEntrySize="+totalEntrySize+" bytes}";
+      return "UUIDIndexData {"+id+", jobUUID="+jobUUID+", scheduleUUID="+scheduleUUID+", name="+name+", lastExecutedDateTime="+lastExecutedDateTime+", totalEntryCount="+totalEntryCount+", totalEntrySize="+totalEntrySize+" bytes}";
     }
   }
 
@@ -1558,7 +1583,7 @@ Dprintf.dprintf("");
    */
   private int findStorageMenuIndex(UUIDIndexData uuidIndexData)
   {
-    MenuItem            menuItems[]         = widgetStorageTreeAssignToMenu.getItems();
+    MenuItem            menuItems[]         = widgetStorageAssignToMenu.getItems();
     IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
 
 //TODO: binary search
@@ -2186,8 +2211,8 @@ Dprintf.dprintf("cirrect?");
 
       // get entity list
       final ArrayList<EntityIndexData> entityIndexDataList = new ArrayList<EntityIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST uuidId=%lld indexStateSet=%s indexModeSet=%s name=%'S",
-                                                   uuidIndexData[0].id,
+      BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=%s indexModeSet=%s name=%'S",
+                                                   uuidIndexData[0].jobUUID,
                                                    storageIndexStateSet.nameList("|"),
                                                    "*",
                                                    storageName
@@ -3878,13 +3903,11 @@ Dprintf.dprintf("cirrect?");
   private TabFolder                    widgetStorageTabFolder;
   private Tree                         widgetStorageTree;
   private Shell                        widgetStorageTreeToolTip = null;
-  private Menu                         widgetStorageTreeAssignToMenu;
   private Table                        widgetStorageTable;
   private Shell                        widgetStorageTableToolTip = null;
-//TODO: NYI
-  private Menu                         widgetStorageTableAssignToMenu;
   private Text                         widgetStorageFilter;
   private Combo                        widgetStorageStateFilter;
+  private Menu                         widgetStorageAssignToMenu;
   final private IndexIdSet             checkedIndexIdSet = new IndexIdSet();
   private WidgetEvent                  checkedIndexEvent = new WidgetEvent();       // triggered when checked-state of some uuid/enity/storage changed
 
@@ -4936,7 +4959,7 @@ Dprintf.dprintf("dropTargetEvent.data=%s",dropTargetEvent.data);
               else if (toIndexData instanceof EntityIndexData)
               {
                 EntityIndexData toEntityIndexData = (EntityIndexData)toIndexData;
-                assignStorage(fromIndexData,toEntityIndexData);
+                assignStorages(fromIndexData,toEntityIndexData);
               }
               else if (toIndexData instanceof StorageIndexData)
               {
@@ -4946,7 +4969,7 @@ Dprintf.dprintf("dropTargetEvent.data=%s",dropTargetEvent.data);
                   EntityIndexData toEntityIndexData = (EntityIndexData)treeItem.getParentItem().getData();
                   if (toEntityIndexData != null)
                   {
-                    assignStorage(fromIndexData,toEntityIndexData);
+                    assignStorages(fromIndexData,toEntityIndexData);
                   }
                 }
               }
@@ -5176,15 +5199,15 @@ Dprintf.dprintf("");
           }
         });
 
-        widgetStorageTreeAssignToMenu = Widgets.addMenu(menu,BARControl.tr("Assign to job")+"\u2026");
+        widgetStorageAssignToMenu = Widgets.addMenu(menu,BARControl.tr("Assign to job")+"\u2026");
         {
         }
-        widgetStorageTreeAssignToMenu.addListener(SWT.Show,new Listener()
+        widgetStorageAssignToMenu.addListener(SWT.Show,new Listener()
         {
           public void handleEvent(Event event)
           {
             // discard old menu items
-            for (MenuItem menuItem : widgetStorageTreeAssignToMenu.getItems())
+            for (MenuItem menuItem : widgetStorageAssignToMenu.getItems())
             {
               menuItem.dispose();
             }
@@ -5201,13 +5224,13 @@ Dprintf.dprintf("");
                                        {
                                          try
                                          {
-                                           long         uuidId               = valueMap.getLong  ("uuidId"              );
+                                           final long   uuidId               = valueMap.getLong  ("uuidId"              );
                                            final String jobUUID              = valueMap.getString("jobUUID"             );
-                                           String       name                 = valueMap.getString("name"                );
-                                           long         lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
-                                           String       lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
-                                           long         totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
-                                           long         totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
+                                           final String name                 = valueMap.getString("name"                );
+                                           final long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
+                                           final String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
+                                           final long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
+                                           final long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
 
                                            // add UUID index data
                                            final UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
@@ -5218,12 +5241,13 @@ Dprintf.dprintf("");
                                                                                                  totalEntryCount,
                                                                                                  totalEntrySize
                                                                                                 );
+
                                            display.syncExec(new Runnable()
                                            {
                                              public void run()
                                              {
                                                // insert new UUID sub-menu
-                                               final Menu subMenu = Widgets.insertMenu(widgetStorageTreeAssignToMenu,
+                                               final Menu subMenu = Widgets.insertMenu(widgetStorageAssignToMenu,
                                                                                        findStorageMenuIndex(uuidIndexData),
                                                                                        (Object)uuidIndexData,
                                                                                        uuidIndexData.name.replaceAll("&","&&")
@@ -5236,10 +5260,16 @@ Dprintf.dprintf("");
                                                  {
                                                    MenuItem menuItem;
 
-                                                   // add new normal/full/incremental/differential entity menu items
-                                                   menuItem = Widgets.addMenuItem(subMenu,
+                                                   // add normal menu items
+                                                   final Menu subSubMenuNormal = Widgets.addMenu(subMenu,
+                                                                                                 null,
+                                                                                                 BARControl.tr("normal")
+                                                                                                );
+                                                   uuidIndexData.setSubMenu(subSubMenuNormal);
+
+                                                   menuItem = Widgets.addMenuItem(subSubMenuNormal,
                                                                                   null,
-                                                                                  BARControl.tr("new normal")
+                                                                                  BARControl.tr("new")
                                                                                  );
                                                    menuItem.addSelectionListener(new SelectionListener()
                                                    {
@@ -5251,12 +5281,85 @@ Dprintf.dprintf("");
                                                        MenuItem widget = (MenuItem)selectionEvent.widget;
 
                                                        UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
-                                                       assignStorage(uuidIndexData,Settings.ArchiveTypes.NORMAL);
+                                                       assignStorages(uuidIndexData,Settings.ArchiveTypes.NORMAL);
                                                      }
                                                    });
-                                                   menuItem = Widgets.addMenuItem(subMenu,
+
+                                                   BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%'S archiveType=normal",
+                                                                                                jobUUID
+                                                                                               ),
+                                                                            1,  // debugLevel
+                                                                            new CommandResultHandler()
+                                                                            {
+                                                                              public int handleResult(int i, ValueMap valueMap)
+                                                                              {
+                                                                                try
+                                                                                {
+                                                                                  String scheduleUUID     = valueMap.getString ("scheduleUUID");
+                                                                                  final String date       = valueMap.getString ("date"        );
+                                                                                  final String weekDays   = valueMap.getString ("weekDays"    );
+                                                                                  final String time       = valueMap.getString ("time"        );
+                                                                                  final String customText = valueMap.getString("customText"  );
+
+                                                                                  // add UUID index data with schedule
+                                                                                  final UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
+                                                                                                                                        jobUUID,
+                                                                                                                                        scheduleUUID,
+                                                                                                                                        name,
+                                                                                                                                        lastExecutedDateTime,
+                                                                                                                                        lastErrorMessage,
+                                                                                                                                        totalEntryCount,
+                                                                                                                                        totalEntrySize
+                                                                                                                                       );
+                                                                                  display.syncExec(new Runnable()
+                                                                                  {
+                                                                                    public void run()
+                                                                                    {
+                                                                                      MenuItem menuItem = Widgets.addMenuItem(subSubMenuNormal,
+                                                                                                                              (Object)uuidIndexData,
+                                                                                                                              date+" "+weekDays+" "+time+" "+customText
+                                                                                                                             );
+                                                                                      uuidIndexData.setMenuItem(menuItem);
+
+                                                                                      menuItem.addSelectionListener(new SelectionListener()
+                                                                                      {
+                                                                                        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                                                                                        {
+                                                                                        }
+                                                                                        public void widgetSelected(SelectionEvent selectionEvent)
+                                                                                        {
+                                                                                          MenuItem widget = (MenuItem)selectionEvent.widget;
+
+                                                                                          UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getData();
+                                                                                          assignStorages(uuidIndexData,Settings.ArchiveTypes.NORMAL);
+                                                                                        }
+                                                                                      });
+                                                                                    }
+                                                                                  });
+                                                                                }
+                                                                                catch (IllegalArgumentException exception)
+                                                                                {
+                                                                                  if (Settings.debugLevel > 0)
+                                                                                  {
+                                                                                    System.err.println("ERROR: "+exception.getMessage());
+                                                                                    System.exit(1);
+                                                                                  }
+                                                                                }
+
+                                                                                return Errors.NONE;
+                                                                              }
+                                                                            });
+
+                                                   // add full menu items
+                                                   final Menu subSubMenuFull = Widgets.addMenu(subMenu,
+                                                                                               null,
+                                                                                               BARControl.tr("full")
+                                                                                              );
+                                                   uuidIndexData.setSubMenu(subSubMenuFull);
+
+                                                   menuItem = Widgets.addMenuItem(subSubMenuFull,
                                                                                   null,
-                                                                                  BARControl.tr("new full")
+                                                                                  BARControl.tr("new")
                                                                                  );
                                                    menuItem.addSelectionListener(new SelectionListener()
                                                    {
@@ -5268,12 +5371,85 @@ Dprintf.dprintf("");
                                                        MenuItem widget = (MenuItem)selectionEvent.widget;
 
                                                        UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
-                                                       assignStorage(uuidIndexData,Settings.ArchiveTypes.FULL);
+                                                       assignStorages(uuidIndexData,Settings.ArchiveTypes.FULL);
                                                      }
                                                    });
-                                                   menuItem = Widgets.addMenuItem(subMenu,
+
+                                                   BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%'S archiveType=full",
+                                                                                                jobUUID
+                                                                                               ),
+                                                                            1,  // debugLevel
+                                                                            new CommandResultHandler()
+                                                                            {
+                                                                              public int handleResult(int i, ValueMap valueMap)
+                                                                              {
+                                                                                try
+                                                                                {
+                                                                                  String scheduleUUID     = valueMap.getString("scheduleUUID");
+                                                                                  final String date       = valueMap.getString("date"        );
+                                                                                  final String weekDays   = valueMap.getString("weekDays"    );
+                                                                                  final String time       = valueMap.getString("time"        );
+                                                                                  final String customText = valueMap.getString("customText"  );
+
+                                                                                  // add UUID index data with schedule
+                                                                                  final UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
+                                                                                                                                        jobUUID,
+                                                                                                                                        scheduleUUID,
+                                                                                                                                        name,
+                                                                                                                                        lastExecutedDateTime,
+                                                                                                                                        lastErrorMessage,
+                                                                                                                                        totalEntryCount,
+                                                                                                                                        totalEntrySize
+                                                                                                                                       );
+                                                                                  display.syncExec(new Runnable()
+                                                                                  {
+                                                                                    public void run()
+                                                                                    {
+                                                                                      MenuItem menuItem = Widgets.addMenuItem(subSubMenuFull,
+                                                                                                                              (Object)uuidIndexData,
+                                                                                                                              date+" "+weekDays+" "+time+" "+customText
+                                                                                                                             );
+                                                                                      uuidIndexData.setMenuItem(menuItem);
+
+                                                                                      menuItem.addSelectionListener(new SelectionListener()
+                                                                                      {
+                                                                                        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                                                                                        {
+                                                                                        }
+                                                                                        public void widgetSelected(SelectionEvent selectionEvent)
+                                                                                        {
+                                                                                          MenuItem widget = (MenuItem)selectionEvent.widget;
+
+                                                                                          UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getData();
+                                                                                          assignStorages(uuidIndexData,Settings.ArchiveTypes.FULL);
+                                                                                        }
+                                                                                      });
+                                                                                    }
+                                                                                  });
+                                                                                }
+                                                                                catch (IllegalArgumentException exception)
+                                                                                {
+                                                                                  if (Settings.debugLevel > 0)
+                                                                                  {
+                                                                                    System.err.println("ERROR: "+exception.getMessage());
+                                                                                    System.exit(1);
+                                                                                  }
+                                                                                }
+
+                                                                                return Errors.NONE;
+                                                                              }
+                                                                            });
+
+                                                   // add incremental menu items
+                                                   final Menu subSubMenuIncremtnal = Widgets.addMenu(subMenu,
+                                                                                                     null,
+                                                                                                     BARControl.tr("incremental")
+                                                                                                    );
+                                                   uuidIndexData.setSubMenu(subSubMenuIncremtnal);
+
+                                                   menuItem = Widgets.addMenuItem(subSubMenuIncremtnal,
                                                                                   null,
-                                                                                  BARControl.tr("new incremental")
+                                                                                  BARControl.tr("new")
                                                                                  );
                                                    menuItem.addSelectionListener(new SelectionListener()
                                                    {
@@ -5285,12 +5461,85 @@ Dprintf.dprintf("");
                                                        MenuItem widget = (MenuItem)selectionEvent.widget;
 
                                                        UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
-                                                       assignStorage(uuidIndexData,Settings.ArchiveTypes.INCREMENTAL);
+                                                       assignStorages(uuidIndexData,Settings.ArchiveTypes.INCREMENTAL);
                                                      }
                                                    });
-                                                   menuItem = Widgets.addMenuItem(subMenu,
+
+                                                   BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%'S archiveType=incremental",
+                                                                                                jobUUID
+                                                                                               ),
+                                                                            1,  // debugLevel
+                                                                            new CommandResultHandler()
+                                                                            {
+                                                                              public int handleResult(int i, ValueMap valueMap)
+                                                                              {
+                                                                                try
+                                                                                {
+                                                                                  String scheduleUUID     = valueMap.getString("scheduleUUID");
+                                                                                  final String date       = valueMap.getString("date"        );
+                                                                                  final String weekDays   = valueMap.getString("weekDays"    );
+                                                                                  final String time       = valueMap.getString("time"        );
+                                                                                  final String customText = valueMap.getString("customText"  );
+
+                                                                                  // add UUID index data with schedule
+                                                                                  final UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
+                                                                                                                                        jobUUID,
+                                                                                                                                        scheduleUUID,
+                                                                                                                                        name,
+                                                                                                                                        lastExecutedDateTime,
+                                                                                                                                        lastErrorMessage,
+                                                                                                                                        totalEntryCount,
+                                                                                                                                        totalEntrySize
+                                                                                                                                       );
+                                                                                  display.syncExec(new Runnable()
+                                                                                  {
+                                                                                    public void run()
+                                                                                    {
+                                                                                      MenuItem menuItem = Widgets.addMenuItem(subSubMenuIncremtnal,
+                                                                                                                              (Object)uuidIndexData,
+                                                                                                                              date+" "+weekDays+" "+time+" "+customText
+                                                                                                                             );
+                                                                                      uuidIndexData.setMenuItem(menuItem);
+
+                                                                                      menuItem.addSelectionListener(new SelectionListener()
+                                                                                      {
+                                                                                        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                                                                                        {
+                                                                                        }
+                                                                                        public void widgetSelected(SelectionEvent selectionEvent)
+                                                                                        {
+                                                                                          MenuItem widget = (MenuItem)selectionEvent.widget;
+
+                                                                                          UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getData();
+                                                                                          assignStorages(uuidIndexData,Settings.ArchiveTypes.INCREMENTAL);
+                                                                                        }
+                                                                                      });
+                                                                                    }
+                                                                                  });
+                                                                                }
+                                                                                catch (IllegalArgumentException exception)
+                                                                                {
+                                                                                  if (Settings.debugLevel > 0)
+                                                                                  {
+                                                                                    System.err.println("ERROR: "+exception.getMessage());
+                                                                                    System.exit(1);
+                                                                                  }
+                                                                                }
+
+                                                                                return Errors.NONE;
+                                                                              }
+                                                                            });
+
+                                                   // add differential menu items
+                                                   final Menu subSubMenuDifferential = Widgets.addMenu(subMenu,
+                                                                                                       null,
+                                                                                                       BARControl.tr("differential")
+                                                                                                      );
+                                                   uuidIndexData.setSubMenu(subSubMenuDifferential);
+
+                                                   menuItem = Widgets.addMenuItem(subSubMenuDifferential,
                                                                                   null,
-                                                                                  BARControl.tr("new differenial")
+                                                                                  BARControl.tr("new")
                                                                                  );
                                                    menuItem.addSelectionListener(new SelectionListener()
                                                    {
@@ -5302,12 +5551,85 @@ Dprintf.dprintf("");
                                                        MenuItem widget = (MenuItem)selectionEvent.widget;
 
                                                        UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
-                                                       assignStorage(uuidIndexData,Settings.ArchiveTypes.DIFFERENTIAL);
+                                                       assignStorages(uuidIndexData,Settings.ArchiveTypes.DIFFERENTIAL);
                                                      }
                                                    });
-                                                   menuItem = Widgets.addMenuItem(subMenu,
+
+                                                   BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%'S archiveType=differential",
+                                                                                                jobUUID
+                                                                                               ),
+                                                                            1,  // debugLevel
+                                                                            new CommandResultHandler()
+                                                                            {
+                                                                              public int handleResult(int i, ValueMap valueMap)
+                                                                              {
+                                                                                try
+                                                                                {
+                                                                                  String scheduleUUID     = valueMap.getString("scheduleUUID");
+                                                                                  final String date       = valueMap.getString("date"        );
+                                                                                  final String weekDays   = valueMap.getString("weekDays"    );
+                                                                                  final String time       = valueMap.getString("time"        );
+                                                                                  final String customText = valueMap.getString("customText"  );
+
+                                                                                  // add UUID index data with schedule
+                                                                                  final UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
+                                                                                                                                        jobUUID,
+                                                                                                                                        scheduleUUID,
+                                                                                                                                        name,
+                                                                                                                                        lastExecutedDateTime,
+                                                                                                                                        lastErrorMessage,
+                                                                                                                                        totalEntryCount,
+                                                                                                                                        totalEntrySize
+                                                                                                                                       );
+                                                                                  display.syncExec(new Runnable()
+                                                                                  {
+                                                                                    public void run()
+                                                                                    {
+                                                                                      MenuItem menuItem = Widgets.addMenuItem(subSubMenuDifferential,
+                                                                                                                              (Object)uuidIndexData,
+                                                                                                                              date+" "+weekDays+" "+time+" "+customText
+                                                                                                                             );
+                                                                                      uuidIndexData.setMenuItem(menuItem);
+
+                                                                                      menuItem.addSelectionListener(new SelectionListener()
+                                                                                      {
+                                                                                        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                                                                                        {
+                                                                                        }
+                                                                                        public void widgetSelected(SelectionEvent selectionEvent)
+                                                                                        {
+                                                                                          MenuItem widget = (MenuItem)selectionEvent.widget;
+
+                                                                                          UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getData();
+                                                                                          assignStorages(uuidIndexData,Settings.ArchiveTypes.DIFFERENTIAL);
+                                                                                        }
+                                                                                      });
+                                                                                    }
+                                                                                  });
+                                                                                }
+                                                                                catch (IllegalArgumentException exception)
+                                                                                {
+                                                                                  if (Settings.debugLevel > 0)
+                                                                                  {
+                                                                                    System.err.println("ERROR: "+exception.getMessage());
+                                                                                    System.exit(1);
+                                                                                  }
+                                                                                }
+
+                                                                                return Errors.NONE;
+                                                                              }
+                                                                            });
+
+                                                   // add continuous menu items
+                                                   final Menu subSubMenuContinuous = Widgets.addMenu(subMenu,
+                                                                                                     null,
+                                                                                                     BARControl.tr("continuous")
+                                                                                                    );
+                                                   uuidIndexData.setSubMenu(subSubMenuContinuous);
+
+                                                   menuItem = Widgets.addMenuItem(subSubMenuContinuous,
                                                                                   null,
-                                                                                  BARControl.tr("new continuous")
+                                                                                  BARControl.tr("new")
                                                                                  );
                                                    menuItem.addSelectionListener(new SelectionListener()
                                                    {
@@ -5319,15 +5641,80 @@ Dprintf.dprintf("");
                                                        MenuItem widget = (MenuItem)selectionEvent.widget;
 
                                                        UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getParent().getData();
-                                                       assignStorage(uuidIndexData,Settings.ArchiveTypes.CONTINUOUS);
+                                                       assignStorages(uuidIndexData,Settings.ArchiveTypes.CONTINUOUS);
                                                      }
                                                    });
+
+                                                   BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%'S archiveType=continuous",
+                                                                                                jobUUID
+                                                                                               ),
+                                                                            1,  // debugLevel
+                                                                            new CommandResultHandler()
+                                                                            {
+                                                                              public int handleResult(int i, ValueMap valueMap)
+                                                                              {
+                                                                                try
+                                                                                {
+                                                                                  String scheduleUUID     = valueMap.getString("scheduleUUID");
+                                                                                  final String date       = valueMap.getString("date"        );
+                                                                                  final String weekDays   = valueMap.getString("weekDays"    );
+                                                                                  final String time       = valueMap.getString("time"        );
+                                                                                  final String customText = valueMap.getString("customText"  );
+
+                                                                                  // add UUID index data with schedule
+                                                                                  final UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
+                                                                                                                                        jobUUID,
+                                                                                                                                        scheduleUUID,
+                                                                                                                                        name,
+                                                                                                                                        lastExecutedDateTime,
+                                                                                                                                        lastErrorMessage,
+                                                                                                                                        totalEntryCount,
+                                                                                                                                        totalEntrySize
+                                                                                                                                       );
+                                                                                  display.syncExec(new Runnable()
+                                                                                  {
+                                                                                    public void run()
+                                                                                    {
+                                                                                      MenuItem menuItem = Widgets.addMenuItem(subSubMenuContinuous,
+                                                                                                                              (Object)uuidIndexData,
+                                                                                                                              date+" "+weekDays+" "+time+" "+customText
+                                                                                                                             );
+                                                                                      uuidIndexData.setMenuItem(menuItem);
+
+                                                                                      menuItem.addSelectionListener(new SelectionListener()
+                                                                                      {
+                                                                                        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                                                                                        {
+                                                                                        }
+                                                                                        public void widgetSelected(SelectionEvent selectionEvent)
+                                                                                        {
+                                                                                          MenuItem widget = (MenuItem)selectionEvent.widget;
+
+                                                                                          UUIDIndexData uuidIndexData = (UUIDIndexData)widget.getData();
+                                                                                          assignStorages(uuidIndexData,Settings.ArchiveTypes.CONTINUOUS);
+                                                                                        }
+                                                                                      });
+                                                                                    }
+                                                                                  });
+                                                                                }
+                                                                                catch (IllegalArgumentException exception)
+                                                                                {
+                                                                                  if (Settings.debugLevel > 0)
+                                                                                  {
+                                                                                    System.err.println("ERROR: "+exception.getMessage());
+                                                                                    System.exit(1);
+                                                                                  }
+                                                                                }
+
+                                                                                return Errors.NONE;
+                                                                              }
+                                                                            });
 
                                                    Widgets.addMenuSeparator(subMenu);
 
                                                    // add entity menu items
-                                                   BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST uuidId=%ld indexStateSet=* indexModeSet=*",
-                                                                                                uuidIndexData.id
+                                                   BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=* indexModeSet=*",
+                                                                                                uuidIndexData.jobUUID
                                                                                                ),
                                                                             1,  // debugLevel
                                                                             new CommandResultHandler()
@@ -5379,7 +5766,7 @@ Dprintf.dprintf("");
 
                                                                                           EntityIndexData entityIndexData = (EntityIndexData)widget.getData();
 
-                                                                                          assignStorage(entityIndexData);
+                                                                                          assignStorages(entityIndexData);
                                                                                         }
                                                                                       });
                                                                                     }
@@ -6662,11 +7049,11 @@ Dprintf.dprintf("remove");
     }
   }
 
-  /** create entity for job and assing selected/checked job/entity/storage to job
+  /** create entity for job and assing jobs/entities/storages to job
    * @param toUUIDIndexData UUID index data
    * @param archiveType archive type
    */
-  private void assignStorage(HashSet<IndexData> indexDataHashSet, UUIDIndexData toUUIDIndexData, Settings.ArchiveTypes archiveType)
+  private void assignStorages(HashSet<IndexData> indexDataHashSet, UUIDIndexData toUUIDIndexData, Settings.ArchiveTypes archiveType)
   {
     if (!indexDataHashSet.isEmpty())
     {
@@ -6686,8 +7073,9 @@ Dprintf.dprintf("remove");
         String[] errorMessage = new String[1];
         ValueMap valueMap     = new ValueMap();
 
-        error = BARServer.executeCommand(StringParser.format("INDEX_ENTITY_ADD jobUUID=%'S archiveType=%s createdDateTime=%ld",
+        error = BARServer.executeCommand(StringParser.format("INDEX_ENTITY_ADD jobUUID=%'S scheduleUUID=%'S archiveType=%s createdDateTime=%ld",
                                                              toUUIDIndexData.jobUUID,
+                                                             (toUUIDIndexData.scheduleUUID != null) ? toUUIDIndexData.scheduleUUID : "",
                                                              archiveType.toString(),
                                                              dateTime
                                                             ),
@@ -6755,34 +7143,34 @@ Dprintf.dprintf("remove");
     }
   }
 
-  /** assing storage to entity
+  /** assing jobs/entities/storages to entity
    * @param indexData index data
    * @param toUUIDIndexData UUID index data
    * @param archiveType archive type
    */
-  private void assignStorage(IndexData indexData, UUIDIndexData toUUIDIndexData, Settings.ArchiveTypes archiveType)
+  private void assignStorages(IndexData indexData, UUIDIndexData toUUIDIndexData, Settings.ArchiveTypes archiveType)
   {
     HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
 
     indexDataHashSet.add(indexData);
-    assignStorage(indexDataHashSet,toUUIDIndexData,archiveType);
+    assignStorages(indexDataHashSet,toUUIDIndexData,archiveType);
   }
 
-  /** assing storage to entity
+  /** assing selected/checked jobs/entities/storages to entity
    * @param toUUIDIndexData UUID index data
    * @param archiveType archive type
    */
-  private void assignStorage(UUIDIndexData toUUIDIndexData, Settings.ArchiveTypes archiveType)
+  private void assignStorages(UUIDIndexData toUUIDIndexData, Settings.ArchiveTypes archiveType)
   {
     HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
-    assignStorage(indexDataHashSet,toUUIDIndexData,archiveType);
+    assignStorages(indexDataHashSet,toUUIDIndexData,archiveType);
   }
 
-  /** assing storage to entity
+  /** assing jobs/entities/storages to entity
    * @param indexDataHashSet index data hash set
    * @param toEntityIndexData entity index data
    */
-  private void assignStorage(HashSet<IndexData> indexDataHashSet, EntityIndexData toEntityIndexData)
+  private void assignStorages(HashSet<IndexData> indexDataHashSet, EntityIndexData toEntityIndexData)
   {
     if (!indexDataHashSet.isEmpty())
     {
@@ -6842,25 +7230,25 @@ Dprintf.dprintf("remove");
     }
   }
 
-  /** assing storage to entity
+  /** assing jobs/entities/storages to entity
    * @param indexData index data
    * @param toEntityIndexData entity index data
    */
-  private void assignStorage(IndexData indexData, EntityIndexData toEntityIndexData)
+  private void assignStorages(IndexData indexData, EntityIndexData toEntityIndexData)
   {
     HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
 
     indexDataHashSet.add(indexData);
-    assignStorage(indexDataHashSet,toEntityIndexData);
+    assignStorages(indexDataHashSet,toEntityIndexData);
   }
 
-  /** assing storage to entity
+  /** assing selected/checked jobs/entities/storages to entity
    * @param toEntityIndexData entity index data
    */
-  private void assignStorage(EntityIndexData toEntityIndexData)
+  private void assignStorages(EntityIndexData toEntityIndexData)
   {
     HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
-    assignStorage(indexDataHashSet,toEntityIndexData);
+    assignStorages(indexDataHashSet,toEntityIndexData);
   }
 
   /** set entity type
