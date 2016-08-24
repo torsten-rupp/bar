@@ -78,6 +78,7 @@
 #define SLEEP_TIME_INDEX_THREAD             ( 1*60)
 #define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD (10*60)
 #define SLEEP_TIME_PURGE_EXPIRED_THREAD     (10*60)
+//#define SLEEP_TIME_PURGE_EXPIRED_THREAD     (30)
 
 /***************************** Datatypes *******************************/
 
@@ -5068,9 +5069,9 @@ LOCAL void purgeExpiredThreadCode(void)
   String             jobName;
   String             string;
   PurgeInfo          expiredInfo,surplusInfo;
+  uint64             now;
   IndexHandle        *indexHandle;
   Errors             error;
-  uint64             now;
   IndexQueryHandle   indexQueryHandle1,indexQueryHandle2;
   IndexId            entityId;
   StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
@@ -5116,6 +5117,7 @@ LOCAL void purgeExpiredThreadCode(void)
     {
       expiredInfo.entityId = INDEX_ID_NONE;
       surplusInfo.entityId = INDEX_ID_NONE;
+      now                  = Misc_getCurrentDateTime();
 
       // check entities
       error = Index_initListEntities(&indexQueryHandle1,
@@ -5139,11 +5141,11 @@ LOCAL void purgeExpiredThreadCode(void)
                                       jobUUID,
                                       scheduleUUID,
                                       &entityId,
-                                      NULL,  // archiveType,
-                                      NULL,  // createdDateTime,
+                                      &archiveType,
+                                      &createdDateTime,
                                       NULL,  // lastErrorMessage
-                                      NULL,  // totalEntryCount,
-                                      NULL  // totalEntrySize,
+                                      &totalEntryCount,
+                                      &totalEntrySize
                                      )
               )
         {
@@ -5173,61 +5175,34 @@ LOCAL void purgeExpiredThreadCode(void)
               }
             }
 
-            // check if expired
+//if (String_equalsCString(jobUUID,"47c2a261-cf7b-4f9f-92e8-87a55358e509") && (entityId==9442))
+if ((entityId==9442))
+{
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+}
             if ((maxKeep > 0) || (maxAge > 0))
             {
+              // check if expired
               if (maxAge > 0)
               {
-                // find expired entity
-                error = Index_initListEntities(&indexQueryHandle2,
-                                               indexHandle,
-                                               INDEX_ID_ANY,  // uuidId
-                                               jobUUID,
-                                               scheduleUUID,
-                                               INDEX_STATE_SET_ALL,
-                                               INDEX_MODE_SET_ALL,
-                                               NULL,  // name
-                                               DATABASE_ORDERING_DESCENDING,
-                                               (ulong)minKeep,
-                                               INDEX_UNLIMITED
-                                              );
-                if (error == ERROR_NONE)
+                if (now > (createdDateTime+maxAge*S_PER_DAY))
                 {
-                  now = Misc_getCurrentDateTime();
-                  while (   !quitFlag
-                         && !isSomeJobActive()
-                         && Index_getNextEntity(&indexQueryHandle2,
-                                                NULL,  // uudId,
-                                                NULL,  // jobUUID
-                                                NULL,  // scheduleUUID
-                                                &entityId,
-                                                &archiveType,
-                                                &createdDateTime,
-                                                NULL,  // lastErrorMessage
-                                                &totalEntryCount,
-                                                &totalEntrySize
-                                               )
-                        )
-                  {
-                    if (now > (createdDateTime+maxAge*S_PER_DAY))
-                    {
-                      // mark for delete
-                      (void)Index_setState(indexHandle,entityId,INDEX_STATE_DELETE,0LL,NULL);
+                  // mark for delete
+                  (void)Index_setState(indexHandle,entityId,INDEX_STATE_DELETE,0LL,NULL);
 
-                      // get purge info
-                      expiredInfo.entityId        = entityId;
-                      String_set(expiredInfo.jobName,jobName);
-                      expiredInfo.archiveType     = archiveType;
-                      expiredInfo.createdDateTime = createdDateTime;
-                      expiredInfo.totalEntryCount = totalEntryCount;
-                      expiredInfo.totalEntrySize  = totalEntrySize;
-                      break;
-                    }
-                  }
-                  Index_doneList(&indexQueryHandle2);
+                  // get purge info
+                  expiredInfo.entityId        = entityId;
+                  String_set(expiredInfo.jobName,jobName);
+                  expiredInfo.archiveType     = archiveType;
+                  expiredInfo.createdDateTime = createdDateTime;
+                  expiredInfo.totalEntryCount = totalEntryCount;
+                  expiredInfo.totalEntrySize  = totalEntrySize;
+                  break;
                 }
               }
 
+              // check if surplus
               if ((maxKeep > 0) && (maxKeep >= minKeep))
               {
                 // find surplus entity
@@ -5283,6 +5258,8 @@ LOCAL void purgeExpiredThreadCode(void)
         // purge expired entity
         if (expiredInfo.entityId != INDEX_ID_NONE)
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//asm("int3");
           error = deleteEntity(indexHandle,expiredInfo.entityId);
           if (error == ERROR_NONE)
           {
@@ -5306,8 +5283,10 @@ LOCAL void purgeExpiredThreadCode(void)
         }
 
         // purge surplus entity
-        if (surplusInfo.entityId != INDEX_ID_NONE)
+        if ((surplusInfo.entityId != INDEX_ID_NONE) && (surplusInfo.entityId != expiredInfo.entityId))
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//asm("int3");
           error = deleteEntity(indexHandle,surplusInfo.entityId);
           if (error == ERROR_NONE)
           {
@@ -5334,6 +5313,8 @@ LOCAL void purgeExpiredThreadCode(void)
     while (   !quitFlag
            && ((expiredInfo.entityId != INDEX_ID_NONE) || (surplusInfo.entityId != INDEX_ID_NONE))
           );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//asm("int3");
 
     // sleep
     delayPurgeExpiredThread();
@@ -8708,7 +8689,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -8814,7 +8795,7 @@ LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *i
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name, value
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -8957,7 +8938,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -9228,7 +9209,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -9309,7 +9290,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name, value
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -9399,7 +9380,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -9555,7 +9536,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -9600,7 +9581,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 * Return : -
 * Notes  : Arguments:
 *            name=<name>
-*            [uuid=<uuid>]
+*            [jobUUID=<uuid>]
 *            [master=<name>]
 *          Result:
 *            jobUUID=<uuid>
@@ -9609,7 +9590,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String        name;
-  StaticString  (uuid,MISC_UUID_STRING_LENGTH);
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        master;
   SemaphoreLock semaphoreLock;
   String        fileName;
@@ -9622,7 +9603,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get uuid, name, master
+  // get name job UUID, master
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
@@ -9630,7 +9611,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
     String_delete(name);
     return;
   }
-  StringMap_getString(argumentMap,"uuid",uuid,NULL);
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
   master = String_new();
   StringMap_getString(argumentMap,"master",master,NULL);
 
@@ -9689,7 +9670,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       // temporary add job from master
 
       // create new job
-      jobNode = newJob(JOB_TYPE_CREATE,NULL,uuid);
+      jobNode = newJob(JOB_TYPE_CREATE,NULL,jobUUID);
       assert(jobNode != NULL);
       String_set(jobNode->master,master);
 
@@ -9739,7 +9720,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -9843,7 +9824,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -9931,7 +9912,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -10016,7 +9997,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, archive type, dry-run
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -10083,7 +10064,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -10213,7 +10194,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -10293,7 +10274,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -10353,7 +10334,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -10418,7 +10399,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, entry type, pattern, pattern type
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -10500,7 +10481,7 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id, entry type, pattern type, pattern
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -10581,7 +10562,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -10651,7 +10632,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -10710,7 +10691,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -10773,7 +10754,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, pattern type, pattern
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -10848,7 +10829,7 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, pattern id, pattern type, pattern
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -10924,7 +10905,7 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -10996,7 +10977,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -11065,20 +11046,20 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
   UNUSED_VARIABLE(indexHandle);
 
   // get jobUUID, name, device, alwaysUnmount
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,0))
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     String_delete(name);
     return;
   }
   device = String_new();
-  if (!StringMap_getString(argumentMap,"device",device,0))
+  if (!StringMap_getString(argumentMap,"device",device,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected device=<name>");
     String_delete(device);
@@ -11161,7 +11142,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
   UNUSED_VARIABLE(indexHandle);
 
   // get jobUUID, mount id, name, alwaysUnmount
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -11172,14 +11153,14 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
   name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,0))
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     String_delete(name);
     return;
   }
   device = String_new();
-  if (!StringMap_getString(argumentMap,"device",device,0))
+  if (!StringMap_getString(argumentMap,"device",device,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected device=<name>");
     String_delete(device);
@@ -11263,7 +11244,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, mount id
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -11334,7 +11315,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -11394,7 +11375,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -11454,7 +11435,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, type, pattern type, pattern
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -11526,7 +11507,7 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id, type, pattern type, pattern
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -11599,7 +11580,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -11668,7 +11649,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -11726,7 +11707,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -11786,7 +11767,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, type, pattern type, pattern
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -11858,7 +11839,7 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id, type, pattern type, pattern
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -11931,7 +11912,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -11982,6 +11963,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<uuid>
+*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
 *          Result:
 *            scheduleUUID=<uuid> \
 *            archiveType=normal|full|incremental|differential
@@ -12004,6 +11986,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
 LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes  archiveType;
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
   ScheduleNode  *scheduleNode;
@@ -12014,12 +11997,13 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  // get job UUID, archive type
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
+  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_NONE);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
@@ -12038,92 +12022,95 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
     time     = String_new();
     LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
     {
-      // get date string
-      String_clear(date);
-      if (scheduleNode->date.year != DATE_ANY)
+      if ((archiveType == ARCHIVE_TYPE_NONE) || (scheduleNode->archiveType == archiveType))
       {
-        String_format(date,"%d",scheduleNode->date.year);
-      }
-      else
-      {
-        String_appendCString(date,"*");
-      }
-      String_appendChar(date,'-');
-      if (scheduleNode->date.month != DATE_ANY)
-      {
-        String_format(date,"%02d",scheduleNode->date.month);
-      }
-      else
-      {
-        String_appendCString(date,"*");
-      }
-      String_appendChar(date,'-');
-      if (scheduleNode->date.day != DATE_ANY)
-      {
-        String_format(date,"%02d",scheduleNode->date.day);
-      }
-      else
-      {
-        String_appendCString(date,"*");
-      }
+        // get date string
+        String_clear(date);
+        if (scheduleNode->date.year != DATE_ANY)
+        {
+          String_format(date,"%d",scheduleNode->date.year);
+        }
+        else
+        {
+          String_appendCString(date,"*");
+        }
+        String_appendChar(date,'-');
+        if (scheduleNode->date.month != DATE_ANY)
+        {
+          String_format(date,"%02d",scheduleNode->date.month);
+        }
+        else
+        {
+          String_appendCString(date,"*");
+        }
+        String_appendChar(date,'-');
+        if (scheduleNode->date.day != DATE_ANY)
+        {
+          String_format(date,"%02d",scheduleNode->date.day);
+        }
+        else
+        {
+          String_appendCString(date,"*");
+        }
 
-      // get weekdays string
-      String_clear(weekDays);
-      if (scheduleNode->weekDaySet != WEEKDAY_SET_ANY)
-      {
-        if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_MON)) { String_joinCString(weekDays,"Mon",','); }
-        if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_TUE)) { String_joinCString(weekDays,"Tue",','); }
-        if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_WED)) { String_joinCString(weekDays,"Wed",','); }
-        if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_THU)) { String_joinCString(weekDays,"Thu",','); }
-        if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_FRI)) { String_joinCString(weekDays,"Fri",','); }
-        if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_SAT)) { String_joinCString(weekDays,"Sat",','); }
-        if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_SUN)) { String_joinCString(weekDays,"Sun",','); }
-      }
-      else
-      {
-        String_appendCString(weekDays,"*");
-      }
+        // get weekdays string
+        String_clear(weekDays);
+        if (scheduleNode->weekDaySet != WEEKDAY_SET_ANY)
+        {
+          if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_MON)) { String_joinCString(weekDays,"Mon",','); }
+          if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_TUE)) { String_joinCString(weekDays,"Tue",','); }
+          if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_WED)) { String_joinCString(weekDays,"Wed",','); }
+          if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_THU)) { String_joinCString(weekDays,"Thu",','); }
+          if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_FRI)) { String_joinCString(weekDays,"Fri",','); }
+          if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_SAT)) { String_joinCString(weekDays,"Sat",','); }
+          if (IN_SET(scheduleNode->weekDaySet,WEEKDAY_SUN)) { String_joinCString(weekDays,"Sun",','); }
+        }
+        else
+        {
+          String_appendCString(weekDays,"*");
+        }
 
-      // get time string
-      String_clear(time);
-      if (scheduleNode->time.hour != TIME_ANY)
-      {
-        String_format(time,"%02d",scheduleNode->time.hour);
-      }
-      else
-      {
-        String_appendCString(time,"*");
-      }
-      String_appendChar(time,':');
-      if (scheduleNode->time.minute != TIME_ANY)
-      {
-        String_format(time,"%02d",scheduleNode->time.minute);
-      }
-      else
-      {
-        String_appendCString(time,"*");
-      }
+        // get time string
+        String_clear(time);
+        if (scheduleNode->time.hour != TIME_ANY)
+        {
+          String_format(time,"%02d",scheduleNode->time.hour);
+        }
+        else
+        {
+          String_appendCString(time,"*");
+        }
+        String_appendChar(time,':');
+        if (scheduleNode->time.minute != TIME_ANY)
+        {
+          String_format(time,"%02d",scheduleNode->time.minute);
+        }
+        else
+        {
+          String_appendCString(time,"*");
+        }
 
-      // send schedule info
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%llu totalEntities=%lu totalEntryCount=%lu totalEntrySize=%llu",
-                       scheduleNode->uuid,
-                       (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,scheduleNode->archiveType,NULL) : "*",
-                       date,
-                       weekDays,
-                       time,
-                       scheduleNode->interval,
-                       scheduleNode->customText,
-                       scheduleNode->minKeep,
-                       scheduleNode->maxKeep,
-                       scheduleNode->maxAge,
-                       scheduleNode->noStorage,
-                       scheduleNode->enabled,
-                       scheduleNode->lastExecutedDateTime,
-                       scheduleNode->totalEntityCount,
-                       scheduleNode->totalEntryCount,
-                       scheduleNode->totalEntrySize
-                      );
+        // send schedule info
+        sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                         "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%llu totalEntities=%lu totalEntryCount=%lu totalEntrySize=%llu",
+                         scheduleNode->uuid,
+                         (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,scheduleNode->archiveType,NULL) : "*",
+                         date,
+                         weekDays,
+                         time,
+                         scheduleNode->interval,
+                         scheduleNode->customText,
+                         scheduleNode->minKeep,
+                         scheduleNode->maxKeep,
+                         scheduleNode->maxAge,
+                         scheduleNode->noStorage,
+                         scheduleNode->enabled,
+                         scheduleNode->lastExecutedDateTime,
+                         scheduleNode->totalEntityCount,
+                         scheduleNode->totalEntryCount,
+                         scheduleNode->totalEntrySize
+                        );
+      }
     }
     String_delete(time);
     String_delete(weekDays);
@@ -12184,7 +12171,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, IndexHandle *indexH
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, date, weekday, time, archive type, custome text, min./max keep, max. age, enabled
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -12386,12 +12373,12 @@ LOCAL void serverCommand_scheduleRemove(ClientInfo *clientInfo, IndexHandle *ind
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,0))
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
     return;
@@ -12465,12 +12452,12 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID, name
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,0))
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
     return;
@@ -12573,12 +12560,12 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID, name, value
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,0))
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
     return;
@@ -12682,12 +12669,12 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID, name
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,0))
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
     return;
@@ -12784,12 +12771,12 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,0))
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
     return;
@@ -13138,7 +13125,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, get encrypt type, encrypted password
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -13262,7 +13249,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, volume number
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -13319,7 +13306,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,0))
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
@@ -15104,7 +15091,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            [uuidId=<id>]
 *            [jobUUID=<uuid>]
 *            indexStateSet=<state set>|*
 *            indexModeSet=<mode set>|*
@@ -15123,7 +15109,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 
 LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId          uuidId;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   bool             indexStateAny;
   IndexStateSet    indexStateSet;
@@ -15144,7 +15129,6 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   assert(argumentMap != NULL);
 
   // get uuid, index state set, index mode set, name, name
-  StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_ANY);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
   {
@@ -15189,7 +15173,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   // get entities
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
-                                 uuidId,
+                                 INDEX_ID_ANY,  // uuidId
                                  jobUUID,
                                  NULL,  // scheduldUUID
                                  indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
@@ -15835,6 +15819,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<uuid>
+*            [scheduleUUID=<uuid>]
 *            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
 *            [createdDateTime=<time stamp [s]>]
 *          Result:
@@ -15844,6 +15829,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
 LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes archiveType;
   uint64       createdDateTime;
   IndexId      entityId;
@@ -15858,6 +15844,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
+  StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
@@ -15875,7 +15862,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
   // create new entity
   error = Index_newEntity(indexHandle,
                            jobUUID,
-                           NULL,  // scheduleUUID,
+                           scheduleUUID,
                            archiveType,
                            createdDateTime,
                            &entityId
@@ -16182,6 +16169,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
 * Return : -
 * Notes  : Arguments:
 *            toJobUUID=<uuid>|""
+*            toScheduleUUID=<uuid>|""
 *            [archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS|]
 *            jobUUID=<uuid>|"" or entityId=<id>|0 or storageId=<id>|0
 *
@@ -16198,6 +16186,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
 LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString     (toJobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString     (toScheduleUUID,MISC_UUID_STRING_LENGTH);
   IndexId          toEntityId;
   ArchiveTypes     archiveType;
   uint64           createdDateTime;
@@ -16209,7 +16198,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get toJobUUID, toEntityId, archive type, jobUUID/entityId/storageId
+  // get toJobUUID, toScheduleUUID, toEntityId, archive type, jobUUID/entityId/storageId
   String_clear(toJobUUID);
   toEntityId = INDEX_ID_NONE;
   if (   !StringMap_getString(argumentMap,"toJobUUID",toJobUUID,NULL)
@@ -16219,6 +16208,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected toJobUUID=<uuid> or toEntityId=<id>");
     return;
   }
+  StringMap_getString(argumentMap,"toScheduleUUID",toScheduleUUID,NULL);
   StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_NONE);
   StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
   String_clear(jobUUID);
@@ -16264,7 +16254,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       // create entity for other job
       error = Index_newEntity(indexHandle,
                               toJobUUID,
-                              NULL,  // scheduleUUID
+                              toScheduleUUID,
                               archiveType,
                               createdDateTime,
                               &toEntityId
@@ -16317,7 +16307,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       // create entity for other job
       error = Index_newEntity(indexHandle,
                               toJobUUID,
-                              NULL,  // scheduleUUID
+                              toScheduleUUID,
                               archiveType,
                               createdDateTime,
                               &toEntityId
@@ -16369,7 +16359,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       // create entity for other job
       error = Index_newEntity(indexHandle,
                               toJobUUID,
-                              NULL,
+                              toScheduleUUID,
                               archiveType,
                               createdDateTime,
                               &toEntityId
