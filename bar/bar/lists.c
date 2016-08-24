@@ -204,6 +204,28 @@ LOCAL void debugRemoveNode(DebugListNodeList *debugListNodeList, DebugListNode *
 }
 
 /***********************************************************************\
+* Name   : debugListInit
+* Purpose: initialize debug functions
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+LOCAL void debugListInit(void)
+{
+  pthread_mutexattr_init(&debugListLockAttributes);
+  pthread_mutexattr_settype(&debugListLockAttributes,PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&debugListLock,&debugListLockAttributes);
+  List_init(&debugListAllocNodeList);
+  memset(debugListAllocNodeList.hash,0,sizeof(debugListAllocNodeList.hash));
+  List_init(&debugListFreeNodeList);
+  memset(debugListFreeNodeList.hash,0,sizeof(debugListFreeNodeList.hash));
+}
+#endif /* not NDEBUG */
+
+/***********************************************************************\
 * Name   : debugCheckDuplicateNode
 * Purpose: check if node is already in list
 * Input  : fileName - code file name
@@ -230,25 +252,30 @@ LOCAL void debugCheckDuplicateNode(const char *fileName,
 
   index = debugNodeHashIndex(node);
 
-  debugListNode = debugListAllocNodeList.hash[index].first;
-  n             = debugListAllocNodeList.hash[index].count;
+  pthread_once(&debugListInitFlag,debugListInit);
 
-  while ((debugListNode != NULL) && (n > 0))
+  pthread_mutex_lock(&debugListLock);
   {
-    if (debugListNode->node == node)
+    debugListNode = debugListAllocNodeList.hash[index].first;
+    n             = debugListAllocNodeList.hash[index].count;
+    while ((debugListNode != NULL) && (n > 0))
     {
-      if      (debugListNode->list == list)
+      if (debugListNode->node == node)
       {
-         HALT_INTERNAL_ERROR_AT(fileName,lineNb,"node %p is already in list %p initialized at %s, %lu!",node,list,list->fileName,list->lineNb);
+        if      (debugListNode->list == list)
+        {
+           HALT_INTERNAL_ERROR_AT(fileName,lineNb,"node %p is already in list %p initialized at %s, %lu!",node,list,list->fileName,list->lineNb);
+        }
+        else if (debugListNode->list != NULL)
+        {
+           HALT_INTERNAL_ERROR_AT(fileName,lineNb,"node %p is still in other list %p initialized at %s, %lu!",node,debugListNode->list,debugListNode->list->fileName,debugListNode->list->lineNb);
+        }
       }
-      else if (debugListNode->list != NULL)
-      {
-         HALT_INTERNAL_ERROR_AT(fileName,lineNb,"node %p is still in other list %p initialized at %s, %lu!",node,debugListNode->list,debugListNode->list->fileName,debugListNode->list->lineNb);
-      }
+      debugListNode = debugListNode->next;
+      n--;
     }
-    debugListNode = debugListNode->next;
-    n--;
   }
+  pthread_mutex_unlock(&debugListLock);
 #endif
 }
 #endif /* not NDEBUG */
@@ -318,12 +345,18 @@ LOCAL_INLINE void listInsert(void *list,
         );
 
   #ifndef NDEBUG
-    // Node: may be NULL in case debug node is inserted
-    debugListNode = debugFindNode(&debugListAllocNodeList,node);
-    if (debugListNode != NULL)
+    pthread_once(&debugListInitFlag,debugListInit);
+
+    pthread_mutex_lock(&debugListLock);
     {
-      debugListNode->list = list;
+      // Node: may be NULL in case debug node is inserted
+      debugListNode = debugFindNode(&debugListAllocNodeList,node);
+      if (debugListNode != NULL)
+      {
+        debugListNode->list = list;
+      }
     }
+    pthread_mutex_unlock(&debugListLock);
   #endif
 }
 
@@ -362,12 +395,18 @@ LOCAL_INLINE void listRemove(void *list,
         );
 
   #ifndef NDEBUG
-    // Node: may be NULL in case debug node is inserted
-    debugListNode = debugFindNode(&debugListAllocNodeList,node);
-    if (debugListNode != NULL)
+    pthread_once(&debugListInitFlag,debugListInit);
+
+    pthread_mutex_lock(&debugListLock);
     {
-      debugListNode->list = NULL;
+      // Node: may be NULL in case debug node is inserted
+      debugListNode = debugFindNode(&debugListAllocNodeList,node);
+      if (debugListNode != NULL)
+      {
+        debugListNode->list = NULL;
+      }
     }
+    pthread_mutex_unlock(&debugListLock);
   #endif
 }
 
@@ -401,28 +440,6 @@ LOCAL_INLINE bool listContains(void *list,
   return listNode != NULL;
 }
 #endif /* 0 */
-
-/***********************************************************************\
-* Name   : debugListInit
-* Purpose: initialize debug functions
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#ifndef NDEBUG
-LOCAL void debugListInit(void)
-{
-  pthread_mutexattr_init(&debugListLockAttributes);
-  pthread_mutexattr_settype(&debugListLockAttributes,PTHREAD_MUTEX_RECURSIVE);
-  pthread_mutex_init(&debugListLock,&debugListLockAttributes);
-  List_init(&debugListAllocNodeList);
-  memset(debugListAllocNodeList.hash,0,sizeof(debugListAllocNodeList.hash));
-  List_init(&debugListFreeNodeList);
-  memset(debugListFreeNodeList.hash,0,sizeof(debugListFreeNodeList.hash));
-}
-#endif /* not NDEBUG */
 
 // ----------------------------------------------------------------------
 
