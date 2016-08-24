@@ -5247,58 +5247,65 @@ e composite widget
   {
     if (!table.isDisposed())
     {
-      TableItem[] tableItems = table.getItems();
-
-      // get sort column index
-      int sortColumnIndex = 0;
-      for (TableColumn tableColumn : table.getColumns())
+      if ((table.getStyle() & SWT.VIRTUAL) == 0)
       {
-        if (table.getSortColumn() == tableColumn)
-        {
-          break;
-        }
-        sortColumnIndex++;
-      }
+        TableItem[] tableItems = table.getItems();
 
-      // get sorting direction
-      int sortDirection = table.getSortDirection();
-      if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
-
-      // sort column
-      int n = tableItems.length;
-      int m;
-      do
-      {
-        m = 1;
-        for (int i = 0; i < n-1; i++)
+        // get sort column index
+        int sortColumnIndex = 0;
+        for (TableColumn tableColumn : table.getColumns())
         {
-          boolean swapFlag = false;
-          switch (sortDirection)
+          if (table.getSortColumn() == tableColumn)
           {
-            case SWT.UP:
-              if (comparator != String.CASE_INSENSITIVE_ORDER)
-                swapFlag = (comparator.compare(tableItems[i].getData(),tableItems[i+1].getData()) > 0);
-              else
-                swapFlag = (comparator.compare(tableItems[i].getText(sortColumnIndex),tableItems[i+1].getText(sortColumnIndex)) > 0);
-              break;
-            case SWT.DOWN:
-              if (comparator != String.CASE_INSENSITIVE_ORDER)
-                swapFlag = (comparator.compare(tableItems[i].getData(),tableItems[i+1].getData()) < 0);
-              else
-                swapFlag = (comparator.compare(tableItems[i].getText(sortColumnIndex),tableItems[i+1].getText(sortColumnIndex)) < 0);
-              break;
+            break;
           }
-          if (swapFlag)
-          {
-            swapTableItems(table,tableItems,i,i+1);
-            m = i+1;
-          }
+          sortColumnIndex++;
         }
-        n = m;
+
+        // get sorting direction
+        int sortDirection = table.getSortDirection();
+        if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
+
+        // sort column
+        int n = tableItems.length;
+        int m;
+        do
+        {
+          m = 1;
+          for (int i = 0; i < n-1; i++)
+          {
+            boolean swapFlag = false;
+            switch (sortDirection)
+            {
+              case SWT.UP:
+                if (comparator != String.CASE_INSENSITIVE_ORDER)
+                  swapFlag = (comparator.compare(tableItems[i].getData(),tableItems[i+1].getData()) > 0);
+                else
+                  swapFlag = (comparator.compare(tableItems[i].getText(sortColumnIndex),tableItems[i+1].getText(sortColumnIndex)) > 0);
+                break;
+              case SWT.DOWN:
+                if (comparator != String.CASE_INSENSITIVE_ORDER)
+                  swapFlag = (comparator.compare(tableItems[i].getData(),tableItems[i+1].getData()) < 0);
+                else
+                  swapFlag = (comparator.compare(tableItems[i].getText(sortColumnIndex),tableItems[i+1].getText(sortColumnIndex)) < 0);
+                break;
+            }
+            if (swapFlag)
+            {
+              swapTableItems(table,tableItems,i,i+1);
+              m = i+1;
+            }
+          }
+          n = m;
 //Dprintf.dprintf("--------------------------------------------------- %d %d",n,tableItems.length);
 //for (int z = 0; z < n-1; z++) Dprintf.dprintf("%s: %d",tableItems[z].getData(),comparator.compare(tableItems[z].getData(),tableItems[z+1].getData()));
+        }
+        while (n > 1);
       }
-      while (n > 1);
+      else
+      {
+        table.clearAll();
+      }
     }
   }
 
@@ -7193,28 +7200,35 @@ private static void printTree(Tree tree)
   {
     if (!tree.isDisposed())
     {
-      // sort sub-trees
-      for (TreeItem subTreeItem : subTreeItems)
+      if ((tree.getStyle() & SWT.VIRTUAL) == 0)
       {
-        sortSubTreeColumn(tree,subTreeItem,subTreeItem.getItems(),sortDirection,comparator);
-      }
-
-      // sort tree
-      for (int i = 0; i < subTreeItems.length; i++)
-      {
-        boolean sortedFlag = false;
-        for (int j = 0; (j <= i) && !sortedFlag; j++)
+        // sort sub-trees
+        for (TreeItem subTreeItem : subTreeItems)
         {
-          switch (sortDirection)
+          sortSubTreeColumn(tree,subTreeItem,subTreeItem.getItems(),sortDirection,comparator);
+        }
+
+        // sort tree
+        for (int i = 0; i < subTreeItems.length; i++)
+        {
+          boolean sortedFlag = false;
+          for (int j = 0; (j <= i) && !sortedFlag; j++)
           {
-            case SWT.UP:   sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),tree.getItem(j).getData()) < 0); break;
-            case SWT.DOWN: sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),tree.getItem(j).getData()) > 0); break;
-          }
-          if (sortedFlag)
-          {
-            recreateTreeItem(tree,subTreeItems[i],j);
+            switch (sortDirection)
+            {
+              case SWT.UP:   sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),tree.getItem(j).getData()) < 0); break;
+              case SWT.DOWN: sortedFlag = (j >= i) || (comparator.compare(subTreeItems[i].getData(),tree.getItem(j).getData()) > 0); break;
+            }
+            if (sortedFlag)
+            {
+              recreateTreeItem(tree,subTreeItems[i],j);
+            }
           }
         }
+      }
+      else
+      {
+        tree.clearAll(true);
       }
     }
   }
