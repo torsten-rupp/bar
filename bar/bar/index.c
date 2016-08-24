@@ -6462,6 +6462,32 @@ bool Index_parseEntrySortMode(const char *name, IndexEntrySortModes *indexEntryS
   }
 }
 
+bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering)
+{
+  assert(name != NULL);
+  assert(databaseOrdering != NULL);
+
+  if      (stringEqualsIgnoreCase("ASCENDING",name))
+  {
+    (*databaseOrdering) = DATABASE_ORDERING_ASCENDING;
+    return TRUE;
+  }
+  else if (stringEqualsIgnoreCase("DESCENDING",name))
+  {
+    (*databaseOrdering) = DATABASE_ORDERING_DESCENDING;
+    return TRUE;
+  }
+  else if (stringEqualsIgnoreCase("NONE",name))
+  {
+    (*databaseOrdering) = DATABASE_ORDERING_NONE;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 Errors Index_init(const char *fileName)
 {
   bool        createFlag;
@@ -8258,6 +8284,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                               LEFT JOIN storage ON storage.entityId=entities.id \
                             WHERE %S \
+                            GROUP BY entities.id \
                             %S \
                             LIMIT %llu,%llu \
                            ",
@@ -9594,7 +9621,6 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE) return error;
 
-fprintf(stderr,"%s, %d: Index_clearStorage image\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM imageEntries WHERE storageId=%lld",

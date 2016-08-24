@@ -357,6 +357,17 @@ bool Index_parseStorageSortMode(const char *name, IndexStorageSortModes *indexSt
 bool Index_parseEntrySortMode(const char *name, IndexEntrySortModes *indexEntrySortMode);
 
 /***********************************************************************\
+* Name   : Index_parseOrdering
+* Purpose: parse index ordering string
+* Input  : name - name
+* Output : databaseOrdering - database ordering
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering);
+
+/***********************************************************************\
 * Name   : Index_init
 * Purpose: initialize index database
 * Input  : fileName - database file name
