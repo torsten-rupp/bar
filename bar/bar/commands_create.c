@@ -6752,6 +6752,7 @@ Errors Command_create(ConstString                  jobUUID,
   }
 
   // close archive
+  AUTOFREE_REMOVE(&autoFreeList,&createInfo.archiveInfo);
   error = Archive_close(&createInfo.archiveInfo);
   if (error != ERROR_NONE)
   {
