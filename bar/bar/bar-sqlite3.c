@@ -799,7 +799,7 @@ int main(int argc, const char *argv[])
     {
       showHeader = TRUE;
     }
-    else if (stringEquals(argv[i],"-n") || stringEquals(argv[i],"--no-foreign-keys"))
+    else if (stringEquals(argv[i],"-f") || stringEquals(argv[i],"--no-foreign-keys"))
     {
       foreignKeys = FALSE;
     }
