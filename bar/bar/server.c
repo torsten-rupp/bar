@@ -5089,15 +5089,15 @@ LOCAL void purgeExpiredThreadCode(void)
   jobName                     = String_new();
   string                      = String_new();
   expiredInfo.jobName         = String_new();
-  expiredInfo.createdDateTime = 0LL;
   expiredInfo.archiveType     = ARCHIVE_TYPE_NONE;
+  expiredInfo.createdDateTime = 0LL;
   expiredInfo.totalEntryCount = 0L;
-  expiredInfo.totalEntryCount = 0LL;
+  expiredInfo.totalEntrySize  = 0LL;
   surplusInfo.jobName         = String_new();
-  surplusInfo.createdDateTime = 0LL;
   surplusInfo.archiveType     = ARCHIVE_TYPE_NONE;
+  surplusInfo.createdDateTime = 0LL;
   surplusInfo.totalEntryCount = 0L;
-  surplusInfo.totalEntryCount = 0LL;
+  surplusInfo.totalEntrySize  = 0LL;
 
   // init index
   indexHandle = Index_open(INDEX_PRIORITY_MEDIUM,INDEX_TIMEOUT);
