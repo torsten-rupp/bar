@@ -134,9 +134,9 @@ LOCAL const char *INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[] =
 #define SLEEP_TIME_INDEX_CLEANUP_THREAD (4*60*60)
 
 /***************************** Datatypes *******************************/
-#define INDEX_OPEN_MODE_READ       0x00
-#define INDEX_OPEN_MODE_READ_WRITE 0x01
-#define INDEX_OPEN_MODE_CREATE     0x02
+#define INDEX_OPEN_MODE_READ       (1 << 0)
+#define INDEX_OPEN_MODE_READ_WRITE (1 << 1)
+#define INDEX_OPEN_MODE_CREATE     (1 << 2)
 
 /***************************** Variables *******************************/
 LOCAL const char                 *indexDatabaseFileName = NULL;
@@ -266,7 +266,7 @@ LOCAL bool   quitFlag;
 
   // disable sync, enable foreign keys
 //TODO: read/write?
-  if ((indexOpenModes & INDEX_OPEN_MODE_READ) == INDEX_OPEN_MODE_READ)
+  if ((indexOpenModes & INDEX_OPEN_MODE_READ_WRITE) == INDEX_OPEN_MODE_READ)
   {
     // disable synchronous mode and journal to increase transaction speed
     (void)Database_setEnabledSync(&indexHandle->databaseHandle,FALSE);
@@ -623,7 +623,9 @@ return ERROR_NONE;
                                 );
         break;
       default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* not NDEBUG */
         break;
     }
     if (error != ERROR_NONE)
@@ -709,7 +711,9 @@ return ERROR_NONE;
                                 );
         break;
       default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* not NDEBUG */
         break;
     }
     if (error != ERROR_NONE)
@@ -7479,7 +7483,9 @@ Errors Index_setState(IndexHandle *indexHandle,
         }
         break;
       default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* not NDEBUG */
         break;
     }
 
@@ -7784,11 +7790,22 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-    return Database_execute(&indexHandle->databaseHandle,
-                            CALLBACK(NULL,NULL),
-                            "DELETE FROM history WHERE id=%lld;",
-                            Index_getDatabaseId(historyId)
-                           );
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM history WHERE id=%lld;",
+                             Index_getDatabaseId(historyId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+      return error;
+    }
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+
+    return ERROR_NONE;
   });
 
   return error;
@@ -7827,7 +7844,7 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
   // init variables
   ftsName      = String_new();
   regexpName   = String_new();
-  filterString = String_new();
+  filterString = String_newCString("1");
 
   // get FTS/regex patterns
   getFTSString(ftsName,name);
@@ -8101,6 +8118,8 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
     // delete entities
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -8113,6 +8132,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     while (   Database_getNextRow(&databaseQueryHandle,
@@ -8127,6 +8147,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
     Database_finalize(&databaseQueryHandle);
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
 
@@ -8140,8 +8161,11 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                               );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
 
     return ERROR_NONE;
   });
@@ -8470,6 +8494,8 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
     // delete storages of entity
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -8481,6 +8507,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     while (   Database_getNextRow(&databaseQueryHandle,
@@ -8495,6 +8522,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
     Database_finalize(&databaseQueryHandle);
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
 
@@ -8506,8 +8534,11 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                               );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
 
     return ERROR_NONE;
   });
@@ -9401,158 +9432,292 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
   }
 
 //fprintf(stderr,"%s, %d: storageId=%lld\n",__FILE__,__LINE__,storageId);
+fprintf(stderr,"%s, %d: beiofer starty Index_deleteStorage\n",__FILE__,__LINE__);
   BLOCK_DOX(error,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-//fprintf(stderr,"%s, %d: %llu Index_deleteStorage file\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+uint64 t0;
+uint64 t1;
+fprintf(stderr,"%s, %d: starty Index_deleteStorage\n",__FILE__,__LINE__);
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
+t0=Misc_getCurrentDateTime();
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM fileEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE) return error;
-//fprintf(stderr,"%s, %d: %llu Index_deleteStorage file e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_FILE
-                            );
-    if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_FILE
-                            );
-    if (error != ERROR_NONE) return error;
+t1=Misc_getCurrentDateTime();
+fprintf(stderr,"%s, %d: A %llu\n",__FILE__,__LINE__,t1-t0);
+    if (error != ERROR_NONE)
+    {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+      return error;
+    }
 
-//fprintf(stderr,"%s, %d: %llu Index_deleteStorage image\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+
+    return ERROR_NONE;
+  });
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+uint64 t0;
+uint64 t1;
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
+t0=Misc_getCurrentDateTime();
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM imageEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE) return error;
-//fprintf(stderr,"%s, %d: %llu Index_deleteStorage image e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_IMAGE
-                            );
-    if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_IMAGE
-                            );
-    if (error != ERROR_NONE) return error;
+t1=Misc_getCurrentDateTime();
+fprintf(stderr,"%s, %d: B %llu\n",__FILE__,__LINE__,t1-t0);
+    if (error != ERROR_NONE)
+    {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+      return error;
+    }
 
-//fprintf(stderr,"%s, %d: %llu Index_deleteStorage dir\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+
+    return ERROR_NONE;
+  });
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+uint64 t0;
+uint64 t1;
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
+t0=Misc_getCurrentDateTime();
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM directoryEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE) return error;
-//fprintf(stderr,"%s, %d: %llu Index_deleteStorage dir e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_DIRECTORY
-                            );
-    if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_DIRECTORY
-                            );
-    if (error != ERROR_NONE) return error;
+t1=Misc_getCurrentDateTime();
+fprintf(stderr,"%s, %d: C %llu\n",__FILE__,__LINE__,t1-t0);
+    if (error != ERROR_NONE)
+    {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+      return error;
+    }
 
-//fprintf(stderr,"%s, %d: %llu Index_deleteStorage link\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+
+    return ERROR_NONE;
+  });
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+uint64 t0;
+uint64 t1;
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
+t0=Misc_getCurrentDateTime();
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM linkEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE) return error;
-//fprintf(stderr,"%s, %d: %llu Index_deleteStorage link e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_LINK
-                            );
-    if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_LINK
-                            );
-    if (error != ERROR_NONE) return error;
+t1=Misc_getCurrentDateTime();
+fprintf(stderr,"%s, %d: D %llu\n",__FILE__,__LINE__,t1-t0);
+    if (error != ERROR_NONE)
+    {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+      return error;
+    }
 
-//fprintf(stderr,"%s, %d: %llu Index_deleteStorage hardlink\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+
+    return ERROR_NONE;
+  });
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+uint64 t0;
+uint64 t1;
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
+t0=Misc_getCurrentDateTime();
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM hardlinkEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE) return error;
-//fprintf(stderr,"%s, %d: %llu Index_deleteStorage hardlink e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_HARDLINK
-                            );
-    if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_HARDLINK
-                            );
-    if (error != ERROR_NONE) return error;
+t1=Misc_getCurrentDateTime();
+fprintf(stderr,"%s, %d: E %llu\n",__FILE__,__LINE__,t1-t0);
+    if (error != ERROR_NONE)
+    {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+      return error;
+    }
 
-//fprintf(stderr,"%s, %d: %llu Index_deleteStorage special\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+
+    return ERROR_NONE;
+  });
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+uint64 t0;
+uint64 t1;
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
+t0=Misc_getCurrentDateTime();
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM specialEntries WHERE storageId=%lld",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE) return error;
-//fprintf(stderr,"%s, %d: %llu Index_deleteStorage special e\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_SPECIAL
-                            );
-    if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),
-                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_SPECIAL
-                            );
-    if (error != ERROR_NONE) return error;
+t1=Misc_getCurrentDateTime();
+fprintf(stderr,"%s, %d: F %llu\n",__FILE__,__LINE__,t1-t0);
+    if (error != ERROR_NONE)
+    {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+      return error;
+    }
 
-//fprintf(stderr,"%s, %d: %llu Index_deleteStorage storage\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+
+    return ERROR_NONE;
+  });
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+uint64 t0;
+uint64 t1;
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
+t0=Misc_getCurrentDateTime();
+(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entriesNewest WHERE storageId=%lld",
+                             Index_getDatabaseId(storageId)
+                            );
+(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+t1=Misc_getCurrentDateTime();
+fprintf(stderr,"%s, %d: G %llu\n",__FILE__,__LINE__,t1-t0);
+    if (error != ERROR_NONE)
+    {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+      return error;
+    }
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+
+    return ERROR_NONE;
+  });
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+uint64 t0;
+uint64 t1;
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+t0=Misc_getCurrentDateTime();
+(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM entries WHERE storageId=%lld",
+                             Index_getDatabaseId(storageId)
+                            );
+(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+t1=Misc_getCurrentDateTime();
+fprintf(stderr,"%s, %d: H %llu\n",__FILE__,__LINE__,t1-t0);
+    if (error != ERROR_NONE)
+    {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+      return error;
+    }
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+
+    return ERROR_NONE;
+  });
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  BLOCK_DOX(error,
+            Database_lock(&indexHandle->databaseHandle),
+            Database_unlock(&indexHandle->databaseHandle),
+  {
+uint64 t0;
+uint64 t1;
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
+t0=Misc_getCurrentDateTime();
+(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM storage WHERE id=%lld",
                              Index_getDatabaseId(storageId)
                             );
-    if (error != ERROR_NONE) return error;
+(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+t1=Misc_getCurrentDateTime();
+fprintf(stderr,"%s, %d: I %llu\n",__FILE__,__LINE__,t1-t0);
+    if (error != ERROR_NONE)
+    {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+      return error;
+    }
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
 
     return ERROR_NONE;
   });
+fprintf(stderr,"%s, %d: end Index_deleteStorage error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   return error;
 }
@@ -9955,7 +10120,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         String_format(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
         break;
       default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* not NDEBUG */
         break;
     }
   }
@@ -10421,7 +10588,9 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
         String_format(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
         break;
       default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* not NDEBUG */
         break;
     }
   }
@@ -10908,6 +11077,8 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
     switch (Index_getType(entryId))
     {
       case INDEX_TYPE_FILE:
@@ -10953,11 +11124,14 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                                 );
         break;
       default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* not NDEBUG */
         break;
     }
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
 
@@ -10968,6 +11142,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
@@ -10977,6 +11152,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
 
@@ -10996,6 +11172,8 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
       verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
       verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
     #endif /* not NDEBUG */
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
 
     return ERROR_NONE;
   });
@@ -11186,6 +11364,8 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM fileEntries WHERE entryId=%lld;",
@@ -11193,6 +11373,7 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
@@ -11202,6 +11383,7 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
@@ -11211,6 +11393,7 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
 
@@ -11223,6 +11406,8 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
       verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
       verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
     #endif /* not NDEBUG */
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
 
     return ERROR_NONE;
   });
@@ -11404,6 +11589,8 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM imageEntries WHERE entryId=%lld;",
@@ -11411,6 +11598,7 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
@@ -11420,6 +11608,7 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
@@ -11429,6 +11618,7 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
 
@@ -11441,6 +11631,8 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
       verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
       verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
     #endif /* not NDEBUG */
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
 
     return ERROR_NONE;
   });
@@ -11619,6 +11811,8 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM directoryEntries WHERE entryId=%lld;",
@@ -11626,6 +11820,7 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
@@ -11635,6 +11830,7 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
@@ -11644,6 +11840,7 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
 
@@ -11655,6 +11852,8 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
       verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
       verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
     #endif /* not NDEBUG */
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
 
     return ERROR_NONE;
   });
@@ -11835,6 +12034,8 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM linkEntries WHERE entryId=%lld;",
@@ -11842,6 +12043,7 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
@@ -11851,6 +12053,7 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
@@ -11860,6 +12063,7 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
 
@@ -11871,6 +12075,8 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
       verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
       verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
     #endif /* not NDEBUG */
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
 
     return ERROR_NONE;
   });
@@ -12061,6 +12267,8 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM hardlinkEntries WHERE entryId=%lld;",
@@ -12068,6 +12276,7 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
@@ -12077,6 +12286,7 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
@@ -12086,6 +12296,7 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
 
@@ -12098,6 +12309,8 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
       verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
       verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
     #endif /* not NDEBUG */
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
 
     return ERROR_NONE;
   });
@@ -12274,6 +12487,8 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),
                              "DELETE FROM specialEntries WHERE entryId=%lld;",
@@ -12281,6 +12496,7 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
@@ -12290,6 +12506,7 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
@@ -12299,6 +12516,7 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
 
@@ -12310,6 +12528,8 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
       verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
       verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
     #endif /* not NDEBUG */
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
 
     return ERROR_NONE;
   });
@@ -13532,11 +13752,22 @@ Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
             Database_lock(&indexHandle->databaseHandle),
             Database_unlock(&indexHandle->databaseHandle),
   {
-    return Database_execute(&indexHandle->databaseHandle,
-                            CALLBACK(NULL,NULL),
-                            "DELETE FROM skippedEntries WHERE id=%lld;",
-                            Index_getDatabaseId(entryId)
-                           );
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),
+                             "DELETE FROM skippedEntries WHERE id=%lld;",
+                             Index_getDatabaseId(entryId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+      return error;
+    }
+
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+
+    return ERROR_NONE;
   });
 
   return error;

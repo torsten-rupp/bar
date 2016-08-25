@@ -91,7 +91,8 @@ typedef uint64 IndexStateSet;
                               SET_VALUE(INDEX_STATE_CREATE) |\
                               SET_VALUE(INDEX_STATE_UPDATE_REQUESTED) |\
                               SET_VALUE(INDEX_STATE_UPDATE) |\
-                              SET_VALUE(INDEX_STATE_ERROR) \
+                              SET_VALUE(INDEX_STATE_ERROR) |\
+                              SET_VALUE(INDEX_STATE_DELETE) \
                              )
 
 // index modes

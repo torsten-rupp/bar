@@ -4581,6 +4581,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
         }
         if (resultError == ERROR_NONE)
         {
+fprintf(stderr,"%s, %d: de;ete sorage %s\n",__FILE__,__LINE__,String_cString(storageName));
           if (Storage_exists(&storageHandle,
                              NULL  // archiveName
                             )
@@ -4606,10 +4607,30 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
   }
 
   // delete index
-  error = Index_deleteStorage(indexHandle,storageId);
+  error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  }
+
+{
+uint64 t0,t1;
+fprintf(stderr,"%s, %d: start deleting index storageId=%llu\n",__FILE__,__LINE__,storageId);
+t0=Misc_getCurrentDateTime();
+  error = Index_deleteStorage(indexHandle,storageId);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  if (error != ERROR_NONE)
+  {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     resultError = error;
+  }
+t1=Misc_getCurrentDateTime();
+fprintf(stderr,"%s, %d: deleted index storageId=%llu done %ds\n",__FILE__,__LINE__,storageId,t1-t0);
+}
+  error = Index_endTransaction(indexHandle);
+  if (error != ERROR_NONE)
+  {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
 
   // free resources
@@ -4687,6 +4708,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   }
 
   // delete entity index
+fprintf(stderr,"%s, %d: delete index enty entityId=%llu\n",__FILE__,__LINE__,entityId);
   error = Index_deleteEntity(indexHandle,entityId);
   if (error != ERROR_NONE)
   {
@@ -5115,6 +5137,7 @@ LOCAL void purgeExpiredThreadCode(void)
   {
     do
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       expiredInfo.entityId = INDEX_ID_NONE;
       surplusInfo.entityId = INDEX_ID_NONE;
       now                  = Misc_getCurrentDateTime();
@@ -5176,10 +5199,10 @@ LOCAL void purgeExpiredThreadCode(void)
             }
 
 //if (String_equalsCString(jobUUID,"47c2a261-cf7b-4f9f-92e8-87a55358e509") && (entityId==9442))
-if ((entityId==9442))
+if ((entityId==10770))
 {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+//asm("int3");
 }
             if ((maxKeep > 0) || (maxAge > 0))
             {
@@ -5255,10 +5278,12 @@ asm("int3");
         }
         Index_doneList(&indexQueryHandle1);
 
+        error = ERROR_NONE;
+
         // purge expired entity
         if (expiredInfo.entityId != INDEX_ID_NONE)
         {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %ld: expired deleteEntity %d\n",__FILE__,__LINE__,expiredInfo.entityId);
 //asm("int3");
           error = deleteEntity(indexHandle,expiredInfo.entityId);
           if (error == ERROR_NONE)
@@ -5278,6 +5303,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           }
           else
           {
+fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
             expiredInfo.entityId = INDEX_ID_NONE;
           }
         }
@@ -5285,7 +5311,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         // purge surplus entity
         if ((surplusInfo.entityId != INDEX_ID_NONE) && (surplusInfo.entityId != expiredInfo.entityId))
         {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %ld: surplus deleteEntity %d\n",__FILE__,__LINE__,surplusInfo.entityId);
 //asm("int3");
           error = deleteEntity(indexHandle,surplusInfo.entityId);
           if (error == ERROR_NONE)
@@ -5305,19 +5331,33 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           }
           else
           {
+fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
             surplusInfo.entityId = INDEX_ID_NONE;
           }
         }
       }
     }
     while (   !quitFlag
+           && (error == ERROR_NONE)
            && ((expiredInfo.entityId != INDEX_ID_NONE) || (surplusInfo.entityId != INDEX_ID_NONE))
           );
+    if (quitFlag)
+    {
+      break;
+    }
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //asm("int3");
 
-    // sleep
-    delayPurgeExpiredThread();
+    if (error == ERROR_NONE)
+    {
+      // sleep
+      delayPurgeExpiredThread();
+    }
+    else
+    {
+      // wait a short time and try again
+      Misc_udelay(30*US_PER_SECOND);
+    }
   }
 
   // done index
@@ -16914,6 +16954,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
         }
 
         // delete index
+fprintf(stderr,"%s, %d: auto in del\n",__FILE__,__LINE__);
         error = Index_deleteStorage(indexHandle,storageId);
         if (error == ERROR_NONE)
         {
