@@ -4598,7 +4598,7 @@ Dprintf.dprintf("cirrect?");
     COLOR_MODIFIED         = display.getSystemColor(SWT.COLOR_GRAY);
     COLOR_INFO_FORGROUND   = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
     COLOR_INFO_BACKGROUND  = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
-    COLOR_NO_SCHEDULE_INFO = new Color(null,0xFF,0xF8,0xFF);
+    COLOR_NO_SCHEDULE_INFO = new Color(null,0xFF,0xF0,0xFF);
 
     // get images
     IMAGE_DIRECTORY  = Widgets.loadImage(display,"directory.png");
@@ -4954,8 +4954,6 @@ Dprintf.dprintf("");
         public void dragSetData(DragSourceEvent dragSourceEvent)
         {
           dragSourceEvent.data = selectedIndexData;
-//TODO
-Dprintf.dprintf("dragSourceEvent.data=%s",dragSourceEvent.data);
         }
         public void dragFinished(DragSourceEvent dragSourceEvent)
         {
@@ -4974,8 +4972,6 @@ Dprintf.dprintf("dragSourceEvent.data=%s",dragSourceEvent.data);
         }
         public void drop(DropTargetEvent dropTargetEvent)
         {
-//TODO
-Dprintf.dprintf("dropTargetEvent.data=%s",dropTargetEvent.data);
           if (dropTargetEvent.data != null)
           {
             Point point = display.map(null,widgetStorageTree,dropTargetEvent.x,dropTargetEvent.y);
@@ -4988,6 +4984,8 @@ Dprintf.dprintf("dropTargetEvent.data=%s",dropTargetEvent.data);
 
               if      (toIndexData instanceof UUIDIndexData)
               {
+                UUIDIndexData toUUIDIndexData = (UUIDIndexData)toIndexData;
+                assignStorages(fromIndexData,toUUIDIndexData);
               }
               else if (toIndexData instanceof EntityIndexData)
               {
@@ -6765,7 +6763,7 @@ Dprintf.dprintf("remove");
                              });
   }
 
-  /** create entity for job and assing jobs/entities/storages to job
+  /** create entity for job and assign jobs/entities/storages to job
    * @param toUUIDIndexData UUID index data
    * @param archiveType archive type
    */
@@ -6859,7 +6857,7 @@ Dprintf.dprintf("remove");
     }
   }
 
-  /** assing jobs/entities/storages to entity
+  /** assign jobs/entities/storages to entity
    * @param indexData index data
    * @param toJobUUID job UUID
    * @param toScheduleUUID schedule UUID
@@ -6873,7 +6871,7 @@ Dprintf.dprintf("remove");
     assignStorages(indexDataHashSet,toJobUUID,toScheduleUUID,archiveType);
   }
 
-  /** assing selected/checked jobs/entities/storages to entity
+  /** assign selected/checked jobs/entities/storages to entity
    * @param toJobUUID job UUID
    * @param toScheduleUUID schedule UUID
    * @param archiveType archive type
@@ -6884,7 +6882,7 @@ Dprintf.dprintf("remove");
     assignStorages(indexDataHashSet,toJobUUID,toScheduleUUID,archiveType);
   }
 
-  /** assing selected/checked jobs/entities/storages to entity
+  /** assign selected/checked jobs/entities/storages to entity
    * @param toJobUUID job UUID
    * @param archiveType archive type
    */
@@ -6893,7 +6891,86 @@ Dprintf.dprintf("remove");
     assignStorages(toJobUUID,(String)null,archiveType);
   }
 
-  /** assing jobs/entities/storages to entity
+  /** assign jobs/entities/storages to UUID
+   * @param indexDataHashSet index data hash set
+   * @param toUUIDIndexData UUID index data
+   */
+  private void assignStorages(HashSet<IndexData> indexDataHashSet, UUIDIndexData toUUIDIndexData)
+  {
+    if (!indexDataHashSet.isEmpty())
+    {
+      try
+      {
+        for (IndexData indexData : indexDataHashSet)
+        {
+          final String info = indexData.getInfo();
+
+          int      error        = Errors.UNKNOWN;
+          String[] errorMessage = new String[1];
+          if      (indexData instanceof UUIDIndexData)
+          {
+            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S jobUUID=%'S",
+                                                                 toUUIDIndexData.jobUUID,
+                                                                 ((UUIDIndexData)indexData).jobUUID
+                                                                ),
+                                             0,  // debugLevel
+                                             errorMessage
+                                            );
+          }
+          else if (indexData instanceof EntityIndexData)
+          {
+            error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S entityId=%lld",
+                                                                 toUUIDIndexData.jobUUID,
+                                                                 indexData.id
+                                                                ),
+                                             0,  // debugLevel
+                                             errorMessage
+                                            );
+          }
+          else if (indexData instanceof StorageIndexData)
+          {
+            // nothing to do
+          }
+          if (error == Errors.NONE)
+          {
+            indexData.setState(IndexStates.UPDATE_REQUESTED);
+          }
+          else
+          {
+            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,errorMessage[0]));
+          }
+        }
+      }
+      catch (CommunicationError error)
+      {
+        Dialogs.error(shell,BARControl.tr("Communication error while assigning index database\n\n(error: {0})",error.toString()));
+      }
+      updateStorageTreeTableThread.triggerUpdate();
+    }
+  }
+
+  /** assign jobs/entities to UUID
+   * @param indexData index data
+   * @param toUUIDIndexData UUID index data
+   */
+  private void assignStorages(IndexData indexData, UUIDIndexData toUUIDIndexData)
+  {
+    HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+
+    indexDataHashSet.add(indexData);
+    assignStorages(indexDataHashSet,toUUIDIndexData);
+  }
+
+  /** assign selected/checked jobs/entities to UUID
+   * @param toUUIDIndexData UUID index data
+   */
+  private void assignStorages(UUIDIndexData toUUIDIndexData)
+  {
+    HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
+    assignStorages(indexDataHashSet,toUUIDIndexData);
+  }
+
+  /** assign jobs/entities/storages to entity
    * @param indexDataHashSet index data hash set
    * @param toEntityIndexData entity index data
    */
@@ -6957,7 +7034,7 @@ Dprintf.dprintf("remove");
     }
   }
 
-  /** assing jobs/entities/storages to entity
+  /** assign jobs/entities/storages to entity
    * @param indexData index data
    * @param toEntityIndexData entity index data
    */
@@ -6969,7 +7046,7 @@ Dprintf.dprintf("remove");
     assignStorages(indexDataHashSet,toEntityIndexData);
   }
 
-  /** assing selected/checked jobs/entities/storages to entity
+  /** assign selected/checked jobs/entities/storages to entity
    * @param toEntityIndexData entity index data
    */
   private void assignStorages(EntityIndexData toEntityIndexData)
@@ -6978,7 +7055,7 @@ Dprintf.dprintf("remove");
     assignStorages(indexDataHashSet,toEntityIndexData);
   }
 
-  /** set entity type
+  /** set archive type of UUID/entity
    * @param entityIndexData entity index data
    * @param archiveType archive type
    */
