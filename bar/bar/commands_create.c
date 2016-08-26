@@ -4267,6 +4267,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                NULL,  // jobUUID
                                INDEX_ID_NONE,  // entityId
                                storageMsg.storageId,
+                               NULL,  // jobUUID
                                INDEX_ID_NONE,  // toEntityId
                                ARCHIVE_TYPE_NONE,
                                storageId
@@ -4374,6 +4375,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                      NULL,  // jobUUID
                                      INDEX_ID_NONE,  // entityId
                                      storageId,
+                                     NULL,  // jobUUID
                                      existingEntityId,
                                      ARCHIVE_TYPE_NONE,
                                      INDEX_ID_NONE  // toStorageId
@@ -6611,19 +6613,6 @@ Errors Command_create(ConstString                  jobUUID,
   entityId = INDEX_ID_NONE;
   if (indexHandle != NULL)
   {
-    // start index database transaction
-    error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot create index for '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-    AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_rollbackTransaction(indexHandle); });
-
     // get/create index job UUID
     if (!Index_findUUIDByJobUUID(indexHandle,
                                  jobUUID,
@@ -6673,6 +6662,19 @@ Errors Command_create(ConstString                  jobUUID,
     assert(entityId != INDEX_ID_NONE);
     DEBUG_TESTCODE() { Index_deleteEntity(indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
     AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
+
+    // start index database transaction
+    error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot create index for '%s' (error: %s)!\n",
+                 Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_rollbackTransaction(indexHandle); });
   }
 
   // create new archive
