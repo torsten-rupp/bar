@@ -2164,6 +2164,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
 *                          INDEX_ID_NONE)
 *          storageId     - index id of storage index (can be
 *                          INDEX_ID_NONE)
+*          toJobUUID     - to job UUID (can be NULL)
 *          toEntityId    - to entity id (can be INDEX_ID_NONE)
 *          toArchiveType - to archive type (can be ARCHIVE_TYPE_NONE)
 *          toStorageId   - to storage id (can be INDEX_ID_NONE)
@@ -2177,6 +2178,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                       ConstString  jobUUID,
                       IndexId      entityId,
                       IndexId      storageId,
+                      ConstString  toJobUUID,
                       IndexId      toEntityId,
                       ArchiveTypes toArchiveType,
                       IndexId      toStorageId

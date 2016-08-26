@@ -582,8 +582,10 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle);
 * Name   : Database_execute
 * Purpose: execute SQL statement
 * Input  : databaseHandle - database handle
-*          databaseRowFunction - callback function for row data
+*          databaseRowFunction - callback function for row data (can be
+*                                NULL)
 *          databaseRowUserData - user data for callback function
+*          changedRowCount     - number of changd rows (can be NULL)
 *          command             - SQL command string with %[l]d, %[']S,
 *                                %[']s
 *          ...                 - optional arguments for SQL command
@@ -598,6 +600,7 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle);
 Errors Database_execute(DatabaseHandle      *databaseHandle,
                         DatabaseRowFunction databaseRowFunction,
                         void                *databaseRowUserData,
+                        ulong               *changedRowCount,
                         const char          *command,
                         ...
                        );

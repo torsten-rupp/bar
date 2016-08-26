@@ -283,7 +283,8 @@ LOCAL void printNotifies(void)
 
   // create tables
   error = Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),
+                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
                            CONTINUOUS_TABLE_DEFINITION
                           );
   if (error != ERROR_NONE)
@@ -1567,7 +1568,8 @@ LOCAL Errors addContinuousEntry(const char  *jobUUID,
   assert(Database_isLocked(&continuousDatabaseHandle));
 
   return Database_execute(&continuousDatabaseHandle,
-                          CALLBACK(NULL,NULL),
+                          CALLBACK(NULL,NULL),  // databaseRowFunction
+                          NULL,  // changedRowCount
                           "INSERT OR IGNORE INTO names \
                              (\
                               jobUUID,\
@@ -1601,7 +1603,8 @@ LOCAL Errors removeContinuousEntry(DatabaseId databaseId)
   assert(Database_isLocked(&continuousDatabaseHandle));
 
   return Database_execute(&continuousDatabaseHandle,
-                          CALLBACK(NULL,NULL),
+                          CALLBACK(NULL,NULL),  // databaseRowFunction
+                          NULL,  // changedRowCount
                           "DELETE FROM names WHERE id=%ld;",
                           databaseId
                          );
