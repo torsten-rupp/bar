@@ -404,12 +404,16 @@ BAR_OBJECTS_GCOV     = $(addprefix gcov/,$(BAR_OBJECTS))
 
 BAR_OBJECTS_VALGRIND = $(addprefix valgrind/,$(BAR_OBJECTS))
 
-EXTERN_SOURCES       = sqlite3.c \
+SQLITE3_SOURCE       = $(if $(wildcard ../packages/sources/sqlite3.c),../packages/sources/sqlite3.c,sqlite3.c)
+
+SQLITE3_HEADER       = $(if $(wildcard ../packages/include/sqlite3.h),../packages/include/sqlite3.h,sqlite3.h)
+
+EXTERN_SOURCES       = $(SQLITE3_SOURCE) \
 
 EXTERN_HEADERS       = $(patsubst %.c,%.h,$(EXTERN_SOURCES)) \
 
-EXTERN_OBJECTS       = $(foreach z,$(filter %.c,$(EXTERN_SOURCES)),$(patsubst %.c,%.o,$z)) \
-                       $(foreach z,$(filter %.cpp,$(EXTERN_SOURCES)),$(patsubst %.cpp,%.o,$z)) \
+EXTERN_OBJECTS       = $(foreach z,$(filter %.c,$(notdir $(EXTERN_SOURCES))),$(patsubst %.c,%.o,$z)) \
+                       $(foreach z,$(filter %.cpp,$(notdir $(EXTERN_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
                        $(if @HAVE_XDELTA@,xdelta3.o) \
 
 DESTROYER_SOURCES    = destroyer.c \
@@ -439,7 +443,7 @@ BAR_SQLITE3_SOURCES  = bar-sqlite3.c \
                        files.c \
                        devices.c \
                        stacktraces.c \
-                       sqlite3.c \
+                       $(SQLITE3_SOURCE) \
 
 BAR_SQLITE3_HEADERS  = $(patsubst %.c,%.h,$(filter-out bar-sqlite3.c,$(BAR_SQLITE3_SOURCES))) \
 
@@ -752,7 +756,7 @@ else
 endif
 
 # compile SQLite, xdelta C source without warning and debug flags
-sqlite3.o: sqlite3.c sqlite3.h
+sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 
 ifeq (@HAVE_XDELTA@,1)
