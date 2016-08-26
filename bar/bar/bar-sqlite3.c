@@ -14,7 +14,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#include <pcreposix.h>
+#ifdef HAVE_PCRE
+  #include <pcreposix.h>
+#endif
 #include <assert.h>
 
 #include "global.h"
@@ -143,6 +145,8 @@ LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv
   sqlite3_result_int64(context,(int64)timestamp);
 }
 
+#ifdef HAVE_PCRE
+
 /***********************************************************************\
 * Name   : regexpDelete
 * Purpose: callback for deleting REGEXP data
@@ -223,6 +227,7 @@ LOCAL void regexpMatch(sqlite3_context *context, int argc, sqlite3_value *argv[]
 
   sqlite3_result_int(context,result);
 }
+#endif /* HAVE_PCRE */
 
 /***********************************************************************\
 * Name   : dirname
@@ -936,6 +941,7 @@ int main(int argc, const char *argv[])
                                          NULL
                                         );
   assert(sqliteResult == SQLITE_OK);
+#ifdef HAVE_PCRE
   sqliteResult = sqlite3_create_function(databaseHandle,
                                          "regexp",
                                          3,
@@ -946,6 +952,7 @@ int main(int argc, const char *argv[])
                                          NULL
                                         );
   assert(sqliteResult == SQLITE_OK);
+#endif /* HAVE_PCRE */
   sqliteResult = sqlite3_create_function(databaseHandle,
                                          "dirname",
                                          1,
