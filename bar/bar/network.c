@@ -1659,9 +1659,12 @@ Errors Network_startSSL(SocketHandle *socketHandle,
     return ERROR_NONE;
   #else /* not HAVE_GNU_TLS */
     UNUSED_VARIABLE(socketHandle);
-    UNUSED_VARIABLE(caFileName);
-    UNUSED_VARIABLE(certFileName);
-    UNUSED_VARIABLE(keyFileName);
+    UNUSED_VARIABLE(caData);
+    UNUSED_VARIABLE(caLength);
+    UNUSED_VARIABLE(certData);
+    UNUSED_VARIABLE(certLength);
+    UNUSED_VARIABLE(keyData);
+    UNUSED_VARIABLE(keyLength);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GNU_TLS */
