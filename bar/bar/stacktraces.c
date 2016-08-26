@@ -21,7 +21,11 @@
 #include <stdbool.h>
 #ifdef HAVE_BFD_H
   #include <bfd.h>
+#endif
+#ifdef HAVE_DEMANGLE_H
   #include <demangle.h>
+#endif
+#ifdef HAVE_LINK_H
   #include <link.h>
 #endif
 #include <unistd.h>
