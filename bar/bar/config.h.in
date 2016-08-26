@@ -70,6 +70,9 @@
 /* curl installed */
 #undef HAVE_CURL
 
+/* Define to 1 if you have the <demangle.h> header file. */
+#undef HAVE_DEMANGLE_H
+
 /* fdatasync() available */
 #undef HAVE_FDATASYNC
 
@@ -219,6 +222,9 @@
 
 /* link() available */
 #undef HAVE_LINK
+
+/* Define to 1 if you have the <link.h> header file. */
+#undef HAVE_LINK_H
 
 /* Define to 1 if you have the <linux/fs.h> header file. */
 #undef HAVE_LINUX_FS_H

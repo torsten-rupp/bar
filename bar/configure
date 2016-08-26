@@ -720,6 +720,7 @@ HAVE_BZ2
 ENABLE_EPM
 ENABLE_GUI_I18N
 ENABLE_GUI
+ENABLE_PCRE
 ENABLE_ISO9660
 ENABLE_TLS
 ENABLE_SSH
@@ -810,6 +811,7 @@ enable_curl
 enable_ssh
 enable_tls
 enable_iso9660
+enable_pcre
 enable_crashdump
 enable_bfd
 enable_gui
@@ -1454,7 +1456,8 @@ Optional Features:
   --disable-curl          disable curl support
   --disable-ssh           disable SSH support
   --disable-tls           disable TLS support
-  --disable-iso9660       disable ISO 9660 support (barcontrol)
+  --disable-iso9660       disable ISO 9660 support
+  --disable-pcre          disable PCRE support
   --disable-crashdump     disable crash dump support
   --disable-bfd           disable BFD support
   --disable-gui           disable GUI support (barcontrol)
@@ -2778,6 +2781,12 @@ fi
 # Check whether --enable-iso9660 was given.
 if test "${enable_iso9660+set}" = set; then :
   enableval=$enable_iso9660; ENABLE_ISO9660=$enableval
+
+fi
+
+# Check whether --enable-pcre was given.
+if test "${enable_pcre+set}" = set; then :
+  enableval=$enable_pcre; ENABLE_PCRE=$enableval
 
 fi
 
@@ -11668,6 +11677,54 @@ $as_echo "$as_me: WARNING: pcre not compiled: pcre package missing" >&2;}
   fi
 fi
 
+# create sqlite3.c
+if test -d sqlite -o -d "`readlink sqlite`"; then
+  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+
+  $as_echo_n "create sqlite3.c... " >&6
+
+    result=1
+    if test $result -eq 1; then
+      (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" ./configure --disable-tcl --enable-fts4) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd sqlite; make clean; make sqlite3.c) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd sqlite; \
+       install -d $cwd/packages/sources; \
+       install sqlite3.c $cwd/packages/sourcesp; \
+       install sqlite3.h $cwd/packages/include; \
+      ) 1>$tmpFile 2>&1
+    fi
+    if test $result -eq 1; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+    fi
+  fi
+fi
+
 # compile/use icu
 if test -d icu -o -d "`readlink icu`"; then
   if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -13623,9 +13680,11 @@ done
 for ac_header in \
                  arpa/inet.h \
                  bfd.h \
+                 demangle.h \
                  grp.h \
                  icu.h \
                  libintl.h \
+                 link.h \
                  linux/fs.h \
                  linux/tcp.h \
                  netdb.h \

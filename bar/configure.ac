@@ -11,6 +11,10 @@ dnl ----------------------- additional macros --------------------------
 
 
 dnl --- print compile info
+AC_DEFUN([AC_MSG_CREATE],
+[
+  _AS_ECHO_N([create $1... ])
+])
 AC_DEFUN([AC_MSG_COMPILE],
 [
   _AS_ECHO_N([compile $1... ])
@@ -591,7 +595,7 @@ AC_SUBST(ENABLE_CURL)                       dnl "yes" for curl support, "no" oth
 AC_SUBST(ENABLE_SSH)                        dnl "yes" for ssh support, "no" otherwise
 AC_SUBST(ENABLE_TLS)                        dnl "yes" for tls support, "no" otherwise
 AC_SUBST(ENABLE_ISO9660)                    dnl "yes" for iso9660 support, "no" otherwise
-AC_SUBST(ENABLE_ISO9660)                    dnl "yes" for iso9660 support, "no" otherwise
+AC_SUBST(ENABLE_PCRE)                       dnl "yes" for PCRE support, "no" otherwise
 AC_SUBST(ENABLE_GUI)                        dnl "yes" for GUI support, "no" otherwise
 AC_SUBST(ENABLE_GUI_I18N)                   dnl "yes" for GUI i18n support, "no" otherwise
 AC_SUBST(ENABLE_EPM)                        dnl "yes" for EPM support, "no" otherwise
@@ -891,8 +895,13 @@ AC_ARG_ENABLE(
 )
 AC_ARG_ENABLE(
   iso9660,
-  AC_HELP_STRING([--disable-iso9660],[disable ISO 9660 support (barcontrol)]),
+  AC_HELP_STRING([--disable-iso9660],[disable ISO 9660 support]),
   [ENABLE_ISO9660=$enableval]
+)
+AC_ARG_ENABLE(
+  pcre,
+  AC_HELP_STRING([--disable-pcre],[disable PCRE support]),
+  [ENABLE_PCRE=$enableval]
 )
 AC_ARG_ENABLE(
   crashdump,
@@ -2667,6 +2676,42 @@ if test $ENABLE_PCRE = "yes"; then
   fi
 fi
 
+# create sqlite3.c
+if test -d sqlite -o -d "`readlink sqlite`"; then
+  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    dnl create sqlite3.c almagation
+
+    AC_MSG_CREATE([sqlite3.c])
+    result=1
+    if test $result -eq 1; then
+      (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" ./configure --disable-tcl --enable-fts4) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd sqlite; make clean; make sqlite3.c) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd sqlite; \
+       install -d $cwd/packages/sources; \
+       install sqlite3.c $cwd/packages/sourcesp; \
+       install sqlite3.h $cwd/packages/include; \
+      ) 1>$tmpFile 2>&1
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+  fi
+fi
+
 # compile/use icu
 if test -d icu -o -d "`readlink icu`"; then
   if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
@@ -3040,9 +3085,11 @@ AC_SET_TOOLCHAIN_SETTINGS($CC_FLAGS,
 AC_CHECK_HEADERS(\
                  arpa/inet.h \
                  bfd.h \
+                 demangle.h \
                  grp.h \
                  icu.h \
                  libintl.h \
+                 link.h \
                  linux/fs.h \
                  linux/tcp.h \
                  netdb.h \
