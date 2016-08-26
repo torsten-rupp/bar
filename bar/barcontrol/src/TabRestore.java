@@ -2332,6 +2332,7 @@ Dprintf.dprintf("cirrect?");
 //TODO
 //entityIndexData.setTreeItem(entityTreeItem);
                 entityTreeItem.setChecked(checkedIndexIdSet.contains(entityIndexData.id));
+                entityTreeItem.setBackground(entityIndexData.scheduleUUID.isEmpty() ? COLOR_NO_SCHEDULE_INFO : null);
               }
               else
               {
@@ -2344,6 +2345,8 @@ Dprintf.dprintf("cirrect?");
                                        (entityIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-",
                                        ""
                                       );
+                entityTreeItem.setBackground(entityIndexData.scheduleUUID.isEmpty() ? COLOR_NO_SCHEDULE_INFO : null);
+
                 removeEntityTreeItemSet.remove(entityTreeItem);
               }
               if ((entityTreeItems != null) && entityTreeItem.getExpanded())
@@ -2543,6 +2546,7 @@ Dprintf.dprintf("cirrect?");
                                          (storageIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)) : "-",
                                          storageIndexData.indexState.toString()
                                         );
+
                   removeStorageTreeItemSet.remove(storageTreeItem);
                 }
               }
@@ -3889,6 +3893,7 @@ Dprintf.dprintf("cirrect?");
   private final Color COLOR_MODIFIED;
   private final Color COLOR_INFO_FORGROUND;
   private final Color COLOR_INFO_BACKGROUND;
+  private final Color COLOR_NO_SCHEDULE_INFO;
 
   // images
   private final Image IMAGE_DIRECTORY;
@@ -4590,9 +4595,10 @@ Dprintf.dprintf("cirrect?");
     display = shell.getDisplay();
 
     // get colors
-    COLOR_MODIFIED        = display.getSystemColor(SWT.COLOR_GRAY);
-    COLOR_INFO_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
-    COLOR_INFO_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+    COLOR_MODIFIED         = display.getSystemColor(SWT.COLOR_GRAY);
+    COLOR_INFO_FORGROUND   = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+    COLOR_INFO_BACKGROUND  = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+    COLOR_NO_SCHEDULE_INFO = new Color(null,0xFF,0xF8,0xFF);
 
     // get images
     IMAGE_DIRECTORY  = Widgets.loadImage(display,"directory.png");
@@ -6770,7 +6776,7 @@ Dprintf.dprintf("remove");
       long dateTime = 0;
       if (archiveType != Settings.ArchiveTypes.NONE)
       {
-        dateTime = Dialogs.date(shell,"New entity date",(String)null,"New");
+        dateTime = Dialogs.date(shell,BARControl.tr("Assign entity date"),(String)null,BARControl.tr("Assign"));
         if (dateTime == 0)
         {
           return;
