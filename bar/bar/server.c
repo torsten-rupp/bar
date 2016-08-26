@@ -4607,11 +4607,15 @@ fprintf(stderr,"%s, %d: de;ete sorage %s\n",__FILE__,__LINE__,String_cString(sto
   }
 
   // delete index
+#if 0
   error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    String_delete(storageName);
+    return error;
   }
+#endif
 
 {
 uint64 t0,t1;
@@ -4627,11 +4631,15 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 t1=Misc_getCurrentDateTime();
 fprintf(stderr,"%s, %d: deleted index storageId=%llu done %ds\n",__FILE__,__LINE__,storageId,t1-t0);
 }
+#if 0
   error = Index_endTransaction(indexHandle);
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    String_delete(storageName);
+    return error;
   }
+#endif
 
   // free resources
   String_delete(storageName);
@@ -16272,6 +16280,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
 
   if (!String_isEmpty(jobUUID))
   {
+    // assign all storages/entities of job
     if      (toEntityId != INDEX_ID_NONE)
     {
       // assign all storages of all entities of job to other entity
@@ -16279,6 +16288,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                              jobUUID,
                              INDEX_ID_NONE,  // entityId,
                              INDEX_ID_NONE,  // storageId
+                             NULL,  // toJobUUID
                              toEntityId,
                              archiveType,
                              INDEX_ID_NONE  // toStorageId
@@ -16310,6 +16320,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                              jobUUID,
                              INDEX_ID_NONE,  // entityId
                              INDEX_ID_NONE,  // storageId
+                             NULL,  // toJobUUID
                              toEntityId,
                              archiveType,
                              INDEX_ID_NONE  // toStorageId
@@ -16324,7 +16335,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
 
   if (entityId != INDEX_ID_NONE)
   {
-    // assign entity to another entity
+    // assign all storages/entity
     if      (toEntityId != INDEX_ID_NONE)
     {
       // assign all storages of entity to other entity
@@ -16332,6 +16343,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                              NULL,  // jobUUID
                              entityId,
                              INDEX_ID_NONE,  // storageId
+                             NULL,  // toJobUUID
                              toEntityId,
                              archiveType,
                              INDEX_ID_NONE  // toStorageId
@@ -16344,26 +16356,13 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
     }
     else if (!String_isEmpty(toJobUUID))
     {
-      // create entity for other job
-      error = Index_newEntity(indexHandle,
-                              toJobUUID,
-                              toScheduleUUID,
-                              archiveType,
-                              createdDateTime,
-                              &toEntityId
-                             );
-      if (error != ERROR_NONE)
-      {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"cannot create entity for %S: %s",toJobUUID,Error_getText(error));
-        return;
-      }
-
-      // assign all storages of entity to other entity
+      // assign entity to other job
       error = Index_assignTo(indexHandle,
                              NULL,  // jobUUID
-                             INDEX_ID_NONE,  // entityId
-                             storageId,
-                             toEntityId,
+                             entityId,
+                             INDEX_ID_NONE,  // storageId
+                             toJobUUID,
+                             INDEX_ID_NONE,  // toEntityId
                              archiveType,
                              INDEX_ID_NONE  // toStorageId
                             );
@@ -16377,13 +16376,15 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
 
   if (storageId != INDEX_ID_NONE)
   {
+    // assign storage
     if      (toEntityId != INDEX_ID_NONE)
     {
-      // assign storages to another entity
+      // assign storage to another entity
       error = Index_assignTo(indexHandle,
                              NULL,  // jobUUID
                              INDEX_ID_NONE,  // entityId
                              storageId,
+                             NULL,  // toJobUUID
                              toEntityId,
                              archiveType,
                              INDEX_ID_NONE  // toStorageId
@@ -16415,6 +16416,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                              NULL,  // jobUUID
                              INDEX_ID_NONE,  // entityId
                              storageId,
+                             NULL,  // toJobUUID
                              toEntityId,
                              archiveType,
                              INDEX_ID_NONE  // toStorageId
