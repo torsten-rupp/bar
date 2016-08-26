@@ -33,6 +33,7 @@ LIBGCRYPT_VERSION=1.6.4
 GMP_VERSION=6.0.0a
 LIBSSH2_VERSION=1.7.0
 PCRE_VERSION=8.38
+SQLITE_VERSION=3140100
 ICU_VERSION=56.1
 MTX_VERSION=1.3.12
 BINUTILS_VERSION=2.25
@@ -65,6 +66,7 @@ libssh2Flag=0
 gnutlsFlag=0
 libcdioFlag=0
 pcreFlag=0
+sqliteFlag=0
 icuFlag=0
 mtxFlag=0
 binutilsFlag=0
@@ -173,6 +175,10 @@ while test $# != 0; do
           allFlag=0
           pcreFlag=1
           ;;
+        sqlite)
+          allFlag=0
+          sqliteFlag=1
+          ;;
         icu)
           allFlag=0
           icuFlag=1
@@ -280,6 +286,10 @@ while test $# != 0; do
       allFlag=0
       pcreFlag=1
       ;;
+    sqlite)
+      allFlag=0
+      sqliteFlag=1
+      ;;
     icu)
       allFlag=0
       icuFlag=1
@@ -336,6 +346,7 @@ if test $helpFlag -eq 1; then
   $ECHO " gnutls"
   $ECHO " libcdio"
   $ECHO " pcre"
+  $ECHO " sqlite"
   $ECHO " icu"
   $ECHO " binutils"
   $ECHO ""
@@ -712,7 +723,7 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
- if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
+  if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
     # pcre
     (
      cd $destination/packages
@@ -725,6 +736,22 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT packages/pcre-$PCRE_VERSION pcre)
+    fi
+  fi
+
+  if test $allFlag -eq 1 -o $sqliteFlag -eq 1; then
+    # sqlite
+    (
+     cd $destination/packages
+     if test ! -f sqlite-src-$SQLITE_VERSION.zip; then
+       $WGET $WGET_OPTIONS "https://www.sqlite.org/2016/sqlite-src-$SQLITE_VERSION.zip"
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $UNZIP -o -q sqlite-src-$SQLITE_VERSION.zip
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      (cd $destination; $LN -sfT packages/sqlite-src-$SQLITE_VERSION sqlite)
     fi
   fi
 
@@ -838,10 +865,10 @@ if test $cleanFlag -eq 0; then
        $WGET $WGET_OPTIONS 'https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip'
      fi
      if test $noDecompressFlag -eq 0; then
-       $UNZIP -o openjdk-1.6.0-unofficial-b30-windows-i586-image.zip 'openjdk-1.6.0-unofficial-b30-windows-i586-image/jre/*'
+       $UNZIP -o -q openjdk-1.6.0-unofficial-b30-windows-i586-image.zip 'openjdk-1.6.0-unofficial-b30-windows-i586-image/jre/*'
      fi
      if test $noDecompressFlag -eq 0; then
-       $UNZIP -o openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip 'openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre/*'
+       $UNZIP -o -q openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip 'openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre/*'
      fi
     )
     if test $noDecompressFlag -eq 0; then
@@ -1032,6 +1059,15 @@ else
       $RMRF packages/pcre-*
     )
     $RMF pcre
+  fi
+
+  if test $allFlag -eq 1 -o $sqliteFlag -eq 1; then
+    # sqlite
+    (
+      cd $destination
+      $RMRF packages/sqlite-*
+    )
+    $RMF sqlite
   fi
 
   if test $allFlag -eq 1 -o $icuFlag -eq 1; then
