@@ -130,35 +130,55 @@ LOCAL const char *INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[] =
   [INDEX_ENTRY_SORT_MODE_MODIFIED] = "entriesNewest.timeModified"
 };
 
+// time for index clean-up [s]
+#define TIME_INDEX_CLEANUP (4*S_PER_HOUR)
+
 // sleep time [s]
-#define SLEEP_TIME_INDEX_CLEANUP_THREAD (4*60*60)
+#define SLEEP_TIME_INDEX_CLEANUP_THREAD 60L
 
 /***************************** Datatypes *******************************/
-#define INDEX_OPEN_MODE_READ       (1 << 0)
-#define INDEX_OPEN_MODE_READ_WRITE (1 << 1)
-#define INDEX_OPEN_MODE_CREATE     (1 << 2)
+#define INDEX_OPEN_MODE_READ         (1 << 0)
+#define INDEX_OPEN_MODE_READ_WRITE   (1 << 1)
+#define INDEX_OPEN_MODE_CREATE       (1 << 2)
+#define INDEX_OPEN_MODE_NO_JOURNAL   (1 << 3)
+#define INDEX_OPEN_MODE_FOREIGN_KEYS (1 << 4)
 
 /***************************** Variables *******************************/
 LOCAL const char                 *indexDatabaseFileName = NULL;
 LOCAL Semaphore                  indexLock;
+LOCAL uint                       indexUseCount = 0;
 LOCAL IndexPauseCallbackFunction indexPauseCallbackFunction = NULL;
 LOCAL void                       *indexPauseCallbackUserData;
 
-LOCAL Thread cleanupIndexThread;    // clean-up thread
-LOCAL bool   quitFlag;
+LOCAL Semaphore                  indexCleanupThreadTrigger;
+LOCAL Thread                     indexCleanupThread;    // clean-up thread
+LOCAL bool                       quitFlag;
 
 /****************************** Macros *********************************/
 
-#define INDEX_DOX(result,entryCode,exitCode,block) \
+/***********************************************************************\
+* Name   : INDEX_DOX
+* Purpose: index block-operation
+* Input  : indexHandle - index handle
+*          block       - code block
+* Output : result - result
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define INDEX_DOX(result,indexHandle,block) \
   do \
   { \
-    entryCode; \
+    Database_lock(&indexHandle->databaseHandle); \
+    indexUseCount++; \
     result = ({ \
                auto typeof(result) __closure__(void); \
                \
                typeof(result) __closure__(void)block; __closure__; \
              })(); \
-    exitCode; \
+    assert(indexUseCount > 0); \
+    indexUseCount--; \
+    Database_unlock(&indexHandle->databaseHandle); \
   } \
   while (0)
 
@@ -216,7 +236,7 @@ LOCAL bool   quitFlag;
   #endif /* NDEBUG */
 
   // open index database
-  if ((indexOpenModes & INDEX_OPEN_MODE_CREATE) == INDEX_OPEN_MODE_CREATE)
+  if ((indexOpenModes & INDEX_OPEN_MODE_CREATE) != 0)
   {
     // delete old file
     if (databaseFileName != NULL)
@@ -266,12 +286,15 @@ LOCAL bool   quitFlag;
   }
 
   // disable sync, enable foreign keys
-//TODO: read/write?
-  if ((indexOpenModes & INDEX_OPEN_MODE_READ_WRITE) == INDEX_OPEN_MODE_READ)
+  if (   ((indexOpenModes & INDEX_OPEN_MODE_READ_WRITE) != 0)
+      || ((indexOpenModes & INDEX_OPEN_MODE_NO_JOURNAL) != 0)
+     )
   {
     // disable synchronous mode and journal to increase transaction speed
     (void)Database_setEnabledSync(&indexHandle->databaseHandle,FALSE);
-
+  }
+  if ((indexOpenModes & INDEX_OPEN_MODE_FOREIGN_KEYS) != 0)
+  {
     // enable foreign key constrains
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
   }
@@ -4109,7 +4132,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
   int64       indexVersion;
 
   // open old index
-  error = openIndex(&oldIndexHandle,String_cString(oldDatabaseFileName),INDEX_OPEN_MODE_READ,2,NO_WAIT);
+  error = openIndex(&oldIndexHandle,String_cString(oldDatabaseFileName),INDEX_OPEN_MODE_READ,INDEX_PRIORITY_IMMEDIATE,NO_WAIT);
   if (error != ERROR_NONE)
   {
     return error;
@@ -5100,6 +5123,75 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
   return ERROR_NONE;
 }
 
+/***********************************************************************\
+* Name   : deleteFromIndex
+* Purpose: delete from index with delay/check if index-usage
+* Input  : indexHandle - index handle
+*          condition    - append iff true
+*          columnName   - column name
+*          ordering     - database ordering
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
+                             const char  *tableName,
+                             const char  *filter,
+                             ...
+                            )
+{
+  String  filterString;
+  va_list arguments;
+  Errors  error;
+  ulong   changedRowCount;
+
+  // init variables
+  filterString = String_new();
+
+  // get filter
+  va_start(arguments,filter);
+  String_vformat(filterString,filter,arguments);
+  va_end(arguments);
+
+#if 1
+  do
+  {
+    if (indexUseCount == 0)
+    {
+      // delete some entries
+      BLOCK_DOX(error,
+                Database_lock(&indexHandle->databaseHandle),
+                Database_unlock(&indexHandle->databaseHandle),
+      {
+        return Database_execute(&indexHandle->databaseHandle,
+                                CALLBACK(NULL,NULL),  // databaseRowFunction
+                                &changedRowCount,
+                                "DELETE FROM %s \
+                                 WHERE %S \
+                                 LIMIT 1000 \
+                                ",
+                                tableName,
+                                filterString
+                               );
+      });
+fprintf(stderr,"%s, %d: deetleted %lu %s\n",__FILE__,__LINE__,changedRowCount,Error_getText(error));
+    }
+
+    // short delay
+    Misc_udelay(500*US_PER_MS);
+  }
+  while (   (changedRowCount > 0)
+         && (error == ERROR_NONE)
+        );
+#endif
+
+  // free resources
+  String_delete(filterString);
+
+  return error;
+}
+
 #if 0
 //TODO: not used, remove
 /***********************************************************************\
@@ -5402,15 +5494,15 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,entryId);
 #endif
 
 /***********************************************************************\
-* Name   : cleanupIndexThreadCode
-* Purpose: cleanup index thread
-* Input  : indexHandle - index handle
+* Name   : indexCleanupThreadCode
+* Purpose: index cleanup thread
+* Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void cleanupIndexThreadCode(void)
+LOCAL void indexCleanupThreadCode(void)
 {
   IndexHandle         indexHandle;
   String              absoluteFileName;
@@ -5420,12 +5512,15 @@ LOCAL void cleanupIndexThreadCode(void)
   uint                i;
   String              oldDatabaseFileName;
   uint                oldDatabaseCount;
+  uint64              lastCleanupTimestamp;
+  SemaphoreLock       semaphoreLock;
   uint                sleepTime;
+  DatabaseId          databaseId;
 
   assert(indexDatabaseFileName != NULL);
 
   // open index
-  error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ_WRITE,2,INDEX_TIMEOUT);
+  error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ_WRITE,INDEX_PRIORITY_LOW,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
@@ -5533,29 +5628,131 @@ LOCAL void cleanupIndexThreadCode(void)
              );
 
   // regular clean-ups
+  lastCleanupTimestamp = Misc_getTimestamp();
   while (!quitFlag)
   {
-    // sleep, check quit flag
-    sleepTime = 0;
-    while ((sleepTime < SLEEP_TIME_INDEX_CLEANUP_THREAD) && !quitFlag)
+    // remove deleted entries
+//TODO
+    do
     {
-      Misc_udelay(10LL*US_PER_SECOND);
-      sleepTime += 10;
+      // get storage to delete
+      error = Database_getId(&indexHandle.databaseHandle,
+                             &databaseId,
+                             "storage",
+                             "WHERE state=%d",
+                             INDEX_STATE_DELETED
+                            );
+      if ((error == ERROR_NONE) && (databaseId != DATABASE_ID_NONE))
+      {
+fprintf(stderr,"%s, %d: ------------------------------------------------------------\n",__FILE__,__LINE__);
+        if (error == ERROR_NONE)
+        {
+          error = deleteFromIndex(&indexHandle,
+                                  "fileEntries",
+                                  "storageId=%lld",
+                                  databaseId
+                                 );
+        }
+        if (error == ERROR_NONE)
+        {
+          error = deleteFromIndex(&indexHandle,
+                                  "imageEntries",
+                                  "storageId=%lld",
+                                  databaseId
+                                 );
+        }
+        if (error == ERROR_NONE)
+        {
+          error = deleteFromIndex(&indexHandle,
+                                  "directoryEntries",
+                                  "storageId=%lld",
+                                  databaseId
+                                 );
+        }
+        if (error == ERROR_NONE)
+        {
+          error = deleteFromIndex(&indexHandle,
+                                  "linkEntries",
+                                  "storageId=%lld",
+                                  databaseId
+                                 );
+        }
+        if (error == ERROR_NONE)
+        {
+          error = deleteFromIndex(&indexHandle,
+                                  "hardlinkEntries",
+                                  "storageId=%lld",
+                                  databaseId
+                                 );
+        }
+        if (error == ERROR_NONE)
+        {
+          error = deleteFromIndex(&indexHandle,
+                                  "specialEntries",
+                                  "storageId=%lld",
+                                  databaseId
+                                 );
+        }
+        if (error == ERROR_NONE)
+        {
+          error = deleteFromIndex(&indexHandle,
+                                  "entriesNewest",
+                                  "storageId=%lld",
+                                  databaseId
+                                 );
+        }
+        if (error == ERROR_NONE)
+        {
+          error = deleteFromIndex(&indexHandle,
+                                  "entries",
+                                  "storageId=%lld",
+                                  databaseId
+                                 );
+        }
+        if (error == ERROR_NONE)
+        {
+          error = deleteFromIndex(&indexHandle,
+                                  "storage",
+                                  "id=%lld",
+                                  databaseId
+                                 );
+        }
+fprintf(stderr,"%s, %d: ---- %s\n",__FILE__,__LINE__,Error_getText(error));
+      }
+    }
+    while ((error == ERROR_NONE) && (databaseId != INDEX_ID_NONE));
+
+    if (Misc_getTimestamp() > (lastCleanupTimestamp+TIME_INDEX_CLEANUP*US_PER_SECOND))
+    {
+      // regular clean-up database
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Started regular clean-up index database\n"
+                 );
+      if (!quitFlag) (void)cleanUpOrphanedEntries(&indexHandle);
+      if (!quitFlag) (void)cleanUpDuplicateIndizes(&indexHandle);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Done regular clean-up index database\n"
+                 );
+
+      lastCleanupTimestamp = Misc_getTimestamp();
     }
 
-    // clean-up database
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Started regular clean-up index database\n"
-               );
-    if (!quitFlag) (void)cleanUpOrphanedEntries(&indexHandle);
-    if (!quitFlag) (void)cleanUpDuplicateIndizes(&indexHandle);
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Done regular clean-up index database\n"
-               );
+    // check quit flag/trigger, sleep
+    sleepTime = 0;
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&indexCleanupThreadTrigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      while (   !quitFlag
+             && (sleepTime < SLEEP_TIME_INDEX_CLEANUP_THREAD)
+             && !Semaphore_waitModified(&indexCleanupThreadTrigger,60*MS_PER_SECOND)
+        )
+      {
+        sleepTime += 60;
+      }
+    }
   }
 
   // free resources
@@ -5890,70 +6087,6 @@ LOCAL void appendOrdering(String orderString, bool condition, const char *column
       #endif /* NDEBUG */
     }
   }
-}
-
-// ----------------------------------------------------------------------
-
-/***********************************************************************\
-* Name   : deleteFromIndex
-* Purpose: delete from index
-* Input  : indexHandle - index handle
-*          condition    - append iff true
-*          columnName   - column name
-*          ordering     - database ordering
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
-                             const char  *tableName,
-                             const char  *filter,
-                             ...
-                            )
-{
-  String  filterString;
-  va_list arguments;
-  Errors  error;
-  ulong   changedRowCount;
-
-  // init variables
-  filterString = String_new();
-
-  // get filter
-  va_start(arguments,filter);
-  String_vformat(filterString,filter,arguments);
-  va_end(arguments);
-
-#if 1
-  do
-  {
-    BLOCK_DOX(error,
-              Database_lock(&indexHandle->databaseHandle),
-              Database_unlock(&indexHandle->databaseHandle),
-    {
-      return Database_execute(&indexHandle->databaseHandle,
-                              CALLBACK(NULL,NULL),  // databaseRowFunction
-                              &changedRowCount,
-                              "DELETE FROM %s \
-                               WHERE %S \
-                               LIMIT 1000 \
-                              ",
-                              tableName,
-                              filterString
-                             );
-    });
-fprintf(stderr,"%s, %d: deetleted %lu %s\n",__FILE__,__LINE__,changedRowCount,Error_getText(error));
-  }
-  while (   (changedRowCount > 0)
-         && (error == ERROR_NONE)
-        );
-#endif
-
-  // free resources
-  String_delete(filterString);
-
-  return error;
 }
 
 // ----------------------------------------------------------------------
@@ -6900,7 +7033,8 @@ error=ERROR_NONE;
 
   // start clean-up thread
   quitFlag = FALSE;
-  if (!Thread_init(&cleanupIndexThread,"Index clean-up",0,cleanupIndexThreadCode,NULL))
+  Semaphore_init(&indexCleanupThreadTrigger);
+  if (!Thread_init(&indexCleanupThread,"Index clean-up",0,indexCleanupThreadCode,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialize index clean-up thread!");
   }
@@ -6912,9 +7046,11 @@ void Index_done(void)
 {
   // stop threads
   quitFlag = TRUE;
-  Thread_join(&cleanupIndexThread);
+  Thread_join(&indexCleanupThread);
 
   // free resources
+  Thread_done(&indexCleanupThread);
+  Semaphore_done(&indexCleanupThreadTrigger);
   free((char*)indexDatabaseFileName);
 }
 
@@ -6964,7 +7100,7 @@ IndexHandle *__Index_open(const char *__fileName__,
     #ifdef NDEBUG
       error = openIndex(indexHandle,
                         indexDatabaseFileName,
-                        INDEX_OPEN_MODE_READ_WRITE,
+                        INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_FOREIGN_KEYS,
                         priority,
                         timeout
                        );
@@ -6973,7 +7109,7 @@ IndexHandle *__Index_open(const char *__fileName__,
                           __lineNb__,
                           indexHandle,
                           indexDatabaseFileName,
-                          INDEX_OPEN_MODE_READ_WRITE,
+                          INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_FOREIGN_KEYS,
                           priority,
                           timeout
                          );
@@ -7095,9 +7231,8 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
   filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
 
 //TODO get errorMessage
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -7189,9 +7324,8 @@ bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
   filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","scheduleUUID=%'S",scheduleUUID);
 
 //TODO get errorMessage
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -7271,9 +7405,8 @@ bool Index_findStorageById(IndexHandle *indexHandle,
     return FALSE;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -7354,9 +7487,8 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
     return FALSE;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -7453,9 +7585,8 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
   // init variables
   indexStateSetString = String_new();
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -7529,9 +7660,8 @@ Errors Index_getState(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -7601,9 +7731,8 @@ Errors Index_setState(IndexHandle *indexHandle,
     errorText = NULL;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     switch (Index_getType(indexId))
     {
@@ -7745,9 +7874,8 @@ long Index_countState(IndexHandle *indexHandle,
     return 0L;
   }
 
-  BLOCK_DOX(count,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(count,
+            indexHandle,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -7930,9 +8058,8 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     Errors error;
 
@@ -8018,9 +8145,8 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
   }
 
   // delete history entry
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -8089,9 +8215,8 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
   filterAppend(filterString,!String_isEmpty(ftsName),"AND","uuids.id IN (SELECT uuidId FROM FTS_uuids WHERE FTS_uuids MATCH %S)",ftsName);
 //  filterAppend(filterString,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,uuids.name)",regexpName);
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     // get storage count, entry count, entry size
     error = Database_prepare(&databaseQueryHandle,
@@ -8297,9 +8422,8 @@ Errors Index_newUUID(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -8348,9 +8472,8 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -8417,9 +8540,8 @@ Errors Index_isEmptyUUID(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(uuidId) == INDEX_TYPE_UUID);
 
-  BLOCK_DOX(emptyFlag,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(emptyFlag,
+            indexHandle,
   {
     return !Database_exists(&indexHandle->databaseHandle,
                             "entities",
@@ -8643,9 +8765,8 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -8727,12 +8848,9 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
     // delete storages of entity
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -8744,7 +8862,6 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                             );
     if (error != ERROR_NONE)
     {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
     while (   Database_getNextRow(&databaseQueryHandle,
@@ -8759,11 +8876,11 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
     Database_finalize(&databaseQueryHandle);
     if (error != ERROR_NONE)
     {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
 
     // delete entity
+    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -8775,7 +8892,6 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
       (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
-
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
 
     return ERROR_NONE;
@@ -8793,9 +8909,8 @@ Errors Index_isEmptyEntity(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
 
-  BLOCK_DOX(emptyFlag,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(emptyFlag,
+            indexHandle,
   {
     return !Database_exists(&indexHandle->databaseHandle,
                             "storage",
@@ -8905,9 +9020,8 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   String_delete(indexStateSetString);
   String_delete(filterIdsString);
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     // get storage count, entry count, entry size
     error = Database_prepare(&databaseQueryHandle,
@@ -9019,9 +9133,8 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     // get file aggregate data
     error = Database_prepare(&databaseQueryHandle,
@@ -9613,9 +9726,8 @@ Errors Index_newStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -9672,429 +9784,30 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-#if 0
-//fprintf(stderr,"%s, %d: storageId=%lld\n",__FILE__,__LINE__,storageId);
-fprintf(stderr,"%s, %d: beiofer starty Index_deleteStorage\n",__FILE__,__LINE__);
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
-uint64 t0;
-uint64 t1;
-fprintf(stderr,"%s, %d: starty Index_deleteStorage\n",__FILE__,__LINE__);
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-t0=Misc_getCurrentDateTime();
-    error = Database_le->databaseHandle),
-            Database_unlock(&indexHanexecute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM fileEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId)
-                            );
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: A %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-
-    return ERROR_NONE;
-  });
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
-  {
-uint64 t0;
-uint64 t1;
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-t0=Misc_getCurrentDateTime();
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
-                             "DELETE FROM imageEntries WHERE storageId=%lld",
+                             "UPDATE storage \
+                              SET state=%d \
+                              WHERE id=%lld; \
+                             ",
+                             INDEX_STATE_DELETED,
                              Index_getDatabaseId(storageId)
                             );
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: B %llu\n",__FILE__,__LINE__,t1-t0);
     if (error != ERROR_NONE)
     {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
 
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+    // trigger clean-up thread
+    Semaphore_signalModified(&indexCleanupThreadTrigger);
+fprintf(stderr,"%s, %d: soma; \n",__FILE__,__LINE__);
 
     return ERROR_NONE;
   });
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
-  {
-uint64 t0;
-uint64 t1;
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-t0=Misc_getCurrentDateTime();
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM directoryEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId)
-                            );
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: C %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-
-
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-
-    return ERROR_NONE;
-  });
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
-  {
-uint64 t0;
-uint64 t1;
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-t0=Misc_getCurrentDateTime();
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM linkEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId)
-                            );
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: D %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-
-
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-
-    return ERROR_NONE;
-  });
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
-  {
-uint64 t0;
-uint64 t1;
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-t0=Misc_getCurrentDateTime();
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM hardlinkEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId)
-                            );
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: E %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-
-
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-
-    return ERROR_NONE;
-  });
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
-  {
-uint64 t0;
-uint64 t1;
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-t0=Misc_getCurrentDateTime();
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM specialEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId)
-                            );
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: F %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-
-
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-
-    return ERROR_NONE;
-  });
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
-  {
-uint64 t0;
-uint64 t1;
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-t0=Misc_getCurrentDateTime();
-(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId)
-                            );
-(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: G %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-
-    return ERROR_NONE;
-  });
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
-  {
-uint64 t0;
-uint64 t1;
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-t0=Misc_getCurrentDateTime();
-(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId)
-                            );
-(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: H %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-
-    return ERROR_NONE;
-  });
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
-  {
-uint64 t0;
-uint64 t1;
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-t0=Misc_getCurrentDateTime();
-(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM storage WHERE id=%lld",
-                             Index_getDatabaseId(storageId)
-                            );
-(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: I %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-
-    return ERROR_NONE;
-  });
-fprintf(stderr,"%s, %d: end Index_deleteStorage error=%s\n",__FILE__,__LINE__,Error_getText(error));
-#else
-
-
-
-fprintf(stderr,"%s, %d: beiofer starty Index_deleteStorage\n",__FILE__,__LINE__);
-uint64 t0;
-uint64 t1;
-fprintf(stderr,"%s, %d: starty Index_deleteStorage\n",__FILE__,__LINE__);
-//    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-t0=Misc_getCurrentDateTime();
-    error = deleteFromIndex(indexHandle,
-                            "fileEntries",
-                            "storageId=%lld",
-                            Index_getDatabaseId(storageId)
-                           );
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: A %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-t0=Misc_getCurrentDateTime();
-    error = deleteFromIndex(indexHandle,
-                            "imageEntries",
-                            "storageId=%lld",
-                            Index_getDatabaseId(storageId)
-                           );
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: B %llu\n",__FILE__,__LINE__,t1-t0);
-t0=Misc_getCurrentDateTime();
-    error = deleteFromIndex(indexHandle,
-                            "directoryEntries",
-                            "storageId=%lld",
-                            Index_getDatabaseId(storageId)
-                           );
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: C %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-t0=Misc_getCurrentDateTime();
-    error = deleteFromIndex(indexHandle,
-                            "linkEntries",
-                            "storageId=%lld",
-                            Index_getDatabaseId(storageId)
-                           );
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: D %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-t0=Misc_getCurrentDateTime();
-    error = deleteFromIndex(indexHandle,
-                            "hardlinkEntries",
-                            "storageId=%lld",
-                            Index_getDatabaseId(storageId)
-                           );
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: E %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-t0=Misc_getCurrentDateTime();
-    error = deleteFromIndex(indexHandle,
-                            "specialEntries",
-                            "storageId=%lld",
-                            Index_getDatabaseId(storageId)
-                           );
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: F %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-t0=Misc_getCurrentDateTime();
-(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-    error = deleteFromIndex(indexHandle,
-                            "entriesNewest",
-                            "storageId=%lld",
-                            Index_getDatabaseId(storageId)
-                           );
-(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: G %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-t0=Misc_getCurrentDateTime();
-(void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-    error = deleteFromIndex(indexHandle,
-                            "entries",
-                            "storageId=%lld",
-                            Index_getDatabaseId(storageId)
-                           );
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: H %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-t0=Misc_getCurrentDateTime();
-    error = deleteFromIndex(indexHandle,
-                            "storage",
-                            "id=%lld",
-                            Index_getDatabaseId(storageId)
-                           );
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: I %llu\n",__FILE__,__LINE__,t1-t0);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-fprintf(stderr,"%s, %d: end Index_deleteStorage error=%s\n",__FILE__,__LINE__,Error_getText(error));
-#endif
 
   return error;
 }
@@ -10108,9 +9821,8 @@ Errors Index_isEmptyStorage(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
-  BLOCK_DOX(emptyFlag,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(emptyFlag,
+            indexHandle,
   {
     return !Database_exists(&indexHandle->databaseHandle,
                             "entries",
@@ -10138,9 +9850,8 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -10324,9 +10035,8 @@ Errors Index_getStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -10404,9 +10114,8 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     // update name
     if (storageName != NULL)
@@ -10546,9 +10255,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   {
     // no pattern/no entries selected
 
-    BLOCK_DOX(error,
-              Database_lock(&indexHandle->databaseHandle),
-              Database_unlock(&indexHandle->databaseHandle),
+    INDEX_DOX(error,
+              indexHandle,
     {
       if (IN_SET(indexTypeSet,INDEX_TYPE_FILE))
       {
@@ -10790,9 +10498,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
       filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
     }
-    BLOCK_DOX(error,
-              Database_lock(&indexHandle->databaseHandle),
-              Database_unlock(&indexHandle->databaseHandle),
+    INDEX_DOX(error,
+              indexHandle,
     {
       // get entry count, entry size
       if (newestOnly)
@@ -11003,9 +10710,8 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   filterAppend(filterString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
   filterAppend(filterString,!String_isEmpty(entityIdString),"OR","entities.id IN (%S)",entityIdString);
   filterAppend(filterString,!String_isEmpty(uuidIdsString),"OR","storage.id IN (%S)",storageIdsString);
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
@@ -11470,9 +11176,8 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -11765,9 +11470,8 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -11993,9 +11697,8 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -12218,9 +11921,8 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -12444,9 +12146,8 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -12680,9 +12381,8 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -12904,9 +12604,8 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
@@ -12999,9 +12698,8 @@ Errors Index_addFile(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     // add file entry
     error = Database_execute(&indexHandle->databaseHandle,
@@ -13118,9 +12816,8 @@ Errors Index_addImage(IndexHandle     *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     // add image entry
     error = Database_execute(&indexHandle->databaseHandle,
@@ -13238,9 +12935,8 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     // add directory entry
     error = Database_execute(&indexHandle->databaseHandle,
@@ -13354,9 +13050,8 @@ Errors Index_addLink(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     // add link entry
     error = Database_execute(&indexHandle->databaseHandle,
@@ -13461,9 +13156,8 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     // add hard link entry
     error = Database_execute(&indexHandle->databaseHandle,
@@ -13584,9 +13278,8 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     // add special entry
     error = Database_execute(&indexHandle->databaseHandle,
@@ -13690,9 +13383,8 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     if      (toJobUUID != NULL)
     {
@@ -13856,9 +13548,8 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
   assert(Index_getType(uuidId) == INDEX_TYPE_UUID);
 
   // prune entities of uuid
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Index_initListEntities(&indexQueryHandle,
                                    indexHandle,
@@ -13943,9 +13634,8 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
   assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
 
   // prune storages of entity
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Index_initListStorages(&indexQueryHandle,
                                    indexHandle,
@@ -14045,9 +13735,8 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
   // check if entries exists for storage
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     existsEntryFlag = Database_exists(&indexHandle->databaseHandle,
                                       "entries",
@@ -14165,9 +13854,8 @@ Errors Index_addSkippedEntry(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -14221,9 +13909,8 @@ Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  BLOCK_DOX(error,
-            Database_lock(&indexHandle->databaseHandle),
-            Database_unlock(&indexHandle->databaseHandle),
+  INDEX_DOX(error,
+            indexHandle,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 

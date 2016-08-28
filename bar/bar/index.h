@@ -76,7 +76,7 @@ typedef enum
   INDEX_STATE_UPDATE_REQUESTED = INDEX_CONST_STATE_UPDATE_REQUESTED,
   INDEX_STATE_UPDATE           = INDEX_CONST_STATE_UPDATE,
   INDEX_STATE_ERROR            = INDEX_CONST_STATE_ERROR,
-  INDEX_STATE_DELETE           = INDEX_CONST_STATE_DELETE,
+  INDEX_STATE_DELETED          = INDEX_CONST_STATE_DELETED,
 
   INDEX_STATE_UNKNOWN
 } IndexStates;
@@ -86,13 +86,12 @@ typedef uint64 IndexStateSet;
 #define INDEX_STATE_MAX INDEX_STATE_ERROR
 
 #define INDEX_STATE_SET_NONE 0
-#define INDEX_STATE_SET_ALL  (SET_VALUE(INDEX_STATE_NONE) |\
-                              SET_VALUE(INDEX_STATE_OK) |\
-                              SET_VALUE(INDEX_STATE_CREATE) |\
-                              SET_VALUE(INDEX_STATE_UPDATE_REQUESTED) |\
-                              SET_VALUE(INDEX_STATE_UPDATE) |\
-                              SET_VALUE(INDEX_STATE_ERROR) |\
-                              SET_VALUE(INDEX_STATE_DELETE) \
+#define INDEX_STATE_SET_ALL  (  SET_VALUE(INDEX_STATE_NONE) \
+                              | SET_VALUE(INDEX_STATE_OK) \
+                              | SET_VALUE(INDEX_STATE_CREATE) \
+                              | SET_VALUE(INDEX_STATE_UPDATE_REQUESTED) \
+                              | SET_VALUE(INDEX_STATE_UPDATE) \
+                              | SET_VALUE(INDEX_STATE_ERROR) \
                              )
 
 // index modes
