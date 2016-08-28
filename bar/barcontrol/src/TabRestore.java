@@ -7494,7 +7494,7 @@ Dprintf.dprintf("remove");
         totalEntryCount = valueMap.getLong("totalEntryCount");
       }
 
-      if (Dialogs.confirm(shell,BARControl.tr("XRemove {0} {0,choice,0#jobs|1#job|1<jobs}/{1} {1,choice,0#entities|1#entity|1<entities}/{2} {2,choice,0#archives|1#archive|1<archives} from index with {3} {3,choice,0#entries|1#entry|1<entries}?",jobCount,entityCount,storageCount,totalEntryCount)))
+      if (Dialogs.confirm(shell,BARControl.tr("Remove {0} {0,choice,0#jobs|1#job|1<jobs}/{1} {1,choice,0#entities|1#entity|1<entities}/{2} {2,choice,0#archives|1#archive|1<archives} from index with {3} {3,choice,0#entries|1#entry|1<entries}?",jobCount,entityCount,storageCount,totalEntryCount)))
       {
         final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Remove indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
         busyDialog.setMaximum(indexDataHashSet.size());
