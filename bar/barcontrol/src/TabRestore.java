@@ -6415,7 +6415,7 @@ Dprintf.dprintf("remove");
 
   //-----------------------------------------------------------------------
 
-  /** set/clear selected storage entry
+  /** set/clear index list
    * @param indexId index id
    * @param checked true for set checked, false for clear checked
    */
@@ -6450,7 +6450,7 @@ Dprintf.dprintf("remove");
     }
   }
 
-  /** set selected storage entries
+  /** set selected index entries
    * @param indexIdSet index id set
    */
   private void setStorageList(IndexIdSet indexIdSet)
@@ -6460,6 +6460,19 @@ Dprintf.dprintf("remove");
     for (Long indexId : indexIdSet)
     {
       setStorageList(indexId,true);
+    }
+  }
+
+  /** set selected index entries
+   * @param indexDataHashSet index data set
+   */
+  private void setStorageList(HashSet<IndexData> indexDataHashSet)
+  {
+    BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
+//TODO: optimize send more than one entry?
+    for (IndexData indexData : indexDataHashSet)
+    {
+      setStorageList(indexData.id,true);
     }
   }
 
@@ -7445,6 +7458,7 @@ Dprintf.dprintf("remove");
     HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
     if (!indexDataHashSet.isEmpty())
     {
+      // count jobs/entities/archives
       int jobCount     = 0;
       int entityCount  = 0;
       int storageCount = 0;
@@ -7463,7 +7477,24 @@ Dprintf.dprintf("remove");
           storageCount++;
         }
       }
-      if (Dialogs.confirm(shell,BARControl.tr("Remove index with {0} {0,choice,0#jobs|1#job|1<jobs}/{1} {1,choice,0#entities|1#entity|1<entities}/{2} {2,choice,0#archives|1#archive|1<archives}?",jobCount,entityCount,storageCount)))
+
+      // set index list
+      setStorageList(indexDataHashSet);
+
+      // get total number entries
+      ValueMap valueMap        = new ValueMap();
+      long     totalEntryCount = 0L;
+      if (BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
+                                   1,  // debugLevel
+                                   null, // errorMessage,
+                                   valueMap
+                                  ) == Errors.NONE
+         )
+      {
+        totalEntryCount = valueMap.getLong("totalEntryCount");
+      }
+
+      if (Dialogs.confirm(shell,BARControl.tr("XRemove {0} {0,choice,0#jobs|1#job|1<jobs}/{1} {1,choice,0#entities|1#entity|1<entities}/{2} {2,choice,0#archives|1#archive|1<archives} from index with {3} {3,choice,0#entries|1#entry|1<entries}?",jobCount,entityCount,storageCount,totalEntryCount)))
       {
         final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Remove indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
         busyDialog.setMaximum(indexDataHashSet.size());
@@ -7805,7 +7836,7 @@ Dprintf.dprintf("remove");
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
 
-      // set storage achives to restore
+      // set index list
       setStorageList(indexIdSet);
 
       // get list
@@ -8664,7 +8695,7 @@ Dprintf.dprintf("");
           switch (restoreType)
           {
             case ARCHIVES:
-              // set storage achives to restore
+              // set index list
               setStorageList(indexIdSet);
 
               // get archives
