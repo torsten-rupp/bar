@@ -32,6 +32,9 @@ const TYPE_HARDLINK  = 9
 const TYPE_SPECIAL   = 10
 const TYPE_HISTORY   = 11
 
+// default entity
+const DEFAULT_ENTITY_ID = 0
+
 PRAGMA foreign_keys = ON;
 PRAGMA auto_vacuum = INCREMENTAL;
 
@@ -63,7 +66,7 @@ CREATE TABLE IF NOT EXISTS entities(
 CREATE INDEX ON entities (jobUUID,created,type);
 
 // insert default entity
-INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (0,'','',0,0,0,0);
+INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES ($DEFAULT_ENTITY_ID,'','',0,0,0,0);
 
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON entities
