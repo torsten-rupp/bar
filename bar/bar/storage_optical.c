@@ -1199,10 +1199,11 @@ LOCAL bool StorageOptical_exists(StorageHandle *storageHandle, ConstString archi
   assert(storageHandle != NULL);
   assert(!String_isEmpty(archiveName));
 
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+//TODO: still not implemented
   UNUSED_VARIABLE(storageHandle);
+  UNUSED_VARIABLE(archiveName);
 
-  return File_exists(archiveName);
+  return FALSE;
 }
 
 LOCAL Errors StorageOptical_create(StorageArchiveHandle *storageArchiveHandle,
@@ -1688,7 +1689,6 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
-  assert(jobOptions != NULL);
 
   UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(jobOptions);
