@@ -470,6 +470,13 @@ OTHER_SOURCES        = forward.h \
                        storage_optical.c \
                        storage_device.c \
                        \
+                       index_version1.c \
+                       index_version2.c \
+                       index_version3.c \
+                       index_version4.c \
+                       index_version5.c \
+                       index_version6.c \
+                       \
                        archive_format.pl \
                        archive_format.def \
                        index_definition.pl \
