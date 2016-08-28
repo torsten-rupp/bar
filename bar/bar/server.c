@@ -5056,19 +5056,9 @@ LOCAL void delayPurgeExpiredThread(void)
 
 LOCAL void purgeExpiredThreadCode(void)
 {
-  typedef struct
-  {
-    IndexId      entityId;
-    String       jobName;
-    ArchiveTypes archiveType;
-    uint64       createdDateTime;
-    ulong        totalEntryCount;
-    uint64       totalEntrySize;
-  } PurgeInfo;
-
   String             jobName;
   String             string;
-  PurgeInfo          expiredInfo,surplusInfo;
+  IndexId            expiredEntityId,surplusEntityId;
   uint64             now;
   IndexHandle        *indexHandle;
   Errors             error;
@@ -5086,18 +5076,8 @@ LOCAL void purgeExpiredThreadCode(void)
   uint64             totalEntrySize;
 
   // init variables
-  jobName                     = String_new();
-  string                      = String_new();
-  expiredInfo.jobName         = String_new();
-  expiredInfo.archiveType     = ARCHIVE_TYPE_NONE;
-  expiredInfo.createdDateTime = 0LL;
-  expiredInfo.totalEntryCount = 0L;
-  expiredInfo.totalEntrySize  = 0LL;
-  surplusInfo.jobName         = String_new();
-  surplusInfo.archiveType     = ARCHIVE_TYPE_NONE;
-  surplusInfo.createdDateTime = 0LL;
-  surplusInfo.totalEntryCount = 0L;
-  surplusInfo.totalEntrySize  = 0LL;
+  jobName = String_new();
+  string  = String_new();
 
   // init index
   indexHandle = Index_open(INDEX_PRIORITY_MEDIUM,INDEX_TIMEOUT);
@@ -5115,10 +5095,9 @@ LOCAL void purgeExpiredThreadCode(void)
   {
     do
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-      expiredInfo.entityId = INDEX_ID_NONE;
-      surplusInfo.entityId = INDEX_ID_NONE;
-      now                  = Misc_getCurrentDateTime();
+      expiredEntityId = INDEX_ID_NONE;
+      surplusEntityId = INDEX_ID_NONE;
+      now             = Misc_getCurrentDateTime();
 
       // check entities
       error = Index_initListEntities(&indexQueryHandle1,
@@ -5173,6 +5152,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               }
             }
 
+//TODO
 //if (String_equalsCString(jobUUID,"47c2a261-cf7b-4f9f-92e8-87a55358e509") && (entityId==9442))
 if ((entityId==10770))
 {
@@ -5186,14 +5166,24 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               {
                 if (now > (createdDateTime+maxAge*S_PER_DAY))
                 {
-                  // get purge info
-                  expiredInfo.entityId        = entityId;
-                  String_set(expiredInfo.jobName,jobName);
-                  expiredInfo.archiveType     = archiveType;
-                  expiredInfo.createdDateTime = createdDateTime;
-                  expiredInfo.totalEntryCount = totalEntryCount;
-                  expiredInfo.totalEntrySize  = totalEntrySize;
-                  break;
+                  // delete expired entity
+                  error = deleteEntity(indexHandle,entityId);
+                  if (error == ERROR_NONE)
+                  {
+                    expiredEntityId = entityId;
+                    plogMessage(NULL,  // logHandle,
+                                LOG_TYPE_INDEX,
+                                "INDEX",
+                                "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
+                                String_cString(jobName),
+                                ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                                String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
+                                totalEntryCount,
+                                BYTES_SHORT(totalEntrySize),
+                                BYTES_UNIT(totalEntrySize),
+                                totalEntrySize
+                               );
+                  }
                 }
               }
 
@@ -5230,14 +5220,23 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                )
                         )
                   {
-                    // get purge info
-                    surplusInfo.entityId        = entityId;
-                    String_set(surplusInfo.jobName,jobName);
-                    surplusInfo.archiveType     = archiveType;
-                    surplusInfo.createdDateTime = createdDateTime;
-                    surplusInfo.totalEntryCount = totalEntryCount;
-                    surplusInfo.totalEntrySize  = totalEntrySize;
-                    break;
+                    error = deleteEntity(indexHandle,entityId);
+                    if (error == ERROR_NONE)
+                    {
+                      surplusEntityId = entityId;
+                      plogMessage(NULL,  // logHandle,
+                                  LOG_TYPE_INDEX,
+                                  "INDEX",
+                                  "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
+                                  String_cString(jobName),
+                                  ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                                  String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
+                                  totalEntryCount,
+                                  BYTES_SHORT(totalEntrySize),
+                                  BYTES_UNIT(totalEntrySize),
+                                  totalEntrySize
+                                 );
+                    }
                   }
                   Index_doneList(&indexQueryHandle2);
                 }
@@ -5246,76 +5245,15 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           }
         }
         Index_doneList(&indexQueryHandle1);
-
-        error = ERROR_NONE;
-
-        // purge expired entity
-        if (expiredInfo.entityId != INDEX_ID_NONE)
-        {
-fprintf(stderr,"%s, %ld: expired deleteEntity %d\n",__FILE__,__LINE__,expiredInfo.entityId);
-//asm("int3");
-          error = deleteEntity(indexHandle,expiredInfo.entityId);
-          if (error == ERROR_NONE)
-          {
-            plogMessage(NULL,  // logHandle,
-                        LOG_TYPE_INDEX,
-                        "INDEX",
-                        "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
-                        String_cString(expiredInfo.jobName),
-                        ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,expiredInfo.archiveType,"normal"),
-                        String_cString(Misc_formatDateTime(string,expiredInfo.createdDateTime,NULL)),
-                        expiredInfo.totalEntryCount,
-                        BYTES_SHORT(expiredInfo.totalEntrySize),
-                        BYTES_UNIT(expiredInfo.totalEntrySize),
-                        expiredInfo.totalEntrySize
-                       );
-          }
-          else
-          {
-fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-            expiredInfo.entityId = INDEX_ID_NONE;
-          }
-        }
-
-        // purge surplus entity
-        if ((surplusInfo.entityId != INDEX_ID_NONE) && (surplusInfo.entityId != expiredInfo.entityId))
-        {
-fprintf(stderr,"%s, %ld: surplus deleteEntity %d\n",__FILE__,__LINE__,surplusInfo.entityId);
-//asm("int3");
-          error = deleteEntity(indexHandle,surplusInfo.entityId);
-          if (error == ERROR_NONE)
-          {
-            plogMessage(NULL,  // logHandle,
-                        LOG_TYPE_INDEX,
-                        "INDEX",
-                        "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
-                        String_cString(surplusInfo.jobName),
-                        ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,surplusInfo.archiveType,"normal"),
-                        String_cString(Misc_formatDateTime(string,surplusInfo.createdDateTime,NULL)),
-                        surplusInfo.totalEntryCount,
-                        BYTES_SHORT(surplusInfo.totalEntrySize),
-                        BYTES_UNIT(surplusInfo.totalEntrySize),
-                        surplusInfo.totalEntrySize
-                       );
-          }
-          else
-          {
-fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-            surplusInfo.entityId = INDEX_ID_NONE;
-          }
-        }
       }
     }
     while (   !quitFlag
-           && (error == ERROR_NONE)
-           && ((expiredInfo.entityId != INDEX_ID_NONE) || (surplusInfo.entityId != INDEX_ID_NONE))
+           && ((expiredEntityId != INDEX_ID_NONE) || (surplusEntityId != INDEX_ID_NONE))
           );
     if (quitFlag)
     {
       break;
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//asm("int3");
 
     if (error == ERROR_NONE)
     {
@@ -5327,15 +5265,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // wait a short time and try again
       Misc_udelay(30*US_PER_SECOND);
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
 
   // done index
   Index_close(indexHandle);
 
   // free resources
-  String_delete(surplusInfo.jobName);
-  String_delete(expiredInfo.jobName);
   String_delete(string);
   String_delete(jobName);
 }
@@ -15954,7 +15889,6 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   {
     if (   (Storage_parseName(&storageSpecifier,pattern) == ERROR_NONE)
         && !Storage_isPatternSpecifier(&storageSpecifier)
-//        && String_endsWithCString(storageSpecifier.archiveName,FILE_NAME_EXTENSION_ARCHIVE_FILE)
        )
     {
       if (Storage_init(&storageHandle,
