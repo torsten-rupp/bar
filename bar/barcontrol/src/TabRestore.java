@@ -7442,7 +7442,7 @@ Dprintf.dprintf("remove");
               @Override
               public void run()
               {
-                Dialogs.error(shell,BARControl.tr("Cannot add index to database for storage path!\n\n''{0}''\n\n(error: {1})",storagePath,errorMessage[0]));
+                Dialogs.error(shell,BARControl.tr("Cannot add index to database for storage path\n\n''{0}''\n\n(error: {1})",storagePath,errorMessage[0]));
               }
             });
           }
