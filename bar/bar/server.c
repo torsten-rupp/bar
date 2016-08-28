@@ -70,9 +70,7 @@
 #define MAX_AUTHORIZATION_FAIL_HISTORY      64      // max. length of history of authorization fail clients
 
 // sleep times [s]
-//TODO
-//#define SLEEP_TIME_REMOTE_THREAD            ( 5*60)
-#define SLEEP_TIME_REMOTE_THREAD            ( 20)
+#define SLEEP_TIME_REMOTE_THREAD            ( 5*60)
 #define SLEEP_TIME_SCHEDULER_THREAD         ( 1*60)
 #define SLEEP_TIME_PAUSE_THREAD             ( 1*60)
 #define SLEEP_TIME_INDEX_THREAD             ( 1*60)
@@ -4607,39 +4605,11 @@ fprintf(stderr,"%s, %d: de;ete sorage %s\n",__FILE__,__LINE__,String_cString(sto
   }
 
   // delete index
-#if 0
-  error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
-  if (error != ERROR_NONE)
-  {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    String_delete(storageName);
-    return error;
-  }
-#endif
-
-{
-uint64 t0,t1;
-fprintf(stderr,"%s, %d: start deleting index storageId=%llu\n",__FILE__,__LINE__,storageId);
-t0=Misc_getCurrentDateTime();
   error = Index_deleteStorage(indexHandle,storageId);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     resultError = error;
   }
-t1=Misc_getCurrentDateTime();
-fprintf(stderr,"%s, %d: deleted index storageId=%llu done %ds\n",__FILE__,__LINE__,storageId,t1-t0);
-}
-#if 0
-  error = Index_endTransaction(indexHandle);
-  if (error != ERROR_NONE)
-  {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    String_delete(storageName);
-    return error;
-  }
-#endif
 
   // free resources
   String_delete(storageName);
@@ -5183,6 +5153,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           if (!String_isEmpty(scheduleUUID))
           {
             // get job name, schedule min./max. keep, max. age
+            String_clear(jobName);
             minKeep = 0;
             maxKeep = 0;
             maxAge  = 0;
@@ -5192,17 +5163,13 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               if (jobNode != NULL)
               {
                 String_set(jobName,jobNode->name);
-              }
-              else
-              {
-                String_clear(jobName);
-              }
-              scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
-              if (scheduleNode != NULL)
-              {
-                minKeep = scheduleNode->minKeep;
-                maxKeep = scheduleNode->maxKeep;
-                maxAge  = scheduleNode->maxAge;
+                scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+                if (scheduleNode != NULL)
+                {
+                  minKeep = scheduleNode->minKeep;
+                  maxKeep = scheduleNode->maxKeep;
+                  maxAge  = scheduleNode->maxAge;
+                }
               }
             }
 
@@ -5219,9 +5186,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               {
                 if (now > (createdDateTime+maxAge*S_PER_DAY))
                 {
-                  // mark for delete
-                  (void)Index_setState(indexHandle,entityId,INDEX_STATE_DELETE,0LL,NULL);
-
                   // get purge info
                   expiredInfo.entityId        = entityId;
                   String_set(expiredInfo.jobName,jobName);
@@ -5266,9 +5230,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                )
                         )
                   {
-                    // mark for delete
-                    (void)Index_setState(indexHandle,entityId,INDEX_STATE_DELETE,0LL,NULL);
-
                     // get purge info
                     surplusInfo.entityId        = entityId;
                     String_set(surplusInfo.jobName,jobName);
@@ -5366,6 +5327,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // wait a short time and try again
       Misc_udelay(30*US_PER_SECOND);
     }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
 
   // done index
@@ -16956,7 +16918,6 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
         }
 
         // delete index
-fprintf(stderr,"%s, %d: auto in del\n",__FILE__,__LINE__);
         error = Index_deleteStorage(indexHandle,storageId);
         if (error == ERROR_NONE)
         {
