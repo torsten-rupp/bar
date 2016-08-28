@@ -64,6 +64,8 @@
 #define INDEX_ID_SPECIAL_NONE  INDEX_ID_SPECIAL  (DATABASE_ID_NONE)
 #define INDEX_ID_HISTORY_NONE  INDEX_ID_HISTORY  (DATABASE_ID_NONE)
 
+#define INDEX_DEFAULT_ENTITY_ID INDEX_CONST_DEFAULT_ENTITY_ID
+
 /***************************** Datatypes *******************************/
 
 // index states
