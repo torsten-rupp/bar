@@ -13,7 +13,7 @@ const STATE_CREATE           = 2
 const STATE_UPDATE_REQUESTED = 3
 const STATE_UPDATE           = 4
 const STATE_ERROR            = 5
-const STATE_DELETE           = 6
+const STATE_DELETED          = 6
 
 // modes
 const MODE_MANUAL = 0
