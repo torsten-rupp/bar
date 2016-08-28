@@ -3694,7 +3694,7 @@ Errors Database_getId(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
 
   va_start(arguments,additional);
-  error = Database_getId(databaseHandle,value,tableName,additional,arguments);
+  error = Database_vgetId(databaseHandle,value,tableName,additional,arguments);
   va_end(arguments);
 
   return error;
@@ -3716,6 +3716,9 @@ Errors Database_vgetId(DatabaseHandle *databaseHandle,
   assert(databaseHandle->handle != NULL);
   assert(value != NULL);
   assert(tableName != NULL);
+
+  // init variables
+  (*value) = DATABASE_ID_NONE;
 
   // format SQL command string
   sqlString = formatSQLString(String_new(),
