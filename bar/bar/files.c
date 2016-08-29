@@ -983,6 +983,10 @@ String File_getFilePathNameCString(String pathName, const char *fileName)
     {
       String_setBuffer(pathName,fileName,lastPathSeparator-fileName);
     }
+    else
+    {
+      String_clear(pathName);
+    }
   }
   else
   {
