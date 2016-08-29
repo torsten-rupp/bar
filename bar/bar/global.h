@@ -1196,6 +1196,59 @@ void __dprintf__(const char *__fileName__,
                 );
 #endif /* NDEBUG */
 
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : atomicIncrement
+* Purpose: atomic increment value
+* Input  : n - value
+*          d - delta
+* Output : -
+* Return : new value
+* Notes  : -
+\***********************************************************************/
+
+static inline uint atomicIncrement(uint *n, int d)
+{
+  assert(n != NULL);
+
+  return __sync_add_and_fetch(n,d);
+}
+
+/***********************************************************************\
+* Name   : swapWORD
+* Purpose: swap low/high byte of word (2 bytes)
+* Input  : n - word (a:b)
+* Output : -
+* Return : swapped word (b:a)
+* Notes  : -
+\***********************************************************************/
+
+static inline ushort swapWORD(ushort n)
+{
+  return   ((n & 0xFF00) >> 8)
+         | ((n & 0x00FF) << 8);
+}
+
+/***********************************************************************\
+* Name   : swapLONG
+* Purpose: swap bytes of long (4 bytes)
+* Input  : n - long (a:b:c:d)
+* Output : -
+* Return : swapped long (d:c:b:a)
+* Notes  : -
+\***********************************************************************/
+
+static inline ulong swapLONG(ulong n)
+{
+  return   ((n & 0xFF000000) >> 24)
+         | ((n & 0x00FF0000) >>  8)
+         | ((n & 0x0000FF00) <<  8)
+         | ((n & 0x000000FF) << 24);
+}
+
+/*---------------------------------------------------------------------*/
+
 #ifdef __cplusplus
 
 /***********************************************************************\
@@ -1209,7 +1262,7 @@ void __dprintf__(const char *__fileName__,
 
 #pragma GCC push_options
 #pragma GCC diagnostic ignored "-Wfloat-equal"
-inline bool isNaN(double n)
+static inline bool isNaN(double n)
 {
   return n != n;
 }
@@ -1224,7 +1277,7 @@ inline bool isNaN(double n)
 * Notes  : -
 \***********************************************************************/
 
-inline bool isInf(double n)
+static inline bool isInf(double n)
 {
   return (n < -MAX_DOUBLE) || (n > MAX_DOUBLE);
 }
@@ -1242,7 +1295,7 @@ inline bool isInf(double n)
 * Notes  : -
 \***********************************************************************/
 
-inline double radToDegree(double n)
+static inline double radToDegree(double n)
 {
 //???  ASSERT_NaN(n);
 //  n=fmod(n,2*PI);
@@ -1259,7 +1312,7 @@ inline double radToDegree(double n)
 * Notes  : -
 \***********************************************************************/
 
-inline double degreeToRad(double n)
+static inline double degreeToRad(double n)
 {
 //???  ASSERT_NaN(n);
 //  n=fmod(n,360);
@@ -1280,7 +1333,7 @@ inline double degreeToRad(double n)
 * Notes  : -
 \***********************************************************************/
 
-inline double normRad(double n)
+static inline double normRad(double n)
 {
 //???  ASSERT(!IsNaN(n));
   n = fmod(n,2 * PI);
@@ -1297,7 +1350,7 @@ inline double normRad(double n)
 * Notes  : -
 \***********************************************************************/
 
-inline double normDegree(double n)
+static inline double normDegree(double n)
 {
 //???  ASSERT(!IsNaN(n));
   n = fmod(n,360);
@@ -1317,7 +1370,7 @@ inline double normDegree(double n)
 *          -3PI/2..-2PI  = PI/2..0
 \***********************************************************************/
 
-inline double normRad90(double n)
+static inline double normRad90(double n)
 {
 //???  ASSERT(!IsNaN(n));
   if (n >  3*PI/2) n -= 2*PI;
@@ -1336,7 +1389,7 @@ inline double normRad90(double n)
 * Notes  : -
 \***********************************************************************/
 
-inline double normRad180(double n)
+static inline double normRad180(double n)
 {
 //???  ASSERT(!IsNaN(n));
   return (n > PI) ? (n-2*PI) : ((n < -PI) ? n+2*PI : n);
@@ -1354,7 +1407,7 @@ inline double normRad180(double n)
 *          -270..-360 = 90..0
 \***********************************************************************/
 
-inline double normDegree90(double n)
+static inline double normDegree90(double n)
 {
 //???  ASSERT(!IsNaN(n));
   if (n >  270) n -= 360;
@@ -1373,7 +1426,7 @@ inline double normDegree90(double n)
 * Notes  : -
 \***********************************************************************/
 
-inline double normDegree180(double n)
+static inline double normDegree180(double n)
 {
 //???  ASSERT(!IsNaN(n));
   return (n > 180) ? (n-360) : ((n<-180) ? n+360 : n);
@@ -1388,7 +1441,7 @@ inline double normDegree180(double n)
 * Notes  : -
 \***********************************************************************/
 
-inline double normRad360(double n)
+static inline double normRad360(double n)
 {
 //???  ASSERT(!IsNaN(n));
   return fmod(n,2*PI);
@@ -1403,7 +1456,7 @@ inline double normRad360(double n)
 * Notes  : -
 \***********************************************************************/
 
-inline double normDegree360(double n)
+static inline double normDegree360(double n)
 {
 //???  ASSERT(!IsNaN(n));
   return fmod(n,360);
@@ -1610,42 +1663,6 @@ static inline char* stringFormat(char *string, size_t n, const char *format, ...
 }
 
 /*---------------------------------------------------------------------*/
-
-#ifdef __cplusplus
-
-/***********************************************************************\
-* Name   : swapWORD
-* Purpose: swap low/high byte of word (2 bytes)
-* Input  : n - word (a:b)
-* Output : -
-* Return : swapped word (b:a)
-* Notes  : -
-\***********************************************************************/
-
-inline ushort swapWORD(ushort n)
-{
-  return   ((n & 0xFF00) >> 8)
-         | ((n & 0x00FF) << 8);
-}
-
-/***********************************************************************\
-* Name   : swapLONG
-* Purpose: swap bytes of long (4 bytes)
-* Input  : n - long (a:b:c:d)
-* Output : -
-* Return : swapped long (d:c:b:a)
-* Notes  : -
-\***********************************************************************/
-
-inline ulong swapLONG(ulong n)
-{
-  return   ((n & 0xFF000000) >> 24)
-         | ((n & 0x00FF0000) >>  8)
-         | ((n & 0x0000FF00) <<  8)
-         | ((n & 0x000000FF) << 24);
-}
-
-#endif
 
 /***********************************************************************\
 * Name   : __halt

@@ -234,7 +234,7 @@ void __abortAt(const char *fileName,
 * Input  : -
 * Output : -
 * Return : -
-* Notes  : Some older GCC versions do not implemented
+* Notes  : Some older GCC versions do not implement
 *          __sync_add_and_fetch() on 32bit. This is a replacement.
 \***********************************************************************/
 uint __sync_add_and_fetch_4(uint *p, uint n)
