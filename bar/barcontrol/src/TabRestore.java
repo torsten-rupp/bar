@@ -5290,6 +5290,12 @@ Dprintf.dprintf("");
                                                  {
                                                    Menu subSubMenu;
 
+                                                   // discard old menu items
+                                                   for (MenuItem menuItem : subMenu.getItems())
+                                                   {
+                                                     menuItem.dispose();
+                                                   }
+
                                                    // add normal menu items
                                                    subSubMenu = Widgets.addMenu(subMenu,
                                                                                 null,
