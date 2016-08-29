@@ -1206,8 +1206,6 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
-
-  if (verbose) printf("OK\n");
 }
 
 /***********************************************************************\
