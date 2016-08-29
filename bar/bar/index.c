@@ -7460,7 +7460,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   if (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))
   {
     // no pattern/no entries selected
-fprintf(stderr,"%s, %d: o=%llu l=%llu\n",__FILE__,__LINE__,offset,limit);
 
     if (newestOnly)
     {
