@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS storage(
   lastChecked               INTEGER DEFAULT 0,
   errorMessage              TEXT,
 
+  // Note: updated via Index_updateStorageInfos()
   totalEntryCount           INTEGER DEFAULT 0,  // total number of entries
   totalEntrySize            INTEGER DEFAULT 0,  // total size of entries [bytes]
 
@@ -278,16 +279,6 @@ CREATE TRIGGER AFTER UPDATE OF offset,size ON entries
 
 CREATE TRIGGER BEFORE DELETE ON entries
   BEGIN
-// insert into log values('trigger entries DELETE: id='||OLD.id||' name='||OLD.name||' size='||OLD.size);
-/*
-    // delete *Entries
-    DELETE FROM fileEntries      WHERE OLD.type=$TYPE_FILE      AND entryId=OLD.id;
-    DELETE FROM imageEntries     WHERE OLD.type=$TYPE_IMAGE     AND entryId=OLD.id;
-    DELETE FROM directoryEntries WHERE OLD.type=$TYPE_DIRECTORY AND entryId=OLD.id;
-    DELETE FROM linkEntries      WHERE OLD.type=$TYPE_LINK      AND entryId=OLD.id;
-    DELETE FROM hardlinkEntries  WHERE OLD.type=$TYPE_HARDLINK  AND entryId=OLD.id;
-    DELETE FROM specialEntries   WHERE OLD.type=$TYPE_SPECIAL   AND entryId=OLD.id;
-*/
     // delete/update newest info
     DELETE FROM entriesNewest WHERE entryId=OLD.id;
     INSERT OR IGNORE INTO entriesNewest
@@ -307,8 +298,6 @@ CREATE TRIGGER BEFORE DELETE ON entries
 
 CREATE TRIGGER AFTER INSERT ON entriesNewest
   BEGIN
-// insert into log values('trigger entriesNewest INSERT: name='||NEW.name||' size='||NEW.size);
-
     // update count/size in parent directories
 // insert into log values('  increment '||DIRNAME(NEW.name)||': size='||NEW.size);
     UPDATE directoryEntries
@@ -393,21 +382,6 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
             AND name=DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId));
   END;
 
-/*
-CREATE TRIGGER BEFORE DELETE ON fileEntries
-  BEGIN
-// insert into log values('trigger fileEntries: DELETE entryId='||OLD.entryId||' storageId='||OLD.storageId||' fragmentSize='||OLD.fragmentSize);
-
-    // update count/size in parent directories
-    UPDATE directoryEntries
-      SET totalEntryCount=totalEntryCount-1,
-          totalEntrySize =totalEntrySize -OLD.fragmentSize
-      WHERE     storageId=OLD.storageId
-            AND name=DIRNAME((SELECT name FROM entries WHERE id=OLD.entryId));
-// insert into log values('done');
-  END;
-*/
-
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS imageEntries(
   id              INTEGER PRIMARY KEY,
@@ -421,6 +395,23 @@ CREATE TABLE IF NOT EXISTS imageEntries(
 );
 CREATE INDEX ON imageEntries (storageId);
 CREATE INDEX ON imageEntries (entryId);
+
+// insert/delete/update triggeres
+CREATE TRIGGER AFTER INSERT ON imageEntries
+  BEGIN
+    // update offset/size in entry (Note: will trigger insert/update newest!)
+    UPDATE entries
+      SET offset=NEW.blockSize*NEW.blockOffset,
+          size  =NEW.blockSize*NEW.blockCount
+      WHERE id=NEW.entryId;
+
+    // update count/size in parent directories
+    UPDATE directoryEntries
+      SET totalEntryCount=totalEntryCount+1,
+          totalEntrySize =totalEntrySize +NEW.blockSize*NEW.blockCount
+      WHERE     storageId=NEW.storageId
+            AND name=DIRNAME((SELECT name FROM entries WHERE id=NEW.entryId));
+  END;
 
 // --- directories -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS directoryEntries(
