@@ -6467,7 +6467,6 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
 
     // trigger clean-up thread
     Semaphore_signalModified(&indexCleanupThreadTrigger);
-fprintf(stderr,"%s, %d: soma; \n",__FILE__,__LINE__);
 
     return ERROR_NONE;
   });
