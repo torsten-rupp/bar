@@ -1832,7 +1832,7 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
                                 filterString
                                );
       });
-fprintf(stderr,"%s, %d: deetleted %lu %s\n",__FILE__,__LINE__,changedRowCount,Error_getText(error));
+//fprintf(stderr,"%s, %d: deleted entries %lu %s\n",__FILE__,__LINE__,changedRowCount,Error_getText(error));
     }
 
     // short delay
@@ -2278,8 +2278,8 @@ LOCAL void indexCleanupThreadCode(void)
       (void)pruneEntities(&indexHandle);
       (void)pruneUUIDs(&indexHandle);
     });
-  //TODO: too slow
-  //  (void)refreshStoragesInfos(&indexHandle);
+//TODO: too slow
+//    (void)refreshStoragesInfos(&indexHandle);
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
@@ -2304,7 +2304,6 @@ LOCAL void indexCleanupThreadCode(void)
                             );
       if ((error == ERROR_NONE) && (databaseId != DATABASE_ID_NONE))
       {
-fprintf(stderr,"%s, %d: ------------------------------------------------------------\n",__FILE__,__LINE__);
         if (error == ERROR_NONE)
         {
           error = deleteFromIndex(&indexHandle,
@@ -2377,7 +2376,6 @@ fprintf(stderr,"%s, %d: --------------------------------------------------------
                                   databaseId
                                  );
         }
-fprintf(stderr,"%s, %d: ---- %s\n",__FILE__,__LINE__,Error_getText(error));
       }
     }
     while ((error == ERROR_NONE) && (databaseId != INDEX_ID_NONE));
