@@ -170,14 +170,14 @@ LOCAL bool                       quitFlag;
   do \
   { \
     Database_lock(&indexHandle->databaseHandle); \
-    indexUseCount++; \
+    atomicIncrement(&indexUseCount,1); \
     result = ({ \
                auto typeof(result) __closure__(void); \
                \
                typeof(result) __closure__(void)block; __closure__; \
              })(); \
     assert(indexUseCount > 0); \
-    indexUseCount--; \
+    atomicIncrement(&indexUseCount,-1); \
     Database_unlock(&indexHandle->databaseHandle); \
   } \
   while (0)
@@ -2259,30 +2259,33 @@ LOCAL void indexCleanupThreadCode(void)
   String_delete(absoluteFileName);
 
   // single clean-ups
-  plogMessage(NULL,  // logHandle
-              LOG_TYPE_INDEX,
-              "INDEX",
-              "Started initial clean-up index database\n"
-             );
-  BLOCK_DO(Database_lock(&indexHandle.databaseHandle),
-           Database_unlock(&indexHandle.databaseHandle),
+  if (!quitFlag)
   {
-    (void)cleanUpDuplicateMeta(&indexHandle);
-    (void)cleanUpIncompleteUpdate(&indexHandle);
-    (void)cleanUpIncompleteCreate(&indexHandle);
-    (void)cleanUpStorageNoName(&indexHandle);
-    (void)cleanUpStorageNoEntity(&indexHandle);
-    (void)pruneStorages(&indexHandle);
-    (void)pruneEntities(&indexHandle);
-    (void)pruneUUIDs(&indexHandle);
-  });
-//TODO: too slow
-//  (void)refreshStoragesInfos(&indexHandle);
-  plogMessage(NULL,  // logHandle
-              LOG_TYPE_INDEX,
-              "INDEX",
-              "Done initial clean-up index database\n"
-             );
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Started initial clean-up index database\n"
+               );
+    BLOCK_DO(Database_lock(&indexHandle.databaseHandle),
+             Database_unlock(&indexHandle.databaseHandle),
+    {
+      (void)cleanUpDuplicateMeta(&indexHandle);
+      (void)cleanUpIncompleteUpdate(&indexHandle);
+      (void)cleanUpIncompleteCreate(&indexHandle);
+      (void)cleanUpStorageNoName(&indexHandle);
+      (void)cleanUpStorageNoEntity(&indexHandle);
+      (void)pruneStorages(&indexHandle);
+      (void)pruneEntities(&indexHandle);
+      (void)pruneUUIDs(&indexHandle);
+    });
+  //TODO: too slow
+  //  (void)refreshStoragesInfos(&indexHandle);
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Done initial clean-up index database\n"
+               );
+  }
 
   // regular clean-ups
   lastCleanupTimestamp = Misc_getTimestamp();
