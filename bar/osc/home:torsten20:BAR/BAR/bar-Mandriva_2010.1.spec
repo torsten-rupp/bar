@@ -181,7 +181,7 @@ mkdir packages
 %doc %{_mandir}/man7/bar.7.gz
 
 %changelog
-* Mon Aug 15 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20
+* Thu Sep 01 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20
   - TLS port is now optional: if possible as SSL protected
     connection is establed via the standard plain port, too.
   - added option --archive-file-mode: stop, append or
@@ -197,6 +197,7 @@ mkdir packages
     log date format is now YYYY-MM-DD hh:mm:ss
   - fixed clean-up duplicate database entries: delete
     storage index
+  - improved delete database entries
   - separate log for each executed job
   - removed macro %%last for archive names
   - support full-text-search in database
