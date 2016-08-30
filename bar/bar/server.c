@@ -341,6 +341,7 @@ typedef struct
 // client info
 typedef struct
 {
+  Semaphore             lock;
   ClientTypes           type;
 
   SessionId             sessionId;
@@ -349,16 +350,14 @@ typedef struct
   AuthorizationFailNode *authorizationFailNode;
   bool                  quitFlag;
 
+  Array                 abortedCommandIdArray;             // aborted command ids
+
   struct
   {
     Semaphore           lock;
     Errors              error;
     StringMap           resultMap;
   } action;
-
-  uint                  abortCommandId;                    // command id to abort
-//TODO:
-bool abortFlag;
 
   union
   {
@@ -383,16 +382,16 @@ bool abortFlag;
     } network;
   };
 
-  EntryList           includeEntryList;
-  PatternList         excludePatternList;
-  MountList           mountList;
-  PatternList         compressExcludePatternList;
-  DeltaSourceList     deltaSourceList;
-  JobOptions          jobOptions;
-  DirectoryInfoList   directoryInfoList;
+  EntryList             includeEntryList;
+  PatternList           excludePatternList;
+  MountList             mountList;
+  PatternList           compressExcludePatternList;
+  DeltaSourceList       deltaSourceList;
+  JobOptions            jobOptions;
+  DirectoryInfoList     directoryInfoList;
 
-  Array               indexIdArray;                        // ids of uuid/entity/storage ids to list/restore
-  Array               entryIdArray;                        // ids of entries to restore
+  Array                 indexIdArray;                      // ids of uuid/entity/storage ids to list/restore
+  Array                 entryIdArray;                      // ids of entries to restore
 } ClientInfo;
 
 // client node
@@ -6155,23 +6154,37 @@ LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, 
 
 LOCAL bool isCommandAborted(ClientInfo *clientInfo, uint commandId)
 {
-  bool abortedFlag;
+  SemaphoreLock semaphoreLock;
+  bool          abortedFlag;
+  ulong         i;
+  uint          *data;
 
   assert(clientInfo != NULL);
 
-  abortedFlag = (clientInfo->abortCommandId == commandId);
-  switch (clientInfo->type)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
-    case CLIENT_TYPE_BATCH:
-      break;
-    case CLIENT_TYPE_NETWORK:
-      if (clientInfo->quitFlag) abortedFlag = TRUE;
-      break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break;
+    abortedFlag = FALSE;
+
+    // check for quit
+    switch (clientInfo->type)
+    {
+      case CLIENT_TYPE_BATCH:
+        break;
+      case CLIENT_TYPE_NETWORK:
+        if (clientInfo->quitFlag) abortedFlag = TRUE;
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break;
+    }
+
+    // check if command aborted
+    ARRAY_ITERATEX(&clientInfo->abortedCommandIdArray,i,data,!abortedFlag)
+    {
+      abortedFlag = (commandId == (*data));
+    }
   }
 
   return abortedFlag;
@@ -6734,7 +6747,8 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   #ifdef HAVE_GNU_TLS
-    Errors error;
+    SemaphoreLock semaphoreLock;
+    Errors        error;
   #endif /* HAVE_GNU_TLS */
 
   assert(clientInfo != NULL);
@@ -6762,17 +6776,20 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
 
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
-    error = Network_startSSL(&clientInfo->network.socketHandle,
-                             serverCA->data,
-                             serverCA->length,
-                             serverCert->data,
-                             serverCert->length,
-                             serverKey->data,
-                             serverKey->length
-                            );
-    if (error != ERROR_NONE)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      Network_disconnect(&clientInfo->network.socketHandle);
+      error = Network_startSSL(&clientInfo->network.socketHandle,
+                               serverCA->data,
+                               serverCA->length,
+                               serverCert->data,
+                               serverCert->length,
+                               serverKey->data,
+                               serverKey->length
+                              );
+      if (error != ERROR_NONE)
+      {
+        Network_disconnect(&clientInfo->network.socketHandle);
+      }
     }
   #else /* not HAVE_GNU_TLS */
     sendClientResult(clientInfo,id,TRUE,ERROR_FUNCTION_NOT_SUPPORTED,"not available");
@@ -6799,9 +6816,10 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String encryptType;
-  String encryptedPassword;
-  bool   okFlag;
+  String        encryptType;
+  String        encryptedPassword;
+  bool          okFlag;
+  SemaphoreLock semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -6835,18 +6853,20 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     okFlag = TRUE;
   }
 
-  // authorization state
-  if (okFlag)
+  // set authorization state
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
-  }
-  else
-  {
-//fprintf(stderr,"%s, %d: encryptedPassword='%s' %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
-    clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
-    sendClientResult(clientInfo,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
-    printInfo(1,"Client authorization failure: '%s:%u'\n",String_cString(clientInfo->network.name),clientInfo->network.port);
+    if (okFlag)
+    {
+      clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
+      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    }
+    else
+    {
+      clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
+      sendClientResult(clientInfo,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+      printInfo(1,"Client authorization failure: '%s:%u'\n",String_cString(clientInfo->network.name),clientInfo->network.port);
+    }
   }
 
   // free resources
@@ -7797,7 +7817,8 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint commandId;
+  uint          commandId;
+  SemaphoreLock semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7812,9 +7833,11 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
   }
 
   // abort command
-  clientInfo->abortCommandId = commandId;
-//TODO:
-clientInfo->abortFlag = TRUE;
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    Array_append(&clientInfo->abortedCommandIdArray,&commandId);
+fprintf(stderr,"%s, %d: add abort command %d: %d\n",__FILE__,__LINE__,commandId,Array_length(&clientInfo->abortedCommandIdArray));
+  }
 
   // format result
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -9004,6 +9027,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
 {
   String            name;
   int64             timeout;
+  SemaphoreLock     semaphoreLock;
   DirectoryInfoNode *directoryInfoNode;
   uint64            fileCount;
   uint64            fileSize;
@@ -9030,21 +9054,25 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
   timedOut  = FALSE;
   if (File_isDirectory(name))
   {
-    // find/create directory info
-    directoryInfoNode = findDirectoryInfo(&clientInfo->directoryInfoList,name);
-    if (directoryInfoNode == NULL)
+//TODO: avoid lock with getDirectoryInfo inside
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      directoryInfoNode = newDirectoryInfo(name);
-      List_append(&clientInfo->directoryInfoList,directoryInfoNode);
-    }
+      // find/create directory info
+      directoryInfoNode = findDirectoryInfo(&clientInfo->directoryInfoList,name);
+      if (directoryInfoNode == NULL)
+      {
+        directoryInfoNode = newDirectoryInfo(name);
+        List_append(&clientInfo->directoryInfoList,directoryInfoNode);
+      }
 
-    // get total size of directoy/file
-    getDirectoryInfo(directoryInfoNode,
-                     timeout,
-                     &fileCount,
-                     &fileSize,
-                     &timedOut
-                    );
+      // get total size of directoy/file
+      getDirectoryInfo(directoryInfoNode,
+                       timeout,
+                       &fileCount,
+                       &fileSize,
+                       &timedOut
+                      );
+    }
   }
   else
   {
@@ -12878,8 +12906,9 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
 
 LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String encryptType;
-  String encryptedPassword;
+  String        encryptType;
+  String        encryptedPassword;
+  SemaphoreLock semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -12903,13 +12932,17 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
   }
 
   // decrypt password
-  if (clientInfo->jobOptions.ftpServer.password == NULL) clientInfo->jobOptions.ftpServer.password = Password_new();
-  if (!decryptPassword(clientInfo->jobOptions.ftpServer.password,clientInfo,encryptType,encryptedPassword))
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_FTP_PASSWORD,"");
-    String_delete(encryptedPassword);
-    String_delete(encryptType);
-    return;
+    if (clientInfo->jobOptions.ftpServer.password == NULL) clientInfo->jobOptions.ftpServer.password = Password_new();
+    if (!decryptPassword(clientInfo->jobOptions.ftpServer.password,clientInfo,encryptType,encryptedPassword))
+    {
+      Semaphore_unlock(&clientInfo->lock);
+      sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_FTP_PASSWORD,"");
+      String_delete(encryptedPassword);
+      String_delete(encryptType);
+      return;
+    }
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -12937,8 +12970,9 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String encryptType;
-  String encryptedPassword;
+  String        encryptType;
+  String        encryptedPassword;
+  SemaphoreLock semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -12962,13 +12996,17 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
   }
 
   // decrypt password
-  if (clientInfo->jobOptions.sshServer.password == NULL) clientInfo->jobOptions.sshServer.password = Password_new();
-  if (!decryptPassword(clientInfo->jobOptions.sshServer.password,clientInfo,encryptType,encryptedPassword))
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_SSH_PASSWORD,"");
-    String_delete(encryptedPassword);
-    String_delete(encryptType);
-    return;
+    if (clientInfo->jobOptions.sshServer.password == NULL) clientInfo->jobOptions.sshServer.password = Password_new();
+    if (!decryptPassword(clientInfo->jobOptions.sshServer.password,clientInfo,encryptType,encryptedPassword))
+    {
+      Semaphore_unlock(&clientInfo->lock);
+      sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_SSH_PASSWORD,"");
+      String_delete(encryptedPassword);
+      String_delete(encryptType);
+      return;
+    }
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -12996,8 +13034,9 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String encryptType;
-  String encryptedPassword;
+  String        encryptType;
+  String        encryptedPassword;
+  SemaphoreLock semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13021,13 +13060,17 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
   }
 
   // decrypt password
-  if (clientInfo->jobOptions.webDAVServer.password == NULL) clientInfo->jobOptions.webDAVServer.password = Password_new();
-  if (!decryptPassword(clientInfo->jobOptions.webDAVServer.password,clientInfo,encryptType,encryptedPassword))
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_WEBDAV_PASSWORD,"");
-    String_delete(encryptedPassword);
-    String_delete(encryptType);
-    return;
+    if (clientInfo->jobOptions.webDAVServer.password == NULL) clientInfo->jobOptions.webDAVServer.password = Password_new();
+    if (!decryptPassword(clientInfo->jobOptions.webDAVServer.password,clientInfo,encryptType,encryptedPassword))
+    {
+      Semaphore_unlock(&clientInfo->lock);
+      sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_WEBDAV_PASSWORD,"");
+      String_delete(encryptedPassword);
+      String_delete(encryptType);
+      return;
+    }
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -13118,12 +13161,16 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
   else
   {
     // decrypt password
-    if (!decryptPassword(clientInfo->jobOptions.cryptPassword,clientInfo,encryptType,encryptedPassword))
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
-      String_delete(encryptedPassword);
-      String_delete(encryptType);
-      return;
+      if (!decryptPassword(clientInfo->jobOptions.cryptPassword,clientInfo,encryptType,encryptedPassword))
+      {
+        Semaphore_unlock(&clientInfo->lock);
+        sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
+        String_delete(encryptedPassword);
+        String_delete(encryptType);
+        return;
+      }
     }
   }
 
@@ -13150,15 +13197,20 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
 
 LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  SemaphoreLock semaphoreLock;
+
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  if (clientInfo->jobOptions.ftpServer.password != NULL) Password_clear(clientInfo->jobOptions.ftpServer.password);
-  if (clientInfo->jobOptions.sshServer.password != NULL) Password_clear(clientInfo->jobOptions.sshServer.password);
-  if (clientInfo->jobOptions.cryptPassword != NULL) Password_clear(clientInfo->jobOptions.cryptPassword);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    if (clientInfo->jobOptions.ftpServer.password != NULL) Password_clear(clientInfo->jobOptions.ftpServer.password);
+    if (clientInfo->jobOptions.sshServer.password != NULL) Password_clear(clientInfo->jobOptions.sshServer.password);
+    if (clientInfo->jobOptions.cryptPassword != NULL) Password_clear(clientInfo->jobOptions.cryptPassword);
+  }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -13857,6 +13909,8 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  SemaphoreLock semaphoreLock;
+
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -13864,7 +13918,10 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, IndexHandle *i
   UNUSED_VARIABLE(argumentMap);
 
   // clear index ids
-  Array_clear(&clientInfo->indexIdArray);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    Array_clear(&clientInfo->indexIdArray);
+  }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -13886,7 +13943,8 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId indexId;
+  IndexId       indexId;
+  SemaphoreLock semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13906,7 +13964,10 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
   }
 
   // store index id
-  Array_append(&clientInfo->indexIdArray,&indexId);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    Array_append(&clientInfo->indexIdArray,&indexId);
+  }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -13928,7 +13989,8 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId indexId;
+  IndexId       indexId;
+  SemaphoreLock semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13948,7 +14010,10 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
   }
 
   // remove index id
-  Array_removeAll(&clientInfo->indexIdArray,&indexId,CALLBACK(NULL,NULL));
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    Array_removeAll(&clientInfo->indexIdArray,&indexId,CALLBACK(NULL,NULL));
+  }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -14136,13 +14201,18 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_entryListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  SemaphoreLock semaphoreLock;
+
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  Array_clear(&clientInfo->entryIdArray);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    Array_clear(&clientInfo->entryIdArray);
+  }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -14164,7 +14234,8 @@ LOCAL void serverCommand_entryListClear(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId entryId;
+  IndexId       entryId;
+  SemaphoreLock semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -14184,7 +14255,10 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *index
   }
 
   // add to id array
-  Array_append(&clientInfo->entryIdArray,&entryId);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    Array_append(&clientInfo->entryIdArray,&entryId);
+  }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -14206,7 +14280,8 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *index
 
 LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId entryId;
+  IndexId       entryId;
+  SemaphoreLock semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -14226,7 +14301,10 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // add to id array
-  Array_removeAll(&clientInfo->entryIdArray,&entryId,CALLBACK(NULL,NULL));
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    Array_removeAll(&clientInfo->entryIdArray,&entryId,CALLBACK(NULL,NULL));
+  }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -14758,6 +14836,9 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   // restore
   restoreCommandInfo.clientInfo = clientInfo;
   restoreCommandInfo.id         = id;
+//TODO
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
   error = Command_restore(&storageNameList,
                           &restoreEntryList,
                           NULL,  // excludePatternList
@@ -14768,11 +14849,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                           CALLBACK(getPassword,&restoreCommandInfo),
                           NULL,  // pauseFlag
 //TODO: callback
-                          &restoreCommandInfo.clientInfo->abortFlag,
+NULL,//                          &restoreCommandInfo.clientInfo->abortFlag,
                           NULL  // logHandle
                          );
 //isCommandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
-restoreCommandInfo.clientInfo->abortFlag = FALSE;
   sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
   EntryList_done(&restoreEntryList);
   StringList_done(&storageNameList);
@@ -17572,11 +17652,14 @@ LOCAL bool parseCommand(CommandMsg  *commandMsg,
 
 LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 {
-  String      result;
-  CommandMsg  commandMsg;
+  String        result;
+  CommandMsg    commandMsg;
   #ifdef SERVER_DEBUG
     uint64 t0,t1;
   #endif /* SERVER_DEBUG */
+  SemaphoreLock semaphoreLock;
+  ulong         i;
+  const uint    *commandId;
 
   assert(clientInfo != NULL);
 
@@ -17603,6 +17686,21 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
         t1 = Misc_getTimestamp();
         fprintf(stderr,"DEBUG: time=%llums\n",(t1-t0)/US_PER_MS);
       #endif /* SERVER_DEBUG */
+
+fprintf(stderr,"%s, %d: done %d\n",__FILE__,__LINE__,commandMsg.id);
+      // remove command id if aborted
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      {
+        ARRAY_ITERATE(&clientInfo->abortedCommandIdArray,i,commandId)
+        {
+          if (commandMsg.id == (*commandId))
+          {
+fprintf(stderr,"%s, %d: remove %d\n",__FILE__,__LINE__,i);
+            Array_remove(&clientInfo->abortedCommandIdArray,i);
+            break;
+          }
+        }
+      }
     }
     else
     {
@@ -17722,18 +17820,20 @@ LOCAL void initClient(ClientInfo *clientInfo)
   assert(clientInfo != NULL);
 
   // initialize
+  Semaphore_init(&clientInfo->lock);
   clientInfo->type                  = CLIENT_TYPE_NONE;
   clientInfo->authorizationState    = AUTHORIZATION_STATE_WAITING;
   clientInfo->authorizationFailNode = NULL;
   clientInfo->quitFlag              = FALSE;
+
+  Array_init(&clientInfo->abortedCommandIdArray,sizeof(uint),64,CALLBACK_NULL,CALLBACK_NULL);
+
   clientInfo->action.error          = ERROR_NONE;
   clientInfo->action.resultMap      = StringMap_new();
   if (clientInfo->action.resultMap == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  clientInfo->abortCommandId        = 0;
-clientInfo->abortFlag = FALSE;
 
   Semaphore_init(&clientInfo->action.lock);
   EntryList_init(&clientInfo->includeEntryList);
@@ -17875,6 +17975,8 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   EntryList_done(&clientInfo->includeEntryList);
   Semaphore_done(&clientInfo->action.lock);
   StringMap_delete(clientInfo->action.resultMap);
+  Array_done(&clientInfo->abortedCommandIdArray);
+  Semaphore_done(&clientInfo->lock);
 }
 
 /***********************************************************************\
