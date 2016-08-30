@@ -942,7 +942,6 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                                size=%llu \
                                                            WHERE id=%llu \
                                                           ",
-
                                                           fragmentOffset,
                                                           fragmentSize,
                                                           entryId
@@ -997,7 +996,6 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                                size=%llu \
                                                            WHERE id=%llu \
                                                           ",
-
                                                           (uint64)blockSize*blockOffset,
                                                           (uint64)blockSize*blockCount,
                                                           entryId
@@ -1049,7 +1047,6 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                                size=%llu \
                                                            WHERE id=%llu \
                                                           ",
-
                                                           fragmentOffset,
                                                           fragmentSize,
                                                           entryId
