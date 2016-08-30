@@ -650,8 +650,9 @@ LOCAL bool StorageSCP_exists(StorageHandle *storageHandle, ConstString archiveNa
   assert(storageHandle != NULL);
   assert(!String_isEmpty(archiveName));
 
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+//TODO: still not implemented
   UNUSED_VARIABLE(storageHandle);
+  UNUSED_VARIABLE(archiveName);
 
   return File_exists(archiveName);
 }
@@ -1505,8 +1506,6 @@ LOCAL void StorageSCP_closeDirectoryList(StorageDirectoryListHandle *storageDire
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_SCP);
 
   UNUSED_VARIABLE(storageDirectoryListHandle);
-
-  HALT_INTERNAL_ERROR("scp does not support directory operations");
 }
 
 LOCAL bool StorageSCP_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
@@ -1515,8 +1514,6 @@ LOCAL bool StorageSCP_endOfDirectoryList(StorageDirectoryListHandle *storageDire
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_SCP);
 
   UNUSED_VARIABLE(storageDirectoryListHandle);
-
-  HALT_INTERNAL_ERROR("scp does not support directory operations");
 
   return TRUE;
 }
@@ -1533,9 +1530,7 @@ LOCAL Errors StorageSCP_readDirectoryList(StorageDirectoryListHandle *storageDir
   UNUSED_VARIABLE(fileName);
   UNUSED_VARIABLE(fileInfo);
 
-  HALT_INTERNAL_ERROR("scp does not support directory operations");
-
-  return ERROR_STILL_NOT_IMPLEMENTED;
+  return ERROR_FUNCTION_NOT_SUPPORTED;
 }
 
 #ifdef __cplusplus

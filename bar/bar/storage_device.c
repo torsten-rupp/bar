@@ -775,8 +775,9 @@ LOCAL bool StorageDevice_exists(StorageHandle *storageHandle, ConstString archiv
   assert(storageHandle != NULL);
   assert(!String_isEmpty(archiveName));
 
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+//TODO: still not implemented
   UNUSED_VARIABLE(storageHandle);
+  UNUSED_VARIABLE(archiveName);
 
   return File_exists(archiveName);
 }
