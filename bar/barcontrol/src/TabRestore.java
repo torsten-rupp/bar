@@ -1911,15 +1911,18 @@ Dprintf.dprintf("cirrect?");
      * @param storageName new storage name
      * @param storageIndexStateSet new storage index state set
      * @param storageEntityState new storage entity state
+     * @param force true to force update
      */
-    public void triggerUpdate(String storageName, IndexStateSet storageIndexStateSet, EntityStates storageEntityState)
+    public void triggerUpdate(String storageName, IndexStateSet storageIndexStateSet, EntityStates storageEntityState, boolean force)
     {
       assert storageName != null;
 
       synchronized(trigger)
       {
         if (   !this.storageName.equals(storageName)
-            || (this.storageIndexStateSet != storageIndexStateSet) || (this.storageEntityState != storageEntityState)
+            || (this.storageIndexStateSet != storageIndexStateSet)
+            || (this.storageEntityState != storageEntityState)
+            || force
            )
         {
           this.storageName               = storageName;
@@ -1941,7 +1944,6 @@ Dprintf.dprintf("cirrect?");
 
       synchronized(trigger)
       {
-//        if (!this.storageName.equals(storageName))
         if (   (this.storageName == null)
             || (storageName == null)
 //Note: at least 3 characters?
@@ -1964,7 +1966,9 @@ Dprintf.dprintf("cirrect?");
     {
       synchronized(trigger)
       {
-        if ((this.storageIndexStateSet != storageIndexStateSet) || (this.storageEntityState != storageEntityState))
+        if (   (this.storageIndexStateSet != storageIndexStateSet)
+            || (this.storageEntityState != storageEntityState)
+           )
         {
           this.storageIndexStateSet      = storageIndexStateSet;
           this.storageEntityState        = storageEntityState;
@@ -3336,14 +3340,18 @@ Dprintf.dprintf("cirrect?");
      * @param entryName new entry name or null
      * @param type type or *
      * @param newestOnly flag for newest entries only
+     * @param force true to force update
      */
-    public void triggerUpdate(String entryName, String type, boolean newestOnly)
+    public void triggerUpdate(String entryName, String type, boolean newestOnly, boolean force)
     {
       synchronized(trigger)
       {
-        if (   (this.entryName == null) || (entryName == null) || !this.entryName.equals(entryName)
+        if (   (this.entryName == null)
+            || (entryName == null)
+            || !this.entryName.equals(entryName)
             || (entryType != this.entryType)
             || (this.newestOnly != newestOnly)
+            || force
            )
         {
           this.entryName                    = entryName;
@@ -3365,7 +3373,6 @@ Dprintf.dprintf("cirrect?");
 
       synchronized(trigger)
       {
-        // if ((this.entryName == null) || (entryName == null) || !this.entryName.equals(entryName))
         if (   (this.entryName == null)
             || (entryName == null)
 //Note: at least 3 characters?
@@ -6419,14 +6426,14 @@ Dprintf.dprintf("remove");
         widgetStorageStateFilter.select(0);
         setAllCheckedStorage(false);
         Widgets.refreshVirtualTable(widgetStorageTable);
-        updateStorageTreeTableThread.triggerUpdate("",INDEX_STATE_SET_ALL,EntityStates.ANY);
+        updateStorageTreeTableThread.triggerUpdate("",INDEX_STATE_SET_ALL,EntityStates.ANY,true);
 
         widgetEntryFilter.setText("");
         Widgets.setSelectedOptionMenuItem(widgetEntryTypeFilter,EntryTypes.ANY);
         widgetEntryNewestOnly.setSelection(false);
         setAllCheckedEntries(false);
         Widgets.refreshVirtualTable(widgetEntryTable);
-        updateEntryTableThread.triggerUpdate("","*",false);
+        updateEntryTableThread.triggerUpdate("","*",false,true);
       }
     });
 
