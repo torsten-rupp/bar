@@ -122,20 +122,21 @@ typedef bool(*ArrayDumpInfoFunction)(const Array *array,
 * Purpose: iterated over array and execute block
 * Input  : array     - array
 *          variable - iteration variable
+*          data      - pointer to data element
 * Output : -
 * Return : -
 * Notes  : variable will contain all data elements in array
 *          usage:
-*            ARRAY_ITERATE(array,variable)
+*            ARRAY_ITERATE(array,variable,data)
 *            {
-*              ... = variable->...
+*              ... = data->...
 *            }
 \***********************************************************************/
 
-#define ARRAY_ITERATE(array,variable) \
-  for ((variable) = 0, Array_get(array,0,variable); \
+#define ARRAY_ITERATE(array,variable,data) \
+  for ((variable) = 0, (data) = Array_get(array,0,NULL); \
        (variable) < Array_length(array); \
-       (variable)++, Array_get(array,0,variable) \
+       (variable)++, (data) = Array_get(array,variable,NULL) \
       )
 
 /***********************************************************************\
@@ -143,21 +144,22 @@ typedef bool(*ArrayDumpInfoFunction)(const Array *array,
 * Purpose: iterated over array and execute block
 * Input  : array     - array
 *          variable  - iteration variable
+*          data      - pointer to data element
 *          condition - additional condition
 * Output : -
 * Return : -
 * Notes  : variable will contain all data elements in array
 *          usage:
-*            ARRAY_ITERATEX(array,variable,TRUE)
+*            ARRAY_ITERATEX(array,variable,data,TRUE)
 *            {
-*              ... = variable->...
+*              ... = data->...
 *            }
 \***********************************************************************/
 
-#define ARRAY_ITERATEX(array,variable,condition) \
-  for ((variable) = 0, Array_get(array,0,variable); \
+#define ARRAY_ITERATEX(array,variable,data,condition) \
+  for ((variable) = 0, (data) = Array_get(array,0,NULL); \
        ((variable) < Array_length(array)) && (condition); \
-       (variable)++, Array_get(array,0,variable) \
+       (variable)++, (data) = Array_get(array,variable,NULL) \
       )
 
 /***************************** Forwards ********************************/
