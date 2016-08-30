@@ -671,6 +671,7 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
           packages/nettle-*.tar.gz \
           packages/openssl-*.tar.gz \
           packages/pcre-*.tar.bz2 \
+          packages/sqlite-src-*.zip \
           packages/pthreads-w32-*.tar.gz \
           packages/xdelta*.tar.gz \
           packages/xz-*.tar.gz \
