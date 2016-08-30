@@ -1,4 +1,4 @@
-2016-08-15 0.20
+2016-09-01 0.20
   * TLS port is now optional: if possible as SSL protected
     connection is establed via the standard plain port, too.
   * added option --archive-file-mode: stop, append or
@@ -14,6 +14,7 @@
     log date format is now YYYY-MM-DD hh:mm:ss
   * fixed clean-up duplicate database entries: delete
     storage index
+  * improved delete database entries
   * separate log for each executed job
   * removed macro %last for archive names
   * support full-text-search in database
