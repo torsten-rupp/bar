@@ -466,11 +466,6 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
       && ((restoreInfo->excludePatternList == NULL) || !PatternList_match(restoreInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
      )
   {
-    String_set(restoreInfo->statusInfo.entryName,fileName);
-    restoreInfo->statusInfo.entryDoneSize  = 0LL;
-    restoreInfo->statusInfo.entryTotalSize = fragmentSize;
-    updateStatusInfo(restoreInfo,TRUE);
-
     // get destination filename
     destinationFileName = getDestinationFileName(String_new(),
                                                  fileName,
@@ -479,10 +474,16 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
                                                 );
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
+    // update status info
+    String_set(restoreInfo->statusInfo.entryName,destinationFileName);
+    restoreInfo->statusInfo.entryDoneSize  = 0LL;
+    restoreInfo->statusInfo.entryTotalSize = fragmentSize;
+    updateStatusInfo(restoreInfo,TRUE);
+
     // check if file fragment already exists, file already exists
     if (!restoreInfo->jobOptions->noFragmentsCheckFlag)
     {
-      // get/create file fragment node
+      // check if fragment already exist -> get/create file fragment node
       fragmentNode = FragmentList_find(&restoreInfo->fragmentList,destinationFileName);
       if (fragmentNode != NULL)
       {
@@ -500,6 +501,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
       }
       else
       {
+        // check if file already exists
         if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
         {
           printInfo(1,"  Restore file '%s'...skipped (file exists)\n",String_cString(destinationFileName));
@@ -643,6 +645,8 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
           break;
         }
       }
+
+      // update status info
       restoreInfo->statusInfo.entryDoneSize += (uint64)n;
       updateStatusInfo(restoreInfo,FALSE);
 
@@ -863,11 +867,6 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
       && ((restoreInfo->excludePatternList == NULL) || !PatternList_match(restoreInfo->excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT))
      )
   {
-    String_set(restoreInfo->statusInfo.entryName,deviceName);
-    restoreInfo->statusInfo.entryDoneSize  = 0LL;
-    restoreInfo->statusInfo.entryTotalSize = blockCount;
-    updateStatusInfo(restoreInfo,TRUE);
-
     // get destination filename
     destinationDeviceName = getDestinationDeviceName(String_new(),
                                                      deviceName,
@@ -875,9 +874,16 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
                                                     );
     AUTOFREE_ADD(&autoFreeList,destinationDeviceName,{ String_delete(destinationDeviceName); });
 
+    // update status info
+    String_set(restoreInfo->statusInfo.entryName,destinationDeviceName);
+    restoreInfo->statusInfo.entryDoneSize  = 0LL;
+    restoreInfo->statusInfo.entryTotalSize = blockCount;
+    updateStatusInfo(restoreInfo,TRUE);
 
     if (!restoreInfo->jobOptions->noFragmentsCheckFlag)
     {
+      // check if image fragment already exists
+
       // get/create image fragment node
       fragmentNode = FragmentList_find(&restoreInfo->fragmentList,deviceName);
       if (fragmentNode != NULL)
@@ -1107,6 +1113,8 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
           break;
         }
       }
+
+      // update status info
       restoreInfo->statusInfo.entryDoneSize += bufferBlockCount*deviceInfo.blockSize;
       updateStatusInfo(restoreInfo,FALSE);
 
@@ -1271,11 +1279,6 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo      *restoreInfo,
       && ((restoreInfo->excludePatternList == NULL) || !PatternList_match(restoreInfo->excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
      )
   {
-    String_set(restoreInfo->statusInfo.entryName,directoryName);
-    restoreInfo->statusInfo.entryDoneSize  = 0LL;
-    restoreInfo->statusInfo.entryTotalSize = 0LL;
-    updateStatusInfo(restoreInfo,TRUE);
-
     // get destination filename
     destinationFileName = getDestinationFileName(String_new(),
                                                  directoryName,
@@ -1284,6 +1287,11 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo      *restoreInfo,
                                                 );
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
+    // update status info
+    String_set(restoreInfo->statusInfo.entryName,destinationFileName);
+    restoreInfo->statusInfo.entryDoneSize  = 0LL;
+    restoreInfo->statusInfo.entryTotalSize = 0LL;
+    updateStatusInfo(restoreInfo,TRUE);
 
     // check if directory already exists
     if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
@@ -1455,11 +1463,6 @@ LOCAL Errors restoreLinkEntry(RestoreInfo      *restoreInfo,
       && ((restoreInfo->excludePatternList == NULL) || !PatternList_match(restoreInfo->excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
      )
   {
-    String_set(restoreInfo->statusInfo.entryName,linkName);
-    restoreInfo->statusInfo.entryDoneSize  = 0LL;
-    restoreInfo->statusInfo.entryTotalSize = 0LL;
-    updateStatusInfo(restoreInfo,TRUE);
-
     // get destination filename
     destinationFileName = getDestinationFileName(String_new(),
                                                  linkName,
@@ -1467,6 +1470,12 @@ LOCAL Errors restoreLinkEntry(RestoreInfo      *restoreInfo,
                                                  restoreInfo->jobOptions->directoryStripCount
                                                 );
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
+
+    // update status info
+    String_set(restoreInfo->statusInfo.entryName,destinationFileName);
+    restoreInfo->statusInfo.entryDoneSize  = 0LL;
+    restoreInfo->statusInfo.entryTotalSize = 0LL;
+    updateStatusInfo(restoreInfo,TRUE);
 
     // create parent directories if not existing
     if (!restoreInfo->jobOptions->dryRunFlag)
@@ -1711,17 +1720,18 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
         && ((restoreInfo->excludePatternList == NULL) || !PatternList_match(restoreInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
        )
     {
-      String_set(restoreInfo->statusInfo.entryName,fileName);
-      restoreInfo->statusInfo.entryDoneSize  = 0LL;
-      restoreInfo->statusInfo.entryTotalSize = fragmentSize;
-      updateStatusInfo(restoreInfo,TRUE);
-
       // get destination filename
       getDestinationFileName(destinationFileName,
                              fileName,
                              restoreInfo->jobOptions->destination,
                              restoreInfo->jobOptions->directoryStripCount
                             );
+
+      // update status info
+      String_set(restoreInfo->statusInfo.entryName,destinationFileName);
+      restoreInfo->statusInfo.entryDoneSize  = 0LL;
+      restoreInfo->statusInfo.entryTotalSize = fragmentSize;
+      updateStatusInfo(restoreInfo,TRUE);
 
       printInfo(1,"  Restore hard link '%s'...",String_cString(destinationFileName));
 
@@ -1781,9 +1791,10 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
 
       if (!restoredDataFlag)
       {
+        // check if file fragment already eixsts, file already exists
         if (!restoreInfo->jobOptions->noFragmentsCheckFlag)
         {
-          // check if file fragment already eixsts, file already exists
+          // check if fragment already exist -> get/create file fragment node
           fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
           if (fragmentNode != NULL)
           {
@@ -1800,6 +1811,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
           }
           else
           {
+            // check if file already exists
             if (!restoreInfo->jobOptions->overwriteEntriesFlag && File_exists(destinationFileName))
             {
               printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
@@ -1889,6 +1901,8 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
               break;
             }
           }
+
+          // update status info
           restoreInfo->statusInfo.entryDoneSize += (uint64)n;
           updateStatusInfo(restoreInfo,FALSE);
 
@@ -2141,11 +2155,6 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo      *restoreInfo,
       && ((restoreInfo->excludePatternList == NULL) || !PatternList_match(restoreInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
      )
   {
-    String_set(restoreInfo->statusInfo.entryName,fileName);
-    restoreInfo->statusInfo.entryDoneSize  = 0LL;
-    restoreInfo->statusInfo.entryTotalSize = 0LL;
-    updateStatusInfo(restoreInfo,TRUE);
-
     // get destination filename
     destinationFileName = getDestinationFileName(String_new(),
                                                  fileName,
@@ -2153,6 +2162,12 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo      *restoreInfo,
                                                  restoreInfo->jobOptions->directoryStripCount
                                                 );
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
+
+    // update status info
+    String_set(restoreInfo->statusInfo.entryName,destinationFileName);
+    restoreInfo->statusInfo.entryDoneSize  = 0LL;
+    restoreInfo->statusInfo.entryTotalSize = 0LL;
+    updateStatusInfo(restoreInfo,TRUE);
 
     // create parent directories if not existing
     if (!restoreInfo->jobOptions->dryRunFlag)
@@ -2399,6 +2414,8 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
     return error;
   }
   AUTOFREE_ADD(&autoFreeList,&archiveInfo,{ Archive_close(&archiveInfo); });
+
+  // update status info
   restoreInfo->statusInfo.storageTotalSize = Archive_getSize(&archiveInfo);
   updateStatusInfo(restoreInfo,TRUE);
 
