@@ -68,6 +68,9 @@
 #define AUTHORIZATION_PENALITY_TIME         500     // delay processing by failCount^2*n [ms]
 #define MAX_AUTHORIZATION_HISTORY_KEEP_TIME 30000   // max. time to keep entries in authorization fail history [ms]
 #define MAX_AUTHORIZATION_FAIL_HISTORY      64      // max. length of history of authorization fail clients
+//#define MAX_ABORT_COMMAND_IDS               1024    // max. aborted command ids history
+//TODO
+#define MAX_ABORT_COMMAND_IDS               16    // max. aborted command ids history
 
 // sleep times [s]
 #define SLEEP_TIME_REMOTE_THREAD            ( 5*60)
@@ -350,7 +353,8 @@ typedef struct
   AuthorizationFailNode *authorizationFailNode;
   bool                  quitFlag;
 
-  Array                 abortedCommandIdArray;             // aborted command ids
+  RingBuffer            abortedCommandIds;                 // aborted command ids
+  uint                  abortedCommandIdStart;
 
   struct
   {
@@ -3893,8 +3897,8 @@ NULL,//                                                        scheduleTitle,
                                                          CALLBACK(restoreUpdateStatusInfo,jobNode),
                                                          CALLBACK(NULL,NULL),  // restoreHandleError
                                                          CALLBACK(getCryptPassword,jobNode),
-                                                         &pauseFlags.restore,
-                                                         &jobNode->requestedAbortFlag,
+                                                         CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
+                                                         CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
                                                          &logHandle
                                                         );
             StringList_done(&archiveFileNameList);
@@ -6156,34 +6160,42 @@ LOCAL bool isCommandAborted(ClientInfo *clientInfo, uint commandId)
 {
   SemaphoreLock semaphoreLock;
   bool          abortedFlag;
-  ulong         i;
-  uint          *data;
+  uint          *abortedCommandId;
 
   assert(clientInfo != NULL);
 
+  abortedFlag = FALSE;
+
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
-    abortedFlag = FALSE;
-
-    // check for quit
-    switch (clientInfo->type)
+    if (!abortedFlag)
     {
-      case CLIENT_TYPE_BATCH:
-        break;
-      case CLIENT_TYPE_NETWORK:
-        if (clientInfo->quitFlag) abortedFlag = TRUE;
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
+      // check for quit
+      switch (clientInfo->type)
+      {
+        case CLIENT_TYPE_BATCH:
+          break;
+        case CLIENT_TYPE_NETWORK:
+          if (clientInfo->quitFlag) abortedFlag = TRUE;
+          break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* NDEBUG */
+          break;
+      }
     }
 
-    // check if command aborted
-    ARRAY_ITERATEX(&clientInfo->abortedCommandIdArray,i,data,!abortedFlag)
+    if (!abortedFlag)
     {
-      abortedFlag = (commandId == (*data));
+      if (commandId >= clientInfo->abortedCommandIdStart)
+      {
+        // check if command aborted
+        RINGBUFFER_ITERATEX(&clientInfo->abortedCommandIds,abortedCommandId,!abortedFlag)
+        {
+          abortedFlag = (commandId == (*abortedCommandId));
+        }
+      }
     }
   }
 
@@ -7835,8 +7847,12 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
   // abort command
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    Array_append(&clientInfo->abortedCommandIdArray,&commandId);
-fprintf(stderr,"%s, %d: add abort command %d: %d\n",__FILE__,__LINE__,commandId,Array_length(&clientInfo->abortedCommandIdArray));
+    if (RingBuffer_isFull(&clientInfo->abortedCommandIds))
+    {
+      RingBuffer_discard(&clientInfo->abortedCommandIds,1,CALLBACK_NULL);
+      RingBuffer_first(&clientInfo->abortedCommandIds,&clientInfo->abortedCommandIdStart);
+    }
+    RingBuffer_put(&clientInfo->abortedCommandIds,&commandId,1);
   }
 
   // format result
@@ -14838,7 +14854,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   restoreCommandInfo.id         = id;
 //TODO
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+//asm("int3");
   error = Command_restore(&storageNameList,
                           &restoreEntryList,
                           NULL,  // excludePatternList
@@ -14847,9 +14863,8 @@ asm("int3");
                           CALLBACK(restoreUpdateStatusInfo,&restoreCommandInfo),
                           CALLBACK(restoreHandleError,&restoreCommandInfo),
                           CALLBACK(getPassword,&restoreCommandInfo),
-                          NULL,  // pauseFlag
-//TODO: callback
-NULL,//                          &restoreCommandInfo.clientInfo->abortFlag,
+                          CALLBACK_NULL,  // isPause callback
+                          CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return isCommandAborted(clientInfo,id); },NULL),
                           NULL  // logHandle
                          );
 //isCommandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
@@ -17657,9 +17672,6 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   #ifdef SERVER_DEBUG
     uint64 t0,t1;
   #endif /* SERVER_DEBUG */
-  SemaphoreLock semaphoreLock;
-  ulong         i;
-  const uint    *commandId;
 
   assert(clientInfo != NULL);
 
@@ -17686,21 +17698,6 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
         t1 = Misc_getTimestamp();
         fprintf(stderr,"DEBUG: time=%llums\n",(t1-t0)/US_PER_MS);
       #endif /* SERVER_DEBUG */
-
-fprintf(stderr,"%s, %d: done %d\n",__FILE__,__LINE__,commandMsg.id);
-      // remove command id if aborted
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-      {
-        ARRAY_ITERATE(&clientInfo->abortedCommandIdArray,i,commandId)
-        {
-          if (commandMsg.id == (*commandId))
-          {
-fprintf(stderr,"%s, %d: remove %d\n",__FILE__,__LINE__,i);
-            Array_remove(&clientInfo->abortedCommandIdArray,i);
-            break;
-          }
-        }
-      }
     }
     else
     {
@@ -17826,7 +17823,11 @@ LOCAL void initClient(ClientInfo *clientInfo)
   clientInfo->authorizationFailNode = NULL;
   clientInfo->quitFlag              = FALSE;
 
-  Array_init(&clientInfo->abortedCommandIdArray,sizeof(uint),64,CALLBACK_NULL,CALLBACK_NULL);
+  if (!RingBuffer_init(&clientInfo->abortedCommandIds,sizeof(uint),MAX_ABORT_COMMAND_IDS))
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  clientInfo->abortedCommandIdStart = 0;
 
   clientInfo->action.error          = ERROR_NONE;
   clientInfo->action.resultMap      = StringMap_new();
@@ -17975,7 +17976,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   EntryList_done(&clientInfo->includeEntryList);
   Semaphore_done(&clientInfo->action.lock);
   StringMap_delete(clientInfo->action.resultMap);
-  Array_done(&clientInfo->abortedCommandIdArray);
+  RingBuffer_done(&clientInfo->abortedCommandIds,CALLBACK_NULL);
   Semaphore_done(&clientInfo->lock);
 }
 

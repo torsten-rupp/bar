@@ -7890,8 +7890,8 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     CALLBACK(NULL,NULL),  // restoreStatusInfo callback
                                     CALLBACK(NULL,NULL),  // restoreError callback
                                     CALLBACK(getPasswordConsole,NULL),
-                                    NULL,  // pauseRestoreFlag
-                                    NULL,  // requestedAbortFlag,
+                                    CALLBACK(NULL,NULL),  // isPause callback
+                                    CALLBACK(NULL,NULL),  // isAborted callback
                                     NULL  // logHandle
                                    );
             break;
