@@ -63,8 +63,10 @@ typedef struct
   void                            *handleErrorUserData;          // user data for handle error call-back
   GetPasswordFunction             getPasswordFunction;           // get password call-back
   void                            *getPasswordUserData;          // user data for get password call-back
-  bool                            *pauseRestoreFlag;             // TRUE for pause restore
-  bool                            *requestedAbortFlag;           // TRUE to abort restore
+  IsPauseFunction                 isPauseFunction;               // check for pause call-back
+  void                            *isPauseUserData;              // user data for check for pause call-back
+  IsAbortedFunction               isAbortedFunction;             // check for aborted call-back
+  void                            *isAbortedUserData;            // user data for check for aborted call-back
   LogHandle                       *logHandle;                    // log handle
 
   FragmentList                    fragmentList;                  // entry fragments
@@ -157,8 +159,10 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
                            void                            *handleErrorUserData,
                            GetPasswordFunction             getPasswordFunction,
                            void                            *getPasswordUserData,
-                           bool                            *pauseRestoreFlag,
-                           bool                            *requestedAbortFlag,
+                           IsPauseFunction                 isPauseFunction,
+                           void                            *isPauseUserData,
+                           IsAbortedFunction               isAbortedFunction,
+                           void                            *isAbortedUserData,
                            LogHandle                       *logHandle
                           )
 {
@@ -170,8 +174,6 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
   restoreInfo->excludePatternList             = excludePatternList;
   restoreInfo->deltaSourceList                = deltaSourceList;
   restoreInfo->jobOptions                     = jobOptions;
-  restoreInfo->pauseRestoreFlag               = pauseRestoreFlag;
-  restoreInfo->requestedAbortFlag             = requestedAbortFlag;
   restoreInfo->logHandle                      = logHandle;
   FragmentList_init(&restoreInfo->fragmentList);
   restoreInfo->failError                      = ERROR_NONE;
@@ -181,6 +183,10 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
   restoreInfo->handleErrorUserData            = handleErrorUserData;
   restoreInfo->getPasswordFunction            = getPasswordFunction;
   restoreInfo->getPasswordUserData            = getPasswordUserData;
+  restoreInfo->isPauseFunction                = isPauseFunction;
+  restoreInfo->isPauseUserData                = isPauseUserData;
+  restoreInfo->isAbortedFunction              = isAbortedFunction;
+  restoreInfo->isAbortedUserData              = isAbortedUserData;
   initStatusInfo(&restoreInfo->statusInfo);
 
   // init locks
@@ -602,14 +608,14 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
     // write file data
     error  = ERROR_NONE;
     length = 0LL;
-    while (   ((restoreInfo->requestedAbortFlag == NULL) || !(*restoreInfo->requestedAbortFlag))
+    while (   ((restoreInfo->isAbortedFunction == NULL) || !restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
            && (length < fragmentSize)
           )
     {
       // pause
-      while ((restoreInfo->pauseRestoreFlag != NULL) && (*restoreInfo->pauseRestoreFlag))
+      while ((restoreInfo->isPauseFunction != NULL) && restoreInfo->isPauseFunction(restoreInfo->isPauseUserData))
       {
-        Misc_udelay(500L*1000L);
+        Misc_udelay(500L*US_PER_MS);
       }
 
       n = (ulong)MIN(fragmentSize-length,bufferSize);
@@ -649,7 +655,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    else if ((restoreInfo->requestedAbortFlag != NULL) && (*restoreInfo->requestedAbortFlag))
+    else if ((restoreInfo->isAbortedFunction != NULL) && restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
     {
       printInfo(1,"ABORTED\n");
       AutoFree_cleanup(&autoFreeList);
@@ -1039,12 +1045,12 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
     // write image data
     error = ERROR_NONE;
     block = 0LL;
-    while (   ((restoreInfo->requestedAbortFlag == NULL) || !(*restoreInfo->requestedAbortFlag))
+    while (   ((restoreInfo->isAbortedFunction == NULL) || !restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
            && (block < blockCount)
           )
     {
       // pause
-      while ((restoreInfo->pauseRestoreFlag != NULL) && (*restoreInfo->pauseRestoreFlag))
+      while ((restoreInfo->isPauseFunction != NULL) && restoreInfo->isPauseFunction(restoreInfo->isPauseUserData))
       {
         Misc_udelay(500L*1000L);
       }
@@ -1113,7 +1119,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    else if ((restoreInfo->requestedAbortFlag != NULL) && (*restoreInfo->requestedAbortFlag))
+    else if ((restoreInfo->isAbortedFunction != NULL) && restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
     {
       printInfo(1,"ABORTED\n");
       AutoFree_cleanup(&autoFreeList);
@@ -1848,14 +1854,14 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
         // write file data
         error  = ERROR_NONE;
         length = 0LL;
-        while (   ((restoreInfo->requestedAbortFlag == NULL) || !(*restoreInfo->requestedAbortFlag))
+        while (   ((restoreInfo->isAbortedFunction == NULL) || !restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
                && (length < fragmentSize)
               )
         {
           // pause
-          while ((restoreInfo->pauseRestoreFlag != NULL) && (*restoreInfo->pauseRestoreFlag))
+          while ((restoreInfo->isPauseFunction != NULL) && restoreInfo->isPauseFunction(restoreInfo->isPauseUserData))
           {
-            Misc_udelay(500L*1000L);
+            Misc_udelay(500L*US_PER_MS);
           }
 
           n = (ulong)MIN(fragmentSize-length,bufferSize);
@@ -1899,7 +1905,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-        else if ((restoreInfo->requestedAbortFlag != NULL) && (*restoreInfo->requestedAbortFlag))
+        else if ((restoreInfo->isAbortedFunction != NULL) && restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
         {
           printInfo(1,"ABORTED\n");
           if (!restoreInfo->jobOptions->dryRunFlag)
@@ -2400,14 +2406,14 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
   printInfo(0,"Restore from archive '%s':\n",Storage_getPrintableNameCString(storageSpecifier,archiveName));
   failError = ERROR_NONE;
   while (   ((failError == ERROR_NONE) || restoreInfo->jobOptions->noStopOnErrorFlag)
-         && ((restoreInfo->requestedAbortFlag == NULL) || !(*restoreInfo->requestedAbortFlag))
+         && ((restoreInfo->isAbortedFunction == NULL) || !restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
          && !Archive_eof(&archiveInfo,TRUE)
         )
   {
     // pause
-    while ((restoreInfo->pauseRestoreFlag != NULL) && (*restoreInfo->pauseRestoreFlag))
+    while ((restoreInfo->isPauseFunction != NULL) && restoreInfo->isPauseFunction(restoreInfo->isPauseUserData))
     {
-      Misc_udelay(500L*1000L);
+      Misc_udelay(500L*US_PER_MS);
     }
 
     // get next archive entry type
@@ -2535,8 +2541,10 @@ Errors Command_restore(const StringList                *storageNameList,
                        void                            *handleErrorUserData,
                        GetPasswordFunction             getPasswordFunction,
                        void                            *getPasswordUserData,
-                       bool                            *pauseRestoreFlag,
-                       bool                            *requestedAbortFlag,
+                       IsPauseFunction                 isPauseFunction,
+                       void                            *isPauseUserData,
+                       IsAbortedFunction               isAbortedFunction,
+                       void                            *isAbortedUserData,
                        LogHandle                       *logHandle
                       )
 {
@@ -2568,8 +2576,8 @@ Errors Command_restore(const StringList                *storageNameList,
                   CALLBACK(updateStatusInfoFunction,updateStatusInfoUserData),
                   CALLBACK(handleErrorFunction,handleErrorUserData),
                   CALLBACK(getPasswordFunction,getPasswordUserData),
-                  pauseRestoreFlag,
-                  requestedAbortFlag,
+                  CALLBACK(isPauseFunction,isPauseUserData),
+                  CALLBACK(isAbortedFunction,isAbortedUserData),
                   logHandle
                  );
 
@@ -2578,9 +2586,9 @@ Errors Command_restore(const StringList                *storageNameList,
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
     // pause
-    while ((pauseRestoreFlag != NULL) && (*pauseRestoreFlag))
+    while ((isPauseFunction != NULL) && isPauseFunction(isPauseUserData))
     {
-      Misc_udelay(500L*1000L);
+      Misc_udelay(500L*US_PER_MS);
     }
 
     // parse storage name
@@ -2659,7 +2667,7 @@ Errors Command_restore(const StringList                *storageNameList,
     }
 
     if (   abortFlag
-        || ((requestedAbortFlag != NULL) && (*requestedAbortFlag))
+        || ((isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData))
         || (restoreInfo.failError != ERROR_NONE)
        )
     {
@@ -2672,7 +2680,7 @@ Errors Command_restore(const StringList                *storageNameList,
      )
   {
     // check fragment lists, set file info also for incomplete entries
-    if ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
+    if ((isAbortedFunction == NULL) || !isAbortedFunction(isAbortedUserData))
     {
       FRAGMENTLIST_ITERATE(&restoreInfo.fragmentList,fragmentNode)
       {
@@ -2721,7 +2729,7 @@ Errors Command_restore(const StringList                *storageNameList,
   }
 
   // get error
-  if ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
+  if ((isAbortedFunction == NULL) || !isAbortedFunction(isAbortedUserData))
   {
     error = restoreInfo.failError;
   }

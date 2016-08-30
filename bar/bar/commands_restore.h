@@ -112,8 +112,10 @@ typedef Errors(*RestoreHandleErrorFunction)(Errors                  error,
 *                                     NULL)
 *          getPasswordUserData      - user data for get password call
 *                                     back
-*          pauseRestoreFlag         - pause restore flag (can be NULL)
-*          requestedAbortFlag       - request abort flag (can be NULL)
+*          isPauseFunction          - check for pause (can be NULL)
+*          isPauseUserData          - user data for check for pause
+*          isAbortedFunction        - check for aborted (can be NULL)
+*          isAbortedUserData        - user data for check for aborted
 *          logHandle                - log handle (can be NULL)
 * Output : -
 * Return : ERROR_NONE if all files restored, otherwise error code
@@ -131,8 +133,10 @@ Errors Command_restore(const StringList                *storageNameList,
                        void                            *handleErrorUserData,
                        GetPasswordFunction             getPasswordFunction,
                        void                            *getPasswordUserData,
-                       bool                            *pauseRestoreFlag,
-                       bool                            *requestedAbortFlag,
+                       IsPauseFunction                 isPauseFunction,
+                       void                            *isPauseUserData,
+                       IsAbortedFunction               isAbortedFunction,
+                       void                            *isAbortedUserData,
                        LogHandle                       *logHandle
                       );
 
