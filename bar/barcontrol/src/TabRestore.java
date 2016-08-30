@@ -9136,7 +9136,7 @@ System.exit(1);
 
                                                          busyDialog.updateText(0,"%s",storageName);
                                                          busyDialog.updateProgressBar(0,(storageTotalSize > 0) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
-                                                         busyDialog.updateText(1,"%s",new File(restoreToDirectory,entryName).getPath());
+                                                         busyDialog.updateText(1,"%s",entryName);
                                                          busyDialog.updateProgressBar(1,(entryTotalSize > 0) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
                                                        }
                                                      }
