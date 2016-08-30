@@ -88,6 +88,7 @@ typedef uint64 IndexStateSet;
 #define INDEX_STATE_MAX INDEX_STATE_ERROR
 
 #define INDEX_STATE_SET_NONE 0
+// Note: all except INDEX_STATE_DELETED
 #define INDEX_STATE_SET_ALL  (  SET_VALUE(INDEX_STATE_NONE) \
                               | SET_VALUE(INDEX_STATE_OK) \
                               | SET_VALUE(INDEX_STATE_CREATE) \
