@@ -679,6 +679,19 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
 
   if (verbose) { printf("Create indizes..."); fflush(stdout); }
 
+  // start transaction
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "BEGIN TRANSACTION",
+                              CALLBACK(NULL,NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+    exit(1);
+  }
+
   // delete all existing indizes
   do
   {
@@ -713,6 +726,8 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   while ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name));
   if (sqliteResult != SQLITE_OK)
   {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
     fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
     exit(1);
   }
@@ -725,6 +740,8 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                              );
   if (sqliteResult != SQLITE_OK)
   {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
     fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
     exit(1);
   }
@@ -737,6 +754,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                              );
   if (sqliteResult != SQLITE_OK)
   {
+    printf("FAIL\n");
     fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
     exit(1);
   }
@@ -747,6 +765,8 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                              );
   if (sqliteResult != SQLITE_OK)
   {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
     fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
     exit(1);
   }
@@ -759,6 +779,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                              );
   if (sqliteResult != SQLITE_OK)
   {
+    printf("FAIL\n");
     fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
     exit(1);
   }
@@ -769,6 +790,21 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                              );
   if (sqliteResult != SQLITE_OK)
   {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+    fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
+    exit(1);
+  }
+
+  // end transaction
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "COMMIT",
+                              CALLBACK(NULL,NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
     fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
     exit(1);
   }
@@ -828,6 +864,7 @@ LOCAL void createTriggers(sqlite3 *databaseHandle)
   while ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name));
   if (sqliteResult != SQLITE_OK)
   {
+    printf("FAIL\n");
     fprintf(stderr,"ERROR: create triggers fail: %s!\n",errorMessage);
     exit(1);
   }
@@ -840,6 +877,7 @@ LOCAL void createTriggers(sqlite3 *databaseHandle)
                              );
   if (sqliteResult != SQLITE_OK)
   {
+    printf("FAIL\n");
     fprintf(stderr,"ERROR: create triggers fail: %s!\n",errorMessage);
     exit(1);
   }
@@ -860,6 +898,18 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 {
   int        sqliteResult;
   const char *errorMessage;
+
+  // start transaction
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "BEGIN TRANSACTION",
+                              CALLBACK(NULL,NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    exit(1);
+  }
 
   // set entries offset/size
   if (verbose) { printf("Create aggregates for entries..."); fflush(stdout); }
@@ -910,6 +960,8 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                              );
   if (sqliteResult != SQLITE_OK)
   {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
@@ -963,6 +1015,60 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                              );
   if (sqliteResult != SQLITE_OK)
   {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    exit(1);
+  }
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "SELECT entryId,fragmentOffset,fragmentSize FROM hardlinkEntries",
+                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                              {
+                                uint64 entryId;
+                                uint64 fragmentOffset;
+                                uint64 fragmentSize;
+
+                                assert(count == 3);
+                                assert(values[0] != NULL);
+                                assert(values[1] != NULL);
+                                assert(values[2] != NULL);
+
+                                UNUSED_VARIABLE(userData);
+                                UNUSED_VARIABLE(columns);
+
+                                entryId        = (uint64)atoll(values[0]);
+                                fragmentOffset = (uint64)atoll(values[1]);
+                                fragmentSize   = (uint64)atoll(values[2]);
+//fprintf(stderr,"%s, %d: %llu %llu %llu\n",__FILE__,__LINE__,entryId,fragmentOffset,fragmentSize);
+
+                                // set offset/size
+                                sqliteResult = sqlExecute(databaseHandle,
+                                                          &errorMessage,
+                                                          "UPDATE entries \
+                                                           SET offset=%llu, \
+                                                               size=%llu \
+                                                           WHERE id=%llu \
+                                                          ",
+
+                                                          fragmentOffset,
+                                                          fragmentSize,
+                                                          entryId
+                                                         );
+                                if (sqliteResult != SQLITE_OK)
+                                {
+                                  if (verbose) printf("FAIL!\n");
+                                  fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                  return sqliteResult;
+                                }
+
+                                return SQLITE_OK;
+                              },NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
@@ -982,6 +1088,8 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                              );
   if (sqliteResult != SQLITE_OK)
   {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
@@ -1052,11 +1160,15 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                              );
   if (sqliteResult != SQLITE_OK)
   {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
+  if (verbose) printf("OK\n");
 
   // calculate total count/size
+  if (verbose) { printf("Create aggregates for storage..."); fflush(stdout); }
   sqliteResult = sqlite3_exec(databaseHandle,
                               "SELECT id FROM storage",
                               CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
@@ -1070,8 +1182,6 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                 UNUSED_VARIABLE(columns);
 
                                 storageId = (uint64)atoll(values[0]);
-
-                                if (verbose) { printf("Create aggregates for storage #%llu...",storageId); fflush(stdout); }
 
                                 // total count/size
                                 sqliteResult = sqlExecute(databaseHandle,
@@ -1195,10 +1305,23 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                   return sqliteResult;
                                 }
 
-                                if (verbose) printf("OK\n");
-
                                 return SQLITE_OK;
                               },NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    exit(1);
+  }
+  if (verbose) printf("OK\n");
+
+  // end transaction
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "COMMIT",
+                              CALLBACK(NULL,NULL),
                               (char**)&errorMessage
                              );
   if (sqliteResult != SQLITE_OK)
