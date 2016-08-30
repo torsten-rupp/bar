@@ -4579,7 +4579,6 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
         }
         if (resultError == ERROR_NONE)
         {
-fprintf(stderr,"%s, %d: de;ete sorage %s\n",__FILE__,__LINE__,String_cString(storageName));
           if (Storage_exists(&storageHandle,
                              NULL  // archiveName
                             )
@@ -4686,7 +4685,6 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   }
 
   // delete entity index
-fprintf(stderr,"%s, %d: delete index enty entityId=%llu\n",__FILE__,__LINE__,entityId);
   error = Index_deleteEntity(indexHandle,entityId);
   if (error != ERROR_NONE)
   {
