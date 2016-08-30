@@ -5575,6 +5575,8 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             setAllCheckedStorage(true);
+            Widgets.refreshVirtualTable(widgetStorageTable);
+            checkedIndexEvent.trigger();
           }
         });
 
@@ -5589,6 +5591,8 @@ Dprintf.dprintf("");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             setAllCheckedStorage(false);
+            Widgets.refreshVirtualTable(widgetStorageTable);
+            checkedIndexEvent.trigger();
           }
         });
 
@@ -5763,12 +5767,16 @@ Dprintf.dprintf("");
             if (!checkedIndexIdSet.isEmpty())
             {
               setAllCheckedStorage(false);
+              Widgets.refreshVirtualTable(widgetStorageTable);
+              checkedIndexEvent.trigger();
               button.setImage(IMAGE_MARK_ALL);
               button.setToolTipText(BARControl.tr("Mark all entries in list."));
             }
             else
             {
               setAllCheckedStorage(true);
+              Widgets.refreshVirtualTable(widgetStorageTable);
+              checkedIndexEvent.trigger();
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText(BARControl.tr("Unmark all entries in list."));
             }
@@ -6111,6 +6119,8 @@ Dprintf.dprintf("remove");
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             setAllCheckedEntries(true);
+            Widgets.refreshVirtualTable(widgetEntryTable);
+            checkedEntryEvent.trigger();
           }
         });
 
@@ -6126,6 +6136,8 @@ Dprintf.dprintf("remove");
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             setAllCheckedEntries(false);
+            Widgets.refreshVirtualTable(widgetEntryTable);
+            checkedEntryEvent.trigger();
           }
         });
 
@@ -6250,6 +6262,8 @@ Dprintf.dprintf("remove");
           {
             Button button = (Button)selectionEvent.widget;
             setAllCheckedEntries(checkedEntryIdSet.isEmpty());
+            Widgets.refreshVirtualTable(widgetEntryTable);
+            checkedEntryEvent.trigger();
             if (!checkedEntryIdSet.isEmpty())
             {
               button.setImage(IMAGE_UNMARK_ALL);
@@ -6403,14 +6417,16 @@ Dprintf.dprintf("remove");
       {
         widgetStorageFilter.setText("");
         widgetStorageStateFilter.select(0);
-        updateStorageTreeTableThread.triggerUpdate("",INDEX_STATE_SET_ALL,EntityStates.ANY);
         setAllCheckedStorage(false);
+        Widgets.refreshVirtualTable(widgetStorageTable);
+        updateStorageTreeTableThread.triggerUpdate("",INDEX_STATE_SET_ALL,EntityStates.ANY);
 
         widgetEntryFilter.setText("");
         Widgets.setSelectedOptionMenuItem(widgetEntryTypeFilter,EntryTypes.ANY);
         widgetEntryNewestOnly.setSelection(false);
-        updateEntryTableThread.triggerUpdate("","*",false);
         setAllCheckedEntries(false);
+        Widgets.refreshVirtualTable(widgetEntryTable);
+        updateEntryTableThread.triggerUpdate("","*",false);
       }
     });
 
@@ -6529,20 +6545,17 @@ Dprintf.dprintf("remove");
           }
         }
         setStorageList(checkedIndexIdSet);
-
-        // trigger update storage
-        checkedIndexEvent.trigger();
         break;
       case 1:
         // table view
-        final int     totalEntryCount[] = new int[]{0};
-        final boolean doit[]            = new boolean[]{true};
+        final int     storageCount[] = new int[]{0};
+        final boolean doit[]         = new boolean[]{false};
 
         if (checked)
         {
-          if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO name=%'S indexStateSet=%s",
-                                                           updateStorageTreeTableThread.getStorageName(),
-                                                           updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|")
+          if (BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO indexStateSet=%s indexModeSet=* name=%'S ",
+                                                           updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
+                                                           updateStorageTreeTableThread.getStorageName()
                                                           ),
                                        1,  // debugLevel
                                        errorMessage,
@@ -6550,8 +6563,8 @@ Dprintf.dprintf("remove");
                                       ) == Errors.NONE
              )
           {
-            totalEntryCount[0] = valueMap.getInt("totalEntryCount");
-            if (totalEntryCount[0] > MAX_CONFIRM_ENTRIES)
+            storageCount[0] = valueMap.getInt("storageCount");
+            if (storageCount[0] > MAX_CONFIRM_ENTRIES)
             {
               display.syncExec(new Runnable()
               {
@@ -6560,13 +6573,22 @@ Dprintf.dprintf("remove");
                   doit[0] = Dialogs.confirm(shell,
                                             Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
                                             BARControl.tr("There are {0} entries. Really mark all entries?",
-                                                          totalEntryCount[0]
-                                                         )
+                                                          storageCount[0]
+                                                         ),
+                                            true
                                            );
                 }
               });
             }
+            else
+            {
+              doit[0] = true;
+            }
           }
+        }
+        else
+        {
+          doit[0] = true;
         }
 
         if (checked)
@@ -6577,7 +6599,7 @@ Dprintf.dprintf("remove");
             checkedIndexIdSet.clear();
             final int n[] = new int[]{0};
             final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE);
-            busyDialog.setMaximum(totalEntryCount[0]);
+            busyDialog.setMaximum(storageCount[0]);
             int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s name=%'S",
                                                                      "*",
                                                                      updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
@@ -6608,12 +6630,6 @@ Dprintf.dprintf("remove");
               return;
             }
             setStorageList(checkedIndexIdSet);
-
-            // refresh table
-            Widgets.refreshVirtualTable(widgetStorageTable);
-
-            // trigger update storage
-            checkedIndexEvent.trigger();
           }
         }
         else
@@ -6621,12 +6637,6 @@ Dprintf.dprintf("remove");
           // clear all checked ids
           checkedIndexIdSet.clear();
           setStorageList(checkedIndexIdSet);
-
-          // refresh table
-          Widgets.refreshVirtualTable(widgetStorageTable);
-
-          // trigger update storage
-          checkedIndexEvent.trigger();
         }
         break;
     }
@@ -7642,7 +7652,7 @@ Dprintf.dprintf("remove");
       // get number of indizes with error state
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
-      if (BARServer.executeCommand("INDEX_STORAGES_INFO indexStateSet=ERROR",
+      if (BARServer.executeCommand("INDEX_STORAGES_INFO indexStateSet=ERROR indexModeSet=*",
                                    1,  // debugLevel
                                    errorMessage,
                                    valueMap
@@ -8182,7 +8192,7 @@ Dprintf.dprintf("remove");
 
     // confirm check if there are many entries
     final int     totalEntryCount[] = new int[]{0};
-    final boolean doit[]            = new boolean[]{true};
+    final boolean doit[]            = new boolean[]{false};
     if (checked)
     {
       if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO name=%'S indexType=%s newestOnly=%y",
@@ -8207,12 +8217,21 @@ Dprintf.dprintf("remove");
                                         Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
                                         BARControl.tr("There are {0} entries. Really mark all entries?",
                                                       totalEntryCount[0]
-                                                     )
+                                                     ),
+                                        true
                                        );
             }
           });
         }
+        else
+        {
+          doit[0] = true;
+        }
       }
+    }
+    else
+    {
+      doit[0] = true;
     }
 
     // check/uncheck all entries
@@ -8258,24 +8277,12 @@ Dprintf.dprintf("remove");
           return;
         }
         setEntryList(checkedEntryIdSet);
-
-        // refresh table
-        Widgets.refreshVirtualTable(widgetEntryTable);
-
-        // trigger update entries
-        checkedEntryEvent.trigger();
       }
     }
     else
     {
       checkedEntryIdSet.clear();
       setEntryList(checkedEntryIdSet);
-
-      // refresh table
-      Widgets.refreshVirtualTable(widgetEntryTable);
-
-      // trigger update entries
-      checkedEntryEvent.trigger();
     }
   }
 
