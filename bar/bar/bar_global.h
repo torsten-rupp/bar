@@ -571,24 +571,24 @@ typedef Errors(*GetPasswordFunction)(String        loginName,
 /***********************************************************************\
 * Name   : IsPauseFunction
 * Purpose: call-back to check for pause
-* Input  : -
+* Input  : userData - user data
 * Output : -
 * Return : TRUE iff pause
 * Notes  : -
 \***********************************************************************/
 
-typedef bool(*IsPauseFunction)(void);
+typedef bool(*IsPauseFunction)(void *userData);
 
 /***********************************************************************\
-* Name   : IsAbortFunction
-* Purpose: call-back to check for abort requested
-* Input  : -
+* Name   : IsAbortedFunction
+* Purpose: call-back to check for aborted
+* Input  : userData - user data
 * Output : -
 * Return : TRUE iff abort requested
 * Notes  : -
 \***********************************************************************/
 
-typedef bool(*IsAbortFunction)(void);
+typedef bool(*IsAbortedFunction)(void *userData);
 
 /***************************** Variables *******************************/
 
