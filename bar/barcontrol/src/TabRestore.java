@@ -9126,8 +9126,6 @@ System.exit(1);
                                                        }
                                                        else
                                                        {
-//TODO
-Dprintf.dprintf("valueMap=%s",valueMap);
                                                          RestoreStates state            = valueMap.getEnum  ("state",RestoreStates.class);
                                                          String        storageName      = valueMap.getString("storageName");
                                                          long          storageDoneSize  = valueMap.getLong  ("storageDoneSize");
