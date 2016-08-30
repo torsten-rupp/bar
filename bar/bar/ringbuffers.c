@@ -691,6 +691,40 @@ void *RingBuffer_get(RingBuffer *ringBuffer, void *data, ulong n)
   return data;
 }
 
+void *RingBuffer_first(RingBuffer *ringBuffer, void *data)
+{
+  ulong n0,n1;
+
+  RINGBUFFER_CHECK_VALID(ringBuffer);
+
+  if (   (ringBuffer != NULL)
+      && (RingBuffer_getAvailable(ringBuffer) > 0L)
+     )
+  {
+    assert(ringBuffer->data != NULL);
+
+    if (data != NULL)
+    {
+      // copy data
+      memcpy((byte*)data,
+             ringBuffer->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize,
+             (ulong)ringBuffer->elementSize
+            );
+    }
+    else
+    {
+      // get pointer to data
+      data = ringBuffer->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize;
+    }
+  }
+  else
+  {
+    data = NULL;
+  }
+
+  return data;
+}
+
 bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBuffer, ulong n)
 {
   ulong n0,n1;

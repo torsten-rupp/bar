@@ -29,7 +29,7 @@ typedef struct
 {
   uint  elementSize;                 // size of element
   ulong size;                        // size of ring buffer (max. number of elements+1)
-  ulong length;                      // number of elements
+  ulong length;                      // number of elements currently in ringbuffer
   ulong nextIn;                      // index of next in-element
   ulong nextOut;                     // index of next out-element
   byte *data;                        // ring buffer data
@@ -123,9 +123,9 @@ typedef void(*RingBufferElementFreeFunction)(void *data, void *userData);
 \***********************************************************************/
 
 #define RINGBUFFER_ITERATE(ringBuffer,variable) \
-  for ((variable) =  (typeof(variable))((ringBuffer)->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize); \
-       (variable) != (typeof(variable))((ringBuffer)->data+(ulong)ringBuffer->nextIn *(ulong)ringBuffer->elementSize); \
-       (variable) =  (typeof(variable))((ringBuffer)->data+(((((byte*)variable)-(ringBuffer)->data)+(ulong)ringBuffer->elementSize)%((ulong)ringBuffer->elementSize*(ulong)ringBuffer->size))) \
+  for ((variable) =  (typeof(variable))((ringBuffer)->data+(ulong)(ringBuffer)->nextOut*(ulong)(ringBuffer)->elementSize); \
+       (variable) != (typeof(variable))((ringBuffer)->data+(ulong)(ringBuffer)->nextIn *(ulong)(ringBuffer)->elementSize); \
+       (variable) =  (typeof(variable))((ringBuffer)->data+(((((byte*)variable)-(ringBuffer)->data)+(ulong)(ringBuffer)->elementSize)%((ulong)(ringBuffer)->elementSize*(ulong)(ringBuffer)->size))) \
       )
 
 /***********************************************************************\
@@ -145,9 +145,9 @@ typedef void(*RingBufferElementFreeFunction)(void *data, void *userData);
 \***********************************************************************/
 
 #define RINGBUFFER_ITERATEX(ringBuffer,variable,condition) \
-  for ((variable) =  (typeof(variable))((ringBuffer)->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize); \
-       ((variable) != (typeof(variable))((ringBuffer)->data+(ulong)ringBuffer->nextIn *(ulong)ringBuffer->elementSize)) && (condition); \
-       (variable) =  (typeof(variable))((ringBuffer)->data+(((((byte*)variable)-(ringBuffer)->data)+(ulong)ringBuffer->elementSize)%((ulong)ringBuffer->elementSize*(ulong)ringBuffer->size))) \
+  for ((variable) =  (typeof(variable))((ringBuffer)->data+(ulong)(ringBuffer)->nextOut*(ulong)(ringBuffer)->elementSize); \
+       ((variable) != (typeof(variable))((ringBuffer)->data+(ulong)(ringBuffer)->nextIn *(ulong)(ringBuffer)->elementSize)) && (condition); \
+       (variable) =  (typeof(variable))((ringBuffer)->data+(((((byte*)variable)-(ringBuffer)->data)+(ulong)(ringBuffer)->elementSize)%((ulong)(ringBuffer)->elementSize*(ulong)(ringBuffer)->size))) \
       )
 
 // check if ring buffer is valid (debug only)
@@ -419,17 +419,30 @@ bool RingBuffer_put(RingBuffer *ringBuffer, const void *data, ulong n);
 
 /***********************************************************************\
 * Name   : RingBuffer_get
-* Purpose: get elements from ring buffer
+* Purpose: get and remove elements from ring buffer
 * Input  : ringBuffer - ring buffer
 *          data       - variable for data (can be NULL)
 *          n          - number of elements
 * Output : data - data
-* Return : -
+* Return : data
 * Notes  : if no data variable is supplied (NULL) a pointer to the
 *          data element in the ring buffer is returned
 \***********************************************************************/
 
 void *RingBuffer_get(RingBuffer *ringBuffer, void *data, ulong n);
+
+/***********************************************************************\
+* Name   : RingBuffer_first
+* Purpose: get first elements in ring buffer (no remove)
+* Input  : ringBuffer - ring buffer
+*          data       - variable for data (can be NULL)
+* Output : data - data
+* Return : data
+* Notes  : if no data variable is supplied (NULL) a pointer to the
+*          data element in the ring buffer is returned
+\***********************************************************************/
+
+void *RingBuffer_first(RingBuffer *ringBuffer, void *data);
 
 /***********************************************************************\
 * Name   : RingBuffer_move
