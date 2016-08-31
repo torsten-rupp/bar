@@ -530,8 +530,9 @@ return ERROR_NONE;
                                CALLBACK(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "UPDATE entriesNewest \
-                                 SET entryId=%lld,size=%llu,timeLastChanged=%llu \
-                                 WHERE id=%llu",
+                                SET entryId=%lld,size=%llu,timeLastChanged=%llu \
+                                WHERE id=%llu \
+                               ",
                                entryId,
                                size,
                                timeLastChanged,
@@ -2750,6 +2751,102 @@ LOCAL void appendOrdering(String orderString, bool condition, const char *column
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : updateDirectoryContentAggregates
+* Purpose: update directory content count/size
+* Input  : indexHandle - index handle
+*          storageId   - index storage id
+*          entryId     - index entry id
+*          fileName    - file name
+*          size        - size
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
+                                              IndexId     storageId,
+                                              IndexId     entryId,
+                                              ConstString fileName,
+                                              uint64      size
+                                             )
+{
+  DatabaseId databaseId;
+  String     path;
+  Errors     error;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(entryId) == INDEX_TYPE_ENTRY);
+  assert(fileName != NULL);
+
+  // get newest id
+  error = Database_getId(&indexHandle->databaseHandle,
+                         &databaseId,
+                         "entriesNewest",
+                         "WHERE entryId=%llu",
+                         Index_getDatabaseId(entryId)
+                        );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  path = File_getFilePathName(String_new(),fileName);
+
+  error = ERROR_NONE;
+  while ((error == ERROR_NONE) && !String_isEmpty(path))
+  {
+//fprintf(stderr,"%s, %d: path=%s %llu\n",__FILE__,__LINE__,String_cString(path),size);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "UPDATE directoryEntries \
+                              SET totalEntryCount=totalEntryCount+1, \
+                                  totalEntrySize =totalEntrySize +%llu \
+                              WHERE storageId=%llu \
+                                AND name=%'S \
+                             ",
+                             size,
+                             Index_getDatabaseId(storageId),
+                             path
+                            );
+    if (error != ERROR_NONE)
+    {
+      break;
+    }
+
+    if (databaseId != DATABASE_ID_NONE)
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "UPDATE directoryEntries \
+                                SET totalEntryCountNewest=totalEntryCountNewest+1, \
+                                    totalEntrySizeNewest =totalEntrySizeNewest +%llu \
+                                WHERE storageId=%llu \
+                                  AND name=%'S \
+                               ",
+                               size,
+                               Index_getDatabaseId(storageId),
+                               path
+                              );
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+    }
+
+    File_getFilePathName(path,path);
+  }
+
+  String_delete(path);
+
+  return ERROR_NONE;
+}
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
 * Name   : assignStorageToStorage
 * Purpose: assign storage entries to other storage
 * Input  : indexHandle - index handle
@@ -4399,7 +4496,7 @@ Errors Index_setState(IndexHandle *indexHandle,
                                  CALLBACK(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  "UPDATE storage \
-                                  SET state=%d, \
+                                  SET state       =%d, \
                                       errorMessage=NULL \
                                   WHERE entityId=%lld; \
                                  ",
@@ -4452,7 +4549,7 @@ Errors Index_setState(IndexHandle *indexHandle,
                                  CALLBACK(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  "UPDATE storage \
-                                  SET state=%d, \
+                                  SET state       =%d, \
                                       errorMessage=NULL \
                                   WHERE id=%lld; \
                                  ",
@@ -5947,17 +6044,17 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "UPDATE storage \
-                              SET totalEntryCount=%llu, \
-                                  totalEntrySize=%llu, \
-                                  totalFileCount=%llu, \
-                                  totalFileSize=%llu, \
-                                  totalImageCount=%llu, \
-                                  totalImageSize=%llu, \
+                              SET totalEntryCount    =%llu, \
+                                  totalEntrySize     =%llu, \
+                                  totalFileCount     =%llu, \
+                                  totalFileSize      =%llu, \
+                                  totalImageCount    =%llu, \
+                                  totalImageSize     =%llu, \
                                   totalDirectoryCount=%llu, \
-                                  totalLinkCount=%llu, \
-                                  totalHardlinkCount=%llu, \
-                                  totalHardlinkSize=%llu, \
-                                  totalSpecialCount=%llu \
+                                  totalLinkCount     =%llu, \
+                                  totalHardlinkCount =%llu, \
+                                  totalHardlinkSize  =%llu, \
+                                  totalSpecialCount  =%llu \
                               WHERE id=%lld; \
                              ",
                              totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
@@ -6130,17 +6227,17 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "UPDATE storage \
-                              SET totalEntryCountNewest=%llu, \
-                                  totalEntrySizeNewest=%llu, \
-                                  totalFileCountNewest=%llu, \
-                                  totalFileSizeNewest=%llu, \
-                                  totalImageCountNewest=%llu, \
-                                  totalImageSizeNewest=%llu, \
+                              SET totalEntryCountNewest    =%llu, \
+                                  totalEntrySizeNewest     =%llu, \
+                                  totalFileCountNewest     =%llu, \
+                                  totalFileSizeNewest      =%llu, \
+                                  totalImageCountNewest    =%llu, \
+                                  totalImageSizeNewest     =%llu, \
                                   totalDirectoryCountNewest=%llu, \
-                                  totalLinkCountNewest=%llu, \
-                                  totalHardlinkCountNewest=%llu, \
-                                  totalHardlinkSizeNewest=%llu, \
-                                  totalSpecialCountNewest=%llu \
+                                  totalLinkCountNewest     =%llu, \
+                                  totalHardlinkCountNewest =%llu, \
+                                  totalHardlinkSizeNewest  =%llu, \
+                                  totalSpecialCountNewest  =%llu \
                               WHERE id=%lld; \
                              ",
                              totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
@@ -9377,8 +9474,8 @@ Errors Index_addFile(IndexHandle *indexHandle,
                      uint64      fragmentSize
                     )
 {
-  Errors     error;
-  DatabaseId entryId;
+  Errors  error;
+  IndexId entryId;
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -9393,7 +9490,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    // add file entry
+    // add entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -9436,8 +9533,9 @@ Errors Index_addFile(IndexHandle *indexHandle,
     {
       return error;
     }
-    entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+    entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
 
+    // add file entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -9459,11 +9557,23 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                 ); \
                              ",
                              Index_getDatabaseId(storageId),
-                             entryId,
+                             Index_getDatabaseId(entryId),
                              size,
                              fragmentOffset,
                              fragmentSize
                             );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // update directory content count/size aggregates
+    error = updateDirectoryContentAggregates(indexHandle,
+                                             storageId,
+                                             entryId,
+                                             fileName,
+                                             size
+                                            );
     if (error != ERROR_NONE)
     {
       return error;
@@ -9511,7 +9621,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    // add image entry
+    // add entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -9557,6 +9667,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
     }
     entryId = Database_getLastRowId(&indexHandle->databaseHandle);
 
+    // add image entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -9614,8 +9725,8 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                           uint32      permission
                          )
 {
-  Errors     error;
-  DatabaseId entryId;
+  Errors  error;
+  IndexId entryId;
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -9630,7 +9741,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    // add directory entry
+    // add entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -9673,8 +9784,9 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
     {
       return error;
     }
-    entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+    entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
 
+    // add directory entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -9692,9 +9804,21 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                 ); \
                              ",
                              Index_getDatabaseId(storageId),
-                             entryId,
+                             Index_getDatabaseId(entryId),
                              directoryName
                             );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // update directory content count/size aggregates
+    error = updateDirectoryContentAggregates(indexHandle,
+                                             storageId,
+                                             entryId,
+                                             directoryName,
+                                             0LL
+                                            );
     if (error != ERROR_NONE)
     {
       return error;
@@ -9726,8 +9850,8 @@ Errors Index_addLink(IndexHandle *indexHandle,
                      uint32      permission
                     )
 {
-  Errors     error;
-  DatabaseId entryId;
+  Errors  error;
+  IndexId entryId;
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -9745,7 +9869,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    // add link entry
+    // add entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -9788,8 +9912,9 @@ Errors Index_addLink(IndexHandle *indexHandle,
     {
       return error;
     }
-    entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+    entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
 
+    // add link entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -9807,9 +9932,21 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                 ); \
                              ",
                              Index_getDatabaseId(storageId),
-                             entryId,
+                             Index_getDatabaseId(entryId),
                              destinationName
                             );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // update directory content count/size aggregates
+    error = updateDirectoryContentAggregates(indexHandle,
+                                             storageId,
+                                             entryId,
+                                             linkName,
+                                             0LL
+                                            );
     if (error != ERROR_NONE)
     {
       return error;
@@ -9835,8 +9972,8 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                          uint64      fragmentSize
                         )
 {
-  Errors     error;
-  DatabaseId entryId;
+  Errors  error;
+  IndexId entryId;
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -9851,7 +9988,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    // add hard link entry
+    // add entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -9894,8 +10031,9 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
     {
       return error;
     }
-    entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+    entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
 
+    // add hard link entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -9917,11 +10055,23 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                 ); \
                              ",
                              Index_getDatabaseId(storageId),
-                             entryId,
+                             Index_getDatabaseId(entryId),
                              size,
                              fragmentOffset,
                              fragmentSize
                             );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // update directory content count/size aggregates
+    error = updateDirectoryContentAggregates(indexHandle,
+                                             storageId,
+                                             entryId,
+                                             fileName,
+                                             size
+                                            );
     if (error != ERROR_NONE)
     {
       return error;
@@ -9957,8 +10107,8 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                         uint32           minor
                        )
 {
-  Errors     error;
-  DatabaseId entryId;
+  Errors  error;
+  IndexId entryId;
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -9973,7 +10123,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    // add special entry
+    // add entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -10016,8 +10166,9 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
     {
       return error;
     }
-    entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+    entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
 
+    // add special entry
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -10039,11 +10190,23 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                 ); \
                              ",
                              Index_getDatabaseId(storageId),
-                             entryId,
+                             Index_getDatabaseId(entryId),
                              specialType,
                              major,
                              minor
                             );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // update directory content count/size aggregates
+    error = updateDirectoryContentAggregates(indexHandle,
+                                             storageId,
+                                             entryId,
+                                             name,
+                                             0LL
+                                            );
     if (error != ERROR_NONE)
     {
       return error;
