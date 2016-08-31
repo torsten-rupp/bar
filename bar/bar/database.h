@@ -704,7 +704,7 @@ bool Database_exists(DatabaseHandle *databaseHandle,
 *          additional     - additional string (e. g. WHERE...)
 *                           special functions:
 *                             REGEXP(pattern,case-flag,text)
-* Output : value - database id
+* Output : value - database id or DATABASE_ID_NONE
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
