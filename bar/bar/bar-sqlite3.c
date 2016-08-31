@@ -662,6 +662,99 @@ LOCAL int sqlExecute(sqlite3    *databaseHandle,
 }
 
 /***********************************************************************\
+* Name   : printPercentage
+* Purpose: print percentage value
+* Input  : n     - value
+*          count - max. value
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printPercentage(ulong n, ulong count)
+{
+  uint percentage;
+
+  percentage = (count > 0) ? (uint)(((double)n*100.0)/(double)count) : 0;
+  if (percentage > 100) percentage = 100;
+
+  printf("%3u%%\b\b\b\b",percentage); fflush(stdout);
+}
+
+/***********************************************************************\
+* Name   : createTriggers
+* Purpose: create triggers
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void createTriggers(sqlite3 *databaseHandle)
+{
+  char       command[1024];
+  char       name[1024];
+  int        sqliteResult;
+  const char *errorMessage;
+
+  if (verbose) { printf("Create triggers..."); fflush(stdout); }
+
+  // delete all existing triggers
+  do
+  {
+    stringClear(name);
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'trigger%'",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 1);
+                                  assert(values[0] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  stringCopy(name,values[0],sizeof(name));
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+
+    if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
+    {
+      stringFormat(command,sizeof(command),"DROP TRIGGER %s",name);
+      sqliteResult = sqlite3_exec(databaseHandle,
+                                  command,
+                                  CALLBACK(NULL,NULL),
+                                  (char**)&errorMessage
+                                 );
+    }
+  }
+  while ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name));
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    fprintf(stderr,"ERROR: create triggers fail: %s!\n",errorMessage);
+    exit(1);
+  }
+
+  // create new triggeres
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              INDEX_TRIGGERS_DEFINITION,
+                              CALLBACK(NULL,NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    fprintf(stderr,"ERROR: create triggers fail: %s!\n",errorMessage);
+    exit(1);
+  }
+
+  if (verbose) printf("OK  \n");
+}
+
+/***********************************************************************\
 * Name   : createIndizes
 * Purpose: create indizes
 * Input  : databaseHandle - database handle
@@ -806,99 +899,6 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   {
     printf("FAIL\n");
     fprintf(stderr,"ERROR: create indizes fail: %s!\n",errorMessage);
-    exit(1);
-  }
-
-  if (verbose) printf("OK  \n");
-}
-
-/***********************************************************************\
-* Name   : printPercentage
-* Purpose: print percentage value
-* Input  : n     - value
-*          count - max. value
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void printPercentage(ulong n, ulong count)
-{
-  uint percentage;
-
-  percentage = (count > 0) ? (uint)(((double)n*100.0)/(double)count) : 0;
-  if (percentage > 100) percentage = 100;
-
-  printf("%3u%%\b\b\b\b",percentage); fflush(stdout);
-}
-
-/***********************************************************************\
-* Name   : createTriggers
-* Purpose: create triggers
-* Input  : databaseHandle - database handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void createTriggers(sqlite3 *databaseHandle)
-{
-  char       command[1024];
-  char       name[1024];
-  int        sqliteResult;
-  const char *errorMessage;
-
-  if (verbose) { printf("Create triggers..."); fflush(stdout); }
-
-  // delete all existing triggers
-  do
-  {
-    stringClear(name);
-    sqliteResult = sqlite3_exec(databaseHandle,
-                                "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'trigger%'",
-                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
-                                {
-                                  assert(count == 1);
-                                  assert(values[0] != NULL);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(columns);
-
-                                  stringCopy(name,values[0],sizeof(name));
-
-                                  return SQLITE_OK;
-                                },NULL),
-                                (char**)&errorMessage
-                               );
-
-    if ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name))
-    {
-      stringFormat(command,sizeof(command),"DROP TRIGGER %s",name);
-      sqliteResult = sqlite3_exec(databaseHandle,
-                                  command,
-                                  CALLBACK(NULL,NULL),
-                                  (char**)&errorMessage
-                                 );
-    }
-  }
-  while ((sqliteResult == SQLITE_OK) && !stringIsEmpty(name));
-  if (sqliteResult != SQLITE_OK)
-  {
-    printf("FAIL\n");
-    fprintf(stderr,"ERROR: create triggers fail: %s!\n",errorMessage);
-    exit(1);
-  }
-
-  // create new triggeres
-  sqliteResult = sqlite3_exec(databaseHandle,
-                              INDEX_TRIGGERS_DEFINITION,
-                              CALLBACK(NULL,NULL),
-                              (char**)&errorMessage
-                             );
-  if (sqliteResult != SQLITE_OK)
-  {
-    printf("FAIL\n");
-    fprintf(stderr,"ERROR: create triggers fail: %s!\n",errorMessage);
     exit(1);
   }
 
@@ -1856,13 +1856,13 @@ int main(int argc, const char *argv[])
     {
       create = TRUE;
     }
-    else if (stringEquals(argv[i],"--create-indizes"))
-    {
-      createIndizesFlag = TRUE;
-    }
     else if (stringEquals(argv[i],"--create-triggers"))
     {
       createTriggersFlag = TRUE;
+    }
+    else if (stringEquals(argv[i],"--create-indizes"))
+    {
+      createIndizesFlag = TRUE;
     }
     else if (stringEquals(argv[i],"--create-aggregates"))
     {
@@ -2055,16 +2055,16 @@ int main(int argc, const char *argv[])
     if (verbose) printf("OK  \n");
   }
 
-  // recreate indizes
-  if (createIndizesFlag)
-  {
-    createIndizes(databaseHandle);
-  }
-
   // recreate triggeres
   if (createTriggersFlag)
   {
     createTriggers(databaseHandle);
+  }
+
+  // recreate indizes
+  if (createIndizesFlag)
+  {
+    createIndizes(databaseHandle);
   }
 
   // calculate aggregate data
