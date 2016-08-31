@@ -798,7 +798,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
 
   // end transaction
   sqliteResult = sqlite3_exec(databaseHandle,
-                              "COMMIT",
+                              "END TRANSACTION",
                               CALLBACK(NULL,NULL),
                               (char**)&errorMessage
                              );
@@ -809,7 +809,27 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
     exit(1);
   }
 
-  if (verbose) printf("OK\n");
+  if (verbose) printf("OK  \n");
+}
+
+/***********************************************************************\
+* Name   : printPercentage
+* Purpose: print percentage value
+* Input  : n     - value
+*          count - max. value
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printPercentage(ulong n, ulong count)
+{
+  uint percentage;
+
+  percentage = (count > 0) ? (uint)(((double)n*100.0)/(double)count) : 0;
+  if (percentage > 100) percentage = 100;
+
+  printf("%3u%%\b\b\b\b",percentage); fflush(stdout);
 }
 
 /***********************************************************************\
@@ -882,7 +902,7 @@ LOCAL void createTriggers(sqlite3 *databaseHandle)
     exit(1);
   }
 
-  if (verbose) printf("OK\n");
+  if (verbose) printf("OK  \n");
 }
 
 /***********************************************************************\
@@ -898,6 +918,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 {
   int        sqliteResult;
   const char *errorMessage;
+  ulong      n,totalCount;
 
   // start transaction
   sqliteResult = sqlite3_exec(databaseHandle,
@@ -913,6 +934,35 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 
   // set entries offset/size
   if (verbose) { printf("Create aggregates for entries..."); fflush(stdout); }
+
+  totalCount = 0L;
+  n          = 0L;
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "SELECT  (SELECT COUNT(id) FROM fileEntries    ) \
+                                      +(SELECT COUNT(id) FROM imageEntries   ) \
+                                      +(SELECT COUNT(id) FROM hardlinkEntries) \
+                                      +(SELECT COUNT(id) FROM entries        ) \
+                              ",
+                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                              {
+                                assert(count == 1);
+                                assert(values[0] != NULL);
+
+                                UNUSED_VARIABLE(userData);
+                                UNUSED_VARIABLE(columns);
+
+                                totalCount = (ulong)atol(values[0]);
+
+                                return SQLITE_OK;
+                              },NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    exit(1);
+  }
+
   sqliteResult = sqlite3_exec(databaseHandle,
                               "SELECT entryId,fragmentOffset,fragmentSize FROM fileEntries",
                               CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
@@ -939,7 +989,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                           &errorMessage,
                                                           "UPDATE entries \
                                                            SET offset=%llu, \
-                                                               size=%llu \
+                                                               size  =%llu \
                                                            WHERE id=%llu \
                                                           ",
                                                           fragmentOffset,
@@ -952,6 +1002,9 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                   fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
+
+                                n++;
+                                if (verbose) printPercentage(n,totalCount);
 
                                 return SQLITE_OK;
                               },NULL),
@@ -993,7 +1046,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                           &errorMessage,
                                                           "UPDATE entries \
                                                            SET offset=%llu, \
-                                                               size=%llu \
+                                                               size  =%llu \
                                                            WHERE id=%llu \
                                                           ",
                                                           (uint64)blockSize*blockOffset,
@@ -1006,6 +1059,9 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                   fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
+
+                                n++;
+                                if (verbose) printPercentage(n,totalCount);
 
                                 return SQLITE_OK;
                               },NULL),
@@ -1044,7 +1100,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                           &errorMessage,
                                                           "UPDATE entries \
                                                            SET offset=%llu, \
-                                                               size=%llu \
+                                                               size  =%llu \
                                                            WHERE id=%llu \
                                                           ",
                                                           fragmentOffset,
@@ -1058,6 +1114,9 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                   return sqliteResult;
                                 }
 
+                                n++;
+                                if (verbose) printPercentage(n,totalCount);
+
                                 return SQLITE_OK;
                               },NULL),
                               (char**)&errorMessage
@@ -1069,16 +1128,100 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
-  if (verbose) printf("OK\n");
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "SELECT id,offset,size FROM entries",
+                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                              {
+                                uint64 entryId;
+                                uint64 offset;
+                                uint64 size;
 
-  // calculate directory content size
+                                assert(count == 3);
+                                assert(values[0] != NULL);
+                                assert(values[1] != NULL);
+                                assert(values[2] != NULL);
+
+                                UNUSED_VARIABLE(userData);
+                                UNUSED_VARIABLE(columns);
+
+                                entryId = (uint64)atoll(values[0]);
+                                offset  = (uint64)atoll(values[1]);
+                                size    = (uint64)atoll(values[2]);
+//fprintf(stderr,"%s, %d: %llu %llu %llu\n",__FILE__,__LINE__,entryId,fragmentOffset,fragmentSize);
+
+                                // set offset/size
+                                sqliteResult = sqlExecute(databaseHandle,
+                                                          &errorMessage,
+                                                          "UPDATE entriesNewest \
+                                                           SET offset=%llu, \
+                                                               size  =%llu \
+                                                           WHERE entryId=%llu \
+                                                          ",
+                                                          offset,
+                                                          size,
+                                                          entryId
+                                                         );
+                                if (sqliteResult != SQLITE_OK)
+                                {
+                                  if (verbose) printf("FAIL!\n");
+                                  fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                  return sqliteResult;
+                                }
+
+                                n++;
+                                if (verbose) printPercentage(n,totalCount);
+
+                                return SQLITE_OK;
+                              },NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    exit(1);
+  }
+  if (verbose) printf("OK  \n");
+
+  // calculate directory content size/count
   if (verbose) { printf("Create aggregates for directory content..."); fflush(stdout); }
+
+  totalCount = 0L;
+  n          = 0L;
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "SELECT  (SELECT COUNT(id) FROM fileEntries     ) \
+                                      +(SELECT COUNT(id) FROM directoryEntries) \
+                                      +(SELECT COUNT(id) FROM linkEntries     ) \
+                                      +(SELECT COUNT(id) FROM hardlinkEntries ) \
+                                      +(SELECT COUNT(id) FROM specialEntries  ) \
+                              ",
+                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                              {
+                                assert(count == 1);
+                                assert(values[0] != NULL);
+
+                                UNUSED_VARIABLE(userData);
+                                UNUSED_VARIABLE(columns);
+
+                                totalCount = (ulong)atol(values[0]);
+
+                                return SQLITE_OK;
+                              },NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    exit(1);
+  }
+
   sqliteResult = sqlite3_exec(databaseHandle,
                               "UPDATE directoryEntries \
-                               SET totalEntryCount=0, \
-                                   totalEntrySize=0, \
+                               SET totalEntryCount      =0, \
+                                   totalEntrySize       =0, \
                                    totalEntryCountNewest=0, \
-                                   totalEntrySizeNewest=0 \
+                                   totalEntrySizeNewest =0 \
                               ",
                               CALLBACK(NULL,NULL),
                               (char**)&errorMessage
@@ -1091,24 +1234,32 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     exit(1);
   }
   sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT name,size FROM entries",
+                              "SELECT entries.storageId, \
+                                      entries.name, \
+                                      fileEntries.fragmentSize \
+                               FROM fileEntries \
+                                 LEFT JOIN entries ON entries.id=fileEntries.entryId \
+                              ",
                               CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
                               {
+                                uint64 storageId;
                                 String name;
-                                uint64 size;
+                                uint64 fragmentSize;
 
-                                assert(count == 2);
+                                assert(count == 3);
                                 assert(values[0] != NULL);
                                 assert(values[1] != NULL);
+                                assert(values[2] != NULL);
 
                                 UNUSED_VARIABLE(userData);
                                 UNUSED_VARIABLE(columns);
 
-                                name = String_newCString(values[0]);
-                                size = (uint64)atoll(values[1]);
-//fprintf(stderr,"%s, %d: %s %llu\n",__FILE__,__LINE__,String_cString(name),size);
+                                storageId    = (uint64)atoll(values[0]);
+                                name         = String_newCString(values[1]);
+                                fragmentSize = (uint64)atoll(values[2]);
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
-                                // update directory content size
+                                // update directory content count/size aggregates in all directories
                                 while (!String_isEmpty(File_getFilePathName(name,name)))
                                 {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
@@ -1116,29 +1267,12 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                             &errorMessage,
                                                             "UPDATE directoryEntries \
                                                              SET totalEntryCount=totalEntryCount+1, \
-                                                                 totalEntrySize=totalEntrySize+%llu \
-                                                             WHERE name=%'S \
+                                                                 totalEntrySize =totalEntrySize +%llu \
+                                                             WHERE     storageId=%llu \
+                                                                   AND name=%'S \
                                                             ",
-
-                                                            size,
-                                                            name
-                                                           );
-                                  if (sqliteResult != SQLITE_OK)
-                                  {
-                                    if (verbose) printf("FAIL!\n");
-                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
-                                    return sqliteResult;
-                                  }
-
-                                  sqliteResult = sqlExecute(databaseHandle,
-                                                            &errorMessage,
-                                                            "UPDATE directoryEntries \
-                                                             SET totalEntryCountNewest=totalEntryCountNewest+1, \
-                                                                 totalEntrySizeNewest=totalEntrySizeNewest+%llu \
-                                                             WHERE name=%'S \
-                                                            ",
-
-                                                            size,
+                                                            fragmentSize,
+                                                            storageId,
                                                             name
                                                            );
                                   if (sqliteResult != SQLITE_OK)
@@ -1151,6 +1285,9 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 
                                 String_delete(name);
 
+                                n++;
+                                if (verbose) printPercentage(n,totalCount);
+
                                 return SQLITE_OK;
                               },NULL),
                               (char**)&errorMessage
@@ -1162,10 +1299,279 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
-  if (verbose) printf("OK\n");
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "SELECT entries.storageId, \
+                                      entries.name \
+                               FROM directoryEntries \
+                                 LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                              ",
+                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                              {
+                                uint64 storageId;
+                                String name;
 
-  // calculate total count/size
+                                assert(count == 2);
+                                assert(values[0] != NULL);
+                                assert(values[1] != NULL);
+
+                                UNUSED_VARIABLE(userData);
+                                UNUSED_VARIABLE(columns);
+
+                                storageId = (uint64)atoll(values[0]);
+                                name      = String_newCString(values[1]);
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+
+                                // update directory content count/size aggregates in all directories
+                                while (!String_isEmpty(File_getFilePathName(name,name)))
+                                {
+                                  sqliteResult = sqlExecute(databaseHandle,
+                                                            &errorMessage,
+                                                            "UPDATE directoryEntries \
+                                                             SET totalEntryCount=totalEntryCount+1 \
+                                                             WHERE     storageId=%llu \
+                                                                   AND name=%'S \
+                                                            ",
+                                                            storageId,
+                                                            name
+                                                           );
+                                  if (sqliteResult != SQLITE_OK)
+                                  {
+                                    if (verbose) printf("FAIL!\n");
+                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                    return sqliteResult;
+                                  }
+                                }
+
+                                String_delete(name);
+
+                                n++;
+                                if (verbose) printPercentage(n,totalCount);
+
+                                return SQLITE_OK;
+                              },NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    exit(1);
+  }
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "SELECT entries.storageId, \
+                                      entries.name \
+                               FROM linkEntries \
+                                 LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                              ",
+                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                              {
+                                uint64 storageId;
+                                String name;
+
+                                assert(count == 2);
+                                assert(values[0] != NULL);
+                                assert(values[1] != NULL);
+
+                                UNUSED_VARIABLE(userData);
+                                UNUSED_VARIABLE(columns);
+
+                                storageId = (uint64)atoll(values[0]);
+                                name      = String_newCString(values[1]);
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+
+                                // update directory content count/size aggregates in all directories
+                                while (!String_isEmpty(File_getFilePathName(name,name)))
+                                {
+//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
+                                  sqliteResult = sqlExecute(databaseHandle,
+                                                            &errorMessage,
+                                                            "UPDATE directoryEntries \
+                                                             SET totalEntryCount=totalEntryCount+1 \
+                                                             WHERE     storageId=%llu \
+                                                                   AND name=%'S \
+                                                            ",
+                                                            storageId,
+                                                            name
+                                                           );
+                                  if (sqliteResult != SQLITE_OK)
+                                  {
+                                    if (verbose) printf("FAIL!\n");
+                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                    return sqliteResult;
+                                  }
+                                }
+
+                                String_delete(name);
+
+                                n++;
+                                if (verbose) printPercentage(n,totalCount);
+
+                                return SQLITE_OK;
+                              },NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    exit(1);
+  }
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "SELECT entries.name, \
+                                      hardlinkEntries.fragmentSize \
+                               FROM hardlinkEntries \
+                                 LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
+                              ",
+                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                              {
+                                uint64 storageId;
+                                String name;
+                                uint64 fragmentSize;
+
+                                assert(count == 3);
+                                assert(values[0] != NULL);
+                                assert(values[1] != NULL);
+                                assert(values[2] != NULL);
+
+                                UNUSED_VARIABLE(userData);
+                                UNUSED_VARIABLE(columns);
+
+                                storageId    = (uint64)atoll(values[0]);
+                                name         = String_newCString(values[1]);
+                                fragmentSize = (uint64)atoll(values[2]);
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
+
+                                // update directory content count/size aggregates in all directories
+                                while (!String_isEmpty(File_getFilePathName(name,name)))
+                                {
+//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
+                                  sqliteResult = sqlExecute(databaseHandle,
+                                                            &errorMessage,
+                                                            "UPDATE directoryEntries \
+                                                             SET totalEntryCount=totalEntryCount+1, \
+                                                                 totalEntrySize =totalEntrySize +%llu \
+                                                             WHERE     storageId=%llu \
+                                                                   AND name=%'S \
+                                                            ",
+                                                            fragmentSize,
+                                                            storageId,
+                                                            name
+                                                           );
+                                  if (sqliteResult != SQLITE_OK)
+                                  {
+                                    if (verbose) printf("FAIL!\n");
+                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                    return sqliteResult;
+                                  }
+                                }
+
+                                String_delete(name);
+
+                                n++;
+                                if (verbose) printPercentage(n,totalCount);
+
+                                return SQLITE_OK;
+                              },NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    exit(1);
+  }
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "SELECT entries.storageId, \
+                                      entries.name \
+                               FROM specialEntries \
+                                 LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                              ",
+                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                              {
+                                uint64 storageId;
+                                String name;
+
+                                assert(count == 2);
+                                assert(values[0] != NULL);
+                                assert(values[1] != NULL);
+
+                                UNUSED_VARIABLE(userData);
+                                UNUSED_VARIABLE(columns);
+
+                                storageId = (uint64)atoll(values[0]);
+                                name      = String_newCString(values[1]);
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+
+                                // update directory content count/size aggregates in all directories
+                                while (!String_isEmpty(File_getFilePathName(name,name)))
+                                {
+                                  sqliteResult = sqlExecute(databaseHandle,
+                                                            &errorMessage,
+                                                            "UPDATE directoryEntries \
+                                                             SET totalEntryCount=totalEntryCount+1 \
+                                                             WHERE     storageId=%llu \
+                                                                   AND name=%'S \
+                                                            ",
+                                                            storageId,
+                                                            name
+                                                           );
+                                  if (sqliteResult != SQLITE_OK)
+                                  {
+                                    if (verbose) printf("FAIL!\n");
+                                    fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                    return sqliteResult;
+                                  }
+                                }
+
+                                String_delete(name);
+
+                                n++;
+                                if (verbose) printPercentage(n,totalCount);
+
+                                return SQLITE_OK;
+                              },NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    exit(1);
+  }
+  if (verbose) printf("OK  \n");
+
+  // calculate total count/size aggregates
   if (verbose) { printf("Create aggregates for storage..."); fflush(stdout); }
+
+  totalCount = 0L;
+  n          = 0L;
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "SELECT  (SELECT COUNT(id) FROM storage) \
+                              ",
+                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                              {
+                                assert(count == 1);
+                                assert(values[0] != NULL);
+
+                                UNUSED_VARIABLE(userData);
+                                UNUSED_VARIABLE(columns);
+
+                                totalCount = (ulong)atol(values[0]);
+
+                                return SQLITE_OK;
+                              },NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
+    exit(1);
+  }
+
   sqliteResult = sqlite3_exec(databaseHandle,
                               "SELECT id FROM storage",
                               CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
@@ -1195,7 +1601,6 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                                totalHardlinkSize  =(SELECT TOTAL(hardlinkEntries.fragmentSize)                   FROM entries LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id WHERE entries.storageId=%llu AND entries.type=%d) \
                                                            WHERE id=%llu \
                                                           ",
-
                                                           storageId,
                                                           INDEX_CONST_TYPE_FILE,
                                                           storageId,
@@ -1256,7 +1661,6 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                                totalHardlinkSizeNewest  =(SELECT TOTAL(hardlinkEntries.fragmentSize)                   FROM entriesNewest LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.id WHERE entriesNewest.storageId=%llu AND entriesNewest.type=%d) \
                                                            WHERE id=%llu \
                                                           ",
-
                                                           storageId,
                                                           INDEX_CONST_TYPE_FILE,
                                                           storageId,
@@ -1302,6 +1706,9 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                   return sqliteResult;
                                 }
 
+                                n++;
+                                if (verbose) printPercentage(n,totalCount);
+
                                 return SQLITE_OK;
                               },NULL),
                               (char**)&errorMessage
@@ -1313,11 +1720,11 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
-  if (verbose) printf("OK\n");
+  if (verbose) printf("OK  \n");
 
   // end transaction
   sqliteResult = sqlite3_exec(databaseHandle,
-                              "COMMIT",
+                              "END TRANSACTION",
                               CALLBACK(NULL,NULL),
                               (char**)&errorMessage
                              );
@@ -1593,7 +2000,7 @@ int main(int argc, const char *argv[])
       exit(1);
     }
   }
-  if (verbose) printf("OK\n");
+  if (verbose) printf("OK  \n");
 
   // register special functions
   sqliteResult = sqlite3_create_function(databaseHandle,
@@ -1645,7 +2052,7 @@ int main(int argc, const char *argv[])
       exit(1);
     }
 
-    if (verbose) printf("OK\n");
+    if (verbose) printf("OK  \n");
   }
 
   // recreate indizes
@@ -1686,7 +2093,7 @@ int main(int argc, const char *argv[])
   // close database
   if (verbose) { printf("Close database..."); fflush(stdout); }
   sqlite3_close(databaseHandle);
-  if (verbose) printf("OK\n");
+  if (verbose) printf("OK  \n");
 
   // free resources
   String_delete(sqlCommands);
