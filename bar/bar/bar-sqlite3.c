@@ -1419,7 +1419,8 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     exit(1);
   }
   sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT entries.name, \
+                              "SELECT entries.storageId, \
+                                      entries.name, \
                                       hardlinkEntries.fragmentSize \
                                FROM hardlinkEntries \
                                  LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
