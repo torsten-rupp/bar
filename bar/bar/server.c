@@ -14366,7 +14366,7 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, IndexHandle *inde
                                Array_cArray(&clientInfo->entryIdArray),
                                Array_length(&clientInfo->entryIdArray),
                                INDEX_TYPE_SET_ANY_ENTRY,
-                               NULL,  // pattern,
+                               NULL,  // name,
                                FALSE,  // newestOnly
                                &totalEntryCount,
                                &totalEntrySize,
