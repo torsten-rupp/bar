@@ -362,10 +362,10 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
   name                  TEXT,                                     // Note: redundancy for faster access of parent directories
 
   // updated by updateDirectoryContentAggregates()
-  totalEntryCount       INTEGER DEFAULT 0,  // total number of entries
-  totalEntrySize        INTEGER DEFAULT 0,  // total size of entries [bytes]
-  totalEntryCountNewest INTEGER DEFAULT 0,  // total number of newest entries
-  totalEntrySizeNewest  INTEGER DEFAULT 0   // total size of newest entries [bytes]
+  totalEntryCount       INTEGER DEFAULT 0,  // total number of directory entries
+  totalEntrySize        INTEGER DEFAULT 0,  // total size of directory entries [bytes]
+  totalEntryCountNewest INTEGER DEFAULT 0,  // total number of newest directory entries
+  totalEntrySizeNewest  INTEGER DEFAULT 0   // total size of newest directory entries [bytes]
 );
 CREATE INDEX ON directoryEntries (storageId,name);
 CREATE INDEX ON directoryEntries (entryId);
