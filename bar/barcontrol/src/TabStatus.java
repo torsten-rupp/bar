@@ -521,9 +521,11 @@ public class TabStatus
     Widgets.layout(widgetJobTable,0,0,TableLayoutData.NSWE);
     widgetJobTable.addSelectionListener(new SelectionListener()
     {
+      @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
       }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         JobData jobData = (JobData)selectionEvent.item.getData();
@@ -608,9 +610,11 @@ public class TabStatus
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -622,9 +626,11 @@ public class TabStatus
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -636,9 +642,11 @@ public class TabStatus
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -650,9 +658,11 @@ public class TabStatus
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -664,9 +674,11 @@ public class TabStatus
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -678,9 +690,11 @@ public class TabStatus
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -692,9 +706,11 @@ public class TabStatus
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -706,9 +722,11 @@ public class TabStatus
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -720,9 +738,11 @@ public class TabStatus
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -735,9 +755,11 @@ public class TabStatus
       menuItem = Widgets.addMenuItem(widgetJobTableHeaderMenu,BARControl.tr("Set optimal column width"));
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Widgets.adjustTableColumnWidth(widgetJobTable);
@@ -750,9 +772,11 @@ public class TabStatus
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Start")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -763,9 +787,11 @@ public class TabStatus
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Abort")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -776,9 +802,11 @@ public class TabStatus
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Pause"));
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -789,9 +817,11 @@ public class TabStatus
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Continue"));
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -802,9 +832,11 @@ public class TabStatus
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Volume"));
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -817,9 +849,11 @@ public class TabStatus
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("New")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           jobNew();
@@ -829,9 +863,11 @@ public class TabStatus
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Clone")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           jobClone();
@@ -841,9 +877,11 @@ public class TabStatus
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Rename")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           jobRename();
@@ -853,9 +891,11 @@ public class TabStatus
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Delete")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           jobDelete();
@@ -983,6 +1023,7 @@ public class TabStatus
                     );
       Widgets.addModifyListener(new WidgetModifyListener(label,doneSize)
       {
+        @Override
         public String getString(WidgetVariable variable)
         {
           return Units.getByteUnit(variable.getLong());
@@ -997,6 +1038,7 @@ public class TabStatus
         Widgets.layout(label,0,0,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetModifyListener(label,filesPerSecond)
         {
+          @Override
           public String getString(WidgetVariable variable)
           {
             return String.format("%.1f",variable.getDouble());
@@ -1014,6 +1056,7 @@ public class TabStatus
         Widgets.layout(label,0,0,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetModifyListener(label,bytesPerSecond)
         {
+          @Override
           public String getString(WidgetVariable variable)
           {
             return Units.getByteSize(variable.getDouble());
@@ -1030,6 +1073,7 @@ public class TabStatus
                       );
         Widgets.addModifyListener(new WidgetModifyListener(label,bytesPerSecond)
         {
+          @Override
           public String getString(WidgetVariable variable)
           {
             return Units.getByteUnit(variable.getDouble())+"/s";
@@ -1051,6 +1095,7 @@ public class TabStatus
       Widgets.layout(label,2,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalSize)
       {
+        @Override
         public String getString(WidgetVariable variable)
         {
           return Units.getByteSize(variable.getLong());
@@ -1067,6 +1112,7 @@ public class TabStatus
                     );
       Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalSize)
       {
+        @Override
         public String getString(WidgetVariable variable)
         {
           return Units.getByteUnit(variable.getLong());
@@ -1083,6 +1129,7 @@ public class TabStatus
         Widgets.layout(label,0,1,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetModifyListener(label,compressionRatio)
         {
+          @Override
           public String getString(WidgetVariable variable)
           {
             return String.format("%.1f",variable.getDouble());
@@ -1100,6 +1147,7 @@ public class TabStatus
         Widgets.layout(label,0,0,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetModifyListener(label,storageBytesPerSecond)
         {
+          @Override
           public String getString(WidgetVariable variable)
           {
             return Units.getByteSize(variable.getDouble());
@@ -1116,6 +1164,7 @@ public class TabStatus
                       );
         Widgets.addModifyListener(new WidgetModifyListener(label,storageBytesPerSecond)
         {
+          @Override
           public String getString(WidgetVariable variable)
           {
             return Units.getByteUnit(variable.getDouble())+"/s";
@@ -1158,6 +1207,7 @@ public class TabStatus
                     );
       Widgets.addModifyListener(new WidgetModifyListener(label,skippedEntrySize)
       {
+        @Override
         public String getString(WidgetVariable variable)
         {
           return Units.getByteUnit(variable.getLong());
@@ -1199,6 +1249,7 @@ public class TabStatus
                     );
       Widgets.addModifyListener(new WidgetModifyListener(label,errorEntrySize)
       {
+        @Override
         public String getString(WidgetVariable variable)
         {
           return Units.getByteUnit(variable.getLong());
@@ -1213,6 +1264,7 @@ public class TabStatus
       Widgets.addModifyListener(new WidgetModifyListener(label,totalEntryCount));
       Widgets.addModifyListener(new WidgetModifyListener(label,collectTotalSumDone)
       {
+        @Override
         public void modified(Control control, WidgetVariable widgetVariable)
         {
           final Color COLOR_IN_PROGRESS = display.getSystemColor(SWT.COLOR_DARK_GRAY);
@@ -1226,6 +1278,7 @@ public class TabStatus
       Widgets.addModifyListener(new WidgetModifyListener(label,totalEntrySize));
       Widgets.addModifyListener(new WidgetModifyListener(label,collectTotalSumDone)
       {
+        @Override
         public void modified(Control control, WidgetVariable widgetVariable)
         {
           final Color COLOR_IN_PROGRESS = display.getSystemColor(SWT.COLOR_DARK_GRAY);
@@ -1240,6 +1293,7 @@ public class TabStatus
       Widgets.layout(label,5,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,totalEntrySize)
       {
+        @Override
         public String getString(WidgetVariable variable)
         {
           return Units.getByteSize(variable.getLong());
@@ -1247,6 +1301,7 @@ public class TabStatus
       });
       Widgets.addModifyListener(new WidgetModifyListener(label,collectTotalSumDone)
       {
+        @Override
         public void modified(Control control, WidgetVariable widgetVariable)
         {
           final Color COLOR_IN_PROGRESS = display.getSystemColor(SWT.COLOR_DARK_GRAY);
@@ -1264,6 +1319,7 @@ public class TabStatus
                     );
       Widgets.addModifyListener(new WidgetModifyListener(label,totalEntrySize)
       {
+        @Override
         public String getString(WidgetVariable variable)
         {
           return Units.getByteUnit(variable.getLong());
@@ -1319,14 +1375,15 @@ public class TabStatus
       Widgets.addModifyListener(new WidgetModifyListener(label,message));
       label.addMouseTrackListener(new MouseTrackListener()
       {
+        @Override
         public void mouseEnter(MouseEvent mouseEvent)
         {
         }
-
+        @Override
         public void mouseExit(MouseEvent mouseEvent)
         {
         }
-
+        @Override
         public void mouseHover(MouseEvent mouseEvent)
         {
           Label label = (Label)mouseEvent.widget;
@@ -1402,9 +1459,11 @@ public class TabStatus
       widgetButtonStart.setEnabled(false);
       widgetButtonStart.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
@@ -1418,9 +1477,11 @@ public class TabStatus
       widgetButtonAbort.setEnabled(false);
       widgetButtonAbort.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
@@ -1433,9 +1494,11 @@ public class TabStatus
       Widgets.layout(widgetButtonPause,0,2,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{"Puase [xxxxs]"}));
       widgetButtonPause.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
@@ -1448,9 +1511,11 @@ public class TabStatus
       Widgets.layout(widgetButtonSuspendContinue,0,3,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{BARControl.tr("Suspend"),BARControl.tr("Continue")}));
       widgetButtonSuspendContinue.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
@@ -1464,9 +1529,11 @@ public class TabStatus
       widgetButtonVolume.setEnabled(false);
       widgetButtonVolume.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           volume();
@@ -1478,9 +1545,11 @@ public class TabStatus
       Widgets.layout(widgetButtonQuit,0,5,TableLayoutData.E,0,0,0,0,80,SWT.DEFAULT);
       widgetButtonQuit.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
@@ -2401,18 +2470,23 @@ public class TabStatus
     widgetJobTableToolTip.setBounds(x,y,size.x,size.y);
     widgetJobTableToolTip.setVisible(true);
 
-    widgetJobTableToolTip.addMouseTrackListener(new MouseTrackListener()
+    shell.addMouseTrackListener(new MouseTrackListener()
     {
+      @Override
       public void mouseEnter(MouseEvent mouseEvent)
       {
       }
-
+      @Override
       public void mouseExit(MouseEvent mouseEvent)
       {
         if (widgetJobTableToolTip != null)
         {
           // check if inside sub-widget
-          Point point = new Point(mouseEvent.x,mouseEvent.y);
+          Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
+          if (widgetJobTableToolTip.getBounds().contains(point))
+          {
+            return;
+          }
           for (Control control : widgetJobTableToolTip.getChildren())
           {
             if (control.getBounds().contains(point))
@@ -2426,7 +2500,7 @@ public class TabStatus
           widgetJobTableToolTip = null;
         }
       }
-
+      @Override
       public void mouseHover(MouseEvent mouseEvent)
       {
       }
