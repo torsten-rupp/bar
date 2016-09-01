@@ -1181,6 +1181,10 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
 
                            databaseId = (DatabaseId)atoll(values[0]);
 
+                           UNUSED_VARIABLE(count);
+                           UNUSED_VARIABLE(names);
+                           UNUSED_VARIABLE(userData);
+
                            error = Database_execute(&indexHandle->databaseHandle,
                                                     CALLBACK(NULL,NULL),  // databaseRowFunction
                                                     NULL,  // changedRowCount
@@ -1213,6 +1217,10 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
 
                            databaseId = (DatabaseId)atoll(values[0]);
 
+                           UNUSED_VARIABLE(count);
+                           UNUSED_VARIABLE(names);
+                           UNUSED_VARIABLE(userData);
+
                            error = Database_execute(&indexHandle->databaseHandle,
                                                     CALLBACK(NULL,NULL),  // databaseRowFunction
                                                     NULL,  // changedRowCount
@@ -1242,6 +1250,10 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
 
                            assert(count == 1);
                            assert(values[0] != NULL);
+
+                           UNUSED_VARIABLE(count);
+                           UNUSED_VARIABLE(names);
+                           UNUSED_VARIABLE(userData);
 
                            databaseId = (DatabaseId)atoll(values[0]);
 
@@ -1275,6 +1287,10 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                            assert(count == 1);
                            assert(values[0] != NULL);
 
+                           UNUSED_VARIABLE(count);
+                           UNUSED_VARIABLE(names);
+                           UNUSED_VARIABLE(userData);
+
                            databaseId = (DatabaseId)atoll(values[0]);
 
                            error = Database_execute(&indexHandle->databaseHandle,
@@ -1307,6 +1323,10 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                            assert(count == 1);
                            assert(values[0] != NULL);
 
+                           UNUSED_VARIABLE(count);
+                           UNUSED_VARIABLE(names);
+                           UNUSED_VARIABLE(userData);
+
                            databaseId = (DatabaseId)atoll(values[0]);
 
                            error = Database_execute(&indexHandle->databaseHandle,
@@ -1338,6 +1358,10 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
 
                            assert(count == 1);
                            assert(values[0] != NULL);
+
+                           UNUSED_VARIABLE(count);
+                           UNUSED_VARIABLE(names);
+                           UNUSED_VARIABLE(userData);
 
                            databaseId = (DatabaseId)atoll(values[0]);
 
