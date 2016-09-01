@@ -131,7 +131,7 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-typedef bool(*DatabaseRowFunction)(uint count, const char* names[], const char* values[], void *userData);
+typedef Errors(*DatabaseRowFunction)(uint count, const char* names[], const char* values[], void *userData);
 
 // database id
 typedef int64 DatabaseId;
