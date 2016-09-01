@@ -1723,6 +1723,8 @@ public class TabStatus
    */
   private void clearSelectedJob()
   {
+    selectedJobData = null;
+
     Widgets.clearSelectedTableItem(widgetJobTable);
     widgetSelectedJob.setText(BARControl.tr("Selected")+" ''");
   }
@@ -1927,22 +1929,44 @@ public class TabStatus
                                        || (state == JobData.States.REQUEST_VOLUME)
                                       );
           widgetButtonVolume.setEnabled(state == JobData.States.REQUEST_VOLUME);
-/*
-          widgetButtonStart.setEnabled(   !state.equals("running")
-                                       && !state.equals("incremental")
-                                       && !state.equals("differential")
-                                       && !state.equals("dry-run")
-                                       && !state.equals("waiting")
-                                       && !state.equals("pause")
-                                      );
-          widgetButtonAbort.setEnabled(   state.equals("waiting")
-                                       || state.equals("running")
-                                       || state.equals("incremental")
-                                       || state.equals("differential")
-                                       || state.equals("dry-run")
-                                       || state.equals("request volume")
-                                      );
-          widgetButtonVolume.setEnabled(state.equals("request volume"));*/
+        }
+      });
+    }
+    else
+    {
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          doneCount.set            (0L);
+          doneSize.set             (0L);
+          storageTotalSize.set     (0L);
+          skippedEntryCount.set    (0L);
+          skippedEntrySize.set     (0L);
+          errorEntryCount.set      (0L);
+          errorEntrySize.set       (0L);
+          totalEntryCount.set      (0L);
+          totalEntrySize.set       (0L);
+          collectTotalSumDone.set  (false);
+          filesPerSecond.set       (0.0);
+          bytesPerSecond.set       (0.0);
+          storageBytesPerSecond.set(0.0);
+          compressionRatio.set     (0.0);
+
+          fileName.set             ("");
+          fileProgress.set         (getProgress(0L,0L));
+          storageName.set          ("");
+          storageProgress.set      (getProgress(0L,0L));
+          volumeNumber.set         (0L);
+          volumeProgress.set       (0.0);
+          totalEntriesProgress.set (getProgress(0L,0L));
+          totalBytesProgress.set   (getProgress(0L,0L));
+          requestedVolumeNumber.set(0);
+          message.set              ("");
+
+          widgetButtonStart.setEnabled(false);
+          widgetButtonAbort.setEnabled(false);
+          widgetButtonVolume.setEnabled(false);
         }
       });
     }
