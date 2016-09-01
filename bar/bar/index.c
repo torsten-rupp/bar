@@ -7449,7 +7449,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   }
   else
   {
-    // pattern/entries selected
+    // name/entries selected
 
     // get filters
     filterAppend(filterString,!String_isEmpty(ftsName),"AND","FTS_entries MATCH %S",ftsName);
@@ -7561,7 +7561,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       }
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
       if (Database_getNextRow(&databaseQueryHandle,
-                              "%%lf",
+                              "%lf",
                               &totalEntryContentSize_
                              )
          )
