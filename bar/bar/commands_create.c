@@ -3556,8 +3556,6 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
   Storage_initSpecifier(&storageSpecifier);
   dateTime          = String_new();
 
-//TODO
-//fprintf(stderr,"%s, %d: start purgeStorage by jobUUID=%s limit=%llu\n",__FILE__,__LINE__,String_cString(jobUUID),limit);
   do
   {
     // get total storage size, find oldest storage entry
@@ -3755,7 +3753,6 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
   oldestStorageName    = String_new();
   dateTime             = String_new();
 
-fprintf(stderr,"%s, %d: start purgeStorageByServer limit=%llu\n",__FILE__,__LINE__,limit);
   do
   {
     // get total storage size, find oldest storage entry
