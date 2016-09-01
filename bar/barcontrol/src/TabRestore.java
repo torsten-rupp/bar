@@ -3597,10 +3597,11 @@ Dprintf.dprintf("cirrect?");
                                      String                jobName         = valueMap.getString("jobName"                                );
                                      Settings.ArchiveTypes archiveType     = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
                                      long                  entryId         = valueMap.getLong  ("entryId"                                );
+                                     final EntryTypes      entryType       = valueMap.getEnum  ("entryType",EntryTypes.class             );
                                      String                storageName     = valueMap.getString("storageName"                            );
                                      long                  storageDateTime = valueMap.getLong  ("storageDateTime"                        );
 
-                                     switch (valueMap.getEnum("entryType",EntryTypes.class))
+                                     switch (entryType)
                                      {
                                        case FILE:
                                          {
@@ -3632,7 +3633,7 @@ Dprintf.dprintf("cirrect?");
                                                                        (Object)entryIndexData,
                                                                        entryIndexData.storageName,
                                                                        entryIndexData.name,
-                                                                       "FILE",
+                                                                       entryType.toString(),
                                                                        Units.formatByteSize(entryIndexData.size),
                                                                        SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
@@ -3671,7 +3672,7 @@ Dprintf.dprintf("cirrect?");
                                                                        (Object)entryIndexData,
                                                                        entryIndexData.storageName,
                                                                        entryIndexData.name,
-                                                                       "IMAGE",
+                                                                       entryType.toString(),
                                                                        Units.formatByteSize(entryIndexData.size),
                                                                        SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
@@ -3709,8 +3710,8 @@ Dprintf.dprintf("cirrect?");
                                                                        (Object)entryIndexData,
                                                                        entryIndexData.storageName,
                                                                        entryIndexData.name,
-                                                                       "DIR",
-                                                                       "",
+                                                                       entryType.toString(),
+                                                                       (entryIndexData.size > 0L) ? Units.formatByteSize(entryIndexData.size) : "",
                                                                        SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
                                                tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
@@ -3746,7 +3747,7 @@ Dprintf.dprintf("cirrect?");
                                                                        (Object)entryIndexData,
                                                                        entryIndexData.storageName,
                                                                        entryIndexData.name,
-                                                                       "LINK",
+                                                                       entryType.toString(),
                                                                        "",
                                                                        SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
@@ -3786,7 +3787,7 @@ Dprintf.dprintf("cirrect?");
                                                                        (Object)entryIndexData,
                                                                        entryIndexData.storageName,
                                                                        entryIndexData.name,
-                                                                       "HARDLINK",
+                                                                       entryType.toString(),
                                                                        Units.formatByteSize(entryIndexData.size),
                                                                        SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
@@ -3822,7 +3823,7 @@ Dprintf.dprintf("cirrect?");
                                                                        (Object)entryIndexData,
                                                                        entryIndexData.storageName,
                                                                        entryIndexData.name,
-                                                                       "DEVICE",
+                                                                       entryType.toString(),
                                                                        Units.formatByteSize(entryIndexData.size),
                                                                        SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                                                       );
@@ -5991,10 +5992,10 @@ Dprintf.dprintf("remove");
       tableColumn = Widgets.addTableColumn(widgetEntryTable,0,BARControl.tr("Archive"),SWT.LEFT, 200,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for archive name."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryTable,1,BARControl.tr("Name"),   SWT.LEFT, 300,true);
+      tableColumn = Widgets.addTableColumn(widgetEntryTable,1,BARControl.tr("Name"),   SWT.LEFT, 270,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryTable,2,BARControl.tr("Type"),   SWT.LEFT,  60,true);
+      tableColumn = Widgets.addTableColumn(widgetEntryTable,2,BARControl.tr("Type"),   SWT.LEFT,  90,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for type."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
       tableColumn = Widgets.addTableColumn(widgetEntryTable,3,BARControl.tr("Size"),   SWT.RIGHT, 60,true);
@@ -8356,7 +8357,7 @@ Dprintf.dprintf("");
                                     (Object)entryIndexData,
                                     entryIndexData.storageName,
                                     entryIndexData.name,
-                                    "FILE",
+                                    entryIndexData.type.toString(),
                                     Units.formatByteSize(entryIndexData.size),
                                     SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                    );
@@ -8367,7 +8368,7 @@ Dprintf.dprintf("");
                                     (Object)entryIndexData,
                                     entryIndexData.storageName,
                                     entryIndexData.name,
-                                    "IMAGE",
+                                    entryIndexData.type.toString(),
                                     Units.formatByteSize(entryIndexData.size),
                                     SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                    );
@@ -8378,8 +8379,8 @@ Dprintf.dprintf("");
                                     (Object)entryIndexData,
                                     entryIndexData.storageName,
                                     entryIndexData.name,
-                                    "DIR",
-                                    "",
+                                    entryIndexData.type.toString(),
+                                    (entryIndexData.size > 0L) ? Units.formatByteSize(entryIndexData.size) : "",
                                     SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                    );
             break;
@@ -8389,7 +8390,7 @@ Dprintf.dprintf("");
                                     (Object)entryIndexData,
                                     entryIndexData.storageName,
                                     entryIndexData.name,
-                                    "LINK",
+                                    entryIndexData.type.toString(),
                                     "",
                                     SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                    );
@@ -8400,7 +8401,7 @@ Dprintf.dprintf("");
                                     (Object)entryIndexData,
                                     entryIndexData.storageName,
                                     entryIndexData.name,
-                                    "SPECIAL",
+                                    entryIndexData.type.toString(),
                                     Units.formatByteSize(entryIndexData.size),
                                     SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                    );
@@ -8411,7 +8412,7 @@ Dprintf.dprintf("");
                                     (Object)entryIndexData,
                                     entryIndexData.storageName,
                                     entryIndexData.name,
-                                    "DEVICE",
+                                    entryIndexData.type.toString(),
                                     Units.formatByteSize(entryIndexData.size),
                                     SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                    );
@@ -8422,7 +8423,7 @@ Dprintf.dprintf("");
                                     (Object)entryIndexData,
                                     entryIndexData.storageName,
                                     entryIndexData.name,
-                                    "SOCKET",
+                                    entryIndexData.type.toString(),
                                     "",
                                     SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                    );
