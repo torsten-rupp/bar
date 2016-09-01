@@ -1108,7 +1108,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
 
   n = 0L;
 
-  // clean-up
+  // clean-up entries without storage name
   error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
@@ -1168,6 +1168,200 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
   }
   Index_doneList(&indexQueryHandle);
   Index_endTransaction(indexHandle);
+
+  // clean-up *Entries without entry
+  (void)Database_execute(&indexHandle->databaseHandle,
+                         CALLBACK_INLINE(Errors,(uint count, const char* names[], const char* values[], void *userData),
+                         {
+                           DatabaseId databaseId;
+                           Errors     error;
+
+                           assert(count == 1);
+                           assert(values[0] != NULL);
+
+                           databaseId = (DatabaseId)atoll(values[0]);
+
+                           error = Database_execute(&indexHandle->databaseHandle,
+                                                    CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                    NULL,  // changedRowCount
+                                                    "DELETE FROM fileEntries WHERE id=%lld",
+                                                    databaseId
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+
+                           n++;
+
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         "SELECT fileEntries.id FROM fileEntries \
+                          LEFT JOIN entries ON entries.id=fileEntries.entryId \
+                          WHERE entries.id IS NULL \
+                         "
+                        );
+  (void)Database_execute(&indexHandle->databaseHandle,
+                         CALLBACK_INLINE(Errors,(uint count, const char* names[], const char* values[], void *userData),
+                         {
+                           DatabaseId databaseId;
+                           Errors     error;
+
+                           assert(count == 1);
+                           assert(values[0] != NULL);
+
+                           databaseId = (DatabaseId)atoll(values[0]);
+
+                           error = Database_execute(&indexHandle->databaseHandle,
+                                                    CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                    NULL,  // changedRowCount
+                                                    "DELETE FROM imageEntries WHERE id=%lld",
+                                                    databaseId
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+
+                           n++;
+
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         "SELECT imageEntries.id FROM imageEntries \
+                          LEFT JOIN entries ON entries.id=imageEntries.entryId \
+                          WHERE entries.id IS NULL \
+                         "
+                        );
+  (void)Database_execute(&indexHandle->databaseHandle,
+                         CALLBACK_INLINE(Errors,(uint count, const char* names[], const char* values[], void *userData),
+                         {
+                           DatabaseId databaseId;
+                           Errors     error;
+
+                           assert(count == 1);
+                           assert(values[0] != NULL);
+
+                           databaseId = (DatabaseId)atoll(values[0]);
+
+                           error = Database_execute(&indexHandle->databaseHandle,
+                                                    CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                    NULL,  // changedRowCount
+                                                    "DELETE FROM directoryEntries WHERE id=%lld",
+                                                    databaseId
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+
+                           n++;
+
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         "SELECT directoryEntries.id FROM directoryEntries \
+                          LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                          WHERE entries.id IS NULL \
+                         "
+                        );
+  (void)Database_execute(&indexHandle->databaseHandle,
+                         CALLBACK_INLINE(Errors,(uint count, const char* names[], const char* values[], void *userData),
+                         {
+                           DatabaseId databaseId;
+                           Errors     error;
+
+                           assert(count == 1);
+                           assert(values[0] != NULL);
+
+                           databaseId = (DatabaseId)atoll(values[0]);
+
+                           error = Database_execute(&indexHandle->databaseHandle,
+                                                    CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                    NULL,  // changedRowCount
+                                                    "DELETE FROM linkEntries WHERE id=%lld",
+                                                    databaseId
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+
+                           n++;
+
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         "SELECT linkEntries.id FROM linkEntries \
+                          LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                          WHERE entries.id IS NULL \
+                         "
+                        );
+  (void)Database_execute(&indexHandle->databaseHandle,
+                         CALLBACK_INLINE(Errors,(uint count, const char* names[], const char* values[], void *userData),
+                         {
+                           DatabaseId databaseId;
+                           Errors     error;
+
+                           assert(count == 1);
+                           assert(values[0] != NULL);
+
+                           databaseId = (DatabaseId)atoll(values[0]);
+
+                           error = Database_execute(&indexHandle->databaseHandle,
+                                                    CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                    NULL,  // changedRowCount
+                                                    "DELETE FROM hardlinkEntries WHERE id=%lld",
+                                                    databaseId
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+
+                           n++;
+
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         "SELECT hardlinkEntries.id FROM hardlinkEntries \
+                          LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
+                          WHERE entries.id IS NULL \
+                         "
+                        );
+  (void)Database_execute(&indexHandle->databaseHandle,
+                         CALLBACK_INLINE(Errors,(uint count, const char* names[], const char* values[], void *userData),
+                         {
+                           DatabaseId databaseId;
+                           Errors     error;
+
+                           assert(count == 1);
+                           assert(values[0] != NULL);
+
+                           databaseId = (DatabaseId)atoll(values[0]);
+
+                           error = Database_execute(&indexHandle->databaseHandle,
+                                                    CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                    NULL,  // changedRowCount
+                                                    "DELETE FROM specialEntries WHERE id=%lld",
+                                                    databaseId
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+
+                           n++;
+
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         "SELECT specialEntries.id FROM specialEntries \
+                          LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                          WHERE entries.id IS NULL \
+                         "
+                        );
 
   if (n > 0L) plogMessage(NULL,  // logHandle
                           LOG_TYPE_INDEX,
@@ -2270,14 +2464,16 @@ LOCAL void indexCleanupThreadCode(void)
     BLOCK_DO(Database_lock(&indexHandle.databaseHandle),
              Database_unlock(&indexHandle.databaseHandle),
     {
-      (void)cleanUpDuplicateMeta(&indexHandle);
-      (void)cleanUpIncompleteUpdate(&indexHandle);
-      (void)cleanUpIncompleteCreate(&indexHandle);
-      (void)cleanUpStorageNoName(&indexHandle);
-      (void)cleanUpStorageNoEntity(&indexHandle);
-      (void)pruneStorages(&indexHandle);
-      (void)pruneEntities(&indexHandle);
-      (void)pruneUUIDs(&indexHandle);
+      if (!quitFlag) (void)cleanUpDuplicateMeta(&indexHandle);
+      if (!quitFlag) (void)cleanUpIncompleteUpdate(&indexHandle);
+      if (!quitFlag) (void)cleanUpIncompleteCreate(&indexHandle);
+      if (!quitFlag) (void)cleanUpStorageNoName(&indexHandle);
+      if (!quitFlag) (void)cleanUpStorageNoEntity(&indexHandle);
+      if (!quitFlag) (void)cleanUpOrphanedEntries(&indexHandle);
+      if (!quitFlag) (void)cleanUpDuplicateIndizes(&indexHandle);
+      if (!quitFlag) (void)pruneStorages(&indexHandle);
+      if (!quitFlag) (void)pruneEntities(&indexHandle);
+      if (!quitFlag) (void)pruneUUIDs(&indexHandle);
     });
 //TODO: too slow
 //    (void)refreshStoragesInfos(&indexHandle);
