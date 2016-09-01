@@ -68,13 +68,14 @@ LOCAL void printUsage(const char *programName)
   printf("Usage %s: [<options>] <database file> [<command>...|-]\n",programName);
   printf("\n");
   printf("Options:  -c|--create         - create index file\n");
-  printf("          --create-indizes    - re-create indizes\n");
   printf("          --create-triggers   - re-create triggers\n");
-  printf("          --create-aggregates - re-create aggregates data\n");
-  printf("          -n|--names          - print named values\n");
-  printf("          -H|--header         - print headers\n");
-  printf("          -v|--verbose        - verbose output\n");
-  printf("          -h|--help         - print this help\n");
+  printf("          --create-indizes     - re-create indizes\n");
+  printf("          --create-aggregates  - re-create aggregates data\n");
+  printf("          -n|--names           - print named values\n");
+  printf("          -H|--header          - print headers\n");
+  printf("          -f|--no-foreign-keys - disable foreign key constrains\n");
+  printf("          -v|--verbose         - verbose output\n");
+  printf("          -h|--help            - print this help\n");
 }
 
 /***********************************************************************\
@@ -1190,11 +1191,11 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
   totalCount = 0L;
   n          = 0L;
   sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT  (SELECT COUNT(id) FROM fileEntries     ) \
-                                      +(SELECT COUNT(id) FROM directoryEntries) \
-                                      +(SELECT COUNT(id) FROM linkEntries     ) \
-                                      +(SELECT COUNT(id) FROM hardlinkEntries ) \
-                                      +(SELECT COUNT(id) FROM specialEntries  ) \
+                              "SELECT  (SELECT COUNT(entries.id) FROM fileEntries      LEFT JOIN entries ON entries.id=fileEntries.entryId      WHERE entries.id IS NOT NULL) \
+                                      +(SELECT COUNT(entries.id) FROM directoryEntries LEFT JOIN entries ON entries.id=directoryEntries.entryId WHERE entries.id IS NOT NULL) \
+                                      +(SELECT COUNT(entries.id) FROM linkEntries      LEFT JOIN entries ON entries.id=linkEntries.entryId      WHERE entries.id IS NOT NULL) \
+                                      +(SELECT COUNT(entries.id) FROM hardlinkEntries  LEFT JOIN entries ON entries.id=hardlinkEntries.entryId  WHERE entries.id IS NOT NULL) \
+                                      +(SELECT COUNT(entries.id) FROM specialEntries   LEFT JOIN entries ON entries.id=specialEntries.entryId   WHERE entries.id IS NOT NULL) \
                               ",
                               CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
                               {
@@ -1239,6 +1240,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                       fileEntries.fragmentSize \
                                FROM fileEntries \
                                  LEFT JOIN entries ON entries.id=fileEntries.entryId \
+                               WHERE entries.id IS NOT NULL \
                               ",
                               CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
                               {
@@ -1299,11 +1301,13 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
+
   sqliteResult = sqlite3_exec(databaseHandle,
                               "SELECT entries.storageId, \
                                       entries.name \
                                FROM directoryEntries \
                                  LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                               WHERE entries.id IS NOT NULL \
                               ",
                               CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
                               {
@@ -1363,6 +1367,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                       entries.name \
                                FROM linkEntries \
                                  LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                               WHERE entries.id IS NOT NULL \
                               ",
                               CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
                               {
@@ -1424,6 +1429,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                       hardlinkEntries.fragmentSize \
                                FROM hardlinkEntries \
                                  LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
+                               WHERE entries.id IS NOT NULL \
                               ",
                               CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
                               {
@@ -1489,6 +1495,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                       entries.name \
                                FROM specialEntries \
                                  LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                               WHERE entries.id IS NOT NULL \
                               ",
                               CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
                               {
@@ -1551,7 +1558,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
   totalCount = 0L;
   n          = 0L;
   sqliteResult = sqlite3_exec(databaseHandle,
-                              "SELECT  (SELECT COUNT(id) FROM storage) \
+                              "SELECT (SELECT COUNT(id) FROM storage) \
                               ",
                               CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
                               {
