@@ -8784,8 +8784,8 @@ Dprintf.dprintf("");
                     {
                       widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
                                                         data.totalEntryCount,
-                                                        Units.formatByteSize(data.totalEntrySize),
-                                                        data.totalEntrySize
+                                                        Units.formatByteSize(data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize),
+                                                        data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize
                                                        )
                                          );
                       widgetTotal.pack();
@@ -8853,7 +8853,6 @@ Dprintf.dprintf("");
                 data.totalEntryCount       = valueMap.getLong("totalEntryCount");
                 data.totalEntrySize        = valueMap.getLong("totalEntrySize");
                 data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
-//Dprintf.dprintf("data.totalEntrySize=%d data.totalEntryContentSize=%d",data.totalEntrySize,data.totalEntryContentSize);
 
                 display.syncExec(new Runnable()
                 {
