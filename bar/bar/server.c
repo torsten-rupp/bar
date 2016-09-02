@@ -68,9 +68,7 @@
 #define AUTHORIZATION_PENALITY_TIME         500     // delay processing by failCount^2*n [ms]
 #define MAX_AUTHORIZATION_HISTORY_KEEP_TIME 30000   // max. time to keep entries in authorization fail history [ms]
 #define MAX_AUTHORIZATION_FAIL_HISTORY      64      // max. length of history of authorization fail clients
-//#define MAX_ABORT_COMMAND_IDS               1024    // max. aborted command ids history
-//TODO
-#define MAX_ABORT_COMMAND_IDS               16    // max. aborted command ids history
+#define MAX_ABORT_COMMAND_IDS               512     // max. aborted command ids history
 
 // sleep times [s]
 #define SLEEP_TIME_REMOTE_THREAD            ( 5*60)
@@ -4535,6 +4533,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
       resultError = Storage_parseName(&storageSpecifier,storageName);
       if (resultError == ERROR_NONE)
       {
+//TODO
 #ifndef WERROR
 #warning NYI: move this special handling of limited scp into Storage_delete()?
 #endif
@@ -4735,7 +4734,6 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                               )
      )
   {
-//TODO: which error?
     return ERROR_DATABASE_INDEX_NOT_FOUND;
   }
 
@@ -5153,13 +5151,6 @@ LOCAL void purgeExpiredThreadCode(void)
               }
             }
 
-//TODO
-//if (String_equalsCString(jobUUID,"47c2a261-cf7b-4f9f-92e8-87a55358e509") && (entityId==9442))
-if ((entityId==10770))
-{
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//asm("int3");
-}
             if ((maxKeep > 0) || (maxAge > 0))
             {
               // check if expired
@@ -5522,6 +5513,7 @@ LOCAL void indexThreadCode(void)
         LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
         {
           // index update
+//TODO
 #ifndef WERROR
 #warning todo init?
 #endif
@@ -5585,18 +5577,7 @@ LOCAL void indexThreadCode(void)
         }
         else if (Error_getCode(error) == ERROR_INTERRUPTED)
         {
-#ifndef WERROR
-#warning needed?
-#endif
-#if 0
-          plogMessage(NULL,  // logHandle,
-                      LOG_TYPE_INDEX,
-                      "INDEX",
-                      "Interrupted create index for '%s' - postpone\n",
-                      String_cString(printableStorageName),
-                      Error_getText(error)
-                     );
-#endif
+          // nothing to do
         }
         else
         {
@@ -5959,11 +5940,9 @@ LOCAL void autoIndexThreadCode(void)
           plogMessage(NULL,  // logHandle,
                       LOG_TYPE_INDEX,
                       "INDEX",
-                      "Deleted index for '%s', last checked %s -- xxxx %d\n",
+                      "Deleted index for '%s', last checked %s\n",
                       String_cString(printableStorageName),
-                      String_cString(Misc_formatDateTime(string,lastCheckedDateTime,NULL)),
-//TODO: remove
-globalOptions.indexDatabaseKeepTime
+                      String_cString(Misc_formatDateTime(string,lastCheckedDateTime,NULL))
                      );
         }
       }
@@ -14852,9 +14831,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   // restore
   restoreCommandInfo.clientInfo = clientInfo;
   restoreCommandInfo.id         = id;
-//TODO
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//asm("int3");
   error = Command_restore(&storageNameList,
                           &restoreEntryList,
                           NULL,  // excludePatternList
@@ -14864,10 +14840,13 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                           CALLBACK(restoreHandleError,&restoreCommandInfo),
                           CALLBACK(getPassword,&restoreCommandInfo),
                           CALLBACK_NULL,  // isPause callback
-                          CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return isCommandAborted(clientInfo,id); },NULL),
+                          CALLBACK_INLINE(bool,(void *userData),
+                          {
+                            UNUSED_VARIABLE(userData);
+                            return isCommandAborted(clientInfo,id);
+                          },NULL),
                           NULL  // logHandle
                          );
-//isCommandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
   sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
   EntryList_done(&restoreEntryList);
   StringList_done(&storageNameList);
@@ -17947,6 +17926,8 @@ LOCAL void doneClient(ClientInfo *clientInfo)
           HALT_INTERNAL_ERROR("Cannot stop client thread!");
         }
       }
+
+      // disconnect
       Network_disconnect(&clientInfo->network.socketHandle);
 
       // free resources
@@ -18029,7 +18010,9 @@ LOCAL ClientNode *newClient(void)
 /***********************************************************************\
 * Name   : newNetworkClient
 * Purpose: create new network client
-* Input  : -
+* Input  : name         - remote name
+*          port         - remote port
+*          socketHandle - socket handle
 * Output : -
 * Return : client node
 * Notes  : -
@@ -18037,7 +18020,6 @@ LOCAL ClientNode *newClient(void)
 
 LOCAL ClientNode *newNetworkClient(ConstString  name,
                                    uint         port,
-//TODO pointer?
                                    SocketHandle socketHandle
                                   )
 {
@@ -18071,6 +18053,7 @@ LOCAL void deleteClient(ClientNode *clientNode)
 * Name   : freeAuthorizationFailNode
 * Purpose: free authorazation fail node
 * Input  : authorizationFailNode - authorization fail node
+*          userData              - user data
 * Output : -
 * Return : -
 * Notes  : -
@@ -18134,7 +18117,7 @@ LOCAL void deleteAuthorizationFailNode(AuthorizationFailNode *authorizationFailN
 * Name   : processCommand
 * Purpose: process client command
 * Input  : clientNode - client node
-*          commadn    - command to process
+*          command    - command to process
 * Output : -
 * Return : -
 * Notes  : -
@@ -18463,7 +18446,7 @@ Errors Server_run(uint              port,
   }
   if (Index_isAvailable())
   {
-//TODO
+//TODO: required?
     // init database pause callbacks
     Index_setPauseCallback(CALLBACK(indexPauseCallback,NULL));
 
@@ -18724,9 +18707,6 @@ Errors Server_run(uint              port,
                   break;
                 case AUTHORIZATION_STATE_OK:
                   // remove from authorization fail list
-#ifndef WERROR
-#warning ERRRORRRRRR: two clients from same host, then disconnect: node is deleted twice
-#endif
                   authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
                   if (authorizationFailNode != NULL)
                   {
@@ -18798,11 +18778,6 @@ Errors Server_run(uint              port,
             // done client and free resources
             deleteClient(disconnectClientNode);
           }
-          else
-          {
-//TODO: remove unknown
-fprintf(stderr,"%s, %d: %x\n",__FILE__,__LINE__,pollfds[pollfdIndex].revents);
-          }
         }
       }
     }
@@ -18846,11 +18821,10 @@ fprintf(stderr,"%s, %d: %x\n",__FILE__,__LINE__,pollfds[pollfdIndex].revents);
     while (authorizationFailNode != NULL)
     {
       // find active client
-//TODO: listFind
-      LIST_ITERATE(&clientList,clientNode)
-      {
-        if (clientNode->clientInfo.authorizationFailNode == authorizationFailNode) break;
-      }
+      clientNode = LIST_FIND(&clientList,
+                             clientNode,
+                             clientNode->clientInfo.authorizationFailNode == authorizationFailNode
+                            );
 
       // check if authorization fail timed out for not active clients
       if (   (clientNode == NULL)
