@@ -133,6 +133,7 @@ void Password_init(Password *password)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  password->data[0] = '\0';
   password->length = 0;
 }
 
@@ -215,8 +216,8 @@ void Password_clear(Password *password)
 {
   assert(password != NULL);
 
-  password->length = 0;
   password->data[0] = '\0';
+  password->length = 0;
 }
 
 void Password_set(Password *password, const Password *fromPassword)
@@ -225,11 +226,12 @@ void Password_set(Password *password, const Password *fromPassword)
 
   if (fromPassword != NULL)
   {
-    memcpy(password->data,fromPassword->data,MAX_PASSWORD_LENGTH+1);
+    memmove(password->data,fromPassword->data,MAX_PASSWORD_LENGTH+1);
     password->length = fromPassword->length;
   }
   else
   {
+    password->data[0] = '\0';
     password->length = 0;
   }
 }
@@ -292,7 +294,7 @@ void Password_setBuffer(Password *password, const void *buffer, uint length)
 
   length = MIN(length,MAX_PASSWORD_LENGTH);
   #ifdef HAVE_GCRYPT
-    memcpy(password->data,buffer,length);
+    memmove(password->data,buffer,length);
   #else /* not HAVE_GCRYPT */
     p = (char*)buffer;
     for (z = 0; z < length; z++)
