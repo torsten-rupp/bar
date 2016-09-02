@@ -2699,7 +2699,7 @@ String String_set(String string, ConstString sourceString)
       assert(sourceString->data != NULL);
 
       ensureStringLength(string,sourceString->length);
-      memcpy(&string->data[0],&sourceString->data[0],sourceString->length);
+      memmove(&string->data[0],&sourceString->data[0],sourceString->length);
       string->data[sourceString->length] = '\0';
       string->length = sourceString->length;
     }
@@ -2764,7 +2764,7 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength)
     if (buffer != NULL)
     {
       ensureStringLength(string,bufferLength);
-      memcpy(&string->data[0],buffer,bufferLength);
+      memmove(&string->data[0],buffer,bufferLength);
       string->data[bufferLength] = '\0';
       string->length = bufferLength;
     }
@@ -2800,7 +2800,7 @@ String String_sub(String string, ConstString fromString, ulong fromIndex, long f
       {
         n = MIN((ulong)fromLength,fromString->length);
         ensureStringLength(string,n);
-        memcpy(&string->data[0],&fromString->data[fromString->length-n],n);
+        memmove(&string->data[0],&fromString->data[fromString->length-n],n);
         string->data[n] ='\0';
         string->length = n;
       }
@@ -2808,7 +2808,7 @@ String String_sub(String string, ConstString fromString, ulong fromIndex, long f
       {
         n = MIN((ulong)fromLength,fromString->length-fromIndex);
         ensureStringLength(string,n);
-        memcpy(&string->data[0],&fromString->data[fromIndex],n);
+        memmove(&string->data[0],&fromString->data[fromIndex],n);
         string->data[n] ='\0';
         string->length = n;
       }
@@ -2847,13 +2847,13 @@ char *String_subCString(char *s, ConstString fromString, ulong fromIndex, long f
       if      (fromIndex == STRING_END)
       {
         n = MIN((ulong)fromLength,fromString->length);
-        memcpy(s,&fromString->data[fromString->length-n],n);
+        memmove(s,&fromString->data[fromString->length-n],n);
         s[n] = '\0';
       }
       else if (fromIndex < fromString->length)
       {
         n = MIN((ulong)fromLength,fromString->length-fromIndex);
-        memcpy(s,&fromString->data[fromIndex],n);
+        memmove(s,&fromString->data[fromIndex],n);
         s[n] = '\0';
       }
       else
@@ -2887,13 +2887,13 @@ char *String_subBuffer(char *buffer, ConstString fromString, ulong fromIndex, lo
       if      (fromIndex == STRING_END)
       {
         n = MIN((ulong)fromLength,fromString->length);
-        memcpy(&buffer[0],&fromString->data[fromString->length-n],n);
+        memmove(&buffer[0],&fromString->data[fromString->length-n],n);
         memset(&buffer[n],0,fromLength-n);
       }
       else if (fromIndex < fromString->length)
       {
         n = MIN((ulong)fromLength,fromString->length-fromIndex);
-        memcpy(&buffer[0],&fromString->data[fromIndex],n);
+        memmove(&buffer[0],&fromString->data[fromIndex],n);
         memset(&buffer[n],0,fromLength-n);
       }
       else
@@ -2925,7 +2925,7 @@ String String_append(String string, ConstString appendString)
     {
       n = string->length+appendString->length;
       ensureStringLength(string,n);
-      memcpy(&string->data[string->length],&appendString->data[0],appendString->length);
+      memmove(&string->data[string->length],&appendString->data[0],appendString->length);
       string->data[n] = '\0';
       string->length = n;
     }
@@ -2962,7 +2962,7 @@ String String_appendSub(String string, ConstString fromString, ulong fromIndex, 
           n = MIN((ulong)fromLength,fromString->length-fromIndex);
         }
         ensureStringLength(string,string->length+n);
-        memcpy(&string->data[string->length],&fromString->data[fromIndex],n);
+        memmove(&string->data[string->length],&fromString->data[fromIndex],n);
         string->data[string->length+n] ='\0';
         string->length += n;
       }
@@ -3028,7 +3028,7 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
     {
       n = string->length+bufferLength;
       ensureStringLength(string,n);
-      memcpy(&string->data[string->length],buffer,bufferLength);
+      memmove(&string->data[string->length],buffer,bufferLength);
       string->data[n] = '\0';
       string->length = n;
     }
@@ -3057,7 +3057,7 @@ String String_insert(String string, ulong index, ConstString insertString)
       {
         n = string->length+insertString->length;
         ensureStringLength(string,n);
-        memcpy(&string->data[string->length],&insertString->data[0],insertString->length);
+        memmove(&string->data[string->length],&insertString->data[0],insertString->length);
         string->data[n] = '\0';
         string->length = n;
       }
@@ -3066,7 +3066,7 @@ String String_insert(String string, ulong index, ConstString insertString)
         n = string->length+insertString->length;
         ensureStringLength(string,n);
         memmove(&string->data[index+insertString->length],&string->data[index],string->length-index);
-        memcpy(&string->data[index],&insertString->data[0],insertString->length);
+        memmove(&string->data[index],&insertString->data[0],insertString->length);
         string->data[n] = '\0';
         string->length = n;
       }
@@ -3106,7 +3106,7 @@ String String_insertSub(String string, ulong index, ConstString fromString, ulon
         if      (index == STRING_END)
         {
           ensureStringLength(string,string->length+n);
-          memcpy(&string->data[string->length],&fromString->data[fromIndex],n);
+          memmove(&string->data[string->length],&fromString->data[fromIndex],n);
           string->data[string->length+n] = '\0';
           string->length += n;
         }
@@ -3114,7 +3114,7 @@ String String_insertSub(String string, ulong index, ConstString fromString, ulon
         {
           ensureStringLength(string,string->length+n);
           memmove(&string->data[index+n],&string->data[index],string->length-index);
-          memcpy(&string->data[index],&fromString->data[fromIndex],n);
+          memmove(&string->data[index],&fromString->data[fromIndex],n);
           string->data[string->length+n] = '\0';
           string->length += n;
         }
@@ -3177,7 +3177,7 @@ String String_insertBuffer(String string, ulong index, const char *buffer, ulong
       {
         n = string->length+bufferLength;
         ensureStringLength(string,n);
-        memcpy(&string->data[string->length],buffer,bufferLength);
+        memmove(&string->data[string->length],buffer,bufferLength);
         string->data[n] = '\0';
         string->length = n;
       }
@@ -3186,7 +3186,7 @@ String String_insertBuffer(String string, ulong index, const char *buffer, ulong
         n = string->length+bufferLength;
         ensureStringLength(string,n);
         memmove(&string->data[index+bufferLength],&string->data[index],string->length-index);
-        memcpy(&string->data[index],buffer,bufferLength);
+        memmove(&string->data[index],buffer,bufferLength);
         string->data[n] = '\0';
         string->length = n;
       }
@@ -4270,7 +4270,7 @@ String String_iterate(                      String string,
         n = strlen(s);
         ensureStringLength(string,string->length+n-1);
         memmove(&string->data[j+n],&string->data[j+1],string->length-(j+1));
-        memcpy(&string->data[j],s,n);
+        memmove(&string->data[j],s,n);
         string->data[string->length+n-1] = '\0';
         string->length += n-1;
 
