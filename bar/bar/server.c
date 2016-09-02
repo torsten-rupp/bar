@@ -9615,7 +9615,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       (void)File_setPermission(fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
 
       // create new job
-      jobNode = newJob(JOB_TYPE_CREATE,fileName,NULL);
+      jobNode = newJob(JOB_TYPE_CREATE,fileName,jobUUID);
       assert(jobNode != NULL);
 
       // free resources
@@ -13932,7 +13932,7 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, IndexHandle *i
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            indexId=<id>|0
+*            indexId=<id>
 *          Result:
 \***********************************************************************/
 
@@ -13944,6 +13944,10 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "222 indexHandle=%p %p\n",&indexHandle,indexHandle
+            );
   // get index id
   if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
   {
@@ -17657,10 +17661,22 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   // init variables
   result = String_new();
 
+logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "dddd--------------------- indexHandle=%p %p\n",&indexHandle,indexHandle
+            );
+logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "axxdddd22222222222 indexHandle=%p %p\n",&indexHandle,indexHandle
+            );
   while (   !clientInfo->quitFlag
          && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg),WAIT_FOREVER)
         )
   {
+logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "dddd22222222222 indexHandle=%p %p\n",&indexHandle,indexHandle
+            );
     // check authorization (if not in server debug mode)
     if (globalOptions.serverDebugFlag || (commandMsg.authorizationState == clientInfo->authorizationState))
     {
@@ -18136,7 +18152,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString command)
   // parse command
   if (!parseCommand(&commandMsg,command))
   {
-    sendClientResult(clientInfo,commandMsg.id,TRUE,ERROR_PARSING,"parse error");
+    sendClientResult(clientInfo,commandMsg.id,TRUE,ERROR_PARSING,"parse error '%S'",command);
     return;
   }
 
@@ -18419,6 +18435,11 @@ Errors Server_run(uint              port,
 
   // init index
   indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
+//TODO
+logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "indexHandle=%p %p\n",&indexHandle,indexHandle
+            );
 
   // read job list
   rereadAllJobs(serverJobsDirectory);
@@ -18968,7 +18989,6 @@ Errors Server_batch(int inputDescriptor,
     return error;
   }
   error = File_openDescriptor(&outputFileHandle,outputDescriptor,FILE_OPEN_APPEND|FILE_STREAM);
-fprintf(stderr,"%s, %d: %x\n",__FILE__,__LINE__,error);
   if (error != ERROR_NONE)
   {
     fprintf(stderr,
@@ -18978,7 +18998,6 @@ fprintf(stderr,"%s, %d: %x\n",__FILE__,__LINE__,error);
     File_close(&inputFileHandle);
     return error;
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // init index
   indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
