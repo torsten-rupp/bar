@@ -540,8 +540,8 @@ public class Settings
   public static String                indexDatabaseAddStorageName     = null;
   public static String                indexDatabaseRemoveStorageName  = null;
   public static String                indexDatabaseRefreshStorageName = null;
-  public static String                indexDatabaseStorageListPattern = null;
-  public static String                indexDatabaseEntriesListPattern = null;
+  public static String                indexDatabaseStorageListName    = null;
+  public static String                indexDatabaseEntriesListName    = null;
 
   public static String                restoreStorageName              = null;
   public static String                destination                     = "";
