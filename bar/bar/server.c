@@ -15492,7 +15492,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
 * Return : -
 * Notes  : Arguments:
 *            name=<text>
-*            indexType=<text>|*
+*            indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*
 *            newestOnly=yes|no
 *            [offset=<n>]
 *            [limit=<n>]
@@ -17130,7 +17130,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
 * Return : -
 * Notes  : Arguments:
 *            name=<text>
-*            indexType=<type>|*
+*            indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*
 *            newestOnly=yes|no
 *          Result:
 *            totalEntryCount=<n>
