@@ -57,7 +57,7 @@
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32S %partFrom:12llu..%partTo:12llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG          "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %        :-32s %partFrom:12llu..%partTo:12llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG            "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32S %                         :26s %        :-15s %       :7s  %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :26s %        :-15s %       :7s  %crypt:-10S %name:S -> %destinationName:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32S %                         :26s %        :-15s %       :7s  %crypt:-10S %name:S -> %destinationName:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG       "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32S %partFrom:12llu..%partTo:12llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG   "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :26s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG  "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :26s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
@@ -79,7 +79,7 @@
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE                "%type:-8s %size:12s %dateTime:-32S %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE               "%type:-8s %size:12s %        :-32s %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR                 "%type:-8s %    :12s %dateTime:-32S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK                "%type:-8s %    :12s %        :-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK                "%type:-8s %    :12s %dateTime:-32S %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK            "%type:-8s %size:12s %dateTime:-32S %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR        "%type:-8s %    :12s %        :-32s %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK       "%type:-8s %    :12s %        :-32s %name:S"
@@ -158,6 +158,10 @@ typedef struct ArchiveContentNode
     {
       String          linkName;
       String          destinationName;
+      uint64          timeModified;
+      uint32          userId;
+      uint32          groupId;
+      FilePermission  permission;
       CryptAlgorithms cryptAlgorithm;
       CryptTypes      cryptType;
     } link;
@@ -762,8 +766,6 @@ LOCAL void printDirectoryInfo(ConstString     storageName,
 
   assert(directoryName != NULL);
 
-//  UNUSED_VARIABLE(storageName);
-
   // init variables
   dateTimeString = String_new();
   cryptString    = String_new();
@@ -834,6 +836,10 @@ LOCAL void printDirectoryInfo(ConstString     storageName,
 *                            not be printed
 *          linkName        - link name
 *          destinationName - name of referenced file
+*          timeModified    - file modified time
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permissions
 *          cryptAlgorithm  - used crypt algorithm
 *          cryptType       - crypt type; see CRYPT_TYPES
 * Output : -
@@ -844,25 +850,52 @@ LOCAL void printDirectoryInfo(ConstString     storageName,
 LOCAL void printLinkInfo(ConstString     storageName,
                          ConstString     linkName,
                          ConstString     destinationName,
+                         uint64          timeModified,
+                         uint32          userId,
+                         uint32          groupId,
+                         FilePermission  permission,
                          CryptAlgorithms cryptAlgorithm,
                          CryptTypes      cryptType
                         )
 {
+  String     dateTimeString;
   String     cryptString;
   String     line;
+  char       userName[12],groupName[12];
+  char       permissionString[10];
   const char *template;
-  TextMacro  textMacros[5];
+  TextMacro  textMacros[9];
 
   assert(linkName != NULL);
   assert(destinationName != NULL);
 
-//  UNUSED_VARIABLE(storageName);
-
   // init variables
-  cryptString = String_new();
-  line        = String_new();
+  dateTimeString = String_new();
+  cryptString    = String_new();
+  line           = String_new();
 
   // format
+  Misc_formatDateTime(dateTimeString,timeModified,NULL);
+
+  if (globalOptions.numericUIDGIDFlag)
+  {
+    snprintf(userName,sizeof(userName),"%d",userId);
+    snprintf(groupName,sizeof(groupName),"%d",groupId);
+  }
+  else
+  {
+    File_userIdToUserName(userName,sizeof(userName),userId);
+    File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
+  }
+  if (globalOptions.numericPermissionFlag)
+  {
+    snprintf(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
+  }
+  else
+  {
+    File_permissionToString(permissionString,sizeof(permissionString),permission);
+  }
+
   if (globalOptions.longFormatFlag)
   {
     template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_LINK_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG;
@@ -873,11 +906,15 @@ LOCAL void printLinkInfo(ConstString     storageName,
     template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_LINK : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK;
   }
 
-  TEXT_MACRO_N_STRING (textMacros[0],"%storageName",    storageName,    NULL);
-  TEXT_MACRO_N_CSTRING(textMacros[1],"%type",           "LINK",         NULL);
-  TEXT_MACRO_N_STRING (textMacros[2],"%crypt",          cryptString,    NULL);
-  TEXT_MACRO_N_STRING (textMacros[3],"%name",           linkName,       NULL);
-  TEXT_MACRO_N_STRING (textMacros[4],"%destinationName",destinationName,NULL);
+  TEXT_MACRO_N_STRING   (textMacros[ 0],"%storageName",    storageName,     NULL);
+  TEXT_MACRO_N_CSTRING  (textMacros[ 1],"%type",           "LINK",          NULL);
+  TEXT_MACRO_N_STRING   (textMacros[ 2],"%dateTime",       dateTimeString,  NULL);
+  TEXT_MACRO_N_CSTRING  (textMacros[ 3],"%user",           userName,        NULL);
+  TEXT_MACRO_N_CSTRING  (textMacros[ 4],"%group",          groupName,       NULL);
+  TEXT_MACRO_N_CSTRING  (textMacros[ 5],"%permission",     permissionString,NULL);
+  TEXT_MACRO_N_STRING   (textMacros[ 6],"%crypt",          cryptString,     NULL);
+  TEXT_MACRO_N_STRING   (textMacros[ 7],"%name",           linkName,        NULL);
+  TEXT_MACRO_N_STRING   (textMacros[ 8],"%destinationName",destinationName, NULL);
 
   // print
   printInfo(0,
@@ -894,6 +931,7 @@ LOCAL void printLinkInfo(ConstString     storageName,
   // free resources
   String_delete(line);
   String_delete(cryptString);
+  String_delete(dateTimeString);
 }
 
 /***********************************************************************\
@@ -952,8 +990,6 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
   TextMacro  textMacros[15];
 
   assert(fileName != NULL);
-
-//  UNUSED_VARIABLE(storageName);
 
   // init variables
   dateTimeString = String_new();
@@ -1438,6 +1474,10 @@ LOCAL void addListDirectoryInfo(ConstString     storageName,
 * Input  : storageName     - storage name
 *          linkName        - link name
 *          destinationName - destination name
+*          timeModified    - link modified time
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permissions
 *          cryptAlgorithm  - used crypt algorithm
 *          cryptType       - crypt type; see CRYPT_TYPES
 * Output : -
@@ -1448,6 +1488,10 @@ LOCAL void addListDirectoryInfo(ConstString     storageName,
 LOCAL void addListLinkInfo(ConstString     storageName,
                            ConstString     linkName,
                            ConstString     destinationName,
+                           uint64          timeModified,
+                           uint32          userId,
+                           uint32          groupId,
+                           FilePermission  permission,
                            CryptAlgorithms cryptAlgorithm,
                            CryptTypes      cryptType
                           )
@@ -1466,6 +1510,10 @@ LOCAL void addListLinkInfo(ConstString     storageName,
   archiveContentNode->type                 = ARCHIVE_ENTRY_TYPE_LINK;
   archiveContentNode->link.linkName        = String_duplicate(linkName);
   archiveContentNode->link.destinationName = String_duplicate(destinationName);
+  archiveContentNode->link.timeModified    = timeModified;
+  archiveContentNode->link.userId          = userId;
+  archiveContentNode->link.groupId         = groupId;
+  archiveContentNode->link.permission      = permission;
   archiveContentNode->link.cryptAlgorithm  = cryptAlgorithm;
   archiveContentNode->link.cryptType       = cryptType;
 
@@ -1874,6 +1922,10 @@ LOCAL void printArchiveList(void)
           printLinkInfo(archiveContentNode->storageName,
                         archiveContentNode->link.linkName,
                         archiveContentNode->link.destinationName,
+                        archiveContentNode->link.timeModified,
+                        archiveContentNode->link.userId,
+                        archiveContentNode->link.groupId,
+                        archiveContentNode->link.permission,
                         archiveContentNode->link.cryptAlgorithm,
                         archiveContentNode->link.cryptType
                        );
@@ -2379,6 +2431,10 @@ remoteBarFlag=FALSE;
                     addListLinkInfo(Storage_getName(storageSpecifier,NULL),
                                     linkName,
                                     fileName,
+                                    fileInfo.timeModified,
+                                    fileInfo.userId,
+                                    fileInfo.groupId,
+                                    fileInfo.permission,
                                     cryptAlgorithm,
                                     cryptType
                                    );
@@ -2394,6 +2450,10 @@ remoteBarFlag=FALSE;
                     printLinkInfo(NULL,
                                   linkName,
                                   fileName,
+                                  fileInfo.timeModified,
+                                  fileInfo.userId,
+                                  fileInfo.groupId,
+                                  fileInfo.permission,
                                   cryptAlgorithm,
                                   cryptType
                                  );
@@ -3104,6 +3164,9 @@ remoteBarFlag=FALSE;
               else if (String_equalsCString(type,"LINK"))
               {
                 String          linkName,fileName;
+                uint64          dateTime;
+                uint32          userId,groupId;
+                FilePermission  permission;
                 CryptAlgorithms cryptAlgorithm;
                 CryptTypes      cryptType;
 
@@ -3115,6 +3178,10 @@ remoteBarFlag=FALSE;
                 parseOK = TRUE;
                 parseOK |= StringMap_getString(argumentMap,"name",linkName,NULL);
                 parseOK |= StringMap_getString(argumentMap,"name",fileName,NULL);
+                parseOK |= StringMap_getUInt64(argumentMap,"dateTime",&dateTime,0LL);
+                parseOK |= StringMap_getUInt(argumentMap,"userId",&userId,0);
+                parseOK |= StringMap_getUInt(argumentMap,"groupId",&groupId,0);
+                parseOK |= StringMap_getUInt(argumentMap,"permission",&permission,0);
                 parseOK |= StringMap_getEnum(argumentMap,"cryptAlgorithm",&cryptAlgorithm,(StringMapParseEnumFunction)StringMap_parseEnumNumber,CRYPT_ALGORITHM_UNKNOWN);
                 parseOK |= StringMap_getEnum(argumentMap,"cryptType",&cryptType,(StringMapParseEnumFunction)StringMap_parseEnumNumber,CRYPT_TYPE_NONE);
 
@@ -3131,6 +3198,10 @@ remoteBarFlag=FALSE;
                       addListLinkInfo(Storage_getName(storageSpecifier,NULL),
                                       linkName,
                                       fileName,
+                                      dateTime,
+                                      userId,
+                                      groupId,
+                                      permission,
                                       cryptAlgorithm,
                                       cryptType
                                      );
@@ -3147,6 +3218,10 @@ remoteBarFlag=FALSE;
                       printLinkInfo(NULL,
                                     linkName,
                                     fileName,
+                                    dateTime,
+                                    userId,
+                                    groupId,
+                                    permission,
                                     cryptAlgorithm,
                                     cryptType
                                    );
