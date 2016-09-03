@@ -18893,12 +18893,10 @@ logMessage(NULL,  // logHandle,
     }
   }
   String_delete(clientName);
-  List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
-#ifndef USE_POLL
+  List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
   free(pollfds);
-#endif
 
-  // disconnect all clients
+  // delete all clients
   while (!List_isEmpty(&clientList))
   {
     clientNode = (ClientNode*)List_removeFirst(&clientList);
@@ -18936,6 +18934,7 @@ logMessage(NULL,  // logHandle,
   // free resources
   if (Index_isAvailable())
   {
+    Thread_done(&purgeExpiredThread);
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
       Thread_done(&autoIndexThread);
