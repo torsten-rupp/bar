@@ -77,7 +77,6 @@
 #define SLEEP_TIME_INDEX_THREAD             ( 1*60)
 #define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD (10*60)
 #define SLEEP_TIME_PURGE_EXPIRED_THREAD     (10*60)
-//#define SLEEP_TIME_PURGE_EXPIRED_THREAD     (30)
 
 /***************************** Datatypes *******************************/
 
@@ -15121,26 +15120,32 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 *            lastErrorMessage=<error message>
 *            totalEntryCount=<n> \
 *            totalEntrySize=<n> \
+*            expireDateTime=<time stamp [s]>
 *            ...
 \***********************************************************************/
 
 LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  bool             indexStateAny;
-  IndexStateSet    indexStateSet;
-  bool             indexModeAny;
-  IndexModeSet     indexModeSet;
-  String           name;
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          entityId;
-  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  uint64           createdDateTime;
-  ArchiveTypes     archiveType;
-  String           lastErrorMessage;
-  ulong            totalEntryCount;
-  uint64           totalEntrySize;
+  StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
+  bool               indexStateAny;
+  IndexStateSet      indexStateSet;
+  bool               indexModeAny;
+  IndexModeSet       indexModeSet;
+  String             name;
+  Errors             error;
+  IndexQueryHandle   indexQueryHandle;
+  IndexId            entityId;
+  StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  uint64             createdDateTime;
+  ArchiveTypes       archiveType;
+  String             lastErrorMessage;
+  ulong              totalEntryCount;
+  uint64             totalEntrySize;
+  uint               maxAge;
+  SemaphoreLock      semaphoreLock;
+  const JobNode      *jobNode;
+  const ScheduleNode *scheduleNode;
+  uint64             expireDateTime;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -15221,8 +15226,32 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                                )
         )
   {
+    // get expire date/time
+    maxAge = 0;
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    {
+      jobNode = findJobByUUID(jobUUID);
+      if (jobNode != NULL)
+      {
+        scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+        if (scheduleNode != NULL)
+        {
+          maxAge = scheduleNode->maxAge;
+        }
+      }
+    }
+    if (maxAge > 0)
+    {
+      expireDateTime = createdDateTime+maxAge*S_PER_DAY;
+    }
+    else
+    {
+      expireDateTime = 0LL;
+    }
+
+    // send result
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "jobUUID=%S scheduleUUID=%S entityId=%lld archiveType=%s lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu",
+                     "jobUUID=%S scheduleUUID=%S entityId=%lld archiveType=%s lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu expireDateTime=%llu",
                      jobUUID,
                      scheduleUUID,
                      entityId,
@@ -15230,7 +15259,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                      createdDateTime,
                      lastErrorMessage,
                      totalEntryCount,
-                     totalEntrySize
+                     totalEntrySize,
+                     expireDateTime
                     );
   }
   Index_doneList(&indexQueryHandle);

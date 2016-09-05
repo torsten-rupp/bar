@@ -999,6 +999,7 @@ public class TabRestore
     public String                lastErrorMessage;     // last error message
     public long                  totalEntryCount;
     public long                  totalEntrySize;
+    public long                  expireDateTime;       // expire date/time or 0
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
@@ -1034,6 +1035,7 @@ Dprintf.dprintf("");
      * @param lastErrorMessage last error message text
      * @param totalEntryCount total number of entresi of storage
      * @param totalEntrySize total size of storage [byte]
+     * @param expireDateTime expire date/time (timestamp)
      */
     EntityIndexData(long                  entityId,
                     String                jobUUID,
@@ -1042,7 +1044,8 @@ Dprintf.dprintf("");
                     long                  lastCreatedDateTime,
                     String                lastErrorMessage,
                     long                  totalEntryCount,
-                    long                  totalEntrySize
+                    long                  totalEntrySize,
+                    long                  expireDateTime
                    )
     {
       super(entityId);
@@ -1053,6 +1056,7 @@ Dprintf.dprintf("");
       this.lastErrorMessage    = lastErrorMessage;
       this.totalEntryCount     = totalEntryCount;
       this.totalEntrySize      = totalEntrySize;
+      this.expireDateTime      = expireDateTime;
     }
 
     /** get name
@@ -1132,6 +1136,7 @@ Dprintf.dprintf("");
       out.writeObject(lastErrorMessage);
       out.writeObject(totalEntryCount);
       out.writeObject(totalEntrySize);
+      out.writeObject(expireDateTime);
     }
 
     /** read storage index data object from object stream
@@ -1151,6 +1156,7 @@ Dprintf.dprintf("");
       lastErrorMessage    = (String)in.readObject();
       totalEntryCount     = (Long)in.readObject();
       totalEntrySize      = (Long)in.readObject();
+      expireDateTime      = (Long)in.readObject();
     }
 
     /** convert data to string
@@ -1158,7 +1164,7 @@ Dprintf.dprintf("");
      */
     public String toString()
     {
-      return "EntityIndexData {"+id+", type="+archiveType.toString()+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes}";
+      return "EntityIndexData {"+id+", type="+archiveType.toString()+", lastCreatedDateTime="+lastCreatedDateTime+", totalEntrySize="+totalEntrySize+" bytes, expireDateTime="+expireDateTime+"}";
     }
   }
 
@@ -2263,6 +2269,7 @@ Dprintf.dprintf("cirrect?");
                                      String                lastErrorMessage    = valueMap.getString("lastErrorMessage"                       );
                                      long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount"                        );
                                      long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize"                         );
+                                     long                  expireDateTime      = valueMap.getLong  ("expireDateTime"                         );
 
                                      // add entity data index
                                      entityIndexDataList.add(new EntityIndexData(entityId,
@@ -2272,7 +2279,8 @@ Dprintf.dprintf("cirrect?");
                                                                                  lastCreatedDateTime,
                                                                                  lastErrorMessage,
                                                                                  totalEntryCount,
-                                                                                 totalEntrySize
+                                                                                 totalEntrySize,
+                                                                                 expireDateTime
                                                                                 )
                                                             );
                                    }
@@ -4205,6 +4213,16 @@ Dprintf.dprintf("cirrect?");
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
+      label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Expire at")+":");
+      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetStorageTreeToolTip,(entityIndexData.expireDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.expireDateTime*1000L)) : "-");
+      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
+
       Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
       widgetStorageTreeToolTip.setBounds(x,y,size.x,size.y);
       widgetStorageTreeToolTip.setVisible(true);
@@ -5380,6 +5398,7 @@ Dprintf.dprintf("");
                                                                                   String                lastErrorMessage    = valueMap.getString("lastErrorMessage"                       );
                                                                                   long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount"                        );
                                                                                   long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize"                         );
+                                                                                  long                  expiredDateTime     = valueMap.getLong  ("expiredDateTime"                        );
 
                                                                                   // add entity data index
                                                                                   final EntityIndexData entityIndexData = new EntityIndexData(entityId,
@@ -5389,7 +5408,8 @@ Dprintf.dprintf("");
                                                                                                                                               lastCreatedDateTime,
                                                                                                                                               lastErrorMessage,
                                                                                                                                               totalEntryCount,
-                                                                                                                                              totalEntrySize
+                                                                                                                                              totalEntrySize,
+                                                                                                                                              expiredDateTime
                                                                                                                                              );
 
                                                                                   // update/insert menu item
