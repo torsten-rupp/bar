@@ -15989,12 +15989,16 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
         {
           if (forceRefresh)
           {
-            Index_setState(indexHandle,
-                           storageId,
-                           INDEX_STATE_UPDATE_REQUESTED,
-                           Misc_getCurrentDateTime(),
-                           NULL
-                          );
+            error = Index_setState(indexHandle,
+                                   storageId,
+                                   INDEX_STATE_UPDATE_REQUESTED,
+                                   Misc_getCurrentDateTime(),
+                                   NULL
+                                  );
+          }
+          else
+          {
+            error = ERROR_NONE;
           }
         }
         else
@@ -16006,15 +16010,16 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                    INDEX_MODE_MANUAL,
                                    &storageId
                                   );
-          if (error == ERROR_NONE)
-          {
-            sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
-                             storageId,
-                             Storage_getPrintableName(&storageSpecifier,NULL)
-                            );
-          }
         }
         Storage_done(&storageHandle);
+
+        if (error == ERROR_NONE)
+        {
+          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+                           storageId,
+                           Storage_getPrintableName(&storageSpecifier,NULL)
+                          );
+        }
       }
     }
   }
@@ -16049,12 +16054,16 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                  {
                                    if (forceRefresh)
                                    {
-                                     Index_setState(indexHandle,
-                                                    storageId,
-                                                    INDEX_STATE_UPDATE_REQUESTED,
-                                                    Misc_getCurrentDateTime(),
-                                                    NULL
-                                                   );
+                                     error = Index_setState(indexHandle,
+                                                            storageId,
+                                                            INDEX_STATE_UPDATE_REQUESTED,
+                                                            Misc_getCurrentDateTime(),
+                                                            NULL
+                                                           );
+                                   }
+                                   else
+                                   {
+                                     error = ERROR_NONE;
                                    }
                                  }
                                  else
@@ -16066,16 +16075,16 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                                             INDEX_MODE_MANUAL,
                                                             &storageId
                                                            );
-                                   if (error != ERROR_NONE)
-                                   {
-                                     return error;
-                                   }
-
-                                   sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
-                                                    storageId,
-                                                    Storage_getPrintableName(&storageSpecifier,storageName)
-                                                   );
                                  }
+                                 if (error != ERROR_NONE)
+                                 {
+                                   return error;
+                                 }
+
+                                 sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+                                                  storageId,
+                                                  Storage_getPrintableName(&storageSpecifier,storageName)
+                                                 );
                                }
                              }
 
