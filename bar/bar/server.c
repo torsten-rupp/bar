@@ -18419,7 +18419,6 @@ Errors Server_run(uint              port,
 
   // init index
   indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
-fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,indexHandle);
 
   // read job list
   rereadAllJobs(serverJobsDirectory);
