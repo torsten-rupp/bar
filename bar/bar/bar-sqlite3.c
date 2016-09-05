@@ -67,8 +67,8 @@ LOCAL void printUsage(const char *programName)
 {
   printf("Usage %s: [<options>] <database file> [<command>...|-]\n",programName);
   printf("\n");
-  printf("Options:  -c|--create         - create index file\n");
-  printf("          --create-triggers   - re-create triggers\n");
+  printf("Options:  --create             - create new index database\n");
+  printf("          --create-triggers    - re-create triggers\n");
   printf("          --create-indizes     - re-create indizes\n");
   printf("          --create-aggregates  - re-create aggregates data\n");
   printf("          -n|--names           - print named values\n");
@@ -1860,7 +1860,7 @@ int main(int argc, const char *argv[])
   n = 0;
   while (i < argc)
   {
-    if      (stringEquals(argv[i],"-c") || stringEquals(argv[i],"--create"))
+    if      (stringEquals(argv[i],"--create"))
     {
       create = TRUE;
     }
