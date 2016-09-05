@@ -1161,7 +1161,6 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
   {
     if (String_isEmpty(storageName))
     {
-//fprintf(stderr,"%s, %d: entryId=%ld\n",__FILE__,__LINE__,entryId);
       Index_deleteEntry(indexHandle,entryId);
       n++;
     }
@@ -1881,7 +1880,6 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                   )
           )
     {
-//fprintf(stderr,"%s, %d: storageId=%llu\n",__FILE__,__LINE__,storageId);
       do
       {
         deleteStorageId = INDEX_ID_NONE;
@@ -1926,7 +1924,6 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                       )
               )
         {
-//fprintf(stderr,"%s, %d: duplicateStorageId %llu\n",__FILE__,__LINE__,duplicateStorageId);
           if (   (storageId != duplicateStorageId)
               && Storage_equalNames(storageName,duplicateStorageName)
              )
@@ -2363,7 +2360,6 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                            )
         )
   {
-fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,entryId);
   }
   String_delete(name);
   Index_doneList(&indexQueryHandle);
@@ -3366,7 +3362,6 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
   // assign to job
   if (toJobUUID != NULL)
   {
-fprintf(stderr,"%s, %d: xxx\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
