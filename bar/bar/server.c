@@ -13944,10 +13944,6 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-logMessage(NULL,  // logHandle,
-             LOG_TYPE_ALWAYS,
-             "222 indexHandle=%p %p\n",&indexHandle,indexHandle
-            );
   // get index id
   if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
   {
@@ -17661,22 +17657,10 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   // init variables
   result = String_new();
 
-logMessage(NULL,  // logHandle,
-             LOG_TYPE_ALWAYS,
-             "dddd--------------------- indexHandle=%p %p\n",&indexHandle,indexHandle
-            );
-logMessage(NULL,  // logHandle,
-             LOG_TYPE_ALWAYS,
-             "axxdddd22222222222 indexHandle=%p %p\n",&indexHandle,indexHandle
-            );
   while (   !clientInfo->quitFlag
          && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg),WAIT_FOREVER)
         )
   {
-logMessage(NULL,  // logHandle,
-             LOG_TYPE_ALWAYS,
-             "dddd22222222222 indexHandle=%p %p\n",&indexHandle,indexHandle
-            );
     // check authorization (if not in server debug mode)
     if (globalOptions.serverDebugFlag || (commandMsg.authorizationState == clientInfo->authorizationState))
     {
@@ -18164,7 +18148,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString command)
       {
         // execute
         commandMsg.serverCommandFunction(clientInfo,
-                                         NULL,  // indexHandle,
+                                         indexHandle,
                                          commandMsg.id,
                                          commandMsg.argumentMap
                                         );
@@ -18188,7 +18172,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString command)
           {
             // execute command
             commandMsg.serverCommandFunction(clientInfo,
-                                             NULL,  // indexHandle,
+                                             indexHandle,
                                              commandMsg.id,
                                              commandMsg.argumentMap
                                             );
@@ -18435,11 +18419,7 @@ Errors Server_run(uint              port,
 
   // init index
   indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
-//TODO
-logMessage(NULL,  // logHandle,
-             LOG_TYPE_ALWAYS,
-             "indexHandle=%p %p\n",&indexHandle,indexHandle
-            );
+fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,indexHandle);
 
   // read job list
   rereadAllJobs(serverJobsDirectory);
