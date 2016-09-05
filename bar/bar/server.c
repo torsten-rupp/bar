@@ -4677,6 +4677,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                 )
         )
   {
+fprintf(stderr,"%s, %d: del storage %u\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
     (void)deleteStorage(indexHandle,storageId);
   }
   Index_doneList(&indexQueryHandle);
@@ -5155,7 +5156,7 @@ LOCAL void purgeExpiredThreadCode(void)
               // check if expired
               if (maxAge > 0)
               {
-                if (now > (createdDateTime+maxAge*S_PER_DAY))
+                if (now > (createdDateTime+(uint64)maxAge*S_PER_DAY))
                 {
                   // delete expired entity
                   error = deleteEntity(indexHandle,entityId);
@@ -15228,15 +15229,18 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   {
     // get expire date/time
     maxAge = 0;
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    if (!String_isEmpty(scheduleUUID))
     {
-      jobNode = findJobByUUID(jobUUID);
-      if (jobNode != NULL)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
-        scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
-        if (scheduleNode != NULL)
+        jobNode = findJobByUUID(jobUUID);
+        if (jobNode != NULL)
         {
-          maxAge = scheduleNode->maxAge;
+          scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+          if (scheduleNode != NULL)
+          {
+            maxAge = scheduleNode->maxAge;
+          }
         }
       }
     }
