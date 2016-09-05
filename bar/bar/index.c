@@ -1822,13 +1822,12 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
   StorageSpecifier storageSpecifier;
   String           storageName;
   String           duplicateStorageName;
-  String           printableStorageName;
+  String           deleteStorageName;
   ulong            n;
   IndexId          storageId;
-  bool             deletedIndexFlag;
-  ulong            i;
   IndexQueryHandle indexQueryHandle1,indexQueryHandle2;
-  int64            duplicateStorageId;
+  IndexId          duplicateStorageId;
+  IndexId          deleteStorageId;
 
   assert(indexHandle != NULL);
 
@@ -1842,37 +1841,28 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
   duplicateStorageName = String_new();
-  printableStorageName = String_new();
+  deleteStorageName    = String_new();
 
-  // clean-up
+  // get storage entry
   n = 0L;
-  do
+  error = Index_initListStorages(&indexQueryHandle1,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 INDEX_ID_ANY,  // entityId
+                                 NULL,  // jobUUID
+                                 NULL,  // indexIds
+                                 0,  // storageIdCount
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // name
+                                 INDEX_STORAGE_SORT_MODE_NONE,
+                                 DATABASE_ORDERING_NONE,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error == ERROR_NONE)
   {
-    deletedIndexFlag = FALSE;
-
-    // get storage entry
-    error = Index_initListStorages(&indexQueryHandle1,
-                                   indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   INDEX_ID_ANY,  // entityId
-                                   NULL,  // jobUUID
-                                   NULL,  // indexIds
-                                   0,  // storageIdCount
-                                   INDEX_STATE_SET_ALL,
-                                   INDEX_MODE_SET_ALL,
-                                   NULL,  // name
-                                   INDEX_STORAGE_SORT_MODE_NONE,
-                                   DATABASE_ORDERING_NONE,
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error != ERROR_NONE)
-    {
-      break;
-    }
-    i = 0L;
     while (   !quitFlag
-           && !deletedIndexFlag
            && Index_getNextStorage(&indexQueryHandle1,
                                    NULL,  // uuidId
                                    NULL,  // jobUUID
@@ -1891,63 +1881,89 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                   )
           )
     {
-      // check for duplicate entry
-      error = Index_initListStorages(&indexQueryHandle2,
-                                     indexHandle,
-                                     INDEX_ID_ANY,  // uuidId
-                                     INDEX_ID_ANY,  // entityId
-                                     NULL,  // jobUUID
-                                     NULL,  // indexIds
-                                     0,  // storageIdCount
-                                     INDEX_STATE_SET_ALL,
-                                     INDEX_MODE_SET_ALL,
-                                     NULL,  // name
-                                     INDEX_STORAGE_SORT_MODE_NONE,
-                                     DATABASE_ORDERING_NONE,
-                                     i,  // offset
-                                     INDEX_UNLIMITED
-                                    );
-      if (error != ERROR_NONE)
+//fprintf(stderr,"%s, %d: storageId=%llu\n",__FILE__,__LINE__,storageId);
+      do
       {
-        continue;
-      }
-      while (   !quitFlag
-             && !deletedIndexFlag
-             && Index_getNextStorage(&indexQueryHandle2,
-                                     NULL,  // uuidId
-                                     NULL,  // jobUUID
-                                     NULL,  // entityId
-                                     NULL,  // scheduleUUID
-                                     NULL,  // archiveType
-                                     &duplicateStorageId,
-                                     duplicateStorageName,
-                                     NULL,  // createdDateTime
-                                     NULL,  // entries
-                                     NULL,  // size
-                                     NULL,  // indexState
-                                     NULL,  // indexMode
-                                     NULL,  // lastCheckedDateTime
-                                     NULL   // errorMessage
-                                    )
-            )
-      {
-        if (   (storageId != duplicateStorageId)
-            && Storage_equalNames(storageName,duplicateStorageName)
-           )
-        {
-          // get printable name (if possible)
-          error = Storage_parseName(&storageSpecifier,duplicateStorageName);
-          if (error == ERROR_NONE)
-          {
-            String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
-          }
-          else
-          {
-            String_set(printableStorageName,duplicateStorageName);
-          }
+        deleteStorageId = INDEX_ID_NONE;
 
+        // check for duplicate entry
+        error = Index_initListStorages(&indexQueryHandle2,
+                                       indexHandle,
+                                       INDEX_ID_ANY,  // uuidId
+                                       INDEX_ID_ANY,  // entityId
+                                       NULL,  // jobUUID
+                                       NULL,  // indexIds
+                                       0,  // storageIdCount
+                                       INDEX_STATE_SET_ALL,
+                                       INDEX_MODE_SET_ALL,
+                                       NULL,  // name
+                                       INDEX_STORAGE_SORT_MODE_NONE,
+                                       DATABASE_ORDERING_NONE,
+                                       0L,  // offset
+                                       INDEX_UNLIMITED
+                                      );
+        if (error != ERROR_NONE)
+        {
+          continue;
+        }
+        while (   !quitFlag
+               && (deleteStorageId == INDEX_ID_NONE)
+               && Index_getNextStorage(&indexQueryHandle2,
+                                       NULL,  // uuidId
+                                       NULL,  // jobUUID
+                                       NULL,  // entityId
+                                       NULL,  // scheduleUUID
+                                       NULL,  // archiveType
+                                       &duplicateStorageId,
+                                       duplicateStorageName,
+                                       NULL,  // createdDateTime
+                                       NULL,  // entries
+                                       NULL,  // size
+                                       NULL,  // indexState
+                                       NULL,  // indexMode
+                                       NULL,  // lastCheckedDateTime
+                                       NULL   // errorMessage
+                                      )
+              )
+        {
+//fprintf(stderr,"%s, %d: duplicateStorageId %llu\n",__FILE__,__LINE__,duplicateStorageId);
+          if (   (storageId != duplicateStorageId)
+              && Storage_equalNames(storageName,duplicateStorageName)
+             )
+          {
+            // get storage id to delete
+            deleteStorageId = duplicateStorageId;
+
+            // get printable name (if possible)
+            error = Storage_parseName(&storageSpecifier,duplicateStorageName);
+            if (error == ERROR_NONE)
+            {
+              String_set(deleteStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+            }
+            else
+            {
+              String_set(deleteStorageName,duplicateStorageName);
+            }
+          }
+        }
+        Index_doneList(&indexQueryHandle2);
+#if 0
+        // request update index
+        if (deletedIndexFlag)
+        {
+          (void)Index_setState(indexHandle,
+                               storageId,
+                               INDEX_STATE_UPDATE_REQUESTED,
+                               0LL,  // lastCheckedDateTime
+                               NULL  // errorMessage
+                              );
+        }
+#endif
+
+        if (deleteStorageId != INDEX_ID_NONE)
+        {
           // delete storage
-          error = Index_deleteStorage(indexHandle,duplicateStorageId);
+          error = Index_deleteStorage(indexHandle,deleteStorageId);
           if (error == ERROR_NONE)
           {
             plogMessage(NULL,  // logHandle
@@ -1955,31 +1971,20 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                         "INDEX",
                         "Deleted duplicate index #%lld: '%s'\n",
                         duplicateStorageId,
-                        String_cString(printableStorageName)
+                        String_cString(deleteStorageName)
                        );
             n++;
-            deletedIndexFlag = TRUE;
+          }
+          else
+          {
+            deleteStorageId = INDEX_ID_NONE;
           }
         }
       }
-      Index_doneList(&indexQueryHandle2);
-
-      // request update index
-      if (deletedIndexFlag)
-      {
-        (void)Index_setState(indexHandle,
-                             storageId,
-                             INDEX_STATE_UPDATE_REQUESTED,
-                             0LL,  // lastCheckedDateTime
-                             NULL  // errorMessage
-                            );
-      }
-
-      i++;
+      while (deleteStorageId != INDEX_ID_NONE);
     }
     Index_doneList(&indexQueryHandle1);
   }
-  while (!quitFlag && deletedIndexFlag);
   if (n > 0L)
   {
     plogMessage(NULL,  // logHandle
@@ -1991,7 +1996,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
   }
 
   // free resources
-  String_delete(printableStorageName);
+  String_delete(deleteStorageName);
   String_delete(duplicateStorageName);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
@@ -2030,7 +2035,6 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
   String_vformat(filterString,filter,arguments);
   va_end(arguments);
 
-#if 1
   do
   {
     if (indexUseCount == 0)
@@ -2060,7 +2064,6 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
   while (   (changedRowCount > 0)
          && (error == ERROR_NONE)
         );
-#endif
 
   // free resources
   String_delete(filterString);
@@ -5292,7 +5295,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   filterString = String_newCString("1");
   string = String_new();
   filterAppend(filterString,!String_isEmpty(name),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
-  filterAppend(filterString,indexStateSet != INDEX_STATE_SET_ALL,"AND","storage.state IN (%S)",getIndexStateSetString(string,indexStateSet));
+  filterAppend(filterString,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(string,indexStateSet));
   filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storage.mode IN (%S)",getIndexModeSetString(string,indexModeSet));
   String_delete(string);
 
@@ -5613,7 +5616,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
   filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
   filterAppend(filterString,!String_isEmpty(name),"AND","EXISTS(SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
-  filterAppend(filterString,indexStateSet != INDEX_STATE_SET_ALL,"AND","storage.state IN (%S)",getIndexStateSetString(string,indexStateSet));
+  filterAppend(filterString,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(string,indexStateSet));
   filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storage.mode IN (%S)",getIndexModeSetString(string,indexModeSet));
   String_delete(string);
 
@@ -6570,7 +6573,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   filterAppend(filterString,!String_isEmpty(ftsName),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH %S)",ftsName);
 //  filterAppend(filterString,!String_isEmpty(regexpName),"AND","REGEXP(%S,0,storage.name)",regexpName);
-  filterAppend(filterString,indexStateSet != INDEX_STATE_SET_ALL,"AND","storage.state IN (%S)",getIndexStateSetString(string,indexStateSet));
+  filterAppend(filterString,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(string,indexStateSet));
   filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storage.mode IN (%S)",getIndexModeSetString(string,indexModeSet));
   String_delete(string);
   String_delete(filterIdsString);
