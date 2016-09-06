@@ -850,7 +850,13 @@ typedef struct
 #define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE() \
   do \
   { \
-     HALT_INTERNAL_ERROR("Unhandled switch case"); \
+     __abort(__FILE__,__LINE__,HALT_PREFIX_INTERNAL_ERROR, "Unhandled switch case"); \
+  } \
+  while (0)
+#define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX(format, args...) \
+  do \
+  { \
+     __abort(__FILE__,__LINE__,HALT_PREFIX_INTERNAL_ERROR, "Unhandled switch case " format, ## args); \
   } \
   while (0)
 #define HALT_INTERNAL_ERROR_UNREACHABLE() \
