@@ -7503,7 +7503,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN storage ON storage.id=entries.storageId \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
+                                  WHERE     entriesNewest.id IS NOT NULL \
+                                        AND %S \
                                  ",
                                  filterString
                                 );
@@ -7933,7 +7934,8 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                   LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
                                   LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.entryId \
                                   LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.entryId \
-                                WHERE %S \
+                                WHERE     entriesNewest.id IS NOT NULL \
+                                      AND %S \
                                 %S \
                                 LIMIT %llu,%llu; \
                                ",
