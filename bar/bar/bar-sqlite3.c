@@ -1827,7 +1827,7 @@ LOCAL int printRow(void *userData, int count, char *values[], char *columns[])
     if (values[i] != NULL)
     {
       if (showNames) printf("%s=",columns[i]);
-      printf("%s ",values[i]); if (showHeader) { printSpaces(widths[i]-strlen(values[i])); }
+      printf("%s ",!stringIsEmpty(values[i]) ? values[i] : "''"); if (showHeader) { printSpaces(widths[i]-strlen(values[i])); }
     }
     else
     {
