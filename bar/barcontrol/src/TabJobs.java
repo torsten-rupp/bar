@@ -2144,7 +2144,7 @@ public class TabJobs
     Widgets.setEnabled(widgetTabFolder,false);
     Widgets.layout(widgetTabFolder,2,0,TableLayoutData.NSWE);
     {
-      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Files"));
+      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Entries"));
       tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
