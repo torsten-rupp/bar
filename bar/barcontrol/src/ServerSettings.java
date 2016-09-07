@@ -1524,7 +1524,7 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
     Widgets.layout(composite,0,0,TableLayoutData.NSWE);
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Log")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Level")+":");
       Widgets.layout(label,0,0,TableLayoutData.NW);
       spinner = BARWidgets.newNumber(composite,
                                      BARControl.tr("Verbosity level."),
