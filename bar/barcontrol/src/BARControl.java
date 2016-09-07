@@ -1924,11 +1924,11 @@ public class BARControl
               }
               catch (ConnectionError error)
               {
-                Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
+                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
               }
               catch (CommunicationError error)
               {
-                Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
+                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
               }
             }
 
@@ -1956,11 +1956,11 @@ public class BARControl
                 }
                 catch (ConnectionError error)
                 {
-                  Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
+                  Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
                 }
                 catch (CommunicationError error)
                 {
-                  Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
+                  Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
                 }
               }
             }
@@ -2017,11 +2017,11 @@ public class BARControl
               }
               catch (ConnectionError error)
               {
-                Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
+                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
               }
               catch (CommunicationError error)
               {
-                Dialogs.error(new Shell(),BARControl.tr("Connection fail: ")+error.getMessage());
+                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
               }
 
               updateServerMenu();
