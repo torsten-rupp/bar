@@ -34,15 +34,16 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL bool create           = FALSE;  // create new index database
+LOCAL bool create               = FALSE;  // create new index database
 LOCAL bool createIndizesFlag    = FALSE;  // re-create indizes
 LOCAL bool createTriggersFlag   = FALSE;  // re-create triggers
+LOCAL bool createNewestFlag     = FALSE;  // re-create newest data
 LOCAL bool createAggregatesFlag = FALSE;  // re-create aggregate data
-LOCAL bool showNames        = FALSE;
-LOCAL bool showHeader       = FALSE;
-LOCAL bool headerPrinted    = FALSE;
-LOCAL bool foreignKeys      = TRUE;
-LOCAL bool verbose          = FALSE;
+LOCAL bool showNames            = FALSE;
+LOCAL bool showHeader           = FALSE;
+LOCAL bool headerPrinted        = FALSE;
+LOCAL bool foreignKeys          = TRUE;
+LOCAL bool verbose              = FALSE;
 
 /****************************** Macros *********************************/
 
@@ -69,6 +70,7 @@ LOCAL void printUsage(const char *programName)
   printf("\n");
   printf("Options:  --create             - create new index database\n");
   printf("          --create-triggers    - re-create triggers\n");
+  printf("          --create-newest      - re-create newest data\n");
   printf("          --create-indizes     - re-create indizes\n");
   printf("          --create-aggregates  - re-create aggregates data\n");
   printf("          -n|--names           - print named values\n");
@@ -496,6 +498,36 @@ LOCAL String vformatSQLString(String     sqlString,
   return sqlString;
 }
 
+/***********************************************************************\
+* Name   : formatSQLString
+* Purpose: format SQL string from command
+* Input  : sqlString - SQL string variable
+*          command   - command string with %[l]d, %S, %s
+*          ..        - optional argument list
+* Output : -
+* Return : SQL string
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String formatSQLString(String     sqlString,
+                             const char *command,
+                             ...
+                            )
+{
+  va_list arguments;
+
+  assert(sqlString != NULL);
+
+  va_start(arguments,command);
+  vformatSQLString(sqlString,
+                   command,
+                   arguments
+                  );
+  va_end(arguments);
+  
+  return sqlString;
+}
+
 #if 0
 still not used
 /***********************************************************************\
@@ -533,7 +565,7 @@ LOCAL int sqlPrepare(sqlite3_stmt **statementHandle,
   va_end(arguments);
 
   // prepare SQL command execution
-  sqliteResult = sqlite3_prepare_v2(databaseHandle,
+  sqliteResult = g(databaseHandle,
                                     String_cString(sqlString),
                                     -1,
                                     &statementHandle,
@@ -632,7 +664,6 @@ LOCAL int sqlExecute(sqlite3    *databaseHandle,
                                arguments
                               );
   va_end(arguments);
-//fprintf(stderr,"%s, %d: sqlStrin=%s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // prepare SQL command execution
   sqliteResult = sqlite3_prepare_v2(databaseHandle,
@@ -649,6 +680,75 @@ LOCAL int sqlExecute(sqlite3    *databaseHandle,
   }
   sqliteResult = sqlite3_step(statementHandle);
   if (sqliteResult != SQLITE_DONE)
+  {
+    (*errorMessage) = sqlite3_errmsg(databaseHandle);
+    String_delete(sqlString);
+    return sqliteResult;
+  }
+  sqlite3_finalize(statementHandle);
+
+  // free resources
+  String_delete(sqlString);
+
+  return SQLITE_OK;
+}
+
+/***********************************************************************\
+* Name   : GetInt64
+* Purpose: get SQL int64 valut command
+* Input  : databaseHandle - database handle
+*          errorMessage   - error message variable (can be NULL)
+*          command        - SQL command
+*          ...            - optional arguments for SQL command
+* Output : -
+* Return : SQLITE_OK or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int sqlGetInt64(sqlite3    *databaseHandle,
+                      int64      *value,
+                      const char **errorMessage,
+                      const char *tableName,
+                      const char *columName,
+                      const char filter,
+                      ...
+                     )
+{
+  String       sqlString;
+  va_list      arguments;
+  int          sqliteResult;
+  sqlite3_stmt *statementHandle;
+
+  assert(databaseHandle != NULL);
+
+  // format SQL command string
+  sqlString = String_format(String_new(),"SELECT %s FROM %s",columName,tableName);
+  va_start(arguments,filter);
+  sqlString = vformatSQLString(sqlString,
+                               filter,
+                               arguments
+                              );
+  va_end(arguments);
+
+  // prepare SQL command execution
+  sqliteResult = sqlite3_prepare_v2(databaseHandle,
+                                    String_cString(sqlString),
+                                    -1,
+                                    &statementHandle,
+                                    NULL
+                                   );
+  if (sqliteResult != SQLITE_OK)
+  {
+    (*errorMessage) = sqlite3_errmsg(databaseHandle);
+    String_delete(sqlString);
+    return sqliteResult;
+  }
+  sqliteResult = sqlite3_step(statementHandle);
+  if      (sqliteResult == SQLITE_ROW)
+  {
+    (*value) = (int64)atoll(value[0]);
+  }
+  else if (sqliteResult != SQLITE_DONE)
   {
     (*errorMessage) = sqlite3_errmsg(databaseHandle);
     String_delete(sqlString);
@@ -904,6 +1004,248 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   }
 
   if (verbose) printf("OK  \n");
+}
+
+/***********************************************************************\
+* Name   : createNewest
+* Purpose: create newest data
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void createNewest(sqlite3 *databaseHandle)
+{
+  int        sqliteResult;
+  const char *errorMessage;
+  ulong      n,totalCount;
+
+  // start transaction
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "BEGIN TRANSACTION",
+                              CALLBACK(NULL,NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    fprintf(stderr,"ERROR: create newest fail: %s!\n",errorMessage);
+    exit(1);
+  }
+
+  // set entries offset/size
+  if (verbose) { printf("Create newest entries..."); fflush(stdout); }
+
+  totalCount = 0L;
+  n          = 0L;
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "SELECT COUNT(id) FROM entries \
+                              ",
+                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                              {
+                                assert(count == 1);
+                                assert(values[0] != NULL);
+
+                                UNUSED_VARIABLE(userData);
+                                UNUSED_VARIABLE(columns);
+
+                                totalCount = (ulong)atol(values[0]);
+
+                                return SQLITE_OK;
+                              },NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    fprintf(stderr,"ERROR: create newest fail: %s!\n",errorMessage);
+    exit(1);
+  }
+
+  // delete newest
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "DELETE FROM entriesNewest",
+                              CALLBACK(NULL,NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    fprintf(stderr,"ERROR: create newest fail: %s!\n",errorMessage);
+    exit(1);
+  }
+
+  // insert newest
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "SELECT id, \
+                                      storageId, \
+                                      name, \
+                                      type, \
+                                      timeLastChanged, \
+                                      userId, \
+                                      groupId, \
+                                      permission, \
+                                      offset, \
+                                      size \
+                                FROM entries \
+                                ORDER BY name,offset,size,timeLastChanged DESC \
+                              ",
+                              CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                              {
+                                String     sqlString;
+                                bool       existsFlag;
+                                uint64     entryId;
+                                uint64     storageId;
+                                const char *name;
+                                uint       type;
+                                uint64     timeLastChanged;
+                                uint       userId;
+                                uint       groupId;
+                                uint       permission;
+                                uint64     offset;
+                                uint64     size;
+
+                                assert(count == 10);
+                                assert(values[0] != NULL);
+                                assert(values[1] != NULL);
+                                assert(values[2] != NULL);
+                                assert(values[3] != NULL);
+                                assert(values[4] != NULL);
+                                assert(values[5] != NULL);
+                                assert(values[6] != NULL);
+                                assert(values[7] != NULL);
+                                assert(values[8] != NULL);
+                                assert(values[9] != NULL);
+
+                                UNUSED_VARIABLE(userData);
+                                UNUSED_VARIABLE(columns);
+
+                                entryId         = (uint64)atoll(values[0]);
+                                storageId       = (uint64)atoll(values[1]);
+                                name            = values[2];
+                                type            = (uint)atol(values[3]);
+                                timeLastChanged = (uint64)atoll(values[4]);
+                                userId          = (uint)atol(values[5]);
+                                groupId         = (uint)atol(values[6]);
+                                permission      = (uint)atol(values[7]);
+                                offset          = (uint64)atoll(values[8]);
+                                size            = (uint64)atoll(values[9]);
+//fprintf(stderr,"%s, %d: %llu name=%s offset=%llu size=%llu timeLastChanged=%llu\n",__FILE__,__LINE__,entryId,name,offset,size,timeLastChanged);
+
+                                // check if exists
+                                sqlString = formatSQLString(String_new(),
+                                                            "SELECT id \
+                                                             FROM entriesNewest \
+                                                             WHERE     name=%'s \
+                                                                   AND offset=%llu \
+                                                                   AND size=%llu \
+                                                            ",
+                                                            name,
+                                                            offset,
+                                                            size
+                                                           );
+                                existsFlag = FALSE;
+                                sqliteResult = sqlite3_exec(databaseHandle,
+                                                            String_cString(sqlString),
+                                                            CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                                            {
+                                                              uint64 id;
+
+                                                              assert(count == 1);
+
+                                                              UNUSED_VARIABLE(userData);
+                                                              UNUSED_VARIABLE(columns);
+
+                                                              existsFlag = (values[0] != NULL);
+                                                              
+                                                              return SQLITE_OK;
+                                                            },NULL),
+                                                            (char**)&errorMessage
+                                                           );
+                                String_delete(sqlString);
+                                if (sqliteResult != SQLITE_OK)
+                                {
+                                  if (verbose) printf("FAIL!\n");
+                                  fprintf(stderr,"ERROR: create newest fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                  return sqliteResult;
+                                }
+                                
+                                if (!existsFlag)
+                                {
+//fprintf(stderr,"%s, %d: %llu name=%s offset=%llu size=%llu timeLastChanged=%llu\n",__FILE__,__LINE__,entryId,name,offset,size,timeLastChanged);
+                                  // insert
+                                  sqliteResult = sqlExecute(databaseHandle,
+                                                            &errorMessage,
+                                                            "INSERT INTO entriesNewest \
+                                                               (entryId,\
+                                                                storageId, \
+                                                                name, \
+                                                                type, \
+                                                                timeLastChanged, \
+                                                                userId, \
+                                                                groupId, \
+                                                                permission, \
+                                                                offset,\
+                                                                size \
+                                                               ) \
+                                                             VALUES \
+                                                               (%llu, \
+                                                                %llu, \
+                                                                %'s, \
+                                                                %u, \
+                                                                %llu, \
+                                                                %u, \
+                                                                %u, \
+                                                                %u, \
+                                                                %llu, \
+                                                                %llu \
+                                                               ) \
+                                                            ",
+                                                            entryId,
+                                                            storageId,
+                                                            name,
+                                                            type,
+                                                            timeLastChanged,
+                                                            userId,
+                                                            groupId,
+                                                            permission,
+                                                            offset,
+                                                            size
+                                                           );
+                                  if (sqliteResult != SQLITE_OK)
+                                  {
+                                    if (verbose) printf("FAIL!\n");
+                                    fprintf(stderr,"ERROR: create newest fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
+                                    return sqliteResult;
+                                  }
+                                }
+
+                                n++;
+                                if (verbose) printPercentage(n,totalCount);
+
+                                return SQLITE_OK;
+                              },NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    printf("FAIL\n");
+    sqlite3_exec(databaseHandle,"ROLLBACK TRANSACTION",CALLBACK(NULL,NULL),NULL);
+    fprintf(stderr,"ERROR: create newest fail: %s!\n",errorMessage);
+    exit(1);
+  }
+  if (verbose) printf("OK  \n");
+
+  // end transaction
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "END TRANSACTION",
+                              CALLBACK(NULL,NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    fprintf(stderr,"ERROR: create newest fail: %s!\n",errorMessage);
+    exit(1);
+  }
 }
 
 /***********************************************************************\
@@ -1868,6 +2210,10 @@ int main(int argc, const char *argv[])
     {
       createTriggersFlag = TRUE;
     }
+    else if (stringEquals(argv[i],"--create-newest"))
+    {
+      createNewestFlag = TRUE;
+    }
     else if (stringEquals(argv[i],"--create-indizes"))
     {
       createIndizesFlag = TRUE;
@@ -2067,6 +2413,12 @@ int main(int argc, const char *argv[])
   if (createTriggersFlag)
   {
     createTriggers(databaseHandle);
+  }
+
+  // recreate newest data
+  if (createNewestFlag)
+  {
+    createNewest(databaseHandle);
   }
 
   // recreate indizes
