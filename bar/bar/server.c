@@ -4677,7 +4677,6 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                 )
         )
   {
-fprintf(stderr,"%s, %d: del storage %u\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
     (void)deleteStorage(indexHandle,storageId);
   }
   Index_doneList(&indexQueryHandle);
