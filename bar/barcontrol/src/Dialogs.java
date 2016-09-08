@@ -3191,12 +3191,13 @@ class Dialogs
             while ((file = listDirectory.getNext()) != null)
             {
               if (   (showHidden || !listDirectory.isHidden(file))
-                  && (showFiles || !listDirectory.isFile(file))
+                  && (showFiles || listDirectory.isDirectory(file))
                   && ((fileFilterPattern == null) || fileFilterPattern.matcher(file.getName()).matches())
                  )
               {
-                TableItem tableItems[] = table.getItems();
+                // find insert index
                 int index = 0;
+                TableItem tableItems[] = table.getItems();
                 while (   (index < tableItems.length)
                        && (fileComparator.compare(file,(File)tableItems[index].getData()) > 0)
                       )
@@ -3204,6 +3205,7 @@ class Dialogs
                   index++;
                 }
 
+                // insert item
                 TableItem tableItem = new TableItem(table,SWT.NONE,index);
                 tableItem.setData(file);
                 tableItem.setText(0,file.getName());
