@@ -2022,6 +2022,7 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
   String  filterString;
   va_list arguments;
   Errors  error;
+  bool    retryFlag;
   ulong   changedRowCount;
 
   // init variables
@@ -2032,6 +2033,7 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
   String_vformat(filterString,filter,arguments);
   va_end(arguments);
 
+  changedRowCount = 0;
   do
   {
     if (indexUseCount == 0)
@@ -2052,13 +2054,18 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
                                 filterString
                                );
       });
+      retryFlag = FALSE;
 //fprintf(stderr,"%s, %d: deleted entries %lu %s\n",__FILE__,__LINE__,changedRowCount,Error_getText(error));
+    }
+    else
+    {
+      retryFlag = TRUE;
     }
 
     // short delay
     Misc_udelay(500*US_PER_MS);
   }
-  while (   (changedRowCount > 0)
+  while (   (retryFlag || (changedRowCount > 0))
          && (error == ERROR_NONE)
         );
 
