@@ -2120,67 +2120,42 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-//TODO: remove if? always insert/update?
-            if (true ||widgetStorageTree.getItemCount() > 0)
+            for (final UUIDIndexData uuidIndexData : uuidIndexDataArray)
             {
-              for (final UUIDIndexData uuidIndexData : uuidIndexDataArray)
+Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
+              TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,indexIdComperator,uuidIndexData);
+              if (uuidTreeItem == null)
               {
-                TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,indexIdComperator,uuidIndexData);
-                if (uuidTreeItem == null)
-                {
-                  // insert tree item
-                  uuidTreeItem = Widgets.insertTreeItem(widgetStorageTree,
-                                                        findStorageTreeIndex(uuidIndexData,indexDataComparator),
-                                                        (Object)uuidIndexData,
-                                                        true,  // folderFlag
-                                                        uuidIndexData.name,
-                                                        Units.formatByteSize(uuidIndexData.totalEntrySize),
-                                                        (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
-                                                        ""
-                                                       );
-//TODO
-//uuidIndexData.setTreeItem(uuidTreeItem);
-                  uuidTreeItem.setChecked(checkedIndexIdSet.contains(uuidIndexData.id));
-                }
-                else
-                {
-                  // update tree item
-                  assert uuidTreeItem.getData() instanceof UUIDIndexData;
-                  Widgets.updateTreeItem(uuidTreeItem,
-                                         (Object)uuidIndexData,
-                                         uuidIndexData.name,
-                                         Units.formatByteSize(uuidIndexData.totalEntrySize),
-                                         (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
-                                         ""
-                                        );
-                  removeUUIDTreeItemSet.remove(uuidTreeItem);
-                }
-                if (uuidTreeItem.getExpanded())
-                {
-                  uuidTreeItems.add(uuidTreeItem);
-                }
-              }
-            }
-            else
-            {
-              for (final UUIDIndexData uuidIndexData : uuidIndexDataArray)
-              {
-                // add tree item
-                TreeItem uuidTreeItem = Widgets.addTreeItem(widgetStorageTree,
-                                                            (Object)uuidIndexData,
-                                                            true,  // folderFlag
-                                                            uuidIndexData.name,
-                                                            Units.formatByteSize(uuidIndexData.totalEntrySize),
-                                                            (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
-                                                            ""
-                                                           );
+                // insert tree item
+                uuidTreeItem = Widgets.insertTreeItem(widgetStorageTree,
+                                                      findStorageTreeIndex(uuidIndexData,indexDataComparator),
+                                                      (Object)uuidIndexData,
+                                                      true,  // folderFlag
+                                                      uuidIndexData.name,
+                                                      Units.formatByteSize(uuidIndexData.totalEntrySize),
+                                                      (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
+                                                      ""
+                                                     );
 //TODO
 //uuidIndexData.setTreeItem(uuidTreeItem);
                 uuidTreeItem.setChecked(checkedIndexIdSet.contains(uuidIndexData.id));
-                if (uuidTreeItem.getExpanded())
-                {
-                  uuidTreeItems.add(uuidTreeItem);
-                }
+              }
+              else
+              {
+                // update tree item
+                assert uuidTreeItem.getData() instanceof UUIDIndexData;
+                Widgets.updateTreeItem(uuidTreeItem,
+                                       (Object)uuidIndexData,
+                                       uuidIndexData.name,
+                                       Units.formatByteSize(uuidIndexData.totalEntrySize),
+                                       (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
+                                       ""
+                                      );
+                removeUUIDTreeItemSet.remove(uuidTreeItem);
+              }
+              if (uuidTreeItem.getExpanded())
+              {
+                uuidTreeItems.add(uuidTreeItem);
               }
             }
           }
@@ -2804,6 +2779,7 @@ Dprintf.dprintf("cirrect?");
                                                                    storageIndexData.indexState.toString()
                                                                   );
                                            tableItem.setChecked(checkedIndexIdSet.contains(storageIndexData.id));
+                                           tableItem.setBackground(jobUUID.isEmpty() ? COLOR_NO_JOB_INFO : null);
                                          }
                                        });
                                      }
@@ -3910,6 +3886,7 @@ Dprintf.dprintf("cirrect?");
   private final Color COLOR_INFO_FORGROUND;
   private final Color COLOR_INFO_BACKGROUND;
   private final Color COLOR_NO_SCHEDULE_INFO;
+  private final Color COLOR_NO_JOB_INFO;
 
   // images
   private final Image IMAGE_DIRECTORY;
@@ -4625,6 +4602,7 @@ Dprintf.dprintf("cirrect?");
     COLOR_INFO_FORGROUND   = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
     COLOR_INFO_BACKGROUND  = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
     COLOR_NO_SCHEDULE_INFO = new Color(null,0xFF,0xF0,0xFF);
+    COLOR_NO_JOB_INFO      = new Color(null,0xF0,0xFF,0xFF);
 
     // get images
     IMAGE_DIRECTORY  = Widgets.loadImage(display,"directory.png");
@@ -5398,7 +5376,7 @@ Dprintf.dprintf("");
                                                                                   String                lastErrorMessage    = valueMap.getString("lastErrorMessage"                       );
                                                                                   long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount"                        );
                                                                                   long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize"                         );
-                                                                                  long                  expiredDateTime     = valueMap.getLong  ("expiredDateTime"                        );
+                                                                                  long                  expireDateTime      = valueMap.getLong  ("expireDateTime"                         );
 
                                                                                   // add entity data index
                                                                                   final EntityIndexData entityIndexData = new EntityIndexData(entityId,
@@ -5409,7 +5387,7 @@ Dprintf.dprintf("");
                                                                                                                                               lastErrorMessage,
                                                                                                                                               totalEntryCount,
                                                                                                                                               totalEntrySize,
-                                                                                                                                              expiredDateTime
+                                                                                                                                              expireDateTime
                                                                                                                                              );
 
                                                                                   // update/insert menu item
