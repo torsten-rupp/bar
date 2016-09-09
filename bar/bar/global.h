@@ -806,6 +806,18 @@ typedef struct
      __abort(HALT_PREFIX_INTERNAL_ERROR, format, ## args); \
   } \
   while (0)
+#define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE() \
+  do \
+  { \
+     __abort(HALT_PREFIX_INTERNAL_ERROR, "Unhandled switch case"); \
+  } \
+  while (0)
+#define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX(format, args...) \
+  do \
+  { \
+     __abort(HALT_PREFIX_INTERNAL_ERROR, "Unhandled switch case " format, ## args); \
+  } \
+  while (0)
 #else /* not NDEBUG */
 #define HALT(errorLevel, format, args...) \
   do \
@@ -834,6 +846,18 @@ typedef struct
      __abort(__FILE__,__LINE__,HALT_PREFIX_INTERNAL_ERROR, format, ## args); \
   } \
   while (0)
+#define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE() \
+  do \
+  { \
+     __abort(__FILE__,__LINE__,HALT_PREFIX_INTERNAL_ERROR, "Unhandled switch case"); \
+  } \
+  while (0)
+#define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX(format, args...) \
+  do \
+  { \
+     __abort(__FILE__,__LINE__,HALT_PREFIX_INTERNAL_ERROR, "Unhandled switch case " format, ## args); \
+  } \
+  while (0)
 #endif /* NDEBUG */
 #define HALT_INTERNAL_ERROR_AT(file, line, format, args...) \
   do \
@@ -845,18 +869,6 @@ typedef struct
   do \
   { \
      HALT_INTERNAL_ERROR("Still not implemented"); \
-  } \
-  while (0)
-#define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE() \
-  do \
-  { \
-     __abort(__FILE__,__LINE__,HALT_PREFIX_INTERNAL_ERROR, "Unhandled switch case"); \
-  } \
-  while (0)
-#define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX(format, args...) \
-  do \
-  { \
-     __abort(__FILE__,__LINE__,HALT_PREFIX_INTERNAL_ERROR, "Unhandled switch case " format, ## args); \
   } \
   while (0)
 #define HALT_INTERNAL_ERROR_UNREACHABLE() \
