@@ -693,8 +693,6 @@ void *RingBuffer_get(RingBuffer *ringBuffer, void *data, ulong n)
 
 void *RingBuffer_first(RingBuffer *ringBuffer, void *data)
 {
-  ulong n0,n1;
-
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
   if (   (ringBuffer != NULL)
