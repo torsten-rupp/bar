@@ -7723,7 +7723,7 @@ widgetArchivePartSize.setListVisible(true);
         Widgets.layout(composite,1,0,TableLayoutData.NSWE);
         {
           styledText = Widgets.newStyledText(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-          styledText.setToolTipText(BARControl.tr("Command or script to execute before start of a job.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%file - archive file name\n%directory - archive directory\n\nAdditional time macros are available."));
+          styledText.setToolTipText(BARControl.tr("Command or script to execute before start of job.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%file - archive file name\n%directory - archive directory\n\nAdditional time macros are available."));
           Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
           styledText.addModifyListener(new ModifyListener()
           {
@@ -7800,7 +7800,7 @@ widgetArchivePartSize.setListVisible(true);
         Widgets.layout(composite,3,0,TableLayoutData.NSWE);
         {
           styledText = Widgets.newStyledText(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-          styledText.setToolTipText(BARControl.tr("Command or script to execute after termination of a job.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%file - archive file name\n%directory - archive directory\n\nAdditional time macros are available."));
+          styledText.setToolTipText(BARControl.tr("Command or script to execute after termination of job.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%file - archive file name\n%directory - archive directory\n\nAdditional time macros are available."));
           Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
           styledText.addModifyListener(new ModifyListener()
           {
