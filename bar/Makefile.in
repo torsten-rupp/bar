@@ -57,8 +57,8 @@ CERTTOOL   = @CERTTOOL@
 OPENSSL    = @OPENSSL@
 KEYTOOL    = @KEYTOOL@
 
-UNOCONV    = @UNOCONV@
 TXT2MAN    = @TXT2MAN@
+UNOCONV    = @UNOCONV@
 
 SVNVERSION = svnversion
 
@@ -110,6 +110,9 @@ doc/images/%.png: doc/images/%.xcf
 doc/images/%-small.png: doc/images/%.xcf
 	$(CONVERT) $^ -delete 1--1 -resize 200x200 $@
 
+doc/images/%-large.png: doc/images/%.xcf
+	$(CONVERT) $^ -delete 1--1 $@
+
 #--------------------------------- objects -----------------------------------
 
 TARGETS              = bar/bar@EXEEXT@ \
@@ -120,8 +123,8 @@ TARGETS              = bar/bar@EXEEXT@ \
                          barcontrol/barcontrol.cmd \
                        ) \
 
-DOC                  = doc/bar.7 \
-                       doc/bar.pdf \
+DOC                  = $(if $(TXT2MAN),doc/bar.7) \
+                       $(if $(UNOCONV),doc/bar.pdf) \
 
 DOC_IMAGES           = doc/images/archivename-editor.png \
                        doc/images/entries.png \
@@ -139,6 +142,7 @@ DOC_IMAGES           = doc/images/archivename-editor.png \
                        doc/images/storage.png \
 
 DOC_IMAGES_SMALL     = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-small.png)
+DOC_IMAGES_LARGE     = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-large.png)
 
 OTHER_SOURCES        = errors.pl \
                        errors.def \
@@ -165,6 +169,9 @@ SCRIPTS              = scripts/barserver-SuSE \
 all: \
   $(TARGETS) \
   $(DOC) \
+  $(DOC_IMAGES) \
+  $(DOC_IMAGES_SMALL) \
+  $(DOC_IMAGES_LARGE) \
 
 clean: \
   clean_keys \
@@ -321,19 +328,16 @@ $(KEY_FILES):
 .PHONY: doc clean_doc
 
 doc: \
-  doc/bar.7 \
-  doc/bar.pdf \
-  $(DOC_IMAGES_SMALL)
+  $(DOC) \
+  $(DOC_IMAGES) \
+  $(DOC_IMAGES_SMALL) \
+  $(DOC_IMAGES_LARGE)
 
 clean_doc:
+	$(RMF) $(DOC)
 	$(RMF) $(DOC_IMAGES)
 	$(RMF) $(DOC_IMAGES_SMALL)
-ifneq ($(TXT2MAN),)
-	$(RMF) doc/bar.7
-endif
-ifneq ($(UNOCONV),)
-	$(RMF) doc/bar.pdf
-endif
+	$(RMF) $(DOC_IMAGES_LARGE)
 
 # create man-page
 
