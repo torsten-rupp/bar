@@ -524,7 +524,7 @@ LOCAL String formatSQLString(String     sqlString,
                    arguments
                   );
   va_end(arguments);
-  
+
   return sqlString;
 }
 
@@ -680,75 +680,6 @@ LOCAL int sqlExecute(sqlite3    *databaseHandle,
   }
   sqliteResult = sqlite3_step(statementHandle);
   if (sqliteResult != SQLITE_DONE)
-  {
-    (*errorMessage) = sqlite3_errmsg(databaseHandle);
-    String_delete(sqlString);
-    return sqliteResult;
-  }
-  sqlite3_finalize(statementHandle);
-
-  // free resources
-  String_delete(sqlString);
-
-  return SQLITE_OK;
-}
-
-/***********************************************************************\
-* Name   : GetInt64
-* Purpose: get SQL int64 valut command
-* Input  : databaseHandle - database handle
-*          errorMessage   - error message variable (can be NULL)
-*          command        - SQL command
-*          ...            - optional arguments for SQL command
-* Output : -
-* Return : SQLITE_OK or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL int sqlGetInt64(sqlite3    *databaseHandle,
-                      int64      *value,
-                      const char **errorMessage,
-                      const char *tableName,
-                      const char *columName,
-                      const char filter,
-                      ...
-                     )
-{
-  String       sqlString;
-  va_list      arguments;
-  int          sqliteResult;
-  sqlite3_stmt *statementHandle;
-
-  assert(databaseHandle != NULL);
-
-  // format SQL command string
-  sqlString = String_format(String_new(),"SELECT %s FROM %s",columName,tableName);
-  va_start(arguments,filter);
-  sqlString = vformatSQLString(sqlString,
-                               filter,
-                               arguments
-                              );
-  va_end(arguments);
-
-  // prepare SQL command execution
-  sqliteResult = sqlite3_prepare_v2(databaseHandle,
-                                    String_cString(sqlString),
-                                    -1,
-                                    &statementHandle,
-                                    NULL
-                                   );
-  if (sqliteResult != SQLITE_OK)
-  {
-    (*errorMessage) = sqlite3_errmsg(databaseHandle);
-    String_delete(sqlString);
-    return sqliteResult;
-  }
-  sqliteResult = sqlite3_step(statementHandle);
-  if      (sqliteResult == SQLITE_ROW)
-  {
-    (*value) = (int64)atoll(value[0]);
-  }
-  else if (sqliteResult != SQLITE_DONE)
   {
     (*errorMessage) = sqlite3_errmsg(databaseHandle);
     String_delete(sqlString);
@@ -1148,15 +1079,13 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
                                                             String_cString(sqlString),
                                                             CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
                                                             {
-                                                              uint64 id;
-
                                                               assert(count == 1);
 
                                                               UNUSED_VARIABLE(userData);
                                                               UNUSED_VARIABLE(columns);
 
                                                               existsFlag = (values[0] != NULL);
-                                                              
+
                                                               return SQLITE_OK;
                                                             },NULL),
                                                             (char**)&errorMessage
@@ -1168,7 +1097,7 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
                                   fprintf(stderr,"ERROR: create newest fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
-                                
+
                                 if (!existsFlag)
                                 {
 //fprintf(stderr,"%s, %d: %llu name=%s offset=%llu size=%llu timeLastChanged=%llu\n",__FILE__,__LINE__,entryId,name,offset,size,timeLastChanged);
