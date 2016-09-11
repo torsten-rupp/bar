@@ -224,7 +224,7 @@ catErrorlog()
 printUsage()
 {
   $CAT << EOT
-Usage: $PROGRAM_NAME [...] [--]...
+Usage: $PROGRAM_NAME [<options>] [--]
 
 Options: -d|--tls-directory=<path>       - TLS directory (default: $DEFAULT_TLS_DIR)
          --private-directory=<path>      - directory for private keys (default: <TLS directory>/private)
