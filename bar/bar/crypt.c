@@ -1405,7 +1405,6 @@ p++;
     gcryptError = gcry_sexp_new(&cryptKey->key,data,dataLength,1);
     if (gcryptError != 0)
     {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,gcry_strerror(gcryptError));
       Password_freeSecure(fileCryptKey);
       return ERROR_INVALID_KEY;
     }
