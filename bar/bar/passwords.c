@@ -43,12 +43,12 @@
 
 /***************************** Datatypes *******************************/
 
-#ifndef HAVE_GCRYPT
+#if !defined(NDEBUG) || !defined(HAVE_GCRYPT)
   typedef struct
   {
     ulong size;
   } MemoryHeader;
-#endif
+#endif /* !NDEBUG || !HAVE_GCRYPT */
 
 /***************************** Variables *******************************/
 #ifndef HAVE_GCRYPT
@@ -92,31 +92,51 @@ void Password_doneAll(void)
 void *Password_allocSecure(size_t size)
 {
   void *p;
-  #ifndef HAVE_GCRYPT
+  #if !defined(NDEBUG) || !defined(HAVE_GCRYPT)
     MemoryHeader *memoryHeader;
   #endif
 
   #ifdef HAVE_GCRYPT
-    p = gcry_malloc_secure(size);
+    #ifndef NDEBUG
+      memoryHeader = gcry_malloc_secure(sizeof(MemoryHeader)+size);
+      memoryHeader->size = size;
+      p = (byte*)memoryHeader+sizeof(MemoryHeader);
+    #else
+      p = gcry_malloc_secure(size);
+    #endif
   #else /* not HAVE_GCRYPT */
-    memoryHeader = (MemoryHeader*)malloc(sizeof(MemoryHeader) + size);
+    memoryHeader = (MemoryHeader*)malloc(sizeof(MemoryHeader)+size);
     memoryHeader->size = size;
-    p = (byte*)memoryHeader + sizeof(MemoryHeader);
+    p = (byte*)memoryHeader+sizeof(MemoryHeader);
   #endif /* HAVE_GCRYPT */
+
+  #if !defined(NDEBUG) || !defined(HAVE_GCRYPT)
+    DEBUG_ADD_RESOURCE_TRACE(p,size);
+  #endif
 
   return p;
 }
 
 void Password_freeSecure(void *p)
 {
-  #ifndef HAVE_GCRYPT
+  #if !defined(NDEBUG) || !defined(HAVE_GCRYPT)
     MemoryHeader *memoryHeader;
   #endif
 
   assert(p != NULL);
 
+  #if !defined(NDEBUG) || !defined(HAVE_GCRYPT)
+    memoryHeader = (MemoryHeader*)((byte*)p - sizeof(MemoryHeader));
+    DEBUG_REMOVE_RESOURCE_TRACE(p,memoryHeader->size);
+  #endif
+
   #ifdef HAVE_GCRYPT
-    gcry_free(p);
+    #ifndef NDEBUG
+      memoryHeader = (MemoryHeader*)((byte*)p - sizeof(MemoryHeader));
+      gcry_free(memoryHeader);
+    #else
+      gcry_free(p);
+    #endif
   #else /* not HAVE_GCRYPT */
     memoryHeader = (MemoryHeader*)((byte*)p - sizeof(MemoryHeader));
     memset(memoryHeader,0,sizeof(memoryHeader) + memoryHeader->size);
