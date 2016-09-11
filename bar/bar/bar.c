@@ -3051,6 +3051,7 @@ LOCAL void doneGlobalOptions(void)
   Semaphore_done(&globalOptions.serverList.lock);
   List_done(&globalOptions.serverList,CALLBACK((ListNodeFreeFunction)freeServerNode,NULL));
 
+  if (globalOptions.cryptPassword != NULL) Password_done(globalOptions.cryptPassword);
   List_done(&globalOptions.maxBandWidthList,CALLBACK((ListNodeFreeFunction)freeBandWidthNode,NULL));
   String_delete(globalOptions.tmpDirectory);
 }
@@ -7947,23 +7948,30 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           break;
         }
 
-        // input crypt password for private key encryption
+        // get crypt password for private key encryption
         Password_init(&cryptPassword);
-        error = getPasswordConsole(NULL,  // name
-                                   &cryptPassword,
-                                   PASSWORD_TYPE_CRYPT,
-                                   String_cString(privateKeyFileName),
-                                   TRUE,  // validateFlag
-                                   FALSE, // weakCheckFlag
-                                   NULL  // userData
-                                  );
-        if (error != ERROR_NONE)
+        if (Password_isEmpty(globalOptions.cryptPassword))
         {
-          printError("No password given for private key!\n");
-          Password_done(&cryptPassword);
-          String_delete(privateKeyFileName);
-          String_delete(publicKeyFileName);
-          break;
+          error = getPasswordConsole(NULL,  // name
+                                     &cryptPassword,
+                                     PASSWORD_TYPE_CRYPT,
+                                     String_cString(privateKeyFileName),
+                                     TRUE,  // validateFlag
+                                     FALSE, // weakCheckFlag
+                                     NULL  // userData
+                                    );
+          if (error != ERROR_NONE)
+          {
+            printError("No password given for private key!\n");
+            Password_done(&cryptPassword);
+            String_delete(privateKeyFileName);
+            String_delete(publicKeyFileName);
+            break;
+          }
+        }
+        else
+        {
+          Password_set(&cryptPassword,globalOptions.cryptPassword);
         }
 
         // generate new keys pair
