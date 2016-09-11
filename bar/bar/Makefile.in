@@ -1273,7 +1273,6 @@ test3-valgrind test_crypt-valgrind: $(TEST_BAR_VALGRIND)
 
 test4 test_asymmetric_crypt: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 4: asymmetric crypt..."
-	@$(RMF) test/key.*; $(MAKE) $(TEST_KEYS)
 	for crypt in $(CRYPT_NAMES); do \
           $(MAKE) \
             BAR_FILE="test" \
@@ -1564,7 +1563,6 @@ test10-valgrind test_server-valgrind: $(TEST_BAR_VALGRIND)
 
 test_combined: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test combined..."
-	@$(RMF) test/key.*; $(MAKE) $(TEST_KEYS)
 	for compress in $(TEST_COMBINED_COMPRESS_NAMES); do \
           for crypt in $(TEST_COMBINED_CRYPT_NAMES); do \
             $(MAKE) \
@@ -1743,6 +1741,9 @@ test_file_operations: \
   test_file_operations_incremental \
   test_file_operations_differential \
   test_file_operations_destroyed
+
+test/key.public test/key.private: $(TEST_BAR)
+	$(TEST_BAR) --generate-keys --crypt-password="$(TEST_PASSWORD_CRYPT)" test/key
 
 $(TEST_DATA_DIR)/data/zero128.dat:
 	$(INSTALL) -d $(@D)
@@ -3523,11 +3524,12 @@ test_server_operations_batch: \
 gcov coverage:
 	@$(call functionVerifyParameter,TEST_PASSWORD_FTP,parameter TEST_PASSWORD_FTP nor TEST_PASSWORD set)
 	@$(call functionVerifyParameter,TEST_PASSWORD_SSH,parameter TEST_PASSWORD_SSH nor TEST_PASSWORD set) 
-	$(MAKE) QUIET=1 --no-print-directory -s \
-          $(if $(CHECK),\
+	$(if $(CHECK), \
+          $(MAKE) \
             gcov$(CHECK),\
+          $(MAKE) xQUIET=1 --no-print-directory -s \
             gcov1 gcov2 gcov3 gcov4 gcov5 gcov6 gcov7 gcov8 gcov9 gcov10 \
-           )
+        )
 	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
 	$(INSTALL) -d coverage
 	$(GENHTML) -o coverage bar-gcov.info --legend
@@ -3608,7 +3610,6 @@ memcheck: \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
-	@$(RMF) test/key.*; $(MAKE) test/key.public test/key.private
 	$(MAKE) \
           VALGRIND_OPTIONS="--leak-check=summary" \
           $(if $(CHECK),\
@@ -3622,7 +3623,6 @@ memcheck_extended: \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
-	@$(RMF) test/key.*; $(MAKE) test/key.public test/key.private
 	$(MAKE) \
           VALGRIND_OPTIONS="--leak-check=full" \
             $(if $(CHECK),\
