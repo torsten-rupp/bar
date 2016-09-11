@@ -1340,6 +1340,7 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
     // decode base64
     if (Misc_base64Decode((byte*)fileCryptKey,fileCryptKeyLength,string,STRING_BEGIN) == -1)
     {
+      Password_freeSecure(fileCryptKey);
       return ERROR_INVALID_KEY;
     }
 
@@ -1351,6 +1352,7 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
     crc = crc32(crc32(0,Z_NULL,0),(Bytef*)data,dataLength);
     if (crc != ntohl(fileCryptKey->crc))
     {
+      Password_freeSecure(fileCryptKey);
       return ERROR_INVALID_KEY;
     }
 #if 0
@@ -1403,7 +1405,8 @@ p++;
     gcryptError = gcry_sexp_new(&cryptKey->key,data,dataLength,1);
     if (gcryptError != 0)
     {
-      free(fileCryptKey);
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,gcry_strerror(gcryptError));
+      Password_freeSecure(fileCryptKey);
       return ERROR_INVALID_KEY;
     }
 
