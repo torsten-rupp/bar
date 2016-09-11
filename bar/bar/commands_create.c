@@ -4204,15 +4204,17 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
              && !isAborted(createInfo)
             );
 
+//TODO: on error restore to original size/delete
+
       // get archive size
       archiveSize = Storage_getSize(&storageArchiveHandle);
 
       // close storage
       Storage_close(&storageArchiveHandle);
     }
-    while (   (error != ERROR_NONE)
-           && (retryCount <= MAX_RETRIES)
-           && !isAborted(createInfo)
+    while (   ((error != ERROR_NONE) && (Error_getCode(error) != ENOSPC))      // some error amd not "no space left"
+           && (retryCount <= MAX_RETRIES)                                      // still some retry left
+           && !isAborted(createInfo)                                           // not aborted
           );
     if (error != ERROR_NONE)
     {
