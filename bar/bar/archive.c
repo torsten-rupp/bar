@@ -375,15 +375,13 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
                {
                  // add to password list
                  password = Archive_appendDecryptPassword(&newPassword);
-
-                 // free resources
-                 Password_done(&newPassword);
                }
                else
                {
                  // next password mode is: none
                  passwordHandle->passwordMode = PASSWORD_MODE_NONE;
                }
+               Password_done(&newPassword);
              }
              else
              {
