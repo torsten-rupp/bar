@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-09-08 10:30+0200\n"
+"POT-Creation-Date: 2016-09-12 09:06+0200\n"
 "PO-Revision-Date: 2016-06-12 12:29+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2156,8 +2156,9 @@ msgid "Pre-script"
 msgstr "Vorverarbeitungs-Skript"
 
 #: src/TabJobs.java:7726
+#, fuzzy
 msgid ""
-"Command or script to execute before start of a job.\n"
+"Command or script to execute before start of job.\n"
 "\n"
 "Macros:\n"
 "\n"
@@ -2184,8 +2185,9 @@ msgid "Post-script"
 msgstr "Nachverarbeitungs-Skript"
 
 #: src/TabJobs.java:7803
+#, fuzzy
 msgid ""
-"Command or script to execute after termination of a job.\n"
+"Command or script to execute after termination of job.\n"
 "\n"
 "Macros:\n"
 "\n"
