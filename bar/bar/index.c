@@ -2495,15 +2495,65 @@ LOCAL void indexCleanupThreadCode(void)
              Database_unlock(&indexHandle.databaseHandle),
     {
       if (!quitFlag) (void)cleanUpDuplicateMeta(&indexHandle);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Clean-up duplicate meta data\n"
+                 );
       if (!quitFlag) (void)cleanUpIncompleteUpdate(&indexHandle);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Clean-up incompluete updates\n"
+                 );
       if (!quitFlag) (void)cleanUpIncompleteCreate(&indexHandle);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Clean-up duplicate create\n"
+                 );
       if (!quitFlag) (void)cleanUpStorageNoName(&indexHandle);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Clean-up no storage-name entries\n"
+                 );
       if (!quitFlag) (void)cleanUpStorageNoEntity(&indexHandle);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Clean-up no entity-entries\n"
+                 );
       if (!quitFlag) (void)cleanUpOrphanedEntries(&indexHandle);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Clean-up orphaned entries\n"
+                 );
       if (!quitFlag) (void)cleanUpDuplicateIndizes(&indexHandle);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Clean-up duplicate indizes\n"
+                 );
       if (!quitFlag) (void)pruneStorages(&indexHandle);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Prune storages\n"
+                 );
       if (!quitFlag) (void)pruneEntities(&indexHandle);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Prune entities\n"
+                 );
       if (!quitFlag) (void)pruneUUIDs(&indexHandle);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Prune UUIDs\n"
+                 );
     });
 //TODO: too slow
 //    (void)refreshStoragesInfos(&indexHandle);
@@ -2518,11 +2568,9 @@ LOCAL void indexCleanupThreadCode(void)
   lastCleanupTimestamp = Misc_getTimestamp();
   while (!quitFlag)
   {
-    // remove deleted entries
-//TODO
+    // remove deleted storages from index
     do
     {
-      // get storage to remove from index
       error = Database_getId(&indexHandle.databaseHandle,
                              &databaseId,
                              "storage",
@@ -2531,6 +2579,7 @@ LOCAL void indexCleanupThreadCode(void)
                             );
       if ((error == ERROR_NONE) && (databaseId != DATABASE_ID_NONE))
       {
+fprintf(stderr,"%s, %d: try remove index %llu\n",__FILE__,__LINE__,databaseId);
         if (error == ERROR_NONE)
         {
           error = deleteFromIndex(&indexHandle,
@@ -2625,7 +2674,17 @@ LOCAL void indexCleanupThreadCode(void)
                   "Started regular clean-up index database\n"
                  );
       if (!quitFlag) (void)cleanUpOrphanedEntries(&indexHandle);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Clean-up duplicate indizes\n"
+                 );
       if (!quitFlag) (void)cleanUpDuplicateIndizes(&indexHandle);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Done regular clean-up index database\n"
+                 );
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_INDEX,
                   "INDEX",
