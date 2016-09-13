@@ -2522,7 +2522,7 @@ LOCAL void indexCleanupThreadCode(void)
 //TODO
     do
     {
-      // get storage to delete
+      // get storage to remove from index
       error = Database_getId(&indexHandle.databaseHandle,
                              &databaseId,
                              "storage",
@@ -2602,6 +2602,15 @@ LOCAL void indexCleanupThreadCode(void)
                                   "id=%lld",
                                   databaseId
                                  );
+        }
+        if (error == ERROR_NONE)
+        {
+          plogMessage(NULL,  // logHandle
+                      LOG_TYPE_INDEX,
+                      "INDEX",
+                      "Removed storage #%llu from index\n",
+                      databaseId
+                     );
         }
       }
     }
