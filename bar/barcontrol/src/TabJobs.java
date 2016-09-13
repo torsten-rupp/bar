@@ -965,14 +965,15 @@ public class TabJobs
    */
   class ScheduleData implements Cloneable
   {
-    final static int ANY = -1;
-    final static int MON = 0;
-    final static int TUE = 1;
-    final static int WED = 2;
-    final static int THU = 3;
-    final static int FRI = 4;
-    final static int SAT = 5;
-    final static int SUN = 6;
+    final static int NONE = 0;
+    final static int ANY  = -1;
+    final static int MON  = 0;
+    final static int TUE  = 1;
+    final static int WED  = 2;
+    final static int THU  = 3;
+    final static int FRI  = 4;
+    final static int SAT  = 5;
+    final static int SUN  = 6;
 
     String  uuid;
     int     year,month,day;
@@ -2648,7 +2649,6 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
@@ -2736,7 +2736,6 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               openAllIncludedDirectories();
             }
           });
@@ -2871,7 +2870,6 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
@@ -3079,7 +3077,6 @@ public class TabJobs
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
                   includeListAdd();
@@ -3099,7 +3096,6 @@ public class TabJobs
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
                   includeListEdit();
@@ -3119,7 +3115,6 @@ public class TabJobs
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
                   includeListClone();
@@ -3288,7 +3283,6 @@ public class TabJobs
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
                   excludeListAdd();
@@ -3308,7 +3302,6 @@ public class TabJobs
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
                   excludeListEdit();
@@ -3328,7 +3321,6 @@ public class TabJobs
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
                   excludeListClone();
@@ -3348,7 +3340,6 @@ public class TabJobs
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
                   excludeListRemove();
@@ -3756,7 +3747,6 @@ public class TabJobs
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
                   mountListAdd();
@@ -3776,7 +3766,6 @@ public class TabJobs
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
                   mountListEdit();
@@ -3796,7 +3785,6 @@ public class TabJobs
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
                   mountListClone();
@@ -3903,8 +3891,6 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
-
               boolean changedFlag = archivePartSizeFlag.set(false);
               archivePartSize.set(0);
               BARServer.setJobOption(selectedJobData.uuid,archivePartSize);
@@ -3941,7 +3927,6 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               archivePartSizeFlag.set(true);
             }
           });
@@ -4497,7 +4482,6 @@ widgetArchivePartSize.setListVisible(true);
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
                   compressExcludeListAdd();
@@ -4525,7 +4509,6 @@ widgetArchivePartSize.setListVisible(true);
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
                   compressExcludeListEdit();
@@ -4553,7 +4536,6 @@ widgetArchivePartSize.setListVisible(true);
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 if (selectedJobData != null)
                 {
                   compressExcludeListRemove();
@@ -5236,7 +5218,6 @@ widgetArchivePartSize.setListVisible(true);
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               if (selectedJobData != null)
               {
                 storageFileNameEdit();
@@ -6081,7 +6062,6 @@ widgetArchivePartSize.setListVisible(true);
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
                 BARServer.setJobOption(selectedJobData.uuid,maxBandWidth);
@@ -6108,7 +6088,6 @@ widgetArchivePartSize.setListVisible(true);
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Button widget = (Button)selectionEvent.widget;
                 archivePartSizeFlag.set(true);
               }
             });
@@ -8409,7 +8388,6 @@ widgetArchivePartSize.setListVisible(true);
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
         }
       });
@@ -8528,7 +8506,6 @@ throw new Error("NYI");
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
         }
       });
@@ -8660,7 +8637,6 @@ throw new Error("NYI");
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
         }
       });
@@ -9926,7 +9902,7 @@ Dprintf.dprintf("clearJobData");
 
     // create widgets
     final Text   widgetPattern;
-    final Button widgetAdd;
+    final Button widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
@@ -10005,7 +9981,6 @@ Dprintf.dprintf("clearJobData");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            Button widget = (Button)selectionEvent.widget;
             entryData.entryType = EntryTypes.FILE;
           }
         });
@@ -10021,7 +9996,6 @@ Dprintf.dprintf("clearJobData");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            Button widget = (Button)selectionEvent.widget;
             entryData.entryType = EntryTypes.IMAGE;
           }
         });
@@ -10033,9 +10007,9 @@ Dprintf.dprintf("clearJobData");
     composite.setLayout(new TableLayout(0.0,1.0));
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
-      widgetAdd = Widgets.newButton(composite,buttonText);
-      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
-      widgetAdd.addSelectionListener(new SelectionListener()
+      widgetSave = Widgets.newButton(composite,buttonText);
+      Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+      widgetSave.addSelectionListener(new SelectionListener()
       {
         @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -10071,7 +10045,7 @@ Dprintf.dprintf("clearJobData");
       @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
-        widgetAdd.forceFocus();
+        widgetSave.forceFocus();
       }
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
@@ -10284,7 +10258,7 @@ throw new Error("NYI");
     // create widgets
     final Text   widgetName;
     final Button widgetAlwaysUnmount;
-    final Button widgetAdd;
+    final Button widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
@@ -10362,9 +10336,9 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(0.0,1.0));
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
-      widgetAdd = Widgets.newButton(composite,buttonText);
-      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
-      widgetAdd.addSelectionListener(new SelectionListener()
+      widgetSave = Widgets.newButton(composite,buttonText);
+      Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+      widgetSave.addSelectionListener(new SelectionListener()
       {
         @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -10401,7 +10375,7 @@ throw new Error("NYI");
       @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
-        widgetAdd.forceFocus();
+        widgetSave.forceFocus();
       }
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
@@ -10660,7 +10634,7 @@ throw new Error("NYI");
 
     // create widgets
     final Text   widgetPattern;
-    final Button widgetAdd;
+    final Button widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0},4));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
@@ -10721,9 +10695,9 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(0.0,1.0));
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
-      widgetAdd = Widgets.newButton(composite,buttonText);
-      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
-      widgetAdd.addSelectionListener(new SelectionListener()
+      widgetSave = Widgets.newButton(composite,buttonText);
+      Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+      widgetSave.addSelectionListener(new SelectionListener()
       {
         @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -10748,7 +10722,6 @@ throw new Error("NYI");
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
         }
       });
@@ -10760,7 +10733,7 @@ throw new Error("NYI");
       @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
-        widgetAdd.forceFocus();
+        widgetSave.forceFocus();
       }
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
@@ -11117,7 +11090,7 @@ throw new Error("NYI");
 
     // create widgets
     final Text   widgetPattern;
-    final Button widgetAdd;
+    final Button widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0},4));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
@@ -11178,8 +11151,8 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(0.0,1.0));
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
-      widgetAdd = Widgets.newButton(composite,buttonText);
-      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+      widgetSave = Widgets.newButton(composite,buttonText);
+      Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
@@ -11192,7 +11165,6 @@ throw new Error("NYI");
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
         }
       });
@@ -11204,7 +11176,7 @@ throw new Error("NYI");
       @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
-        widgetAdd.forceFocus();
+        widgetSave.forceFocus();
       }
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
@@ -11212,7 +11184,7 @@ throw new Error("NYI");
 throw new Error("NYI");
       }
     });
-    widgetAdd.addSelectionListener(new SelectionListener()
+    widgetSave.addSelectionListener(new SelectionListener()
     {
       @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -11221,7 +11193,6 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Button widget = (Button)selectionEvent.widget;
         pattern[0] = widgetPattern.getText();
         Dialogs.close(dialog,true);
       }
@@ -12484,7 +12455,6 @@ throw new Error("NYI");
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
         }
       });
@@ -12500,7 +12470,6 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Button widget = (Button)selectionEvent.widget;
         storageFileName.set(storageFileNameEditor.getFileName());
         Dialogs.close(dialog,true);
       }
@@ -12783,7 +12752,7 @@ Dprintf.dprintf("line=%s",line);
     final Combo    widgetMaxAge;
     final Button   widgetNoStorage;
     final Button   widgetEnabled;
-    final Button   widgetAdd;
+    final Button   widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE);
@@ -13060,8 +13029,8 @@ Dprintf.dprintf("line=%s",line);
     composite.setLayout(new TableLayout(0.0,1.0));
     Widgets.layout(composite,1,0,TableLayoutData.WE);
     {
-      widgetAdd = Widgets.newButton(composite,buttonText);
-      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+      widgetSave = Widgets.newButton(composite,buttonText);
+      Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
@@ -13074,7 +13043,6 @@ Dprintf.dprintf("line=%s",line);
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
         }
       });
@@ -13087,7 +13055,7 @@ Dprintf.dprintf("line=%s",line);
       @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
-        widgetAdd.forceFocus();
+        widgetSave.forceFocus();
       }
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
@@ -13096,7 +13064,7 @@ throw new Error("NYI");
       }
     });
 */
-    widgetAdd.addSelectionListener(new SelectionListener()
+    widgetSave.addSelectionListener(new SelectionListener()
     {
       @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -13105,7 +13073,6 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Button widget = (Button)selectionEvent.widget;
         scheduleData.setDate(widgetYear.getText(),widgetMonth.getText(),widgetDay.getText());
         scheduleData.setWeekDays(widgetWeekDays[ScheduleData.MON].getSelection(),
                                  widgetWeekDays[ScheduleData.TUE].getSelection(),
@@ -13129,6 +13096,19 @@ throw new Error("NYI");
         scheduleData.maxAge     = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxAge,0);
         scheduleData.noStorage  = widgetNoStorage.getSelection();
         scheduleData.enabled    = widgetEnabled.getSelection();
+
+        if ((scheduleData.hour == ScheduleData.ANY) && (scheduleData.minute == ScheduleData.ANY))
+        {
+          if (!Dialogs.confirm(dialog,BARControl.tr("No time specified. Really execute job every minute?")))
+          {
+            return;
+          }
+        }
+        if (scheduleData.weekDays == ScheduleData.NONE)
+        {
+          Dialogs.error(dialog,BARControl.tr("No weekdays spedified!"));
+          return;
+        }
 
         Dialogs.close(dialog,true);
       }
