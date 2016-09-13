@@ -206,6 +206,7 @@ typedef struct JobNode
   String          master;                               // master initiate job or NULL
 
   JobStates       state;                                // current state of job
+  String          byName;                               // state changed by name
   ArchiveTypes    archiveType;                          // archive type to create
   bool            dryRun;                               // TRUE iff dry-run (no storage, no index update)
   struct                                                // schedule data which triggered job
@@ -1760,6 +1761,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
   if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
   if (jobNode->ftpPassword != NULL) Password_delete(jobNode->ftpPassword);
+  String_delete(jobNode->byName);
   String_delete(jobNode->master);
 
   doneJobOptions(&jobNode->jobOptions);
@@ -1842,6 +1844,7 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
 
   jobNode->master                         = String_new();
   jobNode->state                          = JOB_STATE_NONE;
+  jobNode->byName                         = String_new();
   jobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
   jobNode->dryRun                         = FALSE;
   jobNode->schedule.uuid                  = String_new();
@@ -1948,8 +1951,9 @@ LOCAL JobNode *copyJob(JobNode     *jobNode,
   newJobNode->sshPassword                    = NULL;
   newJobNode->cryptPassword                  = NULL;
 
-  jobNode->master                            = String_new();
+  newJobNode->master                         = String_new();
   newJobNode->state                          = JOB_STATE_NONE;
+  newJobNode->byName                         = String_new();
   newJobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
   newJobNode->dryRun                         = FALSE;
   newJobNode->schedule.uuid                  = String_new();
@@ -2208,10 +2212,11 @@ LOCAL ScheduleNode *findScheduleByUUID(const JobNode *jobNode, ConstString sched
 /***********************************************************************\
 * Name   : triggerJob
 * Purpose: trogger job run
-* Input  : jobNode - job node
-*          archiveType - archive type to create
-*          dryRun      - TRUE for dry-run, FALSE otherwise
-*          scheduleUUID - schedule UUID or NULL
+* Input  : jobNode            - job node
+*          byName             - by name or NULL
+*          archiveType        - archive type to create
+*          dryRun             - TRUE for dry-run, FALSE otherwise
+*          scheduleUUID       - schedule UUID or NULL
 *          scheduleCustomText - schedule custom text or NULL
 *          noStorage          - TRUE for no-strage, FALSE otherwise
 * Output : -
@@ -2220,6 +2225,7 @@ LOCAL ScheduleNode *findScheduleByUUID(const JobNode *jobNode, ConstString sched
 \***********************************************************************/
 
 LOCAL void triggerJob(JobNode      *jobNode,
+                      ConstString  byName,
                       ArchiveTypes archiveType,
                       bool         dryRun,
                       ConstString  scheduleUUID,
@@ -2230,6 +2236,7 @@ LOCAL void triggerJob(JobNode      *jobNode,
   assert(jobNode != NULL);
 
   jobNode->state                 = JOB_STATE_WAITING;
+  String_set(jobNode->byName,byName);
   jobNode->archiveType           = archiveType;
   jobNode->dryRun                = dryRun;
   String_set(jobNode->schedule.uuid,scheduleUUID);
@@ -3458,6 +3465,7 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
 LOCAL void jobThreadCode(void)
 {
   StorageSpecifier storageSpecifier;
+  String           jobName;
   String           storageName;
   String           directory;
   SemaphoreLock    semaphoreLock;
@@ -3473,6 +3481,7 @@ LOCAL void jobThreadCode(void)
   DeltaSourceList  deltaSourceList;
   JobOptions       jobOptions;
   ArchiveTypes     archiveType;
+  String           byName;
   StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
   String           scheduleCustomText;
   String           script;
@@ -3486,6 +3495,7 @@ LOCAL void jobThreadCode(void)
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
+  jobName            = String_new();
   storageName        = String_new();
   directory          = String_new();
   hostName           = String_new();
@@ -3495,6 +3505,7 @@ LOCAL void jobThreadCode(void)
   List_init(&mountList);
   PatternList_init(&compressExcludePatternList);
   DeltaSourceList_init(&deltaSourceList);
+  byName             = String_new();
   scheduleCustomText = String_new();
 
   // open index
@@ -3548,6 +3559,7 @@ LOCAL void jobThreadCode(void)
       startJob(jobNode);
 
       // get copy of mandatory job data
+      String_set(jobName,jobNode->name);
       String_set(storageName,jobNode->archiveName);
       String_set(jobUUID,jobNode->uuid);
       Network_getHostName(hostName);
@@ -3559,6 +3571,7 @@ LOCAL void jobThreadCode(void)
       DeltaSourceList_clear(&deltaSourceList); DeltaSourceList_copy(&jobNode->deltaSourceList,&deltaSourceList,CALLBACK(NULL,NULL));
       initDuplicateJobOptions(&jobOptions,&jobNode->jobOptions);
       archiveType = jobNode->archiveType;
+      String_set(byName,jobNode->byName);
       jobOptions.dryRunFlag = jobNode->dryRun;
       if (!String_isEmpty(jobNode->schedule.uuid))
       {
@@ -3585,6 +3598,47 @@ LOCAL void jobThreadCode(void)
 
     // init log
     initLog(&logHandle);
+    String_clear(s);
+    if (jobOptions.dryRunFlag || jobOptions.noStorageFlag)
+    {
+      String_appendCString(s," (");
+      n = 0;
+      if (jobOptions.dryRunFlag)
+      {
+        if (n > 0) String_appendCString(s,", ");
+        String_appendCString(s,"dry-run");
+        n++;
+      }
+      if (jobOptions.noStorageFlag)
+      {
+        if (n > 0) String_appendCString(s,", ");
+        String_appendCString(s,"no-storage");
+        n++;
+      }
+      String_appendCString(s,")");
+    }
+    switch (jobNode->jobType)
+    {
+      case JOB_TYPE_CREATE:
+        logMessage(&logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Started job '%s'%s%s%s\n",
+                   String_cString(jobName),
+                   !String_isEmpty(s) ? String_cString(s) : "",
+                   !String_isEmpty(byName) ? " by " : "",
+                   String_cString(byName)
+                  );
+        break;
+      case JOB_TYPE_RESTORE:
+        logMessage(&logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Started restore%s%s%s\n",
+                   !String_isEmpty(s) ? String_cString(s) : "",
+                   !String_isEmpty(byName) ? " by " : "",
+                   String_cString(byName)
+                  );
+        break;
+    }
 
     // parse storage name
     if (jobNode->runningInfo.error == ERROR_NONE)
@@ -3595,7 +3649,7 @@ LOCAL void jobThreadCode(void)
         logMessage(&logHandle,
                    LOG_TYPE_ALWAYS,
                    "Aborted job '%s': invalid storage '%s' (error: %s)\n",
-                   String_cString(jobNode->name),
+                   String_cString(jobName),
                    Storage_getPrintableNameCString(&storageSpecifier,NULL),
                    Error_getText(jobNode->runningInfo.error)
                   );
@@ -3631,7 +3685,7 @@ LOCAL void jobThreadCode(void)
       if (jobNode->jobOptions.preProcessScript != NULL)
       {
         // get script
-        TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobNode->name,NULL);
+        TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
         TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
         TEXT_MACRO_N_STRING (textMacros[2],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
         TEXT_MACRO_N_STRING (textMacros[3],"%file",     storageSpecifier.archiveName,NULL);
@@ -3661,7 +3715,7 @@ LOCAL void jobThreadCode(void)
           logMessage(&logHandle,
                      LOG_TYPE_ALWAYS,
                      "Aborted job '%s': pre-command fail (error: %s)\n",
-                     String_cString(jobNode->name),
+                     String_cString(jobName),
                      Error_getText(jobNode->runningInfo.error)
                     );
         }
@@ -3705,32 +3759,6 @@ LOCAL void jobThreadCode(void)
         switch (jobNode->jobType)
         {
           case JOB_TYPE_CREATE:
-            String_clear(s);
-            if (jobOptions.dryRunFlag || jobOptions.noStorageFlag)
-            {
-              String_appendCString(s," (");
-              n = 0;
-              if (jobOptions.dryRunFlag)
-              {
-                if (n > 0) String_appendCString(s,", ");
-                String_appendCString(s,"dry-run");
-                n++;
-              }
-              if (jobOptions.noStorageFlag)
-              {
-                if (n > 0) String_appendCString(s,", ");
-                String_appendCString(s,"no-storage");
-                n++;
-              }
-              String_appendCString(s,")");
-            }
-            logMessage(&logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Start job '%s'%s\n",
-                       String_cString(jobNode->name),
-                       !String_isEmpty(s) ? String_cString(s) : ""
-                      );
-
             // create archive
             jobNode->runningInfo.error = Command_create(jobUUID,
                                                         scheduleUUID,
@@ -3763,7 +3791,7 @@ NULL,//                                                        scheduleTitle,
               logMessage(&logHandle,
                          LOG_TYPE_ALWAYS,
                          "Aborted job '%s'\n",
-                         String_cString(jobNode->name)
+                         String_cString(jobName)
                         );
 
               // create history entry
@@ -3790,7 +3818,7 @@ NULL,//                                                        scheduleTitle,
                   logMessage(&logHandle,
                              LOG_TYPE_ALWAYS,
                              "Cannot insert history information for '%s' (error: %s)\n",
-                             String_cString(jobNode->name),
+                             String_cString(jobName),
                              Error_getText(error)
                             );
                 }
@@ -3802,7 +3830,7 @@ NULL,//                                                        scheduleTitle,
               logMessage(&logHandle,
                          LOG_TYPE_ALWAYS,
                          "Done job '%s' (error: %s)\n",
-                         String_cString(jobNode->name),
+                         String_cString(jobName),
                          Error_getText(jobNode->runningInfo.error)
                         );
 
@@ -3830,7 +3858,7 @@ NULL,//                                                        scheduleTitle,
                   logMessage(&logHandle,
                              LOG_TYPE_ALWAYS,
                              "Cannot insert history information for '%s' (error: %s)\n",
-                             String_cString(jobNode->name),
+                             String_cString(jobName),
                              Error_getText(error)
                             );
                 }
@@ -3842,7 +3870,7 @@ NULL,//                                                        scheduleTitle,
               logMessage(&logHandle,
                          LOG_TYPE_ALWAYS,
                          "Done job '%s' (duration: %llus)\n",
-                         String_cString(jobNode->name),
+                         String_cString(jobName),
                          endDateTime-startDateTime
                         );
 
@@ -3870,7 +3898,7 @@ NULL,//                                                        scheduleTitle,
                   logMessage(&logHandle,
                              LOG_TYPE_ALWAYS,
                              "Cannot insert history information for '%s' (error: %s)\n",
-                             String_cString(jobNode->name),
+                             String_cString(jobName),
                              Error_getText(error)
                             );
                 }
@@ -3878,11 +3906,6 @@ NULL,//                                                        scheduleTitle,
             }
             break;
           case JOB_TYPE_RESTORE:
-            logMessage(&logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Start restore archive\n"
-                      );
-
             // restore archive
             StringList_init(&archiveFileNameList);
             StringList_append(&archiveFileNameList,storageName);
@@ -3927,7 +3950,7 @@ NULL,//                                                        scheduleTitle,
         }
       #endif /* SIMULATOR */
 
-      logPostProcess(&logHandle,jobNode->name,&jobNode->jobOptions,archiveType,scheduleCustomText);
+      logPostProcess(&logHandle,jobName,&jobNode->jobOptions,archiveType,scheduleCustomText);
     }
 
     // post-process command
@@ -3936,7 +3959,7 @@ NULL,//                                                        scheduleTitle,
       if (jobNode->jobOptions.postProcessScript != NULL)
       {
         // get script
-        TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobNode->name,NULL);
+        TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
         TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
         TEXT_MACRO_N_STRING (textMacros[2],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
         TEXT_MACRO_N_STRING (textMacros[3],"%file",     storageSpecifier.archiveName,NULL);
@@ -3966,7 +3989,7 @@ NULL,//                                                        scheduleTitle,
           logMessage(&logHandle,
                      LOG_TYPE_ALWAYS,
                      "Aborted job '%s': post-command fail (error: %s)\n",
-                     String_cString(jobNode->name),
+                     String_cString(jobName),
                      Error_getText(jobNode->runningInfo.error)
                     );
         }
@@ -4011,6 +4034,7 @@ NULL,//                                                        scheduleTitle,
 
   // free resources
   String_delete(scheduleCustomText);
+  String_delete(byName);
   DeltaSourceList_done(&deltaSourceList);
   PatternList_done(&compressExcludePatternList);
   List_done(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
@@ -4020,6 +4044,7 @@ NULL,//                                                        scheduleTitle,
   String_delete(hostName);
   String_delete(directory);
   String_delete(storageName);
+  String_delete(jobName);
   Storage_doneSpecifier(&storageSpecifier);
 }
 
@@ -4943,6 +4968,7 @@ LOCAL void schedulerThreadCode(void)
           if (executeScheduleNode != NULL)
           {
             triggerJob(jobNode,
+                       NULL,  // byName
                        executeScheduleNode->archiveType,
                        FALSE,
                        executeScheduleNode->uuid,
@@ -9955,6 +9981,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
   bool          dryRun;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
+  String        byName;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9989,13 +10016,16 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     if  (!isJobActive(jobNode))
     {
       // trigger job
+      byName = String_format(String_new(),"%s:%u",String_cString(clientInfo->network.name),clientInfo->network.port);
       triggerJob(jobNode,
+                 byName,
                  archiveType,
                  dryRun,
                  NULL,  // scheduleUUID
                  NULL,  // scheduleCustomText
                  FALSE  // noStorage
                 );
+      String_delete(byName);
     }
   }
 
@@ -12729,6 +12759,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   ScheduleNode  *scheduleNode;
+  String        byName;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -12776,13 +12807,16 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // trigger job
+    byName = String_format(String_new(),"%s:%u",String_cString(clientInfo->network.name),clientInfo->network.port);
     triggerJob(jobNode,
+               byName,
                scheduleNode->archiveType,
                FALSE,  // dryRun
                scheduleNode->uuid,
                scheduleNode->customText,
                scheduleNode->noStorage
               );
+    String_delete(byName);
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
