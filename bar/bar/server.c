@@ -2225,7 +2225,7 @@ LOCAL ScheduleNode *findScheduleByUUID(const JobNode *jobNode, ConstString sched
 \***********************************************************************/
 
 LOCAL void triggerJob(JobNode      *jobNode,
-                      ConstString  byName,
+                      const char   *byName,
                       ArchiveTypes archiveType,
                       bool         dryRun,
                       ConstString  scheduleUUID,
@@ -2236,7 +2236,7 @@ LOCAL void triggerJob(JobNode      *jobNode,
   assert(jobNode != NULL);
 
   jobNode->state                 = JOB_STATE_WAITING;
-  String_set(jobNode->byName,byName);
+  String_setCString(jobNode->byName,byName);
   jobNode->archiveType           = archiveType;
   jobNode->dryRun                = dryRun;
   String_set(jobNode->schedule.uuid,scheduleUUID);
@@ -4968,7 +4968,7 @@ LOCAL void schedulerThreadCode(void)
           if (executeScheduleNode != NULL)
           {
             triggerJob(jobNode,
-                       NULL,  // byName
+                       "scheduler",
                        executeScheduleNode->archiveType,
                        FALSE,
                        executeScheduleNode->uuid,
@@ -10018,7 +10018,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
       // trigger job
       byName = String_format(String_new(),"%s:%u",String_cString(clientInfo->network.name),clientInfo->network.port);
       triggerJob(jobNode,
-                 byName,
+                 String_cString(byName),
                  archiveType,
                  dryRun,
                  NULL,  // scheduleUUID
@@ -12809,7 +12809,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     // trigger job
     byName = String_format(String_new(),"%s:%u",String_cString(clientInfo->network.name),clientInfo->network.port);
     triggerJob(jobNode,
-               byName,
+               String_cString(byName),
                scheduleNode->archiveType,
                FALSE,  // dryRun
                scheduleNode->uuid,
