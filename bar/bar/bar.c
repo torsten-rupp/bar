@@ -3797,11 +3797,6 @@ const char *getPasswordTypeName(PasswordTypes passwordType)
   return text;
 }
 
-bool isPrintInfo(uint verboseLevel)
-{
-  return !globalOptions.quietFlag && ((uint)globalOptions.verboseLevel >= verboseLevel);
-}
-
 void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments)
 {
   String        line;

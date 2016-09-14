@@ -208,7 +208,13 @@ const char *getPasswordTypeName(PasswordTypes passwordType);
 * Notes  : -
 \***********************************************************************/
 
-bool isPrintInfo(uint verboseLevel);
+INLINE bool isPrintInfo(uint verboseLevel);
+#if defined(NDEBUG) || defined(__BAR_IMPLEMENATION__)
+INLINE bool isPrintInfo(uint verboseLevel)
+{
+  return !globalOptions.quietFlag && ((uint)globalOptions.verboseLevel >= verboseLevel);
+}
+#endif /* NDEBUG || __BAR_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : lockConsole
@@ -1846,7 +1852,7 @@ INLINE bool isNoDumpAttribute(const FileInfo *fileInfo, const JobOptions *jobOpt
 
   return !jobOptions->ignoreNoDumpAttributeFlag && File_haveAttributeNoDump(fileInfo);
 }
-#endif /* NDEBUG || __STRINGS_IMPLEMENATION__ */
+#endif /* NDEBUG || __BAR_IMPLEMENATION__ */
 
 #ifdef __cplusplus
   }
