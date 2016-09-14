@@ -720,7 +720,10 @@ class BusyDialog
               case 1: widgetText = widgetText1; break;
               case 2: widgetText = widgetText2; break;
             }
-            if ((widgetText != null) && !widgetText.isDisposed())
+            if (   (widgetText != null)
+                && !widgetText.isDisposed()
+                && !text.equals(widgetText.getText())
+               )
             {
               // set text
               widgetText.setText(text);
@@ -808,7 +811,13 @@ class BusyDialog
             case 0: widgetProgressBar = widgetProgressBar0; break;
             case 1: widgetProgressBar = widgetProgressBar1; break;
           }
-          if (widgetProgressBar != null) widgetProgressBar.setSelection(n);
+          if (   (widgetProgressBar != null)
+              && !widgetProgressBar.isDisposed()
+              && (n != widgetProgressBar.getSelection())
+             )
+          {
+            widgetProgressBar.setSelection(n);
+          }
 
           display.update();
         }
