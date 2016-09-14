@@ -198,7 +198,7 @@ LOCAL CURLcode initFTPHandle(CURL *curlHandle, ConstString url, ConstString logi
   {
     curlCode = curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,timeout/1000);
   }
-  if (globalOptions.verboseLevel >= 6)
+  if (isPrintInfo(6))
   {
     // enable debug mode
     (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
