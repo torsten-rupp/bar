@@ -3487,7 +3487,7 @@ LOCAL void jobThreadCode(void)
   String           script;
   IndexHandle      *indexHandle;
   uint64           startDateTime,endDateTime;
-  StringList       archiveFileNameList;
+  StringList       storageNameList;
   TextMacro        textMacros[4];
   StaticString     (s,64);
   uint             n;
@@ -3907,9 +3907,9 @@ NULL,//                                                        scheduleTitle,
             break;
           case JOB_TYPE_RESTORE:
             // restore archive
-            StringList_init(&archiveFileNameList);
-            StringList_append(&archiveFileNameList,storageName);
-            jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
+            StringList_init(&storageNameList);
+            StringList_append(&storageNameList,storageName);
+            jobNode->runningInfo.error = Command_restore(&storageNameList,
                                                          &includeEntryList,
                                                          &excludePatternList,
                                                          &deltaSourceList,
@@ -3921,7 +3921,7 @@ NULL,//                                                        scheduleTitle,
                                                          CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
                                                          &logHandle
                                                         );
-            StringList_done(&archiveFileNameList);
+            StringList_done(&storageNameList);
 
             // get end date/time
             endDateTime = Misc_getCurrentDateTime();
@@ -14708,8 +14708,9 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   IndexId            entryId;
   String             entryName;
   StringList         storageNameList;
+  EntryList          includeEntryList;
   IndexQueryHandle   indexQueryHandle;
-  EntryList          restoreEntryList;
+  String             byName;
   RestoreCommandInfo restoreCommandInfo;
   Errors             error;
 
@@ -14743,7 +14744,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   // get storage/entry list
   error = ERROR_NONE;
   StringList_init(&storageNameList);
-  EntryList_init(&restoreEntryList);
+  EntryList_init(&includeEntryList);
   switch (type)
   {
     case ARCHIVES:
@@ -14836,11 +14837,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
           {
             StringList_append(&storageNameList,storageName);
           }
-          EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+          EntryList_append(&includeEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
           if (directoryContentFlag && (Index_getType(entryId) == INDEX_TYPE_DIRECTORY))
           {
             String_appendCString(entryName,"/*");
-            EntryList_append(&restoreEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+            EntryList_append(&includeEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
           }
         }
         Index_doneList(&indexQueryHandle);
@@ -14854,18 +14855,28 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   }
   if (error != ERROR_NONE)
   {
+    EntryList_done(&includeEntryList);
+    StringList_done(&storageNameList);
     String_delete(entryName);
     String_delete(storageName);
-    StringList_done(&storageNameList);
     sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
     return;
   }
 
   // restore
+  byName = String_format(String_new(),"%s:%u",String_cString(clientInfo->network.name),clientInfo->network.port);
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Started restore%s%s: %d archives/%d entries\n",
+             !String_isEmpty(byName) ? " by " : "",
+             String_cString(byName),
+             List_count(&storageNameList),
+             List_count(&includeEntryList)
+            );
   restoreCommandInfo.clientInfo = clientInfo;
   restoreCommandInfo.id         = id;
   error = Command_restore(&storageNameList,
-                          &restoreEntryList,
+                          &includeEntryList,
                           NULL,  // excludePatternList
                           NULL,  // deltaSourceList
                           &clientInfo->jobOptions,
@@ -14881,11 +14892,16 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                           NULL  // logHandle
                          );
   sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
-  EntryList_done(&restoreEntryList);
-  StringList_done(&storageNameList);
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Done restore%s%s\n",
+             !String_isEmpty(byName) ? " by " : "",
+             String_cString(byName)
+            );
+  String_delete(byName);
 
   // free resources
-  EntryList_done(&restoreEntryList);
+  EntryList_done(&includeEntryList);
   StringList_done(&storageNameList);
   String_delete(entryName);
   String_delete(storageName);
