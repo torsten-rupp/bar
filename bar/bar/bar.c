@@ -112,6 +112,9 @@
 
 #define DEFAULT_DATABASE_INDEX_FILE           "/var/lib/bar/index.db"
 
+#define DEFAULT_VERBOSE_LEVEL                 1
+#define DEFAULT_VERBOSE_LEVEL_INTERACTIVE     1
+
 #define CD_UNLOAD_VOLUME_COMMAND              "eject %device"
 #define CD_LOAD_VOLUME_COMMAND                "eject -t %device"
 #define CD_IMAGE_COMMAND                      "nice mkisofs -V Backup -volset %number -r -o %image %directory"
@@ -2970,7 +2973,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.deleteOldArchiveFilesFlag                       = FALSE;
   globalOptions.noDefaultConfigFlag                             = FALSE;
   globalOptions.quietFlag                                       = FALSE;
-  globalOptions.verboseLevel                                    = 1;
+  globalOptions.verboseLevel                                    = DEFAULT_VERBOSE_LEVEL;
 
   globalOptions.serverDebugFlag                                 = FALSE;
 }
@@ -8111,6 +8114,12 @@ exit(1);
     }
 
     String_delete(fileName);
+  }
+
+  // special case: set verbose level in interactive mode
+  if (!daemonFlag && !batchFlag)
+  {
+    globalOptions.verboseLevel = DEFAULT_VERBOSE_LEVEL_INTERACTIVE;
   }
 
   // parse command line: post-options
