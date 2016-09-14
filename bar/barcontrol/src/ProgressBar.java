@@ -125,6 +125,14 @@ class ProgressBar extends Canvas
     this.maximum = n;
   }
 
+  /** get progress value
+   * @return value
+   */
+  public double getSelection()
+  {
+    return value;
+  }
+
   /** set progress value
    * @param n value
    */
