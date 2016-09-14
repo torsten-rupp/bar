@@ -1767,7 +1767,7 @@ LOCAL Errors pruneStorages(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Prune storages\n"
+              "Pruned storages\n"
              );
 
   return error;
@@ -1791,14 +1791,14 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle)
   assert(indexHandle != NULL);
   assert(Database_isLocked(&indexHandle->databaseHandle));
 
-  // Note: keep default entity with id 0!
+  // Note: keep default entity!
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT id \
                             FROM entities \
                             WHERE id!=%lld \
                            ",
-                           DATABASE_ID_NONE
+                           INDEX_CONST_DEFAULT_ENTITY_ID
                           );
   if (error == ERROR_NONE)
   {
@@ -1817,7 +1817,7 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Prune entities\n"
+              "Pruned entities\n"
              );
 
   return error;
@@ -1864,7 +1864,7 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Prune UUIDs\n"
+              "Pruned UUIDs\n"
              );
 
   return error;
@@ -2602,7 +2602,7 @@ LOCAL void indexCleanupThreadCode(void)
                             );
       if ((error == ERROR_NONE) && (databaseId != DATABASE_ID_NONE))
       {
-fprintf(stderr,"%s, %d: try remove index %llu\n",__FILE__,__LINE__,databaseId);
+fprintf(stderr,"%s, %d: try databaseId=%llu\n",__FILE__,__LINE__,databaseId);
         if (error == ERROR_NONE)
         {
           error = deleteFromIndex(&indexHandle,
@@ -6128,7 +6128,8 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
           )
     {
       assert(totalEntryCount_ >= 0.0);
-      assert(totalEntrySize_ >= 0.0);
+//TODO: may happen?
+//      assert(totalEntrySize_ >= 0.0);
       if (totalEntryCount != NULL) (*totalEntryCount) = (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
       if (totalEntrySize != NULL) (*totalEntrySize) = (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
     }
@@ -10686,16 +10687,6 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
     }
 
     #ifndef NDEBUG
-      verify(indexHandle,"uuids","COUNT(id)",0,"WHERE totalEntrySize<0");
-      verify(indexHandle,"uuids","COUNT(id)",0,"WHERE totalFileSize<0");
-      verify(indexHandle,"uuids","COUNT(id)",0,"WHERE totalImageSize<0");
-      verify(indexHandle,"uuids","COUNT(id)",0,"WHERE totalHardlinkSize<0");
-
-      verify(indexHandle,"entities","COUNT(id)",0,"WHERE totalEntrySize<0");
-      verify(indexHandle,"entities","COUNT(id)",0,"WHERE totalFileSize<0");
-      verify(indexHandle,"entities","COUNT(id)",0,"WHERE totalImageSize<0");
-      verify(indexHandle,"entities","COUNT(id)",0,"WHERE totalHardlinkSize<0");
-
       verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
       verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileSize<0");
       verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalImageSize<0");
@@ -10862,9 +10853,6 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
       return error;
     }
 
-//TODO
-    // mark for prune
-
     if (Index_getDatabaseId(entityId) != INDEX_DEFAULT_ENTITY_ID)
     {
       // check if storage exists
@@ -10888,12 +10876,6 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
         {
           return error;
         }
-      }
-      else
-      {
-  //TODO
-        // reset mark prune
-
       }
     }
 
