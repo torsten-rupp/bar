@@ -203,7 +203,11 @@ LOCAL void testThreadCode(TestInfo *testInfo)
   }
 
   // read archive entries
-  printInfo(0,"Testing archive '%s':\n",Storage_getPrintableNameCString(storageSpecifier,archiveName));
+  printInfo(0,
+            "Test storage '%s'%s",
+            Storage_getPrintableNameCString(storageSpecifier,archiveName),
+            !isPrintInfo(1) ? "..." : ":\n"
+           );
   failError = ERROR_NONE;
   while (!Archive_eof(&archiveInfo,FALSE))
   {
@@ -347,7 +351,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
               break;
             }
 
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
           }
           else
           {
@@ -508,7 +512,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
               break;
             }
 
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
           }
           else
           {
@@ -578,7 +582,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
               break;
             }
 
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
 
             // free resources
           }
@@ -655,7 +659,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
               break;
             }
 
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
 
             // free resources
           }
@@ -810,7 +814,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
                   break;
                 }
 
-                printInfo(1,"ok\n");
+                printInfo(1,"OK\n");
 
                 testedDataFlag = TRUE;
               }
@@ -818,7 +822,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
               {
                 if (failError == ERROR_NONE)
                 {
-                  printInfo(1,"ok\n");
+                  printInfo(1,"OK\n");
                 }
                 else
                 {
@@ -901,7 +905,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
               break;
             }
 
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
 
             // free resources
           }
@@ -934,6 +938,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         break; /* not reached */
     }
   }
+  if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // close archive
   Archive_close(&archiveInfo);
@@ -1041,7 +1046,11 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   }
 
   // read archive entries
-  printInfo(0,"Testing archive '%s':\n",Storage_getPrintableNameCString(storageSpecifier,archiveName));
+  printInfo(0,
+            "Test storage '%s'%s",
+            Storage_getPrintableNameCString(storageSpecifier,archiveName),
+            !isPrintInfo(1) ? "..." : ":\n"
+           );
   failError = ERROR_NONE;
   while (!Archive_eof(&archiveInfo,FALSE))
   {
@@ -1185,7 +1194,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
               break;
             }
 
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
           }
           else
           {
@@ -1346,7 +1355,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
               break;
             }
 
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
           }
           else
           {
@@ -1416,7 +1425,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
               break;
             }
 
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
 
             // free resources
           }
@@ -1493,7 +1502,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
               break;
             }
 
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
 
             // free resources
           }
@@ -1648,7 +1657,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                   break;
                 }
 
-                printInfo(1,"ok\n");
+                printInfo(1,"OK\n");
 
                 testedDataFlag = TRUE;
               }
@@ -1656,7 +1665,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
               {
                 if (failError == ERROR_NONE)
                 {
-                  printInfo(1,"ok\n");
+                  printInfo(1,"OK\n");
                 }
                 else
                 {
@@ -1739,7 +1748,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
               break;
             }
 
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
 
             // free resources
           }
@@ -1772,6 +1781,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
         break; /* not reached */
     }
   }
+  if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // close archive
   Archive_close(&archiveInfo);

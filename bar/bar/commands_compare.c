@@ -195,7 +195,11 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
   DEBUG_TESTCODE() { (void)Archive_close(&archiveInfo); (void)Storage_done(&storageHandle); return DEBUG_TESTCODE_ERROR(); }
 
   // read archive entries
-  printInfo(1,"Comparing archive '%s':\n",Storage_getPrintableNameCString(storageSpecifier,archiveName));
+  printInfo(0,
+            "Compare storage '%s'%s",
+            Storage_getPrintableNameCString(storageSpecifier,archiveName),
+            !isPrintInfo(1) ? "..." : ":\n"
+           );
   failError = ERROR_NONE;
   while (   !Archive_eof(&archiveInfo,TRUE)
          && (failError == ERROR_NONE)
@@ -445,7 +449,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
             // get local file info
             // check file time, permissions, file owner/group
 #endif /* 0 */
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
 
             /* check if all data read.
                Note: it is not possible to check if all data is read when
@@ -770,7 +774,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
               }
             }
 
-            printInfo(1,"ok\n",
+            printInfo(1,"OK\n",
                       fileSystemFlag?FileSystem_getName(fileSystemHandle.type):"raw"
                      );
 
@@ -888,7 +892,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
 
             // check file time, permissions, file owner/group
 #endif /* 0 */
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
 
             // check if all data read
             if (!Archive_eofData(&archiveEntryInfo))
@@ -1033,7 +1037,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
 
             // check file time, permissions, file owner/group
 #endif /* 0 */
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
 
             // check if all data read
             if (!Archive_eofData(&archiveEntryInfo))
@@ -1309,7 +1313,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                 // get local file info
                 // check file time, permissions, file owner/group
 #endif /* 0 */
-                printInfo(1,"ok\n");
+                printInfo(1,"OK\n");
 
                 /* check if all data read.
                    Note: it is not possible to check if all data is read when
@@ -1331,7 +1335,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                 // compare hard link data already done
                 if (failError == ERROR_NONE)
                 {
-                  printInfo(1,"ok\n");
+                  printInfo(1,"OK\n");
                 }
                 else
                 {
@@ -1470,7 +1474,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
             // check file time, permissions, file owner/group
 #endif /* 0 */
 
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
 
             // check if all data read
             if (!Archive_eofData(&archiveEntryInfo))
@@ -1504,6 +1508,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
         break; /* not reached */
     }
   }
+  if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // close archive
   Archive_close(&archiveInfo);

@@ -308,6 +308,7 @@ LOCAL void printArchiveListHeader(ConstString storageName)
     // header
     if (storageName != NULL)
     {
+//TODO: printable storaeg name?
       printInfo(0,"List storage '%s':\n",String_cString(storageName));
       printInfo(0,"\n");
     }
@@ -547,7 +548,7 @@ LOCAL void printFileInfo(ConstString        storageName,
                                             )
                           )
            );
-  if (Compress_isCompressed(deltaCompressAlgorithm) && (globalOptions.verboseLevel > 1))
+  if (Compress_isCompressed(deltaCompressAlgorithm) && isPrintInfo(2))
   {
     printInfo(0,
               "%s\n",
@@ -709,7 +710,7 @@ LOCAL void printImageInfo(ConstString        storageName,
                                             )
                           )
            );
-  if (Compress_isCompressed(deltaCompressAlgorithm) && (globalOptions.verboseLevel > 1))
+  if (Compress_isCompressed(deltaCompressAlgorithm) && isPrintInfo(2))
   {
     printInfo(0,
               "%s\n",
@@ -1109,7 +1110,7 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
                                             )
                           )
            );
-  if (Compress_isCompressed(deltaCompressAlgorithm) && (globalOptions.verboseLevel > 1))
+  if (Compress_isCompressed(deltaCompressAlgorithm) && isPrintInfo(2))
   {
     printInfo(0,
               "%s\n",
@@ -3429,7 +3430,7 @@ remoteBarFlag=FALSE;
               }
             }
           }
-          if (globalOptions.verboseLevel >= 4)
+          if (isPrintInfo(4))
           {
             while (!Network_executeEOF(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,60*1000))
             {

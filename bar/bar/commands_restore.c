@@ -735,11 +735,11 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
 
     if (!restoreInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"ok\n");
+      printInfo(1,"OK\n");
     }
     else
     {
-      printInfo(1,"ok (dry-run)\n");
+      printInfo(1,"OK (dry-run)\n");
     }
 
     /* check if all data read.
@@ -1171,11 +1171,11 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
 
     if (!restoreInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"ok\n");
+      printInfo(1,"OK\n");
     }
     else
     {
-      printInfo(1,"ok (dry-run)\n");
+      printInfo(1,"OK (dry-run)\n");
     }
 
     /* check if all data read.
@@ -1356,11 +1356,11 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo      *restoreInfo,
 
     if (!restoreInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"ok\n");
+      printInfo(1,"OK\n");
     }
     else
     {
-      printInfo(1,"ok (dry-run)\n");
+      printInfo(1,"OK (dry-run)\n");
     }
 
     // check if all data read
@@ -1595,11 +1595,11 @@ LOCAL Errors restoreLinkEntry(RestoreInfo      *restoreInfo,
 
     if (!restoreInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"ok\n");
+      printInfo(1,"OK\n");
     }
     else
     {
-      printInfo(1,"ok (dry-run)\n");
+      printInfo(1,"OK (dry-run)\n");
     }
 
     // check if all data read
@@ -1999,11 +1999,11 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
 
         if (!restoreInfo->jobOptions->dryRunFlag)
         {
-          printInfo(1,"ok\n");
+          printInfo(1,"OK\n");
         }
         else
         {
-          printInfo(1,"ok (dry-run)\n");
+          printInfo(1,"OK (dry-run)\n");
         }
 
         restoredDataFlag = TRUE;
@@ -2036,11 +2036,11 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
 
         if (!restoreInfo->jobOptions->dryRunFlag)
         {
-          printInfo(1,"ok\n");
+          printInfo(1,"OK\n");
         }
         else
         {
-          printInfo(1,"ok (dry-run)\n");
+          printInfo(1,"OK (dry-run)\n");
         }
 
         /* check if all data read.
@@ -2290,11 +2290,11 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo      *restoreInfo,
 
     if (!restoreInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"ok\n");
+      printInfo(1,"OK\n");
     }
     else
     {
-      printInfo(1,"ok (dry-run)\n");
+      printInfo(1,"OK (dry-run)\n");
     }
 
     // check if all data read
@@ -2420,7 +2420,11 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
   updateStatusInfo(restoreInfo,TRUE);
 
   // read archive entries
-  printInfo(0,"Restore from archive '%s':\n",Storage_getPrintableNameCString(storageSpecifier,archiveName));
+  printInfo(0,
+            "Restore from '%s'%s",
+            Storage_getPrintableNameCString(storageSpecifier,archiveName),
+            !isPrintInfo(1) ? "..." : ":\n"
+           );
   failError = ERROR_NONE;
   while (   ((failError == ERROR_NONE) || restoreInfo->jobOptions->noStopOnErrorFlag)
          && ((restoreInfo->isAbortedFunction == NULL) || !restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
@@ -2531,6 +2535,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
     restoreInfo->statusInfo.storageDoneSize = Archive_tell(&archiveInfo);
     updateStatusInfo(restoreInfo,TRUE);
   }
+  if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // close archive
   Archive_close(&archiveInfo);
