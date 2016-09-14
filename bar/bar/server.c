@@ -274,6 +274,19 @@ typedef struct
   uint      activeCount;
 } JobList;
 
+// aggregate info
+typedef struct
+{
+  String lastErrorMessage;
+  ulong  executionCount;
+  uint64 averageDuration;
+  ulong  totalEntityCount;
+  ulong  totalStorageCount;
+  uint64 totalStorageSize;
+  ulong  totalEntryCount;
+  uint64 totalEntrySize;
+} AggregateInfo;
+
 // directory info node
 typedef struct DirectoryInfoNode
 {
@@ -2350,85 +2363,52 @@ LOCAL void doneJob(JobNode *jobNode)
 }
 
 /***********************************************************************\
-* Name   : updateJob
-* Purpose: update job (store running data, free job data, e. g. passwords)
-* Input  : jobNode      - job node
-*          scheduleUUID - schedule UUID or NULL
-* Output : -
+* Name   : getAggregateInfo
+* Purpose: get aggregate info for job/sched7ule
+* Input  : aggregateInfo - aggregate info variable
+*          jobUUID       - job UUID
+*          scheduleUUID  - schedule UUID or NULL
+* Output : aggregateInfo - aggregate info
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateJob(JobNode *jobNode, ConstString scheduleUUID)
+LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
+                            ConstString   jobUUID,
+                            ConstString   scheduleUUID
+                           )
 {
-  ScheduleNode *scheduleNode;
+  assert(aggregateInfo != NULL);
+  assert(aggregateInfo->lastErrorMessage != NULL);
+  assert(jobUUID != NULL);
 
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  // set last executed date/time
-  jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
+  // init variables
+  String_clear(aggregateInfo->lastErrorMessage);
+  aggregateInfo->executionCount        = 0L;
+  aggregateInfo->averageDuration       = 0LL;
+  aggregateInfo->totalEntityCount      = 0L;
+  aggregateInfo->totalStorageCount     = 0L;
+  aggregateInfo->totalStorageSize      = 0LL;
+  aggregateInfo->totalEntryCount       = 0L;
+  aggregateInfo->totalEntrySize        = 0LL;
 
   // update job info (if possible)
-  String_clear(jobNode->lastErrorMessage);
-  jobNode->executionCount    = 0L;
-  jobNode->averageDuration   = 0LL;
-  jobNode->totalEntityCount  = 0L;
-  jobNode->totalStorageCount = 0L;
-  jobNode->totalStorageSize  = 0LL;
-  jobNode->totalEntryCount   = 0L;
-  jobNode->totalEntrySize    = 0LL;
   if (indexHandle != NULL)
   {
     (void)Index_findUUIDByJobUUID(indexHandle,
-                                  jobNode->uuid,
-                                  NULL, // scheduleUUID
+                                  jobUUID,
+                                  scheduleUUID,
                                   NULL,  // uuidId,
                                   NULL, // lastExecutedDateTime
-                                  jobNode->lastErrorMessage,
-                                  &jobNode->executionCount,
-                                  &jobNode->averageDuration,
-                                  &jobNode->totalEntityCount,
-                                  &jobNode->totalStorageCount,
-                                  &jobNode->totalStorageSize,
-                                  &jobNode->totalEntryCount,
-                                  &jobNode->totalEntrySize
+                                  aggregateInfo->lastErrorMessage,
+                                  &aggregateInfo->executionCount,
+                                  &aggregateInfo->averageDuration,
+                                  &aggregateInfo->totalEntityCount,
+                                  &aggregateInfo->totalStorageCount,
+                                  &aggregateInfo->totalStorageSize,
+                                  &aggregateInfo->totalEntryCount,
+                                  &aggregateInfo->totalEntrySize
                                  );
-  }
-
-  if (!String_isEmpty(scheduleUUID))
-  {
-    // update schedule info (if possible)
-    scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
-    if (scheduleNode != NULL)
-    {
-      scheduleNode->lastExecutedDateTime = 0LL;
-      String_clear(scheduleNode->lastErrorMessage);
-      scheduleNode->executionCount       = 0L;
-      scheduleNode->averageDuration      = 0LL;
-      scheduleNode->totalEntityCount     = 0L;
-      scheduleNode->totalStorageCount    = 0L;
-      scheduleNode->totalStorageSize     = 0LL;
-      scheduleNode->totalEntryCount      = 0L;
-      scheduleNode->totalEntrySize       = 0LL;
-      if (indexHandle != NULL)
-      {
-        (void)Index_findUUIDByJobUUID(indexHandle,
-                                      NULL, // jobUUID
-                                      scheduleUUID,
-                                      NULL,  // uuidId,
-                                      &scheduleNode->lastExecutedDateTime,
-                                      scheduleNode->lastErrorMessage,
-                                      &scheduleNode->executionCount,
-                                      &scheduleNode->averageDuration,
-                                      &scheduleNode->totalEntityCount,
-                                      &scheduleNode->totalStorageCount,
-                                      &scheduleNode->totalStorageSize,
-                                      &scheduleNode->totalEntryCount,
-                                      &scheduleNode->totalEntrySize
-                                     );
-      }
-    }
   }
 }
 
@@ -3492,21 +3472,26 @@ LOCAL void jobThreadCode(void)
   StaticString     (s,64);
   uint             n;
   Errors           error;
+  uint64           lastExecutedDateTime;
+  AggregateInfo    jobAggregateInfo,scheduleAggregateInfo;
+  ScheduleNode     *scheduleNode;
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
-  jobName            = String_new();
-  storageName        = String_new();
-  directory          = String_new();
-  hostName           = String_new();
+  jobName                                = String_new();
+  storageName                            = String_new();
+  directory                              = String_new();
+  hostName                               = String_new();
   Remote_initHost(&remoteHost,serverPort);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   List_init(&mountList);
   PatternList_init(&compressExcludePatternList);
   DeltaSourceList_init(&deltaSourceList);
-  byName             = String_new();
-  scheduleCustomText = String_new();
+  byName                                 = String_new();
+  scheduleCustomText                     = String_new();
+  jobAggregateInfo.lastErrorMessage      = String_new();
+  scheduleAggregateInfo.lastErrorMessage = String_new();
 
   // open index
   indexHandle = Index_open(INDEX_PRIORITY_HIGH,INDEX_TIMEOUT);
@@ -3520,7 +3505,7 @@ LOCAL void jobThreadCode(void)
       // wait for and get next job to execute
       do
       {
-        // first check for continuous
+        // first check for a continuous job
         jobNode = jobList.head;
         while (   !quitFlag
                && (jobNode != NULL)
@@ -3534,7 +3519,7 @@ LOCAL void jobThreadCode(void)
 
         if (jobNode == NULL)
         {
-          // next check for other types
+          // next check for other job types
           jobNode = jobList.head;
           while (   !quitFlag
                  && (jobNode != NULL)
@@ -3545,6 +3530,7 @@ LOCAL void jobThreadCode(void)
           }
         }
 
+        // if no job to execute -> wait
         if (!quitFlag && (jobNode == NULL)) Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
       }
       while (!quitFlag && (jobNode == NULL));
@@ -3591,7 +3577,7 @@ LOCAL void jobThreadCode(void)
       break;
     }
 
-    // Note: job is now protected by running state)
+    // Note: job is now protected by running state from being deleted
 
     // get start date/time
     startDateTime = Misc_getCurrentDateTime();
@@ -4005,10 +3991,42 @@ NULL,//                                                        scheduleTitle,
     // done log
     doneLog(&logHandle);
 
+
+    // get job executaion date/time, aggregate info
+    lastExecutedDateTime = Misc_getCurrentDateTime();
+    getAggregateInfo(&jobAggregateInfo,
+                     jobNode->uuid,
+                     NULL  // scheduleUUID
+                    );
+    getAggregateInfo(&scheduleAggregateInfo,
+                     jobNode->uuid,
+                     scheduleUUID
+                    );
+
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      // update job
-      updateJob(jobNode,scheduleUUID);
+      // storage executaion date/time, aggregate info
+      jobNode->lastExecutedDateTime = lastExecutedDateTime;
+      String_set(jobNode->lastErrorMessage,jobAggregateInfo.lastErrorMessage);
+      jobNode->executionCount       = jobAggregateInfo.executionCount;
+      jobNode->averageDuration      = jobAggregateInfo.averageDuration;
+      jobNode->totalEntityCount     = jobAggregateInfo.totalEntityCount;
+      jobNode->totalStorageCount    = jobAggregateInfo.totalStorageCount;
+      jobNode->totalStorageSize     = jobAggregateInfo.totalStorageSize;
+      jobNode->totalEntryCount      = jobAggregateInfo.totalEntryCount;
+      jobNode->totalEntrySize       = jobAggregateInfo.totalEntrySize;
+      scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+      if (scheduleNode != NULL)
+      {
+        String_set(scheduleNode->lastErrorMessage,scheduleAggregateInfo.lastErrorMessage);
+        scheduleNode->executionCount    = scheduleAggregateInfo.executionCount;
+        scheduleNode->averageDuration   = scheduleAggregateInfo.averageDuration;
+        scheduleNode->totalEntityCount  = scheduleAggregateInfo.totalEntityCount;
+        scheduleNode->totalStorageCount = scheduleAggregateInfo.totalStorageCount;
+        scheduleNode->totalStorageSize  = scheduleAggregateInfo.totalStorageSize;
+        scheduleNode->totalEntryCount   = scheduleAggregateInfo.totalEntryCount;
+        scheduleNode->totalEntrySize    = scheduleAggregateInfo.totalEntrySize;
+      }
 
       // free resources
       doneJobOptions(&jobOptions);
@@ -4033,6 +4051,8 @@ NULL,//                                                        scheduleTitle,
   Index_close(indexHandle);
 
   // free resources
+  String_delete(scheduleAggregateInfo.lastErrorMessage);
+  String_delete(jobAggregateInfo.lastErrorMessage);
   String_delete(scheduleCustomText);
   String_delete(byName);
   DeltaSourceList_done(&deltaSourceList);
@@ -10079,11 +10099,13 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     // abort job
     if      (isJobRunning(jobNode))
     {
-      jobNode->requestedAbortFlag = TRUE;
-      Semaphore_signalModified(&jobList.lock);
-
       if (isJobLocal(jobNode))
       {
+        // request abort local job
+        jobNode->requestedAbortFlag = TRUE;
+        Semaphore_signalModified(&jobList.lock);
+
+        // wait until job terminated
         while (isJobRunning(jobNode))
         {
           Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
@@ -10091,11 +10113,21 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
       }
       else
       {
-         jobNode->runningInfo.error = Remote_jobAbort(&jobNode->remoteHost,
-                                                      jobNode->uuid
-                                                     );
-         updateJob(jobNode,NULL);
-         doneJob(jobNode);
+        // abort remote job
+        jobNode->requestedAbortFlag = TRUE;
+        jobNode->runningInfo.error = Remote_jobAbort(&jobNode->remoteHost,
+                                                     jobNode->uuid
+                                                    );
+//TODO: do not call getAggregateInfo with joblist lock -> deadlock!
+#if 0
+BLOCK_DO(Semaphore_unlock(&jobList.lock),
+         Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT),
+{
+  getAggregateInfo(jobNode,NULL);
+});
+#endif
+jobNode = findJobByUUID(jobUUID);
+        doneJob(jobNode);
       }
     }
     else if (isJobActive(jobNode))
