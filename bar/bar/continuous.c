@@ -1197,10 +1197,13 @@ LOCAL void continuousThreadCode(void)
       selectTimeout.tv_nsec = 0L;
       n = ppoll(pollfds,1,&selectTimeout,&signalMask);
 
-      // read events
-      if ((pollfds[0].revents & POLLIN) != 0)
+      if (n > 0)
       {
-        n = read(inotifyHandle,buffer,BUFFER_SIZE);
+        // read events
+        if ((pollfds[0].revents & POLLIN) != 0)
+        {
+          n = read(inotifyHandle,buffer,BUFFER_SIZE);
+        }
       }
     }
     while ((n == -1) && ((errno == EAGAIN) || (errno == EINTR)) && !quitFlag);
