@@ -4237,7 +4237,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     }
 
     // done
-    printInfo(1,"ok\n");
+    printInfo(1,"OK\n");
     logMessage(createInfo->logHandle,LOG_TYPE_STORAGE,"Stored '%s' (%llu bytes)\n",String_cString(printableStorageName),archiveSize);
 
     // update index database and set state
@@ -4940,17 +4940,17 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
     if (!createInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",fileInfo.size,compressionRatio);
+      printInfo(1,"OK (%llu bytes, ratio %.1f%%)\n",fileInfo.size,compressionRatio);
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(fileName));
     }
     else
     {
-      printInfo(1,"ok (%llu bytes, dry-run)\n",fileInfo.size);
+      printInfo(1,"OK (%llu bytes, dry-run)\n",fileInfo.size);
     }
   }
   else
   {
-    printInfo(1,"ok (%llu bytes, not stored)\n",fileInfo.size);
+    printInfo(1,"OK (%llu bytes, not stored)\n",fileInfo.size);
   }
 
   // update done entries
@@ -5297,7 +5297,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 
     if (!createInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"ok (%s, %llu bytes, ratio %.1f%%)\n",
+      printInfo(1,"OK (%s, %llu bytes, ratio %.1f%%)\n",
                 fileSystemFlag ? FileSystem_getName(fileSystemHandle.type) : "raw",
                 deviceInfo.size,
                 compressionRatio
@@ -5306,7 +5306,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     }
     else
     {
-      printInfo(1,"ok (%s, %llu bytes, dry-run)\n",
+      printInfo(1,"OK (%s, %llu bytes, dry-run)\n",
                 fileSystemFlag ? FileSystem_getName(fileSystemHandle.type) : "raw",
                 deviceInfo.size
                );
@@ -5315,7 +5315,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   }
   else
   {
-    printInfo(1,"ok (%s, %llu bytes, not stored)\n",
+    printInfo(1,"OK (%s, %llu bytes, not stored)\n",
               fileSystemFlag ? FileSystem_getName(fileSystemHandle.type) : "raw",
               deviceInfo.size
              );
@@ -5464,17 +5464,17 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
 
     if (!createInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"ok\n");
+      printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(directoryName));
     }
     else
     {
-      printInfo(1,"ok (dry-run)\n");
+      printInfo(1,"OK (dry-run)\n");
     }
   }
   else
   {
-    printInfo(1,"ok (not stored)\n");
+    printInfo(1,"OK (not stored)\n");
   }
 
   // update done entries
@@ -5663,12 +5663,12 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 
     if (!createInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"ok\n");
+      printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(linkName));
     }
     else
     {
-      printInfo(1,"ok (dry-run)\n");
+      printInfo(1,"OK (dry-run)\n");
     }
 
     // free resources
@@ -5676,7 +5676,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
   }
   else
   {
-    printInfo(1,"ok (not stored)\n");
+    printInfo(1,"OK (not stored)\n");
   }
 
   // update done entries
@@ -5988,7 +5988,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
     if (!createInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",
+      printInfo(1,"OK (%llu bytes, ratio %.1f%%)\n",
                 fileInfo.size,
                 compressionRatio
                );
@@ -5996,12 +5996,12 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
     else
     {
-      printInfo(1,"ok (%llu bytes, dry-run)\n",fileInfo.size);
+      printInfo(1,"OK (%llu bytes, dry-run)\n",fileInfo.size);
     }
   }
   else
   {
-    printInfo(1,"ok (%llu bytes, not stored)\n",fileInfo.size);
+    printInfo(1,"OK (%llu bytes, not stored)\n",fileInfo.size);
   }
 
   // update done entries
@@ -6157,17 +6157,17 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
 
     if (!createInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"ok\n");
+      printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(fileName));
     }
     else
     {
-      printInfo(1,"ok (dry-run)\n");
+      printInfo(1,"OK (dry-run)\n");
     }
   }
   else
   {
-    printInfo(1,"ok (not stored)\n");
+    printInfo(1,"OK (not stored)\n");
   }
 
   // update done entries
@@ -6599,7 +6599,7 @@ Errors Command_create(ConstString                  jobUUID,
       }
       DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       printInfo(1,
-                "ok (%lu entries)\n",
+                "OK (%lu entries)\n",
                 Dictionary_count(&createInfo.namesDictionary)
                );
     }
@@ -6827,7 +6827,7 @@ Errors Command_create(ConstString                  jobUUID,
     }
     DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
-    printInfo(1,"ok\n");
+    printInfo(1,"OK\n");
     logMessage(logHandle,LOG_TYPE_ALWAYS,"Updated incremental file '%s'\n",String_cString(incrementalListFileName));
   }
 

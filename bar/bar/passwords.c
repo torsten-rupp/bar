@@ -578,7 +578,7 @@ bool Password_input(Password   *password,
         }
       }
       while (!eolFlag);
-      printInfo(2,"ok\n");
+      printInfo(2,"OK\n");
 
       // close pipe
       pclose(file);

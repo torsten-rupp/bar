@@ -101,7 +101,7 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
                         CALLBACK(executeIOOutput,NULL),
                         CALLBACK(executeIOOutput,NULL)
                        );
-    printInfo(1,"ok\n");
+    printInfo(1,"OK\n");
 
     storageHandle->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
   }
@@ -129,7 +129,7 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
                             CALLBACK(executeIOOutput,NULL),
                             CALLBACK(executeIOOutput,NULL)
                            );
-        printInfo(1,"ok\n");
+        printInfo(1,"OK\n");
       }
     }
     while (storageRequestResult == STORAGE_REQUEST_VOLUME_UNLOAD);
@@ -149,7 +149,7 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
                            ) == ERROR_NONE
        )
     {
-      printInfo(1,"ok\n");
+      printInfo(1,"OK\n");
       storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
     }
     else
@@ -207,7 +207,7 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
                             CALLBACK(executeIOOutput,NULL)
                            );
         Misc_udelay(LOAD_VOLUME_DELAY_TIME);
-        printInfo(1,"ok\n");
+        printInfo(1,"OK\n");
 
         // store new volume number
         storageHandle->volumeNumber = storageHandle->requestedVolumeNumber;
@@ -625,7 +625,7 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
                                     CALLBACK(executeIOOutput,NULL),
                                     CALLBACK(executeIOOutput,NULL)
                                    );
-        printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
       if (error == ERROR_NONE)
       {
@@ -636,7 +636,7 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
                                     CALLBACK(executeIOOutput,NULL),
                                     CALLBACK(executeIOOutput,NULL)
                                    );
-        printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
       if (error == ERROR_NONE)
       {
@@ -647,7 +647,7 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
                                     CALLBACK(executeIOOutput,NULL),
                                     CALLBACK(executeIOOutput,NULL)
                                    );
-        printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
 
       // write to device
@@ -660,7 +660,7 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
                                     CALLBACK(executeIOOutput,NULL),
                                     CALLBACK(executeIOOutput,NULL)
                                    );
-        printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
       if (error == ERROR_NONE)
       {
@@ -671,7 +671,7 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
                                     CALLBACK(executeIOOutput,NULL),
                                     CALLBACK(executeIOOutput,NULL)
                                    );
-        printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
       if (error == ERROR_NONE)
       {
@@ -682,7 +682,7 @@ LOCAL Errors StorageDevice_postProcess(StorageHandle *storageHandle,
                                     CALLBACK(executeIOOutput,NULL),
                                     CALLBACK(executeIOOutput,NULL)
                                    );
-        printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
 
       if (error != ERROR_NONE)

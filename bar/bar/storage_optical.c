@@ -138,7 +138,7 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
                         CALLBACK(executeIOOutput,NULL),
                         CALLBACK(executeIOOutput,NULL)
                        );
-    printInfo(1,"ok\n");
+    printInfo(1,"OK\n");
 
     storageHandle->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
   }
@@ -165,7 +165,7 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
                             CALLBACK(executeIOOutput,NULL),
                             CALLBACK(executeIOOutput,NULL)
                            );
-        printInfo(1,"ok\n");
+        printInfo(1,"OK\n");
       }
     }
     while (storageRequestResult == STORAGE_REQUEST_VOLUME_UNLOAD);
@@ -185,7 +185,7 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
                            ) == ERROR_NONE
        )
     {
-      printInfo(1,"ok\n");
+      printInfo(1,"OK\n");
       storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
     }
     else
@@ -243,7 +243,7 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
                             CALLBACK(executeIOOutput,NULL)
                            );
         Misc_udelay(LOAD_VOLUME_DELAY_TIME);
-        printInfo(1,"ok\n");
+        printInfo(1,"OK\n");
 
         // store new medium number
         storageHandle->volumeNumber = storageHandle->requestedVolumeNumber;
@@ -953,7 +953,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
           return error;
         }
         File_getFileInfo(imageFileName,&fileInfo);
-        printInfo(1,"ok (%llu bytes)\n",fileInfo.size);
+        printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
 
         if (storageHandle->jobOptions->errorCorrectionCodesFlag)
         {
@@ -975,7 +975,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
             return error;
           }
           File_getFileInfo(imageFileName,&fileInfo);
-          printInfo(1,"ok (%llu bytes)\n",fileInfo.size);
+          printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
         }
 
         // get number of image sectors
@@ -1015,7 +1015,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
                                      );
           if (error == ERROR_NONE)
           {
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
             retryFlag = FALSE;
           }
           else
@@ -1069,7 +1069,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
                                      );
           if (error == ERROR_NONE)
           {
-            printInfo(1,"ok\n");
+            printInfo(1,"OK\n");
           }
           else
           {

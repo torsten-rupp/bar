@@ -553,7 +553,7 @@ LOCAL Errors StorageSFTP_preProcess(StorageHandle *storageHandle,
               error = ERROR_EXPAND_TEMPLATE;
             }
 
-            printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+            printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
           }
         }
       }
@@ -625,7 +625,7 @@ LOCAL Errors StorageSFTP_postProcess(StorageHandle *storageHandle,
               error = ERROR_EXPAND_TEMPLATE;
             }
 
-            printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+            printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
           }
         }
       }

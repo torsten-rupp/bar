@@ -11698,11 +11698,11 @@ archiveInfo->archiveInitUserData              = NULL;
 
             if (!jobOptions->dryRunFlag)
             {
-              printInfo(2,"ok\n");
+              printInfo(2,"OK\n");
             }
             else
             {
-              printInfo(2,"ok (dry-run)\n");
+              printInfo(2,"OK (dry-run)\n");
             }
 
             /* check if all data read.
@@ -11857,11 +11857,11 @@ archiveInfo->archiveInitUserData              = NULL;
 
             if (!jobOptions->dryRunFlag)
             {
-              printInfo(2,"ok\n");
+              printInfo(2,"OK\n");
             }
             else
             {
-              printInfo(2,"ok (dry-run)\n");
+              printInfo(2,"OK (dry-run)\n");
             }
 
             // check if all data read
@@ -12080,11 +12080,11 @@ archiveInfo->archiveInitUserData              = NULL;
 
             if (!jobOptions->dryRunFlag)
             {
-              printInfo(2,"ok\n");
+              printInfo(2,"OK\n");
             }
             else
             {
-              printInfo(2,"ok (dry-run)\n");
+              printInfo(2,"OK (dry-run)\n");
             }
 
             // check if all data read
@@ -12421,11 +12421,11 @@ archiveInfo->archiveInitUserData              = NULL;
 
                 if (!jobOptions->dryRunFlag)
                 {
-                  printInfo(2,"ok\n");
+                  printInfo(2,"OK\n");
                 }
                 else
                 {
-                  printInfo(2,"ok (dry-run)\n");
+                  printInfo(2,"OK (dry-run)\n");
                 }
 
                 // discard fragment list if file is complete
@@ -12470,11 +12470,11 @@ archiveInfo->archiveInitUserData              = NULL;
 
                 if (!jobOptions->dryRunFlag)
                 {
-                  printInfo(2,"ok\n");
+                  printInfo(2,"OK\n");
                 }
                 else
                 {
-                  printInfo(2,"ok (dry-run)\n");
+                  printInfo(2,"OK (dry-run)\n");
                 }
 
                 /* check if all data read.
@@ -12700,11 +12700,11 @@ archiveInfo->archiveInitUserData              = NULL;
 
             if (!jobOptions->dryRunFlag)
             {
-              printInfo(2,"ok\n");
+              printInfo(2,"OK\n");
             }
             else
             {
-              printInfo(2,"ok (dry-run)\n");
+              printInfo(2,"OK (dry-run)\n");
             }
 
             // check if all data read

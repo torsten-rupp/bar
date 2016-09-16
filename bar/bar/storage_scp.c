@@ -557,7 +557,7 @@ LOCAL Errors StorageSCP_preProcess(StorageHandle *storageHandle,
               error = ERROR_EXPAND_TEMPLATE;
             }
 
-            printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+            printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
           }
         }
       }
@@ -628,7 +628,7 @@ LOCAL Errors StorageSCP_postProcess(StorageHandle *storageHandle,
               error = ERROR_EXPAND_TEMPLATE;
             }
 
-            printInfo(1,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
+            printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
           }
         }
       }

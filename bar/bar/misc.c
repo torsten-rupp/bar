@@ -326,7 +326,7 @@ error = ERROR_NONE;
       exitcode = WEXITSTATUS(status);
       if (exitcode == 0)
       {
-        printInfo(3,"ok\n");
+        printInfo(3,"OK\n");
       }
       else
       {

@@ -1906,7 +1906,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   }
   if (!failFlag)
   {
-    if (printInfoFlag) printf("ok\n");
+    if (printInfoFlag) printf("OK\n");
   }
 
   // free resources
