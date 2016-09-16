@@ -2601,7 +2601,6 @@ LOCAL void indexCleanupThreadCode(void)
                             );
       if ((error == ERROR_NONE) && (databaseId != DATABASE_ID_NONE))
       {
-fprintf(stderr,"%s, %d: try databaseId=%llu\n",__FILE__,__LINE__,databaseId);
         if (error == ERROR_NONE)
         {
           error = deleteFromIndex(&indexHandle,
