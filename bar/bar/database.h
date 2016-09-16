@@ -290,6 +290,17 @@ void Database_doneAll(void);
 
 //bool Database_isHigherRequestPending(uint priority);
 
+/***********************************************************************\
+* Name   : Database_interrupt
+* Purpose: interrupt currently running database command
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_interrupt(DatabaseHandle *databaseHandle);
+
 //TODO: remove
 #if 0
 /***********************************************************************\

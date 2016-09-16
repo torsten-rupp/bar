@@ -1126,6 +1126,11 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
       // report error
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
     }
+    else if (sqliteResult == SQLITE_INTERRUPT)
+    {
+      // report interrupt
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
+    }
     else
     {
       // next SQL command part
@@ -1655,6 +1660,13 @@ void Database_doneAll(void)
   // free resources
   Semaphore_done(&databaseHandle->lock);
   sem_destroy(&databaseHandle->wakeUp);
+}
+
+void Database_interrupt(DatabaseHandle *databaseHandle)
+{
+  assert(databaseHandle != NULL);
+
+  sqlite3_interrupt(databaseHandle->handle);
 }
 
 //TODO: remove
