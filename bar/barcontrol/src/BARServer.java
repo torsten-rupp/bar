@@ -124,79 +124,150 @@ class BusyIndicator
   }
 }
 
-/** process result
- */
-abstract class ProcessResult
-{
-  // --------------------------- constants --------------------------------
-
-  // --------------------------- variables --------------------------------
-
-  // ------------------------ native functions ----------------------------
-
-  // ---------------------------- methods ---------------------------------
-
-  abstract public void process(String result);
-}
-
 /** BAR command
  */
 class Command
 {
+  /** result handler
+   */
+  static abstract class ResultHandler
+  {
+    // --------------------------- constants --------------------------------
+
+    // --------------------------- variables --------------------------------
+    private boolean aborted = false;
+
+    // ------------------------ native functions ----------------------------
+
+    // ---------------------------- methods ---------------------------------
+
+    /** handle result
+     * @param i result number 0..n
+     * @param valueMap result
+     */
+    public int handle(int i, ValueMap valueMap)
+    {
+      return handle(valueMap);
+    }
+
+    /** handle result
+     * @param valueMap result
+     */
+    public int handle(ValueMap valueMap)
+    {
+      throw new Error("result not handled");
+    }
+
+    /** check if aborted
+     * @return true iff aborted
+     */
+    public boolean isAborted()
+    {
+      return aborted;
+    }
+
+    /** abort command
+     */
+    public void abort()
+    {
+      aborted = true;
+    }
+  }
+
+  /** handler
+   */
+  static abstract class Handler
+  {
+    // --------------------------- constants --------------------------------
+
+    // --------------------------- variables --------------------------------
+
+    // ------------------------ native functions ----------------------------
+
+    // ---------------------------- methods ---------------------------------
+
+    abstract public int handle(Command command);
+  }
+
   // --------------------------- constants --------------------------------
   public final static int TIMEOUT      = 30*1000;   // default timeout [ms]
   public final static int WAIT_FOREVER = -1;
 
   // --------------------------- variables --------------------------------
-  public  ProcessResult      processResult;
-  public  long               id;                // unique command id
-  public  int                errorCode;         // error code
-  public  String             errorMessage;      // error text
-  public  boolean            completedFlag;     // true iff command completed
-  public  ArrayDeque<String> result;            // result
-  public  int                debugLevel;        // debug level
 
-  private long               timeoutTimestamp;  // timeout timestamp [ms]
+  private static long         commandId = 0;     // global command id counter
+
+  public  final long          id;                // unique command id
+  public  final String        string;            // command string
+  public  int                 errorCode;         // error code
+  public  String              errorMessage;      // error text
+  public  boolean             completedFlag;     // true iff command completed
+  public  boolean             abortedFlag;       // true iff command aborted
+  public  int                 resultCount;       // result counter
+  public  final ResultHandler resultHandler;     // result handler
+  public  ArrayDeque<String>  result;            // result
+  public  final Handler       handler;           // final handler
+  public  final int           debugLevel;        // debug level
+
+  private long                timeoutTimestamp;  // timeout timestamp [ms]
 
   // ------------------------ native functions ----------------------------
 
   // ---------------------------- methods ---------------------------------
 
   /** create new command
-   * @param id command id
-   * @param timeout timeout or 0 [ms]
+   * @param commandString command string
    * @param debugLevel debug level (0..n)
-   * @param processResult process result handler
+   * @param timeout timeout or 0 [ms]
+   * @param resultHandler result handler
+   * @param handler handler
    */
-  Command(long id, int timeout, int debugLevel, ProcessResult processResult)
+  Command(String commandString, int debugLevel, int timeout, ResultHandler resultHandler, Handler handler)
   {
-    this.id               = id;
+
+    this.id               = getCommandId();
+    this.string           = commandString;
     this.errorCode        = Errors.UNKNOWN;
     this.errorMessage     = "";
     this.completedFlag    = false;
-    this.processResult    = processResult;
+    this.abortedFlag      = false;
+    this.resultCount      = 0;
+    this.resultHandler    = resultHandler;
     this.result           = new ArrayDeque<String>();
+    this.handler          = handler;
     this.debugLevel       = debugLevel;
     this.timeoutTimestamp = (timeout != 0) ? System.currentTimeMillis()+timeout : 0L;
   }
 
   /** create new command
    * @param id command id
-   * @param timeout timeout or 0 [ms]
+   * @param commandString command string
    * @param debugLevel debug level (0..n)
+   * @param timeout timeout or 0 [ms]
    */
-  Command(long id, int timeout, int debugLevel)
+  Command(String commandString, int debugLevel, int timeout)
   {
-    this(id,timeout,debugLevel,(ProcessResult)null);
+    this(commandString,debugLevel,timeout,(ResultHandler)null,(Handler)null);
   }
 
   /** create new command
    * @param id command id
+   * @param commandString command string
    * @param debugLevel debug level (0..n)
    */
-  Command(long id, int debugLevel)
+  Command(String commandString, int debugLevel)
   {
-    this(id,0,debugLevel);
+    this(commandString,debugLevel,0);
+  }
+
+  /** send command
+   */
+  public void send(BufferedWriter output)
+    throws IOException
+  {
+    String line = String.format("%d %s",id,string);
+    output.write(line); output.write('\n'); output.flush();
+    if (Settings.debugLevel > debugLevel) System.err.println("Network: sent '"+line+"'");
   }
 
   /** check if end of data
@@ -204,7 +275,7 @@ class Command
    */
   public synchronized boolean endOfData()
   {
-    while (!completedFlag && (result.size() == 0))
+    while (!completedFlag && !abortedFlag && (result.size() == 0))
     {
       try
       {
@@ -227,6 +298,30 @@ class Command
     return completedFlag;
   }
 
+  /** set completed
+   */
+  public synchronized void setCompleted()
+  {
+    completedFlag = true;
+    notifyAll();
+  }
+
+  /** check if completed
+   * @return true iff command aborted
+   */
+  public boolean isAborted()
+  {
+    return abortedFlag;
+  }
+
+  /** set aborted
+   */
+  public synchronized void setAborted()
+  {
+    abortedFlag = true;
+    notifyAll();
+  }
+
   /** wait until command completed
    * @param timeout timeout [ms]
    * @return true if command completed, false otherwise
@@ -234,6 +329,7 @@ class Command
   public synchronized boolean waitForResult(long timeout)
   {
     while (   !completedFlag
+           && !abortedFlag
            && (result.size() == 0)
            && (timeout != 0)
          )
@@ -285,6 +381,7 @@ class Command
     synchronized(this)
     {
       while (   !completedFlag
+             && !abortedFlag
              && (timeout != 0)
              && !timeoutFlag
             )
@@ -323,7 +420,7 @@ class Command
       timeout();
     }
 
-    return completedFlag;
+    return completedFlag || abortedFlag;
   }
 
   /** wait until commmand completed
@@ -331,6 +428,16 @@ class Command
   public synchronized void waitCompleted()
   {
     waitCompleted(WAIT_FOREVER);
+  }
+
+  /** set error
+   * @param errorCode error code
+   * @param errorMessage error text
+   */
+  public synchronized void setError(int errorCode, String errorMessage)
+  {
+    this.errorCode    = errorCode;
+    this.errorMessage = errorMessage;
   }
 
   /** get error code
@@ -341,6 +448,14 @@ class Command
     return errorCode;
   }
 
+  /** set error code
+   * @param errorCode error code
+   */
+  public synchronized void setErrorCode(int errorCode)
+  {
+    this.errorCode = errorCode;
+  }
+
   /** get error text
    * @return error text
    */
@@ -349,13 +464,21 @@ class Command
     return errorMessage;
   }
 
+  /** set error text
+   * @param errorMessage error text
+   */
+  public synchronized void setErrorMessage(String errorMessage)
+  {
+    this.errorMessage = errorMessage;
+  }
+
   /** get next resultg
    * @param timeout timeout [ms]
    * @return result string or null
    */
   public synchronized String getNextResult(long timeout)
   {
-    while (!completedFlag && (result.size() == 0))
+    while (!completedFlag && !abortedFlag && (result.size() == 0))
     {
       try
       {
@@ -420,15 +543,12 @@ class Command
    * @param typeMap type map
    * @param errorMessage error message
    * @param valueMap value map
-   * @param unknownValueMap unknown values map or null
    * @param timeout timeout or WAIT_FOREVER [ms]
    * @return Errors.NONE or error code
    */
-  public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap, int timeout)
+  public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap, int timeout)
   {
     // init variables
-    if (unknownValueMap != null) unknownValueMap.clear();
-
     if (errorCode == Errors.NONE)
     {
       // wait for result
@@ -441,7 +561,7 @@ class Command
         if ((valueMap != null) && !line.isEmpty())
         {
           valueMap.clear();
-          if (!StringParser.parse(line,valueMap,unknownValueMap))
+          if (!StringParser.parse(line,valueMap))
           {
             throw new RuntimeException("parse '"+line+"' fail");
           }
@@ -459,30 +579,6 @@ class Command
    * @param typeMap type map
    * @param errorMessage error message
    * @param valueMap value map
-   * @param unknownValueMap unknown values map or null
-   * @return Errors.NONE or error code
-   */
-  public synchronized int getResult(String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap)
-  {
-    return getNextResult(errorMessage,valueMap,unknownValueMap,0);
-  }
-
-  /** get next result
-   * @param typeMap type map
-   * @param errorMessage error message
-   * @param valueMap value map
-   * @param timeout timeout or WAIT_FOREVER [ms]
-   * @return Errors.NONE or error code
-   */
-  public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap, int timeout)
-  {
-    return getNextResult(errorMessage,valueMap,(ValueMap)null,timeout);
-  }
-
-  /** get next result
-   * @param typeMap type map
-   * @param errorMessage error message
-   * @param valueMap value map
    * @return Errors.NONE or error code
    */
   public synchronized int getNextResult(String[] errorMessage, ValueMap valueMap)
@@ -490,8 +586,7 @@ class Command
     return getNextResult(errorMessage,valueMap,0);
   }
 
-
-  /** get result
+  /** get next result
    * @param typeMap type map
    * @param errorMessage error message
    * @param valueMap value map
@@ -502,14 +597,23 @@ class Command
     return getNextResult(errorMessage,valueMap);
   }
 
+  /** get next result
+   * @param typeMap type map
+   * @param valueMap value map
+   * @return Errors.NONE or error code
+   */
+  public synchronized int getResult(ValueMap valueMap)
+  {
+    return getResult((String[])null,valueMap);
+  }
+
   /** get result list
    * @param typeMap type map
    * @param errorMessage error message
    * @param valueMapList value map list
-   * @param unknownValueMap unknown values map or null
    * @return Errors.NONE or error code
    */
-  public synchronized int getResult(String[] errorMessage, List<ValueMap> valueMapList, ValueMap unknownValueMap)
+  public synchronized int getResults(String[] errorMessage, List<ValueMap> valueMapList)
   {
     if (errorCode == Errors.NONE)
     {
@@ -519,7 +623,7 @@ class Command
         if (!line.isEmpty())
         {
           ValueMap valueMap = new ValueMap();
-          StringParser.parse(line,valueMap,unknownValueMap);
+          StringParser.parse(line,valueMap);
           valueMapList.add(valueMap);
         }
       }
@@ -531,17 +635,6 @@ class Command
     }
 
     return errorCode;
-  }
-
-  /** get result string list array
-   * @param typeMap type map
-   * @param errorMessage error message
-   * @param valueMapList value map list
-   * @return Errors.NONE or error code
-   */
-  public synchronized int getResult(String[] errorMessage, List<ValueMap> valueMapList)
-  {
-    return getResult(errorMessage,valueMapList,(ValueMap)null);
   }
 
   /** get error code
@@ -565,14 +658,20 @@ class Command
    */
   public void abort()
   {
-    BARServer.abortCommand(this);
+    if (!abortedFlag)
+    {
+      BARServer.abortCommand(this);
+    }
   }
 
   /** timeout command
    */
   public void timeout()
   {
-    BARServer.timeoutCommand(this);
+    if (!abortedFlag)
+    {
+      BARServer.timeoutCommand(this);
+    }
   }
 
   /** convert data to string
@@ -582,44 +681,11 @@ class Command
   {
     return "Command {id="+id+", errorCode="+errorCode+", error="+errorMessage+", completedFlag="+completedFlag+", results="+result.size()+"}";
   }
-}
 
-/** BAR command handler
- */
-abstract class CommandHandler
-{
-  /** handle command result
-   * @param i result counter [0..n-1]
-   * @param command command
-   * @return Errors.NONE or error code
-   */
-  abstract public int handleResult(int i, Command command);
-}
-
-abstract class CommandResultHandler
-{
-  private boolean aborted = false;
-
-  /** handle command result
-   * @param i result counter [0..n-1]
-   * @param valueMap value map
-   * @return Errors.NONE or error code
-   */
-  abstract public int handleResult(int i, ValueMap valueMap);
-
-  /** check if aborted
-   * @return true iff aborted
-   */
-  public boolean isAborted()
+  private static synchronized long getCommandId()
   {
-    return aborted;
-  }
-
-  /** abort command
-   */
-  public void abort()
-  {
-    aborted = true;
+    commandId++;
+    return commandId;
   }
 }
 
@@ -652,7 +718,8 @@ class ReadThread extends Thread
    */
   public void run()
   {
-    String line;
+    String   line;
+    ValueMap valueMap = new ValueMap();
 
     while (!quitFlag)
     {
@@ -699,12 +766,28 @@ class ReadThread extends Thread
               {
                 if (completedFlag)
                 {
-                  command.errorCode = errorCode;
                   if (errorCode == Errors.NONE)
                   {
-                    if (command.processResult != null)
+                    if (command.resultHandler != null)
                     {
-                      command.processResult.process(data);
+                      if (!data.isEmpty())
+                      {
+                        valueMap.clear();
+                        if (StringParser.parse(data,valueMap))
+                        {
+                          // call handler
+                          errorCode = command.resultHandler.handle(command.resultCount,valueMap);
+                          command.setErrorCode(errorCode);
+                        }
+                        else
+                        {
+                          command.setError(Errors.NETWORK_PARSE,"parse '"+data+"' fail");
+                        }
+                      }
+                      else
+                      {
+                        command.setErrorCode(Errors.NONE);
+                      }
                     }
                     else
                     {
@@ -712,24 +795,45 @@ class ReadThread extends Thread
                       {
                         command.result.add(data);
                       }
+                      command.setErrorCode(Errors.NONE);
                     }
                   }
                   else
                   {
-                    command.errorMessage = data;
+                    command.setError(errorCode,data);
                   }
-                  command.completedFlag = true;
+                  command.setCompleted();
                   command.notifyAll();
+                  if (command.handler != null)
+                  {
+                    command.handler.handle(command);
+                  }
                 }
                 else
                 {
-                  command.errorCode = Errors.NONE;
-                  if (command.processResult != null)
+                  if (command.resultHandler != null)
                   {
-                    command.processResult.process(data);
+                    valueMap.clear();
+                    if (StringParser.parse(data,valueMap))
+                    {
+                      errorCode = command.resultHandler.handle(command.resultCount,valueMap);
+                      command.setErrorCode(errorCode);
+                      if (errorCode != Errors.NONE)
+                      {
+                        command.setCompleted();
+                        command.notifyAll();
+                      }
+                    }
+                    else
+                    {
+                      command.setError(Errors.NETWORK_PARSE,"parse '"+data+"' fail");
+                      command.setCompleted();
+                      command.notifyAll();
+                    }
                   }
                   else
                   {
+                    command.setErrorCode(Errors.NONE);
                     if (!data.isEmpty())
                     {
                       command.result.add(data);
@@ -737,6 +841,7 @@ class ReadThread extends Thread
                     }
                   }
                 }
+                command.resultCount++;
               }
             }
             else
@@ -766,10 +871,13 @@ class ReadThread extends Thread
           {
             synchronized(command)
             {
-              command.errorCode     = Errors.NETWORK_RECEIVE;
-              command.errorMessage  = exception.getMessage();
-              command.completedFlag = true;
+              command.setError(Errors.NETWORK_RECEIVE,exception.getMessage());
+              command.setCompleted();
               command.notifyAll();
+              if (command.handler != null)
+              {
+                command.handler.handle(command);
+              }
             }
           }
         }
@@ -789,13 +897,14 @@ class ReadThread extends Thread
   }
 
   /** add command
-   * @param commandId command id
-   * @param timeout timeout or 0 [ms]
+   * @param commandString command string
    * @param debugLevel debug level (0..n)
-   * @param processResult process result handler
+   * @param timeout timeout or 0 [ms]
+   * @param resultHandler result handler
+   * @param handler handler
    * @return command
    */
-  public Command commandAdd(long commandId, int timeout, int debugLevel, ProcessResult processResult)
+  public Command commandAdd(String commandString, int debugLevel, int timeout, Command.ResultHandler resultHandler, Command.Handler handler)
     throws ConnectionError
   {
     Command command = null;
@@ -804,8 +913,8 @@ class ReadThread extends Thread
     {
       if (!quitFlag)
       {
-        command = new Command(commandId,timeout,debugLevel,processResult);
-        commandHashMap.put(commandId,command);
+        command = new Command(commandString,debugLevel,timeout,resultHandler,handler);
+        commandHashMap.put(command.id,command);
         commandHashMap.notifyAll();
       }
       else
@@ -818,26 +927,26 @@ class ReadThread extends Thread
   }
 
   /** add command
-   * @param commandId command id
-   * @param timeout timeout or 0 [ms]
+   * @param commandString command string
    * @param debugLevel debug level (0..n)
+   * @param timeout timeout or 0 [ms]
    * @return command
    */
-  public Command commandAdd(long commandId, int timeout, int debugLevel)
+  public Command commandAdd(String commandString, int debugLevel, int timeout)
     throws ConnectionError
   {
-    return commandAdd(commandId,timeout,debugLevel,(ProcessResult)null);
+    return commandAdd(commandString,debugLevel,timeout,(Command.ResultHandler)null,(Command.Handler)null);
   }
 
   /** add command
-   * @param commandId command id
+   * @param commandString command string
    * @param debugLevel debug level (0..n)
    * @return command
    */
-  public Command commandAdd(long commandId, int debugLevel)
+  public Command commandAdd(String commandString, int debugLevel)
     throws ConnectionError
   {
-    return commandAdd(commandId,0,debugLevel);
+    return commandAdd(commandString,debugLevel,0);
   }
 
   /** remove command
@@ -851,7 +960,7 @@ class ReadThread extends Thread
       commandHashMap.notifyAll();
     }
 
-    return command.errorCode;
+    return command.getErrorCode();
   }
 }
 
@@ -893,7 +1002,6 @@ public class BARServer
   private static Cipher         passwordCipher;
   private static Key            passwordKey;
 
-  private static long           commandId = 0;
   private static Socket         socket;
   private static BufferedWriter output;
   private static BufferedReader input;
@@ -1402,10 +1510,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   /** start running command
    * @param commandString command to start
    * @param debugLevel debug level (0..n)
-   * @param processResult process result handler
+   * @param resultHandler result handler
    * @return command
    */
-  public static Command runCommand(String commandString, int debugLevel, ProcessResult processResult)
+  public static Command runCommand(String commandString, int debugLevel, Command.ResultHandler resultHandler, Command.Handler handler)
   {
     final int TIMEOUT = 120*1000; // total timeout [ms]
 
@@ -1416,11 +1524,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       try
       {
         // add new command
-        commandId++;
-        command = readThread.commandAdd(commandId,TIMEOUT,debugLevel,processResult);
+        command = readThread.commandAdd(commandString,debugLevel,TIMEOUT,resultHandler,handler);
 
         // send command
-        String line = String.format("%d %s",commandId,commandString);
+        String line = String.format("%d %s",command.id,commandString);
         output.write(line); output.write('\n'); output.flush();
         if (Settings.debugLevel > command.debugLevel) System.err.println("Network: sent '"+line+"'");
       }
@@ -1441,12 +1548,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static Command runCommand(String commandString, int debugLevel)
   {
-    return runCommand(commandString,debugLevel,(ProcessResult)null);
+    return runCommand(commandString,debugLevel,(Command.ResultHandler)null,(Command.Handler)null);
   }
 
   /** abort command execution
    * @param command command to abort
-   * @param result result (String[] or ArrayList)
    * @return Errors.NONE or error code
    */
   static void abortCommand(Command command)
@@ -1455,100 +1561,358 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     executeCommand(StringParser.format("ABORT commandId=%d",command.id),0);
     readThread.commandRemove(command);
 
-    // set abort error
-    command.errorCode     = Errors.ABORTED;
-    command.errorMessage  = "aborted";
-    command.completedFlag = true;
+    // set error aborted
+    command.setError(Errors.NETWORK_TIMEOUT,"aborted");
     command.result.clear();
+    command.setAborted();
   }
 
   /** timeout command execution
    * @param command command to abort
-   * @param result result (String[] or ArrayList)
    * @return Errors.NONE or error code
    */
   static void timeoutCommand(Command command)
   {
+Dprintf.dprintf("");
     // send abort command to command
     executeCommand(StringParser.format("ABORT commandId=%d",command.id),0);
     readThread.commandRemove(command);
 
-    // set timeoout error
-    command.errorCode     = Errors.NETWORK_TIMEOUT;
-    command.errorMessage  = "timeout";
-    command.completedFlag = true;
+    // set error timeout
+    command.setError(Errors.NETWORK_TIMEOUT,"timeout");
     command.result.clear();
+    command.setAborted();
   }
 
-  /** execute command
-   * @param commandString command to send to BAR server
+  /** asyncronous execute command
+   * @param command command to send to BAR server
    * @param debugLevel debug level (0..n)
    * @param errorMessage error message or null
-   * @param commandResultHandler command result handler
+   * @param resultHandler result handler
+   * @param handler handler
+   * @param busyIndicator busy indicator or null
+   * @return command
+   */
+  public static Command asyncExecuteCommand(String                commandString,
+                                            int                   debugLevel,
+                                            Command.ResultHandler resultHandler,
+                                            Command.Handler       handler,
+                                            BusyIndicator         busyIndicator
+                                           )
+  {
+    final int TIMEOUT = 120*1000; // total timeout [ms]
+
+    Command command = null;
+
+    // update busy indicator, check if aborted
+    if (busyIndicator != null)
+    {
+      busyIndicator.busy(0);
+      if (busyIndicator.isAborted())
+      {
+        return null;
+      }
+    }
+
+    // create and send command
+    synchronized(lock)
+    {
+      try
+      {
+        // add new command
+        command = readThread.commandAdd(commandString,debugLevel,TIMEOUT,resultHandler,handler);
+
+        // send command
+        String line = String.format("%d %s",command.id,command.string);
+        output.write(line); output.write('\n'); output.flush();
+        if (Settings.debugLevel > debugLevel) System.err.println("Network: sent '"+line+"'");
+      }
+      catch (IOException exception)
+      {
+        if (command != null) readThread.commandRemove(command);
+        if (Settings.debugLevel > 0)
+        {
+          BARControl.printStackTrace(exception);
+        }
+        return null;
+      }
+    }
+
+    // update busy indicator, check if aborted
+    if (busyIndicator != null)
+    {
+      busyIndicator.busy(0);
+      if (busyIndicator.isAborted())
+      {
+        abortCommand(command);
+        return null;
+      }
+    }
+
+    return command;
+  }
+
+  /** asyncronous execute command
+   * @param command command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param errorMessage error message or null
+   * @param resultHandler result handler
+   * @param handler handler
+   * @return command
+   */
+  public static Command asyncExecuteCommand(String                commandString,
+                                            int                   debugLevel,
+                                            Command.ResultHandler resultHandler,
+                                            Command.Handler       handler
+                                           )
+  {
+    return asyncExecuteCommand(commandString,debugLevel,resultHandler,handler,(BusyIndicator)null);
+  }
+
+  /** asyncronous execute command
+   * @param command command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param resultHandler result handler
+   * @return command
+   */
+  public static Command asyncExecuteCommand(String                commandString,
+                                            int                   debugLevel,
+                                            Command.ResultHandler resultHandler
+                                           )
+  {
+    return asyncExecuteCommand(commandString,debugLevel,resultHandler,(Command.Handler)null);
+  }
+
+  /** asyncronous execute command
+   * @param command command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @return command
+   */
+  public static Command asyncExecuteCommand(String commandString,
+                                            int    debugLevel
+                                           )
+  {
+    return asyncExecuteCommand(commandString,debugLevel,(Command.ResultHandler)null);
+  }
+
+  /** wait for asynchronous command
+   * @param command command to send to BAR server
+   * @param errorMessage error message or null
    * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String                     commandString,
-                                   int                        debugLevel,
-                                   final String[]             errorMessage,
-                                   final CommandResultHandler commandResultHandler,
-                                   BusyIndicator              busyIndicator
-                                  )
+  public static int asyncCommandWait(Command       command,
+                                     String[]      errorMessage,
+                                     BusyIndicator busyIndicator
+                                    )
   {
-    return executeCommand(commandString,
-                          debugLevel,
-                          errorMessage,
-                          new CommandHandler()
-                          {
-                            public int handleResult(int i, Command command)
-                            {
-                              ValueMap valueMap = new ValueMap();
-                              int error = command.getNextResult(errorMessage,valueMap);
-                              if ((error == Errors.NONE) && !valueMap.isEmpty())
-                              {
-                                error = commandResultHandler.handleResult(i,valueMap);
-                              }
+    // process results until error, completed, or aborted
+    while (   ((busyIndicator == null) || !busyIndicator.isAborted())
+           && !command.waitCompleted(250)
+           && !command.waitCompleted(2500)
+          )
+    {
+      if (busyIndicator != null)
+      {
+        busyIndicator.busy(0);
+      }
+    }
 
-                              if (commandResultHandler.isAborted())
-                              {
-                                abortCommand(command);
-                              }
+    // update busy indicator, check if aborted
+    if (busyIndicator != null)
+    {
+      busyIndicator.busy(0);
+      if (busyIndicator.isAborted())
+      {
+        abortCommand(command);
+        return Errors.ABORTED;
+      }
+    }
 
-                              return error;
-                            }
-                          },
-                          busyIndicator
-                         );
+    if (errorMessage != null) errorMessage[0] = command.getErrorMessage();
+
+    synchronized(lock)
+    {
+      if (readThread != null)
+      {
+        readThread.commandRemove(command);
+      }
+    }
+
+    return command.getErrorCode();
+  }
+
+  /** wait for asynchronous command
+   * @param command command to send to BAR server
+   * @param errorMessage error message or null
+   * @return Errors.NONE or error code
+   */
+  public static int asyncCommandWait(Command  command,
+                                     String[] errorMessage
+                                    )
+  {
+    return asyncCommandWait(command,errorMessage,(BusyIndicator)null);
+  }
+
+  /** wait for asynchronous command
+   * @param command command to send to BAR server
+   * @return Errors.NONE or error code
+   */
+  public static int asyncCommandWait(Command command)
+  {
+    return asyncCommandWait(command,(String[])null);
   }
 
   /** execute command
-   * @param commandString command to send to BAR server
+   * @param command command to send to BAR server
    * @param debugLevel debug level (0..n)
    * @param errorMessage error message or null
-   * @param commandResultHandler command result handler
+   * @param resultHandler result handler
+   * @param handler handler
+   * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String               commandString,
-                                   int                  debugLevel,
-                                   final String[]       errorMessage,
-                                   CommandResultHandler commandResultHandler
+  public static int executeCommand(String                commandString,
+                                   int                   debugLevel,
+                                   final String[]        errorMessage,
+                                   Command.ResultHandler resultHandler,
+                                   Command.Handler       handler,
+                                   BusyIndicator         busyIndicator
                                   )
   {
-    return executeCommand(commandString,debugLevel,errorMessage,commandResultHandler,(BusyIndicator)null);
+    if (errorMessage != null) errorMessage[0] = null;
+
+    // create and send command
+    Command command = asyncExecuteCommand(commandString,
+                                          debugLevel,
+                                          resultHandler,
+                                          handler,
+                                          busyIndicator
+                                         );
+
+    // update busy indicator, check if aborted
+    if (busyIndicator != null)
+    {
+      busyIndicator.busy(0);
+      if (busyIndicator.isAborted())
+      {
+        abortCommand(command);
+        return Errors.ABORTED;
+      }
+    }
+
+    // process results until error, completed, or aborted
+    int errorCode = asyncCommandWait(command,
+                                     errorMessage,
+                                     busyIndicator
+                                    );
+
+    // update busy indicator, check if aborted
+    if (busyIndicator != null)
+    {
+      busyIndicator.busy(0);
+      if (busyIndicator.isAborted())
+      {
+        return Errors.ABORTED;
+      }
+    }
+
+    return errorCode;
   }
 
   /** execute command
-   * @param commandString command to send to BAR server
+   * @param command command to send to BAR server
    * @param debugLevel debug level (0..n)
-   * @param commandResultHandler command result handler
+   * @param errorMessage error message or null
+   * @param resultHandler result handler
+   * @param handler handler
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String               commandString,
-                                   int                  debugLevel,
-                                   CommandResultHandler commandResultHandler
-                                  )
+  public static int executeCommand(String                 commandString,
+                                    int                   debugLevel,
+                                    final String[]        errorMessage,
+                                    Command.ResultHandler resultHandler,
+                                    Command.Handler       handler
+                                   )
   {
-    return executeCommand(commandString,debugLevel,(String[])null,commandResultHandler);
+    return executeCommand(commandString,debugLevel,errorMessage,resultHandler,handler,(BusyIndicator)null);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param resultHandler result handler
+   * @param handler handler
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String                 commandString,
+                                    int                   debugLevel,
+                                    Command.ResultHandler resultHandler,
+                                    Command.Handler       handler
+                                   )
+  {
+    return executeCommand(commandString,debugLevel,(String[])null,resultHandler,handler);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param errorMessage error message or null
+   * @param resultHandler result handler
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String                 commandString,
+                                    int                   debugLevel,
+                                    final String[]        errorMessage,
+                                    Command.ResultHandler resultHandler
+                                   )
+  {
+    return executeCommand(commandString,debugLevel,errorMessage,resultHandler,(Command.Handler)null);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param errorMessage error message or null
+   * @param resultHandler result handler
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String                 commandString,
+                                    int                   debugLevel,
+                                    Command.ResultHandler resultHandler
+                                   )
+  {
+    return executeCommand(commandString,debugLevel,(String[])null,resultHandler);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param errorMessage error message or null
+   * @param handler handler
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String           commandString,
+                                    int             debugLevel,
+                                    final String[]  errorMessage,
+                                    Command.Handler handler
+                                   )
+  {
+    return executeCommand(commandString,debugLevel,errorMessage,(Command.ResultHandler)null,handler);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param handler handler
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String           commandString,
+                                    int             debugLevel,
+                                    Command.Handler handler
+                                   )
+  {
+    return executeCommand(commandString,debugLevel,(String[])null,handler);
   }
 
   /** execute command
@@ -1556,7 +1920,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param debugLevel debug level (0..n)
    * @param errorMessage error message or null
    * @param valueMap value map
-   * @param unknownValueMap unknown values map or null
    * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
@@ -1564,40 +1927,25 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                    int            debugLevel,
                                    final String[] errorMessage,
                                    final ValueMap valueMap,
-                                   final ValueMap unknownValueMap,
                                    BusyIndicator  busyIndicator
                                   )
   {
+    if (errorMessage != null) errorMessage[0] = null;
+    if (valueMap != null) valueMap.clear();
+
     return executeCommand(commandString,
                           debugLevel,
                           errorMessage,
-                          new CommandHandler()
+                          null,  //result handler
+                          new Command.Handler()
                           {
-                            public int handleResult(int i, Command command)
+                            public int handle(Command command)
                             {
-                              return command.getResult(errorMessage,valueMap,unknownValueMap);
+                              return command.getResult(errorMessage,valueMap);
                             }
                           },
                           busyIndicator
                          );
-  }
-
-  /** execute command
-   * @param commandString command to send to BAR server
-   * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
-   * @param valueMap value map
-   * @param unknownValueMap unknown values map or null
-   * @return Errors.NONE or error code
-   */
-  public static int executeCommand(String   commandString,
-                                   int      debugLevel,
-                                   String[] errorMessage,
-                                   ValueMap valueMap,
-                                   ValueMap unknownValueMap
-                                  )
-  {
-    return executeCommand(commandString,debugLevel,errorMessage,valueMap,unknownValueMap,(BusyIndicator)null);
   }
 
   /** execute command
@@ -1613,7 +1961,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                    ValueMap valueMap
                                   )
   {
-    return executeCommand(commandString,debugLevel,errorMessage,valueMap,(ValueMap)null);
+    return executeCommand(commandString,debugLevel,errorMessage,valueMap,(BusyIndicator)null);
   }
 
   /** execute command
@@ -1662,7 +2010,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param debugLevel debug level (0..n)
    * @param errorMessage error message or null
    * @param valueMapList value map list
-   * @param unknownValueMap unknown values map or null
    * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
@@ -1670,42 +2017,24 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                    int                  debugLevel,
                                    final String[]       errorMessage,
                                    final List<ValueMap> valueMapList,
-                                   final ValueMap       unknownValueMap,
                                    BusyIndicator        busyIndicator)
   {
-    valueMapList.clear();
-    if (unknownValueMap != null) unknownValueMap.clear();
+    if (errorMessage != null) errorMessage[0] = null;
+    if (valueMapList != null) valueMapList.clear();
 
     return executeCommand(commandString,
                           debugLevel,
                           errorMessage,
-                          new CommandHandler()
+                          null,  // resultHandler
+                          new Command.Handler()
                           {
-                            public int handleResult(int i, Command command)
+                            public int handle(Command command)
                             {
-                              return command.getResult(errorMessage,valueMapList,unknownValueMap);
+                              return command.getResults(errorMessage,valueMapList);
                             }
                           },
                           busyIndicator
                          );
-  }
-
-  /** execute command
-   * @param command command to send to BAR server
-   * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
-   * @param valueMapList value map list
-   * @param unknownValueMap unknown values map or null
-   * @return Errors.NONE or error code
-   */
-  public static int executeCommand(String         commandString,
-                                   int            debugLevel,
-                                   String[]       errorMessage,
-                                   List<ValueMap> valueMapList,
-                                   ValueMap       unknownValueMap
-                                  )
-  {
-    return executeCommand(commandString,debugLevel,errorMessage,valueMapList,unknownValueMap,(BusyIndicator)null);
   }
 
   /** execute command
@@ -1721,7 +2050,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                    List<ValueMap> valueMapList
                                   )
   {
-    return executeCommand(commandString,debugLevel,errorMessage,valueMapList,(ValueMap)null);
+    return executeCommand(commandString,debugLevel,errorMessage,valueMapList,(BusyIndicator)null);
   }
 
   /** set boolean value on BAR server
@@ -2735,9 +3064,9 @@ throw new Error("NYI");
       BARServer.executeCommand(StringParser.format("ROOT_LIST"),
                                1,  // debugLevel
                                null,  // errorMessage
-                               new CommandResultHandler()
+                               new Command.ResultHandler()
                                {
-                                 public int handleResult(int i, ValueMap valueMap)
+                                 public int handle(int i, ValueMap valueMap)
                                  {
                                    String name = valueMap.getString("name");
                                    long   size = Long.parseLong(valueMap.getString("size"));
@@ -2746,7 +3075,8 @@ throw new Error("NYI");
 
                                    return Errors.NONE;
                                  }
-                               }
+                               },
+                               null  // handler
                               );
 
       shortcutList.clear();
@@ -3023,11 +3353,11 @@ throw new Error("NYI");
 
     synchronized(output)
     {
-      // new command
-      commandId++;
+      // get new command
+      Command command = new Command(commandString,0);
 
       // send command
-      String line = String.format("%d %s",commandId,commandString);
+      String line = String.format("%d %s",command.id,command.string);
       output.write(line); output.write('\n'); output.flush();
       if (Settings.debugLevel > 1) System.err.println("Network: sent '"+line+"'");
 
@@ -3050,7 +3380,7 @@ throw new Error("NYI");
           throw new CommunicationError("Invalid response from server");
         }
       }
-      while (Integer.parseInt(data[0]) != commandId);
+      while (Integer.parseInt(data[0]) != command.id);
 
       // check result
       if (Integer.parseInt(data[1]) != 1)
@@ -3136,7 +3466,7 @@ throw new Error("NYI");
    * @param commandHandler command handler
    * @return Errors.NONE or error code
    */
-  private static int executeCommand(String         commandString,
+  private static int XexecuteCommand(String         commandString,
                                     int            debugLevel,
                                     final String[] errorMessage,
                                     CommandHandler commandHandler,
@@ -3163,11 +3493,123 @@ throw new Error("NYI");
       try
       {
         // add new command
-        commandId++;
-        command = readThread.commandAdd(commandId,TIMEOUT,debugLevel);
+        command = readThread.commandAdd(commandString,debugLevel,TIMEOUT);
 
         // send command
-        String line = String.format("%d %s",commandId,commandString);
+        String line = String.format("%d %s",command.id,command.string);
+        output.write(line); output.write('\n'); output.flush();
+        if (Settings.debugLevel > debugLevel) System.err.println("Network: sent '"+line+"'");
+      }
+      catch (IOException exception)
+      {
+        if (command != null) readThread.commandRemove(command);
+        if (Settings.debugLevel > 0)
+        {
+          BARControl.printStackTrace(exception);
+        }
+        return Errors.NETWORK_SEND;
+      }
+    }
+
+    // update busy indicator, check if aborted
+    if (busyIndicator != null)
+    {
+      busyIndicator.busy(0);
+      if (busyIndicator.isAborted())
+      {
+        abortCommand(command);
+        return Errors.ABORTED;
+      }
+    }
+
+    // process results until error, completed, or aborted
+    int errorCode = Errors.NONE;
+    int i         = 0;
+    do
+    {
+      while (   (errorCode == Errors.NONE)
+             && ((busyIndicator == null) || !busyIndicator.isAborted())
+             && !command.endOfData()
+            )
+      {
+        errorCode = commandHandler.handleResult(i,command);
+        if (busyIndicator != null)
+        {
+          busyIndicator.busy(0);
+        }
+        i++;
+      }
+    }
+    while (   (errorCode == Errors.NONE)
+           && ((busyIndicator == null) || !busyIndicator.isAborted())
+           && !command.waitCompleted(250)
+          );
+    if (errorCode == Errors.NONE)
+    {
+      errorCode = command.getErrorCode();
+      if (errorMessage != null) errorMessage[0] = command.getErrorMessage();
+    }
+
+    // free command
+    synchronized(lock)
+    {
+      if (readThread != null)
+      {
+        readThread.commandRemove(command);
+      }
+    }
+
+    // check if aborted
+    if (busyIndicator != null)
+    {
+      if (busyIndicator.isAborted())
+      {
+        command.abort();
+      }
+    }
+
+    return errorCode;
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param errorMessage error message or null
+   * @param busyIndicator busy indicator or null
+   * @param commandHandler command handler
+   * @return Errors.NONE or error code
+   */
+  private static int XasyncExecuteCommand(String         commandString,
+                                         int            debugLevel,
+                                         final String[] errorMessage,
+                                         CommandHandler commandHandler,
+                                         BusyIndicator  busyIndicator
+                                        )
+  {
+    final int TIMEOUT = 120*1000; // total timeout [ms]
+
+    Command command = null;
+
+    // update busy indicator, check if aborted
+    if (busyIndicator != null)
+    {
+      busyIndicator.busy(0);
+      if (busyIndicator.isAborted())
+      {
+        return Errors.ABORTED;
+      }
+    }
+
+    // send command
+    synchronized(lock)
+    {
+      try
+      {
+        // add new command
+        command = readThread.commandAdd(commandString,debugLevel,TIMEOUT);
+
+        // send command
+        String line = String.format("%d %s",command.id,command.string);
         output.write(line); output.write('\n'); output.flush();
         if (Settings.debugLevel > debugLevel) System.err.println("Network: sent '"+line+"'");
       }
