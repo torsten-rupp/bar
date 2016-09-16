@@ -7354,9 +7354,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   String_delete(filterIdsString);
 
-  if (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))
+  if      (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))
   {
-    // no pattern/no entries selected
+    // no names/no entries selected
 
     INDEX_DOX(error,
               indexHandle,
@@ -7597,9 +7597,133 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       return ERROR_NONE;
     });
   }
-  else
+  else if (String_isEmpty(ftsName) && !String_isEmpty(entryIdsString))
   {
-    // name/entries selected
+    // entries selected
+
+    // get filters
+    if (newestOnly)
+    {
+      filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
+      filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entriesNewest.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+    }
+    else
+    {
+      filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+      filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
+    }
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      // get entry count, entry size
+      if (newestOnly)
+      {
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT COUNT(entriesNewest.id),\
+                                         TOTAL(entriesNewest.size) \
+                                  FROM entriesNewest \
+                                    LEFT JOIN entries ON entries.id=entriesNewest.entryId \
+                                    LEFT JOIN storage ON storage.id=entries.storageId \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE     entriesNewest.id IS NOT NULL \
+                                        AND %S \
+                                 ",
+                                 filterString
+                                );
+      }
+      else
+      {
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT COUNT(entries.id), \
+                                         TOTAL(entries.size) \
+                                  FROM entries \
+                                    LEFT JOIN storage ON storage.id=entries.storageId \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE %S \
+                                 ",
+                                 filterString
+                                );
+      }
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%lu %lf",
+                               totalEntryCount,
+                               &totalEntrySize_
+                              )
+         )
+      {
+        Database_finalize(&databaseQueryHandle);
+        return ERROR_UNKNOWN;
+      }
+      assert(totalEntrySize_ >= 0.0);
+      if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
+      Database_finalize(&databaseQueryHandle);
+
+      // get entry content size
+      if (newestOnly)
+      {
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT TOTAL(directoryEntries.totalEntrySize) \
+                                  FROM entriesNewest \
+                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                    LEFT JOIN entries ON entries.id=entriesNewest.entryId \
+                                    LEFT JOIN storage ON storage.id=entries.storageId \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE %S \
+                                 ",
+                                 filterString
+                                );
+      }
+      else
+      {
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT TOTAL(directoryEntries.totalEntrySize) \
+                                  FROM entries \
+                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                                    LEFT JOIN storage ON storage.id=entries.storageId \
+                                    LEFT JOIN entities ON entities.id=storage.entityId \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE %S \
+                                 ",
+                                 filterString
+                                );
+      }
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%lf",
+                               &totalEntryContentSize_
+                              )
+         )
+      {
+        Database_finalize(&databaseQueryHandle);
+        return ERROR_INTERRUPTED;
+      }
+//TODO: may happend?
+//      assert(totalEntryContentSize_ >= 0.0);
+      if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
+      Database_finalize(&databaseQueryHandle);
+
+      return ERROR_NONE;
+    });
+  }
+  else /* (!String_isEmpty(ftsName) && String_isEmpty(entryIdsString)) */
+  {
+    // names (and optinally entries) selected
 
     // get filters
     filterAppend(filterString,!String_isEmpty(ftsName),"AND","FTS_entries MATCH %S",ftsName);
@@ -7903,9 +8027,9 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
-  if (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))
+  if      (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))
   {
-    // no pattern/no entries selected
+    // no names/no entries selected
 
     if (newestOnly)
     {
@@ -8006,9 +8130,124 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                               );
     }
   }
-  else
+  else if (String_isEmpty(ftsName) && !String_isEmpty(entryIdsString))
   {
-    // pattern/entries selected
+    // entries selected
+
+    // get additional filters
+    if (newestOnly)
+    {
+//TODO: use entriesNewest.entryId?
+      filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
+    }
+    else
+    {
+      filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+    }
+
+    if (newestOnly)
+    {
+      error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT uuids.id, \
+                                       uuids.jobUUID, \
+                                       entities.id, \
+                                       entities.scheduleUUID, \
+                                       entities.type, \
+                                       storage.id, \
+                                       storage.name, \
+                                       UNIXTIMESTAMP(storage.created), \
+                                       entriesNewest.entryId, \
+                                       entriesNewest.type, \
+                                       entriesNewest.name, \
+                                       entriesNewest.timeLastChanged, \
+                                       entriesNewest.userId, \
+                                       entriesNewest.groupId, \
+                                       entriesNewest.permission, \
+                                       fileEntries.size, \
+                                       fileEntries.fragmentOffset, \
+                                       fileEntries.fragmentSize, \
+                                       imageEntries.size, \
+                                       imageEntries.fileSystemType, \
+                                       imageEntries.blockSize, \
+                                       imageEntries.blockOffset, \
+                                       imageEntries.blockCount, \
+                                       directoryEntries.totalEntrySizeNewest, \
+                                       linkEntries.destinationName, \
+                                       hardlinkEntries.size \
+                                FROM entriesNewest \
+                                  LEFT JOIN storage ON storage.id=entriesNewest.storageId \
+                                  LEFT JOIN entities ON entities.id=storage.entityId \
+                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN fileEntries ON fileEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN imageEntries ON imageEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.entryId \
+                                WHERE     entriesNewest.id IS NOT NULL \
+                                      AND %S \
+                                %S \
+                                LIMIT %llu,%llu; \
+                               ",
+                               filterString,
+                               orderString,
+                               offset,
+                               limit
+                              );
+    }
+    else
+    {
+      error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT uuids.id, \
+                                       uuids.jobUUID, \
+                                       entities.id, \
+                                       entities.scheduleUUID, \
+                                       entities.type, \
+                                       storage.id, \
+                                       storage.name, \
+                                       UNIXTIMESTAMP(storage.created), \
+                                       entries.id, \
+                                       entries.type, \
+                                       entries.name, \
+                                       entries.timeLastChanged, \
+                                       entries.userId, \
+                                       entries.groupId, \
+                                       entries.permission, \
+                                       fileEntries.size, \
+                                       fileEntries.fragmentOffset, \
+                                       fileEntries.fragmentSize, \
+                                       imageEntries.size, \
+                                       imageEntries.fileSystemType, \
+                                       imageEntries.blockSize, \
+                                       imageEntries.blockOffset, \
+                                       imageEntries.blockCount, \
+                                       directoryEntries.totalEntrySize, \
+                                       linkEntries.destinationName, \
+                                       hardlinkEntries.size \
+                                FROM entries \
+                                  LEFT JOIN storage ON storage.id=entries.storageId \
+                                  LEFT JOIN entities ON entities.id=storage.entityId \
+                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
+                                  LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
+                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                                  LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
+                                  LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
+                                WHERE %S \
+                                %S \
+                                LIMIT %llu,%llu; \
+                               ",
+                               filterString,
+                               orderString,
+                               offset,
+                               limit
+                              );
+    }
+  }
+  else /* if (!String_isEmpty(ftsName) && String_isEmpty(entryIdsString)) */
+  {
+    // names (and optional entries) selected
 
     // get additional filters
     filterAppend(filterString,!String_isEmpty(ftsName),"AND","FTS_entries MATCH %S",ftsName);
