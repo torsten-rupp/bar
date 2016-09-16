@@ -1130,6 +1130,26 @@ void *List_findNext(const void             *list,
   return node;
 }
 
+Node *List_findAndRemove(const void             *list,
+                         ListFindModes          listFindMode,
+                         ListNodeEqualsFunction listNodeEqualsFunction,
+                         void                   *listNodeEqualsUserData
+                        )
+{
+  Node *node;
+
+  assert(list != NULL);
+  assert(listNodeEqualsFunction != NULL);
+
+  node = List_findFirst(list,listFindMode,listNodeEqualsFunction,listNodeEqualsUserData);
+  if (node != NULL)
+  {
+    List_remove(list,node);
+  }
+
+  return node;
+}
+
 void List_sort(void                    *list,
                ListNodeCompareFunction listNodeCompareFunction,
                void                    *listNodeCompareUserData

@@ -264,21 +264,20 @@ typedef enum
 * Notes  : -
 \***********************************************************************/
 
-#define LIST_REMOVE(list,condition) \
+#define LIST_REMOVE(list,variable,condition) \
   do \
   { \
-    ListNode *__listNode; \
-    \
-    __listNode = list->head; \
-    while (__listNode != NULL) \
+    variable = list->head; \
+    while ((variable) != NULL) \
     { \
       if (condition) \
       { \
-        __listNode = List_remove(list,__listNode); \
+        (variable) = List_remove(list,variable); \
+        break; \
       } \
       else \
       { \
-        __listNode = __listNode->next; \
+        (variable) = (variable)->next; \
       } \
     } \
   } \
@@ -807,6 +806,25 @@ void *List_findNext(const void             *list,
                     ListNodeEqualsFunction listNodeEqualsFunction,
                     void                   *listNodeEqualsUserData
                    );
+
+/***********************************************************************\
+* Name   : List_findAndRemove
+* Purpose: find and remove node from list
+* Input  : list                   - list
+*          listFindMode           - list find mode
+*          listNodeEqualsFunction - equals function or NULL
+*          listNodeEqualsUserData - user data for equals function
+* Output : -
+* Return : node or NULL if list is empty
+* Notes  : -
+\***********************************************************************/
+
+Node *List_findAndRemove(const void             *list,
+                         ListFindModes          listFindMode,
+                         ListNodeEqualsFunction listNodeEqualsFunction,
+                         void                   *listNodeEqualsUserData
+                        );
+
 
 /***********************************************************************\
 * Name   : List_sort
