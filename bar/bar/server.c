@@ -352,6 +352,20 @@ typedef struct
   LIST_HEADER(AuthorizationFailNode);
 } AuthorizationFailList;
 
+// server command info list
+typedef struct CommandInfoNode
+{
+  LIST_NODE_HEADER(struct CommandInfoNode);
+
+  uint        id;
+  IndexHandle *indexHandle;
+} CommandInfoNode;
+
+typedef struct
+{
+  LIST_HEADER(CommandInfoNode);
+} CommandInfoList;
+
 // client info
 typedef struct
 {
@@ -364,6 +378,7 @@ typedef struct
   AuthorizationFailNode *authorizationFailNode;
   bool                  quitFlag;
 
+  CommandInfoList       commandInfoList;                   // running command list
   RingBuffer            abortedCommandIds;                 // aborted command ids
   uint                  abortedCommandIdStart;
 
@@ -7853,8 +7868,9 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint          commandId;
-  SemaphoreLock semaphoreLock;
+  uint            commandId;
+  SemaphoreLock   semaphoreLock;
+  CommandInfoNode *commandInfoNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7871,9 +7887,19 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
   // abort command
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
+    commandInfoNode = LIST_FIND(&clientInfo->commandInfoList,commandInfoNode,commandInfoNode->id == commandId);
+    if (commandInfoNode != NULL)
+    {
+      Index_interrupt(commandInfoNode->indexHandle);
+    }
+
+    // store command id
     if (RingBuffer_isFull(&clientInfo->abortedCommandIds))
     {
+      // discard first entry
       RingBuffer_discard(&clientInfo->abortedCommandIds,1,CALLBACK_NULL);
+
+      // get new start command id
       RingBuffer_first(&clientInfo->abortedCommandIds,&clientInfo->abortedCommandIdStart);
     }
     RingBuffer_put(&clientInfo->abortedCommandIds,&commandId,1);
@@ -17770,8 +17796,11 @@ LOCAL bool parseCommand(CommandMsg  *commandMsg,
 
 LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 {
-  String        result;
-  CommandMsg    commandMsg;
+  IndexHandle     *indexHandle;
+  SemaphoreLock   semaphoreLock;
+  CommandInfoNode *commandInfoNode;
+  String          result;
+  CommandMsg      commandMsg;
   #ifdef SERVER_DEBUG
     uint64 t0,t1;
   #endif /* SERVER_DEBUG */
@@ -17781,6 +17810,9 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   // init variables
   result = String_new();
 
+  // init index
+  indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
+
   while (   !clientInfo->quitFlag
          && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg),WAIT_FOREVER)
         )
@@ -17788,6 +17820,19 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
     // check authorization (if not in server debug mode)
     if (globalOptions.serverDebugFlag || (commandMsg.authorizationState == clientInfo->authorizationState))
     {
+      // add command info
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      {
+        commandInfoNode = LIST_NEW_NODE(CommandInfoNode);
+        if (commandInfoNode == NULL)
+        {
+          HALT_INSUFFICIENT_MEMORY();
+        }
+        commandInfoNode->id          = commandMsg.id;
+        commandInfoNode->indexHandle = indexHandle;
+        List_append(&clientInfo->commandInfoList,commandInfoNode);
+      }
+
       // execute command
       #ifdef SERVER_DEBUG
         t0 = Misc_getTimestamp();
@@ -17801,6 +17846,12 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
         t1 = Misc_getTimestamp();
         fprintf(stderr,"DEBUG: time=%llums\n",(t1-t0)/US_PER_MS);
       #endif /* SERVER_DEBUG */
+
+      // remove command info
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      {
+        List_removeAndFree(&clientInfo->commandInfoList,commandInfoNode,CALLBACK_NULL);
+      }
     }
     else
     {
@@ -17812,6 +17863,9 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
     // free resources
     freeCommandMsg(&commandMsg,NULL);
   }
+
+  // done index
+  Index_close(indexHandle);
 
   // free resources
   String_delete(result);
@@ -17926,6 +17980,7 @@ LOCAL void initClient(ClientInfo *clientInfo)
   clientInfo->authorizationFailNode = NULL;
   clientInfo->quitFlag              = FALSE;
 
+  List_init(&clientInfo->commandInfoList);
   if (!RingBuffer_init(&clientInfo->abortedCommandIds,sizeof(uint),MAX_ABORT_COMMAND_IDS))
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -18028,11 +18083,19 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
 
 LOCAL void doneClient(ClientInfo *clientInfo)
 {
-  int z;
+  CommandInfoNode *commandInfoNode;
+  int             z;
 
   assert(clientInfo != NULL);
 
   clientInfo->quitFlag = TRUE;
+
+  // abort all running commands
+  LIST_ITERATE(&clientInfo->commandInfoList,commandInfoNode)
+  {
+    Index_interrupt(commandInfoNode->indexHandle);
+  }
+
   switch (clientInfo->type)
   {
     case CLIENT_TYPE_NONE:
@@ -18082,6 +18145,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   Semaphore_done(&clientInfo->action.lock);
   StringMap_delete(clientInfo->action.resultMap);
   RingBuffer_done(&clientInfo->abortedCommandIds,CALLBACK_NULL);
+  List_done(&clientInfo->commandInfoList,CALLBACK_NULL);
   Semaphore_done(&clientInfo->lock);
 }
 
