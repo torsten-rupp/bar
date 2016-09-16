@@ -9079,7 +9079,7 @@ Dprintf.dprintf("");
                 break;
             }
             int error = BARServer.executeCommand(command,
-                                                 0,  // debugLevel
+                                                 1,  // debugLevel
                                                  errorMessage,
                                                  new Command.ResultHandler()
                                                  {
@@ -9256,7 +9256,6 @@ System.exit(1);
                                                    }
                                                  }
                                                 );
-
             if ((error != Errors.NONE) && (error != Errors.ABORTED))
             {
               display.syncExec(new Runnable()
