@@ -453,6 +453,17 @@ IndexHandle *__Index_open(const char *__fileName__,
 void Index_close(IndexHandle *indexHandle);
 
 /***********************************************************************\
+* Name   : Index_close
+* Purpose: interrupt currently running index operation
+* Input  : indexHandle - index handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Index_interrupt(IndexHandle *indexHandle);
+
+/***********************************************************************\
 * Name   : Index_beginTransaction
 * Purpose: begin transaction
 * Input  : indexHandle - index handle

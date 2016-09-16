@@ -1185,7 +1185,6 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
   }
   Index_doneList(&indexQueryHandle);
   Index_endTransaction(indexHandle);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // clean-up *Entries without entry
   (void)Database_execute(&indexHandle->databaseHandle,
@@ -4207,6 +4206,13 @@ void Index_close(IndexHandle *indexHandle)
   }
 }
 
+void Index_interrupt(IndexHandle *indexHandle)
+{
+  assert(indexHandle != NULL);
+
+  Database_interrupt(&indexHandle->databaseHandle);
+}
+
 #ifdef NDEBUG
 Errors Index_beginTransaction(IndexHandle *indexHandle, ulong timeout)
 #else /* not NDEBUG */
@@ -6218,7 +6224,8 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
 //TODO: use entries.size?
-                             "SELECT COUNT(entries.id),TOTAL(fileEntries.fragmentSize) \
+                             "SELECT COUNT(entries.id), \
+                                     TOTAL(fileEntries.fragmentSize) \
                               FROM entries \
                                 LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
                               WHERE     entries.type=%d \
@@ -6244,7 +6251,8 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
 //TODO: use entries.size?
-                             "SELECT COUNT(entries.id),TOTAL(imageEntries.blockSize*imageEntries.blockCount) \
+                             "SELECT COUNT(entries.id),\
+                                     TOTAL(imageEntries.blockSize*imageEntries.blockCount) \
                               FROM entries \
                                 LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
                               WHERE     entries.type=%d \
@@ -6314,7 +6322,8 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
 //TODO: use entries.size?
-                             "SELECT COUNT(entries.id),TOTAL(hardlinkEntries.fragmentSize) \
+                             "SELECT COUNT(entries.id), \
+                                     TOTAL(hardlinkEntries.fragmentSize) \
                               FROM entries \
                                 LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
                               WHERE     entries.type=%d \
@@ -6401,7 +6410,8 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
 //TODO: use entriesNewest.size?
-                             "SELECT COUNT(entriesNewest.id),TOTAL(fileEntries.fragmentSize) \
+                             "SELECT COUNT(entriesNewest.id), \
+                                     TOTAL(fileEntries.fragmentSize) \
                               FROM entriesNewest \
                                 LEFT JOIN fileEntries ON fileEntries.entryId=entriesNewest.entryId \
                               WHERE     entriesNewest.type=%d \
@@ -6427,7 +6437,8 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
 //TODO: use entriesNewest.size?
-                             "SELECT COUNT(entriesNewest.id),TOTAL(imageEntries.blockSize*imageEntries.blockCount) \
+                             "SELECT COUNT(entriesNewest.id), \
+                                     TOTAL(imageEntries.blockSize*imageEntries.blockCount) \
                               FROM entriesNewest \
                                 LEFT JOIN imageEntries ON imageEntries.entryId=entriesNewest.entryId \
                               WHERE     entriesNewest.type=%d \
@@ -6497,7 +6508,8 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
 //TODO: use entriesNewest.size?
-                             "SELECT COUNT(entriesNewest.id),TOTAL(hardlinkEntries.fragmentSize) \
+                             "SELECT COUNT(entriesNewest.id), \
+                                     TOTAL(hardlinkEntries.fragmentSize) \
                               FROM entriesNewest \
                                 LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.entryId \
                               WHERE     entriesNewest.type=%d \
@@ -7369,18 +7381,20 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           return error;
         }
-        if (Database_getNextRow(&databaseQueryHandle,
-                                "%lf %lf",
-                                &totalEntryCount_,
-                                &totalEntrySize_
-                               )
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%lf %lf",
+                                 &totalEntryCount_,
+                                 &totalEntrySize_
+                                )
            )
         {
-          assert(totalEntryCount_ >= 0.0);
-          assert(totalEntrySize_ >= 0.0);
-          if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
-          if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
+          Database_finalize(&databaseQueryHandle);
+          return ERROR_INTERRUPTED;
         }
+        assert(totalEntryCount_ >= 0.0);
+        assert(totalEntrySize_ >= 0.0);
+        if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+        if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         Database_finalize(&databaseQueryHandle);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_IMAGE))
@@ -7403,18 +7417,20 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           return error;
         }
-        if (Database_getNextRow(&databaseQueryHandle,
-                                "%lf %lf",
-                                &totalEntryCount_,
-                                &totalEntrySize_
-                               )
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%lf %lf",
+                                 &totalEntryCount_,
+                                 &totalEntrySize_
+                                )
            )
         {
-          assert(totalEntryCount_ >= 0.0);
-          assert(totalEntrySize_ >= 0.0);
-          if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
-          if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
+          Database_finalize(&databaseQueryHandle);
+          return ERROR_INTERRUPTED;
         }
+        assert(totalEntryCount_ >= 0.0);
+        assert(totalEntrySize_ >= 0.0);
+        if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+        if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         Database_finalize(&databaseQueryHandle);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_DIRECTORY))
@@ -7435,15 +7451,17 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           return error;
         }
-        if (Database_getNextRow(&databaseQueryHandle,
-                                "%lf",
-                                &totalEntryCount_
-                               )
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%lf",
+                                 &totalEntryCount_
+                                )
            )
         {
-          assert(totalEntryCount_ >= 0.0);
-          if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+          Database_finalize(&databaseQueryHandle);
+          return ERROR_INTERRUPTED;
         }
+        assert(totalEntryCount_ >= 0.0);
+        if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
         Database_finalize(&databaseQueryHandle);
 
         // get directory content size
@@ -7463,16 +7481,18 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           return error;
         }
-        if (Database_getNextRow(&databaseQueryHandle,
-                                "%lf",
-                                &totalEntryContentSize_
-                               )
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%lf",
+                                  &totalEntryContentSize_
+                                )
            )
         {
-// TODO: may happen?
-//          assert(totalEntryContentSize_ >= 0.0);
-          if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
+          Database_finalize(&databaseQueryHandle);
+          return ERROR_INTERRUPTED;
         }
+// TODO: may happen?
+//        assert(totalEntryContentSize_ >= 0.0);
+        if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
         Database_finalize(&databaseQueryHandle);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_LINK))
@@ -7493,15 +7513,17 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           return error;
         }
-        if (Database_getNextRow(&databaseQueryHandle,
-                                "%lf",
-                                &totalEntryCount_
-                               )
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%lf",
+                                  &totalEntryCount_
+                                )
            )
         {
-          assert(totalEntryCount_ >= 0.0);
-          if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+          Database_finalize(&databaseQueryHandle);
+          return ERROR_INTERRUPTED;
         }
+        assert(totalEntryCount_ >= 0.0);
+        if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
         Database_finalize(&databaseQueryHandle);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_HARDLINK))
@@ -7524,18 +7546,20 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           return error;
         }
-        if (Database_getNextRow(&databaseQueryHandle,
-                                "%lf %lf",
-                                &totalEntryCount_,
-                                &totalEntrySize_
-                               )
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%lf %lf",
+                                 &totalEntryCount_,
+                                 &totalEntrySize_
+                                )
            )
         {
-          assert(totalEntryCount_ >= 0.0);
-          assert(totalEntrySize_ >= 0.0);
-          if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
-          if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
+          Database_finalize(&databaseQueryHandle);
+          return ERROR_INTERRUPTED;
         }
+        assert(totalEntryCount_ >= 0.0);
+        assert(totalEntrySize_ >= 0.0);
+        if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+        if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         Database_finalize(&databaseQueryHandle);
       }
       if (IN_SET(indexTypeSet,INDEX_TYPE_SPECIAL))
@@ -7556,15 +7580,17 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           return error;
         }
-        if (Database_getNextRow(&databaseQueryHandle,
-                                "%lf",
-                                &totalEntryCount_
-                               )
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%lf",
+                                 &totalEntryCount_
+                                )
            )
         {
-          assert(totalEntryCount_ >= 0.0);
-          if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
+          Database_finalize(&databaseQueryHandle);
+          return ERROR_INTERRUPTED;
         }
+        assert(totalEntryCount_ >= 0.0);
+        if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
         Database_finalize(&databaseQueryHandle);
       }
 
@@ -7632,18 +7658,18 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         return error;
       }
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
-      if (Database_getNextRow(&databaseQueryHandle,
-                              "%lf %lf",
-                              &totalEntryCount_,
-                              &totalEntrySize_
-                             )
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%lu %lf",
+                               totalEntryCount,
+                               &totalEntrySize_
+                              )
          )
       {
-        assert(totalEntryCount_ >= 0.0);
-        assert(totalEntrySize_ >= 0.0);
-        if (totalEntryCount != NULL) (*totalEntryCount) += (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
-        if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
+        Database_finalize(&databaseQueryHandle);
+        return ERROR_UNKNOWN;
       }
+      assert(totalEntrySize_ >= 0.0);
+      if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
       Database_finalize(&databaseQueryHandle);
 
       // get entry content size
@@ -7685,16 +7711,18 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         return error;
       }
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
-      if (Database_getNextRow(&databaseQueryHandle,
-                              "%lf",
-                              &totalEntryContentSize_
-                             )
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%lf",
+                               &totalEntryContentSize_
+                              )
          )
       {
-//TODO: may happend?
-//        assert(totalEntryContentSize_ >= 0.0);
-        if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
+        Database_finalize(&databaseQueryHandle);
+        return ERROR_INTERRUPTED;
       }
+//TODO: may happend?
+//      assert(totalEntryContentSize_ >= 0.0);
+      if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
       Database_finalize(&databaseQueryHandle);
 
       return ERROR_NONE;
