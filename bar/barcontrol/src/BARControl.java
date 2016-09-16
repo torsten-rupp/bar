@@ -2302,9 +2302,9 @@ public class BARControl
                 BARServer.executeCommand(StringParser.format("DEBUG_PRINT_MEMORY_INFO"),
                                          0,  // debugLevel
                                          null,  // errorMessage
-                                         new CommandResultHandler()
+                                         new Command.ResultHandler()
                                          {
-                                           public int handleResult(int i, ValueMap valueMap)
+                                           public int handle(int i, ValueMap valueMap)
                                            {
                                              String type  = valueMap.getString("type");
                                              long   n     = valueMap.getLong("n");
@@ -2359,9 +2359,9 @@ public class BARControl
                 BARServer.executeCommand(StringParser.format("DEBUG_DUMP_MEMORY_INFO"),
                                          0,  // debugLevel
                                          null,  // errorMessage
-                                         new CommandResultHandler()
+                                         new Command.ResultHandler()
                                          {
-                                           public int handleResult(int i, ValueMap valueMap)
+                                           public int handle(int i, ValueMap valueMap)
                                            {
                                              String type  = valueMap.getString("type");
                                              long   n     = valueMap.getLong("n");
@@ -2711,9 +2711,9 @@ public class BARControl
                                                               ),
                                            0,
                                            errorMessage,
-                                           new CommandResultHandler()
+                                           new Command.ResultHandler()
                                            {
-                                             public int handleResult(int i, ValueMap valueMap)
+                                             public int handle(int i, ValueMap valueMap)
                                              {
                                                String storageName = valueMap.getString("name"                        );
                                                long   dateTime    = valueMap.getLong  ("dateTime"                    );
@@ -2762,9 +2762,9 @@ public class BARControl
                                                               ),
                                            0,
                                            errorMessage,
-                                           new CommandResultHandler()
+                                           new Command.ResultHandler()
                                            {
-                                             public int handleResult(int i, ValueMap valueMap)
+                                             public int handle(int i, ValueMap valueMap)
                                              {
                                                switch (valueMap.getEnum("entryType",EntryTypes.class))
                                                {
@@ -3120,9 +3120,9 @@ public class BARControl
                                                               ),
                                            0,
                                            errorMessage,
-                                           new CommandResultHandler()
+                                           new Command.ResultHandler()
                                            {
-                                             public int handleResult(int i, ValueMap valueMap)
+                                             public int handle(int i, ValueMap valueMap)
                                              {
                                                long   storageId   = valueMap.getLong  ("storageId");
                                                String storageName = valueMap.getString("name"     );
@@ -3150,9 +3150,9 @@ false//                                                                   Settin
                                                               ),
                                            0,  // debugLevel
                                            errorMessage,
-                                           new CommandResultHandler()
+                                           new Command.ResultHandler()
                                            {
-                                             public int handleResult(int i, ValueMap valueMap)
+                                             public int handle(int i, ValueMap valueMap)
                                              {
                                                // parse and update progresss
                                                try
