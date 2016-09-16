@@ -8251,7 +8251,7 @@ Dprintf.dprintf("remove");
       BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD entryId=%ld",
                                                    entryId
                                                   ),
-                               0  // debugLevel
+                               1  // debugLevel
                               );
     }
     else
@@ -8259,7 +8259,7 @@ Dprintf.dprintf("remove");
       BARServer.executeCommand(StringParser.format("ENTRY_LIST_REMOVE entryId=%ld",
                                                    entryId
                                                   ),
-                               0  // debugLevel
+                               1  // debugLevel
                               );
     }
     checkedEntryIdSet.set(entryId,checked);
@@ -8270,7 +8270,9 @@ Dprintf.dprintf("remove");
    */
   private void setEntryList(IndexIdSet entryIdSet)
   {
-    BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),0);
+    BARServer.executeCommand(StringParser.format("ENTRY_LIST_CLEAR"),
+                             1  // debugLevel
+                            );
 //TODO: optimize send more than one entry?
     for (Long entryId : entryIdSet)
     {
