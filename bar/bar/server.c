@@ -14949,7 +14949,14 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                           },NULL),
                           NULL  // logHandle
                          );
-  sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+  if (error == ERROR_NONE)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+  }
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
              "Done restore%s%s\n",
@@ -18513,7 +18520,7 @@ Errors Server_run(uint              port,
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    printInfo(1,"ok\n");
+    printInfo(1,"OK\n");
     AUTOFREE_ADD(&autoFreeList,indexDatabaseFileName,{ Index_done(); });
   }
 
