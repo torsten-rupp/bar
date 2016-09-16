@@ -324,14 +324,16 @@ class Command
 
   /** wait until command completed
    * @param timeout timeout [ms]
-   * @return true if command completed, false otherwise
+   * @return true if result available, false otherwise
    */
   public synchronized boolean waitForResult(long timeout)
   {
+    boolean timeoutFlag = false;
     while (   !completedFlag
            && !abortedFlag
            && (result.size() == 0)
            && (timeout != 0)
+           && !timeoutFlag
          )
     {
       if ((timeoutTimestamp == 0L) || (System.currentTimeMillis() < timeoutTimestamp))
@@ -356,12 +358,11 @@ class Command
       }
       else
       {
-        // overall timeout
-        timeout();
+        timeoutFlag = true;
       }
     }
 
-    return completedFlag || (result.size() > 0);
+    return !timeoutFlag && (completedFlag || (result.size() > 0));
   }
 
   /** wait until commmand completed
@@ -408,24 +409,17 @@ class Command
         }
         else
         {
-          // overall timeout (Note: do not handle here, because of syncronization)
           timeoutFlag = true;
         }
       }
     }
 
-    // check if timeout
-    if (timeoutFlag)
-    {
-      timeout();
-    }
-
-    return completedFlag || abortedFlag;
+    return !timeoutFlag && (completedFlag || abortedFlag);
   }
 
   /** wait until commmand completed
    */
-  public synchronized void waitCompleted()
+  public void waitCompleted()
   {
     waitCompleted(WAIT_FOREVER);
   }
@@ -1562,7 +1556,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     readThread.commandRemove(command);
 
     // set error aborted
-    command.setError(Errors.NETWORK_TIMEOUT,"aborted");
+    command.setError(Errors.ABORTED,"aborted");
     command.result.clear();
     command.setAborted();
   }
@@ -1573,7 +1567,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   static void timeoutCommand(Command command)
   {
-Dprintf.dprintf("");
     // send abort command to command
     executeCommand(StringParser.format("ABORT commandId=%d",command.id),0);
     readThread.commandRemove(command);
@@ -1709,7 +1702,6 @@ Dprintf.dprintf("");
     // process results until error, completed, or aborted
     while (   ((busyIndicator == null) || !busyIndicator.isAborted())
            && !command.waitCompleted(250)
-           && !command.waitCompleted(2500)
           )
     {
       if (busyIndicator != null)
