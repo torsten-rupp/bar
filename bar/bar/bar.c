@@ -712,7 +712,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,1,globalOptions.noDefaultConfigFlag,                                                                      "do not read configuration files " CONFIG_DIR "/bar.cfg and ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
   CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,1,globalOptions.quietFlag,                                                                                "suppress any output"                                                      ),
-  CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,1,globalOptions.verboseLevel,                      0,6,NULL,                                              "verbosity level",NULL                                                     ),
+  CMD_OPTION_INTEGER_RANGE("verbose",                      'v',3,1,globalOptions.verboseLevel,                      0,6,NULL,                                              "verbosity level",NULL                                                     ),
 
   CMD_OPTION_BOOLEAN      ("server-debug",                 0,  2,1,globalOptions.serverDebugFlag,                                                                          "enable debug mode for server"                                             ),
 
@@ -8116,12 +8116,6 @@ exit(1);
     String_delete(fileName);
   }
 
-  // special case: set verbose level in interactive mode
-  if (!daemonFlag && !batchFlag)
-  {
-    globalOptions.verboseLevel = DEFAULT_VERBOSE_LEVEL_INTERACTIVE;
-  }
-
   // parse command line: post-options
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
@@ -8159,6 +8153,12 @@ exit(1);
       #endif /* not NDEBUG */
       return ERROR_CONFIG;
     }
+  }
+
+  // special case: set verbose level in interactive mode
+  if (!daemonFlag && !batchFlag)
+  {
+    globalOptions.verboseLevel = DEFAULT_VERBOSE_LEVEL_INTERACTIVE;
   }
 
   // read options from job file
@@ -8335,6 +8335,7 @@ int main(int argc, const char *argv[])
      )
   {
     // run as daemon
+fprintf(stderr,"%s, %d: verboseLevel=%d\n",__FILE__,__LINE__,globalOptions.verboseLevel);
     #if   defined(PLATFORM_LINUX)
       if (daemon(1,0) == 0)
       {
