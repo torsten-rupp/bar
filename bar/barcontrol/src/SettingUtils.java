@@ -517,10 +517,14 @@ class SettingValueAdapterSimpleStringArray extends SettingValueAdapter<String,Si
   public String toString(SimpleStringArray simpleStringArray) throws Exception
   {
     StringBuilder buffer = new StringBuilder();
-    for (String string : simpleStringArray.get())
+    String strings[] = simpleStringArray.get();
+    if (strings != null)
     {
-      if (buffer.length() > 0) buffer.append(',');
-      buffer.append(string);
+      for (String string : strings)
+      {
+        if (buffer.length() > 0) buffer.append(',');
+        buffer.append((string != null) ? string : "");
+      }
     }
     return buffer.toString();
   }
@@ -656,7 +660,7 @@ public class SettingUtils
                           }
                           else if (type == String.class)
                           {
-                            field.set(null,addArrayUniq((String[])field.get(null),StringUtils.unescape(string)));
+                            field.set(null,addArray((String[])field.get(null),StringUtils.unescape(string)));
                           }
                           else if (type.isEnum())
                           {
@@ -1058,7 +1062,7 @@ exception.printStackTrace();
                     // convert to string
                     for (Object object : (Object[])field.get(null))
                     {
-                      String value = (String)settingValueAdapter.toString(object);
+                      String value = (object != null) ? (String)settingValueAdapter.toString(object) : "";
                       output.printf("%s = %s\n",name,value);
                     }
                   }
@@ -1167,7 +1171,7 @@ Dprintf.dprintf("field.getType()=%s",type);
                     // convert to string
                     for (Object object : (Set)field.get(null))
                     {
-                      String value = (String)settingValueAdapter.toString(object);
+                      String value = (object != null) ? (String)settingValueAdapter.toString(object) : "";
                       output.printf("%s = %s\n",name,value);
                     }
                   }
@@ -1276,7 +1280,7 @@ Dprintf.dprintf("field.getType()=%s",type);
                     // convert to string
                     for (Object object : (List)field.get(null))
                     {
-                      String value = (String)settingValueAdapter.toString(object);
+                      String value = (object != null) ? (String)settingValueAdapter.toString(object) : "";
                       output.printf("%s = %s\n",name,value);
                     }
                   }
@@ -1381,7 +1385,8 @@ Dprintf.dprintf("field.getType()=%s",type);
                     }
 
                     // convert to string
-                    String value = (String)settingValueAdapter.toString(field.get(null));
+                    Object object = field.get(null);
+                    String value = (object != null) ? (String)settingValueAdapter.toString(object) : "";
                     output.printf("%s = %s\n",name,value);
                   }
                   else if (type == int.class)
@@ -1681,6 +1686,19 @@ exception.printStackTrace();
       array = Arrays.copyOf(array,array.length+1);
       array[array.length-1] = n;
     }
+
+    return array;
+  }
+
+  /** add element to string array
+   * @param array array
+   * @param string element
+   * @return extended array or array
+   */
+  private static String[] addArray(String[] array, String string)
+  {
+    array = Arrays.copyOf(array,array.length+1);
+    array[array.length-1] = string;
 
     return array;
   }
