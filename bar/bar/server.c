@@ -17821,6 +17821,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
     if (globalOptions.serverDebugFlag || (commandMsg.authorizationState == clientInfo->authorizationState))
     {
       // add command info
+      commandInfoNode = NULL;
       SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
         commandInfoNode = LIST_NEW_NODE(CommandInfoNode);
