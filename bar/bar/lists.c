@@ -1130,7 +1130,7 @@ void *List_findNext(const void             *list,
   return node;
 }
 
-Node *List_findAndRemove(const void             *list,
+Node *List_findAndRemove(void                   *list,
                          ListFindModes          listFindMode,
                          ListNodeEqualsFunction listNodeEqualsFunction,
                          void                   *listNodeEqualsUserData
