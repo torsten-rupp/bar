@@ -81,6 +81,24 @@ public class StringUtils
 
   /** trim characters from string at string beginning
    * @param string string
+   * @param ch character to trim
+   * @return trimmed string
+   */
+  public static String trimBegin(String string, char ch)
+  {
+    int i = 0;
+    while (   (i < string.length())
+           && (string.charAt(i) == ch)
+          )
+    {
+      i++;
+    }
+
+    return string.substring(i);
+  }
+
+  /** trim characters from string at string beginning
+   * @param string string
    * @return trimmed string
    */
   public static String trimBegin(String string)
@@ -98,6 +116,24 @@ public class StringUtils
     int i = string.length()-1;
     while (   (i > 0)
            && (chars.indexOf(string.charAt(i)) >= 0)
+          )
+    {
+      i--;
+    }
+
+    return string.substring(0,i+1);
+  }
+
+  /** trim characters from string at string end
+   * @param string string
+   * @param chars characters to trim
+   * @return trimmed string
+   */
+  public static String trimEnd(String string, char ch)
+  {
+    int i = string.length()-1;
+    while (   (i > 0)
+           && (string.charAt(i) == ch)
           )
     {
       i--;
