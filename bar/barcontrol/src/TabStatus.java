@@ -1826,23 +1826,20 @@ public class TabStatus
    */
   private void updateStatus()
   {
-    // get status
-    String[] resultErrorMessage = new String[1];
-    ValueMap resultMap          = new ValueMap();
+    ValueMap valueMap = new ValueMap();
     int error = BARServer.executeCommand(StringParser.format("STATUS"),
                                          3,  // debugLevel
-                                         resultErrorMessage,
-                                         resultMap
+                                         valueMap
                                         );
     if (error != Errors.NONE)
     {
       return;
     }
 
-    String statusText = resultMap.getString("state","running");
+    String statusText = valueMap.getString("state","running");
     if      (statusText.equals("pause"))
     {
-      final long pauseTime = resultMap.getLong("time");
+      final long pauseTime = valueMap.getLong("time");
 
       status = States.PAUSE;
       display.syncExec(new Runnable()
