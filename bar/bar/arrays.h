@@ -125,18 +125,20 @@ typedef bool(*ArrayDumpInfoFunction)(const Array *array,
 *          data      - pointer to data element
 * Output : -
 * Return : -
-* Notes  : variable will contain all data elements in array
+* Notes  : variable will contain all indizes in array
 *          usage:
-*            ARRAY_ITERATE(array,variable,data)
+*            ulong i;
+*
+*            ARRAY_ITERATE(array,i,data)
 *            {
-*              ... = data->...
+*              ... = data
 *            }
 \***********************************************************************/
 
 #define ARRAY_ITERATE(array,variable,data) \
-  for ((variable) = 0, (data) = Array_get(array,0,NULL); \
+  for ((variable) = 0, Array_get(array,0,&(data)); \
        (variable) < Array_length(array); \
-       (variable)++, (data) = Array_get(array,variable,NULL) \
+       (variable)++, Array_get(array,variable,&(data)) \
       )
 
 /***********************************************************************\
@@ -148,18 +150,20 @@ typedef bool(*ArrayDumpInfoFunction)(const Array *array,
 *          condition - additional condition
 * Output : -
 * Return : -
-* Notes  : variable will contain all data elements in array
+* Notes  : variable will contain all indizes in array
 *          usage:
-*            ARRAY_ITERATEX(array,variable,data,TRUE)
+*            ulong i;
+*
+*            ARRAY_ITERATEX(array,i,data,TRUE)
 *            {
-*              ... = data->...
+*              ... = data
 *            }
 \***********************************************************************/
 
 #define ARRAY_ITERATEX(array,variable,data,condition) \
-  for ((variable) = 0, (data) = Array_get(array,0,NULL); \
+  for ((variable) = 0, Array_get(array,0,&(data)); \
        ((variable) < Array_length(array)) && (condition); \
-       (variable)++, (data) = Array_get(array,variable,NULL) \
+       (variable)++, Array_get(array,variable,&(data)) \
       )
 
 /***************************** Forwards ********************************/
