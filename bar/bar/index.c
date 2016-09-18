@@ -4794,7 +4794,7 @@ Errors Index_setState(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  // format error message
+  // format error message (if any)
   if (errorMessage != NULL)
   {
     va_start(arguments,errorMessage);
