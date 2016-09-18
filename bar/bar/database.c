@@ -43,6 +43,7 @@
 
 /****************** Conditional compilation switches *******************/
 #define DATABASE_SUPPORT_TRANSACTIONS
+#define DATABASE_SUPPORT_INTERRUPT
 
 /***************************** Constants *******************************/
 #if 1
@@ -1666,7 +1667,9 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
 
-  sqlite3_interrupt(databaseHandle->handle);
+  #ifdef DATABASE_SUPPORT_INTERRUPT
+    sqlite3_interrupt(databaseHandle->handle);
+  #endif /* DATABASE_SUPPORT_INTERRUPT */
 }
 
 //TODO: remove
