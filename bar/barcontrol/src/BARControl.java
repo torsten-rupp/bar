@@ -2652,7 +2652,7 @@ public class BARControl
           String[] errorMessage  = new String[1];
 
           // remote index for storage
-          error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH pattern=%'S patternType=GLOB",
+          error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH name=%'S",
                                                                Settings.indexDatabaseRefreshStorageName
                                                               ),
                                            0,

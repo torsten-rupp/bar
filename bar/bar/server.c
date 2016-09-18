@@ -16575,8 +16575,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
 *            entityId=<id>|0 and/or
 *            storageId=<id>|0 and/or
 *            jobUUID=<uuid>|"" and/or
-*            pattern=<text>
-*            [patternType=<type>]
+*            name=<text>
 *          Result:
 \***********************************************************************/
 
@@ -16592,8 +16591,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   IndexStates      indexState;
-  Pattern          pattern;
+  Array            storageIdArray;
   String           storageName;
+  ulong            i;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -16617,7 +16617,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
       && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
       && !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
-      && !StringMap_getString(argumentMap,"pattern",name,NULL)
+      && !StringMap_getString(argumentMap,"name",name,NULL)
      )
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuidId=<id> or entityId=<id> or storageId=<id> or jobUUID=<uuid> or name=<text>");
@@ -16633,8 +16633,11 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     return;
   }
 
+  // init variables
+  Array_init(&storageIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
   storageName = String_new();
 
+  // collect all storage ids (Note: do this to avoid infinite loop or database-busy-error when states are changed in another thread, too)
   if ((uuidId == INDEX_ID_NONE) && (storageId == INDEX_ID_NONE) && (entityId == INDEX_ID_NONE) && String_isEmpty(jobUUID) && String_isEmpty(name))
   {
     // refresh all storage with specific state
@@ -16656,6 +16659,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
       return;
@@ -16681,13 +16685,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     {
       if (stateAny || (state == indexState))
       {
-        // set state
-        Index_setState(indexHandle,
-                       storageId,
-                       INDEX_STATE_UPDATE_REQUESTED,
-                       0LL,
-                       NULL
-                      );
+        Array_append(&storageIdArray,&storageId);
       }
     }
     Index_doneList(&indexQueryHandle);
@@ -16714,6 +16712,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
       return;
@@ -16739,13 +16738,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     {
       if (stateAny || (state == indexState))
       {
-        // set state
-        Index_setState(indexHandle,
-                       storageId,
-                       INDEX_STATE_UPDATE_REQUESTED,
-                       0LL,
-                       NULL
-                      );
+        Array_append(&storageIdArray,&storageId);
       }
     }
     Index_doneList(&indexQueryHandle);
@@ -16772,6 +16765,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
       return;
@@ -16797,13 +16791,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     {
       if (stateAny || (state == indexState))
       {
-        // set state
-        Index_setState(indexHandle,
-                       storageId,
-                       INDEX_STATE_UPDATE_REQUESTED,
-                       0LL,
-                       NULL
-                      );
+        Array_append(&storageIdArray,&storageId);
       }
     }
     Index_doneList(&indexQueryHandle);
@@ -16811,15 +16799,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
 
   if (storageId != INDEX_ID_NONE)
   {
-    // refresh storage
-    Index_setState(indexHandle,
-                   storageId,
-                   INDEX_STATE_UPDATE_REQUESTED,
-                   0LL,
-                   NULL
-                  );
+    Array_append(&storageIdArray,&storageId);
   }
-
 
   if (!String_isEmpty(jobUUID))
   {
@@ -16842,6 +16823,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
       return;
@@ -16867,13 +16849,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     {
       if (stateAny || (state == indexState))
       {
-        // set state
-        Index_setState(indexHandle,
-                       storageId,
-                       INDEX_STATE_UPDATE_REQUESTED,
-                       0LL,
-                       NULL
-                      );
+        Array_append(&storageIdArray,&storageId);
       }
     }
     Index_doneList(&indexQueryHandle);
@@ -16900,7 +16876,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     if (error != ERROR_NONE)
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
-      Pattern_done(&pattern);
+      Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
       return;
@@ -16926,16 +16902,29 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     {
       if (stateAny || (state == indexState))
       {
-        // set state
-        Index_setState(indexHandle,
-                       storageId,
-                       INDEX_STATE_UPDATE_REQUESTED,
-                       0LL,
-                       NULL
-                      );
+        Array_append(&storageIdArray,&storageId);
       }
     }
     Index_doneList(&indexQueryHandle);
+  }
+
+  // set state for collected storage ids
+  ARRAY_ITERATE(&storageIdArray,i,storageId)
+  {
+    error = Index_setState(indexHandle,
+                           storageId,
+                           INDEX_STATE_UPDATE_REQUESTED,
+                           0LL,
+                           NULL
+                          );
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"set storage state fail: %s",Error_getText(error));
+      Array_done(&storageIdArray);
+      String_delete(storageName);
+      String_delete(name);
+      return;
+    }
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -16944,6 +16933,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   Semaphore_signalModified(&indexThreadTrigger);
 
   // free resources
+  Array_done(&storageIdArray);
   String_delete(storageName);
   String_delete(name);
 }
