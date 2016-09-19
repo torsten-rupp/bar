@@ -8335,7 +8335,6 @@ int main(int argc, const char *argv[])
      )
   {
     // run as daemon
-fprintf(stderr,"%s, %d: verboseLevel=%d\n",__FILE__,__LINE__,globalOptions.verboseLevel);
     #if   defined(PLATFORM_LINUX)
       if (daemon(1,0) == 0)
       {
