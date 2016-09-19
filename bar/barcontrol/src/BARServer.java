@@ -971,6 +971,7 @@ public class BARServer
   public static char         fileSeparator;
 
   private final static int   SOCKET_READ_TIMEOUT    = 20*1000;    // timeout reading socket [ms]
+  private final static int   TIMEOUT                = 120*1000;   // global timeout [ms]
 
   private static byte[]      RANDOM_DATA = new byte[64];
 
@@ -1403,6 +1404,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
     synchronized(lock)
     {
+      if (readThread == null)
+      {
+        return;
+      }
+
       try
       {
         // close connection, stop read thread
@@ -1509,12 +1515,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static Command runCommand(String commandString, int debugLevel, Command.ResultHandler resultHandler, Command.Handler handler)
   {
-    final int TIMEOUT = 120*1000; // total timeout [ms]
-
     Command command = null;
-
-    synchronized(output)
+    synchronized(lock)
     {
+      if (readThread == null)
+      {
+        return null;
+      }
+
       try
       {
         // add new command
@@ -1593,10 +1601,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                             BusyIndicator         busyIndicator
                                            )
   {
-    final int TIMEOUT = 120*1000; // total timeout [ms]
-
-    Command command = null;
-
     // update busy indicator, check if aborted
     if (busyIndicator != null)
     {
@@ -1608,8 +1612,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
 
     // create and send command
+    Command command = null;
     synchronized(lock)
     {
+      if (readThread == null)
+      {
+        return null;
+      }
+
       try
       {
         // add new command
@@ -3343,7 +3353,7 @@ throw new Error("NYI");
   {
     int errorCode;
 
-    synchronized(output)
+    synchronized(lock)
     {
       // get new command
       Command command = new Command(commandString,0);
@@ -3448,232 +3458,6 @@ throw new Error("NYI");
     throws IOException
   {
     return syncExecuteCommand(commandString,(String[])null);
-  }
-
-  /** execute command
-   * @param command command to send to BAR server
-   * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
-   * @param busyIndicator busy indicator or null
-   * @param commandHandler command handler
-   * @return Errors.NONE or error code
-   */
-  private static int XexecuteCommand(String         commandString,
-                                    int            debugLevel,
-                                    final String[] errorMessage,
-                                    CommandHandler commandHandler,
-                                    BusyIndicator  busyIndicator
-                                   )
-  {
-    final int TIMEOUT = 120*1000; // total timeout [ms]
-
-    Command command = null;
-
-    // update busy indicator, check if aborted
-    if (busyIndicator != null)
-    {
-      busyIndicator.busy(0);
-      if (busyIndicator.isAborted())
-      {
-        return Errors.ABORTED;
-      }
-    }
-
-    // send command
-    synchronized(lock)
-    {
-      try
-      {
-        // add new command
-        command = readThread.commandAdd(commandString,debugLevel,TIMEOUT);
-
-        // send command
-        String line = String.format("%d %s",command.id,command.string);
-        output.write(line); output.write('\n'); output.flush();
-        if (Settings.debugLevel > debugLevel) System.err.println("Network: sent '"+line+"'");
-      }
-      catch (IOException exception)
-      {
-        if (command != null) readThread.commandRemove(command);
-        if (Settings.debugLevel > 0)
-        {
-          BARControl.printStackTrace(exception);
-        }
-        return Errors.NETWORK_SEND;
-      }
-    }
-
-    // update busy indicator, check if aborted
-    if (busyIndicator != null)
-    {
-      busyIndicator.busy(0);
-      if (busyIndicator.isAborted())
-      {
-        abortCommand(command);
-        return Errors.ABORTED;
-      }
-    }
-
-    // process results until error, completed, or aborted
-    int errorCode = Errors.NONE;
-    int i         = 0;
-    do
-    {
-      while (   (errorCode == Errors.NONE)
-             && ((busyIndicator == null) || !busyIndicator.isAborted())
-             && !command.endOfData()
-            )
-      {
-        errorCode = commandHandler.handleResult(i,command);
-        if (busyIndicator != null)
-        {
-          busyIndicator.busy(0);
-        }
-        i++;
-      }
-    }
-    while (   (errorCode == Errors.NONE)
-           && ((busyIndicator == null) || !busyIndicator.isAborted())
-           && !command.waitCompleted(250)
-          );
-    if (errorCode == Errors.NONE)
-    {
-      errorCode = command.getErrorCode();
-      if (errorMessage != null) errorMessage[0] = command.getErrorMessage();
-    }
-
-    // free command
-    synchronized(lock)
-    {
-      if (readThread != null)
-      {
-        readThread.commandRemove(command);
-      }
-    }
-
-    // check if aborted
-    if (busyIndicator != null)
-    {
-      if (busyIndicator.isAborted())
-      {
-        command.abort();
-      }
-    }
-
-    return errorCode;
-  }
-
-  /** execute command
-   * @param command command to send to BAR server
-   * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
-   * @param busyIndicator busy indicator or null
-   * @param commandHandler command handler
-   * @return Errors.NONE or error code
-   */
-  private static int XasyncExecuteCommand(String         commandString,
-                                         int            debugLevel,
-                                         final String[] errorMessage,
-                                         CommandHandler commandHandler,
-                                         BusyIndicator  busyIndicator
-                                        )
-  {
-    final int TIMEOUT = 120*1000; // total timeout [ms]
-
-    Command command = null;
-
-    // update busy indicator, check if aborted
-    if (busyIndicator != null)
-    {
-      busyIndicator.busy(0);
-      if (busyIndicator.isAborted())
-      {
-        return Errors.ABORTED;
-      }
-    }
-
-    // send command
-    synchronized(lock)
-    {
-      try
-      {
-        // add new command
-        command = readThread.commandAdd(commandString,debugLevel,TIMEOUT);
-
-        // send command
-        String line = String.format("%d %s",command.id,command.string);
-        output.write(line); output.write('\n'); output.flush();
-        if (Settings.debugLevel > debugLevel) System.err.println("Network: sent '"+line+"'");
-      }
-      catch (IOException exception)
-      {
-        if (command != null) readThread.commandRemove(command);
-        if (Settings.debugLevel > 0)
-        {
-          BARControl.printStackTrace(exception);
-        }
-        return Errors.NETWORK_SEND;
-      }
-    }
-
-    // update busy indicator, check if aborted
-    if (busyIndicator != null)
-    {
-      busyIndicator.busy(0);
-      if (busyIndicator.isAborted())
-      {
-        abortCommand(command);
-        return Errors.ABORTED;
-      }
-    }
-
-    // process results until error, completed, or aborted
-    int errorCode = Errors.NONE;
-    int i         = 0;
-    do
-    {
-      while (   (errorCode == Errors.NONE)
-             && ((busyIndicator == null) || !busyIndicator.isAborted())
-             && !command.endOfData()
-            )
-      {
-        errorCode = commandHandler.handleResult(i,command);
-        if (busyIndicator != null)
-        {
-          busyIndicator.busy(0);
-        }
-        i++;
-      }
-    }
-    while (   (errorCode == Errors.NONE)
-           && ((busyIndicator == null) || !busyIndicator.isAborted())
-           && !command.waitCompleted(250)
-          );
-    if (errorCode == Errors.NONE)
-    {
-      errorCode = command.getErrorCode();
-      if (errorMessage != null) errorMessage[0] = command.getErrorMessage();
-    }
-
-    // free command
-    synchronized(lock)
-    {
-      if (readThread != null)
-      {
-        readThread.commandRemove(command);
-      }
-    }
-
-    // check if aborted
-    if (busyIndicator != null)
-    {
-      if (busyIndicator.isAborted())
-      {
-        command.abort();
-      }
-    }
-
-    return errorCode;
   }
 }
 
