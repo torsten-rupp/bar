@@ -3870,9 +3870,10 @@ NULL,//                                                        scheduleTitle,
               // success
               logMessage(&logHandle,
                          LOG_TYPE_ALWAYS,
-                         "Done job '%s' (duration: %llus)\n",
+                         "Done job '%s' (duration: %llumin:%02us)\n",
                          String_cString(jobName),
-                         endDateTime-startDateTime
+                         (endDateTime-startDateTime) / 60,
+                         (uint)((endDateTime-startDateTime) % 60)
                         );
 
               // create history entry
