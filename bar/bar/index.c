@@ -2701,11 +2701,6 @@ LOCAL void indexCleanupThreadCode(void)
                   "INDEX",
                   "Done regular clean-up index database\n"
                  );
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_INDEX,
-                  "INDEX",
-                  "Done regular clean-up index database\n"
-                 );
 
       lastCleanupTimestamp = Misc_getTimestamp();
     }
