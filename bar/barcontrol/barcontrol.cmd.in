@@ -1,6 +1,7 @@
 @echo off
 
-java.exe @JAVA_FLAGS@ -cp barcontrol-windows.jar DataModel
+if exist barcontrol-windows.jar ( java.exe @JAVA_FLAGS@ -cp barcontrol-windows.jar DataModel )
+if exist barcontrol-windows_64.jar ( java.exe @JAVA_FLAGS@ -cp barcontrol-windows_64.jar DataModel )
 if errorlevel 64 goto 64
 if errorlevel 32 goto 32
 goto error
