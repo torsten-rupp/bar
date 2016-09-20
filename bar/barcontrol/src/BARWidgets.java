@@ -686,14 +686,14 @@ public class BARWidgets
    * @param parentComposite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
-   * @param values combo values
+   * @param values combo values [text,value]
    * @param listener listener or null
    * @return number widget
    */
   public static Combo newTime(Composite            parentComposite,
                               String               toolTipText,
                               final WidgetVariable widgetVariable,
-                              String[]             values,
+                              Object[]             values,
                               final Listener       listener
                              )
   {
@@ -702,7 +702,10 @@ public class BARWidgets
 
     combo = Widgets.newCombo(parentComposite);
     combo.setToolTipText(toolTipText);
-    combo.setItems(values);
+Dprintf.dprintf("");
+//    combo.setItems(values);
+    Widgets.setComboItems(combo,values);
+Dprintf.dprintf("");
     combo.setText(widgetVariable.getString());
     combo.setData("showedErrorDialog",false);
 
@@ -740,7 +743,11 @@ public class BARWidgets
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
         Combo  widget = (Combo)selectionEvent.widget;
-        String string = widget.getText();
+
+//        String string = widget.getText();
+String string = Widgets.getSelectedComboItem(combo,(String)null);
+if (string == null) string = widget.getText();
+Dprintf.dprintf("string=%s",string);
         try
         {
           long n = Units.parseTime(string);
@@ -752,8 +759,10 @@ public class BARWidgets
           {
             widget.setData("showedErrorDialog",true);
             Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
-            widget.forceFocus();
+Dprintf.dprintf("");
           }
+          widget.forceFocus();
+          return;
         }
 
         if (listener != null)
@@ -770,7 +779,11 @@ public class BARWidgets
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Combo  widget = (Combo)selectionEvent.widget;
-        String string = widget.getText();
+//        String string = widget.getText();
+String string = Widgets.getSelectedComboItem(combo,(String)null);
+Dprintf.dprintf("string=%s",string);
+if (string == null) string = widget.getText();
+Dprintf.dprintf("string=%s",string);
         try
         {
           long  n = Units.parseTime(string);
@@ -782,8 +795,10 @@ public class BARWidgets
           {
             widget.setData("showedErrorDialog",true);
             Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
-            widget.forceFocus();
+Dprintf.dprintf("");
           }
+          widget.forceFocus();
+          return;
         }
 
         if (listener != null)
@@ -795,7 +810,9 @@ public class BARWidgets
           widgetVariable.set(string);
         }
 
-        widget.setText(string);
+Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %s",string);
+//        widget.setText(string);
+        Widgets.setSelectedComboItem(combo,string);
         widget.setBackground(null);
       }
     });
@@ -809,7 +826,10 @@ public class BARWidgets
       public void focusLost(FocusEvent focusEvent)
       {
         Combo  widget = (Combo)focusEvent.widget;
-        String string = widget.getText();
+//        String string = widget.getText();
+String string = Widgets.getSelectedComboItem(combo,(String)null);
+if (string == null) string = widget.getText();
+Dprintf.dprintf("string=%s",string);
         try
         {
           long n = Units.parseTime(string);
@@ -827,14 +847,18 @@ public class BARWidgets
 
         if (listener != null)
         {
+Dprintf.dprintf("");
           listener.setString(widgetVariable,string);
         }
         else
         {
+Dprintf.dprintf("");
           widgetVariable.set(string);
         }
 
-        widget.setText(string);
+Dprintf.dprintf("");
+//        widget.setText(string);
+        Widgets.setSelectedComboItem(combo,string);
         widget.setBackground(null);
       }
     });
@@ -844,6 +868,7 @@ public class BARWidgets
         {
           void modified(Widget widget, WidgetVariable variable)
           {
+Dprintf.dprintf("modfffffffffffffffffff");
             combo.setText(listener.getString(widgetVariable));
           }
         }
@@ -886,7 +911,7 @@ public class BARWidgets
   public static Combo newTime(Composite            parentComposite,
                               String               toolTipText,
                               final WidgetVariable widgetVariable,
-                              String[]             values
+                              Object[]             values
                              )
   {
     return newTime(parentComposite,toolTipText,widgetVariable,values,(Listener)null);

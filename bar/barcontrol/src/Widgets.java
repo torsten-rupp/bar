@@ -4449,12 +4449,14 @@ e composite widget
             ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
             for (int i = 0; i < dataArray.size(); i++)
             {
+Dprintf.dprintf("i=%d: %s",i,dataArray.get(i));
               if (dataArray.get(i).equals(data))
               {
                 combo.select(i);
-                break;
+                return;
               }
             }
+            combo.setText(data.toString());
           }
         }
       });

@@ -942,11 +942,11 @@ class Units
    */
   public static String getTimeUnit(double n)
   {
-    if      (((long)n % (7L*24L*60L*60L)) == 0) return BARControl.tr("weeks");
-    else if (((long)n % (   24L*60L*60L)) == 0) return BARControl.tr("days");
-    else if (((long)n % (       60L*60L)) == 0) return BARControl.tr("h");
-    else if (((long)n % (           60L)) == 0) return BARControl.tr("min");
-    else                                        return BARControl.tr("s");
+    if      (((long)n % (7L*24L*60L*60L)) == 0) return "weeks";
+    else if (((long)n % (   24L*60L*60L)) == 0) return "days";
+    else if (((long)n % (       60L*60L)) == 0) return "h";
+    else if (((long)n % (           60L)) == 0) return "min";
+    else                                        return "s";
   }
 
   /** parse byte size string

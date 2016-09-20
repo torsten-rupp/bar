@@ -390,7 +390,6 @@ public class ServerSettings
       subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,0.0}));
       Widgets.layout(subComposite,row,1,TableLayoutData.WE);
       {
-Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         subSubComposite = BARWidgets.newDirectory(subComposite,
                                                   BARControl.tr("Path to temporary directory."),
                                                   tmpDirectory
@@ -515,7 +514,14 @@ Dprintf.dprintf("tmpDirector=%s",tmpDirectory);
         combo = BARWidgets.newTime(subComposite,
                                    BARControl.tr("Index database keep time for not existing storages."),
                                    indexDatabaseKeepTime,
-                                   new String[]{"0","1day","3days","7days","14days","21days","30days"}
+                                   new Object[]{"0",                    "0",
+                                                BARControl.tr("1day"),  "1days",
+                                                BARControl.tr("3days"), "3days",
+                                                BARControl.tr("1week"), "7days",
+                                                BARControl.tr("2weeks"),"14days",
+                                                BARControl.tr("3weeks"),"21days",
+                                                BARControl.tr("30days"),"30days"
+                                               }
                                   );
         Widgets.layout(combo,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       }
