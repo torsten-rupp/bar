@@ -1172,6 +1172,7 @@ Dprintf.dprintf("");
    */
   class StorageIndexData extends IndexData implements Serializable
   {
+    public  String                jobUUID;                  // job UUID
     public  String                jobName;                  // job name or null
     public  Settings.ArchiveTypes archiveType;              // archive type
     public  String                name;                     // name
@@ -1218,6 +1219,7 @@ Dprintf.dprintf("");
 
     /** create storage data index
      * @param storageId database storage id
+     * @param jobUUID job UUID
      * @param jobName job name or null
      * @param archiveType archive type
      * @param name name of storage
@@ -1230,6 +1232,7 @@ Dprintf.dprintf("");
      * @param errorMessage error message text
      */
     StorageIndexData(long                  storageId,
+                     String                jobUUID,
                      String                jobName,
                      Settings.ArchiveTypes archiveType,
                      String                name,
@@ -1243,6 +1246,7 @@ Dprintf.dprintf("");
                     )
     {
       super(storageId);
+      this.jobUUID             = jobUUID;
       this.jobName             = jobName;
       this.archiveType         = archiveType;
       this.name                = name;
@@ -1257,6 +1261,7 @@ Dprintf.dprintf("");
 
     /** create storage data
      * @param storageId database storage id
+     * @param jobUUID job UUID
      * @param jobName job name
      * @param archiveType archive type
      * @param name name of storage
@@ -1264,6 +1269,7 @@ Dprintf.dprintf("");
      * @param lastCheckedDateTime last checked date/time (timestamp)
      */
     StorageIndexData(long                  storageId,
+                     String                jobUUID,
                      String                jobName,
                      Settings.ArchiveTypes archiveType,
                      String                name,
@@ -1271,19 +1277,19 @@ Dprintf.dprintf("");
                      long                  lastCheckedDateTime
                     )
     {
-      this(storageId,jobName,archiveType,name,lastCreatedDateTime,0L,0L,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
+      this(storageId,jobUUID,jobName,archiveType,name,lastCreatedDateTime,0L,0L,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
     }
 
     /** create storage data
      * @param storageId database storage id
-     * @param entityId database entity id
+     * @param jobUUID job UUID
      * @param jobName job name
      * @param archiveType archive type
      * @param name name of storage
      */
-    StorageIndexData(long storageId, String jobName, Settings.ArchiveTypes archiveType, String name)
+    StorageIndexData(long storageId, String jobUUID, String jobName, Settings.ArchiveTypes archiveType, String name)
     {
-      this(storageId,jobName,archiveType,name,0L,0L);
+      this(storageId,jobUUID,jobName,archiveType,name,0L,0L);
     }
 
     /** get name
@@ -1825,7 +1831,7 @@ Dprintf.dprintf("cirrect?");
                   && !updateOffsets.isEmpty()         // updated offset requested
                  )
               {
-                updateStorageTable(updateOffsets);
+                updateStorageTableItems(updateOffsets);
               }
             }
             catch (CommunicationError error)
@@ -2473,10 +2479,9 @@ Dprintf.dprintf("cirrect?");
 
       // get storage list for entity
       final ArrayList<StorageIndexData> storageIndexDataList = new ArrayList<StorageIndexData>();
-      BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld indexStateSet=%s indexModeSet=%s name=%'S",
+      BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%ld indexStateSet=%s indexModeSet=* name=%'S",
                                                    entityIndexData[0].id,
                                                    storageIndexStateSet.nameList("|"),
-                                                   "*",
                                                    storageName
                                                   ),
                                1,  // debugLevel
@@ -2502,6 +2507,7 @@ Dprintf.dprintf("cirrect?");
 
                                      // add storage index data
                                      storageIndexDataList.add(new StorageIndexData(storageId,
+                                                                                   jobUUID,
                                                                                    jobName,
                                                                                    archiveType,
                                                                                    name,
@@ -2710,7 +2716,7 @@ Dprintf.dprintf("cirrect?");
      * @param offset refresh offset
      * @return true iff update done
      */
-    private boolean updateStorageTable(final int offset)
+    private boolean updateStorageTableItems(final int offset)
     {
       assert storageName != null;
       assert offset >= 0;
@@ -2748,6 +2754,80 @@ Dprintf.dprintf("cirrect?");
         }
       });
 
+      // get list
+      final ArrayList<StorageIndexData> storageIndexDataList = new ArrayList<StorageIndexData>();
+      final int[]                       n                    = new int[1];
+      storageTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d sortMode=%s ordering=%s",
+                                                                              (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
+                                                                              storageIndexStateSet.nameList("|"),
+                                                                              storageName,
+                                                                              offset,
+                                                                              limit,
+                                                                              sortMode[0],
+                                                                              ordering[0]
+                                                                             ),
+                                                          1,  // debugLevel
+                                                          new Command.ResultHandler()
+                                                          {
+                                                            public int handle(int i, ValueMap valueMap)
+                                                            {
+                                                              try
+                                                              {
+                                                                final long                  storageId           = valueMap.getLong  ("storageId");
+                                                                final String                jobUUID             = valueMap.getString("jobUUID");
+                                                                final String                scheduleUUID        = valueMap.getString("scheduleUUID");
+                                                                final String                jobName             = valueMap.getString("jobName");
+                                                                final Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class,Settings.ArchiveTypes.NORMAL);
+                                                                final String                name                = valueMap.getString("name");
+                                                                final long                  dateTime            = valueMap.getLong  ("dateTime");
+                                                                final long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount");
+                                                                final long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize");
+                                                                final IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class);
+                                                                final IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class);
+                                                                final long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime");
+                                                                final String                errorMessage_       = valueMap.getString("errorMessage");
+
+                                                                // add storage index data
+                                                                storageIndexDataList.add(new StorageIndexData(storageId,
+                                                                                                              jobUUID,
+                                                                                                              jobName,
+                                                                                                              archiveType,
+                                                                                                              name,
+                                                                                                              dateTime,
+                                                                                                              totalEntryCount,
+                                                                                                              totalEntrySize,
+                                                                                                              indexState,
+                                                                                                              indexMode,
+                                                                                                              lastCheckedDateTime,
+                                                                                                              errorMessage_
+                                                                                                             )
+                                                                                        );
+                                                              }
+                                                              catch (IllegalArgumentException exception)
+                                                              {
+                                                                if (Settings.debugLevel > 0)
+                                                                {
+                                                                  System.err.println("ERROR: "+exception.getMessage());
+                                                                  BARControl.printStackTrace(exception);
+                                                                  System.exit(1);
+                                                                }
+                                                              }
+
+                                                              // store number of entries
+                                                              n[0] = i+1;
+
+                                                              // check if aborted
+                                                              if (isRequestUpdate() || (n[0] >= limit))
+                                                              {
+                                                                abort();
+                                                              }
+
+                                                              return Errors.NONE;
+                                                            }
+                                                          }
+                                                         );
+      BARServer.asyncCommandWait(storageTableCommand);
+
       // update storage table segment
       {
         // disable redraw
@@ -2759,97 +2839,31 @@ Dprintf.dprintf("cirrect?");
           }
         });
       }
-      final int[] n = new int[1];
       try
       {
-        storageTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d sortMode=%s ordering=%s",
-                                                                                (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
-                                                                                storageIndexStateSet.nameList("|"),
-                                                                                storageName,
-                                                                                offset,
-                                                                                limit,
-                                                                                sortMode[0],
-                                                                                ordering[0]
-                                                                               ),
-                                                            1,  // debugLevel
-                                                            new Command.ResultHandler()
-                                                            {
-                                                              public int handle(int i, ValueMap valueMap)
-                                                              {
-                                                                final int index = offset+i;
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            int i = 0;
+            for (StorageIndexData storageIndexData : storageIndexDataList)
+            {
+              TableItem tableItem = widgetStorageTable.getItem(offset+i);
 
-                                                                try
-                                                                {
-                                                                  final long                  storageId           = valueMap.getLong  ("storageId");
-                                                                  final String                jobUUID             = valueMap.getString("jobUUID");
-                                                                  final String                scheduleUUID        = valueMap.getString("scheduleUUID");
-                                                                  final String                jobName             = valueMap.getString("jobName");
-                                                                  final Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class,Settings.ArchiveTypes.NORMAL);
-                                                                  final String                name                = valueMap.getString("name");
-                                                                  final long                  dateTime            = valueMap.getLong  ("dateTime");
-                                                                  final long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount");
-                                                                  final long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize");
-                                                                  final IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class);
-                                                                  final IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class);
-                                                                  final long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime");
-                                                                  final String                errorMessage_       = valueMap.getString("errorMessage");
+              Widgets.updateTableItem(tableItem,
+                                      (Object)storageIndexData,
+                                      storageIndexData.name,
+                                      Units.formatByteSize(storageIndexData.totalEntrySize),
+                                      SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
+                                      storageIndexData.indexState.toString()
+                                     );
+              tableItem.setChecked(checkedIndexIdSet.contains(storageIndexData.id));
+              tableItem.setBackground(storageIndexData.jobUUID.isEmpty() ? COLOR_NO_JOB_INFO : null);
 
-                                                                  // add storage index data
-                                                                  final StorageIndexData storageIndexData = new StorageIndexData(storageId,
-                                                                                                                                 jobName,
-                                                                                                                                 archiveType,
-                                                                                                                                 name,
-                                                                                                                                 dateTime,
-                                                                                                                                 totalEntryCount,
-                                                                                                                                 totalEntrySize,
-                                                                                                                                 indexState,
-                                                                                                                                 indexMode,
-                                                                                                                                 lastCheckedDateTime,
-                                                                                                                                 errorMessage_
-                                                                                                                                );
-
-                                                                  display.syncExec(new Runnable()
-                                                                  {
-                                                                    public void run()
-                                                                    {
-                                                                      TableItem tableItem = widgetStorageTable.getItem(index);
-
-                                                                      Widgets.updateTableItem(tableItem,
-                                                                                              (Object)storageIndexData,
-                                                                                              storageIndexData.name,
-                                                                                              Units.formatByteSize(storageIndexData.totalEntrySize),
-                                                                                              SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)),
-                                                                                              storageIndexData.indexState.toString()
-                                                                                             );
-                                                                      tableItem.setChecked(checkedIndexIdSet.contains(storageIndexData.id));
-                                                                      tableItem.setBackground(jobUUID.isEmpty() ? COLOR_NO_JOB_INFO : null);
-                                                                    }
-                                                                  });
-                                                                }
-                                                                catch (IllegalArgumentException exception)
-                                                                {
-                                                                  if (Settings.debugLevel > 0)
-                                                                  {
-                                                                    System.err.println("ERROR: "+exception.getMessage());
-                                                                    BARControl.printStackTrace(exception);
-                                                                    System.exit(1);
-                                                                  }
-                                                                }
-
-                                                                // store number of entries
-                                                                n[0] = i+1;
-
-                                                                // check if aborted
-                                                                if (isRequestUpdate() || (n[0] >= limit))
-                                                                {
-                                                                  abort();
-                                                                }
-
-                                                                return Errors.NONE;
-                                                              }
-                                                            }
-                                                           );
-        BARServer.asyncCommandWait(storageTableCommand);
+              i++;
+            }
+          }
+        });
       }
       finally
       {
@@ -2869,7 +2883,7 @@ Dprintf.dprintf("cirrect?");
     /** refresh storage table items
      * @param updateOffsets segment offsets to update
      */
-    private void updateStorageTable(HashSet<Integer> updateOffsets)
+    private void updateStorageTableItems(HashSet<Integer> updateOffsets)
     {
       try
       {
@@ -2884,7 +2898,7 @@ Dprintf.dprintf("cirrect?");
         Integer offsets[] = updateOffsets.toArray(new Integer[updateOffsets.size()]);
         for (Integer offset : offsets)
         {
-          if (!updateStorageTable(offset)) break;
+          if (!updateStorageTableItems(offset)) break;
           updateOffsets.remove(offset);
         }
       }
@@ -3250,7 +3264,7 @@ Dprintf.dprintf("cirrect?");
                 && !updateOffsets.isEmpty()            // updated offset requested
                )
             {
-              updateEntryTable(updateOffsets);
+              updateEntryTableItems(updateOffsets);
             }
           }
           catch (CommunicationError error)
@@ -3582,7 +3596,7 @@ Dprintf.dprintf("cirrect?");
      * @param offset refresh offset
      * @return true iff update done
      */
-    private boolean updateEntryTable(final int offset)
+    private boolean updateEntryTableItems(final int offset)
     {
       assert entryName != null;
       assert offset >= 0;
@@ -3621,6 +3635,185 @@ Dprintf.dprintf("cirrect?");
         }
       });
 
+      // get list
+      final ArrayList<EntryIndexData> entryIndexDataList = new ArrayList<EntryIndexData>();
+      final int[]                     n                  = new int[1];
+      entryTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=%s newestOnly=%y offset=%d limit=%d sortMode=%s ordering=%s",
+                                                                            entryName,
+                                                                            entryType.toString(),
+                                                                            newestOnly,
+                                                                            offset,
+                                                                            limit,
+                                                                            sortMode[0],
+                                                                            ordering[0]
+                                                                           ),
+                                                        1,  // debugLevel
+                                                        new Command.ResultHandler()
+                                                        {
+                                                          public int handle(int i, ValueMap valueMap)
+                                                          {
+                                                            final int index = offset+i;
+
+                                                            try
+                                                            {
+                                                              String                jobName         = valueMap.getString("jobName"                                );
+                                                              Settings.ArchiveTypes archiveType     = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
+                                                              long                  entryId         = valueMap.getLong  ("entryId"                                );
+                                                              final EntryTypes      entryType       = valueMap.getEnum  ("entryType",EntryTypes.class             );
+                                                              String                storageName     = valueMap.getString("storageName"                            );
+                                                              long                  storageDateTime = valueMap.getLong  ("storageDateTime"                        );
+
+                                                              switch (entryType)
+                                                              {
+                                                                case FILE:
+                                                                  {
+                                                                    String fileName       = valueMap.getString("name"          );
+                                                                    long   dateTime       = valueMap.getLong  ("dateTime"      );
+                                                                    long   size           = valueMap.getLong  ("size"          );
+                                                                    long   fragmentOffset = valueMap.getLong  ("fragmentOffset");
+                                                                    long   fragmentSize   = valueMap.getLong  ("fragmentSize"  );
+
+                                                                    // add entry data index
+                                                                    entryIndexDataList.add(new EntryIndexData(entryId,
+                                                                                                              jobName,
+                                                                                                              archiveType,
+                                                                                                              storageName,
+                                                                                                              storageDateTime,
+                                                                                                              EntryTypes.FILE,
+                                                                                                              fileName,
+                                                                                                              dateTime,
+                                                                                                              size
+                                                                                                             )
+                                                                                          );
+                                                                  }
+                                                                  break;
+                                                                case IMAGE:
+                                                                  {
+                                                                    String imageName   = valueMap.getString("name"       );
+                                                                    long   size        = valueMap.getLong  ("size"       );
+                                                                    long   blockOffset = valueMap.getLong  ("blockOffset");
+                                                                    long   blockCount  = valueMap.getLong  ("blockCount" );
+
+                                                                    // add entry data index
+                                                                    entryIndexDataList.add(new EntryIndexData(entryId,
+                                                                                                              jobName,
+                                                                                                              archiveType,
+                                                                                                              storageName,
+                                                                                                              storageDateTime,
+                                                                                                              EntryTypes.IMAGE,
+                                                                                                              imageName,
+                                                                                                              0L,
+                                                                                                              size
+                                                                                                             )
+                                                                                          );
+                                                                  }
+                                                                  break;
+                                                                case DIRECTORY:
+                                                                  {
+                                                                    String directoryName = valueMap.getString("name"    );
+                                                                    long   dateTime      = valueMap.getLong  ("dateTime");
+                                                                    long   size          = valueMap.getLong  ("size"    );
+
+                                                                    // add entry data index
+                                                                    entryIndexDataList.add(new EntryIndexData(entryId,
+                                                                                                              jobName,
+                                                                                                              archiveType,
+                                                                                                              storageName,
+                                                                                                              storageDateTime,
+                                                                                                              EntryTypes.DIRECTORY,
+                                                                                                              directoryName,
+                                                                                                              dateTime,
+                                                                                                              size
+                                                                                                             )
+                                                                                          );
+                                                                  }
+                                                                  break;
+                                                                case LINK:
+                                                                  {
+                                                                    String linkName        = valueMap.getString("name"           );
+                                                                    String destinationName = valueMap.getString("destinationName");
+                                                                    long   dateTime        = valueMap.getLong  ("dateTime"       );
+
+                                                                    // add entry data index
+                                                                    entryIndexDataList.add(new EntryIndexData(entryId,
+                                                                                                              jobName,
+                                                                                                              archiveType,
+                                                                                                              storageName,
+                                                                                                              storageDateTime,
+                                                                                                              EntryTypes.LINK,
+                                                                                                              linkName,
+                                                                                                              dateTime
+                                                                                                             )
+                                                                                          );
+                                                                  }
+                                                                  break;
+                                                                case HARDLINK:
+                                                                  {
+                                                                    String fileName       = valueMap.getString("name"          );
+                                                                    long   dateTime       = valueMap.getLong  ("dateTime"      );
+                                                                    long   size           = valueMap.getLong  ("size"          );
+                                                                    long   fragmentOffset = valueMap.getLong  ("fragmentOffset");
+                                                                    long   fragmentSize   = valueMap.getLong  ("fragmentSize"  );
+
+                                                                    // add entry data index
+                                                                    entryIndexDataList.add(new EntryIndexData(entryId,
+                                                                                                              jobName,
+                                                                                                              archiveType,
+                                                                                                              storageName,
+                                                                                                              storageDateTime,
+                                                                                                              EntryTypes.HARDLINK,
+                                                                                                              fileName,
+                                                                                                              dateTime,
+                                                                                                              size
+                                                                                                             )
+                                                                                          );
+                                                                  }
+                                                                  break;
+                                                                case SPECIAL:
+                                                                  {
+
+                                                                    String name     = valueMap.getString("name"    );
+                                                                    long   dateTime = valueMap.getLong  ("dateTime");
+
+                                                                    // add entry data index
+                                                                    entryIndexDataList.add(new EntryIndexData(entryId,
+                                                                                                              jobName,
+                                                                                                              archiveType,
+                                                                                                              storageName,
+                                                                                                              storageDateTime,
+                                                                                                              EntryTypes.SPECIAL,
+                                                                                                              name,dateTime
+                                                                                                             )
+                                                                                          );
+                                                                  }
+                                                                  break;
+                                                              }
+                                                            }
+                                                            catch (IllegalArgumentException exception)
+                                                            {
+                                                              if (Settings.debugLevel > 0)
+                                                              {
+                                                                System.err.println("ERROR: "+exception.getMessage());
+                                                                BARControl.printStackTrace(exception);
+                                                                System.exit(1);
+                                                              }
+                                                            }
+
+                                                            // store number of entries
+                                                            n[0] = i+1;
+
+                                                            // check if aborted
+                                                            if (isRequestUpdate() || (n[0] >= limit))
+                                                            {
+                                                              abort();
+                                                            }
+
+                                                            return Errors.NONE;
+                                                          }
+                                                        }
+                                                       );
+      BARServer.asyncCommandWait(entryTableCommand);
+
       // update entry table segment
       {
         // disable redraw
@@ -3632,291 +3825,86 @@ Dprintf.dprintf("cirrect?");
           }
         });
       }
-      final int[] n = new int[1];
       try
       {
-        entryTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=%s newestOnly=%y offset=%d limit=%d sortMode=%s ordering=%s",
-                                                                              entryName,
-                                                                              entryType.toString(),
-                                                                              newestOnly,
-                                                                              offset,
-                                                                              limit,
-                                                                              sortMode[0],
-                                                                              ordering[0]
-                                                                             ),
-                                                          1,  // debugLevel
-                                                          new Command.ResultHandler()
-                                                          {
-                                                            public int handle(int i, ValueMap valueMap)
-                                                            {
-                                                              final int index = offset+i;
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            int i = 0;
+            for (EntryIndexData entryIndexData : entryIndexDataList)
+            {
+              TableItem tableItem = widgetEntryTable.getItem(offset+i);
 
-                                                              try
-                                                              {
-                                                                String                jobName         = valueMap.getString("jobName"                                );
-                                                                Settings.ArchiveTypes archiveType     = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-                                                                long                  entryId         = valueMap.getLong  ("entryId"                                );
-                                                                final EntryTypes      entryType       = valueMap.getEnum  ("entryType",EntryTypes.class             );
-                                                                String                storageName     = valueMap.getString("storageName"                            );
-                                                                long                  storageDateTime = valueMap.getLong  ("storageDateTime"                        );
+              switch (entryIndexData.entryType)
+              {
+                case FILE:
+                  Widgets.updateTableItem(tableItem,
+                                          (Object)entryIndexData,
+                                          entryIndexData.storageName,
+                                          entryIndexData.name,
+                                          entryIndexData.entryType.toString(),
+                                          Units.formatByteSize(entryIndexData.size),
+                                          SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                         );
+                  break;
+                case IMAGE:
+                  Widgets.updateTableItem(tableItem,
+                                          (Object)entryIndexData,
+                                          entryIndexData.storageName,
+                                          entryIndexData.name,
+                                          entryIndexData.entryType.toString(),
+                                          Units.formatByteSize(entryIndexData.size),
+                                          SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                         );
+                  break;
+                case DIRECTORY:
+                  Widgets.updateTableItem(tableItem,
+                                          (Object)entryIndexData,
+                                          entryIndexData.storageName,
+                                          entryIndexData.name,
+                                          entryIndexData.entryType.toString(),
+                                          (entryIndexData.size > 0L) ? Units.formatByteSize(entryIndexData.size) : "",
+                                          SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                         );
+                  break;
+                case LINK:
+                  Widgets.updateTableItem(tableItem,
+                                          (Object)entryIndexData,
+                                          entryIndexData.storageName,
+                                          entryIndexData.name,
+                                          entryIndexData.entryType.toString(),
+                                          "",
+                                          SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                         );
+                  break;
+                case HARDLINK:
+                  Widgets.updateTableItem(tableItem,
+                                          (Object)entryIndexData,
+                                          entryIndexData.storageName,
+                                          entryIndexData.name,
+                                          entryIndexData.entryType.toString(),
+                                          Units.formatByteSize(entryIndexData.size),
+                                          SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                         );
+                  break;
+                case SPECIAL:
+                  Widgets.updateTableItem(tableItem,
+                                          (Object)entryIndexData,
+                                          entryIndexData.storageName,
+                                          entryIndexData.name,
+                                          entryIndexData.entryType.toString(),
+                                          Units.formatByteSize(entryIndexData.size),
+                                          SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                         );
+                  break;
+              }
+              tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
 
-                                                                switch (entryType)
-                                                                {
-                                                                  case FILE:
-                                                                    {
-                                                                      String fileName       = valueMap.getString("name"          );
-                                                                      long   dateTime       = valueMap.getLong  ("dateTime"      );
-                                                                      long   size           = valueMap.getLong  ("size"          );
-                                                                      long   fragmentOffset = valueMap.getLong  ("fragmentOffset");
-                                                                      long   fragmentSize   = valueMap.getLong  ("fragmentSize"  );
-
-                                                                      // add entry data index
-                                                                      final EntryIndexData entryIndexData = new EntryIndexData(entryId,
-                                                                                                                               jobName,
-                                                                                                                               archiveType,
-                                                                                                                               storageName,
-                                                                                                                               storageDateTime,
-                                                                                                                               EntryTypes.FILE,
-                                                                                                                               fileName,
-                                                                                                                               dateTime,
-                                                                                                                               size
-                                                                                                                              );
-
-                                                                      display.syncExec(new Runnable()
-                                                                      {
-                                                                        public void run()
-                                                                        {
-                                                                          TableItem tableItem = widgetEntryTable.getItem(index);
-
-                                                                          Widgets.updateTableItem(tableItem,
-                                                                                                  (Object)entryIndexData,
-                                                                                                  entryIndexData.storageName,
-                                                                                                  entryIndexData.name,
-                                                                                                  entryType.toString(),
-                                                                                                  Units.formatByteSize(entryIndexData.size),
-                                                                                                  SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                                                                                 );
-                                                                          tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
-                                                                        }
-                                                                      });
-                                                                    }
-                                                                    break;
-                                                                  case IMAGE:
-                                                                    {
-                                                                      String imageName   = valueMap.getString("name"       );
-                                                                      long   size        = valueMap.getLong  ("size"       );
-                                                                      long   blockOffset = valueMap.getLong  ("blockOffset");
-                                                                      long   blockCount  = valueMap.getLong  ("blockCount" );
-
-                                                                      // add entry data index
-                                                                      final EntryIndexData entryIndexData = new EntryIndexData(entryId,
-                                                                                                                               jobName,
-                                                                                                                               archiveType,
-                                                                                                                               storageName,
-                                                                                                                               storageDateTime,
-                                                                                                                               EntryTypes.IMAGE,
-                                                                                                                               imageName,
-                                                                                                                               0L,
-                                                                                                                               size
-                                                                                                                              );
-
-                                                                      // update/insert table item
-                                                                      display.syncExec(new Runnable()
-                                                                      {
-                                                                        public void run()
-                                                                        {
-                                                                          TableItem tableItem = widgetEntryTable.getItem(index);
-
-                                                                          Widgets.updateTableItem(tableItem,
-                                                                                                  (Object)entryIndexData,
-                                                                                                  entryIndexData.storageName,
-                                                                                                  entryIndexData.name,
-                                                                                                  entryType.toString(),
-                                                                                                  Units.formatByteSize(entryIndexData.size),
-                                                                                                  SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                                                                                 );
-                                                                          tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
-                                                                        }
-                                                                      });
-                                                                    }
-                                                                    break;
-                                                                  case DIRECTORY:
-                                                                    {
-                                                                      String directoryName = valueMap.getString("name"    );
-                                                                      long   dateTime      = valueMap.getLong  ("dateTime");
-                                                                      long   size          = valueMap.getLong  ("size"    );
-
-                                                                      // add entry data index
-                                                                      final EntryIndexData entryIndexData = new EntryIndexData(entryId,
-                                                                                                                               jobName,
-                                                                                                                               archiveType,
-                                                                                                                               storageName,
-                                                                                                                               storageDateTime,
-                                                                                                                               EntryTypes.DIRECTORY,
-                                                                                                                               directoryName,
-                                                                                                                               dateTime,
-                                                                                                                               size
-                                                                                                                              );
-
-                                                                      // update/insert table item
-                                                                      display.syncExec(new Runnable()
-                                                                      {
-                                                                        public void run()
-                                                                        {
-                                                                          TableItem tableItem = widgetEntryTable.getItem(index);
-
-                                                                          Widgets.updateTableItem(tableItem,
-                                                                                                  (Object)entryIndexData,
-                                                                                                  entryIndexData.storageName,
-                                                                                                  entryIndexData.name,
-                                                                                                  entryType.toString(),
-                                                                                                  (entryIndexData.size > 0L) ? Units.formatByteSize(entryIndexData.size) : "",
-                                                                                                  SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                                                                                 );
-                                                                          tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
-                                                                        }
-                                                                      });
-                                                                    }
-                                                                    break;
-                                                                  case LINK:
-                                                                    {
-                                                                      String linkName        = valueMap.getString("name"           );
-                                                                      String destinationName = valueMap.getString("destinationName");
-                                                                      long   dateTime        = valueMap.getLong  ("dateTime"       );
-
-                                                                      // add entry data index
-                                                                      final EntryIndexData entryIndexData = new EntryIndexData(entryId,
-                                                                                                                               jobName,
-                                                                                                                               archiveType,
-                                                                                                                               storageName,
-                                                                                                                               storageDateTime,
-                                                                                                                               EntryTypes.LINK,
-                                                                                                                               linkName,
-                                                                                                                               dateTime
-                                                                                                                              );
-
-                                                                      // update/insert table item
-                                                                      display.syncExec(new Runnable()
-                                                                      {
-                                                                        public void run()
-                                                                        {
-                                                                          TableItem tableItem = widgetEntryTable.getItem(index);
-
-                                                                          Widgets.updateTableItem(tableItem,
-                                                                                                  (Object)entryIndexData,
-                                                                                                  entryIndexData.storageName,
-                                                                                                  entryIndexData.name,
-                                                                                                  entryType.toString(),
-                                                                                                  "",
-                                                                                                  SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                                                                                 );
-                                                                          tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
-                                                                        }
-                                                                      });
-                                                                    }
-                                                                    break;
-                                                                  case HARDLINK:
-                                                                    {
-                                                                      String fileName       = valueMap.getString("name"          );
-                                                                      long   dateTime       = valueMap.getLong  ("dateTime"      );
-                                                                      long   size           = valueMap.getLong  ("size"          );
-                                                                      long   fragmentOffset = valueMap.getLong  ("fragmentOffset");
-                                                                      long   fragmentSize   = valueMap.getLong  ("fragmentSize"  );
-
-                                                                      // add entry data index
-                                                                      final EntryIndexData entryIndexData = new EntryIndexData(entryId,
-                                                                                                                               jobName,
-                                                                                                                               archiveType,
-                                                                                                                               storageName,
-                                                                                                                               storageDateTime,
-                                                                                                                               EntryTypes.HARDLINK,
-                                                                                                                               fileName,
-                                                                                                                               dateTime,
-                                                                                                                               size
-                                                                                                                              );
-
-                                                                      // update/insert table item
-                                                                      display.syncExec(new Runnable()
-                                                                      {
-                                                                        public void run()
-                                                                        {
-                                                                          TableItem tableItem = widgetEntryTable.getItem(index);
-
-                                                                          Widgets.updateTableItem(tableItem,
-                                                                                                  (Object)entryIndexData,
-                                                                                                  entryIndexData.storageName,
-                                                                                                  entryIndexData.name,
-                                                                                                  entryType.toString(),
-                                                                                                  Units.formatByteSize(entryIndexData.size),
-                                                                                                  SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                                                                                 );
-                                                                          tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
-                                                                        }
-                                                                      });
-                                                                    }
-                                                                    break;
-                                                                  case SPECIAL:
-                                                                    {
-
-                                                                      String name     = valueMap.getString("name"    );
-                                                                      long   dateTime = valueMap.getLong  ("dateTime");
-
-                                                                      // add entry data index
-                                                                      final EntryIndexData entryIndexData = new EntryIndexData(entryId,
-                                                                                                                               jobName,
-                                                                                                                               archiveType,
-                                                                                                                               storageName,
-                                                                                                                               storageDateTime,
-                                                                                                                               EntryTypes.SPECIAL,
-                                                                                                                               name,dateTime
-                                                                                                                              );
-
-                                                                      // update/insert table item
-                                                                      display.syncExec(new Runnable()
-                                                                      {
-                                                                        public void run()
-                                                                        {
-                                                                          TableItem tableItem = widgetEntryTable.getItem(index);
-
-                                                                          Widgets.updateTableItem(tableItem,
-                                                                                                  (Object)entryIndexData,
-                                                                                                  entryIndexData.storageName,
-                                                                                                  entryIndexData.name,
-                                                                                                  entryType.toString(),
-                                                                                                  Units.formatByteSize(entryIndexData.size),
-                                                                                                  SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                                                                                 );
-                                                                          tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
-                                                                        }
-                                                                      });
-                                                                    }
-                                                                    break;
-                                                                }
-                                                              }
-                                                              catch (IllegalArgumentException exception)
-                                                              {
-                                                                if (Settings.debugLevel > 0)
-                                                                {
-                                                                  System.err.println("ERROR: "+exception.getMessage());
-                                                                  BARControl.printStackTrace(exception);
-                                                                  System.exit(1);
-                                                                }
-                                                              }
-
-                                                              // store number of entries
-                                                              n[0] = i+1;
-
-                                                              // check if aborted
-                                                              if (isRequestUpdate() || (n[0] >= limit))
-                                                              {
-                                                                abort();
-                                                              }
-
-                                                              return Errors.NONE;
-                                                            }
-                                                          }
-                                                         );
-        BARServer.asyncCommandWait(entryTableCommand);
+              i++;
+            }
+          }
+        });
       }
       finally
       {
@@ -3936,7 +3924,7 @@ Dprintf.dprintf("cirrect?");
     /** refresh entry table items
      * @param updateOffsets segment offsets to update
      */
-    private void updateEntryTable(HashSet<Integer> updateOffsets)
+    private void updateEntryTableItems(HashSet<Integer> updateOffsets)
     {
       {
         display.syncExec(new Runnable()
@@ -3952,7 +3940,7 @@ Dprintf.dprintf("cirrect?");
         Integer offsets[] = updateOffsets.toArray(new Integer[updateOffsets.size()]);
         for (Integer offset : offsets)
         {
-          if (!updateEntryTable(offset)) break;
+          if (!updateEntryTableItems(offset)) break;
           updateOffsets.remove(offset);
         }
       }
@@ -5743,7 +5731,16 @@ Dprintf.dprintf("");
 
         widgetStorageStateFilter = Widgets.newOptionMenu(composite);
         widgetStorageStateFilter.setToolTipText(BARControl.tr("Storage states filter."));
-        widgetStorageStateFilter.setItems(new String[]{"*","ok","error","update","update requested","update/update requested","error/update/update requested","not assigned"});
+        widgetStorageStateFilter.setItems(new String[]{"*",
+                                                       BARControl.tr("ok"),
+                                                       BARControl.tr("error"),
+                                                       BARControl.tr("update"),
+                                                       BARControl.tr("update requested"),
+                                                       BARControl.tr("update/update requested"),
+                                                       BARControl.tr("error/update/update requested"),
+                                                       BARControl.tr("not assigned")
+                                                      }
+                                         );
         widgetStorageStateFilter.setText("*");
         Widgets.layout(widgetStorageStateFilter,0,4,TableLayoutData.W);
         widgetStorageStateFilter.addSelectionListener(new SelectionListener()
@@ -5751,7 +5748,6 @@ Dprintf.dprintf("");
           @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
-Dprintf.dprintf("");
           }
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -5771,9 +5767,7 @@ Dprintf.dprintf("");
               case 6:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR,IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED); storageEntityState = EntityStates.ANY;  break;
               case 7:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
               default: storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               storageEntityState = EntityStates.ANY;  break;
-
             }
-Dprintf.dprintf("");
             updateStorageTreeTableThread.triggerUpdateStorageState(storageIndexStateSet,storageEntityState);
           }
         });
@@ -6234,14 +6228,13 @@ Dprintf.dprintf("remove");
 
         widgetEntryTypeFilter = Widgets.newOptionMenu(composite);
         widgetEntryTypeFilter.setToolTipText(BARControl.tr("Entry type."));
-        widgetEntryTypeFilter.setItems(new String[]{"*","files","directories","links","hardlinks","special"});
-        Widgets.setOptionMenuItems(widgetEntryTypeFilter,new Object[]{"*",          EntryTypes.ANY,
-                                                                      "files",      EntryTypes.FILE,
-                                                                      "images",     EntryTypes.IMAGE,
-                                                                      "directories",EntryTypes.DIRECTORY,
-                                                                      "links",      EntryTypes.LINK,
-                                                                      "hardlinks",  EntryTypes.HARDLINK,
-                                                                      "special",    EntryTypes.SPECIAL
+        Widgets.setOptionMenuItems(widgetEntryTypeFilter,new Object[]{"*",                         EntryTypes.ANY,
+                                                                      BARControl.tr("files"),      EntryTypes.FILE,
+                                                                      BARControl.tr("images"),     EntryTypes.IMAGE,
+                                                                      BARControl.tr("directories"),EntryTypes.DIRECTORY,
+                                                                      BARControl.tr("links"),      EntryTypes.LINK,
+                                                                      BARControl.tr("hardlinks"),  EntryTypes.HARDLINK,
+                                                                      BARControl.tr("special"),    EntryTypes.SPECIAL
                                                                      }
                                   );
         Widgets.setSelectedOptionMenuItem(widgetEntryTypeFilter,EntryTypes.ANY);
@@ -6505,10 +6498,8 @@ Dprintf.dprintf("remove");
             final int n[] = new int[]{0};
             final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE);
             busyDialog.setMaximum(storageCount[0]);
-            int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s name=%'S",
-                                                                     "*",
+            int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=%s indexModeSet=* name=%'S",
                                                                      updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
-                                                                     "*",
                                                                      updateStorageTreeTableThread.getStorageName()
                                                                     ),
                                                  1,  // debugLevel
