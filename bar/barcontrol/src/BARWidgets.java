@@ -693,7 +693,7 @@ public class BARWidgets
   public static Combo newTime(Composite            parentComposite,
                               String               toolTipText,
                               final WidgetVariable widgetVariable,
-                              Object[]             values,
+                              String[]             values,
                               final Listener       listener
                              )
   {
@@ -702,11 +702,7 @@ public class BARWidgets
 
     combo = Widgets.newCombo(parentComposite);
     combo.setToolTipText(toolTipText);
-Dprintf.dprintf("");
-//    combo.setItems(values);
-    Widgets.setComboItems(combo,values);
-Dprintf.dprintf("");
-    combo.setText(widgetVariable.getString());
+    combo.setItems(values);
     combo.setData("showedErrorDialog",false);
 
     combo.addModifyListener(new ModifyListener()
@@ -716,24 +712,25 @@ Dprintf.dprintf("");
         Combo widget = (Combo)modifyEvent.widget;
         Color color  = COLOR_MODIFIED;
 
-        String s = widget.getText();
-        if (listener != null)
-        {
-          if (listener.getString(widgetVariable).equals(s)) color = null;
-        }
-        else
-        {
-          if (widgetVariable.getString().equals(s)) color = null;
-        }
-/*
+        String string = widget.getText();
         try
         {
-          long n = Units.parseTime(widget.getText());
-          if (widgetVariable.getLong() == n) color = null;
+          long n = Units.parseLocalizedTime(string);
+
+          if (listener != null)
+          {
+            if (Units.parseTime(listener.getString(widgetVariable)) == n) color = null;
+          }
+          else
+          {
+            if (Units.parseTime(widgetVariable.getString()) == n) color = null;
+          }
         }
-        catch (NumberFormatException exception)
+        catch (NumberFormatException exception1)
         {
-        }*/
+          // ignored
+        }
+
         widget.setBackground(color);
         widget.setData("showedErrorDialog",false);
       }
@@ -744,13 +741,11 @@ Dprintf.dprintf("");
       {
         Combo  widget = (Combo)selectionEvent.widget;
 
-//        String string = widget.getText();
-String string = Widgets.getSelectedComboItem(combo,(String)null);
-if (string == null) string = widget.getText();
-Dprintf.dprintf("string=%s",string);
+        long   n      = 0;
+        String string = widget.getText();
         try
         {
-          long n = Units.parseTime(string);
+          n      = Units.parseLocalizedTime(string);
           string = Units.formatTime(n);
         }
         catch (NumberFormatException exception)
@@ -758,8 +753,15 @@ Dprintf.dprintf("string=%s",string);
           if (!(Boolean)widget.getData("showedErrorDialog"))
           {
             widget.setData("showedErrorDialog",true);
-            Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
-Dprintf.dprintf("");
+            Dialogs.error(shell,BARControl.tr("''{0}'' is not valid time!\n\nEnter a time in the format ''n<{1}|{2}|{3}|{4}|{5}>''",
+                                              string,
+                                              BARControl.tr("weeks"),
+                                              BARControl.tr("days"),
+                                              BARControl.tr("h"),
+                                              BARControl.tr("mins"),
+                                              BARControl.tr("s")
+                                             )
+                         );
           }
           widget.forceFocus();
           return;
@@ -773,20 +775,18 @@ Dprintf.dprintf("");
         {
           widgetVariable.set(string);
         }
-        widget.setText(string);
+        widget.setText(Units.formatLocalizedTime(n));
         widget.setBackground(null);
       }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Combo  widget = (Combo)selectionEvent.widget;
-//        String string = widget.getText();
-String string = Widgets.getSelectedComboItem(combo,(String)null);
-Dprintf.dprintf("string=%s",string);
-if (string == null) string = widget.getText();
-Dprintf.dprintf("string=%s",string);
+
+        long   n      = 0;
+        String string = widget.getText();
         try
         {
-          long  n = Units.parseTime(string);
+          n      = Units.parseLocalizedTime(string);
           string = Units.formatTime(n);
         }
         catch (NumberFormatException exception)
@@ -794,8 +794,15 @@ Dprintf.dprintf("string=%s",string);
           if (!(Boolean)widget.getData("showedErrorDialog"))
           {
             widget.setData("showedErrorDialog",true);
-            Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
-Dprintf.dprintf("");
+            Dialogs.error(shell,BARControl.tr("''{0}'' is not valid time!\n\nEnter a time in the format ''n<{1}|{2}|{3}|{4}|{5}>''",
+                                              string,
+                                              BARControl.tr("weeks"),
+                                              BARControl.tr("days"),
+                                              BARControl.tr("h"),
+                                              BARControl.tr("mins"),
+                                              BARControl.tr("s")
+                                             )
+                         );
           }
           widget.forceFocus();
           return;
@@ -810,9 +817,7 @@ Dprintf.dprintf("");
           widgetVariable.set(string);
         }
 
-Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %s",string);
-//        widget.setText(string);
-        Widgets.setSelectedComboItem(combo,string);
+        widget.setText(Units.formatLocalizedTime(n));
         widget.setBackground(null);
       }
     });
@@ -826,13 +831,12 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %s",stri
       public void focusLost(FocusEvent focusEvent)
       {
         Combo  widget = (Combo)focusEvent.widget;
-//        String string = widget.getText();
-String string = Widgets.getSelectedComboItem(combo,(String)null);
-if (string == null) string = widget.getText();
-Dprintf.dprintf("string=%s",string);
+
+        long   n      = 0;
+        String string = widget.getText();
         try
         {
-          long n = Units.parseTime(string);
+          n      = Units.parseLocalizedTime(string);
           string = Units.formatTime(n);
         }
         catch (NumberFormatException exception)
@@ -840,25 +844,30 @@ Dprintf.dprintf("string=%s",string);
           if (!(Boolean)widget.getData("showedErrorDialog"))
           {
             widget.setData("showedErrorDialog",true);
-            Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
-            widget.forceFocus();
+            Dialogs.error(shell,BARControl.tr("''{0}'' is not valid time!\n\nEnter a time in the format ''n<{1}|{2}|{3}|{4}|{5}>''",
+                                              string,
+                                              BARControl.tr("weeks"),
+                                              BARControl.tr("days"),
+                                              BARControl.tr("h"),
+                                              BARControl.tr("mins"),
+                                              BARControl.tr("s")
+                                             )
+                         );
           }
+          widget.forceFocus();
+          return;
         }
 
         if (listener != null)
         {
-Dprintf.dprintf("");
           listener.setString(widgetVariable,string);
         }
         else
         {
-Dprintf.dprintf("");
           widgetVariable.set(string);
         }
 
-Dprintf.dprintf("");
-//        widget.setText(string);
-        Widgets.setSelectedComboItem(combo,string);
+        widget.setText(Units.formatLocalizedTime(n));
         widget.setBackground(null);
       }
     });
@@ -868,16 +877,46 @@ Dprintf.dprintf("");
         {
           void modified(Widget widget, WidgetVariable variable)
           {
-Dprintf.dprintf("modfffffffffffffffffff");
-            combo.setText(listener.getString(widgetVariable));
+            long n = 0;
+            try
+            {
+              n = Units.parseLocalizedTime(listener.getString(widgetVariable));
+            }
+            catch (NumberFormatException exception1)
+            {
+              try
+              {
+                n = Units.parseTime(listener.getString(widgetVariable));
+              }
+              catch (NumberFormatException exception2)
+              {
+                // ignored
+              }
+            }
+            combo.setText(Units.formatLocalizedTime(n));
           }
         }
       : new WidgetModifyListener(combo,widgetVariable)
         {
           public String getString(WidgetVariable variable)
           {
-//            return Units.formatByteSize(variable.getLong());
-            return variable.getString();
+            long n = 0;
+            try
+            {
+              n = Units.parseLocalizedTime(variable.getString());
+            }
+            catch (NumberFormatException exception1)
+            {
+              try
+              {
+                n = Units.parseTime(variable.getString());
+              }
+              catch (NumberFormatException exception2)
+              {
+                // ignored
+              }
+            }
+            return Units.formatLocalizedTime(n);
           }
         };
     Widgets.addModifyListener(widgetModifiedListener);
@@ -889,14 +928,44 @@ Dprintf.dprintf("modfffffffffffffffffff");
       }
     });
 
+    long n = 0;
     if (listener != null)
     {
-      combo.setText(listener.getString(widgetVariable));
+      try
+      {
+        n = Units.parseLocalizedTime(listener.getString(widgetVariable));
+      }
+      catch (NumberFormatException exception1)
+      {
+        try
+        {
+          n = Units.parseTime(listener.getString(widgetVariable));
+        }
+        catch (NumberFormatException exception2)
+        {
+          // ignored
+        }
+      }
     }
     else
     {
-      combo.setText(widgetVariable.getString());
+      try
+      {
+        n = Units.parseLocalizedTime(widgetVariable.getString());
+      }
+      catch (NumberFormatException exception1)
+      {
+        try
+        {
+          n = Units.parseTime(widgetVariable.getString());
+        }
+        catch (NumberFormatException exception2)
+        {
+          // ignored
+        }
+      }
     }
+    combo.setText(Units.formatLocalizedTime(n));
 
     return combo;
   }
@@ -911,7 +980,7 @@ Dprintf.dprintf("modfffffffffffffffffff");
   public static Combo newTime(Composite            parentComposite,
                               String               toolTipText,
                               final WidgetVariable widgetVariable,
-                              Object[]             values
+                              String[]             values
                              )
   {
     return newTime(parentComposite,toolTipText,widgetVariable,values,(Listener)null);
