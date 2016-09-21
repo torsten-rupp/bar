@@ -19,7 +19,9 @@
   * removed macro %last for archive names
   * support full-text-search in database
   * BARControl: removed "connector" button in restore tab;
-    search is automatically filtered by selected entities
+    search is automatically filtered by selected entities,
+  * BARControl: new restore dialog with list, destination
+    and directory content option
   * Added test button for scripts
   * added option --mount: mount/unmount devices before/after
     execution of job
