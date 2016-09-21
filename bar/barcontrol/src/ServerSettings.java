@@ -514,13 +514,13 @@ public class ServerSettings
         combo = BARWidgets.newTime(subComposite,
                                    BARControl.tr("Index database keep time for not existing storages."),
                                    indexDatabaseKeepTime,
-                                   new Object[]{"0",                    "0",
-                                                BARControl.tr("1day"),  "1days",
-                                                BARControl.tr("3days"), "3days",
-                                                BARControl.tr("1week"), "7days",
-                                                BARControl.tr("2weeks"),"14days",
-                                                BARControl.tr("3weeks"),"21days",
-                                                BARControl.tr("30days"),"30days"
+                                   new String[]{"0",
+                                                BARControl.tr("1day"),
+                                                BARControl.tr("3days"),
+                                                BARControl.tr("1week"),
+                                                BARControl.tr("2weeks"),
+                                                BARControl.tr("3weeks"),
+                                                BARControl.tr("30days")
                                                }
                                   );
         Widgets.layout(combo,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);

@@ -924,7 +924,7 @@ class Units
   }
 
   /** get time string
-   * @param n time
+   * @param n time [s]
    * @return string
    */
   public static String getTime(double n)
@@ -937,21 +937,35 @@ class Units
   }
 
   /** get time unit
-   * @param n time
+   * @param n time [s]
    * @return unit
    */
   public static String getTimeUnit(double n)
   {
-    if      (((long)n % (7L*24L*60L*60L)) == 0) return "weeks";
-    else if (((long)n % (   24L*60L*60L)) == 0) return "days";
+    if      (((long)n % (7L*24L*60L*60L)) == 0) return (((long)n / (7L*24L*60L*60L)) != 1) ? "weeks" : "week";
+    else if (((long)n % (   24L*60L*60L)) == 0) return (((long)n / (   24L*60L*60L)) != 1) ? "days"  : "day";
     else if (((long)n % (       60L*60L)) == 0) return "h";
     else if (((long)n % (           60L)) == 0) return "min";
     else                                        return "s";
   }
 
-  /** parse byte size string
+  /** get localized time unit
+   * @param n time [s]
+   * @return localized unit
+   */
+  public static String getLocalizedTimeUnit(double n)
+  {
+    if      (((long)n > 0) && (((long)n % (7L*24L*60L*60L)) == 0)) return (((long)n / (7L*24L*60L*60L)) != 1) ? BARControl.tr("weeks") : BARControl.tr("week");
+    else if (((long)n > 0) && (((long)n % (   24L*60L*60L)) == 0)) return (((long)n / (   24L*60L*60L)) != 1) ? BARControl.tr("days" ) : BARControl.tr("day" );
+    else if (((long)n > 0) && (((long)n % (       60L*60L)) == 0)) return BARControl.tr("h");
+    else if (((long)n > 0) && (((long)n % (           60L)) == 0)) return BARControl.tr("min");
+    else if ((long)n > 0)                                          return BARControl.tr("s");
+    else                                                           return "";
+  }
+
+  /** parse time string
    * @param string string to parse (<n>.<n>(weeks|days|h|min|s)
-   * @return time
+   * @return time [s]
    */
   public static long parseTime(String string)
     throws NumberFormatException
@@ -1024,9 +1038,91 @@ class Units
     }
   }
 
-  /** parse to,e string
+  /** parse localized time string
    * @param string string to parse (<n>.<n>(weeks|days|h|min|s)
-   * @param defaultValue default value if number cannot be parsed
+   * @return time [s]
+   */
+  public static long parseLocalizedTime(String string)
+    throws NumberFormatException
+  {
+    final String WEEK    = BARControl.tr("week"   ).toUpperCase();
+    final String WEEKS   = BARControl.tr("weeks"  ).toUpperCase();
+    final String DAY     = BARControl.tr("day"    ).toUpperCase();
+    final String DAYS    = BARControl.tr("days"   ).toUpperCase();
+    final String H       = BARControl.tr("h"      ).toUpperCase();
+    final String HOUR    = BARControl.tr("hour"   ).toUpperCase();
+    final String HOURS   = BARControl.tr("hours"  ).toUpperCase();
+    final String M       = BARControl.tr("m"      ).toUpperCase();
+    final String MIN     = BARControl.tr("min"    ).toUpperCase();
+    final String MINS    = BARControl.tr("mins"   ).toUpperCase();
+    final String S       = BARControl.tr("s"      ).toUpperCase();
+    final String SECOND  = BARControl.tr("second" ).toUpperCase();
+    final String SECONDS = BARControl.tr("seconds").toUpperCase();
+
+    string = string.toUpperCase();
+
+    // try to parse with default locale
+    if       (string.endsWith(WEEK))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-WEEK.length()))*7L*24L*60L*60L);
+    }
+    if       (string.endsWith(WEEKS))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-WEEKS.length()))*7L*24L*60L*60L);
+    }
+    else if (string.endsWith(DAY))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-DAY.length()))*24L*60L*60L);
+    }
+    else if (string.endsWith(DAYS))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-DAYS.length()))*24L*60L*60L);
+    }
+    else if (string.endsWith(H))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-H.length()))*60L*60L);
+    }
+    else if (string.endsWith(HOUR))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-HOUR.length()))*60L*60L);
+    }
+    else if (string.endsWith(HOURS))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-HOURS.length()))*60L*60L);
+    }
+    else if (string.endsWith(M))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-M.length()))*60L*60L);
+    }
+    else if (string.endsWith(MIN))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-MIN.length()))*60L);
+    }
+    else if (string.endsWith(MINS))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-MINS.length()))*60L);
+    }
+    else if (string.endsWith(S))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-S.length())));
+    }
+    else if (string.endsWith(SECOND))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SECOND.length())));
+    }
+    else if (string.endsWith(SECONDS))
+    {
+      return (long)(Double.parseDouble(string.substring(0,string.length()-SECONDS.length())));
+    }
+    else
+    {
+      return (long)Double.parseDouble(string);
+    }
+  }
+
+  /** parse time string
+   * @param string string to parse (<n>.<n>(weeks|days|h|min|s)
+   * @param defaultValue default value if string cannot be parsed
    * @return time
    */
   public static long parseTime(String string, long defaultValue)
@@ -1045,13 +1141,43 @@ class Units
     return n;
   }
 
+  /** parse localized time string
+   * @param string string to parse (<n>.<n>(weeks|days|h|min|s)
+   * @param defaultValue default value if string cannot be parsed
+   * @return time
+   */
+  public static long parseLocalizedTime(String string, long defaultValue)
+  {
+    long n;
+
+    try
+    {
+      n = Units.parseLocalizedTime(string);
+    }
+    catch (NumberFormatException exception)
+    {
+      n = defaultValue;
+    }
+
+    return n;
+  }
+
   /** format time
-   * @param n time
+   * @param n time [s]
    * @return string with unit
    */
   public static String formatTime(long n)
   {
     return getTime(n)+getTimeUnit(n);
+  }
+
+  /** format time localized
+   * @param n time [s]
+   * @return localized string with unit
+   */
+  public static String formatLocalizedTime(long n)
+  {
+    return getTime(n)+getLocalizedTimeUnit(n);
   }
 }
 
