@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-09-21 11:42+0200\n"
-"PO-Revision-Date: 2016-09-21 09:58+0100\n"
+"POT-Creation-Date: 2016-09-21 11:56+0200\n"
+"PO-Revision-Date: 2016-09-21 12:00+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: DE\n"
@@ -493,8 +493,8 @@ msgid "Jobs directory."
 msgstr "Verzeichnis mit Aufträgen."
 
 #: src/ServerSettings.java:471
-msgid "Max. continuous size"
-msgstr "Max. Größe fortlaufende Sicherungen"
+msgid "Max. continuous entry size"
+msgstr "Max. Größe Eintrag in fortlaufender Sicherung"
 
 #: src/ServerSettings.java:478
 msgid "Size limit for continuous stored entries."
@@ -813,7 +813,7 @@ msgstr "Befehl für Erzeugung eines Abbilds."
 #: src/ServerSettings.java:929 src/ServerSettings.java:1103
 #: src/ServerSettings.java:1278 src/ServerSettings.java:1453
 msgid "ECC pre-command"
-msgstr "Befehlszeile vor dem Erstellen Fehlerkorrekturcodes"
+msgstr "Befehlszeile vor dem Erstellen von Fehlerkorrekturcodes"
 
 #: src/ServerSettings.java:932 src/ServerSettings.java:1106
 #: src/ServerSettings.java:1281 src/ServerSettings.java:1456
@@ -825,7 +825,7 @@ msgstr ""
 #: src/ServerSettings.java:941 src/ServerSettings.java:1115
 #: src/ServerSettings.java:1290 src/ServerSettings.java:1465
 msgid "ECC post-command"
-msgstr "Befehlszeile nach dem Erstellen Fehlerkorrekturcodes"
+msgstr "Befehlszeile nach dem Erstellen von Fehlerkorrekturcodes"
 
 #: src/ServerSettings.java:944 src/ServerSettings.java:1118
 #: src/ServerSettings.java:1293 src/ServerSettings.java:1468
@@ -1002,12 +1002,12 @@ msgid "device write command."
 msgstr "Befehl zum Schreiben auf ein Gerät."
 
 #: src/ServerSettings.java:1528
-msgid "Verbosity && Log"
-msgstr "Detailierungsgrad und Logging"
+msgid "Output && Log"
+msgstr "Ausgaben && Logging"
 
 #: src/ServerSettings.java:1533
 msgid "Level"
-msgstr "Level"
+msgstr "Detailierungsgrad"
 
 #: src/ServerSettings.java:1536
 msgid "Verbosity level."
@@ -1099,11 +1099,11 @@ msgstr "Indexoperationen"
 
 #: src/ServerSettings.java:1892
 msgid "Log continous operations."
-msgstr "Kontinuierliche Operation in Log schreiben."
+msgstr "Kontinuierliche Operationen in Log schreiben."
 
 #: src/ServerSettings.java:1894
 msgid "continous operations"
-msgstr "Kontinuierliche Operation"
+msgstr "Kontinuierliche Operationen"
 
 #: src/ServerSettings.java:1926 src/ServerSettings.java:1928
 msgid "all"
@@ -3966,6 +3966,9 @@ msgstr "Anzahl Ausführungen"
 #: src/TabStatus.java:2456
 msgid "Average execution time"
 msgstr "Durchschnittliche Ausführungszeit"
+
+#~ msgid "Verbosity && Log"
+#~ msgstr "Detailierungsgrad und Logging"
 
 #, fuzzy
 #~ msgid ""

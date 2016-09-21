@@ -468,7 +468,7 @@ public class ServerSettings
       Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
       row++;
 
-      label = Widgets.newLabel(composite,BARControl.tr("Max. continuous size")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Max. continuous entry size")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       subComposite.setLayout(new TableLayout(0.0,0.0));
@@ -1524,8 +1524,8 @@ public class ServerSettings
       }
     }
 
-    // verbosity+log
-    composite = Widgets.addTab(tabFolder,BARControl.tr("Verbosity && Log"));
+    // output+log
+    composite = Widgets.addTab(tabFolder,BARControl.tr("Output && Log"));
     composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
     Widgets.layout(composite,0,0,TableLayoutData.NSWE);
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-09-21 11:42+0200\n"
+"POT-Creation-Date: 2016-09-21 11:56+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -512,7 +512,7 @@ msgstr "ディレクトリサイズ"
 
 #: src/ServerSettings.java:471
 #, fuzzy
-msgid "Max. continuous size"
+msgid "Max. continuous entry size"
 msgstr "先へ"
 
 #: src/ServerSettings.java:478
@@ -1041,7 +1041,7 @@ msgid "device write command."
 msgstr ""
 
 #: src/ServerSettings.java:1528
-msgid "Verbosity && Log"
+msgid "Output && Log"
 msgstr ""
 
 #: src/ServerSettings.java:1533
