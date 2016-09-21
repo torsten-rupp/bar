@@ -263,7 +263,7 @@ class BusyDialog
       widgetAbortCloseButton = new Button(composite,SWT.CENTER|SWT.BORDER);
       widgetAbortCloseButton.setText(BusyDialog.tr("Abort"));
       widgetAbortCloseButton.setEnabled((flags & ABORT_CLOSE) != 0);
-      widgetAbortCloseButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
+      widgetAbortCloseButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,120,SWT.DEFAULT));
       widgetAbortCloseButton.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -622,7 +622,7 @@ class BusyDialog
   {
     if ((widgetMessage != null) && !dialog.isDisposed())
     {
-      display.syncExec(new Runnable()
+      display.asyncExec(new Runnable()
       {
         public void run()
         {
@@ -702,7 +702,7 @@ class BusyDialog
   {
     if (!display.isDisposed() && !dialog.isDisposed())
     {
-      display.syncExec(new Runnable()
+      display.asyncExec(new Runnable()
       {
         public void run()
         {
@@ -798,7 +798,7 @@ class BusyDialog
   {
     if (!dialog.isDisposed())
     {
-      display.syncExec(new Runnable()
+      display.asyncExec(new Runnable()
       {
         public void run()
         {
@@ -866,7 +866,7 @@ class BusyDialog
   {
     if (!dialog.isDisposed())
     {
-      display.syncExec(new Runnable()
+      display.asyncExec(new Runnable()
       {
         public void run()
         {
