@@ -52,6 +52,8 @@ import javax.crypto.NullCipher;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.eclipse.swt.widgets.Display;
+
 /****************************** Classes ********************************/
 
 /** connection error
@@ -135,7 +137,7 @@ class Command
     // --------------------------- constants --------------------------------
 
     // --------------------------- variables --------------------------------
-    private boolean aborted = false;
+    private boolean abortedFlag = false;
 
     // ------------------------ native functions ----------------------------
 
@@ -163,14 +165,14 @@ class Command
      */
     public boolean isAborted()
     {
-      return aborted;
+      return abortedFlag;
     }
 
     /** abort command
      */
     public void abort()
     {
-      aborted = true;
+      abortedFlag = true;
     }
   }
 
@@ -224,7 +226,6 @@ class Command
    */
   Command(String commandString, int debugLevel, int timeout, ResultHandler resultHandler, Handler handler)
   {
-
     this.id               = getCommandId();
     this.string           = commandString;
     this.errorCode        = Errors.UNKNOWN;
@@ -311,7 +312,8 @@ class Command
    */
   public boolean isAborted()
   {
-    return abortedFlag;
+    return    abortedFlag
+           || ((resultHandler != null) && resultHandler.isAborted());
   }
 
   /** set aborted
@@ -417,9 +419,10 @@ class Command
     return !timeoutFlag && (completedFlag || abortedFlag);
   }
 
+//TODO: remove
   /** wait until commmand completed
    */
-  public void waitCompleted()
+  public void XwaitCompleted()
   {
     waitCompleted(WAIT_FOREVER);
   }
@@ -673,7 +676,7 @@ class Command
    */
   public String toString()
   {
-    return "Command {id="+id+", errorCode="+errorCode+", error="+errorMessage+", completedFlag="+completedFlag+", results="+result.size()+"}";
+    return "Command {id="+id+", errorCode="+errorCode+", error="+errorMessage+", completedFlag="+completedFlag+", results="+result.size()+": "+string+"}";
   }
 
   private static synchronized long getCommandId()
@@ -989,6 +992,7 @@ public class BARServer
 
   // --------------------------- variables --------------------------------
   private static Object         lock = new Object();
+  private static Display        display;
   private static String         name;
   private static int            port;
 
@@ -1019,7 +1023,7 @@ public class BARServer
    * @param tlsPort TLS port number of 0
    * @param serverPassword server password
    */
-  public static void connect(String name, int port, int tlsPort, String serverPassword, String serverKeyFileName)
+  public static void connect(Display display, String name, int port, int tlsPort, String serverPassword, String serverKeyFileName)
   {
     Socket         socket = null;
     BufferedWriter output = null;
@@ -1363,16 +1367,30 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
 
       // setup new connection
-      BARServer.name   = name;
-      BARServer.port   = socket.getPort();
-      BARServer.socket = socket;
-      BARServer.input  = input;
-      BARServer.output = output;
+      BARServer.display = display;
+      BARServer.name    = name;
+      BARServer.port    = socket.getPort();
+      BARServer.socket  = socket;
+      BARServer.input   = input;
+      BARServer.output  = output;
     }
 
     // start read thread
     readThread = new ReadThread(input);
     readThread.start();
+  }
+
+  /** connect to BAR server
+   * @param name host name
+   * @param port host port number or 0
+   * @param tlsPort TLS port number of 0
+   * @param serverPassword server password
+   * @param serverKeyFileName server key file name
+   */
+  public static void connect(String name, int port, int tlsPort, String serverPassword, String serverKeyFileName)
+  {
+Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    connect((Display)null,name,port,tlsPort,serverPassword,serverKeyFileName);
   }
 
   /** disconnect from BAR server
@@ -1709,15 +1727,44 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                      BusyIndicator busyIndicator
                                     )
   {
+    final int SLEEP_TIME = 250;  // [ms]
+
+    final Display display = Display.getDefault();
+    long    t0;
+
     // process results until error, completed, or aborted
+    if ((Thread.currentThread() == display.getThread()))
+    {
+      display.update();
+    }
     while (   ((busyIndicator == null) || !busyIndicator.isAborted())
-           && !command.waitCompleted(250)
+           && !command.isCompleted()
+           && !command.isAborted()
           )
     {
+      if ((Thread.currentThread() == display.getThread()))
+      {
+        final boolean done[] = new boolean[]{ false };
+        display.timerExec(250,new Runnable() { public void run() { done[0] = true; display.wake(); } });
+
+        while (!done[0] && !display.readAndDispatch())
+        {
+          display.sleep();
+        }
+      }
+      else
+      {
+        command.waitCompleted(SLEEP_TIME);
+      }
+
       if (busyIndicator != null)
       {
         busyIndicator.busy(0);
       }
+    }
+    if (command.isAborted())
+    {
+      return Errors.ABORTED;
     }
 
     // update busy indicator, check if aborted
@@ -1847,11 +1894,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param handler handler
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String                 commandString,
-                                    int                   debugLevel,
-                                    Command.ResultHandler resultHandler,
-                                    Command.Handler       handler
-                                   )
+  public static int executeCommand(String                commandString,
+                                   int                   debugLevel,
+                                   Command.ResultHandler resultHandler,
+                                   Command.Handler       handler
+                                  )
   {
     return executeCommand(commandString,debugLevel,(String[])null,resultHandler,handler);
   }
@@ -1861,15 +1908,33 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param debugLevel debug level (0..n)
    * @param errorMessage error message or null
    * @param resultHandler result handler
+   * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String                 commandString,
-                                    int                   debugLevel,
-                                    final String[]        errorMessage,
-                                    Command.ResultHandler resultHandler
-                                   )
+  public static int executeCommand(String                commandString,
+                                   int                   debugLevel,
+                                   final String[]        errorMessage,
+                                   Command.ResultHandler resultHandler,
+                                   BusyIndicator         busyIndicator
+                                  )
   {
-    return executeCommand(commandString,debugLevel,errorMessage,resultHandler,(Command.Handler)null);
+    return executeCommand(commandString,debugLevel,errorMessage,resultHandler,(Command.Handler)null,busyIndicator);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param errorMessage error message or null
+   * @param resultHandler result handler
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String                commandString,
+                                   int                   debugLevel,
+                                   final String[]        errorMessage,
+                                   Command.ResultHandler resultHandler
+                                  )
+  {
+    return executeCommand(commandString,debugLevel,errorMessage,resultHandler,(BusyIndicator)null);
   }
 
   /** execute command
@@ -3065,7 +3130,6 @@ throw new Error("NYI");
       // add root shortcuts
       BARServer.executeCommand(StringParser.format("ROOT_LIST"),
                                1,  // debugLevel
-                               null,  // errorMessage
                                new Command.ResultHandler()
                                {
                                  public int handle(int i, ValueMap valueMap)
@@ -3077,8 +3141,7 @@ throw new Error("NYI");
 
                                    return Errors.NONE;
                                  }
-                               },
-                               null  // handler
+                               }
                               );
 
       shortcutList.clear();

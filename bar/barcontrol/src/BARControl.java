@@ -2037,7 +2037,8 @@ public class BARControl
                                        );
               try
               {
-                BARServer.connect(loginData.serverName,
+                BARServer.connect(display,
+                                  loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
                                   loginData.password,
@@ -2069,7 +2070,8 @@ public class BARControl
               {
                 try
                 {
-                  BARServer.connect(loginData.serverName,
+                  BARServer.connect(display,
+                                    loginData.serverName,
                                     loginData.serverPort,
                                     loginData.serverTLSPort,
                                     loginData.password,
@@ -2131,7 +2133,8 @@ public class BARControl
             {
               try
               {
-                BARServer.connect(loginData.serverName,
+                BARServer.connect(display,
+                                  loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
                                   loginData.password,
@@ -2566,7 +2569,8 @@ public class BARControl
           {
             try
             {
-              BARServer.connect(loginData.serverName,
+              BARServer.connect(display,
+                                loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
                                 loginData.password,
@@ -2602,7 +2606,8 @@ public class BARControl
             // try to connect to server
             try
             {
-              BARServer.connect(loginData.serverName,
+              BARServer.connect(display,
+                                loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
                                 loginData.password,
@@ -3434,7 +3439,8 @@ Dprintf.dprintf("still not supported");
             // try to connect to server with preset data
             try
             {
-              BARServer.connect(loginData.serverName,
+              BARServer.connect(display,
+                                loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
                                 loginData.password,
@@ -3452,7 +3458,8 @@ Dprintf.dprintf("still not supported");
             // try to connect to server with empty password
             try
             {
-              BARServer.connect(loginData.serverName,
+              BARServer.connect(display,
+                                loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
                                 "",
@@ -3482,7 +3489,8 @@ Dprintf.dprintf("still not supported");
           // try to connect to server
           try
           {
-            BARServer.connect(loginData.serverName,
+            BARServer.connect(display,
+                              loginData.serverName,
                               loginData.serverPort,
                               loginData.serverTLSPort,
                               loginData.password,

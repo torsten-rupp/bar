@@ -5776,7 +5776,7 @@ Dprintf.dprintf("");
         button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected archives."));
         button.setEnabled(false);
-        Widgets.layout(button,0,5,TableLayoutData.DEFAULT,0,0,0,0,140,SWT.DEFAULT);
+        Widgets.layout(button,0,5,TableLayoutData.DEFAULT,0,0,0,0,160,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedIndexEvent)
         {
           @Override
@@ -6283,7 +6283,7 @@ Dprintf.dprintf("remove");
         button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected entries."));
         button.setEnabled(false);
-        Widgets.layout(button,0,5,TableLayoutData.DEFAULT,0,0,0,0,140,SWT.DEFAULT);
+        Widgets.layout(button,0,5,TableLayoutData.DEFAULT,0,0,0,0,160,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedEntryEvent)
         {
           @Override
@@ -6498,6 +6498,7 @@ Dprintf.dprintf("remove");
             final int n[] = new int[]{0};
             final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE);
             busyDialog.setMaximum(storageCount[0]);
+
             int error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=%s indexModeSet=* name=%'S",
                                                                      updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
                                                                      updateStorageTreeTableThread.getStorageName()
@@ -6515,12 +6516,21 @@ Dprintf.dprintf("remove");
                                                      n[0]++;
                                                      busyDialog.updateProgressBar(n[0]);
 
+                                                     if (busyDialog.isAborted())
+                                                     {
+                                                       abort();
+                                                     }
+
                                                      return Errors.NONE;
                                                    }
                                                  }
                                                 );
             busyDialog.close();
-            if (error != Errors.NONE)
+            if      (error == Errors.ABORTED)
+            {
+              return;
+            }
+            else if (error != Errors.NONE)
             {
               Dialogs.error(shell,BARControl.tr("Cannot mark all storages!\n\n(error: {0})",errorMessage[0]));
               return;
@@ -7784,7 +7794,7 @@ Dprintf.dprintf("remove");
       // get number of indizes with error state
       final String[] errorMessage = new String[1];
       ValueMap       valueMap     = new ValueMap();
-      if (BARServer.executeCommand("INDEX_STORAGES_INFO indexStateSet=ERROR indexModeSet=*",
+      if (BARServer.executeCommand("INDEX_STORAGES_INFO entityId=* indexStateSet=ERROR indexModeSet=* name=*",
                                    1,  // debugLevel
                                    errorMessage,
                                    valueMap
@@ -8406,7 +8416,11 @@ Dprintf.dprintf("remove");
                                              }
                                             );
         busyDialog.close();
-        if (error != Errors.NONE)
+        if      (error == Errors.ABORTED)
+        {
+          return;
+        }
+        else if (error != Errors.NONE)
         {
           Dialogs.error(shell,BARControl.tr("Cannot mark all index entries!\n\n(error: {0})",errorMessage[0]));
           return;
@@ -8780,7 +8794,7 @@ Dprintf.dprintf("");
     {
       widgetRestore = Widgets.newButton(composite,BARControl.tr("Start restore"));
       widgetRestore.setEnabled(false);
-      Widgets.layout(widgetRestore,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
+      Widgets.layout(widgetRestore,0,0,TableLayoutData.W,0,0,0,0,160,SWT.DEFAULT);
       widgetRestore.addSelectionListener(new SelectionListener()
       {
         @Override
