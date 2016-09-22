@@ -6029,7 +6029,6 @@ Dprintf.dprintf("remove");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             setAllCheckedEntries(true);
             Widgets.refreshVirtualTable(widgetEntryTable);
             checkedEntryEvent.trigger();
@@ -6046,7 +6045,6 @@ Dprintf.dprintf("remove");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             setAllCheckedEntries(false);
             Widgets.refreshVirtualTable(widgetEntryTable);
             checkedEntryEvent.trigger();
@@ -6074,7 +6072,6 @@ Dprintf.dprintf("remove");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             restore(RestoreTypes.ENTRIES,checkedEntryIdSet);
           }
         });
@@ -6482,7 +6479,7 @@ Dprintf.dprintf("remove");
                 public void run()
                 {
                   doit[0] = Dialogs.confirm(shell,
-                                            Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
+                                            Dialogs.booleanFieldUpdater(Settings.class,"showEntriesMarkInfo"),
                                             BARControl.tr("There are {0} entries. Really mark all entries?",
                                                           storageCount[0]
                                                          ),
@@ -8372,7 +8369,7 @@ Dprintf.dprintf("remove");
             public void run()
             {
               doit[0] = Dialogs.confirm(shell,
-                                        Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
+                                        Dialogs.booleanFieldUpdater(Settings.class,"showEntriesMarkInfo"),
                                         BARControl.tr("There are {0} entries. Really mark all entries?",
                                                       totalEntryCount[0]
                                                      ),
