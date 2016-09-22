@@ -2044,7 +2044,7 @@ public class TabJobs
       spinner.setMinimum(0);
       spinner.setMaximum(65535);
       spinner.setEnabled(false);
-      Widgets.layout(spinner,0,3,TableLayoutData.W,0,0,0,0,90,SWT.DEFAULT);
+      Widgets.layout(spinner,0,3,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT);
       Widgets.addEventListener(new WidgetEventListener(spinner,selectJobEvent)
       {
         @Override
