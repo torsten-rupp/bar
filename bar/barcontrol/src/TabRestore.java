@@ -2406,9 +2406,12 @@ Dprintf.dprintf("cirrect?");
                 IndexData indexData = (IndexData)treeItem.getData();
                 Widgets.removeTreeItem(widgetStorageTree,treeItem);
 
-                setStorageList(indexData.id,false);
+                if (indexData != null)
+                {
+                  setStorageList(indexData.id,false);
 //TODO: remove?
-                indexData.clearTreeItem();
+                  indexData.clearTreeItem();
+                }
               }
             }
           }
@@ -2598,12 +2601,15 @@ Dprintf.dprintf("cirrect?");
           {
             for (TreeItem treeItem : removeStorageTreeItemSet)
             {
-              IndexData indexData = (IndexData)treeItem.getData();
               Widgets.removeTreeItem(widgetStorageTree,treeItem);
 
-              setStorageList(indexData.id,false);
+              IndexData indexData = (IndexData)treeItem.getData();
+              if (indexData != null)
+              {
+                setStorageList(indexData.id,false);
 //TODO: remove?
-              indexData.clearTreeItem();
+                indexData.clearTreeItem();
+              }
             }
           }
         });
@@ -4828,7 +4834,10 @@ Dprintf.dprintf("cirrect?");
           for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
           {
             IndexData indexData = (IndexData)subTreeItem.getData();
-            setStorageList(indexData.id,false);
+            if (indexData != null)
+            {
+              setStorageList(indexData.id,false);
+            }
           }
 
           // close sub-tree
@@ -4852,6 +4861,7 @@ Dprintf.dprintf("cirrect?");
                      || (treeItem.getData() instanceof EntityIndexData)
                     )
             {
+Dprintf.dprintf("");
               // expand/collapse sub-tree
               Event treeEvent = new Event();
               treeEvent.item = treeItem;
@@ -4866,14 +4876,17 @@ Dprintf.dprintf("cirrect?");
             }
             else if (treeItem.getData() instanceof StorageIndexData)
             {
-              boolean          isChecked        = treeItem.getChecked();
               StorageIndexData storageIndexData = (StorageIndexData)treeItem.getData();
+              if (storageIndexData != null)
+              {
+                boolean isChecked = treeItem.getChecked();
 
-              // get check
-              setStorageList(storageIndexData.id,isChecked);
+                // set check
+                setStorageList(storageIndexData.id,isChecked);
 
-              // trigger update checked
-              checkedIndexEvent.trigger();
+                // trigger update checked
+                checkedIndexEvent.trigger();
+              }
             }
           }
         }
