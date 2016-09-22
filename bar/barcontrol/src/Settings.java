@@ -548,9 +548,10 @@ public class Settings
   public static boolean               overwriteEntriesFlag            = false;
 
   // flags
-//TODO
-//  public static boolean               showEntriesExceededInfo         = true;
-  public static boolean               showEntriesExceededInfo         = false;
+//TODO: preference file
+  public static boolean               showEntriesExceededInfo         = true;
+//TODO: preference file
+  public static boolean               showEntriesMarkInfo             = true;
 
   // debug
   public static int                   debugLevel                      = 0;
