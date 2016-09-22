@@ -2044,7 +2044,7 @@ public class TabJobs
       spinner.setMinimum(0);
       spinner.setMaximum(65535);
       spinner.setEnabled(false);
-      Widgets.layout(spinner,0,3,TableLayoutData.W,0,0,0,0,70,SWT.DEFAULT);
+      Widgets.layout(spinner,0,3,TableLayoutData.W,0,0,0,0,90,SWT.DEFAULT);
       Widgets.addEventListener(new WidgetEventListener(spinner,selectJobEvent)
       {
         @Override
@@ -2428,19 +2428,21 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-
-              for (TreeItem treeItem : widgetFileTree.getSelection())
+              MenuItem menuItem = (MenuItem)selectionEvent.widget;
+              if (menuItem.getSelection())
               {
-                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                fileTreeData.include();
-                switch (fileTreeData.fileType)
+                for (TreeItem treeItem : widgetFileTree.getSelection())
                 {
-                  case FILE:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
-                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_INCLUDED); break;
-                  case LINK:      treeItem.setImage(IMAGE_LINK_INCLUDED);      break;
-                  case HARDLINK:  treeItem.setImage(IMAGE_LINK_INCLUDED);      break;
-                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                  FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                  fileTreeData.include();
+                  switch (fileTreeData.fileType)
+                  {
+                    case FILE:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                    case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_INCLUDED); break;
+                    case LINK:      treeItem.setImage(IMAGE_LINK_INCLUDED);      break;
+                    case HARDLINK:  treeItem.setImage(IMAGE_LINK_INCLUDED);      break;
+                    case SPECIAL:   treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                  }
                 }
               }
             }
@@ -2456,17 +2458,21 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              for (TreeItem treeItem : widgetFileTree.getSelection())
+              MenuItem menuItem = (MenuItem)selectionEvent.widget;
+              if (menuItem.getSelection())
               {
-                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                fileTreeData.excludeByList();
-                switch (fileTreeData.fileType)
+                for (TreeItem treeItem : widgetFileTree.getSelection())
                 {
-                  case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
-                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
-                  case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                  case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                  fileTreeData.excludeByList();
+                  switch (fileTreeData.fileType)
+                  {
+                    case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                    case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
+                    case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                    case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                    case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  }
                 }
               }
             }
@@ -2482,17 +2488,21 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              for (TreeItem treeItem : widgetFileTree.getSelection())
+              MenuItem menuItem = (MenuItem)selectionEvent.widget;
+              if (menuItem.getSelection())
               {
-                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                fileTreeData.excludeByNoBackup();
-                switch (fileTreeData.fileType)
+                for (TreeItem treeItem : widgetFileTree.getSelection())
                 {
-                  case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
-                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
-                  case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                  case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                  fileTreeData.excludeByNoBackup();
+                  switch (fileTreeData.fileType)
+                  {
+                    case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                    case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
+                    case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                    case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                    case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  }
                 }
               }
             }
@@ -2508,17 +2518,21 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              for (TreeItem treeItem : widgetFileTree.getSelection())
+              MenuItem menuItem = (MenuItem)selectionEvent.widget;
+              if (menuItem.getSelection())
               {
-                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                fileTreeData.excludeByNoDump();
-                switch (fileTreeData.fileType)
+                for (TreeItem treeItem : widgetFileTree.getSelection())
                 {
-                  case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
-                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
-                  case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                  case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                  case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                  fileTreeData.excludeByNoDump();
+                  switch (fileTreeData.fileType)
+                  {
+                    case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                    case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
+                    case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                    case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
+                    case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  }
                 }
               }
             }
@@ -2534,17 +2548,21 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              for (TreeItem treeItem : widgetFileTree.getSelection())
+              MenuItem menuItem = (MenuItem)selectionEvent.widget;
+              if (menuItem.getSelection())
               {
-                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                fileTreeData.none();
-                switch (fileTreeData.fileType)
+                for (TreeItem treeItem : widgetFileTree.getSelection())
                 {
-                  case FILE:      treeItem.setImage(IMAGE_FILE);      break;
-                  case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY); break;
-                  case LINK:      treeItem.setImage(IMAGE_LINK);      break;
-                  case HARDLINK:  treeItem.setImage(IMAGE_LINK);      break;
-                  case SPECIAL:   treeItem.setImage(IMAGE_FILE);      break;
+                  FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+                  fileTreeData.none();
+                  switch (fileTreeData.fileType)
+                  {
+                    case FILE:      treeItem.setImage(IMAGE_FILE);      break;
+                    case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY); break;
+                    case LINK:      treeItem.setImage(IMAGE_LINK);      break;
+                    case HARDLINK:  treeItem.setImage(IMAGE_LINK);      break;
+                    case SPECIAL:   treeItem.setImage(IMAGE_FILE);      break;
+                  }
                 }
               }
             }
