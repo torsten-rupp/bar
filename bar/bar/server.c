@@ -15887,8 +15887,10 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list entries fail: %s",Error_getText(error));
-    String_delete(name);
+    String_delete(destinationName);
+    String_delete(entryName);
     String_delete(storageName);
+    String_delete(jobName);
     String_delete(name);
     return;
   }
@@ -15970,6 +15972,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   String_delete(destinationName);
   String_delete(entryName);
   String_delete(storageName);
+  String_delete(jobName);
   String_delete(name);
 }
 
