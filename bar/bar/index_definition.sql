@@ -62,7 +62,8 @@ CREATE TABLE IF NOT EXISTS entities(
   type                INTEGER,
   parentJobUUID       INTEGER,
   bidFlag             INTEGER,
-  lockedFlag          INTEGER
+  lockedFlag          INTEGER,
+  comment             TEXT
 );
 CREATE INDEX ON entities (jobUUID,created,type);
 
