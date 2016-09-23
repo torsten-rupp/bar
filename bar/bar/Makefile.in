@@ -1797,7 +1797,7 @@ $(TEST_DATA_DIR)/data/sub_ignore_dir:
 	touch $@/.nobackup
 $(TEST_DATA_DIR)/data/linkdata.dat $(TEST_DATA_DIR)/data/link.dat:
 	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$(TEST_DATA_DIR)/data/linkdata.dat bs=1 count=1024 2>/dev/null
+	$(DD) if=$(DEVICE_RANDOM) of=$(TEST_DATA_DIR)/data/linkdata.dat bs=1k count=512 2>/dev/null
 	($(CD) $(@D); $(RMF) link.dat; $(LN) -s linkdata.dat link.dat)
 $(TEST_DATA_DIR)/data/link_not_existing_file.dat:
 	$(INSTALL) -d $(@D)
@@ -1808,7 +1808,7 @@ $(TEST_DATA_DIR)/data/circular_link.dat.marker:
 	touch $@
 $(TEST_DATA_DIR)/data/hardlinkdata.dat $(TEST_DATA_DIR)/data/hardlink.dat:
 	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$(TEST_DATA_DIR)/data/hardlinkdata.dat bs=1 count=1024 2>/dev/null
+	$(DD) if=$(DEVICE_RANDOM) of=$(TEST_DATA_DIR)/data/hardlinkdata.dat bs=1k count=512 2>/dev/null
 	($(CD) $(@D); $(RMF) hardlink.dat; $(LN) hardlinkdata.dat hardlink.dat)
 $(TEST_DATA_DIR)/data/file400.dat:
 	$(INSTALL) -d $(@D)

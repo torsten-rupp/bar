@@ -578,17 +578,14 @@ LOCAL_INLINE bool isSplittedArchive(const ArchiveInfo *archiveInfo)
 * Name   : isNewPartNeeded
 * Purpose: check if new archive part should be created
 * Input  : archiveInfo - archive info data
-*          headerLength      - length of header data to write
-*          headerWrittenFlag - TRUE iff header already written
-*          minBytes          - additional space needed in archive file
-*                              part
+*          minBytes    - additional space needed in archive file part
 * Output : -
-* Return : TRUE if new file part should be created, FALSE otherwise
+* Return : TRUE if new part should be created, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool isNewPartNeeded(ArchiveInfo *archiveInfo,
-                           ulong       minBytes
+LOCAL bool isNewPartNeeded(const ArchiveInfo *archiveInfo,
+                           ulong             minBytes
                           )
 {
   bool   newPartFlag;
@@ -1696,11 +1693,11 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         archiveEntryInfo->file.chunkFileData.fragmentSize   =  0LL;
 
         // set new delta base-offset
-        if (archiveEntryInfo->image.deltaSourceHandleInitFlag)
+        if (archiveEntryInfo->file.deltaSourceHandleInitFlag)
         {
           DeltaSource_setBaseOffset(&archiveEntryInfo->file.deltaSourceHandle,
-                               archiveEntryInfo->file.chunkFileData.fragmentSize
-                              );
+                                    archiveEntryInfo->file.chunkFileData.fragmentSize
+                                   );
         }
 
         /* reset compress, encrypt (do it here because data if buffered and can be
@@ -1962,7 +1959,11 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
       // create new part (if not already created)
       if (!archiveEntryInfo->image.headerWrittenFlag)
       {
-        writeImageChunks(archiveEntryInfo);
+        error = writeImageChunks(archiveEntryInfo);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
       }
 
       // get max. number of byte-compressed data blocks to write
@@ -2077,15 +2078,20 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       // split
       if (newPartFlag)
       {
+        // create new part (if not already created)
+        if (!archiveEntryInfo->image.headerWrittenFlag)
+        {
+          error = writeImageChunks(archiveEntryInfo);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+        assert(archiveEntryInfo->hardLink.headerWrittenFlag);
+
         // write last compressed block (if any)
         if (byteLength > 0L)
         {
-          // create new part (if not already created)
-          if (!archiveEntryInfo->image.headerWrittenFlag)
-          {
-            writeImageChunks(archiveEntryInfo);
-          }
-
           // encrypt block
           error = Crypt_encryptBytes(&archiveEntryInfo->image.cryptInfo,
                                      archiveEntryInfo->image.byteBuffer,
@@ -2205,7 +2211,12 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
           return error;
         }
-        assert(archiveEntryInfo->image.headerWrittenFlag);
+
+        // reset header "written"
+        archiveEntryInfo->image.headerWrittenFlag = FALSE;
+
+        // mark header "not written"
+        archiveEntryInfo->image.headerWrittenFlag = FALSE;
 
         // create archive file
         error = createArchiveFile(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
@@ -2249,9 +2260,6 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                 );
         }
 
-        // mark header "not written"
-        archiveEntryInfo->image.headerWrittenFlag = FALSE;
-
         // store block offset, count for next fragment
         archiveEntryInfo->image.chunkImageData.blockOffset += archiveEntryInfo->image.chunkImageData.blockCount;
         archiveEntryInfo->image.chunkImageData.blockCount  =  0;
@@ -2260,8 +2268,8 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         if (archiveEntryInfo->image.deltaSourceHandleInitFlag)
         {
           DeltaSource_setBaseOffset(&archiveEntryInfo->image.deltaSourceHandle,
-                               archiveEntryInfo->image.chunkImageData.blockCount*(uint64)archiveEntryInfo->image.blockSize
-                              );
+                                    archiveEntryInfo->image.chunkImageData.blockCount*(uint64)archiveEntryInfo->image.blockSize
+                                   );
         }
 
         /* reset compress, encrypt (do it here because data if buffered and can be
@@ -2679,15 +2687,20 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       // split
       if (newPartFlag)
       {
+        // create new part (if not already created)
+        if (!archiveEntryInfo->hardLink.headerWrittenFlag)
+        {
+          error = writeHardLinkChunks(archiveEntryInfo);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+        assert(archiveEntryInfo->hardLink.headerWrittenFlag);
+
         // write last compressed block (if any)
         if (byteLength > 0L)
         {
-          // create new part (if not already created)
-          if (!archiveEntryInfo->hardLink.headerWrittenFlag)
-          {
-            writeHardLinkChunks(archiveEntryInfo);
-          }
-
           // encrypt block
           error = Crypt_encryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
                                      archiveEntryInfo->hardLink.byteBuffer,
@@ -2806,7 +2819,9 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
           return error;
         }
-        assert(archiveEntryInfo->hardLink.headerWrittenFlag);
+
+        // reset header "written"
+        archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
 
         // create archive file
         error = createArchiveFile(archiveEntryInfo->archiveInfo,archiveEntryInfo->indexHandle);
@@ -2863,11 +2878,11 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   =  0LL;
 
         // set new delta base-offset
-        if (archiveEntryInfo->image.deltaSourceHandleInitFlag)
+        if (archiveEntryInfo->hardLink.deltaSourceHandleInitFlag)
         {
           DeltaSource_setBaseOffset(&archiveEntryInfo->hardLink.deltaSourceHandle,
-                               archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset
-                              );
+                                    archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset
+                                   );
         }
 
         /* reset compress, encrypt (do it here because data if buffered and can be
