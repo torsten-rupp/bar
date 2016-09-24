@@ -19,7 +19,9 @@ bar (0.20) stable; urgency=low
   * removed macro %last for archive names
   * support full-text-search in database
   * BARControl: removed "connector" button in restore tab;
-    search is automatically filtered by selected entities
+    search is automatically filtered by selected entities,
+  * BARControl: new restore dialog with list, destination
+    and directory content option
   * Added test button for scripts
   * added option --mount: mount/unmount devices before/after
     execution of job
@@ -52,7 +54,7 @@ bar (0.20) stable; urgency=low
   * BARControl: fixed login credentials on command line
   * BARControl: fixed archive name editor %S, %s, _
 
- -- Torsten Rupp <torsten.rupp@gmx.net>  Thu, 01 Sep 2016 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 25 Sep 2016 00:00:00 +0200
 
 bar (0.19d) stable; urgency=low
   * fixed include of multiple entries with pattern: store

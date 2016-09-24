@@ -164,7 +164,7 @@ mkdir packages
 %doc %{_mandir}/man7/bar.7.gz
 
 %changelog
-* Thu Sep 01 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20
+* Sun Sep 25 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20
   - TLS port is now optional: if possible as SSL protected
     connection is establed via the standard plain port, too.
   - added option --archive-file-mode: stop, append or
@@ -185,7 +185,9 @@ mkdir packages
   - removed macro %%last for archive names
   - support full-text-search in database
   - BARControl: removed "connector" button in restore tab;
-    search is automatically filtered by selected entities
+    search is automatically filtered by selected entities,
+  - BARControl: new restore dialog with list, destination
+    and directory content option
   - Added test button for scripts
   - added option --mount: mount/unmount devices before/after
     execution of job
