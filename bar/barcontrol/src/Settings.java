@@ -460,35 +460,6 @@ public class Settings
 
   static final int    MAX_SERVER_HISTORY = 10;
 
-  /** archive types
-   */
-  public enum ArchiveTypes
-  {
-    NONE,
-    NORMAL,
-    FULL,
-    INCREMENTAL,
-    DIFFERENTIAL,
-    CONTINUOUS;
-
-    /** convert to string
-     * @return string
-     */
-    public String toString()
-    {
-      switch (this)
-      {
-        case NONE:         return null;
-        case NORMAL:       return BARControl.tr("normal");
-        case FULL:         return BARControl.tr("full");
-        case INCREMENTAL:  return BARControl.tr("incremental");
-        case DIFFERENTIAL: return BARControl.tr("differential");
-        case CONTINUOUS:   return BARControl.tr("continuous");
-        default:           return BARControl.tr("normal");
-      }
-    }
-  };
-
   // --------------------------- variables --------------------------------
 
   @SettingComment(text={"BARControl configuration",""})

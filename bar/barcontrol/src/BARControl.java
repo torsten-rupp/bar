@@ -782,6 +782,35 @@ class ArchiveNameParts
   }
 }
 
+/** archive types
+ */
+enum ArchiveTypes
+{
+  NONE,
+  NORMAL,
+  FULL,
+  INCREMENTAL,
+  DIFFERENTIAL,
+  CONTINUOUS;
+
+  /** convert to string
+   * @return string
+   */
+  public String toString()
+  {
+    switch (this)
+    {
+      case NONE:         return null;
+      case NORMAL:       return BARControl.tr("normal");
+      case FULL:         return BARControl.tr("full");
+      case INCREMENTAL:  return BARControl.tr("incremental");
+      case DIFFERENTIAL: return BARControl.tr("differential");
+      case CONTINUOUS:   return BARControl.tr("continuous");
+      default:           return BARControl.tr("normal");
+    }
+  }
+};
+
 /** units
  */
 class Units
@@ -1361,10 +1390,10 @@ public class BARControl
   // command line options
   private static final OptionEnumeration[] ARCHIVE_TYPE_ENUMERATION =
   {
-    new OptionEnumeration("normal",      Settings.ArchiveTypes.NORMAL),
-    new OptionEnumeration("full",        Settings.ArchiveTypes.FULL),
-    new OptionEnumeration("incremental", Settings.ArchiveTypes.INCREMENTAL),
-    new OptionEnumeration("differential",Settings.ArchiveTypes.DIFFERENTIAL),
+    new OptionEnumeration("normal",      ArchiveTypes.NORMAL),
+    new OptionEnumeration("full",        ArchiveTypes.FULL),
+    new OptionEnumeration("incremental", ArchiveTypes.INCREMENTAL),
+    new OptionEnumeration("differential",ArchiveTypes.DIFFERENTIAL),
   };
 
   private static final Option[] OPTIONS =

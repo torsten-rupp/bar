@@ -992,14 +992,14 @@ public class TabRestore
    */
   class EntityIndexData extends IndexData implements Serializable
   {
-    public String                jobUUID;
-    public String                scheduleUUID;
-    public Settings.ArchiveTypes archiveType;
-    public long                  lastCreatedDateTime;  // last date/time when some storage was created
-    public String                lastErrorMessage;     // last error message
-    public long                  totalEntryCount;
-    public long                  totalEntrySize;
-    public long                  expireDateTime;       // expire date/time or 0
+    public String       jobUUID;
+    public String       scheduleUUID;
+    public ArchiveTypes archiveType;
+    public long         lastCreatedDateTime;  // last date/time when some storage was created
+    public String       lastErrorMessage;     // last error message
+    public long         totalEntryCount;
+    public long         totalEntrySize;
+    public long         expireDateTime;       // expire date/time or 0
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
@@ -1037,15 +1037,15 @@ Dprintf.dprintf("");
      * @param totalEntrySize total size of storage [byte]
      * @param expireDateTime expire date/time (timestamp)
      */
-    EntityIndexData(long                  entityId,
-                    String                jobUUID,
-                    String                scheduleUUID,
-                    Settings.ArchiveTypes archiveType,
-                    long                  lastCreatedDateTime,
-                    String                lastErrorMessage,
-                    long                  totalEntryCount,
-                    long                  totalEntrySize,
-                    long                  expireDateTime
+    EntityIndexData(long         entityId,
+                    String       jobUUID,
+                    String       scheduleUUID,
+                    ArchiveTypes archiveType,
+                    long         lastCreatedDateTime,
+                    String       lastErrorMessage,
+                    long         totalEntryCount,
+                    long         totalEntrySize,
+                    long         expireDateTime
                    )
     {
       super(entityId);
@@ -1151,7 +1151,7 @@ Dprintf.dprintf("");
       super.readObject(in);
       jobUUID             = (String)in.readObject();
       scheduleUUID        = (String)in.readObject();
-      archiveType         = (Settings.ArchiveTypes)in.readObject();
+      archiveType         = (ArchiveTypes)in.readObject();
       lastCreatedDateTime = (Long)in.readObject();
       lastErrorMessage    = (String)in.readObject();
       totalEntryCount     = (Long)in.readObject();
@@ -1172,18 +1172,18 @@ Dprintf.dprintf("");
    */
   class StorageIndexData extends IndexData implements Serializable
   {
-    public  String                jobUUID;                  // job UUID
-    public  String                jobName;                  // job name or null
-    public  Settings.ArchiveTypes archiveType;              // archive type
-    public  String                name;                     // name
-    public  long                  lastCreatedDateTime;      // last date/time when some storage was created
-    public  IndexStates           indexState;               // state of index
-    public  IndexModes            indexMode;                // mode of index
-    public  long                  lastCheckedDateTime;      // last checked date/time
-    public  String                errorMessage;             // last error message
+    public  String       jobUUID;                  // job UUID
+    public  String       jobName;                  // job name or null
+    public  ArchiveTypes archiveType;              // archive type
+    public  String       name;                     // name
+    public  long         lastCreatedDateTime;      // last date/time when some storage was created
+    public  IndexStates  indexState;               // state of index
+    public  IndexModes   indexMode;                // mode of index
+    public  long         lastCheckedDateTime;      // last checked date/time
+    public  String       errorMessage;             // last error message
 
-    private long                  totalEntryCount;
-    private long                  totalEntrySize;
+    private long         totalEntryCount;
+    private long         totalEntrySize;
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
@@ -1231,18 +1231,18 @@ Dprintf.dprintf("");
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    StorageIndexData(long                  storageId,
-                     String                jobUUID,
-                     String                jobName,
-                     Settings.ArchiveTypes archiveType,
-                     String                name,
-                     long                  lastCreatedDateTime,
-                     long                  totalEntryCount,
-                     long                  totalEntrySize,
-                     IndexStates           indexState,
-                     IndexModes            indexMode,
-                     long                  lastCheckedDateTime,
-                     String                errorMessage
+    StorageIndexData(long         storageId,
+                     String       jobUUID,
+                     String       jobName,
+                     ArchiveTypes archiveType,
+                     String       name,
+                     long         lastCreatedDateTime,
+                     long         totalEntryCount,
+                     long         totalEntrySize,
+                     IndexStates  indexState,
+                     IndexModes   indexMode,
+                     long         lastCheckedDateTime,
+                     String       errorMessage
                     )
     {
       super(storageId);
@@ -1268,13 +1268,13 @@ Dprintf.dprintf("");
      * @param lastCreatedDateTime date/time (timestamp) when storage was created
      * @param lastCheckedDateTime last checked date/time (timestamp)
      */
-    StorageIndexData(long                  storageId,
-                     String                jobUUID,
-                     String                jobName,
-                     Settings.ArchiveTypes archiveType,
-                     String                name,
-                     long                  lastCreatedDateTime,
-                     long                  lastCheckedDateTime
+    StorageIndexData(long         storageId,
+                     String       jobUUID,
+                     String       jobName,
+                     ArchiveTypes archiveType,
+                     String       name,
+                     long         lastCreatedDateTime,
+                     long         lastCheckedDateTime
                     )
     {
       this(storageId,jobUUID,jobName,archiveType,name,lastCreatedDateTime,0L,0L,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
@@ -1287,7 +1287,7 @@ Dprintf.dprintf("");
      * @param archiveType archive type
      * @param name name of storage
      */
-    StorageIndexData(long storageId, String jobUUID, String jobName, Settings.ArchiveTypes archiveType, String name)
+    StorageIndexData(long storageId, String jobUUID, String jobName, ArchiveTypes archiveType, String name)
     {
       this(storageId,jobUUID,jobName,archiveType,name,0L,0L);
     }
@@ -1409,7 +1409,7 @@ Dprintf.dprintf("");
     {
       super.readObject(in);
       jobName             = (String)in.readObject();
-      archiveType         = (Settings.ArchiveTypes)in.readObject();
+      archiveType         = (ArchiveTypes)in.readObject();
       name                = (String)in.readObject();
       lastCreatedDateTime = (Long)in.readObject();
       totalEntryCount     = (Long)in.readObject();
@@ -2284,15 +2284,15 @@ Dprintf.dprintf("cirrect?");
                                  {
                                    try
                                    {
-                                     long                  entityId            = valueMap.getLong  ("entityId"                               );
-                                     String                jobUUID             = valueMap.getString("jobUUID"                                );
-                                     String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
-                                     Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-                                     long                  lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"                    );
-                                     String                lastErrorMessage    = valueMap.getString("lastErrorMessage"                       );
-                                     long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount"                        );
-                                     long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize"                         );
-                                     long                  expireDateTime      = valueMap.getLong  ("expireDateTime"                         );
+                                     long         entityId            = valueMap.getLong  ("entityId"                      );
+                                     String       jobUUID             = valueMap.getString("jobUUID"                       );
+                                     String       scheduleUUID        = valueMap.getString("scheduleUUID"                  );
+                                     ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
+                                     long         lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"           );
+                                     String       lastErrorMessage    = valueMap.getString("lastErrorMessage"              );
+                                     long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"               );
+                                     long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                );
+                                     long         expireDateTime      = valueMap.getLong  ("expireDateTime"                );
 
                                      // add entity data index
                                      entityIndexDataList.add(new EntityIndexData(entityId,
@@ -2494,19 +2494,19 @@ Dprintf.dprintf("cirrect?");
                                  {
                                    try
                                    {
-                                     long                  storageId           = valueMap.getLong  ("storageId"                              );
-                                     String                jobUUID             = valueMap.getString("jobUUID"                                );
-                                     String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
-                                     String                jobName             = valueMap.getString("jobName"                                );
-                                     Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-                                     String                name                = valueMap.getString("name"                                   );
-                                     long                  dateTime            = valueMap.getLong  ("dateTime"                               );
-                                     long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount"                        );
-                                     long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize"                         );
-                                     IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class           );
-                                     IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class             );
-                                     long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                    );
-                                     String                errorMessage_       = valueMap.getString("errorMessage"                           );
+                                     long         storageId           = valueMap.getLong  ("storageId"                     );
+                                     String       jobUUID             = valueMap.getString("jobUUID"                       );
+                                     String       scheduleUUID        = valueMap.getString("scheduleUUID"                  );
+                                     String       jobName             = valueMap.getString("jobName"                       );
+                                     ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
+                                     String       name                = valueMap.getString("name"                          );
+                                     long         dateTime            = valueMap.getLong  ("dateTime"                      );
+                                     long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"               );
+                                     long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                );
+                                     IndexStates  indexState          = valueMap.getEnum  ("indexState",IndexStates.class  );
+                                     IndexModes   indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class    );
+                                     long         lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"           );
+                                     String       errorMessage_       = valueMap.getString("errorMessage"                  );
 
                                      // add storage index data
                                      storageIndexDataList.add(new StorageIndexData(storageId,
@@ -2779,19 +2779,19 @@ Dprintf.dprintf("cirrect?");
                                                             {
                                                               try
                                                               {
-                                                                final long                  storageId           = valueMap.getLong  ("storageId");
-                                                                final String                jobUUID             = valueMap.getString("jobUUID");
-                                                                final String                scheduleUUID        = valueMap.getString("scheduleUUID");
-                                                                final String                jobName             = valueMap.getString("jobName");
-                                                                final Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class,Settings.ArchiveTypes.NORMAL);
-                                                                final String                name                = valueMap.getString("name");
-                                                                final long                  dateTime            = valueMap.getLong  ("dateTime");
-                                                                final long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount");
-                                                                final long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize");
-                                                                final IndexStates           indexState          = valueMap.getEnum  ("indexState",IndexStates.class);
-                                                                final IndexModes            indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class);
-                                                                final long                  lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime");
-                                                                final String                errorMessage_       = valueMap.getString("errorMessage");
+                                                                final long         storageId           = valueMap.getLong  ("storageId"                                         );
+                                                                final String       jobUUID             = valueMap.getString("jobUUID"                                           );
+                                                                final String       scheduleUUID        = valueMap.getString("scheduleUUID"                                      );
+                                                                final String       jobName             = valueMap.getString("jobName"                                           );
+                                                                final ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class,ArchiveTypes.NORMAL);
+                                                                final String       name                = valueMap.getString("name"                                              );
+                                                                final long         dateTime            = valueMap.getLong  ("dateTime"                                          );
+                                                                final long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"                                   );
+                                                                final long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                                    );
+                                                                final IndexStates  indexState          = valueMap.getEnum  ("indexState",IndexStates.class                      );
+                                                                final IndexModes   indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class                        );
+                                                                final long         lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                               );
+                                                                final String       errorMessage_       = valueMap.getString("errorMessage"                                      );
 
                                                                 // add storage index data
                                                                 storageIndexDataList.add(new StorageIndexData(storageId,
@@ -3038,16 +3038,16 @@ Dprintf.dprintf("cirrect?");
    */
   class EntryIndexData extends IndexData
   {
-    String                jobName;
-    Settings.ArchiveTypes archiveType;
-    String                storageName;
-    long                  storageDateTime;
-    EntryTypes            entryType;
-    String                name;
-    long                  dateTime;
-    long                  size;              // file/directory size
-    boolean               checked;           // true iff check mark set
-    RestoreStates         restoreState;      // current restore state
+    String        jobName;
+    ArchiveTypes  archiveType;
+    String        storageName;
+    long          storageDateTime;
+    EntryTypes    entryType;
+    String        name;
+    long          dateTime;
+    long          size;              // file/directory size
+    boolean       checked;           // true iff check mark set
+    RestoreStates restoreState;      // current restore state
 
     /** create entry data
      * @param entryId entry id
@@ -3060,7 +3060,7 @@ Dprintf.dprintf("cirrect?");
      * @param dateTime date/time (timestamp)
      * @param size size [bytes]
      */
-    EntryIndexData(long entryId, String jobName, Settings.ArchiveTypes archiveType, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
+    EntryIndexData(long entryId, String jobName, ArchiveTypes archiveType, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime, long size)
     {
       super(entryId);
       this.jobName         = jobName;
@@ -3085,7 +3085,7 @@ Dprintf.dprintf("cirrect?");
      * @param name entry name
      * @param dateTime date/time (timestamp)
      */
-    EntryIndexData(long entryId, String jobName, Settings.ArchiveTypes archiveType, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
+    EntryIndexData(long entryId, String jobName, ArchiveTypes archiveType, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
     {
       this(entryId,jobName,archiveType,storageName,storageDateTime,entryType,name,dateTime,0L);
     }
@@ -3662,12 +3662,12 @@ Dprintf.dprintf("cirrect?");
 
                                                             try
                                                             {
-                                                              String                jobName         = valueMap.getString("jobName"                                );
-                                                              Settings.ArchiveTypes archiveType     = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-                                                              long                  entryId         = valueMap.getLong  ("entryId"                                );
-                                                              final EntryTypes      entryType       = valueMap.getEnum  ("entryType",EntryTypes.class             );
-                                                              String                storageName     = valueMap.getString("storageName"                            );
-                                                              long                  storageDateTime = valueMap.getLong  ("storageDateTime"                        );
+                                                              String           jobName         = valueMap.getString("jobName"                       );
+                                                              ArchiveTypes     archiveType     = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
+                                                              long             entryId         = valueMap.getLong  ("entryId"                       );
+                                                              final EntryTypes entryType       = valueMap.getEnum  ("entryType",EntryTypes.class    );
+                                                              String           storageName     = valueMap.getString("storageName"                   );
+                                                              long             storageDateTime = valueMap.getLong  ("storageDateTime"               );
 
                                                               switch (entryType)
                                                               {
@@ -5354,7 +5354,7 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              setEntityType(Settings.ArchiveTypes.NORMAL);
+              setEntityType(ArchiveTypes.NORMAL);
             }
           });
           menuItem = Widgets.addMenuItem(subMenu,
@@ -5370,7 +5370,7 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              setEntityType(Settings.ArchiveTypes.FULL);
+              setEntityType(ArchiveTypes.FULL);
             }
           });
           menuItem = Widgets.addMenuItem(subMenu,
@@ -5386,7 +5386,7 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              setEntityType(Settings.ArchiveTypes.INCREMENTAL);
+              setEntityType(ArchiveTypes.INCREMENTAL);
             }
           });
           menuItem = Widgets.addMenuItem(subMenu,
@@ -5402,7 +5402,7 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              setEntityType(Settings.ArchiveTypes.DIFFERENTIAL);
+              setEntityType(ArchiveTypes.DIFFERENTIAL);
             }
           });
           menuItem = Widgets.addMenuItem(subMenu,
@@ -5418,7 +5418,7 @@ Dprintf.dprintf("");
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              setEntityType(Settings.ArchiveTypes.CONTINUOUS);
+              setEntityType(ArchiveTypes.CONTINUOUS);
             }
           });
         }
@@ -6728,15 +6728,15 @@ Dprintf.dprintf("remove");
                                {
                                  try
                                  {
-                                   long                  entityId            = valueMap.getLong  ("entityId"                               );
-                                   String                jobUUID             = valueMap.getString("jobUUID"                                );
-                                   String                scheduleUUID        = valueMap.getString("scheduleUUID"                           );
-                                   Settings.ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",Settings.ArchiveTypes.class);
-                                   long                  lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"                    );
-                                   String                lastErrorMessage    = valueMap.getString("lastErrorMessage"                       );
-                                   long                  totalEntryCount     = valueMap.getLong  ("totalEntryCount"                        );
-                                   long                  totalEntrySize      = valueMap.getLong  ("totalEntrySize"                         );
-                                   long                  expireDateTime      = valueMap.getLong  ("expireDateTime"                         );
+                                   long         entityId            = valueMap.getLong  ("entityId"                      );
+                                   String       jobUUID             = valueMap.getString("jobUUID"                       );
+                                   String       scheduleUUID        = valueMap.getString("scheduleUUID"                  );
+                                   ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
+                                   long         lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime"           );
+                                   String       lastErrorMessage    = valueMap.getString("lastErrorMessage"              );
+                                   long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"               );
+                                   long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                );
+                                   long         expireDateTime      = valueMap.getLong  ("expireDateTime"                );
 
                                    // add entity data index
                                    entityIndexDataList.add(new EntityIndexData(entityId,
@@ -6773,7 +6773,7 @@ Dprintf.dprintf("remove");
                                 );
     updateAssignToMenu(subSubMenu,
                        jobUUID,
-                       Settings.ArchiveTypes.NORMAL
+                       ArchiveTypes.NORMAL
                       );
 
     // add full menu items
@@ -6783,7 +6783,7 @@ Dprintf.dprintf("remove");
                                 );
     updateAssignToMenu(subSubMenu,
                        jobUUID,
-                       Settings.ArchiveTypes.FULL
+                       ArchiveTypes.FULL
                       );
 
     // add incremental menu items
@@ -6793,7 +6793,7 @@ Dprintf.dprintf("remove");
                                 );
     updateAssignToMenu(subSubMenu,
                        jobUUID,
-                       Settings.ArchiveTypes.INCREMENTAL
+                       ArchiveTypes.INCREMENTAL
                       );
 
 
@@ -6804,7 +6804,7 @@ Dprintf.dprintf("remove");
                                 );
     updateAssignToMenu(subSubMenu,
                        jobUUID,
-                       Settings.ArchiveTypes.DIFFERENTIAL
+                       ArchiveTypes.DIFFERENTIAL
                       );
 
     // add continuous menu items
@@ -6814,7 +6814,7 @@ Dprintf.dprintf("remove");
                                 );
     updateAssignToMenu(subSubMenu,
                        jobUUID,
-                       Settings.ArchiveTypes.CONTINUOUS
+                       ArchiveTypes.CONTINUOUS
                       );
 
     Widgets.addMenuSeparator(subMenu);
@@ -6852,9 +6852,9 @@ Dprintf.dprintf("remove");
    * @param jobUUID job UUID
    * @param archiveType archive type
    */
-  private void updateAssignToMenu(final Menu                  menu,
-                                  final String                jobUUID,
-                                  final Settings.ArchiveTypes archiveType
+  private void updateAssignToMenu(final Menu         menu,
+                                  final String       jobUUID,
+                                  final ArchiveTypes archiveType
                                  )
   {
     MenuItem menuItem;
@@ -6947,12 +6947,12 @@ Dprintf.dprintf("remove");
    * @param toUUIDIndexData UUID index data
    * @param archiveType archive type
    */
-  private void assignStorages(HashSet<IndexData> indexDataHashSet, String toJobUUID, String toScheduleUUID, Settings.ArchiveTypes archiveType)
+  private void assignStorages(HashSet<IndexData> indexDataHashSet, String toJobUUID, String toScheduleUUID, ArchiveTypes archiveType)
   {
     if (!indexDataHashSet.isEmpty())
     {
       long dateTime = 0;
-      if (archiveType != Settings.ArchiveTypes.NONE)
+      if (archiveType != ArchiveTypes.NONE)
       {
         dateTime = Dialogs.date(shell,BARControl.tr("Assign entity date"),(String)null,BARControl.tr("Assign"));
         if (dateTime == 0)
@@ -7043,7 +7043,7 @@ Dprintf.dprintf("remove");
    * @param toScheduleUUID schedule UUID
    * @param archiveType archive type
    */
-  private void assignStorages(IndexData indexData, String toJobUUID, String toScheduleUUID, Settings.ArchiveTypes archiveType)
+  private void assignStorages(IndexData indexData, String toJobUUID, String toScheduleUUID, ArchiveTypes archiveType)
   {
     HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
 
@@ -7056,7 +7056,7 @@ Dprintf.dprintf("remove");
    * @param toScheduleUUID schedule UUID
    * @param archiveType archive type
    */
-  private void assignStorages(String toJobUUID, String toScheduleUUID, Settings.ArchiveTypes archiveType)
+  private void assignStorages(String toJobUUID, String toScheduleUUID, ArchiveTypes archiveType)
   {
     HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
     assignStorages(indexDataHashSet,toJobUUID,toScheduleUUID,archiveType);
@@ -7066,7 +7066,7 @@ Dprintf.dprintf("remove");
    * @param toJobUUID job UUID
    * @param archiveType archive type
    */
-  private void assignStorages(String toJobUUID, Settings.ArchiveTypes archiveType)
+  private void assignStorages(String toJobUUID, ArchiveTypes archiveType)
   {
     assignStorages(toJobUUID,(String)null,archiveType);
   }
@@ -7239,7 +7239,7 @@ Dprintf.dprintf("remove");
    * @param entityIndexData entity index data
    * @param archiveType archive type
    */
-  private void setEntityType(HashSet<IndexData> indexDataHashSet, Settings.ArchiveTypes archiveType)
+  private void setEntityType(HashSet<IndexData> indexDataHashSet, ArchiveTypes archiveType)
   {
     if (!indexDataHashSet.isEmpty())
     {
@@ -7304,7 +7304,7 @@ Dprintf.dprintf("remove");
    * @param entityIndexData entity index data
    * @param archiveType archive type
    */
-  private void setEntityType(EntityIndexData entityIndexData, Settings.ArchiveTypes archiveType)
+  private void setEntityType(EntityIndexData entityIndexData, ArchiveTypes archiveType)
   {
     HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
 
@@ -7315,7 +7315,7 @@ Dprintf.dprintf("remove");
   /** set entity type
    * @param archiveType archive type
    */
-  private void setEntityType(Settings.ArchiveTypes archiveType)
+  private void setEntityType(ArchiveTypes archiveType)
   {
     HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
     setEntityType(indexDataHashSet,archiveType);

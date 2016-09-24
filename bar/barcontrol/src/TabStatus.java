@@ -105,19 +105,19 @@ class JobData
     }
   };
 
-  String                uuid;
-  String                name;
-  States                state;
-  String                remoteHostName;
-  Settings.ArchiveTypes archiveType;
-  long                  archivePartSize;
-  String                deltaCompressAlgorithm;
-  String                byteCompressAlgorithm;
-  String                cryptAlgorithm;
-  String                cryptType;
-  String                cryptPasswordMode;
-  long                  lastExecutedDateTime;
-  long                  estimatedRestTime;
+  String       uuid;
+  String       name;
+  States       state;
+  String       remoteHostName;
+  ArchiveTypes archiveType;
+  long         archivePartSize;
+  String       deltaCompressAlgorithm;
+  String       byteCompressAlgorithm;
+  String       cryptAlgorithm;
+  String       cryptType;
+  String       cryptPasswordMode;
+  long         lastExecutedDateTime;
+  long         estimatedRestTime;
 
   // date/time format
   private final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -137,7 +137,7 @@ class JobData
    * @param lastExecutedDateTime last executed date/time [s]
    * @param estimatedRestTime estimated rest time [s]
    */
-  JobData(String uuid, String name, States state, String remoteHostName, Settings.ArchiveTypes archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
+  JobData(String uuid, String name, States state, String remoteHostName, ArchiveTypes archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
   {
     this.uuid                   = uuid;
     this.name                   = name;
@@ -1630,19 +1630,19 @@ public class TabStatus
         for (ValueMap resultMap : resultMapList)
         {
           // get data
-          String                jobUUID                = resultMap.getString("jobUUID"                              );
-          String                name                   = resultMap.getString("name"                                 );
-          JobData.States        state                  = resultMap.getEnum  ("state",JobData.States.class           );
-          String                remoteHostName         = resultMap.getString("remoteHostName",""                    );
-          Settings.ArchiveTypes archiveType            = resultMap.getEnum("archiveType",Settings.ArchiveTypes.class);
-          long                  archivePartSize        = resultMap.getLong  ("archivePartSize"                      );
-          String                deltaCompressAlgorithm = resultMap.getString("deltaCompressAlgorithm"               );
-          String                byteCompressAlgorithm  = resultMap.getString("byteCompressAlgorithm"                );
-          String                cryptAlgorithm         = resultMap.getString("cryptAlgorithm"                       );
-          String                cryptType              = resultMap.getString("cryptType"                            );
-          String                cryptPasswordMode      = resultMap.getString("cryptPasswordMode"                    );
-          long                  lastExecutedDateTime   = resultMap.getLong  ("lastExecutedDateTime"                 );
-          long                  estimatedRestTime      = resultMap.getLong  ("estimatedRestTime"                    );
+          String         jobUUID                = resultMap.getString("jobUUID"                       );
+          String         name                   = resultMap.getString("name"                          );
+          JobData.States state                  = resultMap.getEnum  ("state",JobData.States.class    );
+          String         remoteHostName         = resultMap.getString("remoteHostName",""             );
+          ArchiveTypes   archiveType            = resultMap.getEnum  ("archiveType",ArchiveTypes.class);
+          long           archivePartSize        = resultMap.getLong  ("archivePartSize"               );
+          String         deltaCompressAlgorithm = resultMap.getString("deltaCompressAlgorithm"        );
+          String         byteCompressAlgorithm  = resultMap.getString("byteCompressAlgorithm"         );
+          String         cryptAlgorithm         = resultMap.getString("cryptAlgorithm"                );
+          String         cryptType              = resultMap.getString("cryptType"                     );
+          String         cryptPasswordMode      = resultMap.getString("cryptPasswordMode"             );
+          long           lastExecutedDateTime   = resultMap.getLong  ("lastExecutedDateTime"          );
+          long           estimatedRestTime      = resultMap.getLong  ("estimatedRestTime"             );
 
           JobData jobData = jobDataMap.get(jobUUID);
           if (jobData != null)
