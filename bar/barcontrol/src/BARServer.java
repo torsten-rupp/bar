@@ -1744,16 +1744,19 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     {
       if ((Thread.currentThread() == display.getThread()))
       {
+        // if this is the GUI thread run GUI loop
         final boolean done[] = new boolean[]{ false };
         display.timerExec(250,new Runnable() { public void run() { done[0] = true; display.wake(); } });
-
-        while (!done[0] && !display.readAndDispatch())
+        while (   !done[0]
+               && !display.isDisposed()
+               && !display.readAndDispatch())
         {
           display.sleep();
         }
       }
       else
       {
+        // wait for command completion
         command.waitCompleted(SLEEP_TIME);
       }
 
