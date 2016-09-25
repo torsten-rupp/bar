@@ -31,6 +31,7 @@
 #include "compress.h"
 
 /****************** Conditional compilation switches *******************/
+#define USE_ALLOCATOR
 
 /***************************** Constants *******************************/
 
@@ -47,6 +48,42 @@
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+#ifdef USE_ALLOCATOR
+
+/***********************************************************************\
+* Name   : lzmaAlloc
+* Purpose: LZMA allocte
+* Input  : mnemb - number of elements
+*          size  - size of element
+* Output : -
+* Return : pointer or NULL
+* Notes  : -
+\***********************************************************************/
+
+void *lzmaAlloc(void *userData, size_t nmemb, size_t size)
+{
+//fprintf(stderr,"%s, %d: %lu %lu \n",__FILE__,__LINE__,SIZE_MAX,nmemb*size);
+  return calloc(nmemb,size);
+}
+
+/***********************************************************************\
+* Name   : lzmaFree
+* Purpose: LZMA free
+* Input  : p - pointer
+* Output : -
+* Return : error text or NULL
+* Notes  : -
+\***********************************************************************/
+
+void lzmaFree(void *userData, void *p)
+{
+  free(p);
+}
+
+LOCAL const lzma_allocator ALLOCATOR = { lzmaAlloc, lzmaFree, NULL };
+
+#endif /* USE_ALLOCATOR */
 
 /***********************************************************************\
 * Name   : lzmaErrorText
@@ -286,7 +323,11 @@ LOCAL Errors CompressLZMA_init(CompressInfo       *compressInfo,
       break;
   }
   compressInfo->lzmalib.stream = streamInit;
-  compressInfo->lzmalib.stream.allocator = NULL;
+  #ifdef USE_ALLOCATOR
+    compressInfo->lzmalib.stream.allocator = &ALLOCATOR;
+  #else /* not USE_ALLOCATOR */
+    compressInfo->lzmalib.stream.allocator = NULL;
+  #endif /* USE_ALLOCATOR */
   switch (compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
@@ -337,6 +378,11 @@ LOCAL Errors CompressLZMA_reset(CompressInfo *compressInfo)
     case COMPRESS_MODE_DEFLATE:
       lzma_end(&compressInfo->lzmalib.stream);
       compressInfo->lzmalib.stream = streamInit;
+      #ifdef USE_ALLOCATOR
+        compressInfo->lzmalib.stream.allocator = &ALLOCATOR;
+      #else /* not USE_ALLOCATOR */
+        compressInfo->lzmalib.stream.allocator = NULL;
+      #endif /* USE_ALLOCATOR */
       lzmalibResult = lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE);
       if (lzmalibResult != LZMA_OK)
       {
@@ -346,6 +392,11 @@ LOCAL Errors CompressLZMA_reset(CompressInfo *compressInfo)
     case COMPRESS_MODE_INFLATE:
       lzma_end(&compressInfo->lzmalib.stream);
       compressInfo->lzmalib.stream = streamInit;
+      #ifdef USE_ALLOCATOR
+        compressInfo->lzmalib.stream.allocator = &ALLOCATOR;
+      #else /* not USE_ALLOCATOR */
+        compressInfo->lzmalib.stream.allocator = NULL;
+      #endif /* USE_ALLOCATOR */
       lzmalibResult = lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0);
       if (lzmalibResult != LZMA_OK)
       {
