@@ -254,6 +254,91 @@ uint __sync_add_and_fetch_4(uint *p, uint n)
 #endif /* i386 */
 
 #ifndef NDEBUG
+
+/* Linker flags
+
+-Wl,-wrap,malloc -Wl,-wrap,calloc -Wl,-wrap,realloc
+
+*/
+
+#define ALLOC_LIMIT (1000L*1024L*1024L)
+
+/***********************************************************************\
+* Name   : __wrap_malloc
+* Purpose: wrapper function for malloc()
+* Input  : size - size
+* Output : -
+* Return : pointer to memory
+* Notes  : -
+\***********************************************************************/
+
+void *__wrap_malloc(size_t size);
+void *__wrap_malloc(size_t size)
+{
+  extern void * __real_malloc(size_t size) __attribute((weak));
+
+  if (size > ALLOC_LIMIT)
+  {
+    asm("int3");
+  }
+
+  return __real_malloc(size);
+}
+
+/***********************************************************************\
+* Name   : __wrap_calloc
+* Purpose: wrapper function for calloc()
+* Input  : size - size
+* Output : -
+* Return : pointer to memory
+* Notes  : -
+\***********************************************************************/
+
+void *__wrap_calloc(size_t nmemb, size_t size);
+void *__wrap_calloc(size_t nmemb, size_t size)
+{
+  extern void * __real_calloc(size_t nmemb, size_t size) __attribute((weak));
+
+  if (nmemb*size > ALLOC_LIMIT)
+  {
+    asm("int3");
+  }
+
+  return __real_calloc(nmemb,size);
+}
+
+/***********************************************************************\
+* Name   : __wrap_realloc
+* Purpose: wrapper function for realloc()
+* Input  : size - size
+* Output : -
+* Return : pointer to memory
+* Notes  : -
+\***********************************************************************/
+
+void *__wrap_realloc(void *ptr, size_t size);
+void *__wrap_realloc(void *ptr, size_t size)
+{
+  extern void * __real_realloc(void *ptr, size_t size) __attribute((weak));
+
+  if (size > ALLOC_LIMIT)
+  {
+    asm("int3");
+  }
+
+  return __real_realloc(ptr,size);
+}
+
+/***********************************************************************\
+* Name   : __cyg_profile_func_enter
+* Purpose: profile function
+* Input  : functionCode - function address
+*          callAddress  - call address
+* Output : -
+* Return : pointer to memory
+* Notes  : -
+\***********************************************************************/
+
 void __cyg_profile_func_enter(void *functionCode, void *callAddress) ATTRIBUTE_NO_INSTRUMENT_FUNCTION;
 void __cyg_profile_func_enter(void *functionCode, void *callAddress)
 {
