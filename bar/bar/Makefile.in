@@ -73,6 +73,7 @@ LD                     = $(if @CXX@,@CXX@,@CC@)
 LD_FLAGS               = @LD_FLAGS@
 LD_FLAGS_RELEASE       =
 LD_FLAGS_DEBUG         = -Wl,-wrap,pthread_create
+#LD_FLAGS_DEBUG         = -Wl,-wrap,pthread_create -Wl,-wrap,malloc -Wl,-wrap,calloc -Wl,-wrap,realloc
 LD_FLAGS_GCOV          = -Wl,-wrap,pthread_create -fprofile-arcs
 LD_FLAGS_VALGRIND      =
 LD_LIBRARY_PATHS       = @LIBRARY_PATHS@
