@@ -256,10 +256,13 @@ LOCAL void *debugThreadStackTraceWrapStartCode(void *userData)
 
 /***********************************************************************\
 * Name   : __wrap_pthread_create
-* Purpose: wrapper function for pthread_create
-* Input  : -
+* Purpose: wrapper function for pthread_create()
+* Input  : thread    - thread variable
+*          attr      - thread attributes
+*          startCode - thread entry code
+*          argument  - thread argument
 * Output : -
-* Return : -
+* Return : 0 or error code
 * Notes  : -
 \***********************************************************************/
 
