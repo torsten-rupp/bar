@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-09-24 15:29+0200\n"
+"POT-Creation-Date: 2016-09-25 18:00+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -1405,7 +1405,7 @@ msgid "Enable to force SSL connection."
 msgstr ""
 
 #: src/TabJobs.java:2147 src/TabRestore.java:4406 src/TabRestore.java:5847
-#: src/TabRestore.java:8654 src/TabRestore.java:8663 src/TabStatus.java:2420
+#: src/TabRestore.java:8654 src/TabRestore.java:8663 src/TabStatus.java:2412
 msgid "Entries"
 msgstr "エントリ"
 
@@ -2934,7 +2934,7 @@ msgid "Job UUID"
 msgstr ""
 
 #: src/TabRestore.java:4096 src/TabStatus.java:591 src/TabStatus.java:721
-#: src/TabStatus.java:2436
+#: src/TabStatus.java:2428
 msgid "Last executed"
 msgstr "最終実行された"
 
@@ -2958,7 +2958,7 @@ msgstr "スケジュール"
 msgid "Expire at"
 msgstr ""
 
-#: src/TabRestore.java:4353 src/TabRestore.java:4527 src/TabStatus.java:2384
+#: src/TabRestore.java:4353 src/TabRestore.java:4527 src/TabStatus.java:2376
 msgid "Job"
 msgstr "タスク"
 
@@ -4039,27 +4039,27 @@ msgstr "トレーを開く"
 msgid "Cannot change volume (error: {0})"
 msgstr "ボリュームを交換できません（エラー: {0}）"
 
-#: src/TabStatus.java:2394
+#: src/TabStatus.java:2386
 #, fuzzy
 msgid "Entities"
 msgstr "エンティティ合計"
 
-#: src/TabStatus.java:2404
+#: src/TabStatus.java:2396
 #, fuzzy
 msgid "Storages"
 msgstr "保存"
 
-#: src/TabStatus.java:2414 src/TabStatus.java:2430
+#: src/TabStatus.java:2406 src/TabStatus.java:2422
 #, fuzzy
 msgid "%s (%d bytes)"
 msgstr "%s (%d バイト)"
 
-#: src/TabStatus.java:2446
+#: src/TabStatus.java:2438
 #, fuzzy
 msgid "Execution count"
 msgstr "接続ミス"
 
-#: src/TabStatus.java:2456
+#: src/TabStatus.java:2448
 msgid "Average execution time"
 msgstr ""
 

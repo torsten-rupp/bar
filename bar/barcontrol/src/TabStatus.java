@@ -2288,10 +2288,6 @@ public class TabStatus
    */
   private void jobNew()
   {
-    assert selectedJobData != null;
-
-    assert selectedJobData != null;
-
     tabJobs.jobNew();
     updateJobList();
   }
@@ -2302,8 +2298,6 @@ public class TabStatus
   {
     assert selectedJobData != null;
 
-    assert selectedJobData != null;
-
     tabJobs.jobClone(selectedJobData);
     updateJobList();
   }
@@ -2312,8 +2306,6 @@ public class TabStatus
    */
   private void jobRename()
   {
-    assert selectedJobData != null;
-
     assert selectedJobData != null;
 
     if (tabJobs.jobRename(selectedJobData))

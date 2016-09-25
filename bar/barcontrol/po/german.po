@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-09-24 15:29+0200\n"
+"POT-Creation-Date: 2016-09-25 18:00+0200\n"
 "PO-Revision-Date: 2016-09-21 12:00+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1336,7 +1336,7 @@ msgid "Enable to force SSL connection."
 msgstr "Aktivierung um eine SSL-Verbindung zu erzwingen."
 
 #: src/TabJobs.java:2147 src/TabRestore.java:4406 src/TabRestore.java:5847
-#: src/TabRestore.java:8654 src/TabRestore.java:8663 src/TabStatus.java:2420
+#: src/TabRestore.java:8654 src/TabRestore.java:8663 src/TabStatus.java:2412
 msgid "Entries"
 msgstr "Dateien"
 
@@ -2884,7 +2884,7 @@ msgid "Job UUID"
 msgstr "Auftrag UUID"
 
 #: src/TabRestore.java:4096 src/TabStatus.java:591 src/TabStatus.java:721
-#: src/TabStatus.java:2436
+#: src/TabStatus.java:2428
 msgid "Last executed"
 msgstr "Letzte Ausführung"
 
@@ -2906,7 +2906,7 @@ msgstr "Zeitplan ID"
 msgid "Expire at"
 msgstr "Ablaufdatum"
 
-#: src/TabRestore.java:4353 src/TabRestore.java:4527 src/TabStatus.java:2384
+#: src/TabRestore.java:4353 src/TabRestore.java:4527 src/TabStatus.java:2376
 msgid "Job"
 msgstr "Auftrag"
 
@@ -3948,23 +3948,23 @@ msgstr "Schublade öffnen"
 msgid "Cannot change volume (error: {0})"
 msgstr "Name des Auftrags kann nicht geändert werden (Fehler: {0})"
 
-#: src/TabStatus.java:2394
+#: src/TabStatus.java:2386
 msgid "Entities"
 msgstr "Datensätze"
 
-#: src/TabStatus.java:2404
+#: src/TabStatus.java:2396
 msgid "Storages"
 msgstr "Sicherungen"
 
-#: src/TabStatus.java:2414 src/TabStatus.java:2430
+#: src/TabStatus.java:2406 src/TabStatus.java:2422
 msgid "%s (%d bytes)"
 msgstr "%s (%d Bytes)"
 
-#: src/TabStatus.java:2446
+#: src/TabStatus.java:2438
 msgid "Execution count"
 msgstr "Anzahl Ausführungen"
 
-#: src/TabStatus.java:2456
+#: src/TabStatus.java:2448
 msgid "Average execution time"
 msgstr "Durchschnittliche Ausführungszeit"
 
