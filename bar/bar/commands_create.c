@@ -719,6 +719,7 @@ LOCAL void pauseCreate(const CreateInfo *createInfo)
   assert(createInfo != NULL);
 
   while (   ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
+         && (createInfo->failError == ERROR_NONE)
          && !isAborted(createInfo)
         )
   {
@@ -740,6 +741,7 @@ LOCAL void pauseStorage(const CreateInfo *createInfo)
   assert(createInfo != NULL);
 
   while (   ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
+         && (createInfo->failError == ERROR_NONE)
          && !isAborted(createInfo)
         )
   {
@@ -1698,8 +1700,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                 {
                   // read directory contents
                   while (   (createInfo->failError == ERROR_NONE)
-                          && !isAborted(createInfo)
-                          && !File_endOfDirectoryList(&directoryListHandle)
+                         && !isAborted(createInfo)
+                         && !File_endOfDirectoryList(&directoryListHandle)
                         )
                   {
                     // pause
@@ -3380,6 +3382,7 @@ LOCAL Errors archiveStore(IndexHandle  *indexHandle,
     {
       while (   (createInfo->storageInfo.count > 2)                           // more than 2 archives are waiting
              && (createInfo->storageInfo.bytes > globalOptions.maxTmpSize)    // temporary space limit exceeded
+             && (createInfo->failError == ERROR_NONE)
              && !isAborted(createInfo)
             )
       {
@@ -3968,8 +3971,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   AUTOFREE_ADD(&autoFreeList,&existingStorageSpecifier,{ Storage_doneSpecifier(&existingStorageSpecifier); });
 
   // initial storage pre-processing
-  if (   !isAborted(createInfo)
-      && (createInfo->failError == ERROR_NONE)
+  if (   (createInfo->failError == ERROR_NONE)
+      && !isAborted(createInfo)
      )
   {
     // pause
@@ -4201,6 +4204,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         }
       }
       while (   !File_eof(&fileHandle)
+             && (createInfo->failError == ERROR_NONE)
              && !isAborted(createInfo)
             );
 
@@ -4214,6 +4218,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     }
     while (   ((error != ERROR_NONE) && (Error_getCode(error) != ENOSPC))      // some error amd not "no space left"
            && (retryCount <= MAX_RETRIES)                                      // still some retry left
+           && (createInfo->failError == ERROR_NONE)                            // no eror
            && !isAborted(createInfo)                                           // not aborted
           );
     if (error != ERROR_NONE)
@@ -4496,8 +4501,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   }
 
   // final storage post-processing
-  if (   !isAborted(createInfo)
-      && (createInfo->failError == ERROR_NONE)
+  if (   (createInfo->failError == ERROR_NONE)
+      && !isAborted(createInfo)
      )
   {
     // pause
@@ -4519,8 +4524,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
 //TODO: required?
   // delete old storage files if no database
-  if (   !isAborted(createInfo)
-      && (createInfo->failError == ERROR_NONE)
+  if (   (createInfo->failError == ERROR_NONE)
+      && !isAborted(createInfo)
       && (createInfo->indexHandle == NULL)
      )
   {
@@ -4866,9 +4871,9 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
         }
       }
     }
-    while (   !isAborted(createInfo)
-           && (bufferLength > 0L)
+    while (   (bufferLength > 0L)
            && (createInfo->failError == ERROR_NONE)
+           && !isAborted(createInfo)
            && (error == ERROR_NONE)
           );
     if (isAborted(createInfo))
@@ -5157,9 +5162,9 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     error         = ERROR_NONE;
     entryDoneSize = 0LL;
     while (   (block < blockCount)
-           && !isAborted(createInfo)
-           && (createInfo->failError == ERROR_NONE)
            && (error == ERROR_NONE)
+           && (createInfo->failError == ERROR_NONE)
+           && !isAborted(createInfo)
           )
     {
       // pause
@@ -5934,10 +5939,10 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
         }
       }
     }
-    while (   !isAborted(createInfo)
-           && (bufferLength > 0L)
-           && (createInfo->failError == ERROR_NONE)
+    while (   (bufferLength > 0L)
            && (error == ERROR_NONE)
+           && (createInfo->failError == ERROR_NONE)
+           && !isAborted(createInfo)
           );
     if (isAborted(createInfo))
     {
