@@ -991,8 +991,8 @@ public class BARServer
   };
 
   // --------------------------- variables --------------------------------
-  private static Object         lock = new Object();
-  private static Display        display;
+  private static Object         lock    = new Object();
+  private static Display        display = null;
   private static String         name;
   private static int            port;
 
@@ -1389,7 +1389,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static void connect(String name, int port, int tlsPort, String serverPassword, String serverKeyFileName)
   {
-Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     connect((Display)null,name,port,tlsPort,serverPassword,serverKeyFileName);
   }
 
@@ -1729,11 +1728,10 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
   {
     final int SLEEP_TIME = 250;  // [ms]
 
-    final Display display = Display.getDefault();
-    long    t0;
+    long t0;
 
     // process results until error, completed, or aborted
-    if ((Thread.currentThread() == display.getThread()))
+    if ((display != null) && (Thread.currentThread() == display.getThread()))
     {
       display.update();
     }
@@ -1742,7 +1740,7 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
            && !command.isAborted()
           )
     {
-      if ((Thread.currentThread() == display.getThread()))
+      if ((display != null) && (Thread.currentThread() == display.getThread()))
       {
         // if this is the GUI thread run GUI loop
         final boolean done[] = new boolean[]{ false };
@@ -1881,11 +1879,11 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
    * @return Errors.NONE or error code
    */
   public static int executeCommand(String                 commandString,
-                                    int                   debugLevel,
-                                    final String[]        errorMessage,
-                                    Command.ResultHandler resultHandler,
-                                    Command.Handler       handler
-                                   )
+                                   int                   debugLevel,
+                                   final String[]        errorMessage,
+                                   Command.ResultHandler resultHandler,
+                                   Command.Handler       handler
+                                  )
   {
     return executeCommand(commandString,debugLevel,errorMessage,resultHandler,handler,(BusyIndicator)null);
   }
@@ -1948,9 +1946,9 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
    * @return Errors.NONE or error code
    */
   public static int executeCommand(String                 commandString,
-                                    int                   debugLevel,
-                                    Command.ResultHandler resultHandler
-                                   )
+                                   int                   debugLevel,
+                                   Command.ResultHandler resultHandler
+                                  )
   {
     return executeCommand(commandString,debugLevel,(String[])null,resultHandler);
   }
@@ -1963,10 +1961,10 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
    * @return Errors.NONE or error code
    */
   public static int executeCommand(String           commandString,
-                                    int             debugLevel,
-                                    final String[]  errorMessage,
-                                    Command.Handler handler
-                                   )
+                                   int             debugLevel,
+                                   final String[]  errorMessage,
+                                   Command.Handler handler
+                                  )
   {
     return executeCommand(commandString,debugLevel,errorMessage,(Command.ResultHandler)null,handler);
   }
@@ -1978,9 +1976,9 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
    * @return Errors.NONE or error code
    */
   public static int executeCommand(String           commandString,
-                                    int             debugLevel,
-                                    Command.Handler handler
-                                   )
+                                   int             debugLevel,
+                                   Command.Handler handler
+                                  )
   {
     return executeCommand(commandString,debugLevel,(String[])null,handler);
   }
@@ -2000,7 +1998,6 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
                                    BusyIndicator  busyIndicator
                                   )
   {
-    if (errorMessage != null) errorMessage[0] = null;
     if (valueMap != null) valueMap.clear();
 
     return executeCommand(commandString,

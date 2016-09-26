@@ -1745,7 +1745,7 @@ public class BARControl
     String[]            errorMessage  = new String[1];
     ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
     int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                         0,
+                                         0,  // debug level
                                          errorMessage,
                                          valueMapList
                                         );
@@ -2775,7 +2775,7 @@ public class BARControl
                                                                jobUUID,
                                                                Settings.archiveType.toString()
                                                               ),
-                                           0,
+                                           0,  // debug level
                                            errorMessage
                                           );
           if (error != Errors.NONE)
@@ -2795,7 +2795,7 @@ public class BARControl
           error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB",
                                                                Settings.indexDatabaseAddStorageName
                                                               ),
-                                           0,
+                                           0,  // debug level
                                            errorMessage
                                           );
           if (error != Errors.NONE)
@@ -2815,7 +2815,7 @@ public class BARControl
           error = BARServer.executeCommand(StringParser.format("INDEX_REFRESH name=%'S",
                                                                Settings.indexDatabaseRefreshStorageName
                                                               ),
-                                           0,
+                                           0,  // debug level
                                            errorMessage
                                           );
           if (error != Errors.NONE)
@@ -2835,7 +2835,7 @@ public class BARControl
           error = BARServer.executeCommand(StringParser.format("INDEX_REMOVE pattern=%'S patternType=GLOB",
                                                                Settings.indexDatabaseRemoveStorageName
                                                               ),
-                                           0,
+                                           0,  // debug level
                                            errorMessage
                                           );
           if (error != Errors.NONE)
@@ -2869,7 +2869,7 @@ public class BARControl
           error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=* indexModeSet=* name=%'S",
                                                                Settings.indexDatabaseStorageListName
                                                               ),
-                                           0,
+                                           0,  // debug level
                                            errorMessage,
                                            new Command.ResultHandler()
                                            {
@@ -2920,7 +2920,7 @@ public class BARControl
           error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=* newestOnly=no",
                                                                Settings.indexDatabaseEntriesListName
                                                               ),
-                                           0,
+                                           0,  // debug level
                                            errorMessage,
                                            new Command.ResultHandler()
                                            {
@@ -3064,7 +3064,7 @@ public class BARControl
                                                                Settings.pauseTime,
                                                                "ALL"
                                                               ),
-                                           0,
+                                           0,  // debug level
                                            errorMessage
                                           );
           if (error != Errors.NONE)
@@ -3087,7 +3087,7 @@ public class BARControl
 
           // suspend
           error = BARServer.executeCommand(StringParser.format("SUSPEND modeMask=CREATE"),
-                                           0,
+                                           0,  // debug level
                                            errorMessage
                                           );
           if (error != Errors.NONE)
@@ -3105,7 +3105,7 @@ public class BARControl
 
           // continue
           error = BARServer.executeCommand(StringParser.format("CONTINUE"),
-                                           0,
+                                           0,  // debug level
                                            errorMessage
                                           );
           if (error != Errors.NONE)
@@ -3134,7 +3134,7 @@ public class BARControl
           error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",
                                                                jobUUID
                                                               ),
-                                           0,
+                                           0,  // debug level
                                            errorMessage
                                           );
           if (error != Errors.NONE)
@@ -3155,7 +3155,7 @@ public class BARControl
           // get server state
           String serverState = null;
           error = BARServer.executeCommand(StringParser.format("STATUS"),
-                                           0,
+                                           0,  // debug level
                                            errorMessage,
                                            valueMap
                                           );
@@ -3187,7 +3187,7 @@ public class BARControl
 
           // get joblist
           error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                           0,
+                                           0,  // debug level
                                            errorMessage,
                                            valueMapList
                                           );
@@ -3264,7 +3264,9 @@ public class BARControl
           String[] errorMessage  = new String[1];
 
           // set archives to restore
-          error = BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),0);
+          error = BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),
+                                           0  // debug level
+                                          );
           if (error != Errors.NONE)
           {
             printError("cannot set restore list (error: %s)",errorMessage[0]);
@@ -3278,7 +3280,7 @@ public class BARControl
                                                                Settings.restoreStorageName,
                                                                0L
                                                               ),
-                                           0,
+                                           0,  // debug level
                                            errorMessage,
                                            new Command.ResultHandler()
                                            {
