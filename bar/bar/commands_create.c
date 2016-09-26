@@ -719,7 +719,6 @@ LOCAL void pauseCreate(const CreateInfo *createInfo)
   assert(createInfo != NULL);
 
   while (   ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
-         && (createInfo->failError == ERROR_NONE)
          && !isAborted(createInfo)
         )
   {
@@ -741,7 +740,6 @@ LOCAL void pauseStorage(const CreateInfo *createInfo)
   assert(createInfo != NULL);
 
   while (   ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
-         && (createInfo->failError == ERROR_NONE)
          && !isAborted(createInfo)
         )
   {
