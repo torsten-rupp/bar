@@ -1044,13 +1044,11 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
 
   if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
   {
-fprintf(stderr,"%s, %d: %llu >= %llu --- %llu %llu \n",__FILE__,__LINE__,storageHandle->opticalDisk.write.totalSize,storageHandle->opticalDisk.write.volumeSize,storageHandle->opticalDisk.write.totalSize/(10241024),storageHandle->opticalDisk.write.volumeSize/(1024*1024));
     if (   (storageHandle->opticalDisk.write.totalSize > storageHandle->opticalDisk.write.volumeSize)
         || (finalFlag && (storageHandle->opticalDisk.write.totalSize > 0LL))
        )
     {
       // medium size limit reached or final medium -> create medium and request new volume
-fprintf(stderr,"%s, %d: %llu >= %llu --- %llu %llu \n",__FILE__,__LINE__,storageHandle->opticalDisk.write.totalSize,storageHandle->opticalDisk.write.volumeSize,storageHandle->opticalDisk.write.totalSize/(10241024),storageHandle->opticalDisk.write.volumeSize/(1024*1024));
 
       // init variables
       executeIOInfo.storageHandle = storageHandle;
