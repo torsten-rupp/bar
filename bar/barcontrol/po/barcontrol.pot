@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-09-26 09:42+0200\n"
+"POT-Creation-Date: 2016-09-28 18:52+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1861,8 +1861,8 @@ msgid ""
 "some free space should be available on medium for error-correction codes.\n"
 "\n"
 "Good settings may be:\n"
-"- part size 500M, medium 3.5G\n"
-"- part size 600M, medium 3.6G"
+"- part size 515M, medium 3.5G\n"
+"- part size 620M, medium 3.6G"
 msgstr ""
 
 #: src/TabJobs.java:5628
@@ -2030,8 +2030,18 @@ msgid ""
 "to leave some free space for error-correction codes."
 msgstr ""
 
-#: src/TabJobs.java:7315 src/TabJobs.java:7347 src/TabJobs.java:7388
-#: src/TabJobs.java:7444
+#: src/TabJobs.java:7315
+msgid ""
+"When writing to a CD/DVD/BD with error-correction codes enabled\n"
+"some free space should be available on medium for error-correction codes.\n"
+"\n"
+"Good settings may be:\n"
+"- part size 140M, medium 560M\n"
+"- part size 512M, medium 3.5G\n"
+"- part size 620M, medium 3.6G"
+msgstr ""
+
+#: src/TabJobs.java:7347 src/TabJobs.java:7388 src/TabJobs.java:7444
 msgid ""
 "When writing to a CD/DVD/BD with error-correction codes enabled\n"
 "some free space should be available on medium for error-correction codes.\n"
@@ -2039,7 +2049,7 @@ msgid ""
 "Good settings may be:\n"
 "- part size 140M, medium 560M\n"
 "- part size 500M, medium 3.5G\n"
-"- part size 600M, medium 3.6G"
+"- part size 620M, medium 3.6G"
 msgstr ""
 
 #: src/TabJobs.java:7419
