@@ -56,6 +56,7 @@
   * fixed storage of splitted hardlink-entries!
   * added options --blank, --(cd|dvd|bd|device)-blank to
     blank medium before writing
+   BARControl: added abort to load volume dialog
 
 2016-01-09 0.19d
   * fixed include of multiple entries with pattern: store

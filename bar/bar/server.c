@@ -1678,7 +1678,7 @@ LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
     jobNode->requestedVolumeNumber = volumeNumber;
     String_format(String_clear(jobNode->runningInfo.message),"Please insert DVD #%d",volumeNumber);
     jobNode->state = JOB_STATE_REQUEST_VOLUME;
-    Semaphore_signalModified(&jobList.lock);
+    Semaphore_signalModified(&jobStatusLock);
 
     // wait until volume is available or job is aborted
     storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
