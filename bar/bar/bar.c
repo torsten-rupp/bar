@@ -127,8 +127,7 @@
 #define DVD_LOAD_VOLUME_COMMAND               "eject -t %device"
 #define DVD_IMAGE_COMMAND                     "nice mkisofs -V Backup -volset %number -r -o %image %directory"
 #define DVD_ECC_COMMAND                       "nice dvdisaster -mRS02 -n dvd -c -i %image -v"
-//TODO: debug
-#define DVD_BLANK_COMMAND                     "nice echo dvd+rw-format -blank %device"
+#define DVD_BLANK_COMMAND                     "nice dvd+rw-format -blank %device"
 #define DVD_WRITE_COMMAND                     "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory"
 //#warning todo remove -dry-run
 //#define DVD_WRITE_COMMAND                     "nice growisofs -Z %device -A BAR -V Backup -volset %number -dry-run -r %directory"

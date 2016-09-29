@@ -1301,6 +1301,29 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
           updateStorageStatusInfo(storageHandle);
         }
 
+        // blank mediuam
+        if (storageHandle->jobOptions->blankFlag)
+        {
+          // add error-correction codes to medium image
+          printInfo(1,"Blank medium #%d...",storageHandle->opticalDisk.write.number);
+          StringList_clear(&executeIOInfo.stderrList);
+          error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.blankCommand),
+                                      textMacros,SIZE_OF_ARRAY(textMacros),
+                                      CALLBACK(executeIOblankStdout,&executeIOInfo),
+                                      CALLBACK(executeIOblankStderr,&executeIOInfo)
+                                     );
+          if (error != ERROR_NONE)
+          {
+            printInfo(1,"FAIL\n");
+            File_delete(imageFileName,FALSE);
+            String_delete(imageFileName);
+            StringList_done(&executeIOInfo.stderrList);
+            return error;
+          }
+          printInfo(1,"OK\n");
+          storageHandle->opticalDisk.write.step++;
+        }
+
         retryFlag = TRUE;
         do
         {
