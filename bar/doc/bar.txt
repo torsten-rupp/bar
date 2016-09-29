@@ -154,6 +154,7 @@ Options: -c|--create                                           create new files 
          --cd-ecc-pre-command=<command>                        make CD error-correction codes pre-process command
          --cd-ecc-post-command=<command>                       make CD error-correction codes post-process command
          --cd-ecc-command=<command>                            make CD error-correction codes command (default: nice dvdisaster -mRS02 -n cd -c -i %image -v)
+         --cd-blank-command=<command>                          blank CD medium command (default: nice dvd+rw-format -blank %device)
          --cd-write-pre-command=<command>                      write CD pre-process command
          --cd-write-post-command=<command>                     write CD post-process command
          --cd-write-command=<command>                          write CD command (default: nice sh -c 'mkisofs -V Backup -volset %number -r -o %image %directory && cdrecord dev=%device %image')
@@ -169,6 +170,7 @@ Options: -c|--create                                           create new files 
          --dvd-ecc-pre-command=<command>                       make DVD error-correction codes pre-process command
          --dvd-ecc-post-command=<command>                      make DVD error-correction codes post-process command
          --dvd-ecc-command=<command>                           make DVD error-correction codes command (default: nice dvdisaster -mRS02 -n dvd -c -i %image -v)
+         --dvd-blank-command=<command>                         blank DVD mediumcommand (default: nice echo dvd+rw-format -blank %device)
          --dvd-write-pre-command=<command>                     write DVD pre-process command
          --dvd-write-post-command=<command>                    write DVD post-process command
          --dvd-write-command=<command>                         write DVD command (default: nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory)
@@ -184,6 +186,7 @@ Options: -c|--create                                           create new files 
          --bd-ecc-pre-command=<command>                        make BD error-correction codes pre-process command
          --bd-ecc-post-command=<command>                       make BD error-correction codes post-process command
          --bd-ecc-command=<command>                            make BD error-correction codes command (default: nice dvdisaster -mRS02 -n bd -c -i %image -v)
+         --bd-blank-command=<command>                          blank BD medium command (default: nice dvd+rw-format -blank %device)
          --bd-write-pre-command=<command>                      write BD pre-process command
          --bd-write-post-command=<command>                     write BD post-process command
          --bd-write-command=<command>                          write BD command (default: nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory)
@@ -199,12 +202,14 @@ Options: -c|--create                                           create new files 
          --device-ecc-pre-command=<command>                    make error-correction codes pre-process command
          --device-ecc-post-command=<command>                   make error-correction codes post-process command
          --device-ecc-command=<command>                        make error-correction codes command
+         --device-blank-command=<command>                      blank device medium command
          --device-write-pre-command=<command>                  write device pre-process command
          --device-write-post-command=<command>                 write device post-process command
          --device-write-command=<command>                      write device command
          --volume-size=<n>[G|M|K]                              volume size
          --ecc                                                 add error-correction codes with 'dvdisaster' tool
          --always-create-image                                 always create image for CD/DVD/BD/device
+         --blank                                               blank medium before writing
          --index-database=<file name>                          index database file name
          --index-database-auto-update                          enabled automatic update index database
          --index-database-max-band-width=<number or file name> max. band width to use for index updates [bis/s]
