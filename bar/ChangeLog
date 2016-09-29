@@ -54,6 +54,8 @@
   * BARControl: fixed login credentials on command line
   * BARControl: fixed archive name editor %S, %s, _
   * fixed storage of splitted hardlink-entries!
+  * fixed abort when there is an error when writing
+    a CD/DVD/BD
   * added options --blank, --(cd|dvd|bd|device)-blank to
     blank medium before writing
    BARControl: added abort to load volume dialog
