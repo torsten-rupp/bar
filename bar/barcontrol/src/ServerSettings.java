@@ -299,6 +299,7 @@ public class ServerSettings
     WidgetVariable          cdECCPreCommand            = new WidgetVariable<String >("cd-ecc-pre-command",            ""   );
     WidgetVariable          cdECCPostCommand           = new WidgetVariable<String >("cd-ecc-post-command",           ""   );
     WidgetVariable          cdECCCommand               = new WidgetVariable<String >("cd-ecc-command",                ""   );
+    WidgetVariable          cdBlankCommand             = new WidgetVariable<String >("cd-blank-command",              ""   );
     WidgetVariable          cdWritePreCommand          = new WidgetVariable<String >("cd-write-pre-command",          ""   );
     WidgetVariable          cdWritePostCommand         = new WidgetVariable<String >("cd-write-post-command",         ""   );
     WidgetVariable          cdWriteCommand             = new WidgetVariable<String >("cd-write-command",              ""   );
@@ -315,6 +316,7 @@ public class ServerSettings
     WidgetVariable          dvdECCPreCommand           = new WidgetVariable<String >("dvd-ecc-pre-command",           ""   );
     WidgetVariable          dvdECCPostCommand          = new WidgetVariable<String >("dvd-ecc-post-command",          ""   );
     WidgetVariable          dvdECCCommand              = new WidgetVariable<String >("dvd-ecc-command",               ""   );
+    WidgetVariable          dvdBlankCommand            = new WidgetVariable<String >("dvd-blank-command",             ""   );
     WidgetVariable          dvdWritePreCommand         = new WidgetVariable<String >("dvd-write-pre-command",         ""   );
     WidgetVariable          dvdWritePostCommand        = new WidgetVariable<String >("dvd-write-post-command",        ""   );
     WidgetVariable          dvdWriteCommand            = new WidgetVariable<String >("dvd-write-command",             ""   );
@@ -331,6 +333,7 @@ public class ServerSettings
     WidgetVariable          bdECCPreCommand            = new WidgetVariable<String >("bd-ecc-pre-command",            ""   );
     WidgetVariable          bdECCPostCommand           = new WidgetVariable<String >("bd-ecc-post-command",           ""   );
     WidgetVariable          bdECCCommand               = new WidgetVariable<String >("bd-ecc-command",                ""   );
+    WidgetVariable          bdBlankCommand             = new WidgetVariable<String >("bd-blank-command",              ""   );
     WidgetVariable          bdWritePreCommand          = new WidgetVariable<String >("bd-write-pre-command",          ""   );
     WidgetVariable          bdWritePostCommand         = new WidgetVariable<String >("bd-write-post-command",         ""   );
     WidgetVariable          bdWriteCommand             = new WidgetVariable<String >("bd-write-command",              ""   );
@@ -347,6 +350,7 @@ public class ServerSettings
     WidgetVariable          deviceECCPreCommand        = new WidgetVariable<String >("device-ecc-pre-command",        ""   );
     WidgetVariable          deviceECCPostCommand       = new WidgetVariable<String >("device-ecc-post-command",       ""   );
     WidgetVariable          deviceECCCommand           = new WidgetVariable<String >("device-ecc-command",            ""   );
+    WidgetVariable          deviceBlankCommand         = new WidgetVariable<String >("device-blank-command",          ""   );
     WidgetVariable          deviceWritePreCommand      = new WidgetVariable<String >("device-write-pre-command",      ""   );
     WidgetVariable          deviceWritePostCommand     = new WidgetVariable<String >("device-write-post-command",     ""   );
     WidgetVariable          deviceWriteCommand         = new WidgetVariable<String >("device-write-command",          ""   );
@@ -962,6 +966,18 @@ public class ServerSettings
         Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
         row++;
 
+        label = Widgets.newLabel(subComposite,BARControl.tr("Blank command")+":");
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        subSubComposite = BARWidgets.newFile(subComposite,
+                                             BARControl.tr("Command to blank medium."),
+                                             cdBlankCommand,
+                                             new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                         },
+                                             "*"
+                                            );
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        row++;
+
         label = Widgets.newLabel(subComposite,BARControl.tr("Write pre-command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
@@ -1129,6 +1145,18 @@ public class ServerSettings
         subSubComposite = BARWidgets.newFile(subComposite,
                                              BARControl.tr("Command to create error correction codes."),
                                              dvdECCCommand,
+                                             new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                         },
+                                             "*"
+                                            );
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        row++;
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("Blank command")+":");
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        subSubComposite = BARWidgets.newFile(subComposite,
+                                             BARControl.tr("Command to blank medium."),
+                                             dvdBlankCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
                                              "*"
@@ -1311,6 +1339,18 @@ public class ServerSettings
         Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
         row++;
 
+        label = Widgets.newLabel(subComposite,BARControl.tr("Blank command")+":");
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        subSubComposite = BARWidgets.newFile(subComposite,
+                                             BARControl.tr("Command to blank medium."),
+                                             bdBlankCommand,
+                                             new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                         },
+                                             "*"
+                                            );
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        row++;
+
         label = Widgets.newLabel(subComposite,BARControl.tr("Write pre-command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
@@ -1479,6 +1519,18 @@ public class ServerSettings
         subSubComposite = BARWidgets.newFile(subComposite,
                                              BARControl.tr("Command to create error correction codes."),
                                              deviceECCCommand,
+                                             new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                         },
+                                             "*"
+                                            );
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        row++;
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("Blank command")+":");
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        subSubComposite = BARWidgets.newFile(subComposite,
+                                             BARControl.tr("Command to blank medium."),
+                                             deviceBlankCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
                                              "*"
@@ -2074,6 +2126,7 @@ public class ServerSettings
     BARServer.getServerOption(cdECCPreCommand            );
     BARServer.getServerOption(cdECCPostCommand           );
     BARServer.getServerOption(cdECCCommand               );
+    BARServer.getServerOption(cdBlankCommand             );
     BARServer.getServerOption(cdWritePreCommand          );
     BARServer.getServerOption(cdWritePostCommand         );
     BARServer.getServerOption(cdWriteCommand             );
@@ -2090,6 +2143,7 @@ public class ServerSettings
     BARServer.getServerOption(dvdECCPreCommand           );
     BARServer.getServerOption(dvdECCPostCommand          );
     BARServer.getServerOption(dvdECCCommand              );
+    BARServer.getServerOption(dvdBlankCommand            );
     BARServer.getServerOption(dvdWritePreCommand         );
     BARServer.getServerOption(dvdWritePostCommand        );
     BARServer.getServerOption(dvdWriteCommand            );
@@ -2106,6 +2160,7 @@ public class ServerSettings
     BARServer.getServerOption(bdECCPreCommand            );
     BARServer.getServerOption(bdECCPostCommand           );
     BARServer.getServerOption(bdECCCommand               );
+    BARServer.getServerOption(bdBlankCommand             );
     BARServer.getServerOption(bdWritePreCommand          );
     BARServer.getServerOption(bdWritePostCommand         );
     BARServer.getServerOption(bdWriteCommand             );
@@ -2122,6 +2177,7 @@ public class ServerSettings
     BARServer.getServerOption(deviceECCPreCommand        );
     BARServer.getServerOption(deviceECCPostCommand       );
     BARServer.getServerOption(deviceECCCommand           );
+    BARServer.getServerOption(deviceBlankCommand         );
     BARServer.getServerOption(deviceWritePreCommand      );
     BARServer.getServerOption(deviceWritePostCommand     );
     BARServer.getServerOption(deviceWriteCommand         );
@@ -2237,6 +2293,7 @@ public class ServerSettings
       BARServer.setServerOption(cdECCPreCommand            );
       BARServer.setServerOption(cdECCPostCommand           );
       BARServer.setServerOption(cdECCCommand               );
+      BARServer.setServerOption(cdBlankCommand             );
       BARServer.setServerOption(cdWritePreCommand          );
       BARServer.setServerOption(cdWritePostCommand         );
       BARServer.setServerOption(cdWriteCommand             );
@@ -2253,6 +2310,7 @@ public class ServerSettings
       BARServer.setServerOption(dvdECCPreCommand           );
       BARServer.setServerOption(dvdECCPostCommand          );
       BARServer.setServerOption(dvdECCCommand              );
+      BARServer.setServerOption(dvdBlankCommand            );
       BARServer.setServerOption(dvdWritePreCommand         );
       BARServer.setServerOption(dvdWritePostCommand        );
       BARServer.setServerOption(dvdWriteCommand            );
@@ -2269,6 +2327,7 @@ public class ServerSettings
       BARServer.setServerOption(bdECCPreCommand            );
       BARServer.setServerOption(bdECCPostCommand           );
       BARServer.setServerOption(bdECCCommand               );
+      BARServer.setServerOption(bdBlankCommand             );
       BARServer.setServerOption(bdWritePreCommand          );
       BARServer.setServerOption(bdWritePostCommand         );
       BARServer.setServerOption(bdWriteCommand             );
@@ -2285,6 +2344,7 @@ public class ServerSettings
       BARServer.setServerOption(deviceECCPreCommand        );
       BARServer.setServerOption(deviceECCPostCommand       );
       BARServer.setServerOption(deviceECCCommand           );
+      BARServer.setServerOption(deviceBlankCommand         );
       BARServer.setServerOption(deviceWritePreCommand      );
       BARServer.setServerOption(deviceWritePostCommand     );
       BARServer.setServerOption(deviceWriteCommand         );
