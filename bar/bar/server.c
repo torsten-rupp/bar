@@ -1653,8 +1653,10 @@ LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint buffe
 /***********************************************************************\
 * Name   : storageRequestVolume
 * Purpose: request volume call-back
-* Input  : volumeNumber - volume number
-*          userData     - user data: job node
+* Input  : type          - storage request volume type,
+*          volumeNumber  - volume number
+*          volumeMessage - volume message or NULL
+*          userData      - user data: job node
 * Output : -
 * Return : request result; see StorageRequestResults
 * Notes  : -
