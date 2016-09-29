@@ -118,7 +118,7 @@ LOCAL void libcdioLogCallback(cdio_log_level_t level, const char *message)
 * Name   : requestNewOpticalMedium
 * Purpose: request new cd/dvd/bd medium
 * Input  : storageHandle - storage file handle
-*          waitFlag          - TRUE to wait for new medium
+*          waitFlag      - TRUE to wait for new medium
 * Output : -
 * Return : TRUE if new medium loaded, FALSE otherwise
 * Notes  : -
@@ -155,6 +155,7 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
   storageRequestResult = STORAGE_REQUEST_VOLUME_UNKNOWN;
   if      (storageHandle->requestVolumeFunction != NULL)
   {
+    // request volume via callback
     mediumRequestedFlag = TRUE;
 
     // request new medium via call back, unload if requested
@@ -181,6 +182,7 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
   }
   else if (storageHandle->opticalDisk.write.requestVolumeCommand != NULL)
   {
+    // request volume via external command
     mediumRequestedFlag = TRUE;
 
     // request new volume via external command
@@ -205,6 +207,7 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
   }
   else
   {
+    // request volume via console
     if (storageHandle->volumeState == STORAGE_VOLUME_STATE_UNLOADED)
     {
       if (waitFlag)
@@ -236,6 +239,7 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
 
     storageHandle->volumeState = STORAGE_VOLUME_STATE_WAIT;
   }
+fprintf(stderr,"%s, %d: storageRequestResult=%d\n",__FILE__,__LINE__,storageRequestResult);
 
   if (mediumRequestedFlag)
   {
@@ -263,7 +267,17 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
         return ERROR_NONE;
         break;
       case STORAGE_REQUEST_VOLUME_ABORTED:
-        return ERROR_NONE;
+        // load medium, then sleep a short time to give hardware time for reading medium information
+        printInfo(1,"Load medium #%d...",storageHandle->requestedVolumeNumber);
+        Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.loadVolumeCommand),
+                            textMacros,SIZE_OF_ARRAY(textMacros),
+                            CALLBACK(executeIOOutput,NULL),
+                            CALLBACK(executeIOOutput,NULL)
+                           );
+        Misc_udelay(LOAD_VOLUME_DELAY_TIME);
+        printInfo(1,"OK\n");
+
+        return ERROR_ABORTED;
         break;
       default:
         return ERROR_LOAD_VOLUME_FAIL;
@@ -1272,6 +1286,10 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
             {
               retryFlag = Misc_getYesNo("Retry write image to medium?");
             }
+            else
+            {
+              retryFlag = (requestNewOpticalMedium(storageHandle,TRUE) == ERROR_NONE);
+            }
           }
         }
         while ((error != ERROR_NONE) && retryFlag);
@@ -1347,6 +1365,10 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
             if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
             {
               retryFlag = Misc_getYesNo("Retry write image to medium?");
+            }
+            else
+            {
+              retryFlag = (requestNewOpticalMedium(storageHandle,TRUE) == ERROR_NONE);
             }
           }
         }
