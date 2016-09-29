@@ -215,7 +215,7 @@ typedef struct JobNode
     String        customText;                           // custom text or empty
     bool          noStorage;                            // TRUE to skip storage, only create incremental data file
   } schedule;
-  bool            requestedAbortFlag;                   // request abort
+  bool            requestedAbortFlag;                   // request abort current job execution
   uint            requestedVolumeNumber;                // requested volume number
   uint            volumeNumber;                         // loaded volume number
   bool            volumeUnloadFlag;                     // TRUE to unload volume
@@ -587,7 +587,7 @@ LOCAL const Password        *serverPassword;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
 LOCAL JobList               jobList;                // job list
-LOCAL Semaphore             statusLock;             // status update lock
+LOCAL Semaphore             jobStatusLock;          // job status update lock
 LOCAL Thread                jobThread;              // thread executing jobs create/restore
 LOCAL Thread                schedulerThread;        // thread scheduling jobs
 LOCAL Thread                pauseThread;
@@ -1671,7 +1671,7 @@ LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
 
   storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&statusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobStatusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // request volume, set job state
     assert(jobNode->state == JOB_STATE_RUNNING);
@@ -1684,9 +1684,13 @@ LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
     storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
     do
     {
-      Semaphore_waitModified(&statusLock,LOCK_TIMEOUT);
+      Semaphore_waitModified(&jobStatusLock,LOCK_TIMEOUT);
 
-      if      (jobNode->volumeUnloadFlag)
+      if      (jobNode->requestedAbortFlag)
+      {
+        storageRequestResult = STORAGE_REQUEST_VOLUME_ABORTED;
+      }
+      else if (jobNode->volumeUnloadFlag)
       {
         storageRequestResult = STORAGE_REQUEST_VOLUME_UNLOAD;
         jobNode->volumeUnloadFlag = FALSE;
@@ -1694,10 +1698,6 @@ LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
       else if (jobNode->volumeNumber == jobNode->requestedVolumeNumber)
       {
         storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
-      }
-      else if (jobNode->requestedAbortFlag)
-      {
-        storageRequestResult = STORAGE_REQUEST_VOLUME_ABORTED;
       }
     }
     while (   !quitFlag
@@ -3326,7 +3326,7 @@ LOCAL void updateCreateStatusInfo(Errors                 error,
   assert(createStatusInfo->storageName != NULL);
 
   // Note: only try for 2s
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&statusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*1000L)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobStatusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*1000L)
   {
     // calculate statics values
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     createStatusInfo->doneCount);
@@ -3412,7 +3412,7 @@ LOCAL void restoreUpdateStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
   assert(restoreStatusInfo->storageName != NULL);
   assert(restoreStatusInfo->entryName != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&statusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*1000L)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobStatusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*1000L)
   {
     // calculate estimated rest time
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     restoreStatusInfo->doneCount);
@@ -10128,13 +10128,13 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     // abort job
     if      (isJobRunning(jobNode))
     {
+      // request abort job
+      jobNode->requestedAbortFlag = TRUE;
+      Semaphore_signalModified(&jobStatusLock);
+
       if (isJobLocal(jobNode))
       {
-        // request abort local job
-        jobNode->requestedAbortFlag = TRUE;
-        Semaphore_signalModified(&jobList.lock);
-
-        // wait until job terminated
+        // wait until local job terminated
         while (isJobRunning(jobNode))
         {
           Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
@@ -10143,7 +10143,6 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
       else
       {
         // abort remote job
-        jobNode->requestedAbortFlag = TRUE;
         jobNode->runningInfo.error = Remote_jobAbort(&jobNode->remoteHost,
                                                      jobNode->uuid
                                                     );
@@ -13357,7 +13356,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
 
     // set volume number
     jobNode->volumeNumber = volumeNumber;
-    Semaphore_signalModified(&statusLock);
+    Semaphore_signalModified(&jobStatusLock);
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -18457,7 +18456,7 @@ Errors Server_run(uint              port,
   List_init(&jobList);
   Semaphore_init(&jobList.lock);
   jobList.activeCount     = 0;
-  Semaphore_init(&statusLock);
+  Semaphore_init(&jobStatusLock);
   Semaphore_init(&serverStateLock);
   serverState             = SERVER_STATE_RUNNING;
   pauseFlags.create       = FALSE;
@@ -18469,7 +18468,7 @@ Errors Server_run(uint              port,
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&jobList, { List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&jobList.lock,{ Semaphore_done(&jobList.lock); });
-  AUTOFREE_ADD(&autoFreeList,&statusLock,{ Semaphore_done(&serverStateLock); });
+  AUTOFREE_ADD(&autoFreeList,&jobStatusLock,{ Semaphore_done(&serverStateLock); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
 
   logMessage(NULL,  // logHandle,
@@ -19121,7 +19120,7 @@ Errors Server_run(uint              port,
   Semaphore_done(&serverStateLock);
   if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
   List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
-  Semaphore_done(&statusLock);
+  Semaphore_done(&jobStatusLock);
   Semaphore_done(&jobList.lock);
   List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
   List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
