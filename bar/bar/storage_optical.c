@@ -1148,7 +1148,8 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
       // medium size limit reached or final medium -> create medium and request new volume
 
       // init variables
-      executeIOInfo.storageHandle = storageHandle;
+      storageHandle->opticalDisk.write.step = 0;
+      executeIOInfo.storageHandle           = storageHandle;
       StringList_init(&executeIOInfo.stderrList);
 
       // update info
