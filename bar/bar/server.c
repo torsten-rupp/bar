@@ -217,7 +217,8 @@ typedef struct JobNode
   } schedule;
   bool            requestedAbortFlag;                   // request abort current job execution
   uint            requestedVolumeNumber;                // requested volume number
-  uint            volumeNumber;                         // loaded volume number
+  uint            volumeNumber;                         // load volume number
+  String          volumeMessage;                        // load volume message
   bool            volumeUnloadFlag;                     // TRUE to unload volume
 
   uint64          lastExecutedDateTime;                 // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
@@ -1659,17 +1660,19 @@ LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint buffe
 * Notes  : -
 \***********************************************************************/
 
-LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
-                                                 void *userData
-                                                )
+LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes type,
+                                                       uint                      volumeNumber,
+                                                       const char                *volumeMessage,
+                                                       void                      *userData
+                                                      )
 {
-  JobNode               *jobNode = (JobNode*)userData;
-  StorageRequestResults storageRequestResult;
-  SemaphoreLock         semaphoreLock;
+  JobNode                     *jobNode = (JobNode*)userData;
+  StorageRequestVolumeResults storageRequestVolumeResult;
+  SemaphoreLock               semaphoreLock;
 
   assert(jobNode != NULL);
 
-  storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
+  storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_NONE;
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobStatusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
@@ -1681,27 +1684,27 @@ LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
     Semaphore_signalModified(&jobStatusLock);
 
     // wait until volume is available or job is aborted
-    storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
+    storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_NONE;
     do
     {
       Semaphore_waitModified(&jobStatusLock,LOCK_TIMEOUT);
 
       if      (jobNode->requestedAbortFlag)
       {
-        storageRequestResult = STORAGE_REQUEST_VOLUME_ABORTED;
+        storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_ABORTED;
       }
       else if (jobNode->volumeUnloadFlag)
       {
-        storageRequestResult = STORAGE_REQUEST_VOLUME_UNLOAD;
+        storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_UNLOAD;
         jobNode->volumeUnloadFlag = FALSE;
       }
       else if (jobNode->volumeNumber == jobNode->requestedVolumeNumber)
       {
-        storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
+        storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
       }
     }
     while (   !quitFlag
-           && (storageRequestResult == STORAGE_REQUEST_VOLUME_NONE)
+           && (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_NONE)
           );
 
     // clear request volume, reset job state
@@ -1709,7 +1712,7 @@ LOCAL StorageRequestResults storageRequestVolume(uint volumeNumber,
     jobNode->state = JOB_STATE_RUNNING;
   }
 
-  return storageRequestResult;
+  return storageRequestVolumeResult;
 }
 
 /***********************************************************************\
@@ -1783,6 +1786,8 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   String_delete(jobNode->runningInfo.entryName);
 
   String_delete(jobNode->lastErrorMessage);
+
+  String_delete(jobNode->volumeMessage);
 
   String_delete(jobNode->schedule.customText);
   String_delete(jobNode->schedule.uuid);
@@ -1882,6 +1887,7 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
   jobNode->requestedAbortFlag             = FALSE;
   jobNode->requestedVolumeNumber          = 0;
   jobNode->volumeNumber                   = 0;
+  jobNode->volumeMessage                  = String_new();
   jobNode->volumeUnloadFlag               = FALSE;
 
   jobNode->lastExecutedDateTime           = 0LL;
@@ -1991,6 +1997,7 @@ LOCAL JobNode *copyJob(JobNode     *jobNode,
   newJobNode->requestedAbortFlag             = FALSE;
   newJobNode->requestedVolumeNumber          = 0;
   newJobNode->volumeNumber                   = 0;
+  newJobNode->volumeMessage                  = String_new();
   newJobNode->volumeUnloadFlag               = FALSE;
 
   newJobNode->lastExecutedDateTime           = 0LL;
@@ -2274,6 +2281,7 @@ LOCAL void triggerJob(JobNode      *jobNode,
   jobNode->requestedAbortFlag    = FALSE;
   jobNode->requestedVolumeNumber = 0;
   jobNode->volumeNumber          = 0;
+  String_clear(jobNode->volumeMessage);
   jobNode->volumeUnloadFlag      = FALSE;
   resetJobRunningInfo(jobNode);
 
@@ -3445,8 +3453,8 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
     String_set(jobNode->runningInfo.storageName,restoreStatusInfo->storageName);
     jobNode->runningInfo.storageDoneSize       = restoreStatusInfo->storageDoneSize;
     jobNode->runningInfo.storageTotalSize      = restoreStatusInfo->storageTotalSize;
-    jobNode->runningInfo.volumeNumber          = 0; // ???
-    jobNode->runningInfo.volumeProgress        = 0.0; // ???
+    jobNode->runningInfo.volumeNumber          = 0;
+    jobNode->runningInfo.volumeProgress        = 0.0;
   }
 }
 
@@ -13305,7 +13313,7 @@ LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, IndexHandle *ind
 
 /***********************************************************************\
 * Name   : serverCommand_volumeLoad
-* Purpose: set number of loaded volume
+* Purpose: load volume
 * Input  : clientInfo    - client info
 *          indexHandle   - index handle
 *          id            - command id

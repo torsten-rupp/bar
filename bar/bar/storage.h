@@ -91,32 +91,43 @@ typedef void(*StorageUpdateStatusInfoFunction)(const StorageStatusInfo *storageS
                                                void                    *userData
                                               );
 
+// storage request volume types
+typedef enum
+{
+  STORAGE_REQUEST_VOLUME_TYPE_NEW,
+  STORAGE_REQUEST_VOLUME_TYPE_RENEW
+} StorageRequestVolumeTypes;
+
 // storage request volume results
 typedef enum
 {
-  STORAGE_REQUEST_VOLUME_NONE,
+  STORAGE_REQUEST_VOLUME_RESULT_NONE,
 
-  STORAGE_REQUEST_VOLUME_OK,
-  STORAGE_REQUEST_VOLUME_FAIL,
-  STORAGE_REQUEST_VOLUME_UNLOAD,
-  STORAGE_REQUEST_VOLUME_ABORTED,
+  STORAGE_REQUEST_VOLUME_RESULT_OK,
+  STORAGE_REQUEST_VOLUME_RESULT_FAIL,
+  STORAGE_REQUEST_VOLUME_RESULT_UNLOAD,
+  STORAGE_REQUEST_VOLUME_RESULT_ABORTED,
 
-  STORAGE_REQUEST_VOLUME_UNKNOWN,
-} StorageRequestResults;
+  STORAGE_REQUEST_VOLUME_RESULT_UNKNOWN,
+} StorageRequestVolumeResults;
 
 /***********************************************************************\
 * Name   : StorageRequestVolumeFunction
 * Purpose: request new volume call-back
-* Input  : volumeNumber - requested volume number
-*          userData     - user data
+* Input  : type          - storage request type; see StorageRequestTypes
+*          volumeNumber  - requested volume number
+*          volumeMessage - request message
+*          userData      - user data
 * Output : -
 * Return : storage request result; see StorageRequestResults
 * Notes  : -
 \***********************************************************************/
 
-typedef StorageRequestResults(*StorageRequestVolumeFunction)(uint volumeNumber,
-                                                             void *userData
-                                                            );
+typedef StorageRequestVolumeResults(*StorageRequestVolumeFunction)(StorageRequestVolumeTypes type,
+                                                                   uint                      volumeNumber,
+                                                                   const char                *volumeMessage,
+                                                                   void                      *userData
+                                                                  );
 
 // storage modes
 typedef enum

@@ -82,9 +82,9 @@
 
 LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
 {
-  TextMacro             textMacros[2];
-  bool                  volumeRequestedFlag;
-  StorageRequestResults storageRequestResult;
+  TextMacro                   textMacros[2];
+  bool                        volumeRequestedFlag;
+  StorageRequestVolumeResults storageRequestVolumeResult;
 
   TEXT_MACRO_N_STRING (textMacros[0],"%device",storageHandle->storageSpecifier.deviceName,NULL);
   TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->requestedVolumeNumber,      NULL);
@@ -108,7 +108,7 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
 
   // request new volume
   volumeRequestedFlag  = FALSE;
-  storageRequestResult = STORAGE_REQUEST_VOLUME_UNKNOWN;
+  storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_UNKNOWN;
   if      (storageHandle->requestVolumeFunction != NULL)
   {
     volumeRequestedFlag = TRUE;
@@ -116,10 +116,12 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
     // request new volume via call back, unload if requested
     do
     {
-      storageRequestResult = storageHandle->requestVolumeFunction(storageHandle->requestedVolumeNumber,
-                                                                  storageHandle->requestVolumeUserData
-                                                                 );
-      if (storageRequestResult == STORAGE_REQUEST_VOLUME_UNLOAD)
+      storageRequestVolumeResult = storageHandle->requestVolumeFunction(STORAGE_REQUEST_VOLUME_TYPE_NEW,
+                                                                        storageHandle->requestedVolumeNumber,
+                                                                        NULL,  // message
+                                                                        storageHandle->requestVolumeUserData
+                                                                       );
+      if (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_UNLOAD)
       {
         // sleep a short time to give hardware time for finishing volume, then unload current medium
         printInfo(1,"Unload volume...");
@@ -132,7 +134,7 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
         printInfo(1,"OK\n");
       }
     }
-    while (storageRequestResult == STORAGE_REQUEST_VOLUME_UNLOAD);
+    while (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_UNLOAD);
 
     storageHandle->volumeState = STORAGE_VOLUME_STATE_WAIT;
   }
@@ -150,12 +152,12 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
        )
     {
       printInfo(1,"OK\n");
-      storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
+      storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
     }
     else
     {
       printInfo(1,"FAIL\n");
-      storageRequestResult = STORAGE_REQUEST_VOLUME_FAIL;
+      storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_FAIL;
     }
 
     storageHandle->volumeState = STORAGE_VOLUME_STATE_WAIT;
@@ -171,7 +173,7 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
         printInfo(0,"Please insert volume #%d into drive '%s' and press ENTER to continue\n",storageHandle->requestedVolumeNumber,storageHandle->storageSpecifier.deviceName);
         Misc_waitEnter();
 
-        storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
+        storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
       }
       else
       {
@@ -187,7 +189,7 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
         printInfo(0,"Press ENTER to continue\n");
         Misc_waitEnter();
 
-        storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
+        storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
       }
     }
 
@@ -196,9 +198,9 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
 
   if (volumeRequestedFlag)
   {
-    switch (storageRequestResult)
+    switch (storageRequestVolumeResult)
     {
-      case STORAGE_REQUEST_VOLUME_OK:
+      case STORAGE_REQUEST_VOLUME_RESULT_OK:
         // load volume; sleep a short time to give hardware time for reading volume information
         printInfo(1,"Load volume #%d...",storageHandle->requestedVolumeNumber);
         Misc_executeCommand(String_cString(storageHandle->device.loadVolumeCommand),
@@ -219,8 +221,17 @@ LOCAL Errors requestNewDeviceVolume(StorageHandle *storageHandle, bool waitFlag)
         storageHandle->volumeState = STORAGE_VOLUME_STATE_LOADED;
         return ERROR_NONE;
         break;
-      case STORAGE_REQUEST_VOLUME_ABORTED:
-        return ERROR_NONE;
+      case STORAGE_REQUEST_VOLUME_RESULT_ABORTED:
+        // load volume
+        printInfo(1,"Load volume #%d...",storageHandle->requestedVolumeNumber);
+        Misc_executeCommand(String_cString(storageHandle->device.loadVolumeCommand),
+                            textMacros,SIZE_OF_ARRAY(textMacros),
+                            CALLBACK(executeIOOutput,NULL),
+                            CALLBACK(executeIOOutput,NULL)
+                           );
+        printInfo(1,"OK\n");
+
+        return ERROR_ABORTED;
         break;
       default:
         return ERROR_LOAD_VOLUME_FAIL;
