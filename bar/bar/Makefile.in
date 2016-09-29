@@ -562,6 +562,7 @@ help:
 	@$(ECHO) "  rundev_de"
 	@$(ECHO) "  rundev_jp"
 	@$(ECHO) "  rundev_ssl"
+	@$(ECHO) "  rundev_test"
 	@$(ECHO) ""
 	@$(ECHO) "  test[-debug|-valgrind]"
 	@$(ECHO) "  test1[-debug|-valgrind], test_basic[-debug|-valgrind]"
@@ -883,7 +884,7 @@ run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-s
         --server-jobs-directory=jobs \
         --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem
 
-.PHONY: rundev rundevd rundevd1 rundevd2 rundevddd rundevvalgrind rundev_en rundev_de rundev_jp rundev_ssl runserver runserver_ssl
+.PHONY: rundev rundevd rundevd1 rundevd2 rundevddd rundevvalgrind rundev_en rundev_de rundev_jp rundev_ssl runserver runserver_ssl rundev_test
 rundev: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	$(INSTALL) bar.cfg /tmp/bar.cfg
@@ -973,6 +974,16 @@ rundev_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.p
         --server-port=39909 --server-tls-port=39910 \
         --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
         --log-file=/tmp/bar.log --log=all
+
+rundev_test: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	$(INSTALL) bar.cfg /tmp/bar.cfg
+	nice ./bar --daemon -D --no-default-config --config=/tmp/bar.cfg \
+        --index-database=test/index.db \
+        --server-jobs-directory=test/jobs \
+        --server-port=39909 --server-tls-port=39910 \
+        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+        --verbose=0
 
 ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem:
 	$(MAKE) -C .. keys
