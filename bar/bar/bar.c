@@ -119,6 +119,7 @@
 #define CD_LOAD_VOLUME_COMMAND                "eject -t %device"
 #define CD_IMAGE_COMMAND                      "nice mkisofs -V Backup -volset %number -r -o %image %directory"
 #define CD_ECC_COMMAND                        "nice dvdisaster -mRS02 -n cd -c -i %image -v"
+#define CD_BLANK_COMMAND                      "nice dvd+rw-format -blank %device"
 #define CD_WRITE_COMMAND                      "nice sh -c 'mkisofs -V Backup -volset %number -r -o %image %directory && cdrecord dev=%device %image'"
 #define CD_WRITE_IMAGE_COMMAND                "nice cdrecord dev=%device %image"
 
@@ -126,6 +127,8 @@
 #define DVD_LOAD_VOLUME_COMMAND               "eject -t %device"
 #define DVD_IMAGE_COMMAND                     "nice mkisofs -V Backup -volset %number -r -o %image %directory"
 #define DVD_ECC_COMMAND                       "nice dvdisaster -mRS02 -n dvd -c -i %image -v"
+//TODO: debug
+#define DVD_BLANK_COMMAND                     "nice echo dvd+rw-format -blank %device"
 #define DVD_WRITE_COMMAND                     "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory"
 //#warning todo remove -dry-run
 //#define DVD_WRITE_COMMAND                     "nice growisofs -Z %device -A BAR -V Backup -volset %number -dry-run -r %directory"
@@ -137,6 +140,7 @@
 #define BD_LOAD_VOLUME_COMMAND                "eject -t %device"
 #define BD_IMAGE_COMMAND                      "nice mkisofs -V Backup -volset %number -r -o %image %directory"
 #define BD_ECC_COMMAND                        "nice dvdisaster -mRS02 -n bd -c -i %image -v"
+#define BD_BLANK_COMMAND                      "nice dvd+rw-format -blank %device"
 #define BD_WRITE_COMMAND                      "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory"
 //#warning todo remove -dry-run
 //#define BD_WRITE_COMMAND                      "nice growisofs -Z %device -A BAR -V Backup -volset %number -dry-run -r %directory"
@@ -607,6 +611,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("cd-ecc-pre-command",           0,  1,1,globalOptions.cd.eccPreProcessCommand,                                                                  "make CD error-correction codes pre-process command","command"             ),
   CMD_OPTION_STRING       ("cd-ecc-post-command",          0,  1,1,globalOptions.cd.eccPostProcessCommand,                                                                 "make CD error-correction codes post-process command","command"            ),
   CMD_OPTION_STRING       ("cd-ecc-command",               0,  1,1,globalOptions.cd.eccCommand,                                                                            "make CD error-correction codes command","command"                         ),
+  CMD_OPTION_STRING       ("cd-blank-command",             0,  1,1,globalOptions.cd.blankCommand,                                                                          "blank CD medium command","command"                                        ),
   CMD_OPTION_STRING       ("cd-write-pre-command",         0,  1,1,globalOptions.cd.writePreProcessCommand,                                                                "write CD pre-process command","command"                                   ),
   CMD_OPTION_STRING       ("cd-write-post-command",        0,  1,1,globalOptions.cd.writePostProcessCommand,                                                               "write CD post-process command","command"                                  ),
   CMD_OPTION_STRING       ("cd-write-command",             0,  1,1,globalOptions.cd.writeCommand,                                                                          "write CD command","command"                                               ),
@@ -623,6 +628,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("dvd-ecc-pre-command",          0,  1,1,globalOptions.dvd.eccPreProcessCommand,                                                                 "make DVD error-correction codes pre-process command","command"            ),
   CMD_OPTION_STRING       ("dvd-ecc-post-command",         0,  1,1,globalOptions.dvd.eccPostProcessCommand,                                                                "make DVD error-correction codes post-process command","command"           ),
   CMD_OPTION_STRING       ("dvd-ecc-command",              0,  1,1,globalOptions.dvd.eccCommand,                                                                           "make DVD error-correction codes command","command"                        ),
+  CMD_OPTION_STRING       ("dvd-blank-command",            0,  1,1,globalOptions.dvd.blankCommand,                                                                         "blank DVD mediumcommand","command"                                        ),
   CMD_OPTION_STRING       ("dvd-write-pre-command",        0,  1,1,globalOptions.dvd.writePreProcessCommand,                                                               "write DVD pre-process command","command"                                  ),
   CMD_OPTION_STRING       ("dvd-write-post-command",       0,  1,1,globalOptions.dvd.writePostProcessCommand,                                                              "write DVD post-process command","command"                                 ),
   CMD_OPTION_STRING       ("dvd-write-command",            0,  1,1,globalOptions.dvd.writeCommand,                                                                         "write DVD command","command"                                              ),
@@ -639,6 +645,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("bd-ecc-pre-command",           0,  1,1,globalOptions.bd.eccPreProcessCommand,                                                                  "make BD error-correction codes pre-process command","command"             ),
   CMD_OPTION_STRING       ("bd-ecc-post-command",          0,  1,1,globalOptions.bd.eccPostProcessCommand,                                                                 "make BD error-correction codes post-process command","command"            ),
   CMD_OPTION_STRING       ("bd-ecc-command",               0,  1,1,globalOptions.bd.eccCommand,                                                                            "make BD error-correction codes command","command"                         ),
+  CMD_OPTION_STRING       ("bd-blank-command",             0,  1,1,globalOptions.bd.blankCommand,                                                                          "blank BD medium command","command"                                        ),
   CMD_OPTION_STRING       ("bd-write-pre-command",         0,  1,1,globalOptions.bd.writePreProcessCommand,                                                                "write BD pre-process command","command"                                   ),
   CMD_OPTION_STRING       ("bd-write-post-command",        0,  1,1,globalOptions.bd.writePostProcessCommand,                                                               "write BD post-process command","command"                                  ),
   CMD_OPTION_STRING       ("bd-write-command",             0,  1,1,globalOptions.bd.writeCommand,                                                                          "write BD command","command"                                               ),
@@ -655,6 +662,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("device-ecc-pre-command",       0,  1,1,defaultDevice.eccPreProcessCommand,                                                                     "make error-correction codes pre-process command","command"                ),
   CMD_OPTION_STRING       ("device-ecc-post-command",      0,  1,1,defaultDevice.eccPostProcessCommand,                                                                    "make error-correction codes post-process command","command"               ),
   CMD_OPTION_STRING       ("device-ecc-command",           0,  1,1,defaultDevice.eccCommand,                                                                               "make error-correction codes command","command"                            ),
+  CMD_OPTION_STRING       ("device-blank-command",         0,  1,1,defaultDevice.blankCommand,                                                                             "blank device medium command","command"                                    ),
   CMD_OPTION_STRING       ("device-write-pre-command",     0,  1,1,defaultDevice.writePreProcessCommand,                                                                   "write device pre-process command","command"                               ),
   CMD_OPTION_STRING       ("device-write-post-command",    0,  1,1,defaultDevice.writePostProcessCommand,                                                                  "write device post-process command","command"                              ),
   CMD_OPTION_STRING       ("device-write-command",         0,  1,1,defaultDevice.writeCommand,                                                                             "write device command","command"                                           ),
@@ -669,6 +677,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER64    ("volume-size",                  0,  1,2,jobOptions.volumeSize,                           0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                "volume size","unlimited"                                                  ),
   CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,2,jobOptions.errorCorrectionCodesFlag,                                                                    "add error-correction codes with 'dvdisaster' tool"                        ),
   CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,2,jobOptions.alwaysCreateImageFlag,                                                                       "always create image for CD/DVD/BD/device"                                 ),
+  CMD_OPTION_BOOLEAN      ("blank",                        0,  1,2,jobOptions.blankFlag,                                                                                   "blank medium before writing"                                              ),
 
   CMD_OPTION_CSTRING      ("continuous-database",          0,  2,1,continuousDatabaseFileName,                                                                             "continuous database file name (default: in memory)","file name"           ),
   CMD_OPTION_INTEGER64    ("continuous-max-size",          0,  1,2,globalOptions.continuousMaxSize,                 0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                "max. continuous size","unlimited"                                         ),
@@ -958,6 +967,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_INTEGER64         ("volume-size",                  &jobOptions.volumeSize,-1,                                     0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_BOOLEAN           ("ecc",                          &jobOptions.errorCorrectionCodesFlag,-1                        ),
   CONFIG_VALUE_BOOLEAN           ("always-create-image",          &jobOptions.alwaysCreateImageFlag,-1                           ),
+  CONFIG_VALUE_BOOLEAN           ("blank",                        &jobOptions.blankFlag,-1                                       ),
 
   CONFIG_VALUE_BOOLEAN           ("skip-unreadable",              &jobOptions.skipUnreadableFlag,-1                              ),
   CONFIG_VALUE_BOOLEAN           ("raw-images",                   &jobOptions.rawImagesFlag,-1                                   ),
@@ -1016,6 +1026,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("cd-ecc-pre-command",           &globalOptions.cd.eccPreProcessCommand,-1                      ),
   CONFIG_VALUE_STRING            ("cd-ecc-post-command",          &globalOptions.cd.eccPostProcessCommand,-1                     ),
   CONFIG_VALUE_STRING            ("cd-ecc-command",               &globalOptions.cd.eccCommand,-1                                ),
+  CONFIG_VALUE_STRING            ("cd-blank-command",             &globalOptions.cd.blankCommand,-1                              ),
   CONFIG_VALUE_STRING            ("cd-write-pre-command",         &globalOptions.cd.writePreProcessCommand,-1                    ),
   CONFIG_VALUE_STRING            ("cd-write-post-command",        &globalOptions.cd.writePostProcessCommand,-1                   ),
   CONFIG_VALUE_STRING            ("cd-write-command",             &globalOptions.cd.writeCommand,-1                              ),
@@ -1032,6 +1043,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("dvd-ecc-pre-command",          &globalOptions.dvd.eccPreProcessCommand,-1                     ),
   CONFIG_VALUE_STRING            ("dvd-ecc-post-command",         &globalOptions.dvd.eccPostProcessCommand,-1                    ),
   CONFIG_VALUE_STRING            ("dvd-ecc-command",              &globalOptions.dvd.eccCommand,-1                               ),
+  CONFIG_VALUE_STRING            ("dvd-blank-command",            &globalOptions.dvd.blankCommand,-1                             ),
   CONFIG_VALUE_STRING            ("dvd-write-pre-command",        &globalOptions.dvd.writePreProcessCommand,-1                   ),
   CONFIG_VALUE_STRING            ("dvd-write-post-command",       &globalOptions.dvd.writePostProcessCommand,-1                  ),
   CONFIG_VALUE_STRING            ("dvd-write-command",            &globalOptions.dvd.writeCommand,-1                             ),
@@ -1048,6 +1060,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("bd-ecc-pre-command",           &globalOptions.bd.eccPreProcessCommand,-1                      ),
   CONFIG_VALUE_STRING            ("bd-ecc-post-command",          &globalOptions.bd.eccPostProcessCommand,-1                     ),
   CONFIG_VALUE_STRING            ("bd-ecc-command",               &globalOptions.bd.eccCommand,-1                                ),
+  CONFIG_VALUE_STRING            ("bd-blank-command",             &globalOptions.bd.blankCommand,-1                              ),
   CONFIG_VALUE_STRING            ("bd-write-pre-command",         &globalOptions.bd.writePreProcessCommand,-1                    ),
   CONFIG_VALUE_STRING            ("bd-write-post-command",        &globalOptions.bd.writePostProcessCommand,-1                   ),
   CONFIG_VALUE_STRING            ("bd-write-command",             &globalOptions.bd.writeCommand,-1                              ),
@@ -1117,6 +1130,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("device-ecc-pre-command",       &defaultDevice.eccPreProcessCommand,-1                         ),
   CONFIG_VALUE_STRING            ("device-ecc-post-command",      &defaultDevice.eccPostProcessCommand,-1                        ),
   CONFIG_VALUE_STRING            ("device-ecc-command",           &defaultDevice.eccCommand,-1                                   ),
+  CONFIG_VALUE_STRING            ("device-blank-command",         &defaultDevice.blankCommand,-1                                 ),
   CONFIG_VALUE_STRING            ("device-write-pre-command",     &defaultDevice.writePreProcessCommand,-1                       ),
   CONFIG_VALUE_STRING            ("device-write-post-command",    &defaultDevice.writePostProcessCommand,-1                      ),
   CONFIG_VALUE_STRING            ("device-write-command",         &defaultDevice.writeCommand,-1                                 ),
@@ -1133,6 +1147,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_STRING   ("device-ecc-pre-command",       Device,eccPreProcessCommand                                    ),
     CONFIG_STRUCT_VALUE_STRING   ("device-ecc-post-command",      Device,eccPostProcessCommand                                   ),
     CONFIG_STRUCT_VALUE_STRING   ("device-ecc-command",           Device,eccCommand                                              ),
+    CONFIG_STRUCT_VALUE_STRING   ("device-blank-command",         Device,blankCommand                                            ),
     CONFIG_STRUCT_VALUE_STRING   ("device-write-pre-command",     Device,writePreProcessCommand                                  ),
     CONFIG_STRUCT_VALUE_STRING   ("device-write-post-command",    Device,writePostProcessCommand                                 ),
     CONFIG_STRUCT_VALUE_STRING   ("device-write-command",         Device,writeCommand                                            ),
@@ -1374,6 +1389,7 @@ LOCAL void initDevice(Device *device)
   device->eccPreProcessCommand    = NULL;
   device->eccPostProcessCommand   = NULL;
   device->eccCommand              = NULL;
+  device->blankCommand            = NULL;
   device->writePreProcessCommand  = NULL;
   device->writePostProcessCommand = NULL;
   device->writeCommand            = NULL;
@@ -1424,6 +1440,7 @@ LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
   String_delete(deviceNode->device.writeCommand           );
   String_delete(deviceNode->device.writePostProcessCommand);
   String_delete(deviceNode->device.writePreProcessCommand );
+  String_delete(deviceNode->device.blankCommand           );
   String_delete(deviceNode->device.eccCommand             );
   String_delete(deviceNode->device.eccPostProcessCommand  );
   String_delete(deviceNode->device.eccPreProcessCommand   );
@@ -2918,6 +2935,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.cd.eccPreProcessCommand                         = NULL;
   globalOptions.cd.eccPostProcessCommand                        = NULL;
   globalOptions.cd.eccCommand                                   = String_newCString(CD_ECC_COMMAND);
+  globalOptions.cd.blankCommand                                 = String_newCString(CD_BLANK_COMMAND);
   globalOptions.cd.writePreProcessCommand                       = NULL;
   globalOptions.cd.writePostProcessCommand                      = NULL;
   globalOptions.cd.writeCommand                                 = String_newCString(CD_WRITE_COMMAND);
@@ -2934,6 +2952,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.dvd.eccPreProcessCommand                        = NULL;
   globalOptions.dvd.eccPostProcessCommand                       = NULL;
   globalOptions.dvd.eccCommand                                  = String_newCString(DVD_ECC_COMMAND);
+  globalOptions.dvd.blankCommand                                = String_newCString(DVD_BLANK_COMMAND);
   globalOptions.dvd.writePreProcessCommand                      = NULL;
   globalOptions.dvd.writePostProcessCommand                     = NULL;
   globalOptions.dvd.writeCommand                                = String_newCString(DVD_WRITE_COMMAND);
@@ -2950,6 +2969,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.bd.eccPreProcessCommand                         = NULL;
   globalOptions.bd.eccPostProcessCommand                        = NULL;
   globalOptions.bd.eccCommand                                   = String_newCString(BD_ECC_COMMAND);
+  globalOptions.bd.blankCommand                                 = String_newCString(BD_BLANK_COMMAND);
   globalOptions.bd.writePreProcessCommand                       = NULL;
   globalOptions.bd.writePostProcessCommand                      = NULL;
   globalOptions.bd.writeCommand                                 = String_newCString(BD_WRITE_COMMAND);
@@ -2994,6 +3014,7 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.bd.writeCommand);
   String_delete(globalOptions.bd.writePostProcessCommand);
   String_delete(globalOptions.bd.writePreProcessCommand);
+  String_delete(globalOptions.bd.blankCommand);
   String_delete(globalOptions.bd.eccCommand);
   String_delete(globalOptions.bd.eccPostProcessCommand);
   String_delete(globalOptions.bd.eccPreProcessCommand);
@@ -3009,6 +3030,7 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.dvd.writeCommand);
   String_delete(globalOptions.dvd.writePostProcessCommand);
   String_delete(globalOptions.dvd.writePreProcessCommand);
+  String_delete(globalOptions.dvd.blankCommand);
   String_delete(globalOptions.dvd.eccCommand);
   String_delete(globalOptions.dvd.eccPostProcessCommand);
   String_delete(globalOptions.dvd.eccPreProcessCommand);
@@ -3024,6 +3046,7 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.cd.writeCommand);
   String_delete(globalOptions.cd.writePostProcessCommand);
   String_delete(globalOptions.cd.writePreProcessCommand);
+  String_delete(globalOptions.cd.blankCommand);
   String_delete(globalOptions.cd.eccCommand);
   String_delete(globalOptions.cd.eccPostProcessCommand);
   String_delete(globalOptions.cd.eccPreProcessCommand);
@@ -3361,6 +3384,7 @@ LOCAL void doneAll(void)
   if (defaultDevice.writePostProcessCommand != NULL) String_delete(defaultDevice.writePostProcessCommand);
   if (defaultDevice.writePreProcessCommand != NULL) String_delete(defaultDevice.writePreProcessCommand);
   if (defaultDevice.eccCommand != NULL) String_delete(defaultDevice.eccCommand);
+  if (defaultDevice.blankCommand != NULL) String_delete(defaultDevice.blankCommand);
   if (defaultDevice.eccPostProcessCommand != NULL) String_delete(defaultDevice.eccPostProcessCommand);
   if (defaultDevice.eccPreProcessCommand != NULL) String_delete(defaultDevice.eccPreProcessCommand);
   if (defaultDevice.imageCommand != NULL) String_delete(defaultDevice.imageCommand);
@@ -4524,6 +4548,7 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->archiveFileMode                 = ARCHIVE_FILE_MODE_STOP;
   jobOptions->overwriteEntriesFlag            = FALSE;
   jobOptions->errorCorrectionCodesFlag        = FALSE;
+  jobOptions->blankFlag                       = FALSE;
   jobOptions->alwaysCreateImageFlag           = FALSE;
   jobOptions->waitFirstVolumeFlag             = FALSE;
   jobOptions->rawImagesFlag                   = FALSE;
@@ -4574,6 +4599,7 @@ void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOp
   jobOptions->opticalDisk.eccPreProcessCommand    = String_duplicate(fromJobOptions->opticalDisk.eccPreProcessCommand);
   jobOptions->opticalDisk.eccPostProcessCommand   = String_duplicate(fromJobOptions->opticalDisk.eccPostProcessCommand);
   jobOptions->opticalDisk.eccCommand              = String_duplicate(fromJobOptions->opticalDisk.eccCommand);
+  jobOptions->opticalDisk.blankCommand            = String_duplicate(fromJobOptions->opticalDisk.blankCommand);
   jobOptions->opticalDisk.writePreProcessCommand  = String_duplicate(fromJobOptions->opticalDisk.writePreProcessCommand);
   jobOptions->opticalDisk.writePostProcessCommand = String_duplicate(fromJobOptions->opticalDisk.writePostProcessCommand);
   jobOptions->opticalDisk.writeCommand            = String_duplicate(fromJobOptions->opticalDisk.writeCommand);
@@ -4587,6 +4613,7 @@ void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOp
   jobOptions->device.eccPreProcessCommand         = String_duplicate(fromJobOptions->device.eccPreProcessCommand);
   jobOptions->device.eccPostProcessCommand        = String_duplicate(fromJobOptions->device.eccPostProcessCommand);
   jobOptions->device.eccCommand                   = String_duplicate(fromJobOptions->device.eccCommand);
+  jobOptions->device.blankCommand                 = String_duplicate(fromJobOptions->device.blankCommand);
   jobOptions->device.writePreProcessCommand       = String_duplicate(fromJobOptions->device.writePreProcessCommand);
   jobOptions->device.writePostProcessCommand      = String_duplicate(fromJobOptions->device.writePostProcessCommand);
   jobOptions->device.writeCommand                 = String_duplicate(fromJobOptions->device.writeCommand);
@@ -4603,6 +4630,7 @@ void doneJobOptions(JobOptions *jobOptions)
   String_delete(jobOptions->device.writeCommand);
   String_delete(jobOptions->device.writePostProcessCommand);
   String_delete(jobOptions->device.writePreProcessCommand);
+  String_delete(jobOptions->device.blankCommand);
   String_delete(jobOptions->device.eccCommand);
   String_delete(jobOptions->device.eccPostProcessCommand);
   String_delete(jobOptions->device.eccPreProcessCommand);
@@ -4616,6 +4644,7 @@ void doneJobOptions(JobOptions *jobOptions)
   String_delete(jobOptions->opticalDisk.writeCommand);
   String_delete(jobOptions->opticalDisk.writePostProcessCommand);
   String_delete(jobOptions->opticalDisk.writePreProcessCommand);
+  String_delete(jobOptions->opticalDisk.blankCommand);
   String_delete(jobOptions->opticalDisk.eccCommand);
   String_delete(jobOptions->opticalDisk.eccPostProcessCommand);
   String_delete(jobOptions->opticalDisk.eccPreProcessCommand);
@@ -5552,6 +5581,7 @@ void getCDSettings(const JobOptions *jobOptions,
   opticalDisk->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.cd.eccPreProcessCommand;
   opticalDisk->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.cd.eccPostProcessCommand;
   opticalDisk->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.cd.eccCommand;
+  opticalDisk->blankCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.blankCommand            : globalOptions.cd.blankCommand;
   opticalDisk->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.cd.writePreProcessCommand;
   opticalDisk->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.cd.writePostProcessCommand;
   opticalDisk->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.cd.writeCommand;
@@ -5575,6 +5605,7 @@ void getDVDSettings(const JobOptions *jobOptions,
   opticalDisk->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.dvd.eccPreProcessCommand;
   opticalDisk->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.dvd.eccPostProcessCommand;
   opticalDisk->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.dvd.eccCommand;
+  opticalDisk->blankCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.blankCommand            : globalOptions.dvd.blankCommand;
   opticalDisk->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.dvd.writePreProcessCommand;
   opticalDisk->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.dvd.writePostProcessCommand;
   opticalDisk->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.dvd.writeCommand;
@@ -5598,6 +5629,7 @@ void getBDSettings(const JobOptions *jobOptions,
   opticalDisk->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.bd.eccPreProcessCommand;
   opticalDisk->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.bd.eccPostProcessCommand;
   opticalDisk->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.bd.eccCommand;
+  opticalDisk->blankCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.blankCommand            : globalOptions.bd.blankCommand;
   opticalDisk->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.bd.writePreProcessCommand;
   opticalDisk->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.bd.writePostProcessCommand;
   opticalDisk->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.bd.writeCommand;
@@ -5635,6 +5667,7 @@ void getDeviceSettings(ConstString      name,
     device->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->device.eccPreProcessCommand    != NULL)) ? jobOptions->device.eccPreProcessCommand    : ((deviceNode != NULL) ? deviceNode->device.eccPreProcessCommand    : globalOptions.defaultDevice->eccPreProcessCommand   );
     device->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->device.eccPostProcessCommand   != NULL)) ? jobOptions->device.eccPostProcessCommand   : ((deviceNode != NULL) ? deviceNode->device.eccPostProcessCommand   : globalOptions.defaultDevice->eccPostProcessCommand  );
     device->eccCommand              = ((jobOptions != NULL) && (jobOptions->device.eccCommand              != NULL)) ? jobOptions->device.eccCommand              : ((deviceNode != NULL) ? deviceNode->device.eccCommand              : globalOptions.defaultDevice->eccCommand             );
+    device->blankCommand            = ((jobOptions != NULL) && (jobOptions->device.eccCommand              != NULL)) ? jobOptions->device.eccCommand              : ((deviceNode != NULL) ? deviceNode->device.blankCommand            : globalOptions.defaultDevice->blankCommand           );
     device->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->device.writePreProcessCommand  != NULL)) ? jobOptions->device.writePreProcessCommand  : ((deviceNode != NULL) ? deviceNode->device.writePreProcessCommand  : globalOptions.defaultDevice->writePreProcessCommand );
     device->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->device.writePostProcessCommand != NULL)) ? jobOptions->device.writePostProcessCommand : ((deviceNode != NULL) ? deviceNode->device.writePostProcessCommand : globalOptions.defaultDevice->writePostProcessCommand);
     device->writeCommand            = ((jobOptions != NULL) && (jobOptions->device.writeCommand            != NULL)) ? jobOptions->device.writeCommand            : ((deviceNode != NULL) ? deviceNode->device.writeCommand            : globalOptions.defaultDevice->writeCommand           );

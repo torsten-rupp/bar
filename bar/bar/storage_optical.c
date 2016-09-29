@@ -357,7 +357,7 @@ LOCAL void executeIOmkisofsStderr(ConstString line,
 }
 
 /***********************************************************************\
-* Name   : executeIODVDisaster
+* Name   : executeIOdvdisasterOutput
 * Purpose: process dvdisaster output
 * Input  : storageHandle - storage handle
 *          line          - line
@@ -440,6 +440,86 @@ LOCAL void executeIOdvdisasterStderr(ConstString line,
   assert(executeIOInfo->storageHandle != NULL);
 
   executeIOdvdisasterOutput(executeIOInfo->storageHandle,line);
+  executeIOOutput(line,&executeIOInfo->stderrList);
+}
+
+/***********************************************************************\
+* Name   : executeIOblankOutput
+* Purpose: process blank output
+* Input  : storageHandle - storage handle
+*          line          - line
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void executeIOblankOutput(StorageHandle *storageHandle,
+                                ConstString   line
+                               )
+{
+  String s;
+  double p;
+
+  assert(storageHandle != NULL);
+  assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(line != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
+
+//fprintf(stderr,"%s,%d: blank line=%s\n",__FILE__,__LINE__,String_cString(line));
+  s = String_new();
+  if (String_matchCString(line,STRING_BEGIN,".*?([0-9\\.]+)%.*",NULL,STRING_NO_ASSIGN,s,NULL))
+  {
+    p = String_toDouble(s,0,NULL,NULL,0);
+//fprintf(stderr,"%s,%d: blank: %s -> %lf\n",__FILE__,__LINE__,String_cString(line),p);
+    storageHandle->runningInfo.volumeProgress = ((double)storageHandle->opticalDisk.write.step*100.0+p)/(double)(storageHandle->opticalDisk.write.steps*100);
+    updateStorageStatusInfo(storageHandle);
+  }
+  String_delete(s);
+}
+
+/***********************************************************************\
+* Name   : executeIOblankStdout
+* Purpose: process blank stdout
+* Input  : line     - line
+*          userData - storage file handle variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void executeIOblankStdout(ConstString line,
+                                void        *userData
+                               )
+{
+  ExecuteIOInfo *executeIOInfo = (ExecuteIOInfo*)userData;
+
+  assert(executeIOInfo != NULL);
+  assert(executeIOInfo->storageHandle != NULL);
+
+  executeIOblankOutput(executeIOInfo->storageHandle,line);
+  executeIOOutput(line,NULL);
+}
+
+/***********************************************************************\
+* Name   : executeIOblankStderr
+* Purpose: process blank stderr
+* Input  : line     - line
+*          userData - storage file handle variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void executeIOblankStderr(ConstString line,
+                                void        *userData
+                               )
+{
+  ExecuteIOInfo *executeIOInfo = (ExecuteIOInfo*)userData;
+
+  assert(executeIOInfo != NULL);
+  assert(executeIOInfo->storageHandle != NULL);
+
+  executeIOblankOutput(executeIOInfo->storageHandle,line);
   executeIOOutput(line,&executeIOInfo->stderrList);
 }
 
@@ -859,11 +939,14 @@ LOCAL Errors StorageOptical_init(StorageHandle          *storageHandle,
   storageHandle->opticalDisk.write.eccPreProcessCommand   = opticalDisk.eccPreProcessCommand;
   storageHandle->opticalDisk.write.eccPostProcessCommand  = opticalDisk.eccPostProcessCommand;
   storageHandle->opticalDisk.write.eccCommand             = opticalDisk.eccCommand;
+  storageHandle->opticalDisk.write.blankCommand           = opticalDisk.blankCommand;
   storageHandle->opticalDisk.write.writePreProcessCommand = opticalDisk.writePreProcessCommand;
   storageHandle->opticalDisk.write.writePostProcessCommand= opticalDisk.writePostProcessCommand;
   storageHandle->opticalDisk.write.writeCommand           = opticalDisk.writeCommand;
   storageHandle->opticalDisk.write.writeImageCommand      = opticalDisk.writeImageCommand;
-  storageHandle->opticalDisk.write.steps                  = ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag) ? 4 : 1;
+  storageHandle->opticalDisk.write.steps                  = 1;
+  if ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag) storageHandle->opticalDisk.write.steps += 3;
+  if ((jobOptions != NULL) && jobOptions->blankFlag) storageHandle->opticalDisk.write.steps += 1;
   storageHandle->opticalDisk.write.directory              = String_new();
   storageHandle->opticalDisk.write.step                   = 0;
   if ((jobOptions != NULL) && jobOptions->waitFirstVolumeFlag)
@@ -1079,7 +1162,6 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
       {
         // create medium image
         printInfo(1,"Make medium image #%d with %d part(s)...",storageHandle->opticalDisk.write.number,StringList_count(&storageHandle->opticalDisk.write.fileNameList));
-        storageHandle->opticalDisk.write.step = 0;
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.imageCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
@@ -1096,12 +1178,12 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
         }
         File_getFileInfo(imageFileName,&fileInfo);
         printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
+        storageHandle->opticalDisk.write.step++;
 
         if (storageHandle->jobOptions->errorCorrectionCodesFlag)
         {
           // add error-correction codes to medium image
           printInfo(1,"Add ECC to image #%d...",storageHandle->opticalDisk.write.number);
-          storageHandle->opticalDisk.write.step = 1;
           StringList_clear(&executeIOInfo.stderrList);
           error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.eccCommand),
                                       textMacros,SIZE_OF_ARRAY(textMacros),
@@ -1118,6 +1200,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
           }
           File_getFileInfo(imageFileName,&fileInfo);
           printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
+          storageHandle->opticalDisk.write.step++;
         }
 
         // get number of image sectors
@@ -1141,6 +1224,29 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
           updateStorageStatusInfo(storageHandle);
         }
 
+        // blank mediuam
+        if (storageHandle->jobOptions->blankFlag)
+        {
+          // add error-correction codes to medium image
+          printInfo(1,"Blank medium #%d...",storageHandle->opticalDisk.write.number);
+          StringList_clear(&executeIOInfo.stderrList);
+          error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.blankCommand),
+                                      textMacros,SIZE_OF_ARRAY(textMacros),
+                                      CALLBACK(executeIOblankStdout,&executeIOInfo),
+                                      CALLBACK(executeIOblankStderr,&executeIOInfo)
+                                     );
+          if (error != ERROR_NONE)
+          {
+            printInfo(1,"FAIL\n");
+            File_delete(imageFileName,FALSE);
+            String_delete(imageFileName);
+            StringList_done(&executeIOInfo.stderrList);
+            return error;
+          }
+          printInfo(1,"OK\n");
+          storageHandle->opticalDisk.write.step++;
+        }
+
         retryFlag = TRUE;
         do
         {
@@ -1148,7 +1254,6 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
 
           // write image to medium
           printInfo(1,"Write image to medium #%d...",storageHandle->opticalDisk.write.number);
-          storageHandle->opticalDisk.write.step = 3;
           StringList_clear(&executeIOInfo.stderrList);
           error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.writeImageCommand),
                                       textMacros,SIZE_OF_ARRAY(textMacros),
@@ -1177,6 +1282,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
           StringList_done(&executeIOInfo.stderrList);
           return error;
         }
+        storageHandle->opticalDisk.write.step++;
       }
       else
       {
@@ -1202,7 +1308,6 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
 
           // write to medium
           printInfo(1,"Write medium #%d with %d part(s)...",storageHandle->opticalDisk.write.number,StringList_count(&storageHandle->opticalDisk.write.fileNameList));
-          storageHandle->opticalDisk.write.step = 0;
           StringList_clear(&executeIOInfo.stderrList);
           error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.writeCommand),
                                       textMacros,SIZE_OF_ARRAY(textMacros),
@@ -1230,6 +1335,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
           StringList_done(&executeIOInfo.stderrList);
           return error;
         }
+        storageHandle->opticalDisk.write.step++;
       }
 
       // delete image
@@ -1307,7 +1413,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
   else
   {
     // update info
-    storageHandle->opticalDisk.write.step     = 3;
+    storageHandle->opticalDisk.write.step     = storageHandle->opticalDisk.write.steps;
     storageHandle->runningInfo.volumeProgress = 1.0;
     updateStorageStatusInfo(storageHandle);
   }

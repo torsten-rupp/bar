@@ -1753,6 +1753,7 @@ public class TabJobs
   private WidgetVariable  maxBandWidth            = new WidgetVariable<Long>   ("max-band-width",0);
   private WidgetVariable  volumeSize              = new WidgetVariable<Long>   ("volume-size",0);
   private WidgetVariable  ecc                     = new WidgetVariable<Boolean>("ecc",false);
+  private WidgetVariable  blank                   = new WidgetVariable<Boolean>("blank",false);
   private WidgetVariable  waitFirstVolume         = new WidgetVariable<Boolean>("wait-first-volume",false);
   private WidgetVariable  skipUnreadable          = new WidgetVariable<Boolean>("skip-unreadable",false);
   private WidgetVariable  rawImages               = new WidgetVariable<Boolean>("raw-images",false);
@@ -7447,6 +7448,27 @@ widgetArchivePartSize.setListVisible(true);
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,ecc));
 
+            button = Widgets.newCheckbox(subComposite,BARControl.tr("blank medium"));
+            button.setToolTipText(BARControl.tr("Blank medium before writing."));
+            Widgets.layout(button,0,1,TableLayoutData.W);
+            button.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button  widget      = (Button)selectionEvent.widget;
+                boolean checkedFlag = widget.getSelection();
+
+                blank.set(checkedFlag);
+                BARServer.setJobOption(selectedJobData.uuid,"blank",checkedFlag);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(button,ecc));
+
             button = Widgets.newCheckbox(subComposite,BARControl.tr("wait for first volume"));
             button.setToolTipText(BARControl.tr("Wait until first volume is loaded."));
             Widgets.layout(button,1,0,TableLayoutData.W);
@@ -8881,6 +8903,7 @@ Dprintf.dprintf("clearJobData");
 */
       volumeSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"volume-size"),0));
       BARServer.getJobOption(selectedJobData.uuid,ecc);
+      BARServer.getJobOption(selectedJobData.uuid,blank);
       BARServer.getJobOption(selectedJobData.uuid,waitFirstVolume);
       BARServer.getJobOption(selectedJobData.uuid,skipUnreadable);
       BARServer.getJobOption(selectedJobData.uuid,rawImages);

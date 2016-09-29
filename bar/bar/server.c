@@ -543,6 +543,7 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 #endif
   CONFIG_STRUCT_VALUE_INTEGER64 ("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_STRUCT_VALUE_BOOLEAN   ("ecc",                     JobNode,jobOptions.errorCorrectionCodesFlag     ),
+  CONFIG_STRUCT_VALUE_BOOLEAN   ("blank",                   JobNode,jobOptions.blankFlag                    ),
 
   CONFIG_STRUCT_VALUE_BOOLEAN   ("skip-unreadable",         JobNode,jobOptions.skipUnreadableFlag           ),
   CONFIG_STRUCT_VALUE_BOOLEAN   ("raw-images",              JobNode,jobOptions.rawImagesFlag                ),
@@ -2859,6 +2860,7 @@ LOCAL bool readJob(JobNode *jobNode)
   jobNode->jobOptions.device.volumeSize            = 0LL;
   jobNode->jobOptions.waitFirstVolumeFlag          = FALSE;
   jobNode->jobOptions.errorCorrectionCodesFlag     = FALSE;
+  jobNode->jobOptions.blankFlag                    = FALSE;
   jobNode->jobOptions.skipUnreadableFlag           = FALSE;
   jobNode->jobOptions.rawImagesFlag                = FALSE;
   jobNode->jobOptions.archiveFileMode              = ARCHIVE_FILE_MODE_STOP;

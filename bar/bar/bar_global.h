@@ -344,6 +344,7 @@ typedef struct
   String eccPreProcessCommand;                                // command to execute before ECC calculation
   String eccPostProcessCommand;                               // command to execute after ECC calculation
   String eccCommand;                                          // command for ECC calculation
+  String blankCommand;                                        // command to balnk medium
   String writePreProcessCommand;                              // command to execute before writing medium
   String writePostProcessCommand;                             // command to execute after writing medium
   String writeCommand;                                        // command to write medium
@@ -365,6 +366,7 @@ typedef struct
   String eccPreProcessCommand;                                // command to execute before ECC calculation
   String eccPostProcessCommand;                               // command to execute after ECC calculation
   String eccCommand;                                          // command for ECC calculation
+  String blankCommand;                                        // command to balnk medium
   String writePreProcessCommand;                              // command to execute before writing volume
   String writePostProcessCommand;                             // command to execute after writing volume
   String writeCommand;                                        // command to write volume
@@ -529,6 +531,7 @@ struct JobOptions
   bool                         overwriteEntriesFlag;          // TRUE for overwrite existing files on restore
   bool                         errorCorrectionCodesFlag;      // TRUE iff error correction codes should be added
   bool                         alwaysCreateImageFlag;         // TRUE iff always create image for CD/DVD/BD/device
+  bool                         blankFlag;                     // TRUE to blank medium before writing
   bool                         waitFirstVolumeFlag;           // TRUE for wait for first volume
   bool                         rawImagesFlag;                 // TRUE for storing raw images
   bool                         noFragmentsCheckFlag;          // TRUE to skip checking file fragments for completeness
