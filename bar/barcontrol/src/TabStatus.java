@@ -2267,7 +2267,17 @@ public class TabStatus
     long     volumeNumber = requestedVolumeNumber.getLong();
     String[] resultErrorMessage = new String[1];
     int      error              = Errors.NONE;
-    switch (Dialogs.select(shell,BARControl.tr("Volume request"),BARControl.tr("Load volume number {0}.",volumeNumber),new String[]{BARControl.tr("OK"),BARControl.tr("Unload tray"),BARControl.tr("Cancel")},0))
+    switch (Dialogs.select(shell,
+                           BARControl.tr("Volume request"),
+                           BARControl.tr("Load volume number {0}.",volumeNumber),
+                           new String[]{BARControl.tr("OK"),
+                                        BARControl.tr("Unload tray"),
+                                        BARControl.tr("Abort"),
+                                        BARControl.tr("Cancel")
+                                       },
+                           0
+                          )
+           )
     {
       case 0:
         error = BARServer.executeCommand(StringParser.format("VOLUME_LOAD jobUUID=%s volumeNumber=%d",selectedJobData.uuid,volumeNumber),0,resultErrorMessage);
@@ -2276,6 +2286,9 @@ public class TabStatus
         error = BARServer.executeCommand(StringParser.format("VOLUME_UNLOAD jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
         break;
       case 2:
+        error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",selectedJobData.uuid),0,resultErrorMessage);
+        break;
+      case 3:
         break;
     }
     if (error != Errors.NONE)

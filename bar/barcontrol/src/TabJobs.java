@@ -7467,7 +7467,7 @@ widgetArchivePartSize.setListVisible(true);
                 BARServer.setJobOption(selectedJobData.uuid,"blank",checkedFlag);
               }
             });
-            Widgets.addModifyListener(new WidgetModifyListener(button,ecc));
+            Widgets.addModifyListener(new WidgetModifyListener(button,blank));
 
             button = Widgets.newCheckbox(subComposite,BARControl.tr("wait for first volume"));
             button.setToolTipText(BARControl.tr("Wait until first volume is loaded."));

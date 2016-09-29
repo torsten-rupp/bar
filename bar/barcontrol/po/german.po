@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-09-29 12:25+0200\n"
+"POT-Creation-Date: 2016-09-29 12:46+0200\n"
 "PO-Revision-Date: 2016-09-21 12:00+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -163,7 +163,7 @@ msgstr "Login"
 #: src/TabJobs.java:8668 src/TabJobs.java:10066 src/TabJobs.java:10396
 #: src/TabJobs.java:10754 src/TabJobs.java:11197 src/TabJobs.java:12487
 #: src/TabJobs.java:13075 src/TabRestore.java:7512 src/TabRestore.java:8827
-#: src/TabStatus.java:2070 src/TabStatus.java:2270
+#: src/TabStatus.java:2070 src/TabStatus.java:2276
 msgid "Cancel"
 msgstr "Abbrechen"
 
@@ -189,6 +189,7 @@ msgstr "Start"
 #: src/BARControl.java:2211 src/BARControl.java:2680 src/BusyDialog.java:264
 #: src/Dialogs.java:163 src/TabRestore.java:8113 src/TabRestore.java:9250
 #: src/TabStatus.java:787 src/TabStatus.java:1474 src/TabStatus.java:2155
+#: src/TabStatus.java:2275
 msgid "Abort"
 msgstr "Abbrechen"
 
@@ -391,7 +392,7 @@ msgid "Confirmation"
 msgstr "Bestätigung"
 
 #: src/Dialogs.java:2578 src/Dialogs.java:2761 src/Dialogs.java:2998
-#: src/Dialogs.java:4442 src/Dialogs.java:4794 src/TabStatus.java:2270
+#: src/Dialogs.java:4442 src/Dialogs.java:4794 src/TabStatus.java:2273
 msgid "OK"
 msgstr "OK"
 
@@ -1350,7 +1351,7 @@ msgid "Enable to force SSL connection."
 msgstr "Aktivierung um eine SSL-Verbindung zu erzwingen."
 
 #: src/TabJobs.java:2148 src/TabRestore.java:4406 src/TabRestore.java:5847
-#: src/TabRestore.java:8654 src/TabRestore.java:8663 src/TabStatus.java:2412
+#: src/TabRestore.java:8654 src/TabRestore.java:8663 src/TabStatus.java:2425
 msgid "Entries"
 msgstr "Dateien"
 
@@ -2927,7 +2928,7 @@ msgid "Job UUID"
 msgstr "Auftrag UUID"
 
 #: src/TabRestore.java:4096 src/TabStatus.java:591 src/TabStatus.java:721
-#: src/TabStatus.java:2428
+#: src/TabStatus.java:2441
 msgid "Last executed"
 msgstr "Letzte Ausführung"
 
@@ -2949,7 +2950,7 @@ msgstr "Zeitplan ID"
 msgid "Expire at"
 msgstr "Ablaufdatum"
 
-#: src/TabRestore.java:4353 src/TabRestore.java:4527 src/TabStatus.java:2376
+#: src/TabRestore.java:4353 src/TabRestore.java:4527 src/TabStatus.java:2389
 msgid "Job"
 msgstr "Auftrag"
 
@@ -3973,41 +3974,41 @@ msgstr "Auftrag kann nicht pausiert werden (Fehler: {0})"
 msgid "Cannot suspend job (error: {0})"
 msgstr "Auftrag kann nicht angehalten werden (Fehler: {0})"
 
-#: src/TabStatus.java:2270
+#: src/TabStatus.java:2271
 msgid "Volume request"
 msgstr "Medium anfordern"
 
-#: src/TabStatus.java:2270
+#: src/TabStatus.java:2272
 #, java-format
 msgid "Load volume number {0}."
 msgstr "Medium Nummer {0} laden."
 
-#: src/TabStatus.java:2270
+#: src/TabStatus.java:2274
 msgid "Unload tray"
 msgstr "Schublade öffnen"
 
-#: src/TabStatus.java:2283
+#: src/TabStatus.java:2296
 #, java-format
 msgid "Cannot change volume (error: {0})"
 msgstr "Name des Auftrags kann nicht geändert werden (Fehler: {0})"
 
-#: src/TabStatus.java:2386
+#: src/TabStatus.java:2399
 msgid "Entities"
 msgstr "Datensätze"
 
-#: src/TabStatus.java:2396
+#: src/TabStatus.java:2409
 msgid "Storages"
 msgstr "Sicherungen"
 
-#: src/TabStatus.java:2406 src/TabStatus.java:2422
+#: src/TabStatus.java:2419 src/TabStatus.java:2435
 msgid "%s (%d bytes)"
 msgstr "%s (%d Bytes)"
 
-#: src/TabStatus.java:2438
+#: src/TabStatus.java:2451
 msgid "Execution count"
 msgstr "Anzahl Ausführungen"
 
-#: src/TabStatus.java:2448
+#: src/TabStatus.java:2461
 msgid "Average execution time"
 msgstr "Durchschnittliche Ausführungszeit"
 
