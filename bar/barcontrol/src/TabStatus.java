@@ -417,7 +417,9 @@ public class TabStatus
 
   // colors
   private final Color COLOR_RUNNING;
+  private final Color COLOR_REQUEST;
   private final Color COLOR_ERROR;
+  private final Color COLOR_ABORTED;
 
   // date/time format
   private final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -498,7 +500,9 @@ public class TabStatus
 
     // get colors
     COLOR_RUNNING = new Color(null,0xA0,0xFF,0xA0);
+    COLOR_REQUEST = new Color(null,0xFF,0xFF,0xA0);
     COLOR_ERROR   = new Color(null,0xFF,0xA0,0xA0);
+    COLOR_ABORTED = new Color(null,0xC0,0xC0,0xC0);
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Status")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
@@ -1772,10 +1776,21 @@ public class TabStatus
                 switch (jobData.state)
                 {
                   case RUNNING:
+                  case DRY_RUNNING:
                     tableItem.setBackground(COLOR_RUNNING);
+                    break;
+                  case REQUEST_FTP_PASSWORD:
+                  case REQUEST_SSH_PASSWORD:
+                  case REQUEST_WEBDAV_PASSWORD:
+                  case REQUEST_CRYPT_PASSWORD:
+                  case REQUEST_VOLUME:
+                    tableItem.setBackground(COLOR_REQUEST);
                     break;
                   case ERROR:
                     tableItem.setBackground(COLOR_ERROR);
+                    break;
+                  case ABORTED:
+                    tableItem.setBackground(COLOR_ABORTED);
                     break;
                   default:
                     tableItem.setBackground(null);
