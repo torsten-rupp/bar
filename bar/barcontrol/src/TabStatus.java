@@ -400,8 +400,8 @@ public class TabStatus
   enum States
   {
     RUNNING,
-    PAUSE,
-    SUSPEND,
+    PAUSED,
+    SUSPENDED,
   };
 
   /** pause modes
@@ -1372,7 +1372,14 @@ public class TabStatus
       Widgets.layout(label,13,0,TableLayoutData.W);
       label = Widgets.newView(widgetSelectedJob);
       Widgets.layout(label,13,1,TableLayoutData.WE,0,9);
-      Widgets.addModifyListener(new WidgetModifyListener(label,message));
+      Widgets.addModifyListener(new WidgetModifyListener(label,message)
+      {
+        @Override
+        public String getString(WidgetVariable variable)
+        {
+          return message.getString().replaceAll("\\n+"," ");
+        }
+      });
       label.addMouseTrackListener(new MouseTrackListener()
       {
         @Override
@@ -1395,7 +1402,7 @@ public class TabStatus
             widgetMessageToolTip = null;
           }
 
-          if (!message.getString().equals(""))
+          if (!message.getString().isEmpty())
           {
             final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
             final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
@@ -1404,22 +1411,6 @@ public class TabStatus
             widgetMessageToolTip.setBackground(COLOR_BACKGROUND);
             widgetMessageToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
             Widgets.layout(widgetMessageToolTip,0,0,TableLayoutData.NSWE);
-            widgetMessageToolTip.addMouseTrackListener(new MouseTrackListener()
-            {
-              public void mouseEnter(MouseEvent mouseEvent)
-              {
-              }
-
-              public void mouseExit(MouseEvent mouseEvent)
-              {
-                widgetMessageToolTip.dispose();
-                widgetMessageToolTip = null;
-              }
-
-              public void mouseHover(MouseEvent mouseEvent)
-              {
-              }
-            });
 
             text = Widgets.newText(widgetMessageToolTip,SWT.LEFT|SWT.V_SCROLL|SWT.MULTI|SWT.WRAP);
             text.setText(message.getString());
@@ -1432,6 +1423,46 @@ public class TabStatus
             Point point = label.getParent().toDisplay(bounds.x,bounds.y);
             widgetMessageToolTip.setBounds(point.x+2,point.y+2,size.x,size.y);
             widgetMessageToolTip.setVisible(true);
+
+            shell.addMouseTrackListener(new MouseTrackListener()
+            {
+              @Override
+              public void mouseEnter(MouseEvent mouseEvent)
+              {
+              }
+
+              @Override
+              public void mouseExit(MouseEvent mouseEvent)
+              {
+                if (widgetMessageToolTip != null)
+                {
+                  // check if inside widget
+                  Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
+                  if (widgetMessageToolTip.getBounds().contains(point))
+                  {
+                    return;
+                  }
+
+                  // check if inside sub-widget
+                  for (Control control : widgetMessageToolTip.getChildren())
+                  {
+                    if (control.getBounds().contains(point))
+                    {
+                      return;
+                    }
+                  }
+
+                  // close tooltip
+                  widgetMessageToolTip.dispose();
+                  widgetMessageToolTip = null;
+                }
+              }
+
+              @Override
+              public void mouseHover(MouseEvent mouseEvent)
+              {
+              }
+            });
           }
         }
       });
@@ -1822,7 +1853,7 @@ public class TabStatus
     return (m > 0) ? ((double)n*100.0)/(double)m : 0.0;
   }
 
-  /** update status
+  /** update server status
    */
   private void updateStatus()
   {
@@ -1836,44 +1867,40 @@ public class TabStatus
       return;
     }
 
-    String statusText = valueMap.getString("state","running");
-    if      (statusText.equals("pause"))
+    status = valueMap.getEnum("state",States.class,States.RUNNING);
+    switch (status)
     {
-      final long pauseTime = valueMap.getLong("time");
-
-      status = States.PAUSE;
-      display.syncExec(new Runnable()
-      {
-        public void run()
+      case PAUSED:
+        final long pauseTime = valueMap.getLong("time");
+        display.syncExec(new Runnable()
         {
-          widgetButtonPause.setText(String.format(BARControl.tr("Pause [%3dmin]"),(pauseTime > 0) ? (pauseTime+59)/60:1));
-          widgetButtonSuspendContinue.setText(BARControl.tr("Continue"));
-        }
-      });
-    }
-    else if (statusText.equals("suspended"))
-    {
-      status = States.SUSPEND;
-      display.syncExec(new Runnable()
-      {
-        public void run()
+          public void run()
+          {
+            widgetButtonPause.setText(String.format(BARControl.tr("Pause [%3dmin]"),(pauseTime > 0) ? (pauseTime+59)/60:1));
+            widgetButtonSuspendContinue.setText(BARControl.tr("Continue"));
+          }
+        });
+        break;
+      case SUSPENDED:
+        display.syncExec(new Runnable()
         {
-          widgetButtonPause.setText(BARControl.tr("Pause"));
-          widgetButtonSuspendContinue.setText(BARControl.tr("Continue"));
-        }
-      });
-    }
-    else
-    {
-      status = States.RUNNING;
-      display.syncExec(new Runnable()
-      {
-        public void run()
+          public void run()
+          {
+            widgetButtonPause.setText(BARControl.tr("Pause"));
+            widgetButtonSuspendContinue.setText(BARControl.tr("Continue"));
+          }
+        });
+        break;
+      default:
+        display.syncExec(new Runnable()
         {
-          widgetButtonPause.setText(BARControl.tr("Pause"));
-          widgetButtonSuspendContinue.setText(BARControl.tr("Suspend"));
-        }
-      });
+          public void run()
+          {
+            widgetButtonPause.setText(BARControl.tr("Pause"));
+            widgetButtonSuspendContinue.setText(BARControl.tr("Suspend"));
+          }
+        });
+        break;
     }
   }
 
@@ -1958,6 +1985,7 @@ public class TabStatus
         public void run()
         {
           JobData.States state = resultMap.getEnum("state",JobData.States.class);
+          String         text  = resultMap.getString("message");
 
           doneCount.set            (resultMap.getLong("doneCount"              ));
           doneSize.set             (resultMap.getLong("doneSize"               ));
@@ -1983,8 +2011,8 @@ public class TabStatus
           totalEntriesProgress.set (getProgress(doneCount.getLong(),totalEntryCount.getLong()));
           totalBytesProgress.set   (getProgress(doneSize.getLong(),totalEntrySize.getLong()));
           requestedVolumeNumber.set(resultMap.getInt("requestedVolumeNumber"));
-          message.set              (resultMap.getString("message"));
 
+          // enable/disable buttons
           widgetButtonStart.setEnabled(   (state != JobData.States.RUNNING)
                                        && (state != JobData.States.DRY_RUNNING)
                                        && (state != JobData.States.WAITING)
@@ -1995,6 +2023,39 @@ public class TabStatus
                                        || (state == JobData.States.REQUEST_VOLUME)
                                       );
           widgetButtonVolume.setEnabled(state == JobData.States.REQUEST_VOLUME);
+
+          // set message
+          switch (state)
+          {
+            case NONE:
+            case WAITING:
+              message.set("");
+              break;
+            case RUNNING:
+            case DRY_RUNNING:
+              message.set(text);
+              break;
+            case REQUEST_FTP_PASSWORD:
+            case REQUEST_SSH_PASSWORD:
+            case REQUEST_WEBDAV_PASSWORD:
+            case REQUEST_CRYPT_PASSWORD:
+              break;
+            case REQUEST_VOLUME:
+              if (text.isEmpty())
+              {
+                message.set(BARControl.tr("Please insert volume #{0}",requestedVolumeNumber.getLong()));
+              }
+              else
+              {
+                message.set(BARControl.tr("Please insert replacement volume #{0}:\n\n{1}",requestedVolumeNumber.getLong(),text));
+              }
+              break;
+            case DONE:
+            case ERROR:
+            case ABORTED:
+              message.set(text);
+              break;
+          }
         }
       });
     }
@@ -2248,9 +2309,9 @@ public class TabStatus
     int      error  = Errors.NONE;
     switch (status)
     {
-      case RUNNING: error = BARServer.executeCommand(StringParser.format("SUSPEND") ,0,errorMessage); break;
-      case PAUSE:
-      case SUSPEND: error = BARServer.executeCommand(StringParser.format("CONTINUE"),0,errorMessage); break;
+      case RUNNING:   error = BARServer.executeCommand(StringParser.format("SUSPEND") ,0,errorMessage); break;
+      case PAUSED:
+      case SUSPENDED: error = BARServer.executeCommand(StringParser.format("CONTINUE"),0,errorMessage); break;
     }
     if (error != Errors.NONE)
     {

@@ -4149,12 +4149,14 @@ Dprintf.dprintf("cirrect?");
         {
           if (widgetStorageTreeToolTip != null)
           {
-            // check if inside sub-widget
+            // check if inside widget
             Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
             if (widgetStorageTreeToolTip.getBounds().contains(point))
             {
               return;
             }
+
+            // check if inside sub-widget
             for (Control control : widgetStorageTreeToolTip.getChildren())
             {
               if (control.getBounds().contains(point))
@@ -4299,12 +4301,14 @@ Dprintf.dprintf("cirrect?");
         {
           if (widgetStorageTreeToolTip != null)
           {
-            // check if inside sub-widget
+            // check if inside widget
             Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
             if (widgetStorageTreeToolTip.getBounds().contains(point))
             {
               return;
             }
+
+            // check if inside sub-widget
             for (Control control : widgetStorageTreeToolTip.getChildren())
             {
               if (control.getBounds().contains(point))
@@ -4469,12 +4473,14 @@ Dprintf.dprintf("cirrect?");
         {
           if (widgetStorageTableToolTip != null)
           {
-            // check if inside sub-widget
+            // check if inside widget
             Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
             if (widgetStorageTableToolTip.getBounds().contains(point))
             {
               return;
             }
+
+            // check if inside sub-widget
             for (Control control : widgetStorageTableToolTip.getChildren())
             {
               if (control.getBounds().contains(point))
@@ -4624,12 +4630,14 @@ Dprintf.dprintf("cirrect?");
         {
           if (widgetEntryTableToolTip != null)
           {
-            // check if inside sub-widget
+            // check if inside widget
             Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
             if (widgetEntryTableToolTip.getBounds().contains(point))
             {
               return;
             }
+
+            // check if inside sub-widget
             for (Control control : widgetEntryTableToolTip.getChildren())
             {
               if (control.getBounds().contains(point))

@@ -118,13 +118,17 @@ LOCAL void libcdioLogCallback(cdio_log_level_t level, const char *message)
 * Name   : requestNewOpticalMedium
 * Purpose: request new cd/dvd/bd medium
 * Input  : storageHandle - storage file handle
+           message       - message to show (or NULL)
 *          waitFlag      - TRUE to wait for new medium
 * Output : -
 * Return : TRUE if new medium loaded, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag)
+LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle,
+                                     const char    *message,
+                                     bool          waitFlag
+                                    )
 {
   TextMacro                   textMacros[2];
   bool                        mediumRequestedFlag;
@@ -163,7 +167,7 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle, bool waitFlag
     {
       storageRequestVolumeResult = storageHandle->requestVolumeFunction(STORAGE_REQUEST_VOLUME_TYPE_NEW,
                                                                         storageHandle->requestedVolumeNumber,
-                                                                        NULL,  // message
+                                                                        message,
                                                                         storageHandle->requestVolumeUserData
                                                                        );
       if (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_UNLOAD)
@@ -1067,7 +1071,7 @@ LOCAL Errors StorageOptical_preProcess(StorageHandle *storageHandle,
     if (storageHandle->volumeNumber != storageHandle->requestedVolumeNumber)
     {
       // request load new medium
-      error = requestNewOpticalMedium(storageHandle,FALSE);
+      error = requestNewOpticalMedium(storageHandle,NULL,FALSE);
     }
 
     // init macros
@@ -1228,7 +1232,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
         if (storageHandle->volumeNumber != storageHandle->requestedVolumeNumber)
         {
           // request load new medium
-          error = requestNewOpticalMedium(storageHandle,TRUE);
+          error = requestNewOpticalMedium(storageHandle,NULL,TRUE);
           if (error != ERROR_NONE)
           {
             File_delete(imageFileName,FALSE);
@@ -1289,7 +1293,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
             }
             else
             {
-              retryFlag = (requestNewOpticalMedium(storageHandle,TRUE) == ERROR_NONE);
+              retryFlag = (requestNewOpticalMedium(storageHandle,Error_getText(error),TRUE) == ERROR_NONE);
             }
           }
         }
@@ -1309,7 +1313,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
         if (storageHandle->volumeNumber != storageHandle->requestedVolumeNumber)
         {
           // request load new medium
-          error = requestNewOpticalMedium(storageHandle,TRUE);
+          error = requestNewOpticalMedium(storageHandle,NULL,TRUE);
           if (error != ERROR_NONE)
           {
             File_delete(imageFileName,FALSE);
@@ -1369,7 +1373,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
             }
             else
             {
-              retryFlag = (requestNewOpticalMedium(storageHandle,TRUE) == ERROR_NONE);
+              retryFlag = (requestNewOpticalMedium(storageHandle,Error_getText(error),TRUE) == ERROR_NONE);
             }
           }
         }

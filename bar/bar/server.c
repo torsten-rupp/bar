@@ -1653,10 +1653,10 @@ LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint buffe
 /***********************************************************************\
 * Name   : storageRequestVolume
 * Purpose: request volume call-back
-* Input  : type          - storage request volume type,
-*          volumeNumber  - volume number
-*          volumeMessage - volume message or NULL
-*          userData      - user data: job node
+* Input  : type         - storage request volume type,
+*          volumeNumber - volume number
+*          message      - message or NULL
+*          userData     - user data: job node
 * Output : -
 * Return : request result; see StorageRequestResults
 * Notes  : -
@@ -1664,7 +1664,7 @@ LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint buffe
 
 LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes type,
                                                        uint                      volumeNumber,
-                                                       const char                *volumeMessage,
+                                                       const char                *message,
                                                        void                      *userData
                                                       )
 {
@@ -1681,7 +1681,7 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
     // request volume, set job state
     assert(jobNode->state == JOB_STATE_RUNNING);
     jobNode->requestedVolumeNumber = volumeNumber;
-    String_format(String_clear(jobNode->runningInfo.message),"Please insert DVD #%d",volumeNumber);
+    String_setCString(jobNode->runningInfo.message,message);
     jobNode->state = JOB_STATE_REQUEST_VOLUME;
     Semaphore_signalModified(&jobStatusLock);
 
@@ -4367,6 +4367,7 @@ LOCAL void remoteThreadCode(void)
   * Notes  : -
   \***********************************************************************/
 
+//TODO: replace by enum/const instead of text?
   JobStates parseJobState(const char *stateText, uint *jobState)
   {
     assert(stateText != NULL);
@@ -6502,37 +6503,37 @@ LOCAL const char *getJobStateText(JobStates jobState, const JobOptions *jobOptio
   switch (jobState)
   {
     case JOB_STATE_NONE:
-      stateText = "none";
+      stateText = "NONE";
       break;
     case JOB_STATE_WAITING:
-      stateText = "waiting";
+      stateText = "WAITING";
       break;
     case JOB_STATE_RUNNING:
-      stateText = (jobOptions->dryRunFlag) ? "dry_running" : "running";
+      stateText = (jobOptions->dryRunFlag) ? "DRY_RUNNING" : "RUNNING";
       break;
     case JOB_STATE_REQUEST_FTP_PASSWORD:
-      stateText = "request_ftp_password";
+      stateText = "REQUEST_FTP_PASSWORD";
       break;
     case JOB_STATE_REQUEST_SSH_PASSWORD:
-      stateText = "request_ssh_password";
+      stateText = "REQUEST_SSH_PASSWORD";
       break;
     case JOB_STATE_REQUEST_WEBDAV_PASSWORD:
-      stateText = "request_webdav_password";
+      stateText = "REQUEST_WEBDAV_PASSWORD";
       break;
     case JOB_STATE_REQUEST_CRYPT_PASSWORD:
       stateText = "request_crypt_password";
       break;
     case JOB_STATE_REQUEST_VOLUME:
-      stateText = "request_volume";
+      stateText = "REQUEST_VOLUME";
       break;
     case JOB_STATE_DONE:
-      stateText = "done";
+      stateText = "DONE";
       break;
     case JOB_STATE_ERROR:
-      stateText = "error";
+      stateText = "ERROR";
       break;
     case JOB_STATE_ABORTED:
-      stateText = "aborted";
+      stateText = "ABORTED";
       break;
     #ifndef NDEBUG
       default:
@@ -7934,7 +7935,7 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
 * Return : -
 * Notes  : Arguments:
 *          Result:
-*            state=<status>
+*            state=RUNNIGN|PAUSED|SUSPENDED
 *            time=<pause time [s]>
 \***********************************************************************/
 
@@ -7954,14 +7955,14 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, IndexHandle *indexHandle
     switch (serverState)
     {
       case SERVER_STATE_RUNNING:
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=running");
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=RUNNING");
         break;
       case SERVER_STATE_PAUSE:
         now = Misc_getCurrentDateTime();
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=pause time=%llu",(pauseEndDateTime > now) ? pauseEndDateTime-now : 0LL);
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=PAUSED time=%llu",(pauseEndDateTime > now) ? pauseEndDateTime-now : 0LL);
         break;
       case SERVER_STATE_SUSPENDED:
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=suspended");
+        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=SUSPENDED");
         break;
     }
   }
