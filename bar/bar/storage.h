@@ -114,10 +114,10 @@ typedef enum
 /***********************************************************************\
 * Name   : StorageRequestVolumeFunction
 * Purpose: request new volume call-back
-* Input  : type          - storage request type; see StorageRequestTypes
-*          volumeNumber  - requested volume number
-*          volumeMessage - request message
-*          userData      - user data
+* Input  : type         - storage request type; see StorageRequestTypes
+*          volumeNumber - requested volume number
+*          message      - message to show
+*          userData     - user data
 * Output : -
 * Return : storage request result; see StorageRequestResults
 * Notes  : -
@@ -125,7 +125,7 @@ typedef enum
 
 typedef StorageRequestVolumeResults(*StorageRequestVolumeFunction)(StorageRequestVolumeTypes type,
                                                                    uint                      volumeNumber,
-                                                                   const char                *volumeMessage,
+                                                                   const char                *message,
                                                                    void                      *userData
                                                                   );
 
