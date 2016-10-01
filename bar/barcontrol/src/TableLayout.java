@@ -632,7 +632,7 @@ if (debug) System.err.println(indent()+"initialize "+this+": children="+children
     for (int i = 0; i < children.length; i++)
     {
       TableLayoutData tableLayoutData = (TableLayoutData)children[i].getLayoutData();
-      if (tableLayoutData == null) throw new Error("no layout data for "+children[i]);
+      if (tableLayoutData == null) throw new Error("no layout data for "+children[i]+", parent "+children[i].getParent());
 
       sizes[i] = children[i].computeSize(SWT.DEFAULT,SWT.DEFAULT,true);
 
