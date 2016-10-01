@@ -437,7 +437,7 @@ public class TabStatus
   private Menu        widgetJobTableHeaderMenu;
   private Menu        widgetJobTableBodyMenu;
   private Shell       widgetMessageToolTip = null;
-  private Group       widgetSelectedJob;
+  private Separator   widgetSelectedJob;
   public  Button      widgetButtonStart;
   public  Button      widgetButtonAbort;
   public  Button      widgetButtonPause;
@@ -488,7 +488,7 @@ public class TabStatus
     Menu        menu;
     MenuItem    menuItem;
     Group       group;
-    Composite   composite;
+    Composite   composite,subComposite;
     Button      button;
     Control     control;
     Label       label;
@@ -506,7 +506,7 @@ public class TabStatus
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Status")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
-    widgetTab.setLayout(new TableLayout(new double[]{1.0,0.0,0.0},1.0,2));
+    widgetTab.setLayout(new TableLayout(new double[]{1.0,0.0,0.0,0.0},1.0,2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
     widgetTab.addListener(SWT.Show,new Listener()
     {
@@ -984,31 +984,30 @@ public class TabStatus
     });
 
     // selected job group
-    widgetSelectedJob = Widgets.newGroup(widgetTab,BARControl.tr("Selected")+" ''",SWT.NONE);
-    widgetSelectedJob.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0,1.0,0.0,0.0,1.0,0.0,1.0,1.0},4));
+    widgetSelectedJob = new Separator(widgetTab,BARControl.tr("Selected")+" ''",SWT.NONE);
     Widgets.layout(widgetSelectedJob,1,0,TableLayoutData.WE);
-    {
-      // fix layout
-      control = Widgets.newSpacer(widgetSelectedJob);
-      Widgets.layout(control,0,0,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,1);
 
+    composite = Widgets.newComposite(widgetTab);
+    composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0,1.0,0.0,0.0,1.0,0.0,1.0,1.0},4));
+    Widgets.layout(composite,2,0,TableLayoutData.WE);
+    {
       // done files/bytes, files/s, bytes/s
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Done")+":");
-      Widgets.layout(label,1,0,TableLayoutData.W);
-      label = Widgets.newNumberView(widgetSelectedJob);
-      Widgets.layout(label,1,1,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("Done")+":");
+      Widgets.layout(label,0,0,TableLayoutData.W);
+      label = Widgets.newNumberView(composite);
+      Widgets.layout(label,0,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,doneCount));
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("files"));
-      Widgets.layout(label,1,2,TableLayoutData.W);
-      label = Widgets.newNumberView(widgetSelectedJob);
-      Widgets.layout(label,1,3,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("files"));
+      Widgets.layout(label,0,2,TableLayoutData.W);
+      label = Widgets.newNumberView(composite);
+      Widgets.layout(label,0,3,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,doneSize));
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,1,4,TableLayoutData.W);
-      label = Widgets.newLabel(widgetSelectedJob,"/");
-      Widgets.layout(label,1,5,TableLayoutData.W);
-      label = Widgets.newNumberView(widgetSelectedJob);
-      Widgets.layout(label,1,6,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("bytes"));
+      Widgets.layout(label,0,4,TableLayoutData.W);
+      label = Widgets.newLabel(composite,"/");
+      Widgets.layout(label,0,5,TableLayoutData.W);
+      label = Widgets.newNumberView(composite);
+      Widgets.layout(label,0,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,doneSize)
       {
         public String getString(WidgetVariable variable)
@@ -1016,8 +1015,8 @@ public class TabStatus
           return Units.getByteSize(variable.getLong());
         }
       });
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,1,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
+      label = Widgets.newLabel(composite,BARControl.tr("bytes"));
+      Widgets.layout(label,0,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
                                                                                                 BARControl.tr("KBytes"),
                                                                                                 BARControl.tr("MBytes"),
                                                                                                 BARControl.tr("GBytes"),
@@ -1034,11 +1033,11 @@ public class TabStatus
         }
       });
 
-      composite = Widgets.newComposite(widgetSelectedJob);
-      composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
-      Widgets.layout(composite,1,8,TableLayoutData.WE);
+      subComposite = Widgets.newComposite(composite);
+      subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
+      Widgets.layout(subComposite,0,8,TableLayoutData.WE);
       {
-        label = Widgets.newNumberView(composite);
+        label = Widgets.newNumberView(subComposite);
         Widgets.layout(label,0,0,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetModifyListener(label,filesPerSecond)
         {
@@ -1048,15 +1047,15 @@ public class TabStatus
             return String.format("%.1f",variable.getDouble());
           }
         });
-        label = Widgets.newLabel(composite,BARControl.tr("files/s"));
+        label = Widgets.newLabel(subComposite,BARControl.tr("files/s"));
         Widgets.layout(label,0,1,TableLayoutData.W);
       }
 
-      composite = Widgets.newComposite(widgetSelectedJob);
-      composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
-      Widgets.layout(composite,1,9,TableLayoutData.WE);
+      subComposite = Widgets.newComposite(composite);
+      subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
+      Widgets.layout(subComposite,0,9,TableLayoutData.WE);
       {
-        label = Widgets.newNumberView(composite);
+        label = Widgets.newNumberView(subComposite);
         Widgets.layout(label,0,0,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetModifyListener(label,bytesPerSecond)
         {
@@ -1066,7 +1065,7 @@ public class TabStatus
             return Units.getByteSize(variable.getDouble());
           }
         });
-        label = Widgets.newLabel(composite,BARControl.tr("bytes/s"));
+        label = Widgets.newLabel(subComposite,BARControl.tr("bytes/s"));
         Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes/s"),
                                                                                                   BARControl.tr("KBytes/s"),
                                                                                                   BARControl.tr("MBytes/s"),
@@ -1086,17 +1085,17 @@ public class TabStatus
       }
 
       // stored files/bytes
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Stored")+":");
-      Widgets.layout(label,2,0,TableLayoutData.W);
-      label = Widgets.newNumberView(widgetSelectedJob);
-      Widgets.layout(label,2,3,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("Stored")+":");
+      Widgets.layout(label,1,0,TableLayoutData.W);
+      label = Widgets.newNumberView(composite);
+      Widgets.layout(label,1,3,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalSize));
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,2,4,TableLayoutData.W);
-      label = Widgets.newLabel(widgetSelectedJob,"/");
-      Widgets.layout(label,2,5,TableLayoutData.W);
-      label = Widgets.newNumberView(widgetSelectedJob);
-      Widgets.layout(label,2,6,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("bytes"));
+      Widgets.layout(label,1,4,TableLayoutData.W);
+      label = Widgets.newLabel(composite,"/");
+      Widgets.layout(label,1,5,TableLayoutData.W);
+      label = Widgets.newNumberView(composite);
+      Widgets.layout(label,1,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalSize)
       {
         @Override
@@ -1105,8 +1104,8 @@ public class TabStatus
           return Units.getByteSize(variable.getLong());
         }
       });
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,2,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
+      label = Widgets.newLabel(composite,BARControl.tr("bytes"));
+      Widgets.layout(label,1,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
                                                                                                 BARControl.tr("KBytes"),
                                                                                                 BARControl.tr("MBytes"),
                                                                                                 BARControl.tr("GBytes"),
@@ -1123,13 +1122,13 @@ public class TabStatus
         }
       });
 
-      composite = Widgets.newComposite(widgetSelectedJob);
-      composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0}));
-      Widgets.layout(composite,2,8,TableLayoutData.WE);
+      subComposite = Widgets.newComposite(composite);
+      subComposite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0}));
+      Widgets.layout(subComposite,1,8,TableLayoutData.WE);
       {
-        label = Widgets.newLabel(composite,BARControl.tr("Ratio"));
+        label = Widgets.newLabel(subComposite,BARControl.tr("Ratio"));
         Widgets.layout(label,0,0,TableLayoutData.W);
-        label = Widgets.newNumberView(composite);
+        label = Widgets.newNumberView(subComposite);
         Widgets.layout(label,0,1,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetModifyListener(label,compressionRatio)
         {
@@ -1139,15 +1138,15 @@ public class TabStatus
             return String.format("%.1f",variable.getDouble());
           }
         });
-        label = Widgets.newLabel(composite,"%");
+        label = Widgets.newLabel(subComposite,"%");
         Widgets.layout(label,0,2,TableLayoutData.W);
       }
 
-      composite = Widgets.newComposite(widgetSelectedJob);
-      composite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
-      Widgets.layout(composite,2,9,TableLayoutData.WE);
+      subComposite = Widgets.newComposite(composite);
+      subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
+      Widgets.layout(subComposite,1,9,TableLayoutData.WE);
       {
-        label = Widgets.newNumberView(composite);
+        label = Widgets.newNumberView(subComposite);
         Widgets.layout(label,0,0,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetModifyListener(label,storageBytesPerSecond)
         {
@@ -1157,7 +1156,7 @@ public class TabStatus
             return Units.getByteSize(variable.getDouble());
           }
         });
-        label = Widgets.newLabel(composite,BARControl.tr("bytes/s"));
+        label = Widgets.newLabel(subComposite,BARControl.tr("bytes/s"));
         Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes/s"),
                                                                                                   BARControl.tr("KBytes/s"),
                                                                                                   BARControl.tr("MBytes/s"),
@@ -1177,22 +1176,22 @@ public class TabStatus
       }
 
       // skipped files/bytes
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Skipped")+":");
-      Widgets.layout(label,3,0,TableLayoutData.W);
-      label = Widgets.newNumberView(widgetSelectedJob);
-      Widgets.layout(label,3,1,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("Skipped")+":");
+      Widgets.layout(label,2,0,TableLayoutData.W);
+      label = Widgets.newNumberView(composite);
+      Widgets.layout(label,2,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,skippedEntryCount));
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("files"));
-      Widgets.layout(label,3,2,TableLayoutData.W);
-      label = Widgets.newNumberView(widgetSelectedJob);
-      Widgets.layout(label,3,3,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("files"));
+      Widgets.layout(label,2,2,TableLayoutData.W);
+      label = Widgets.newNumberView(composite);
+      Widgets.layout(label,2,3,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,skippedEntrySize));
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,3,4,TableLayoutData.W);
-      label = Widgets.newLabel(widgetSelectedJob,"/");
-      Widgets.layout(label,3,5,TableLayoutData.W);
-      label = Widgets.newNumberView(widgetSelectedJob);
-      Widgets.layout(label,3,6,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("bytes"));
+      Widgets.layout(label,2,4,TableLayoutData.W);
+      label = Widgets.newLabel(composite,"/");
+      Widgets.layout(label,2,5,TableLayoutData.W);
+      label = Widgets.newNumberView(composite);
+      Widgets.layout(label,2,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,skippedEntrySize)
       {
         public String getString(WidgetVariable variable)
@@ -1200,8 +1199,8 @@ public class TabStatus
           return Units.getByteSize(variable.getLong());
         }
       });
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,3,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
+      label = Widgets.newLabel(composite,BARControl.tr("bytes"));
+      Widgets.layout(label,2,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
                                                                                                 BARControl.tr("KBytes"),
                                                                                                 BARControl.tr("MBytes"),
                                                                                                 BARControl.tr("GBytes"),
@@ -1219,22 +1218,22 @@ public class TabStatus
       });
 
       // error files/bytes
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Errors")+":");
-      Widgets.layout(label,4,0,TableLayoutData.W);
-      label = Widgets.newNumberView(widgetSelectedJob);
-      Widgets.layout(label,4,1,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("Errors")+":");
+      Widgets.layout(label,3,0,TableLayoutData.W);
+      label = Widgets.newNumberView(composite);
+      Widgets.layout(label,3,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,errorEntryCount));
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("files"));
-      Widgets.layout(label,4,2,TableLayoutData.W);
-      label = Widgets.newNumberView(widgetSelectedJob);
-      Widgets.layout(label,4,3,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("files"));
+      Widgets.layout(label,3,2,TableLayoutData.W);
+      label = Widgets.newNumberView(composite);
+      Widgets.layout(label,3,3,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,errorEntrySize));
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,4,4,TableLayoutData.W);
-      label = Widgets.newLabel(widgetSelectedJob,"/");
-      Widgets.layout(label,4,5,TableLayoutData.W);
-      label = Widgets.newNumberView(widgetSelectedJob);
-      Widgets.layout(label,4,6,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("bytes"));
+      Widgets.layout(label,3,4,TableLayoutData.W);
+      label = Widgets.newLabel(composite,"/");
+      Widgets.layout(label,3,5,TableLayoutData.W);
+      label = Widgets.newNumberView(composite);
+      Widgets.layout(label,3,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,errorEntrySize)
       {
         public String getString(WidgetVariable variable)
@@ -1242,8 +1241,8 @@ public class TabStatus
           return Units.getByteSize(variable.getLong());
         }
       });
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,4,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
+      label = Widgets.newLabel(composite,BARControl.tr("bytes"));
+      Widgets.layout(label,3,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
                                                                                                 BARControl.tr("KBytes"),
                                                                                                 BARControl.tr("MBytes"),
                                                                                                 BARControl.tr("GBytes"),
@@ -1261,10 +1260,10 @@ public class TabStatus
       });
 
       // total files/bytes
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Total")+":");
-      Widgets.layout(label,5,0,TableLayoutData.W);
-      label = Widgets.newNumberView(widgetSelectedJob);
-      Widgets.layout(label,5,1,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("Total")+":");
+      Widgets.layout(label,4,0,TableLayoutData.W);
+      label = Widgets.newNumberView(composite);
+      Widgets.layout(label,4,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,totalEntryCount));
       Widgets.addModifyListener(new WidgetModifyListener(label,collectTotalSumDone)
       {
@@ -1275,10 +1274,10 @@ public class TabStatus
           control.setForeground(widgetVariable.getBoolean() ? null : COLOR_IN_PROGRESS);
         }
       });
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("files"));
-      Widgets.layout(label,5,2,TableLayoutData.W);
-      label = Widgets.newNumberView(widgetSelectedJob);
-      Widgets.layout(label,5,3,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("files"));
+      Widgets.layout(label,4,2,TableLayoutData.W);
+      label = Widgets.newNumberView(composite);
+      Widgets.layout(label,4,3,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,totalEntrySize));
       Widgets.addModifyListener(new WidgetModifyListener(label,collectTotalSumDone)
       {
@@ -1289,12 +1288,12 @@ public class TabStatus
           control.setForeground(widgetVariable.getBoolean() ? null : COLOR_IN_PROGRESS);
         }
       });
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,5,4,TableLayoutData.W);
-      label = Widgets.newLabel(widgetSelectedJob,"/");
-      Widgets.layout(label,5,5,TableLayoutData.W);
-      label = Widgets.newNumberView(widgetSelectedJob);
-      Widgets.layout(label,5,6,TableLayoutData.WE);
+      label = Widgets.newLabel(composite,BARControl.tr("bytes"));
+      Widgets.layout(label,4,4,TableLayoutData.W);
+      label = Widgets.newLabel(composite,"/");
+      Widgets.layout(label,4,5,TableLayoutData.W);
+      label = Widgets.newNumberView(composite);
+      Widgets.layout(label,4,6,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,totalEntrySize)
       {
         @Override
@@ -1312,8 +1311,8 @@ public class TabStatus
           control.setForeground(widgetVariable.getBoolean() ? null : COLOR_IN_PROGRESS);
         }
       });
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("bytes"));
-      Widgets.layout(label,5,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
+      label = Widgets.newLabel(composite,BARControl.tr("bytes"));
+      Widgets.layout(label,4,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{BARControl.tr("bytes"),
                                                                                                 BARControl.tr("KBytes"),
                                                                                                 BARControl.tr("MBytes"),
                                                                                                 BARControl.tr("GBytes"),
@@ -1331,51 +1330,51 @@ public class TabStatus
       });
 
       // current file, file percentage
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("File")+":");
-      Widgets.layout(label,6,0,TableLayoutData.W);
-      label = Widgets.newView(widgetSelectedJob);
-      Widgets.layout(label,6,1,TableLayoutData.WE,0,9);
+      label = Widgets.newLabel(composite,BARControl.tr("File")+":");
+      Widgets.layout(label,5,0,TableLayoutData.W);
+      label = Widgets.newView(composite);
+      Widgets.layout(label,5,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetModifyListener(label,fileName));
-      progressBar = Widgets.newProgressBar(widgetSelectedJob);
-      Widgets.layout(progressBar,7,1,TableLayoutData.WE,0,9);
+      progressBar = Widgets.newProgressBar(composite);
+      Widgets.layout(progressBar,6,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetModifyListener(progressBar,fileProgress));
 
       // storage file, storage percentage
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Storage")+":");
-      Widgets.layout(label,8,0,TableLayoutData.W);
-      label = Widgets.newView(widgetSelectedJob);
-      Widgets.layout(label,8,1,TableLayoutData.WE,0,9);
+      label = Widgets.newLabel(composite,BARControl.tr("Storage")+":");
+      Widgets.layout(label,7,0,TableLayoutData.W);
+      label = Widgets.newView(composite);
+      Widgets.layout(label,7,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetModifyListener(label,storageName));
-      progressBar = Widgets.newProgressBar(widgetSelectedJob);
-      Widgets.layout(progressBar,9,1,TableLayoutData.WE,0,9);
+      progressBar = Widgets.newProgressBar(composite);
+      Widgets.layout(progressBar,8,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetModifyListener(progressBar,storageProgress));
 
       // volume percentage
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Volume")+":");
-      Widgets.layout(label,10,0,TableLayoutData.W);
-      progressBar = Widgets.newProgressBar(widgetSelectedJob);
-      Widgets.layout(progressBar,10,1,TableLayoutData.WE,0,9);
+      label = Widgets.newLabel(composite,BARControl.tr("Volume")+":");
+      Widgets.layout(label,9,0,TableLayoutData.W);
+      progressBar = Widgets.newProgressBar(composite);
+      Widgets.layout(progressBar,9,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetModifyListener(progressBar,volumeProgress));
 
       // total files percentage
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Total files")+":");
-      Widgets.layout(label,11,0,TableLayoutData.W);
-      progressBar = Widgets.newProgressBar(widgetSelectedJob);
-      Widgets.layout(progressBar,11,1,TableLayoutData.WE,0,9);
+      label = Widgets.newLabel(composite,BARControl.tr("Total files")+":");
+      Widgets.layout(label,10,0,TableLayoutData.W);
+      progressBar = Widgets.newProgressBar(composite);
+      Widgets.layout(progressBar,10,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetModifyListener(progressBar,totalEntriesProgress));
 
       // total bytes percentage
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Total bytes")+":");
-      Widgets.layout(label,12,0,TableLayoutData.W);
-      progressBar = Widgets.newProgressBar(widgetSelectedJob);
-      Widgets.layout(progressBar,12,1,TableLayoutData.WE,0,9);
+      label = Widgets.newLabel(composite,BARControl.tr("Total bytes")+":");
+      Widgets.layout(label,11,0,TableLayoutData.W);
+      progressBar = Widgets.newProgressBar(composite);
+      Widgets.layout(progressBar,11,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetModifyListener(progressBar,totalBytesProgress));
 
       // message
-      label = Widgets.newLabel(widgetSelectedJob,BARControl.tr("Message")+":");
-      Widgets.layout(label,13,0,TableLayoutData.W);
-      label = Widgets.newView(widgetSelectedJob);
-      Widgets.layout(label,13,1,TableLayoutData.WE,0,9);
+      label = Widgets.newLabel(composite,BARControl.tr("Message")+":");
+      Widgets.layout(label,12,0,TableLayoutData.W);
+      label = Widgets.newView(composite);
+      Widgets.layout(label,12,1,TableLayoutData.WE,0,9);
       Widgets.addModifyListener(new WidgetModifyListener(label,message)
       {
         @Override
@@ -1470,23 +1469,12 @@ public class TabStatus
           }
         }
       });
-
-      // work-around for SWT/GTK group bug: text will not be fully visible if initial set is to short
-      widgetSelectedJob.setText(StringUtils.repeat('#',256));
-      widgetSelectedJob.getShell().addShellListener(new ShellAdapter()
-      {
-        @Override
-        public void shellActivated(ShellEvent shellEvent)
-        {
-          widgetSelectedJob.setText(BARControl.tr("Selected")+" ''");
-        }
-      });
     }
 
     // buttons
     composite = Widgets.newComposite(widgetTab);
     composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,1.0}));
-    Widgets.layout(composite,2,0,TableLayoutData.WE);
+    Widgets.layout(composite,3,0,TableLayoutData.WE);
     {
       widgetButtonStart = Widgets.newButton(composite,null,BARControl.tr("Start")+"\u2026");
       widgetButtonStart.setToolTipText(BARControl.tr("Start selected job."));
