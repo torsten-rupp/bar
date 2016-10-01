@@ -984,7 +984,7 @@ public class TabStatus
     });
 
     // selected job group
-    widgetSelectedJob = new Separator(widgetTab,BARControl.tr("Selected")+" ''",SWT.NONE);
+    widgetSelectedJob = Widgets.newSeparator(widgetTab,BARControl.tr("Selected")+" ''",SWT.NONE);
     Widgets.layout(widgetSelectedJob,1,0,TableLayoutData.WE);
 
     composite = Widgets.newComposite(widgetTab);

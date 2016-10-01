@@ -9003,6 +9003,38 @@ private static void printTree(Tree tree)
 
   //-----------------------------------------------------------------------
 
+  /** new separator widget
+   * @param composite composite widget
+   * @param text separator text
+   * @param style style
+   * @return new separator widget
+   */
+  public static Separator newSeparator(Composite composite, String text, int style)
+  {
+    return new Separator(composite,text,style);
+  }
+
+  /** new separator widget
+   * @param composite composite widget
+   * @param text separator text
+   * @return new separator widget
+   */
+  public static Separator newSeparator(Composite composite, String text)
+  {
+    return newSeparator(composite,text,SWT.NONE);
+  }
+
+  /** new separator widget
+   * @param composite composite widget
+   * @return new separator widget
+   */
+  public static Canvas newSeparator(Composite composite)
+  {
+    return newSeparator(composite,"");
+  }
+
+  //-----------------------------------------------------------------------
+
   /** new group widget
    * @param composite composite widget
    * @param title group title
