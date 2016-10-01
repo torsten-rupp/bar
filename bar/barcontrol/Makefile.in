@@ -166,6 +166,7 @@ SOURCES        = src/BARControl.java \
                  src/OptionSpecial.java \
                  src/Pane.java \
                  src/ProgressBar.java \
+                 src/Separator.java \
                  src/SettingUtils.java \
                  src/StringParser.java \
                  src/StringUtils.java \
