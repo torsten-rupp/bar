@@ -585,7 +585,7 @@ LOCAL Errors writeIncrementalList(ConstString fileName,
 
   // get temporary name for new .bid file
   tmpFileName = String_new();
-  error = File_getTmpFileName(tmpFileName,NULL,directory);
+  error = File_getTmpFileName(tmpFileName,"bid",directory);
   if (error != ERROR_NONE)
   {
     String_delete(tmpFileName);
@@ -6388,7 +6388,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
            && (createInfo->statusInfo.doneCount >= createInfo->statusInfo.totalEntryCount)
           )
     {
-      Misc_udelay(1000*1000);
+      Misc_udelay(1000LL*US_PER_MS);
     }
   }
 
@@ -6735,16 +6735,16 @@ Errors Command_create(ConstString                  jobUUID,
   }
 
   // wait for collector threads
-  if (!Thread_join(&collectorThread))
-  {
-    HALT_INTERNAL_ERROR("Cannot stop collector thread!");
-  }
   if (!Thread_join(&collectorSumThread))
   {
     HALT_INTERNAL_ERROR("Cannot stop collector sum thread!");
   }
+  if (!Thread_join(&collectorThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop collector thread!");
+  }
 
-  // wait for create threads
+  // wait for and done create threads
   MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
   for (z = 0; z < createThreadCount; z++)
   {
@@ -6795,6 +6795,7 @@ Errors Command_create(ConstString                  jobUUID,
     }
 
     // end index database transaction
+    AUTOFREE_REMOVE(&autoFreeList,indexHandle);
     error = Index_endTransaction(indexHandle);
     if (error != ERROR_NONE)
     {
