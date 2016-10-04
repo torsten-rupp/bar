@@ -1674,6 +1674,9 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 
   assert(jobNode != NULL);
 
+//TODO: use type?
+  UNUSED_VARIABLE(type);
+
   storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_NONE;
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobStatusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
