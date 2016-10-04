@@ -4041,9 +4041,6 @@ Errors initLog(LogHandle *logHandle)
     String_delete(logHandle->logFileName); logHandle->logFileName = NULL;
     return error;
   }
-#warning remove 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//String_clear(logHandle->logFileName);
   logHandle->logFile = fopen(String_cString(logHandle->logFileName),"w");
   if (logHandle->logFile == NULL)
   {
