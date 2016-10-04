@@ -4035,18 +4035,21 @@ Errors initLog(LogHandle *logHandle)
   assert(logHandle != NULL);
 
   logHandle->logFileName = String_new();
-  error = File_getTmpFileNameCString(logHandle->logFileName,"bar-XXXXXX",NULL);
+  error = File_getTmpFileNameCString(logHandle->logFileName,"bar-log",NULL /* directory */);
   if (error != ERROR_NONE)
   {
-    String_delete(logHandle->logFileName);
+    String_delete(logHandle->logFileName); logHandle->logFileName = NULL;
     return error;
   }
+#warning remove 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//String_clear(logHandle->logFileName);
   logHandle->logFile = fopen(String_cString(logHandle->logFileName),"w");
   if (logHandle->logFile == NULL)
   {
     error = ERRORX_(CREATE_FILE,errno,"%s",String_cString(logHandle->logFileName));
     File_delete(logHandle->logFileName,FALSE);
-    String_delete(logHandle->logFileName);
+    String_delete(logHandle->logFileName); logHandle->logFileName = NULL;
     return error;
   }
 
@@ -4056,7 +4059,6 @@ Errors initLog(LogHandle *logHandle)
 void doneLog(LogHandle *logHandle)
 {
   assert(logHandle != NULL);
-  assert(logHandle->logFileName != NULL);
 
   if (logHandle->logFile != NULL)
   {
@@ -4454,6 +4456,7 @@ void logPostProcess(LogHandle        *logHandle,
 
   UNUSED_VARIABLE(jobOptions);
 
+  assert(logHandle != NULL);
   assert(jobName != NULL);
   assert(jobOptions != NULL);
 
@@ -4466,8 +4469,11 @@ void logPostProcess(LogHandle        *logHandle,
 
       if (logHandle->logFile != NULL)
       {
+        assert(logHandle->logFileName != NULL);
+
         // close job log file
         fclose(logHandle->logFile);
+        assert(logHandle->logFileName != NULL);
 
         // log post command for job log file
         TEXT_MACRO_N_STRING (textMacros[0],"%file",logHandle->logFileName,              TEXT_MACRO_PATTERN_STRING);
@@ -4482,6 +4488,7 @@ void logPostProcess(LogHandle        *logHandle,
                           TRUE
                          );
         printInfo(2,"Log post process '%s'...\n",String_cString(command));
+        assert(logHandle->logFileName != NULL);
 
         StringList_init(&stderrList);
         error = Misc_executeCommand(logPostCommand,
@@ -4501,10 +4508,13 @@ void logPostProcess(LogHandle        *logHandle,
       }
 
       // reset and reopen job log file
-      logHandle->logFile = fopen(String_cString(logHandle->logFileName),"w");
-      if (logHandle->logFile == NULL)
+      if (logHandle->logFileName != NULL)
       {
-        printWarning("Cannot re-open log file '%s' (error: %s)",String_cString(logHandle->logFileName),strerror(errno));
+        logHandle->logFile = fopen(String_cString(logHandle->logFileName),"w");
+        if (logHandle->logFile == NULL)
+        {
+          printWarning("Cannot re-open log file '%s' (error: %s)\n",String_cString(logHandle->logFileName),strerror(errno));
+        }
       }
 
       // free resources
