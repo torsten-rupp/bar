@@ -61,8 +61,10 @@
 * Notes  : -
 \***********************************************************************/
 
-void *lzmaAlloc(void *userData, size_t nmemb, size_t size)
+LOCAL void *lzmaAlloc(void *userData, size_t nmemb, size_t size)
 {
+  UNUSED_VARIABLE(userData);
+  
 //fprintf(stderr,"%s, %d: %lu %lu \n",__FILE__,__LINE__,SIZE_MAX,nmemb*size);
   return calloc(nmemb,size);
 }
@@ -76,8 +78,10 @@ void *lzmaAlloc(void *userData, size_t nmemb, size_t size)
 * Notes  : -
 \***********************************************************************/
 
-void lzmaFree(void *userData, void *p)
+LOCAL void lzmaFree(void *userData, void *p)
 {
+  UNUSED_VARIABLE(userData); 
+
   free(p);
 }
 
