@@ -3128,6 +3128,7 @@ dnl Note: AC_SYS_LARGEFILE() does not work with gcc? Use my own implementation
 AC_CHECK_LARGEFILE_DEFINES
 AC_CHECK_SIZEOF(unsigned long)
 AC_CHECK_SIZEOF(void *)
+AC_CHECK_SIZEOF(size_t)
 
 AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"],,uuid/uuid.h)
 case $host_os in

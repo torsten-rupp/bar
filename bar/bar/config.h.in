@@ -583,6 +583,9 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* The size of `size_t', as computed by sizeof. */
+#undef SIZEOF_SIZE_T
+
 /* The size of `unsigned long', as computed by sizeof. */
 #undef SIZEOF_UNSIGNED_LONG
 
