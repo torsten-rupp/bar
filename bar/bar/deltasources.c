@@ -237,7 +237,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
     // pause
     while ((pauseFlag != NULL) && (*pauseFlag))
     {
-      Misc_udelay(500*1000);
+      Misc_udelay(500LL*US_PER_MS);
     }
 
     // get next archive entry type
@@ -326,7 +326,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
               // pause
               while ((pauseFlag != NULL) && (*pauseFlag))
               {
-                Misc_udelay(500*1000);
+                Misc_udelay(500LL*US_PER_MS);
               }
 
               bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
@@ -473,7 +473,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
               // pause
               while ((pauseFlag != NULL) && (*pauseFlag))
               {
-                Misc_udelay(500*1000);
+                Misc_udelay(500LL*US_PER_MS);
               }
 
               bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
@@ -600,7 +600,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
               // pause
               while ((pauseFlag != NULL) && (*pauseFlag))
               {
-                Misc_udelay(500*1000);
+                Misc_udelay(500LL*US_PER_MS);
               }
 
               bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
