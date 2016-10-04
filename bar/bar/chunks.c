@@ -635,7 +635,11 @@ LOCAL void initDefinition(const char *__fileName__,
     }
   }
 
-  DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,chunkData,sizeof(chunkData));
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(chunkData,sizeof(chunkData));
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,chunkData,sizeof(chunkData));
+  #endif /* NDEBUG */
 }
 
 /***********************************************************************\
