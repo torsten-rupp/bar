@@ -711,6 +711,7 @@ bool Thread_init(Thread     *thread,
   #endif /* HAVE_PTHREAD_ATTR_SETNAME */
 
   // start thread
+  thread->terminatedFlag = FALSE;
   if (pthread_create(&thread->handle,
                      &threadAttributes,
                      threadStartCode,
@@ -748,7 +749,17 @@ bool Thread_join(Thread *thread)
 {
   assert(thread != NULL);
 
-  return pthread_join(thread->handle,NULL) == 0;
+  if (!thread->terminatedFlag)
+  {
+    // Note: pthread_join() can only be called once with success!
+    if (pthread_join(thread->handle,NULL) != 0)
+    {
+      return FALSE;
+    }
+    thread->terminatedFlag = TRUE;
+  }
+  
+  return TRUE;
 }
 
 void Thread_delay(uint time)

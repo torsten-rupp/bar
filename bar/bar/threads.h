@@ -34,6 +34,7 @@ typedef pthread_t ThreadId;
 typedef struct
 {
   pthread_t handle;
+  bool      terminatedFlag;       // thread terminated/joined
 } Thread;
 
 // thread local storage
