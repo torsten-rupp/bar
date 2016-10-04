@@ -917,7 +917,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo, IndexHandle *indexHandl
       AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_unlock(&archiveInfo->chunkIOLock); });
 
       // get intermediate data filename
-      error = File_getTmpFileName(archiveInfo->file.fileName,NULL,tmpDirectory);
+      error = File_getTmpFileName(archiveInfo->file.fileName,"archive-XXXXXX",tmpDirectory);
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
@@ -11343,7 +11343,7 @@ archiveInfo->archiveInitUserData              = NULL;
     // pause
     while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
     {
-      Misc_udelay(500L*1000L);
+      Misc_udelay(500L*US_PER_MS);
     }
 #endif /* 0 */
 
@@ -11447,7 +11447,7 @@ archiveInfo->archiveInitUserData              = NULL;
             // pause
             while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
             {
-              Misc_udelay(500L*1000L);
+              Misc_udelay(500L*US_PER_MS);
             }
 #endif /* 0 */
 
@@ -11649,7 +11649,7 @@ archiveInfo->archiveInitUserData              = NULL;
               // pause
               while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
               {
-                Misc_udelay(500L*1000L);
+                Misc_udelay(500L*US_PER_MS);
               }
 
               assert(deviceInfo.blockSize > 0);
@@ -12334,7 +12334,7 @@ archiveInfo->archiveInitUserData              = NULL;
                   // pause
                   while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
                   {
-                    Misc_udelay(500L*1000L);
+                    Misc_udelay(500L*US_PER_MS);
                   }
 
                   n = MIN(fragmentSize-length,BUFFER_SIZE);
