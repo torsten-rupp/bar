@@ -39,6 +39,7 @@ MTX_VERSION=1.3.12
 BINUTILS_VERSION=2.25
 BREAKPAD_REVISION=1430
 EPM_VERSION=4.2
+XDELTA3_VERSION=3.1.0
 
 # --------------------------------- variables --------------------------------
 
@@ -56,7 +57,7 @@ bzip2Flag=0
 lzmaFlag=0
 lzoFlag=0
 lz4Flag=0
-xdeltaFlag=0
+xdelta3Flag=0
 gcryptFlag=0
 ftplibFlag=0
 curlFlag=0
@@ -130,9 +131,9 @@ while test $# != 0; do
           allFlag=0
           lz4Flag=1
           ;;
-        xdelta)
+        xdelta3)
           allFlag=0
-          xdeltaFlag=1
+          xdelta3Flag=1
           ;;
         gcrypt|libgcrypt)
           allFlag=0
@@ -241,9 +242,9 @@ while test $# != 0; do
       allFlag=0
       lz4Flag=1
       ;;
-    xdelta)
+    xdelta3)
       allFlag=0
-      xdeltaFlag=1
+      xdelta3Flag=1
       ;;
     gcrypt|libgcrypt)
       allFlag=0
@@ -337,7 +338,7 @@ if test $helpFlag -eq 1; then
   $ECHO " lzma"
   $ECHO " lzo"
   $ECHO " lz4"
-  $ECHO " xdelta"
+  $ECHO " xdelta3"
   $ECHO " gcrypt"
   $ECHO " curl"
   $ECHO " mxml"
@@ -485,25 +486,25 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
-  if test $allFlag -eq 1 -o $xdeltaFlag -eq 1; then
-    # xdelta 3.0.0
+  if test $allFlag -eq 1 -o $xdelta3Flag -eq 1; then
+    # xdelta3
     (
      cd $destination/packages
-     if test ! -f xdelta3.0.0.tar.gz; then
-       $WGET $WGET_OPTIONS 'http://xdelta.googlecode.com/files/xdelta3.0.0.tar.gz'
+     if test ! -f xdelta3-$XDELTA3_VERSION.tar.gz; then
+       $WGET $WGET_OPTIONS "https://github.com/jmacd/xdelta-gpl/releases/download/v3.1.0/xdelta3-$XDELTA3_VERSION.tar.gz"
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf xdelta3.0.0.tar.gz
+       $TAR xzf xdelta3-$XDELTA3_VERSION.tar.gz
 
        # patch to fix warnings:
        #   diff -u xdelta3.0.0.org/xdelta3.c        xdelta3.0.0/xdelta3.c        >  xdelta3.0.patch
        #   diff -u xdelta3.0.0.org/xdelta3-decode.h xdelta3.0.0/xdelta3-decode.h >> xdelta3.0.patch
        #   diff -u xdelta3.0.0.org/xdelta3-hash.h   xdelta3.0.0/xdelta3-hash.h   >> xdelta3.0.patch
-       (cd xdelta3.0.0; $PATCH --batch -N -p1 < ../../misc/xdelta3.0.patch) 1>/dev/null 2>/dev/null
+       (cd xdelta3-$XDELTA3_VERSION; $PATCH --batch -N -p1 < ../../misc/xdelta3.0.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find packages -type d -name "xdelta3*"` xdelta3)
+      (cd $destination; $LN -sfT `find packages -maxdepth 1 -type d -name "xdelta3-*"` xdelta3)
     fi
   fi
 
@@ -929,12 +930,12 @@ else
     $RMF lz4
   fi
 
-  if test $allFlag -eq 1 -o $xdeltaFlag -eq 1; then
-    # xdelta
+  if test $allFlag -eq 1 -o $xdelta3Flag -eq 1; then
+    # xdelta3
     (
       cd $destination
-      $RMF `find packages -type f -name "xdelta3*.tar.gz" 2>/dev/null`
-      $RMRF `find packages -type d -name "xdelta3*" 2>/dev/null`
+      $RMF `find packages -type f -name "xdelta3-*.tar.gz" 2>/dev/null`
+      $RMRF `find packages -type d -name "xdelta3-*" 2>/dev/null`
     )
     $RMF xdelta3
   fi
