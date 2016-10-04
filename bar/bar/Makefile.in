@@ -776,7 +776,7 @@ sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
 
 ifeq (@HAVE_XDELTA@,1)
 xdelta3.o: ../xdelta3/xdelta3.c
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 endif
 
 # create bar-keygen script
