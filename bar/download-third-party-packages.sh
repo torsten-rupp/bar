@@ -500,7 +500,7 @@ if test $cleanFlag -eq 0; then
        #   diff -u xdelta3.0.0.org/xdelta3.c        xdelta3.0.0/xdelta3.c        >  xdelta3.0.patch
        #   diff -u xdelta3.0.0.org/xdelta3-decode.h xdelta3.0.0/xdelta3-decode.h >> xdelta3.0.patch
        #   diff -u xdelta3.0.0.org/xdelta3-hash.h   xdelta3.0.0/xdelta3-hash.h   >> xdelta3.0.patch
-       (cd xdelta3-$XDELTA3_VERSION; $PATCH --batch -N -p1 < ../../misc/xdelta3.0.patch) 1>/dev/null 2>/dev/null
+       (cd xdelta3-$XDELTA3_VERSION; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.1.0.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
