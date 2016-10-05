@@ -13,12 +13,12 @@ BuildRoot:     %{_tmppath}/build-%{name}-%{version}
 BuildRequires: bc
 BuildRequires: e2fsprogs
 BuildRequires: gcc gcc-c++ glibc-devel make
-BuildRequires: java-1.6.0-openjdk-devel >= 1.6.0
-BuildRequires: jre >= 1.6.0
+BuildRequires: java-1.8.0-openjdk-devel >= 1.8.0
+BuildRequires: jre >= 1.8.0
 BuildRequires: m4
 BuildRequires: patch
 BuildRequires: tar
-BuildRequires: tclsh
+BuildRequires: tcl
 BuildRequires: unzip
 BuildRequires: wget
 BuildRequires: xz

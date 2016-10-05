@@ -18,12 +18,10 @@ BuildRequires: jre >= 1.6.0
 BuildRequires: m4
 BuildRequires: patch
 BuildRequires: tar
-BuildRequires: tclsh
+BuildRequires: tcl
 BuildRequires: unzip
 BuildRequires: wget
 BuildRequires: xz
-
-BuildRequires: systemd
 
 Requires(preun): initscripts
 Requires(postun): initscripts

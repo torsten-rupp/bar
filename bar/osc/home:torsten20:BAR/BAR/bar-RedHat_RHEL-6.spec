@@ -10,20 +10,16 @@ Group:         Tool
 License:       GPL-2.0
 BuildRoot:     %{_tmppath}/build-%{name}-%{version}
 
-BuildRequires: bc
-BuildRequires: e2fsprogs
 BuildRequires: gcc gcc-c++ glibc-devel make
-BuildRequires: java-1.6.0-openjdk-devel >= 1.6.0
 BuildRequires: jre >= 1.6.0
-BuildRequires: m4
-BuildRequires: patch
+BuildRequires: java-devel >= 1.6.0
 BuildRequires: tar
-BuildRequires: tclsh
 BuildRequires: unzip
-BuildRequires: wget
 BuildRequires: xz
-
-BuildRequires: systemd
+BuildRequires: patch
+BuildRequires: m4
+BuildRequires: e2fsprogs
+BuildRequires: bc
 
 %description
 BAR is backup archiver program. It can create compressed, encrypted
