@@ -404,6 +404,17 @@ void Index_done(void);
 bool Index_isAvailable(void);
 
 /***********************************************************************\
+* Name   : Index_isInitialized
+* Purpose: check if index database is initialized and ready to use
+* Input  : -
+* Output : -
+* Return : TRUE iff index database is initialized and ready to use
+* Notes  : -
+\***********************************************************************/
+
+bool Index_isInitialized(void);
+
+/***********************************************************************\
 * Name   : Index_setPauseCallback
 * Purpose: set/reset pause callback
 * Input  : pauseCallbackFunction - pause check callback (can be NULL)

@@ -145,13 +145,14 @@ LOCAL const char *INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[] =
 
 /***************************** Variables *******************************/
 LOCAL const char                 *indexDatabaseFileName = NULL;
+LOCAL bool                       indexInitializedFlag = FALSE;
 LOCAL Semaphore                  indexLock;
 LOCAL uint                       indexUseCount = 0;
 LOCAL IndexPauseCallbackFunction indexPauseCallbackFunction = NULL;
 LOCAL void                       *indexPauseCallbackUserData;
 
-LOCAL Semaphore                  indexCleanupThreadTrigger;
-LOCAL Thread                     indexCleanupThread;    // clean-up thread
+LOCAL Semaphore                  indexThreadTrigger;
+LOCAL Thread                     indexThread;    // upgrad/clean-up thread
 LOCAL bool                       quitFlag;
 
 /****************************** Macros *********************************/
@@ -2447,15 +2448,15 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
 #endif
 
 /***********************************************************************\
-* Name   : indexCleanupThreadCode
-* Purpose: index cleanup thread
+* Name   : indexThreadCode
+* Purpose: index upgrade and cleanup thread
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void indexCleanupThreadCode(void)
+LOCAL void indexThreadCode(void)
 {
   IndexHandle         indexHandle;
   String              absoluteFileName;
@@ -2586,6 +2587,9 @@ LOCAL void indexCleanupThreadCode(void)
                );
   }
 
+  // index is initialized and ready to use
+  indexInitializedFlag = TRUE;
+
   // regular clean-ups
   lastCleanupTimestamp = Misc_getTimestamp();
   while (!quitFlag)
@@ -2707,11 +2711,11 @@ LOCAL void indexCleanupThreadCode(void)
 
     // check quit flag/trigger, sleep
     sleepTime = 0;
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&indexCleanupThreadTrigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&indexThreadTrigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       while (   !quitFlag
              && (sleepTime < SLEEP_TIME_INDEX_CLEANUP_THREAD)
-             && !Semaphore_waitModified(&indexCleanupThreadTrigger,60*MS_PER_SECOND)
+             && !Semaphore_waitModified(&indexThreadTrigger,60*MS_PER_SECOND)
         )
       {
         sleepTime += 60;
@@ -4092,10 +4096,10 @@ error=ERROR_NONE;
 
   // start clean-up thread
   quitFlag = FALSE;
-  Semaphore_init(&indexCleanupThreadTrigger);
-  if (!Thread_init(&indexCleanupThread,"Index clean-up",0,indexCleanupThreadCode,NULL))
+  Semaphore_init(&indexThreadTrigger);
+  if (!Thread_init(&indexThread,"Index",0,indexThreadCode,NULL))
   {
-    HALT_FATAL_ERROR("Cannot initialize index clean-up thread!");
+    HALT_FATAL_ERROR("Cannot initialize index thread!");
   }
 
   return ERROR_NONE;
@@ -4105,17 +4109,22 @@ void Index_done(void)
 {
   // stop threads
   quitFlag = TRUE;
-  Thread_join(&indexCleanupThread);
+  Thread_join(&indexThread);
 
   // free resources
-  Thread_done(&indexCleanupThread);
-  Semaphore_done(&indexCleanupThreadTrigger);
+  Thread_done(&indexThread);
+  Semaphore_done(&indexThreadTrigger);
   free((char*)indexDatabaseFileName);
 }
 
 bool Index_isAvailable(void)
 {
   return indexDatabaseFileName != NULL;
+}
+
+bool Index_isInitialized(void)
+{
+  return indexInitializedFlag;
 }
 
 void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
@@ -6901,7 +6910,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     }
 
     // trigger clean-up thread
-    Semaphore_signalModified(&indexCleanupThreadTrigger);
+    Semaphore_signalModified(&indexThreadTrigger);
 
     return ERROR_NONE;
   });

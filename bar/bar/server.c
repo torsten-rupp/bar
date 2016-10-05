@@ -5169,134 +5169,85 @@ LOCAL void purgeExpiredThreadCode(void)
 
   while (!quitFlag)
   {
-    do
+    error = ERROR_NONE;
+
+    if (Index_isInitialized())
     {
-      expiredEntityId = INDEX_ID_NONE;
-      surplusEntityId = INDEX_ID_NONE;
-      now             = Misc_getCurrentDateTime();
-
-      // check entities
-      error = Index_initListEntities(&indexQueryHandle1,
-                                     indexHandle,
-                                     INDEX_ID_ANY,  // uuidId
-                                     NULL,  // jobUUID
-                                     NULL,  // scheduldUUID,
-                                     INDEX_STATE_SET_ALL,
-                                     INDEX_MODE_SET_ALL,
-                                     NULL,  // name
-                                     DATABASE_ORDERING_ASCENDING,
-                                     0LL,  // offset
-                                     INDEX_UNLIMITED
-                                    );
-      if (error == ERROR_NONE)
+      do
       {
-        while (   !quitFlag
-               && !isSomeJobActive()
-               && Index_getNextEntity(&indexQueryHandle1,
-                                      NULL,  // uudId,
-                                      jobUUID,
-                                      scheduleUUID,
-                                      &entityId,
-                                      &archiveType,
-                                      &createdDateTime,
-                                      NULL,  // lastErrorMessage
-                                      &totalEntryCount,
-                                      &totalEntrySize
-                                     )
-              )
-        {
-          if (!String_isEmpty(scheduleUUID))
-          {
-            // get job name, schedule min./max. keep, max. age
-            String_clear(jobName);
-            minKeep = 0;
-            maxKeep = 0;
-            maxAge  = 0;
-            SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-            {
-              jobNode = findJobByUUID(jobUUID);
-              if (jobNode != NULL)
-              {
-                String_set(jobName,jobNode->name);
-                scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
-                if (scheduleNode != NULL)
-                {
-                  minKeep = scheduleNode->minKeep;
-                  maxKeep = scheduleNode->maxKeep;
-                  maxAge  = scheduleNode->maxAge;
-                }
-              }
-            }
+        expiredEntityId = INDEX_ID_NONE;
+        surplusEntityId = INDEX_ID_NONE;
+        now             = Misc_getCurrentDateTime();
 
-            if ((maxKeep > 0) || (maxAge > 0))
+        // check entities
+        error = Index_initListEntities(&indexQueryHandle1,
+                                       indexHandle,
+                                       INDEX_ID_ANY,  // uuidId
+                                       NULL,  // jobUUID
+                                       NULL,  // scheduldUUID,
+                                       INDEX_STATE_SET_ALL,
+                                       INDEX_MODE_SET_ALL,
+                                       NULL,  // name
+                                       DATABASE_ORDERING_ASCENDING,
+                                       0LL,  // offset
+                                       INDEX_UNLIMITED
+                                      );
+        if (error == ERROR_NONE)
+        {
+          while (   !quitFlag
+                 && !isSomeJobActive()
+                 && Index_getNextEntity(&indexQueryHandle1,
+                                        NULL,  // uudId,
+                                        jobUUID,
+                                        scheduleUUID,
+                                        &entityId,
+                                        &archiveType,
+                                        &createdDateTime,
+                                        NULL,  // lastErrorMessage
+                                        &totalEntryCount,
+                                        &totalEntrySize
+                                       )
+                )
+          {
+            if (!String_isEmpty(scheduleUUID))
             {
-              // check if expired
-              if (maxAge > 0)
+              // get job name, schedule min./max. keep, max. age
+              String_clear(jobName);
+              minKeep = 0;
+              maxKeep = 0;
+              maxAge  = 0;
+              SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
               {
-                if (now > (createdDateTime+(uint64)maxAge*S_PER_DAY))
+                jobNode = findJobByUUID(jobUUID);
+                if (jobNode != NULL)
                 {
-                  // delete expired entity
-                  error = deleteEntity(indexHandle,entityId);
-                  if (error == ERROR_NONE)
+                  String_set(jobName,jobNode->name);
+                  scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
+                  if (scheduleNode != NULL)
                   {
-                    expiredEntityId = entityId;
-                    plogMessage(NULL,  // logHandle,
-                                LOG_TYPE_INDEX,
-                                "INDEX",
-                                "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
-                                String_cString(jobName),
-                                ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
-                                String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
-                                totalEntryCount,
-                                BYTES_SHORT(totalEntrySize),
-                                BYTES_UNIT(totalEntrySize),
-                                totalEntrySize
-                               );
+                    minKeep = scheduleNode->minKeep;
+                    maxKeep = scheduleNode->maxKeep;
+                    maxAge  = scheduleNode->maxAge;
                   }
                 }
               }
 
-              // check if surplus
-              if ((maxKeep > 0) && (maxKeep >= minKeep))
+              if ((maxKeep > 0) || (maxAge > 0))
               {
-                // find surplus entity
-                error = Index_initListEntities(&indexQueryHandle2,
-                                               indexHandle,
-                                               INDEX_ID_ANY,  // uuidId
-                                               jobUUID,
-                                               scheduleUUID,
-                                               INDEX_STATE_SET_ALL,
-                                               INDEX_MODE_SET_ALL,
-                                               NULL,  // name
-                                               DATABASE_ORDERING_DESCENDING,
-                                               (ulong)maxKeep,
-                                               INDEX_UNLIMITED
-                                              );
-                if (error == ERROR_NONE)
+                // check if expired
+                if (maxAge > 0)
                 {
-                  while (   !quitFlag
-                         && !isSomeJobActive()
-                         && Index_getNextEntity(&indexQueryHandle2,
-                                                NULL,  // uudId,
-                                                NULL,  // jobUUID
-                                                NULL,  // scheduleUUID
-                                                &entityId,
-                                                &archiveType,
-                                                &createdDateTime,
-                                                NULL,  // lastErrorMessage
-                                                &totalEntryCount,
-                                                &totalEntrySize
-                                               )
-                        )
+                  if (now > (createdDateTime+(uint64)maxAge*S_PER_DAY))
                   {
+                    // delete expired entity
                     error = deleteEntity(indexHandle,entityId);
                     if (error == ERROR_NONE)
                     {
-                      surplusEntityId = entityId;
+                      expiredEntityId = entityId;
                       plogMessage(NULL,  // logHandle,
                                   LOG_TYPE_INDEX,
                                   "INDEX",
-                                  "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
+                                  "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
                                   String_cString(jobName),
                                   ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
                                   String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
@@ -5307,18 +5258,72 @@ LOCAL void purgeExpiredThreadCode(void)
                                  );
                     }
                   }
-                  Index_doneList(&indexQueryHandle2);
+                }
+
+                // check if surplus
+                if ((maxKeep > 0) && (maxKeep >= minKeep))
+                {
+                  // find surplus entity
+                  error = Index_initListEntities(&indexQueryHandle2,
+                                                 indexHandle,
+                                                 INDEX_ID_ANY,  // uuidId
+                                                 jobUUID,
+                                                 scheduleUUID,
+                                                 INDEX_STATE_SET_ALL,
+                                                 INDEX_MODE_SET_ALL,
+                                                 NULL,  // name
+                                                 DATABASE_ORDERING_DESCENDING,
+                                                 (ulong)maxKeep,
+                                                 INDEX_UNLIMITED
+                                                );
+                  if (error == ERROR_NONE)
+                  {
+                    while (   !quitFlag
+                           && !isSomeJobActive()
+                           && Index_getNextEntity(&indexQueryHandle2,
+                                                  NULL,  // uudId,
+                                                  NULL,  // jobUUID
+                                                  NULL,  // scheduleUUID
+                                                  &entityId,
+                                                  &archiveType,
+                                                  &createdDateTime,
+                                                  NULL,  // lastErrorMessage
+                                                  &totalEntryCount,
+                                                  &totalEntrySize
+                                                 )
+                          )
+                    {
+                      error = deleteEntity(indexHandle,entityId);
+                      if (error == ERROR_NONE)
+                      {
+                        surplusEntityId = entityId;
+                        plogMessage(NULL,  // logHandle,
+                                    LOG_TYPE_INDEX,
+                                    "INDEX",
+                                    "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
+                                    String_cString(jobName),
+                                    ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                                    String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
+                                    totalEntryCount,
+                                    BYTES_SHORT(totalEntrySize),
+                                    BYTES_UNIT(totalEntrySize),
+                                    totalEntrySize
+                                   );
+                      }
+                    }
+                    Index_doneList(&indexQueryHandle2);
+                  }
                 }
               }
             }
           }
+          Index_doneList(&indexQueryHandle1);
         }
-        Index_doneList(&indexQueryHandle1);
       }
+      while (   !quitFlag
+             && ((expiredEntityId != INDEX_ID_NONE) || (surplusEntityId != INDEX_ID_NONE))
+            );
     }
-    while (   !quitFlag
-           && ((expiredEntityId != INDEX_ID_NONE) || (surplusEntityId != INDEX_ID_NONE))
-          );
     if (quitFlag)
     {
       break;
@@ -5806,225 +5811,228 @@ LOCAL void autoIndexThreadCode(void)
     pauseIndexUpdate();
     if (quitFlag) break;
 
-    // collect storage locations to check for BAR files
-    getStorageDirectories(&storageDirectoryList);
-
-    // check storage locations for BAR files, send index update request
-    initDuplicateJobOptions(&jobOptions,serverDefaultJobOptions);
-    while (!StringList_isEmpty(&storageDirectoryList))
+    if (Index_isInitialized())
     {
-      storageDirectoryName = StringList_removeFirst(&storageDirectoryList,NULL);
+      // collect storage locations to check for BAR files
+      getStorageDirectories(&storageDirectoryList);
 
-      error = Storage_parseName(&storageSpecifier,storageDirectoryName);
-      if (error == ERROR_NONE)
+      // check storage locations for BAR files, send index update request
+      initDuplicateJobOptions(&jobOptions,serverDefaultJobOptions);
+      while (!StringList_isEmpty(&storageDirectoryList))
       {
-        if (   (storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
-            || (storageSpecifier.type == STORAGE_TYPE_FTP       )
-            || (storageSpecifier.type == STORAGE_TYPE_SSH       )
-            || (storageSpecifier.type == STORAGE_TYPE_SCP       )
-            || (storageSpecifier.type == STORAGE_TYPE_SFTP      )
-            || (storageSpecifier.type == STORAGE_TYPE_WEBDAV    )
-           )
+        storageDirectoryName = StringList_removeFirst(&storageDirectoryList,NULL);
+
+        error = Storage_parseName(&storageSpecifier,storageDirectoryName);
+        if (error == ERROR_NONE)
         {
-          // get base directory
-          File_setFileName(baseName,storageSpecifier.archiveName);
-          do
+          if (   (storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
+              || (storageSpecifier.type == STORAGE_TYPE_FTP       )
+              || (storageSpecifier.type == STORAGE_TYPE_SSH       )
+              || (storageSpecifier.type == STORAGE_TYPE_SCP       )
+              || (storageSpecifier.type == STORAGE_TYPE_SFTP      )
+              || (storageSpecifier.type == STORAGE_TYPE_WEBDAV    )
+             )
           {
-            error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                              &storageSpecifier,
-                                              &jobOptions,
-                                              SERVER_CONNECTION_PRIORITY_LOW,
-                                              baseName
-                                             );
-            if (error == ERROR_NONE)
+            // get base directory
+            File_setFileName(baseName,storageSpecifier.archiveName);
+            do
             {
-              Storage_closeDirectoryList(&storageDirectoryListHandle);
+              error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                                &storageSpecifier,
+                                                &jobOptions,
+                                                SERVER_CONNECTION_PRIORITY_LOW,
+                                                baseName
+                                               );
+              if (error == ERROR_NONE)
+              {
+                Storage_closeDirectoryList(&storageDirectoryListHandle);
+              }
+              else
+              {
+                File_getFilePathName(baseName,baseName);
+              }
             }
-            else
+            while ((error != ERROR_NONE) && !String_isEmpty(baseName));
+
+            if (!String_isEmpty(baseName))
             {
-              File_getFilePathName(baseName,baseName);
-            }
-          }
-          while ((error != ERROR_NONE) && !String_isEmpty(baseName));
-
-          if (!String_isEmpty(baseName))
-          {
-            // read directory and scan all sub-directories for .bar files if possible
-            pprintInfo(4,
-                       "INDEX",
-                       "Auto-index scan '%s'\n",
-                       String_cString(Storage_getPrintableName(&storageSpecifier,baseName))
-                      );
-            File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
-            (void)Storage_forAll(pattern,
-                                 CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
-                                 {
-                                   Errors error;
-
-                                   assert(fileInfo != NULL);
-
-                                   UNUSED_VARIABLE(userData);
-
-                                   error = Storage_parseName(&storageSpecifier,storageName);
-                                   if (error == ERROR_NONE)
+              // read directory and scan all sub-directories for .bar files if possible
+              pprintInfo(4,
+                         "INDEX",
+                         "Auto-index scan '%s'\n",
+                         String_cString(Storage_getPrintableName(&storageSpecifier,baseName))
+                        );
+              File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
+              (void)Storage_forAll(pattern,
+                                   CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                                    {
-                                     // check entry type and file name
-                                     switch (fileInfo->type)
+                                     Errors error;
+
+                                     assert(fileInfo != NULL);
+
+                                     UNUSED_VARIABLE(userData);
+
+                                     error = Storage_parseName(&storageSpecifier,storageName);
+                                     if (error == ERROR_NONE)
                                      {
-                                       case FILE_TYPE_FILE:
-                                       case FILE_TYPE_LINK:
-                                       case FILE_TYPE_HARDLINK:
-                                         // get index id, request index update
-                                         if (Index_findStorageByName(indexHandle,
-                                                                     &storageSpecifier,
-                                                                     NULL,  // archiveName
-                                                                     NULL,  // uuidId
-                                                                     NULL,  // entityId
-                                                                     NULL,  // jobUUID
-                                                                     NULL,  // scheduleUUID
-                                                                     &storageId,
-                                                                     &indexState,
-                                                                     &lastCheckedDateTime
-                                                                    )
-                                            )
-                                         {
-                                           if      (fileInfo->timeModified > lastCheckedDateTime)
+                                       // check entry type and file name
+                                       switch (fileInfo->type)
+                                       {
+                                         case FILE_TYPE_FILE:
+                                         case FILE_TYPE_LINK:
+                                         case FILE_TYPE_HARDLINK:
+                                           // get index id, request index update
+                                           if (Index_findStorageByName(indexHandle,
+                                                                       &storageSpecifier,
+                                                                       NULL,  // archiveName
+                                                                       NULL,  // uuidId
+                                                                       NULL,  // entityId
+                                                                       NULL,  // jobUUID
+                                                                       NULL,  // scheduleUUID
+                                                                       &storageId,
+                                                                       &indexState,
+                                                                       &lastCheckedDateTime
+                                                                      )
+                                              )
                                            {
-                                             // request update index
-                                             error = Index_setState(indexHandle,
-                                                                    storageId,
-                                                                    INDEX_STATE_UPDATE_REQUESTED,
-                                                                    Misc_getCurrentDateTime(),
-                                                                    NULL
-                                                                   );
+                                             if      (fileInfo->timeModified > lastCheckedDateTime)
+                                             {
+                                               // request update index
+                                               error = Index_setState(indexHandle,
+                                                                      storageId,
+                                                                      INDEX_STATE_UPDATE_REQUESTED,
+                                                                      Misc_getCurrentDateTime(),
+                                                                      NULL
+                                                                     );
+                                               if (error == ERROR_NONE)
+                                               {
+                                                 plogMessage(NULL,  // logHandle,
+                                                             LOG_TYPE_INDEX,
+                                                             "INDEX",
+                                                             "Requested update index for '%s'\n",
+                                                             String_cString(Storage_getPrintableName(&storageSpecifier,NULL))
+                                                            );
+                                               }
+                                             }
+                                             else if (indexState == INDEX_STATE_OK)
+                                             {
+                                               // set last checked date/time
+                                               error = Index_setState(indexHandle,
+                                                                      storageId,
+                                                                      INDEX_STATE_OK,
+                                                                      Misc_getCurrentDateTime(),
+                                                                      NULL
+                                                                     );
+                                             }
+                                           }
+                                           else
+                                           {
+                                             // add to index
+                                             error = Index_newStorage(indexHandle,
+                                                                      INDEX_ID_NONE, // entityId
+                                                                      storageName,
+                                                                      INDEX_STATE_UPDATE_REQUESTED,
+                                                                      INDEX_MODE_AUTO,
+                                                                      &storageId
+                                                                     );
                                              if (error == ERROR_NONE)
                                              {
                                                plogMessage(NULL,  // logHandle,
                                                            LOG_TYPE_INDEX,
                                                            "INDEX",
-                                                           "Requested update index for '%s'\n",
+                                                           "Requested add index for '%s'\n",
                                                            String_cString(Storage_getPrintableName(&storageSpecifier,NULL))
                                                           );
                                              }
                                            }
-                                           else if (indexState == INDEX_STATE_OK)
-                                           {
-                                             // set last checked date/time
-                                             error = Index_setState(indexHandle,
-                                                                    storageId,
-                                                                    INDEX_STATE_OK,
-                                                                    Misc_getCurrentDateTime(),
-                                                                    NULL
-                                                                   );
-                                           }
-                                         }
-                                         else
-                                         {
-                                           // add to index
-                                           error = Index_newStorage(indexHandle,
-                                                                    INDEX_ID_NONE, // entityId
-                                                                    storageName,
-                                                                    INDEX_STATE_UPDATE_REQUESTED,
-                                                                    INDEX_MODE_AUTO,
-                                                                    &storageId
-                                                                   );
-                                           if (error == ERROR_NONE)
-                                           {
-                                             plogMessage(NULL,  // logHandle,
-                                                         LOG_TYPE_INDEX,
-                                                         "INDEX",
-                                                         "Requested add index for '%s'\n",
-                                                         String_cString(Storage_getPrintableName(&storageSpecifier,NULL))
-                                                        );
-                                           }
-                                         }
-                                         break;
-                                       default:
-                                         break;
+                                           break;
+                                         default:
+                                           break;
+                                       }
                                      }
-                                   }
 
-                                   return error;
-                                 },NULL)
-                                );
+                                     return error;
+                                   },NULL)
+                                  );
+            }
           }
         }
+
+        String_delete(storageDirectoryName);
       }
+      doneJobOptions(&jobOptions);
 
-      String_delete(storageDirectoryName);
-    }
-    doneJobOptions(&jobOptions);
-
-    // delete not existing and expired indizes
-    error = Index_initListStorages(&indexQueryHandle,
-                                   indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   INDEX_ID_ANY,  // entity id
-                                   NULL,  // jobUUID
-                                   NULL,  // indexIds
-                                   0,  // indexIdCount
-                                   INDEX_STATE_SET_ALL,
-                                   INDEX_MODE_SET_ALL,
-                                   NULL,  // name
-                                   INDEX_STORAGE_SORT_MODE_NONE,
-                                   DATABASE_ORDERING_NONE,
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error == ERROR_NONE)
-    {
-      now    = Misc_getCurrentDateTime();
-      string = String_new();
-      while (   !quitFlag
-             && Index_getNextStorage(&indexQueryHandle,
-                                     NULL,  // uuidId
+      // delete not existing and expired indizes
+      error = Index_initListStorages(&indexQueryHandle,
+                                     indexHandle,
+                                     INDEX_ID_ANY,  // uuidId
+                                     INDEX_ID_ANY,  // entity id
                                      NULL,  // jobUUID
-                                     NULL,  // entityId
-                                     NULL,  // scheduleUUID
-                                     NULL,  // archiveType
-                                     &storageId,
-                                     storageName,
-                                     &createdDateTime,
-                                     NULL,  // totalEntryCount
-                                     NULL,  // totalEntrySize
-                                     &indexState,
-                                     &indexMode,
-                                     &lastCheckedDateTime,
-                                     NULL  // errorMessage
-                                    )
-            )
+                                     NULL,  // indexIds
+                                     0,  // indexIdCount
+                                     INDEX_STATE_SET_ALL,
+                                     INDEX_MODE_SET_ALL,
+                                     NULL,  // name
+                                     INDEX_STORAGE_SORT_MODE_NONE,
+                                     DATABASE_ORDERING_NONE,
+                                     0LL,  // offset
+                                     INDEX_UNLIMITED
+                                    );
+      if (error == ERROR_NONE)
       {
-        // get printable name (if possible)
-        error = Storage_parseName(&storageSpecifier,storageName);
-        if (error == ERROR_NONE)
+        now    = Misc_getCurrentDateTime();
+        string = String_new();
+        while (   !quitFlag
+               && Index_getNextStorage(&indexQueryHandle,
+                                       NULL,  // uuidId
+                                       NULL,  // jobUUID
+                                       NULL,  // entityId
+                                       NULL,  // scheduleUUID
+                                       NULL,  // archiveType
+                                       &storageId,
+                                       storageName,
+                                       &createdDateTime,
+                                       NULL,  // totalEntryCount
+                                       NULL,  // totalEntrySize
+                                       &indexState,
+                                       &indexMode,
+                                       &lastCheckedDateTime,
+                                       NULL  // errorMessage
+                                      )
+              )
         {
-          String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
-        }
-        else
-        {
-          String_set(printableStorageName,storageName);
-        }
+          // get printable name (if possible)
+          error = Storage_parseName(&storageSpecifier,storageName);
+          if (error == ERROR_NONE)
+          {
+            String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+          }
+          else
+          {
+            String_set(printableStorageName,storageName);
+          }
 
-        if (   (indexMode == INDEX_MODE_AUTO)
-            && (indexState != INDEX_STATE_UPDATE_REQUESTED)
-            && (indexState != INDEX_STATE_UPDATE)
-            && (now > (createdDateTime+globalOptions.indexDatabaseKeepTime))
-            && (now > (lastCheckedDateTime+globalOptions.indexDatabaseKeepTime))
-           )
-        {
-          Index_deleteStorage(indexHandle,storageId);
+          if (   (indexMode == INDEX_MODE_AUTO)
+              && (indexState != INDEX_STATE_UPDATE_REQUESTED)
+              && (indexState != INDEX_STATE_UPDATE)
+              && (now > (createdDateTime+globalOptions.indexDatabaseKeepTime))
+              && (now > (lastCheckedDateTime+globalOptions.indexDatabaseKeepTime))
+             )
+          {
+            Index_deleteStorage(indexHandle,storageId);
 
-          plogMessage(NULL,  // logHandle,
-                      LOG_TYPE_INDEX,
-                      "INDEX",
-                      "Deleted index for '%s', last checked %s\n",
-                      String_cString(printableStorageName),
-                      String_cString(Misc_formatDateTime(string,lastCheckedDateTime,NULL))
-                     );
+            plogMessage(NULL,  // logHandle,
+                        LOG_TYPE_INDEX,
+                        "INDEX",
+                        "Deleted index for '%s', last checked %s\n",
+                        String_cString(printableStorageName),
+                        String_cString(Misc_formatDateTime(string,lastCheckedDateTime,NULL))
+                       );
+          }
         }
+        Index_doneList(&indexQueryHandle);
+        String_delete(string);
       }
-      Index_doneList(&indexQueryHandle);
-      String_delete(string);
     }
 
     // sleep
