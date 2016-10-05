@@ -13,7 +13,7 @@ BuildRoot:     %{_tmppath}/build-%{name}-%{version}
 BuildRequires: bc
 BuildRequires: e2fsprogs
 BuildRequires: gcc gcc-c++ glibc-devel make
-BuildRequires: java-openjdk-devel >= 1.6.0
+BuildRequires: java-1.6.0-openjdk-devel
 BuildRequires: jre >= 1.6.0
 BuildRequires: m4
 BuildRequires: patch
