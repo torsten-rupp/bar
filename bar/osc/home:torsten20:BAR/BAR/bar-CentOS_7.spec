@@ -10,16 +10,20 @@ Group:         Tool
 License:       GPL-2.0
 BuildRoot:     %{_tmppath}/build-%{name}-%{version}
 
-BuildRequires: gcc gcc-c++ glibc-devel make
-BuildRequires: jre >= 1.6.0
-BuildRequires: java-devel >= 1.6.0
-BuildRequires: tar
-BuildRequires: unzip
-BuildRequires: xz
-BuildRequires: patch
-BuildRequires: m4
-BuildRequires: e2fsprogs
 BuildRequires: bc
+BuildRequires: e2fsprogs
+BuildRequires: gcc gcc-c++ glibc-devel make
+BuildRequires: java-1.6.0-openjdk-devel >= 1.6.0
+BuildRequires: jre >= 1.6.0
+BuildRequires: m4
+BuildRequires: patch
+BuildRequires: tar
+BuildRequires: tclsh
+BuildRequires: unzip
+BuildRequires: wget
+BuildRequires: xz
+
+BuildRequires: systemd
 
 Requires(preun): initscripts
 Requires(postun): initscripts
