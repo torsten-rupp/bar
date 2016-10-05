@@ -23,8 +23,6 @@ BuildRequires: unzip
 BuildRequires: wget
 BuildRequires: xz
 
-BuildRequires: systemd
-
 %description
 BAR is backup archiver program. It can create compressed, encrypted
 and splitted archives of files and harddisk images which can be
