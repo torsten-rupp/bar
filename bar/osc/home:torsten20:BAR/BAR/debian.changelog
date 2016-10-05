@@ -53,6 +53,12 @@ bar (0.20) stable; urgency=low
   * fixed auto-index: search for .bar files
   * BARControl: fixed login credentials on command line
   * BARControl: fixed archive name editor %S, %s, _
+  * fixed storage of splitted hardlink-entries!
+  * fixed abort when there is an error when writing
+    a CD/DVD/BD
+  * added options --blank, --(cd|dvd|bd|device)-blank to
+    blank medium before writing
+    BARControl: added abort to load volume dialog
 
  -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 25 Sep 2016 00:00:00 +0200
 

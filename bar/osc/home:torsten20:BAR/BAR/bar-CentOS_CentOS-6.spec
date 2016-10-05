@@ -62,9 +62,10 @@ mkdir packages
   ln -s `find packages -type d -name 'lz4-*'|head -1` lz4
 )
 (
-  cp %{_sourcedir}/xdelta*.tar.gz packages
-  (cd packages; tar xzf xdelta*.tar.gz)
-  ln -s `find packages -type d -name 'xdelta*'|head -1` xdelta3
+  cp %{_sourcedir}/xdelta3-*.tar.gz packages
+  (cd packages; tar xzf xdelta3-*.tar.gz)
+  ln -s `find packages -type d -name 'xdelta3-*'|head -1` xdelta3
+  (cd xdelta3; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.1.0.patch)
 )
 (
   cp %{_sourcedir}/libgpg-error-*.tar.bz2 packages
@@ -238,6 +239,12 @@ service barserver stop 1>/dev/null
   - fixed auto-index: search for .bar files
   - BARControl: fixed login credentials on command line
   - BARControl: fixed archive name editor %%S, %%s, _
+  - fixed storage of splitted hardlink-entries!
+  - fixed abort when there is an error when writing
+    a CD/DVD/BD
+  - added options --blank, --(cd|dvd|bd|device)-blank to
+    blank medium before writing
+    BARControl: added abort to load volume dialog
 
 * Sat Jan 09 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.19d
   - fixed include of multiple entries with pattern: store

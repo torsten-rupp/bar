@@ -243,6 +243,12 @@ systemctl disable barserver.service 1>/dev/null 2>/dev/null
   - fixed auto-index: search for .bar files
   - BARControl: fixed login credentials on command line
   - BARControl: fixed archive name editor %%S, %%s, _
+  - fixed storage of splitted hardlink-entries!
+  - fixed abort when there is an error when writing
+    a CD/DVD/BD
+  - added options --blank, --(cd|dvd|bd|device)-blank to
+    blank medium before writing
+    BARControl: added abort to load volume dialog
 
 * Sat Jan 09 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.19d
   - fixed include of multiple entries with pattern: store
