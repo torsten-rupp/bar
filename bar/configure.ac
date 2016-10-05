@@ -10,7 +10,7 @@ dnl --------------------------------------------------------------------
 dnl ----------------------- additional macros --------------------------
 
 
-dnl --- print compile info
+dnl --- print compile infofg
 AC_DEFUN([AC_MSG_CREATE],
 [
   _AS_ECHO_N([create $1... ])
@@ -600,6 +600,7 @@ AC_SUBST(ENABLE_GUI)                        dnl "yes" for GUI support, "no" othe
 AC_SUBST(ENABLE_GUI_I18N)                   dnl "yes" for GUI i18n support, "no" otherwise
 AC_SUBST(ENABLE_EPM)                        dnl "yes" for EPM support, "no" otherwise
 
+AC_SUBST(HAVE_ICU)                          dnl "1" for ICU support, "" otherwise
 AC_SUBST(HAVE_BZ2)                          dnl "1" for bzip2 support, "" otherwise
 AC_SUBST(HAVE_LZMA)                         dnl "1" for lzma support, "" otherwise
 AC_SUBST(HAVE_LZO)                          dnl "1" for lzo support, "" otherwise
@@ -615,7 +616,6 @@ AC_SUBST(HAVE_SSH2)                         dnl "1" for ssh2 support, "" otherwi
 AC_SUBST(HAVE_GNU_TLS)                      dnl "1" for GNU TLS support, "" otherwise
 AC_SUBST(HAVE_ISO9660)                      dnl "1" for ISO9660 support, "" otherwise
 AC_SUBST(HAVE_PCRE)                         dnl "1" for pcre support, "" otherwise
-AC_SUBST(HAVE_ICU)                          dnl "1" for ICU support, "" otherwise
 AC_SUBST(HAVE_PTHREADS_W32)                 dnl "1" for pthreads-w32 support, "" otherwise
 AC_SUBST(HAVE_BREAKPAD)                     dnl "1" for BreakPad support, "" otherwise
 AC_SUBST(HAVE_BFD)                          dnl "1" for BFD support, "" otherwise
@@ -956,11 +956,14 @@ dnl ------------------------------ programs ----------------------------
 if test -z "$CC"; then
   AC_PATH_PROGS(CC,gcc cc)
 fi
+if test -z "$CC"; then
+  AC_MSG_ERROR([Cannot find C compiler in PATH. Please check your PATH environment variable.])
+fi
 if test -z "$CXX"; then
   AC_PATH_PROGS(CXX,g++ c++)
 fi
 if test -z "$CXX"; then
-  AC_WARN([No C++ compiler - compiling third-party packages may fail])
+  AC_MSG_ERROR([Cannot find C++ compiler in PATH. Please check your PATH environment variable.])
 fi
 if test -z "$LD"; then
   AC_PATH_PROGS(LD,ld gcc)
@@ -986,6 +989,12 @@ fi
 AC_PATH_PROGS(PERL,perl)
 if test -z "$PERL"; then
   AC_MSG_ERROR([Cannot find a 'perl' in PATH. Please check your PATH environment variable.])
+fi
+
+# required for building sqlite3.c
+AC_PATH_PROGS(TCLSH,tclsh)
+if test -z "$TCLSH"; then
+  AC_MSG_ERROR([Cannot find a 'tclsh' in PATH. Please check your PATH environment variable.])
 fi
 
 AC_PROG_INSTALL
@@ -1250,6 +1259,153 @@ AC_SET_TOOLCHAIN_SETTINGS($CC_FLAGS,
                           $LIBRARY_PATHS,
                           $STATIC_LIBRARIES,
                           $LIBRARIES)
+
+# create sqlite3.c
+if test -d sqlite -o -d "`readlink sqlite`"; then
+  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    dnl create sqlite3.c almagation
+
+    AC_MSG_CREATE([sqlite3.c])
+    result=1
+    if test $result -eq 1; then
+      (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" ./configure --disable-tcl --enable-fts4) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd sqlite; make clean; make sqlite3.c) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd sqlite; \
+       install -d $cwd/packages/sources; \
+       install sqlite3.c $cwd/packages/sourcesp; \
+       install sqlite3.h $cwd/packages/include; \
+      ) 1>$tmpFile 2>&1
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    else
+      AC_MSG_ERROR([Cannot create sqlite3.c])
+    fi
+  fi
+fi
+
+# compile/use icu
+if test -d icu -o -d "`readlink icu`"; then
+  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    dnl compile icu library
+
+    AC_MSG_COMPILE([icu])
+    result=1
+    if test $result -eq 1; then
+      case $host_os in
+        mingw*)
+          # patch to disable usage of lib-command when RANLIB is set
+          # patch created with:
+          #   diff -u pcre-8.32.org/m4/libtool.m4 pcre-8.32/m4/libtool.m4 >  pcre-8.32-libtool.patch
+          #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
+          #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
+          #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
+#            if test -d packages/pcre-8.32; then
+#              (cd packages/pcre-8.32; patch --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
+#            else
+#              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
+#            fi
+          ;;
+        *)
+          ;;
+      esac
+    fi
+    if test $result -eq 1; then
+      (cd icu/source; ./configure \
+        --host=$host_cpu-$host_os \
+        --prefix=$cwd/packages \
+        --disable-shared \
+        --enable-static \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (echo $LIBTOOL; cd icu/source; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd icu/source; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+      case $host_os in
+        mingw*)
+          (cd packages/lib; ln -s libicuuc.lib libicuuc.a) 1>/dev/null 2>/dev/null
+          (cd packages/lib; ln -s libicui18n.lib libicui18n.a) 1>/dev/null 2>/dev/null
+          (cd packages/lib; ln -s libicudata.lib libicudata.a) 1>/dev/null 2>/dev/null
+          ;;
+        *)
+          ;;
+      esac
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+  else
+    result=1
+  fi
+
+  if test $result -eq 1; then
+    STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc icui18n icudata"
+    AC_DEFINE(HAVE_ICU,1,[icu installed (local)])
+  fi
+else
+  dnl search for installed icuuc, icui18n, icudata library
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    AC_SEARCH_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICUUC=1;LIBRARIES="$LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[icuuc installed])])
+  else
+    if test -z "$HAVE_ICUUC"; then
+      AC_SEARCH_STATIC_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICUUC=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[static icuuc installed])])
+    fi
+    if test -z "$HAVE_ICUUC"; then
+      AC_SEARCH_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICUUC=1;LIBRARIES="$LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[icuuc installed])])
+    fi
+  fi
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    AC_SEARCH_LIBRARIES(uregex_open,icui18n,[HAVE_ICUI18N=1;LIBRARIES="$LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[icui18n installed])])
+  else
+    if test -z "$HAVE_ICUI18N"; then
+      AC_SEARCH_STATIC_LIBRARIES(uregex_open,icui18n,[HAVE_ICUI18N=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[static icui18n installed])])
+    fi
+    if test -z "$HAVE_ICUI18N"; then
+      AC_SEARCH_LIBRARIES(uregex_open,icui18n,[HAVE_ICUI18N=1;LIBRARIES="$LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[icui18n installed])])
+    fi
+  fi
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    AC_SEARCH_LIBRARIES(icudt,icudata,[HAVE_ICUDATA=1;LIBRARIES="$LIBRARIES icudata";AC_DEFINE(HAVE_ICUI18N,1,[icudata installed])])
+  else
+    if test -z "$HAVE_ICUDATA"; then
+      AC_SEARCH_STATIC_LIBRARIES(icudt,icudata,[HAVE_ICUDATA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icudata";AC_DEFINE(HAVE_ICUI18N,1,[static icudata installed])])
+    fi
+    if test -z "$HAVE_ICUDATA"; then
+      AC_SEARCH_LIBRARIES(icudt,icudata,[HAVE_ICUDATA=1;LIBRARIES="$LIBRARIES icudata";AC_DEFINE(HAVE_ICUI18N,1,[icudata installed])])
+    fi
+  fi
+fi
 
 # compile/use zlib
 if test -d zlib -o -d "`readlink zlib`"; then
@@ -2676,151 +2832,6 @@ if test $ENABLE_PCRE = "yes"; then
   fi
 fi
 
-# create sqlite3.c
-if test -d sqlite -o -d "`readlink sqlite`"; then
-  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
-    dnl create sqlite3.c almagation
-
-    AC_MSG_CREATE([sqlite3.c])
-    result=1
-    if test $result -eq 1; then
-      (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" ./configure --disable-tcl --enable-fts4) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (configure)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd sqlite; make clean; make sqlite3.c) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd sqlite; \
-       install -d $cwd/packages/sources; \
-       install sqlite3.c $cwd/packages/sourcesp; \
-       install sqlite3.h $cwd/packages/include; \
-      ) 1>$tmpFile 2>&1
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
-    fi
-  fi
-fi
-
-# compile/use icu
-if test -d icu -o -d "`readlink icu`"; then
-  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
-    dnl compile icu library
-
-    AC_MSG_COMPILE([icu])
-    result=1
-    if test $result -eq 1; then
-      case $host_os in
-        mingw*)
-          # patch to disable usage of lib-command when RANLIB is set
-          # patch created with:
-          #   diff -u pcre-8.32.org/m4/libtool.m4 pcre-8.32/m4/libtool.m4 >  pcre-8.32-libtool.patch
-          #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
-          #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
-          #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
-#            if test -d packages/pcre-8.32; then
-#              (cd packages/pcre-8.32; patch --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
-#            else
-#              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
-#            fi
-          ;;
-        *)
-          ;;
-      esac
-    fi
-    if test $result -eq 1; then
-      (cd icu/source; ./configure \
-        --host=$host_cpu-$host_os \
-        --prefix=$cwd/packages \
-        --disable-shared \
-        --enable-static \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (configure)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (echo $LIBTOOL; cd icu/source; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd icu/source; make install PREFIX=$cwd/packages) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (install)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-      case $host_os in
-        mingw*)
-          (cd packages/lib; ln -s libicuuc.lib libicuuc.a) 1>/dev/null 2>/dev/null
-          (cd packages/lib; ln -s libicui18n.lib libicui18n.a) 1>/dev/null 2>/dev/null
-          (cd packages/lib; ln -s libicudata.lib libicudata.a) 1>/dev/null 2>/dev/null
-          ;;
-        *)
-          ;;
-      esac
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
-    fi
-  else
-    result=1
-  fi
-
-  if test $result -eq 1; then
-    STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc icui18n icudata"
-    AC_DEFINE(HAVE_ICU,1,[icu installed (local)])
-  fi
-else
-  dnl search for installed icuuc, icui18n, icudata library
-  if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICUUC=1;LIBRARIES="$LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[icuuc installed])])
-  else
-    if test -z "$HAVE_ICUUC"; then
-      AC_SEARCH_STATIC_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICUUC=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[static icuuc installed])])
-    fi
-    if test -z "$HAVE_ICUUC"; then
-      AC_SEARCH_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICUUC=1;LIBRARIES="$LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[icuuc installed])])
-    fi
-  fi
-  if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(uregex_open,icui18n,[HAVE_ICUI18N=1;LIBRARIES="$LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[icui18n installed])])
-  else
-    if test -z "$HAVE_ICUI18N"; then
-      AC_SEARCH_STATIC_LIBRARIES(uregex_open,icui18n,[HAVE_ICUI18N=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[static icui18n installed])])
-    fi
-    if test -z "$HAVE_ICUI18N"; then
-      AC_SEARCH_LIBRARIES(uregex_open,icui18n,[HAVE_ICUI18N=1;LIBRARIES="$LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[icui18n installed])])
-    fi
-  fi
-  if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(icudt,icudata,[HAVE_ICUDATA=1;LIBRARIES="$LIBRARIES icudata";AC_DEFINE(HAVE_ICUI18N,1,[icudata installed])])
-  else
-    if test -z "$HAVE_ICUDATA"; then
-      AC_SEARCH_STATIC_LIBRARIES(icudt,icudata,[HAVE_ICUDATA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icudata";AC_DEFINE(HAVE_ICUI18N,1,[static icudata installed])])
-    fi
-    if test -z "$HAVE_ICUDATA"; then
-      AC_SEARCH_LIBRARIES(icudt,icudata,[HAVE_ICUDATA=1;LIBRARIES="$LIBRARIES icudata";AC_DEFINE(HAVE_ICUI18N,1,[icudata installed])])
-    fi
-  fi
-fi
-
 case "$host_os" in
   windows*|mingw*)
     if test $ENABLE_PTHREADS_W32 = "yes"; then
@@ -3051,6 +3062,7 @@ AC_ARG_ENABLE(
   package-check,
   AC_HELP_STRING([--enable-package-check],[enable check packages]),
   [
+   AS_IF(test $HAVE_ICU    ,,AC_MSG_ERROR([icu missing]))
    AS_IF(test $HAVE_BZ2    ,,AC_MSG_ERROR([bzip2 missing]))
    AS_IF(test $HAVE_LZMA   ,,AC_MSG_ERROR([lzma missing]))
    AS_IF(test $HAVE_LZO    ,,AC_MSG_ERROR([lzo missing]))
