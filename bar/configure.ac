@@ -3139,6 +3139,7 @@ AC_CHECK_VARIABLE_ATTRIBUTE(__thread,AC_DEFINE(HAVE___THREAD,1,[defined if __thr
 dnl Note: AC_SYS_LARGEFILE() does not work with gcc? Use my own implementation
 AC_CHECK_LARGEFILE_DEFINES
 AC_CHECK_SIZEOF(unsigned long)
+AC_CHECK_SIZEOF(unsigned long long)
 AC_CHECK_SIZEOF(void *)
 AC_CHECK_SIZEOF(size_t)
 
