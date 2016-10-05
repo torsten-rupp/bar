@@ -63,9 +63,10 @@ mkdir packages
   ln -s `find packages -type d -name 'lz4-*'|head -1` lz4
 )
 (
-  cp %{_sourcedir}/xdelta*.tar.gz packages
-  (cd packages; tar xzf xdelta*.tar.gz)
-  ln -s `find packages -type d -name 'xdelta*'|head -1` xdelta3
+  cp %{_sourcedir}/xdelta3-*.tar.gz packages
+  (cd packages; tar xzf xdelta3-*.tar.gz)
+  ln -s `find packages -type d -name 'xdelta3-*'|head -1` xdelta3
+  (cd xdelta3; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.1.0.patch)
 )
 (
   cp %{_sourcedir}/libgpg-error-*.tar.bz2 packages

@@ -63,7 +63,7 @@ mkdir packages
 )
 (
   cp %{_sourcedir}/xdelta3-*.tar.gz packages
-  (cd packages; tar xzf xdelta-3*.tar.gz)
+  (cd packages; tar xzf xdelta3-*.tar.gz)
   ln -s `find packages -type d -name 'xdelta3-*'|head -1` xdelta3
   (cd xdelta3; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.1.0.patch)
 )
