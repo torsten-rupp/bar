@@ -96,6 +96,7 @@ The following additional packages are optional:
 * ftp://ftp.gnu.org/pub/gnu/gnutls/gnutls-3.1.18.tar.bz2
 * http://www.minixml.org
 * http://c-ares.haxx.se
+* http://site.icu-project.org/
 * http://curl.haxx.se
 * http://prdownloads.sourceforge.net/libssh2/libssh2-1.6.0.tar.gz?download
 * http://www.gnu.org/software/libiconv
@@ -122,10 +123,13 @@ Note: bar configure will build the additional packages into a temporary
 Install the following development packages (or newer versions):
 
   gcc
+  gcc-c++
   openjdk-6-jdk
   make
-  epm
+  icu
   perl
+  tcl
+  epm
 
 3)
 
