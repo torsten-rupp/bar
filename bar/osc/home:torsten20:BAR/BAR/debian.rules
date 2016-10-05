@@ -26,7 +26,7 @@ build-stamp:
 	#ln -s `find packages -maxdepth 1 -type d -name 'xz*'|head -1` xz
 	#ln -s `find packages -maxdepth 1 -type d -name 'lzo-*'|head -1` lzo
 	#ln -s `find packages -maxdepth 1 -type d -name 'lz4-*'|head -1` lz4
-	#ln -s `find packages -maxdepth 1 -type d -name 'xdelta*'|head -1` xdelta3
+	#ln -s `find packages -maxdepth 1 -type d -name 'xdelta3-*'|head -1` xdelta3
 	#ln -s packages/ftplib-3.1 ftplib
 	#ln -s `find packages -maxdepth 1 -type d -name 'libgpg-error-*'|head -1` libgpg-error
 	#ln -s `find packages -maxdepth 1 -type d -name 'libgcrypt-*'|head -1` libgcrypt
@@ -44,7 +44,7 @@ build-stamp:
 	#ln -s `find packages -maxdepth 1 -type d -name 'breakpad'|head -1` breakpad
 	ls -la
 	ls -la packages
-	./download-third-party-packages.sh
+	sh -x ./download-third-party-packages.sh
 	./configure --enable-package-check
 	make all
 	# --- end custom part for compiling
