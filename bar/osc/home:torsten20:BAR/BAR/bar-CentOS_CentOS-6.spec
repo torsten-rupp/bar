@@ -41,7 +41,7 @@ mkdir packages
 (
   cp %{_sourcedir}/icu4c-*.tgz packages
   (cd packages; tar xzf icu*.tgz)
-  ln -s `find packages -type d -name 'zlib'|head -1` icu
+  ln -s `find packages -type d -name 'icu'|head -1` icu
 )
 (
   cp %{_sourcedir}/zlib-*.tar.gz packages
