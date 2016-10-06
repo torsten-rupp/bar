@@ -200,7 +200,7 @@ LOCAL bool                       quitFlag;
 /***********************************************************************\
 * Name   : openIndex
 * Purpose: open index database
-* Input  : databaseFileName - database file name
+* Input  : databaseFileName - database file name NULL for "in memory"
 *          indexOpenModes   - open modes; see INDEX_OPEN_MODE_...
 * Output : indexHandle - index handle
 * Return : ERROR_NONE or error code
@@ -4005,10 +4005,6 @@ Errors Index_init(const char *fileName)
         if (error == ERROR_NONE)
         {
           error = Database_compare(&indexHandleReference.databaseHandle,&indexHandle.databaseHandle);
-#ifndef WERROR
-#warning remove TODO xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-#endif
-error=ERROR_NONE;
           closeIndex(&indexHandle);
         }
         closeIndex(&indexHandleReference);
@@ -4037,7 +4033,7 @@ error=ERROR_NONE;
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_ERROR,
                     "INDEX",
-                    "Invalid or corrupt index database '%s' (error: %s) - create new\n",
+                    "Outdated or corrupt index database '%s' (error: %s) - create new\n",
                     indexDatabaseFileName,
                     Error_getText(error)
                    );
