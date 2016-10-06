@@ -589,6 +589,9 @@
 /* The size of `unsigned long', as computed by sizeof. */
 #undef SIZEOF_UNSIGNED_LONG
 
+/* The size of `unsigned long long', as computed by sizeof. */
+#undef SIZEOF_UNSIGNED_LONG_LONG
+
 /* The size of `void *', as computed by sizeof. */
 #undef SIZEOF_VOID_P
 
