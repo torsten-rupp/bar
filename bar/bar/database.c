@@ -44,6 +44,7 @@
 /****************** Conditional compilation switches *******************/
 #define DATABASE_SUPPORT_TRANSACTIONS
 #define DATABASE_SUPPORT_INTERRUPT
+#define _DATABASE_DEBUG_COPY_TABLE
 
 /***************************** Constants *******************************/
 #if 1
@@ -1954,12 +1955,12 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
         {
           if (columnNodeReference->type != columnNode->type)
           {
-            error = ERRORX_(DATABASE_TYPE_MISMATCH,0,columnNodeReference->name);
+            error = ERRORX_(DATABASE_TYPE_MISMATCH,0,"%s",columnNodeReference->name);
           }
         }
         else
         {
-          error = ERRORX_(DATABASE_MISSING_COLUMN,0,columnNodeReference->name);
+          error = ERRORX_(DATABASE_MISSING_COLUMN,0,"%s",columnNodeReference->name);
         }
       }
 
@@ -1968,7 +1969,7 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
       {
         if (LIST_FIND(&columnListReference,columnNodeReference,stringEquals(columnNodeReference->name,columnNode->name)) == NULL)
         {
-          error = ERRORX_(DATABASE_OBSOLETE_COLUMN,0,columnNode->name);
+          error = ERRORX_(DATABASE_OBSOLETE_COLUMN,0,"%s",columnNode->name);
         }
       }
 
@@ -1978,7 +1979,7 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
     }
     else
     {
-      error = ERRORX_(DATABASE_MISSING_TABLE,0,String_cString(tableNameReference));
+      error = ERRORX_(DATABASE_MISSING_TABLE,0,"%s",String_cString(tableNameReference));
     }
   }
 
@@ -1987,7 +1988,7 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
   {
     if (!StringList_contains(&tableListReference,tableName))
     {
-      error = ERRORX_(DATABASE_OBSOLETE_TABLE,0,String_cString(tableName));
+      error = ERRORX_(DATABASE_OBSOLETE_TABLE,0,"%s",String_cString(tableName));
     }
   }
 
@@ -2023,9 +2024,10 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
   uint               n;
   DatabaseColumnNode *toColumnNode;
   DatabaseId         lastRowId;
-
-uint64 t0 = Misc_getTimestamp();
-ulong xxx=0;
+  #ifdef DATABASE_DEBUG_COPY_TABLE
+    uint64 t0,t1;
+    ulong  rowCount;
+  #endif /* DATABASE_DEBUG_COPY_TABLE */
 
   assert(fromDatabaseHandle != NULL);
   assert(fromDatabaseHandle->handle != NULL);
@@ -2033,6 +2035,11 @@ ulong xxx=0;
   assert(toDatabaseHandle->handle != NULL);
   assert(fromTableName != NULL);
   assert(toTableName != NULL);
+
+  #ifdef DATABASE_DEBUG_COPY_TABLE
+    t0       = Misc_getTimestamp();
+    rowCount = 0;
+  #endif /* DATABASE_DEBUG_COPY_TABLE */
 
   // get table columns
   error = getTableColumnList(&fromColumnList,fromDatabaseHandle,fromTableName);
@@ -2043,7 +2050,7 @@ ulong xxx=0;
   if (List_isEmpty(&fromColumnList))
   {
     freeTableColumnList(&fromColumnList);
-    return ERRORX_(DATABASE_MISSING_TABLE,0,fromTableName);
+    return ERRORX_(DATABASE_MISSING_TABLE,0,"%s",fromTableName);
   }
   error = getTableColumnList(&toColumnList,toDatabaseHandle,toTableName);
   if (error != ERROR_NONE)
@@ -2055,7 +2062,7 @@ ulong xxx=0;
   {
     freeTableColumnList(&toColumnList);
     freeTableColumnList(&fromColumnList);
-    return ERRORX_(DATABASE_MISSING_TABLE,0,toTableName);
+    return ERRORX_(DATABASE_MISSING_TABLE,0,"%s",toTableName);
   }
 
   // create SQL select statement string
@@ -2138,7 +2145,10 @@ ulong xxx=0;
     // copy rows
     while ((sqliteResult = sqliteStep(fromDatabaseHandle->handle,fromStatementHandle,fromDatabaseHandle->timeout)) == SQLITE_ROW)
     {
-xxx++;
+      #ifdef DATABASE_DEBUG_COPY_TABLE
+        rowCount++;
+      #endif /* DATABASE_DEBUG_COPY_TABLE */
+
       // reset to data
       LIST_ITERATE(&toColumnList,columnNode)
       {
@@ -2439,13 +2449,6 @@ xxx++;
     // free resources
     sqlite3_finalize(fromStatementHandle);
 
-if (xxx > 0)
-{
-uint64 t1 = Misc_getTimestamp();
-fprintf(stderr,"%s, %d: %s->%s %llums xxx=%lu -> %lfms/trans\n",__FILE__,__LINE__,fromTableName,toTableName,(t1-t0)/1000,xxx,(double)(t1-t0)/((double)xxx*1000));
-//exit(12);
-}
-
     return ERROR_NONE;
   });
   String_delete(sqlInsertString);
@@ -2458,6 +2461,22 @@ fprintf(stderr,"%s, %d: %s->%s %llums xxx=%lu -> %lfms/trans\n",__FILE__,__LINE_
   String_delete(sqlSelectString);
   freeTableColumnList(&toColumnList);
   freeTableColumnList(&fromColumnList);
+
+  #ifdef DATABASE_DEBUG_COPY_TABLE
+    t1 = Misc_getTimestamp();
+    if (rowCount > 0L)
+    {
+      fprintf(stderr,
+              "%s, %d: DEBUG copy table %s->%s: %llums, %lu rows, %lfms/row\n",
+              __FILE__,__LINE__,
+              fromTableName,
+              toTableName,
+              (t1-t0)/1000,
+              rowCount,
+              (double)(t1-t0)/((double)rowCount*1000L)
+             );
+    }
+  #endif /* DATABASE_DEBUG_COPY_TABLE */
 
   return error;
 }
