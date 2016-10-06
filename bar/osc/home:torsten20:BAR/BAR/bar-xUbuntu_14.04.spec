@@ -38,6 +38,11 @@ creating automated backups in the background.
 %build
 mkdir packages
 (
+  cp %{_sourcedir}/icu-*.tgz packages
+  (cd packages; tar xzf icu*.tgz)
+  ln -s `find packages -type d -name 'zlib'|head -1` icu
+)
+(
   cp %{_sourcedir}/zlib-*.tar.gz packages
   (cd packages; tar xzf zlib-*.tar.gz)
   ln -s `find packages -type d -name 'zlib-*'|head -1` zlib
