@@ -717,6 +717,7 @@ HAVE_LZ4
 HAVE_LZO
 HAVE_LZMA
 HAVE_BZ2
+HAVE_Z
 HAVE_ICU
 ENABLE_EPM
 ENABLE_GUI_I18N
@@ -6824,15 +6825,6 @@ if test -d icu -o -d "`readlink icu`"; then
         mingw*)
           # patch to disable usage of lib-command when RANLIB is set
           # patch created with:
-          #   diff -u pcre-8.32.org/m4/libtool.m4 pcre-8.32/m4/libtool.m4 >  pcre-8.32-libtool.patch
-          #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
-          #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
-          #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
-#            if test -d packages/pcre-8.32; then
-#              (cd packages/pcre-8.32; patch --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
-#            else
-#              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
-#            fi
           ;;
         *)
           ;;
@@ -6900,6 +6892,7 @@ $as_echo "done" >&6; }
   fi
 
   if test $result -eq 1; then
+    HAVE_ICU=1
     STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc icui18n icudata"
 
 $as_echo "#define HAVE_ICU 1" >>confdefs.h
@@ -13214,6 +13207,11 @@ if test "${enable_package_check+set}" = set; then :
 
 else
   as_fn_error $? "icu missing" "$LINENO" 5
+fi
+   if test $HAVE_Z      ; then :
+
+else
+  as_fn_error $? "zlib missing" "$LINENO" 5
 fi
    if test $HAVE_BZ2    ; then :
 

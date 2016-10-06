@@ -601,6 +601,7 @@ AC_SUBST(ENABLE_GUI_I18N)                   dnl "yes" for GUI i18n support, "no"
 AC_SUBST(ENABLE_EPM)                        dnl "yes" for EPM support, "no" otherwise
 
 AC_SUBST(HAVE_ICU)                          dnl "1" for ICU support, "" otherwise
+AC_SUBST(HAVE_Z)                            dnl "1" for zlib support, "" otherwise
 AC_SUBST(HAVE_BZ2)                          dnl "1" for bzip2 support, "" otherwise
 AC_SUBST(HAVE_LZMA)                         dnl "1" for lzma support, "" otherwise
 AC_SUBST(HAVE_LZO)                          dnl "1" for lzo support, "" otherwise
@@ -1310,15 +1311,6 @@ if test -d icu -o -d "`readlink icu`"; then
         mingw*)
           # patch to disable usage of lib-command when RANLIB is set
           # patch created with:
-          #   diff -u pcre-8.32.org/m4/libtool.m4 pcre-8.32/m4/libtool.m4 >  pcre-8.32-libtool.patch
-          #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
-          #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
-          #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
-#            if test -d packages/pcre-8.32; then
-#              (cd packages/pcre-8.32; patch --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
-#            else
-#              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
-#            fi
           ;;
         *)
           ;;
@@ -1370,6 +1362,7 @@ if test -d icu -o -d "`readlink icu`"; then
   fi
 
   if test $result -eq 1; then
+    HAVE_ICU=1
     STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc icui18n icudata"
     AC_DEFINE(HAVE_ICU,1,[icu installed (local)])
   fi
@@ -3063,6 +3056,7 @@ AC_ARG_ENABLE(
   AC_HELP_STRING([--enable-package-check],[enable check packages]),
   [
    AS_IF(test $HAVE_ICU    ,,AC_MSG_ERROR([icu missing]))
+   AS_IF(test $HAVE_Z      ,,AC_MSG_ERROR([zlib missing]))
    AS_IF(test $HAVE_BZ2    ,,AC_MSG_ERROR([bzip2 missing]))
    AS_IF(test $HAVE_LZMA   ,,AC_MSG_ERROR([lzma missing]))
    AS_IF(test $HAVE_LZO    ,,AC_MSG_ERROR([lzo missing]))
