@@ -1606,7 +1606,6 @@ public class BARControl
     System.out.println("Options: -p|--port=<n>                              - server port (default: "+Settings.DEFAULT_SERVER_PORT+")");
     System.out.println("         --tls-port=<n>                             - TLS server port (default: "+Settings.DEFAULT_SERVER_TLS_PORT+")");
     System.out.println("         --password=<password>                      - server password (use with care!)");
-    System.out.println("         --select-job=<name>                        - select job <name>");
     System.out.println("         --login-dialog                             - force to open login dialog");
     System.out.println("         --key-file=<file name>                     - key file name (default: ");
     System.out.println("                                                        ."+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
