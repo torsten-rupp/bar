@@ -58,7 +58,11 @@
     a CD/DVD/BD
   * added options --blank, --(cd|dvd|bd|device)-blank to
     blank medium before writing
-   BARControl: added abort to load volume dialog
+  * BARControl: added abort to load volume dialog
+  * BARControl: renamed option --index-database-storage-list
+    -> --index-database-storages-list, added option
+    --index-database-entities-list
+
 
 2016-01-09 0.19d
   * fixed include of multiple entries with pattern: store

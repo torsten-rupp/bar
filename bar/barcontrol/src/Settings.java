@@ -511,7 +511,8 @@ public class Settings
   public static String                indexDatabaseAddStorageName     = null;
   public static String                indexDatabaseRemoveStorageName  = null;
   public static String                indexDatabaseRefreshStorageName = null;
-  public static String                indexDatabaseStorageListName    = null;
+  public static String                indexDatabaseEntitiesListName   = null;
+  public static String                indexDatabaseStoragesListName   = null;
   public static String                indexDatabaseEntriesListName    = null;
 
   public static String                restoreStorageName              = null;

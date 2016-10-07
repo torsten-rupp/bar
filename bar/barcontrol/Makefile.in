@@ -233,6 +233,8 @@ help:
 	@$(ECHO) ""
 	@$(ECHO) "  compile"
 	@$(ECHO) ""
+	@$(ECHO) "  test"
+	@$(ECHO) ""
 	@$(ECHO) "  poeditde"
 	@$(ECHO) "  poeditjp"
 	@$(ECHO) ""
@@ -265,6 +267,11 @@ ifneq ($(JAVAC),)
 else
 	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"
 endif
+
+.PHONY: compile
+compile: $(OBJECTS)
+
+# ----------------------------------------------------------------------------
 
 # i18n
 .PHONY: i18n po
@@ -299,6 +306,36 @@ poeditde:
 .PHONE: poeditjp
 poeditjp:
 	poedit po/japanese.po
+
+# ----------------------------------------------------------------------------
+
+# tests
+.PHONY: test
+.PHONY: test
+test:
+	@$(ECHO_NO_LF) "Test 1: basic..."
+	@$(MAKE) \
+          BARCONTROL_OPTIONS="$(TEST_OPTIONS) localhost --port=39909" \
+	  test_basic \
+          ;
+
+test_basic:
+ifneq ($(JAVA),)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --help 1>/dev/null
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --version
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --ping
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --pause 60
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --suspend
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --continue
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --list 1>/dev/null
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --index-database-entities-list home 1>/dev/null
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --index-database-storages-list home 1>/dev/null
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --index-database-entries-list home 1>/dev/null
+else
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
+endif
+
+# ----------------------------------------------------------------------------
 
 # jars
 .PHONY: jars clean_jars
@@ -500,9 +537,7 @@ barcontrol.cmd: $(SOURCE_DIR)/barcontrol.cmd.in barcontrol-windows.jar
 	$(CHMOD) 775 $@
 endif
 
-# compile
-.PHONY: compile
-compile: $(OBJECTS)
+# ----------------------------------------------------------------------------
 
 # run
 .PHONY: run runde runjp rundebug runxdebug runxxdebug

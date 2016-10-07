@@ -1398,42 +1398,43 @@ public class BARControl
 
   private static final Option[] OPTIONS =
   {
-    new Option("--password",                   null,Options.Types.STRING,     "serverPassword"),
-    new Option("--port",                       "-p",Options.Types.INTEGER,    "serverPort"),
-    new Option("--tls-port",                   null,Options.Types.INTEGER,    "serverTLSPort"),
-    new Option("--key-file",                   null,Options.Types.STRING,     "serverKeyFileName"),
-    new Option("--force-ssl",                  null,Options.Types.BOOLEAN,    "serverForceSSL"),
-    new Option("--select-job",                 null,Options.Types.STRING,     "selectedJobName"),
-    new Option("--login-dialog",               null,Options.Types.BOOLEAN,    "loginDialogFlag"),
+    new Option("--password",                    null,Options.Types.STRING,     "serverPassword"),
+    new Option("--port",                        "-p",Options.Types.INTEGER,    "serverPort"),
+    new Option("--tls-port",                    null,Options.Types.INTEGER,    "serverTLSPort"),
+    new Option("--key-file",                    null,Options.Types.STRING,     "serverKeyFileName"),
+    new Option("--force-ssl",                   null,Options.Types.BOOLEAN,    "serverForceSSL"),
+    new Option("--select-job",                  null,Options.Types.STRING,     "selectedJobName"),
+    new Option("--login-dialog",                null,Options.Types.BOOLEAN,    "loginDialogFlag"),
 
-    new Option("--job",                        "-j",Options.Types.STRING,     "runJobName"),
-    new Option("--archive-type",               null,Options.Types.ENUMERATION,"archiveType",ARCHIVE_TYPE_ENUMERATION),
-    new Option("--abort",                      null,Options.Types.STRING,     "abortJobName"),
-    new Option("--pause",                      "-t",Options.Types.INTEGER,    "pauseTime"),
-    new Option("--ping",                       "-i",Options.Types.BOOLEAN,    "pingFlag"),
-    new Option("--suspend",                    "-s",Options.Types.BOOLEAN,    "suspendFlag"),
-    new Option("--continue",                   "-c",Options.Types.BOOLEAN,    "continueFlag"),
-    new Option("--list",                       "-l",Options.Types.BOOLEAN,    "listFlag"),
+    new Option("--job",                         "-j",Options.Types.STRING,     "runJobName"),
+    new Option("--archive-type",                null,Options.Types.ENUMERATION,"archiveType",ARCHIVE_TYPE_ENUMERATION),
+    new Option("--abort",                       null,Options.Types.STRING,     "abortJobName"),
+    new Option("--pause",                       "-t",Options.Types.INTEGER,    "pauseTime"),
+    new Option("--ping",                        "-i",Options.Types.BOOLEAN,    "pingFlag"),
+    new Option("--suspend",                     "-s",Options.Types.BOOLEAN,    "suspendFlag"),
+    new Option("--continue",                    "-c",Options.Types.BOOLEAN,    "continueFlag"),
+    new Option("--list",                        "-l",Options.Types.BOOLEAN,    "listFlag"),
 
-    new Option("--index-database-add",         null,Options.Types.STRING,     "indexDatabaseAddStorageName"),
-    new Option("--index-database-remove",      null,Options.Types.STRING,     "indexDatabaseRemoveStorageName"),
-    new Option("--index-database-refresh",     null,Options.Types.STRING,     "indexDatabaseRefreshStorageName"),
-    new Option("--index-database-storage-list","-a",Options.Types.STRING,     "indexDatabaseStorageListPattern"),
-    new Option("--index-database-entries-list","-e",Options.Types.STRING,     "indexDatabaseEntriesListName"),
+    new Option("--index-database-add",          null,Options.Types.STRING,     "indexDatabaseAddStorageName"),
+    new Option("--index-database-remove",       null,Options.Types.STRING,     "indexDatabaseRemoveStorageName"),
+    new Option("--index-database-refresh",      null,Options.Types.STRING,     "indexDatabaseRefreshStorageName"),
+    new Option("--index-database-entities-list","-n",Options.Types.STRING,     "indexDatabaseEntitiesListName"),
+    new Option("--index-database-storages-list","-a",Options.Types.STRING,     "indexDatabaseStoragesListName"),
+    new Option("--index-database-entries-list", "-e",Options.Types.STRING,     "indexDatabaseEntriesListName"),
 
-    new Option("--restore",                    null,Options.Types.STRING,     "restoreStorageName"),
-    new Option("--destination",                null,Options.Types.STRING,     "destination"),
-    new Option("--overwrite-entries",          null,Options.Types.BOOLEAN,    "overwriteEntriesFlag"),
+    new Option("--restore",                     null,Options.Types.STRING,     "restoreStorageName"),
+    new Option("--destination",                 null,Options.Types.STRING,     "destination"),
+    new Option("--overwrite-entries",           null,Options.Types.BOOLEAN,    "overwriteEntriesFlag"),
 
-    new Option("--version",                    null,Options.Types.BOOLEAN,    "versionFlag"),
-    new Option("--help",                       "-h",Options.Types.BOOLEAN,    "helpFlag"),
-    new Option("--xhelp",                      null,Options.Types.BOOLEAN,    "xhelpFlag"),
+    new Option("--version",                     null,Options.Types.BOOLEAN,    "versionFlag"),
+    new Option("--help",                        "-h",Options.Types.BOOLEAN,    "helpFlag"),
+    new Option("--xhelp",                       null,Options.Types.BOOLEAN,    "xhelpFlag"),
 
-    new Option("--debug",                      "-d",Options.Types.INCREMENT,  "debugLevel"),
-    new Option("--debug-quit-server",          null,Options.Types.BOOLEAN,    "debugQuitServerFlag"),
+    new Option("--debug",                       "-d",Options.Types.INCREMENT,  "debugLevel"),
+    new Option("--debug-quit-server",           null,Options.Types.BOOLEAN,    "debugQuitServerFlag"),
 
     // ignored
-    new Option("--swing",                      null, Options.Types.BOOLEAN,   null),
+    new Option("--swing",                       null, Options.Types.BOOLEAN,   null),
   };
 
   // --------------------------- variables --------------------------------
@@ -1622,8 +1623,8 @@ public class BARControl
     System.out.println("                                                        incremental");
     System.out.println("                                                        differential");
     System.out.println("         --abort=<name>                             - abort execution of job <name>");
-    System.out.println("         -t|--pause=<n>                             - pause job execution for <n> seconds");
     System.out.println("         -i|--ping                                  - check connection to server");
+    System.out.println("         -t|--pause=<n>                             - pause job execution for <n> seconds");
     System.out.println("         -s|--suspend                               - suspend job execution");
     System.out.println("         -c|--continue                              - continue job execution");
     System.out.println("         -l|--list                                  - list jobs");
@@ -1631,8 +1632,9 @@ public class BARControl
     System.out.println("         --index-database-add=<name|directory>      - add storage archive <name> or all .bar files to index");
     System.out.println("         --index-database-remove=<text>             - remove matching storage archives from index");
     System.out.println("         --index-database-refresh=<text>            - refresh matching storage archive in index");
-    System.out.println("         -a|--index-database-storage-list=<text>    - list matching storage archives");
-    System.out.println("         -e|--index-database-entries-list=<text>    - list matching entries");
+    System.out.println("         -n|--index-database-entities-list=<text>   - list index entities");
+    System.out.println("         -a|--index-database-storages-list=<text>   - list index storage archives");
+    System.out.println("         -e|--index-database-entries-list=<text>    - list index entries");
     System.out.println("");
     System.out.println("         --restore=<name>                           - restore storage <name>");
     System.out.println("         --destination=<directory>                  - destination to restore entries");
@@ -2726,7 +2728,8 @@ public class BARControl
           || (Settings.indexDatabaseAddStorageName != null)
           || (Settings.indexDatabaseRemoveStorageName != null)
           || (Settings.indexDatabaseRefreshStorageName != null)
-          || (Settings.indexDatabaseStorageListName != null)
+          || (Settings.indexDatabaseEntitiesListName != null)
+          || (Settings.indexDatabaseStoragesListName != null)
           || (Settings.indexDatabaseEntriesListName != null)
           || (Settings.pauseTime > 0)
           || (Settings.pingFlag)
@@ -2846,7 +2849,7 @@ public class BARControl
           }
         }
 
-        if (Settings.indexDatabaseStorageListName != null)
+        if (Settings.indexDatabaseEntitiesListName != null)
         {
           final String[] MAP_TEXT = new String[]{"\\n","\\r","\\\\"};
           final String[] MAP_BIN  = new String[]{"\n","\r","\\"};
@@ -2857,7 +2860,60 @@ public class BARControl
           ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
 
           // list storage index
-          System.out.println(String.format("%-12s %-19s %-5s %-5s %s",
+          System.out.println(String.format("%-14s %-14s %-19s %s",
+                                           "Entry count",
+                                           "Entry size",
+                                           "Date/Time",
+                                           "Job"
+                                          )
+                            );
+          System.out.println(StringUtils.repeat("-",14+1+14+1+19+1+40));
+          error = BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=* name=%'S",
+                                                               Settings.indexDatabaseEntitiesListName
+                                                              ),
+                                           0,  // debug level
+                                           errorMessage,
+                                           new Command.ResultHandler()
+                                           {
+                                             public int handle(int i, ValueMap valueMap)
+                                             {
+                                               String      jobName             = valueMap.getString("jobName"            );
+                                               long        lastCreatedDateTime = valueMap.getLong  ("lastCreatedDateTime");
+                                               long        totalEntryCount     = valueMap.getLong  ("totalEntryCount"    );
+                                               long        totalEntrySize      = valueMap.getLong  ("totalEntrySize"     );
+
+                                               System.out.println(String.format("%14d %14d %-19s %s",
+                                                                                totalEntryCount,
+                                                                                totalEntrySize,
+                                                                                (lastCreatedDateTime > 0L) ? DATE_FORMAT.format(new Date(lastCreatedDateTime*1000)) : "-",
+                                                                                jobName
+                                                                               )
+                                                                 );
+
+                                               return Errors.NONE;
+                                             }
+                                           }
+                                          );
+          if (error != Errors.NONE)
+          {
+            printError("cannot list storages index (error: %s)",errorMessage[0]);
+            BARServer.disconnect();
+            System.exit(1);
+          }
+        }
+
+        if (Settings.indexDatabaseStoragesListName != null)
+        {
+          final String[] MAP_TEXT = new String[]{"\\n","\\r","\\\\"};
+          final String[] MAP_BIN  = new String[]{"\n","\r","\\"};
+
+          int                 error;
+          String[]            errorMessage  = new String[1];
+          ValueMap            valueMap     = new ValueMap();
+          ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
+
+          // list storage index
+          System.out.println(String.format("%-14s %-19s %-5s %-5s %s",
                                            "Size",
                                            "Date/Time",
                                            "State",
@@ -2865,9 +2921,9 @@ public class BARControl
                                            "Name"
                                           )
                             );
-          System.out.println(StringUtils.repeat("-",12+1+19+1+5+1+5+40));
+          System.out.println(StringUtils.repeat("-",14+1+19+1+5+1+5+40));
           error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=* indexModeSet=* name=%'S",
-                                                               Settings.indexDatabaseStorageListName
+                                                               Settings.indexDatabaseStoragesListName
                                                               ),
                                            0,  // debug level
                                            errorMessage,
@@ -2881,7 +2937,7 @@ public class BARControl
                                                IndexStates state  = valueMap.getEnum  ("indexState",IndexStates.class);
                                                IndexModes mode    = valueMap.getEnum  ("indexMode",IndexModes.class  );
 
-                                               System.out.println(String.format("%12d %-19s %-5s %-5s %s",
+                                               System.out.println(String.format("%14d %-19s %-5s %-5s %s",
                                                                                 size,
                                                                                 DATE_FORMAT.format(new Date(dateTime*1000)),
                                                                                 state,
@@ -2908,7 +2964,7 @@ public class BARControl
           String[] errorMessage = new String[1];
 
           // list storage index
-          System.out.println(String.format("%-40s %-8s %-12s %-19s %s",
+          System.out.println(String.format("%-40s %-8s %-14s %-19s %s",
                                            "Storage",
                                            "Type",
                                            "Size",
@@ -2916,7 +2972,7 @@ public class BARControl
                                            "Name"
                                           )
                             );
-          System.out.println(StringUtils.repeat("-",40+1+8+1+12+1+19+40));
+          System.out.println(StringUtils.repeat("-",40+1+8+1+14+1+19+40));
           error = BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST name=%'S indexType=* newestOnly=no",
                                                                Settings.indexDatabaseEntriesListName
                                                               ),
@@ -2938,7 +2994,7 @@ public class BARControl
                                                      long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
                                                      long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
 
-                                                     System.out.println(String.format("%-40s %-8s %12d %-19s %s",
+                                                     System.out.println(String.format("%-40s %-8s %14d %-19s %s",
                                                                                       storageName,
                                                                                       "FILE",
                                                                                       size,
@@ -2957,7 +3013,7 @@ public class BARControl
                                                      long   blockOffset     = valueMap.getLong  ("blockOffset"    );
                                                      long   blockCount      = valueMap.getLong  ("blockCount"     );
 
-                                                     System.out.println(String.format("%-40s %-8s %12d %-19s %s",
+                                                     System.out.println(String.format("%-40s %-8s %14d %-19s %s",
                                                                                       storageName,
                                                                                       "IMAGE",
                                                                                       size,
@@ -2974,7 +3030,7 @@ public class BARControl
                                                      String directoryName   = valueMap.getString("name"           );
                                                      long   dateTime        = valueMap.getLong  ("dateTime"       );
 
-                                                     System.out.println(String.format("%-40s %-8s %12s %-19s %s",
+                                                     System.out.println(String.format("%-40s %-8s %14s %-19s %s",
                                                                                       storageName,
                                                                                       "DIR",
                                                                                       "",
@@ -2992,7 +3048,7 @@ public class BARControl
                                                      String destinationName = valueMap.getString("destinationName");
                                                      long   dateTime        = valueMap.getLong  ("dateTime"       );
 
-                                                     System.out.println(String.format("%-40s %-8s %12s %-19s %s -> %s",
+                                                     System.out.println(String.format("%-40s %-8s %14s %-19s %s -> %s",
                                                                                       storageName,
                                                                                       "LINK",
                                                                                       "",
@@ -3013,7 +3069,7 @@ public class BARControl
                                                      long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
                                                      long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
 
-                                                     System.out.println(String.format("%-40s %-8s %12d %-19s %s",
+                                                     System.out.println(String.format("%-40s %-8s %14d %-19s %s",
                                                                                       storageName,
                                                                                       "HARDLINK",
                                                                                       size,
@@ -3030,7 +3086,7 @@ public class BARControl
                                                      String name            = valueMap.getString("name"           );
                                                      long   dateTime        = valueMap.getLong  ("dateTime"       );
 
-                                                     System.out.println(String.format("%-40s %-8s %12s %-19s %s",
+                                                     System.out.println(String.format("%-40s %-8s %14s %-19s %s",
                                                                                       storageName,
                                                                                       "SPECIAL",
                                                                                       "",
@@ -3197,7 +3253,7 @@ public class BARControl
             BARServer.disconnect();
             System.exit(1);
           }
-          System.out.println(String.format("%-40s %-20s %-10s %-11s %-12s %-25s %-12s %-10s %-8s %-19s %-12s",
+          System.out.println(String.format("%-40s %-20s %-10s %-14s %-14s %-25s %-14s %-10s %-8s %-19s %-12s",
                                            "Name",
                                            "Host name",
                                            "State",
@@ -3211,7 +3267,7 @@ public class BARControl
                                            "Estimated"
                                           )
                             );
-          System.out.println(StringUtils.repeat("-",40+1+20+1+10+1+11+1+12+1+25+1+12+1+10+1+8+1+19+1+12));
+          System.out.println(StringUtils.repeat("-",40+1+20+1+10+1+11+1+14+1+25+1+14+1+10+1+8+1+19+1+12));
           for (ValueMap valueMap_ : valueMapList)
           {
             // get data
@@ -3241,7 +3297,7 @@ public class BARControl
               cryptPasswordMode = "-";
             }
 
-            System.out.println(String.format("%-40s %-20s %-10s %-11s %12d %-25s %-12s %-10s %-8s %-19s %12d",
+            System.out.println(String.format("%-40s %-20s %-10s %-11s %14d %-25s %-14s %-10s %-8s %-19s %12d",
                                              name,
                                              hostName,
                                              (serverState == null) ? state : serverState,
