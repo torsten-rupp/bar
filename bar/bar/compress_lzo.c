@@ -117,6 +117,7 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
   ulong    maxCompressBytes,maxDataBytes;
   uint     n;
   lzo_uint compressLength;
+  uint     length;
   int      lzoError;
   uint32   compressLengthFlags;
   uint32   lengthFlags;
@@ -204,6 +205,10 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
             fprintf(stderr,"%s, %d: compress: length=%u -> compressLength=%u, compressLengthFlags=%08x\n",__FILE__,__LINE__,LZO_BLOCK_SIZE,(uint)compressLength,compressLengthFlags);
           #endif /* LZO_DEBUG */
 
+          // reset LZO input bfufer
+          compressInfo->lzo.inputBufferIndex  = 0;
+          compressInfo->lzo.inputBufferLength = 0;
+
           // init LZO output buffer
           compressInfo->lzo.outputBufferIndex  = 0;
           compressInfo->lzo.outputBufferLength = 4+(uint)compressLength;
@@ -211,26 +216,33 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
         else
         {
           // cannot compress => store original data
+          length = MIN(compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex,compressInfo->lzo.bufferSize-4);
 
           // move input buffer -> compress buffer (spare 4 bytes for length+flags in output buffer)
           memcpy(&compressInfo->lzo.outputBuffer[4],
                  &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex],
-                 compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex
+                 length
                 );
 
           // put length of data+flag into output buffer before data
-          lengthFlags = ((uint32)compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) & LZO_LENGTH_MASK;
+          lengthFlags = (uint32)length & LZO_LENGTH_MASK;
           putUINT32(&compressInfo->lzo.outputBuffer[0],lengthFlags);
           #ifdef LZO_DEBUG
             fprintf(stderr,"%s, %d: compress: length=%u, lengthFlags=%08x\n",__FILE__,__LINE__,compressInfo->lzo.inputBufferLength,lengthFlags);
           #endif /* LZO_DEBUG */
 
+          // shift LZO input buffer
+          memmove(compressInfo->lzo.inputBuffer,
+                  &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex+length],
+                  length
+                 );
+          compressInfo->lzo.inputBufferLength -= length;
+          compressInfo->lzo.inputBufferIndex  =  0;
+
           // init LZO output buffer
           compressInfo->lzo.outputBufferIndex  = 0;
-          compressInfo->lzo.outputBufferLength = 4+(compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex);
+          compressInfo->lzo.outputBufferLength = 4+length;
         }
-        compressInfo->lzo.inputBufferIndex  = 0;
-        compressInfo->lzo.inputBufferLength = 0;
 
         // get max. number of data and max. number of compressed bytes
         maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
@@ -293,6 +305,10 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
             fprintf(stderr,"%s, %d: compress: final length=%u -> compressLength=%u, compressLengthFlags=%08x\n",__FILE__,__LINE__,compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex,(uint)compressLength,compressLengthFlags);
           #endif /* LZO_DEBUG */
 
+          // reset LZO input bfufer
+          compressInfo->lzo.inputBufferIndex  = 0;
+          compressInfo->lzo.inputBufferLength = 0;
+
           // init LZO output buffer
           compressInfo->lzo.outputBufferIndex  = 0;
           compressInfo->lzo.outputBufferLength = 4+(uint)compressLength;
@@ -300,26 +316,33 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
         else
         {
           // cannot compress => store original data
+          length = MIN(compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex,compressInfo->lzo.bufferSize-4);
 
           // transfer: input buffer -> compress buffer
           memcpy(&compressInfo->lzo.outputBuffer[4],
                  &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex],
-                 compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex
+                 length
                 );
 
           // put length of data+end-of-data flag into output buffer before data
-          lengthFlags = ((uint32)(compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex) & LZO_LENGTH_MASK) | LZO_END_OF_DATA_FLAG;
+          lengthFlags = ((uint32)length & LZO_LENGTH_MASK) | LZO_END_OF_DATA_FLAG;
           putUINT32(&compressInfo->lzo.outputBuffer[0],lengthFlags);
           #ifdef LZO_DEBUG
             fprintf(stderr,"%s, %d: compress: final length=%d, lengthFlags=%08x\n",__FILE__,__LINE__,compressInfo->lzo.inputBufferLength-compressInfo->lzo.inputBufferIndex,lengthFlags);
           #endif /* LZO_DEBUG */
 
+          // shift LZO input buffer
+          memmove(compressInfo->lzo.inputBuffer,
+                  &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex+length],
+                  length
+                 );
+          compressInfo->lzo.inputBufferLength -= length;
+          compressInfo->lzo.inputBufferIndex  =  0;
+
           // init LZO output buffer
           compressInfo->lzo.outputBufferIndex  = 0;
-          compressInfo->lzo.outputBufferLength = 4+(uint)compressInfo->lzo.inputBufferLength;
+          compressInfo->lzo.outputBufferLength = 4+length;
         }
-        compressInfo->lzo.inputBufferIndex  = 0;
-        compressInfo->lzo.inputBufferLength = 0;
 
         // get max. number of compressed bytes
         maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
@@ -560,7 +583,7 @@ LOCAL Errors CompressLZO_decompressData(CompressInfo *compressInfo)
           compressInfo->lzo.totalInputLength  += (uint64)n;
           #ifdef LZO_DEBUG
             fprintf(stderr,"%s, %d: decompress: move input=%u\n",__FILE__,__LINE__,n);
-          #endif /* LZ4_DEBUG */
+          #endif /* LZO_DEBUG */
         }
 
         if (!compressInfo->lzo.lastBlockFlag)
