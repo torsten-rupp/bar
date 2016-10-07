@@ -411,9 +411,9 @@ BAR_OBJECTS_GCOV     = $(addprefix gcov/,$(BAR_OBJECTS))
 
 BAR_OBJECTS_VALGRIND = $(addprefix valgrind/,$(BAR_OBJECTS))
 
-SQLITE3_SOURCE       = $(if $(wildcard ../packages/sources/sqlite3.c),../packages/sources/sqlite3.c,sqlite3.c)
+SQLITE3_SOURCE       = $(if $(wildcard ../sqlite/sqlite3.c),../sqlite/sqlite3.c,sqlite3.c)
 
-SQLITE3_HEADER       = $(if $(wildcard ../packages/include/sqlite3.h),../packages/include/sqlite3.h,sqlite3.h)
+SQLITE3_HEADER       = $(if $(wildcard ../sqlite/sqlite3.h),../sqlite/sqlite3.h,sqlite3.h)
 
 EXTERN_SOURCES       = $(SQLITE3_SOURCE) \
 
