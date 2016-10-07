@@ -968,7 +968,13 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                                   NULL,  // scheduleUUID
                                   &storageId,
                                   storageName,
-                                  NULL  // lastCheckedDateTime
+                                  NULL,  // createdDateTime
+                                  NULL,  // size
+                                  NULL,  // indexMode
+                                  NULL,  // lastCheckedDateTime
+                                  NULL,  // errorMessage
+                                  NULL,  // totalEntryCount
+                                  NULL  // totalEntrySize
                                  )
          && (error == ERROR_NONE)
         )
@@ -1054,7 +1060,13 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
                                   NULL,  // scheduleUUID
                                   &storageId,
                                   storageName,
-                                  NULL  // lastCheckedDateTime
+                                  NULL,  // createdDateTime
+                                  NULL,  // size
+                                  NULL,  // indexMode
+                                  NULL,  // lastCheckedDateTime
+                                  NULL,  // errorMessage
+                                  NULL,  // totalEntryCount
+                                  NULL  // totalEntrySize
                                  )
          && (error == ERROR_NONE)
         )
@@ -1489,12 +1501,13 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
                                 &storageId,
                                 storageName,
                                 NULL,  // createdDateTime
-                                NULL,  // entries
-                                NULL,  // size
+                                NULL,  // size,
                                 NULL,  // indexState
                                 NULL,  // indexMode
                                 NULL,  // lastCheckedDateTime
-                                NULL  // errorMessage
+                                NULL,  // errorMessage
+                                NULL,  // totalEntryCount
+                                NULL  // totalEntrySize
                                )
           )
     {
@@ -1935,12 +1948,13 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                    &storageId,
                                    storageName,
                                    NULL,  // createdDateTime
-                                   NULL,  // entries
-                                   NULL,  // size
+                                   NULL,  // size,
                                    NULL,  // indexState
                                    NULL,  // indexMode
                                    NULL,  // lastCheckedDateTime
-                                   NULL   // errorMessage
+                                   NULL,  // errorMessage
+                                   NULL,  // totalEntryCount
+                                   NULL  // totalEntrySize
                                   )
           )
     {
@@ -1979,12 +1993,13 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                                        &duplicateStorageId,
                                        duplicateStorageName,
                                        NULL,  // createdDateTime
-                                       NULL,  // entries
-                                       NULL,  // size
+                                       NULL,  // size,
                                        NULL,  // indexState
                                        NULL,  // indexMode
                                        NULL,  // lastCheckedDateTime
-                                       NULL   // errorMessage
+                                       NULL,  // errorMessage
+                                       NULL,  // totalEntryCount
+                                       NULL  // totalEntrySize
                                       )
               )
         {
@@ -2195,12 +2210,13 @@ LOCAL Errors refreshStoragesInfos(IndexHandle *indexHandle)
                                 &storageId,
                                 NULL,  // storageName,
                                 NULL,  // createdDateTime
-                                NULL,  // entries
-                                NULL,  // size
+                                NULL,  // size,
                                 NULL,  // indexState
                                 NULL,  // indexMode
                                 NULL,  // lastCheckedDateTime
-                                NULL  // errorMessage
+                                NULL,  // errorMessage
+                                NULL,  // totalEntryCount
+                                NULL  // totalEntrySize
                                )
           )
     {
@@ -3314,12 +3330,13 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
                               &storageId,
                               NULL,  // storageName
                               NULL,  // createdDateTime
-                              NULL,  // entries
-                              NULL,  // size
+                              NULL,  // size,
                               NULL,  // indexState
                               NULL,  // indexMode
                               NULL,  // lastCheckedDateTime
-                              NULL   // errorMessage
+                              NULL,  // errorMessage
+                              NULL,  // totalEntryCount
+                              NULL  // totalEntrySize
                              )
         )
   {
@@ -4462,8 +4479,14 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                            IndexId     *uuidId,
                            IndexId     *entityId,
                            String      storageName,
+                           uint64      *createdDateTime,
+                           uint64      *size,
                            IndexStates *indexState,
-                           uint64      *lastCheckedDateTime
+                           IndexModes  *indexMode,
+                           uint64      *lastCheckedDateTime,
+                           String      errorMessage,
+                           ulong       *totalEntryCount,
+                           uint64      *totalEntrySize
                           )
 {
   Errors              error;
@@ -4490,8 +4513,13 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                                      entities.jobUUID, \
                                      entities.scheduleUUID, \
                                      storage.name, \
+                                     storage.size, \
                                      storage.state, \
-                                     UNIXTIMESTAMP(storage.lastChecked) \
+                                     storage.mode, \
+                                     UNIXTIMESTAMP(storage.lastChecked), \
+                                     storage.errorMessage, \
+                                     storage.totalEntryCount, \
+                                     storage.totalEntrySize \
                               FROM storage \
                                 LEFT JOIN entities ON storage.entityId=entities.id \
                                 LEFT JOIN uuids ON entities.jobUUID=uuids.jobUUID \
@@ -4507,14 +4535,20 @@ bool Index_findStorageById(IndexHandle *indexHandle,
     }
 
     result = Database_getNextRow(&databaseQueryHandle,
-                                 "%lld %lld %S %S %S %d %llu",
+                                 "%lld %lld %S %S %'S %llu %llu %d %llu %S %llu %llu",
                                  &uuidId_,
                                  &entityId_,
                                  jobUUID,
                                  scheduleUUID,
                                  storageName,
+                                 createdDateTime,
+                                 size,
                                  indexState,
-                                 lastCheckedDateTime
+                                 indexMode,
+                                 lastCheckedDateTime,
+                                 errorMessage,
+                                 totalEntryCount,
+                                 totalEntrySize
                                 );
 
     Database_finalize(&databaseQueryHandle);
@@ -4540,8 +4574,14 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                              String                 jobUUID,
                              String                 scheduleUUID,
                              IndexId                *storageId,
+                             uint64                 *createdDateTime,
+                             uint64                 *size,
                              IndexStates            *indexState,
-                             uint64                 *lastCheckedDateTime
+                             IndexModes             *indexMode,
+                             uint64                 *lastCheckedDateTime,
+                             String                 errorMessage,
+                             ulong                  *totalEntryCount,
+                             uint64                 *totalEntrySize
                             )
 {
   Errors              error;
@@ -4573,8 +4613,14 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                                      entities.jobUUID, \
                                      entities.scheduleUUID, \
                                      storage.name, \
+                                     UNIXTIMESTAMP(storage.created), \
+                                     storage.size, \
                                      storage.state, \
-                                     UNIXTIMESTAMP(storage.lastChecked) \
+                                     storage.mode, \
+                                     UNIXTIMESTAMP(storage.lastChecked), \
+                                     storage.errorMessage, \
+                                     storage.totalEntryCount, \
+                                     storage.totalEntrySize \
                               FROM storage \
                                 LEFT JOIN entities ON storage.entityId=entities.id \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -4591,15 +4637,21 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
     foundFlag   = FALSE;
     while (   !foundFlag
            && Database_getNextRow(&databaseQueryHandle,
-                                  "%lld %lld %lld %S %S %S %d %llu",
+                                  "%lld %lld %lld %S %S %'S %llu %llu %d %d %llu %S %llu %llu",
                                   &uuidId_,
                                   &entityId_,
                                   &storageId_,
                                   jobUUID,
                                   scheduleUUID,
                                   tmpStorageName,
+                                  createdDateTime,
+                                  size,
                                   indexState,
-                                  lastCheckedDateTime
+                                  indexMode,
+                                  lastCheckedDateTime,
+                                  errorMessage,
+                                  totalEntryCount,
+                                  totalEntrySize
                                  )
           )
     {
@@ -4639,7 +4691,13 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                               String        scheduleUUID,
                               IndexId       *storageId,
                               String        storageName,
-                              uint64        *lastCheckedDateTime
+                              uint64        *createdDateTime,
+                              uint64        *size,
+                              IndexModes    *indexMode,
+                              uint64        *lastCheckedDateTime,
+                              String        errorMessage,
+                              ulong         *totalEntryCount,
+                              uint64        *totalEntrySize
                              )
 {
   Errors              error;
@@ -4671,7 +4729,13 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                                      entities.jobUUID, \
                                      entities.scheduleUUID, \
                                      storage.name, \
-                                     UNIXTIMESTAMP(storage.lastChecked) \
+                                     UNIXTIMESTAMP(storage.created), \
+                                     storage.size, \
+                                     storage.mode, \
+                                     UNIXTIMESTAMP(storage.lastChecked), \
+                                     storage.errorMessage, \
+                                     storage.totalEntryCount, \
+                                     storage.totalEntrySize \
                               FROM storage \
                                 LEFT JOIN entities ON storage.entityId=entities.id \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -4686,14 +4750,20 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
     }
 
     result = Database_getNextRow(&databaseQueryHandle,
-                                 "%lld %lld %lld %S %S %S %llu",
+                                 "%lld %lld %lld %S %S %'S %llu %llu %d %llu %S %llu %llu",
                                  &uuidId_,
                                  &entityId_,
                                  &storageId_,
                                  jobUUID,
                                  scheduleUUID,
                                  storageName,
-                                 lastCheckedDateTime
+                                 createdDateTime,
+                                 size,
+                                 indexMode,
+                                 lastCheckedDateTime,
+                                 errorMessage,
+                                 totalEntryCount,
+                                 totalEntrySize
                                 );
 
     Database_finalize(&databaseQueryHandle);
@@ -6705,12 +6775,13 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                                    storage.id, \
                                    storage.name, \
                                    UNIXTIMESTAMP(storage.created), \
-                                   storage.totalEntryCount, \
-                                   storage.totalEntrySize, \
+                                   storage.size, \
                                    storage.state, \
                                    storage.mode, \
                                    UNIXTIMESTAMP(storage.lastChecked), \
-                                   storage.errorMessage \
+                                   storage.errorMessage, \
+                                   storage.totalEntryCount, \
+                                   storage.totalEntrySize \
                             FROM storage \
                               LEFT JOIN entities ON entities.id=storage.entityId \
                               LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -6762,12 +6833,13 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           IndexId          *storageId,
                           String           storageName,
                           uint64           *createdDateTime,
-                          ulong            *totalEntryCount,
-                          uint64           *totalEntrySize,
+                          uint64           *size,
                           IndexStates      *indexState,
                           IndexModes       *indexMode,
                           uint64           *lastCheckedDateTime,
-                          String           errorMessage
+                          String           errorMessage,
+                          ulong            *totalEntryCount,
+                          uint64           *totalEntrySize
                          )
 {
   DatabaseId uuidId_,entityId_,storageId_;
@@ -6782,7 +6854,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %lld %S %d %lld %S %llu %lu %llu %d %d %llu %S",
+                           "%lld %S %lld %S %d %lld %S %llu %llu %d %d %llu %S %lu %llu",
                            &uuidId_,
                            jobUUID,
                            &entityId_,
@@ -6791,12 +6863,13 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                            &storageId_,
                            storageName,
                            createdDateTime,
-                           totalEntryCount,
-                           totalEntrySize,
+                           size,
                            indexState,
                            indexMode,
                            lastCheckedDateTime,
-                           errorMessage
+                           errorMessage,
+                           totalEntryCount,
+                           totalEntrySize
                           )
     )
   {
@@ -7116,12 +7189,12 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                         String       storageName,
                         uint64       *createdDateTime,
                         uint64       *size,
-                        uint64       *totalEntryCount,
-                        uint64       *totalEntrySize,
                         IndexStates  *indexState,
                         IndexModes   *indexMode,
                         uint64       *lastCheckedDateTime,
-                        String       errorMessage
+                        String       errorMessage,
+                        uint64       *totalEntryCount,
+                        uint64       *totalEntrySize
                        )
 {
   Errors              error;
@@ -7150,12 +7223,12 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                                      storage.name, \
                                      UNIXTIMESTAMP(storage.created), \
                                      storage.size, \
-                                     storage.totalEntryCount, \
-                                     storage.totalEntrySize, \
                                      storage.state, \
                                      storage.mode, \
                                      UNIXTIMESTAMP(storage.lastChecked), \
-                                     storage.errorMessage \
+                                     storage.errorMessage, \
+                                     storage.totalEntryCount, \
+                                     storage.totalEntrySize \
                               FROM storage \
                                 LEFT JOIN entities ON entities.id=storage.entityId \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -7168,7 +7241,7 @@ Errors Index_getStorage(IndexHandle *indexHandle,
       return error;
     }
     if (!Database_getNextRow(&databaseQueryHandle,
-                             "%llu %S %llu %S %d %S %llu %llu %ld %llu %d %d %llu %S",
+                             "%llu %S %llu %S %d %S %llu %llu %d %d %llu %S %llu %llu",
                              &uuidId_,
                              jobUUID,
                              &entityId_,
@@ -7177,12 +7250,12 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                              storageName,
                              createdDateTime,
                              size,
-                             totalEntryCount,
-                             totalEntrySize,
                              indexState,
                              indexMode,
                              lastCheckedDateTime,
-                             errorMessage
+                             errorMessage,
+                             totalEntryCount,
+                             totalEntrySize
                             )
        )
     {
@@ -11098,12 +11171,13 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
                                 &storageId,
                                 NULL,  // storageName,
                                 NULL,  // createdDateTime
-                                NULL,  // entries
-                                NULL,  // size
+                                NULL,  // size,
                                 NULL,  // indexState
                                 NULL,  // indexMode
                                 NULL,  // lastCheckedDateTime
-                                NULL   // errorMessage
+                                NULL,  // errorMessage
+                                NULL,  // totalEntryCount
+                                NULL  // totalEntrySize
                                )
           )
     {

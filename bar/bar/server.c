@@ -4588,8 +4588,14 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
                              NULL,  // uuidId
                              NULL,  // entityId
                              storageName,
+                             NULL,  // createdDateTime
+                             NULL,  // size
                              NULL,  // indexState
-                             NULL  // lastCheckedDateTime
+                             NULL,  // indexMode
+                             NULL,  // lastCheckedDateTime
+                             NULL,  // errorMessage
+                             NULL,  // totalEntryCount
+                             NULL  // totalEntrySize
                             )
      )
   {
@@ -4745,12 +4751,13 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                  &storageId,
                                  NULL,  // storageName
                                  NULL,  // createdDateTime
-                                 NULL,  // totalEntryCount
-                                 NULL,  // totalEntrySize
+                                 NULL,  // size
                                  NULL,  // indexState
                                  NULL,  // indexMode
                                  NULL,  // lastCheckedDateTime
-                                 NULL  // errorMessage
+                                 NULL,  // errorMessage
+                                 NULL,  // totalEntryCount
+                                 NULL  // totalEntrySize
                                 )
         )
   {
@@ -5556,7 +5563,13 @@ LOCAL void indexThreadCode(void)
                                        NULL,  // scheduleUUID
                                        &storageId,
                                        storageName,
-                                       NULL  // lastCheckedDateTime
+                                       NULL,  // createdDateTime
+                                       NULL,  // size
+                                       NULL,  // indexMode
+                                       NULL,  // lastCheckedDateTime
+                                       NULL,  // errorMessage
+                                       NULL,  // totalEntryCount
+                                       NULL  // totalEntrySize
                                       )
           )
     {
@@ -5890,8 +5903,14 @@ LOCAL void autoIndexThreadCode(void)
                                                                        NULL,  // jobUUID
                                                                        NULL,  // scheduleUUID
                                                                        &storageId,
+                                                                       NULL,  // createdDateTime
+                                                                       NULL,  // size
                                                                        &indexState,
-                                                                       &lastCheckedDateTime
+                                                                       NULL,  // indexMode
+                                                                       &lastCheckedDateTime,
+                                                                       NULL,  // errorMessage
+                                                                       NULL,  // totalEntryCount
+                                                                       NULL  // totalEntrySize
                                                                       )
                                               )
                                            {
@@ -5992,12 +6011,13 @@ LOCAL void autoIndexThreadCode(void)
                                        &storageId,
                                        storageName,
                                        &createdDateTime,
-                                       NULL,  // totalEntryCount
-                                       NULL,  // totalEntrySize
+                                       NULL,  // size
                                        &indexState,
                                        &indexMode,
                                        &lastCheckedDateTime,
-                                       NULL  // errorMessage
+                                       NULL,  // errorMessage
+                                       NULL,  // totalEntryCount
+                                       NULL  // totalEntrySize
                                       )
               )
         {
@@ -13979,12 +13999,13 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
                                  &storageId,
                                  storageName,
                                  NULL,  // createdDateTime
-                                 &totalEntryCount,
-                                 &totalEntrySize,
+                                 NULL,  // size
                                  NULL,  // indexState
                                  NULL,  // indexMode
                                  NULL,  // lastCheckedDateTime
-                                 NULL  // errorMessage
+                                 NULL,  // errorMessage
+                                 &totalEntryCount,
+                                 &totalEntrySize
                                 )
         )
   {
@@ -14859,12 +14880,13 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                          NULL,  // storageId
                                          storageName,
                                          NULL,  // createdDateTime
-                                         NULL,  // totalEntryCount
+                                         NULL,  // size
                                          NULL,  // totalEntrySize
                                          NULL,  // indexState,
                                          NULL,  // indexMode,
                                          NULL,  // lastCheckedDateTime,
-                                         NULL   // errorMessage
+                                         NULL,  // errorMessage
+                                         NULL  // totalEntryCount
                                         )
                 )
           {
@@ -15273,6 +15295,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   String             name;
   Errors             error;
   IndexQueryHandle   indexQueryHandle;
+  IndexId            uuidId;
+  String             jobName;
   IndexId            entityId;
   StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
   uint64             createdDateTime;
@@ -15329,6 +15353,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // initialize variables
+  jobName          = String_new();
   lastErrorMessage = String_new();
 
   // get entities
@@ -15348,12 +15373,13 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init entity list fail: %s",Error_getText(error));
     String_delete(lastErrorMessage);
+    String_delete(jobName);
     String_delete(name);
     return;
   }
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextEntity(&indexQueryHandle,
-                                NULL,  // uudId,
+                                &uuidId,
                                 jobUUID,
                                 scheduleUUID,
                                 &entityId,
@@ -15365,7 +15391,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                                )
         )
   {
-    // get expire date/time
+    // get job name, expire date/time
+    String_clear(jobName);
     maxAge = 0;
     if (!String_isEmpty(scheduleUUID))
     {
@@ -15374,6 +15401,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
         jobNode = findJobByUUID(jobUUID);
         if (jobNode != NULL)
         {
+          String_set(jobName,jobNode->name);
           scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
           if (scheduleNode != NULL)
           {
@@ -15393,8 +15421,10 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 
     // send result
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "jobUUID=%S scheduleUUID=%S entityId=%lld archiveType=%s lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu expireDateTime=%llu",
+                     "uuid=%llu jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%lld archiveType=%s lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu expireDateTime=%llu",
+                     uuidId,
                      jobUUID,
+                     jobName,
                      scheduleUUID,
                      entityId,
                      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
@@ -15411,6 +15441,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 
   // free resources
   String_delete(lastErrorMessage);
+  String_delete(jobName);
   String_delete(name);
 }
 
@@ -15475,11 +15506,12 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   IndexId               uuidId,storageId;
   ArchiveTypes          archiveType;
   uint64                dateTime;
-  ulong                 totalEntryCount;
-  uint64                totalEntrySize;
+  uint64                size;
   IndexStates           indexState;
   IndexModes            indexMode;
   uint64                lastCheckedDateTime;
+  ulong                 totalEntryCount;
+  uint64                totalEntrySize;
   SemaphoreLock         semaphoreLock;
   JobNode               *jobNode;
 
@@ -15589,12 +15621,13 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                                  &storageId,
                                  storageName,
                                  &dateTime,
-                                 &totalEntryCount,
-                                 &totalEntrySize,
+                                 &size,
                                  &indexState,
                                  &indexMode,
                                  &lastCheckedDateTime,
-                                 errorMessage
+                                 errorMessage,
+                                 &totalEntryCount,
+                                 &totalEntrySize
                                 )
         )
   {
@@ -15621,7 +15654,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
     }
 
     sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "uuidId=%llu jobUUID=%S jobName=%'S entityId=%llu scheduleUUID=%S archiveType='%s' storageId=%llu name=%'S dateTime=%llu totalEntryCount=%lu totalEntrySize=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S",
+                     "uuidId=%llu jobUUID=%S jobName=%'S entityId=%llu scheduleUUID=%S archiveType='%s' storageId=%llu name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu",
                      uuidId,
                      jobUUID,
                      jobName,
@@ -15631,12 +15664,13 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                      storageId,
                      printableStorageName,
                      dateTime,
-                     totalEntryCount,
-                     totalEntrySize,
+                     size,
                      Index_stateToString(indexState,"unknown"),
                      Index_modeToString(indexMode,"unknown"),
                      lastCheckedDateTime,
-                     errorMessage
+                     errorMessage,
+                     totalEntryCount,
+                     totalEntrySize
                     );
   }
   Index_doneList(&indexQueryHandle);
@@ -16157,8 +16191,14 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                     NULL,  // jobUUID
                                     NULL,  // scheduleUUID
                                     &storageId,
-                                    NULL,  // indexState,
-                                    NULL  // lastCheckedDateTime
+                                    NULL,  // createdDateTime
+                                    NULL,  // size
+                                    NULL,  // indexState
+                                    NULL,  // indexMode
+                                    NULL,  // lastCheckedDateTime
+                                    NULL,  // errorMessage
+                                    NULL,  // totalEntryCount
+                                    NULL  // totalEntrySize
                                    )
            )
         {
@@ -16222,8 +16262,14 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                                              NULL,  // jobUUID
                                                              NULL,  // scheduleUUID
                                                              &storageId,
-                                                             NULL,  // indexState,
-                                                             NULL  // lastCheckedDateTime
+                                                             NULL,  // createdDateTime
+                                                             NULL,  // size
+                                                             NULL,  // indexState
+                                                             NULL,  // indexMode
+                                                             NULL,  // lastCheckedDateTime
+                                                             NULL,  // errorMessage
+                                                             NULL,  // totalEntryCount
+                                                             NULL  // totalEntrySize
                                                             )
                                     )
                                  {
@@ -16701,12 +16747,13 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    &storageId,
                                    NULL,  // storageName
                                    NULL,  // createdDateTime
-                                   NULL,  // totalEntryCount
-                                   NULL,  // totalEntrySize
+                                   NULL,  // size
                                    &indexState,
                                    NULL,  // indexMode
                                    NULL,  // lastCheckedDateTime
-                                   NULL  // errorMessage
+                                   NULL,  // errorMessage
+                                   NULL,  // totalEntryCount
+                                   NULL  // totalEntrySize
                                   )
           )
     {
@@ -16754,12 +16801,13 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    &storageId,
                                    NULL,  // storageName
                                    NULL,  // createdDateTime
-                                   NULL,  // totalEntryCount
-                                   NULL,  // totalEntrySize
+                                   NULL,  // size
                                    NULL,  // indexState
                                    NULL,  // indexMode
                                    NULL,  // lastCheckedDateTime
-                                   NULL  // errorMessage
+                                   NULL,  // errorMessage
+                                   NULL,  // totalEntryCount
+                                   NULL  // totalEntrySize
                                   )
           )
     {
@@ -16807,12 +16855,13 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    &storageId,
                                    NULL,  // storageName
                                    NULL,  // createdDateTime
-                                   NULL,  // totalEntryCount
-                                   NULL,  // totalEntrySize
+                                   NULL,  // size
                                    NULL,  // indexState
                                    NULL,  // indexMode
                                    NULL,  // lastCheckedDateTime
-                                   NULL  // errorMessage
+                                   NULL,  // errorMessage
+                                   NULL,  // totalEntryCount
+                                   NULL  // totalEntrySize
                                   )
           )
     {
@@ -16865,12 +16914,13 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    &storageId,
                                    NULL,  // storageName
                                    NULL,  // createdDateTime
-                                   NULL,  // totalEntryCount
-                                   NULL,  // totalEntrySize
+                                   NULL,  // size
                                    NULL,  // indexState
                                    NULL,  // indexMode
                                    NULL,  // lastCheckedDateTime
-                                   NULL  // errorMessage
+                                   NULL,  // errorMessage
+                                   NULL,  // totalEntryCount
+                                   NULL  // totalEntrySize
                                   )
           )
     {
@@ -16918,12 +16968,13 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    &storageId,
                                    storageName,
                                    NULL,  // createdDateTime
-                                   NULL,  // totalEntryCount
-                                   NULL,  // totalEntrySize
+                                   NULL,  // size
                                    &indexState,
                                    NULL,  // indexMode
                                    NULL,  // lastCheckedDateTime
-                                   NULL  // errorMessage
+                                   NULL,  // errorMessage
+                                   NULL,  // totalEntryCount
+                                   NULL  // totalEntrySize
                                   )
           )
     {
@@ -17075,12 +17126,13 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
                                    &storageId,
                                    storageName,
                                    NULL,  // createdDateTime
-                                   NULL,  // totalEntryCount
-                                   NULL,  // totalEntrySize
+                                   NULL,  // size
                                    &indexState,
                                    NULL,  // indexMode
                                    NULL,  // lastCheckedDateTime
-                                   NULL  // errorMessage
+                                   NULL,  // errorMessage
+                                   NULL,  // totalEntryCount
+                                   NULL  // totalEntrySize
                                   )
           )
     {

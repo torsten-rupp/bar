@@ -3455,12 +3455,13 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
                               &oldStorageId,
                               oldStorageName,
                               NULL, // createdDateTime
-                              NULL, // entries
                               NULL, // size
-                              NULL, // indexState,
-                              NULL, // indexMode,
-                              NULL, // lastCheckedDateTime,
-                              NULL  // errorMessage
+                              NULL, // indexState
+                              NULL, // indexMode
+                              NULL, // lastCheckedDateTime
+                              NULL, // errorMessage
+                              NULL, // totalEntryCount
+                              NULL // totalEntrySize
                              )
         )
   {
@@ -3603,12 +3604,13 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                 &storageId,
                                 storageName,
                                 &createdDateTime,
-                                NULL,  // entries,
                                 &size,
                                 NULL,  // indexState,
                                 NULL,  // indexMode,
                                 NULL,  // lastCheckedDateTime,
-                                NULL   // errorMessage
+                                NULL,  // errorMessage
+                                NULL,  // totalEntryCount
+                                NULL  // totalEntrySize
                                )
           )
     {
@@ -3800,12 +3802,13 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                 &storageId,
                                 storageName,
                                 &createdDateTime,
-                                NULL,  // entries,
                                 &size,
                                 NULL,  // indexState,
                                 NULL,  // indexMode,
                                 NULL,  // lastCheckedDateTime,
-                                NULL   // errorMessage
+                                NULL,  // errorMessage
+                                NULL,  // totalEntryCount
+                                NULL  // totalEntrySize
                                )
           )
     {
@@ -4258,8 +4261,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                      NULL,  // jobUUID,
                                      NULL,  // scheduleUUID,
                                      &storageId,
-                                     NULL,  // indexState,
-                                     NULL  // lastCheckedTimestamp
+                                     NULL,  // createdDateTime
+                                     NULL,  // size
+                                     NULL,  // indexMode
+                                     NULL,  // indexState
+                                     NULL,  // lastCheckedDateTime
+                                     NULL,  // errorMessage
+                                     NULL,  // totalEntryCount
+                                     NULL  // totalEntrySize
                                     )
          )
       {
@@ -4357,12 +4366,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                       &existingStorageId,
                                       existingStorageName,
                                       NULL,  // createdDateTime
-                                      NULL,  // entries
                                       NULL,  // size
                                       NULL,  // indexState,
                                       NULL,  // indexMode,
                                       NULL,  // lastCheckedDateTime,
-                                      NULL  // errorMessage
+                                      NULL,  // errorMessage
+                                      NULL,  // totalEntryCount
+                                      NULL  // totalEntrySize
                                      )
                 )
           {

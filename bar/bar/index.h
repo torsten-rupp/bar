@@ -644,9 +644,15 @@ bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
 *          uuidId              - index id of UUID entry (can be NULL)
 *          entityId            - index id of entity entry (can be NULL)
 *          storageName         - storage name (can be NULL)
+*          createdDateTime     - date/time stamp [s] (can be NULL)
+*          size                - storage size [bytes]
 *          indexState          - index state (can be NULL)
-*          lastCheckedDateTime - last checked date/time stamp [s] (can
-*                                be NULL)
+*          indexMode           - index mode (can be NULL)
+*          lastCheckedDateTime - last checked date/time stamp [s] (can be
+*                                NULL)
+*          errorMessage        - last error message
+*          totalEntryCount     - total number of entries (can be NULL)
+*          totalEntrySize      - total size [bytes] (can be NULL)
 * Return : TRUE if index found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -658,8 +664,14 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                            IndexId     *uuidId,
                            IndexId     *entityId,
                            String      storageName,
+                           uint64      *createdDateTime,
+                           uint64      *size,
                            IndexStates *indexState,
-                           uint64      *lastCheckedDateTime
+                           IndexModes  *indexMode,
+                           uint64      *lastCheckedDateTime,
+                           String      errorMessage,
+                           ulong       *totalEntryCount,
+                           uint64      *totalEntrySize
                           );
 
 /***********************************************************************\
@@ -674,9 +686,15 @@ bool Index_findStorageById(IndexHandle *indexHandle,
 *          uuidId              - index id of UUID entry (can be NULL)
 *          entityId            - index id of entity entry (can be NULL)
 *          storageId           - index id of storage entry (can be NULL)
+*          createdDateTime     - date/time stamp [s] (can be NULL)
+*          size                - storage size [bytes]
 *          indexState          - index state (can be NULL)
-*          lastCheckedDateTime - last checked date/time stamp [s] (can
-*                                be NULL)
+*          indexMode           - index mode (can be NULL)
+*          lastCheckedDateTime - last checked date/time stamp [s] (can be
+*                                NULL)
+*          errorMessage        - last error message
+*          totalEntryCount     - total number of entries (can be NULL)
+*          totalEntrySize      - total size [bytes] (can be NULL)
 * Return : TRUE if index found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -689,8 +707,14 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                              String                 jobUUID,
                              String                 scheduleUUID,
                              IndexId                *storageId,
+                             uint64                 *createdDateTime,
+                             uint64                 *size,
                              IndexStates            *indexState,
-                             uint64                 *lastCheckedDateTime
+                             IndexModes             *indexMode,
+                             uint64                 *lastCheckedDateTime,
+                             String                 errorMessage,
+                             ulong                  *totalEntryCount,
+                             uint64                 *totalEntrySize
                             );
 
 /***********************************************************************\
@@ -703,8 +727,15 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 *          entityId            - index id of entity (can be NULL)
 *          storageId           - index id of storage (can be NULL)
 *          storageName         - storage name (can be NULL)
-*          lastCheckedDateTime - last checked date/time stamp [s] (can
-*                                be NULL)
+*          createdDateTime     - date/time stamp [s] (can be NULL)
+*          size                - storage size [bytes]
+*          indexState          - index state (can be NULL)
+*          indexMode           - index mode (can be NULL)
+*          lastCheckedDateTime - last checked date/time stamp [s] (can be
+*                                NULL)
+*          errorMessage        - last error message
+*          totalEntryCount     - total number of entries (can be NULL)
+*          totalEntrySize      - total size [bytes] (can be NULL)
 * Return : TRUE if index found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -717,7 +748,13 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                               String        scheduleUUID,
                               IndexId       *storageId,
                               String        storageName,
-                              uint64        *lastCheckedDateTime
+                              uint64        *createdDateTime,
+                              uint64        *size,
+                              IndexModes    *indexMode,
+                              uint64        *lastCheckedDateTime,
+                              String        errorMessage,
+                              ulong         *totalEntryCount,
+                              uint64        *totalEntrySize
                              );
 
 /***********************************************************************\
@@ -1295,13 +1332,14 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 *          storageId           - index id of storage (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s] (can be NULL)
-*          totalEntryCount     - total number of entries (can be NULL)
-*          totalEntrySize      - total size [bytes] (can be NULL)
+*          size                - storage size [bytes]
 *          indexState          - index state (can be NULL)
 *          indexMode           - index mode (can be NULL)
 *          lastCheckedDateTime - last checked date/time stamp [s] (can be
 *                                NULL)
 *          errorMessage        - last error message
+*          totalEntryCount     - total number of entries (can be NULL)
+*          totalEntrySize      - total size [bytes] (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1315,12 +1353,13 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           IndexId          *storageId,
                           String           storageName,
                           uint64           *createdDateTime,
-                          ulong            *totalEntryCount,
-                          uint64           *totalEntrySize,
+                          uint64           *size,
                           IndexStates      *indexState,
                           IndexModes       *indexMode,
                           uint64           *lastCheckedDateTime,
-                          String           errorMessage
+                          String           errorMessage,
+                          ulong            *totalEntryCount,
+                          uint64           *totalEntrySize
                          );
 
 /***********************************************************************\
@@ -1398,12 +1437,12 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - created date/time (can be NULL)
 -*         size                - size of stroage (can be NULL)
-*          totalEntryCount     - total number of entries (can be NULL)
-*          totalEntrySize      - total size [bytes] (can be NULL)
 *          indexState          - index state (can be NULL)
 *          indexMode           - index mode (can be NULL)
 *          lastCheckedDateTime - last checked date/time (can be NULL)
 *          errorMessage        - last error message (can be NULL)
+*          totalEntryCount     - total number of entries (can be NULL)
+*          totalEntrySize      - total size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -1418,12 +1457,12 @@ Errors Index_getStorage(IndexHandle  *indexHandle,
                         String       storageName,
                         uint64       *createdDateTime,
                         uint64       *size,
-                        uint64       *totalEntryCount,
-                        uint64       *totalEntrySize,
                         IndexStates  *indexState,
                         IndexModes   *indexMode,
                         uint64       *lastCheckedDateTime,
-                        String       errorMessage
+                        String       errorMessage,
+                        uint64       *totalEntryCount,
+                        uint64       *totalEntrySize
                        );
 
 /***********************************************************************\

@@ -339,8 +339,14 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                             NULL,  // uuidId
                                                             NULL,  // entityId
                                                             NULL,  // storageName
+                                                            NULL,  // createdDateTime
+                                                            NULL,  // size
                                                             NULL,  // indexState
-                                                            NULL  // lastCheckedDateTime
+                                                            NULL,  // indexMode
+                                                            NULL,  // lastCheckedDateTime
+                                                            NULL,  // errorMessage
+                                                            NULL,  // totalEntryCount
+                                                            NULL  // totalEntrySize
                                                            )
                                    && Index_findEntityByJobUUID(newIndexHandle,
                                                                 jobUUID,
