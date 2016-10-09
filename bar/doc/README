@@ -126,9 +126,11 @@ Install the following development packages (or newer versions):
   gcc-c++
   openjdk-6-jdk
   make
+  m4
+  xgettext (getext-devel package)
   icu
   perl
-  tcl
+  tclsh (tcl package)
   epm
 
 3)
