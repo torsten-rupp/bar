@@ -260,8 +260,6 @@ LOCAL Errors CompressBZ2_init(CompressInfo       *compressInfo,
       bz2Result = BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0);
       if (bz2Result != BZ_OK)
       {
-        RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
-        RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
         return ERRORX_(INIT_COMPRESS,bz2Result,NULL);
       }
       break;
@@ -269,8 +267,6 @@ LOCAL Errors CompressBZ2_init(CompressInfo       *compressInfo,
       bz2Result = BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0);
       if (bz2Result != BZ_OK)
       {
-        RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
-        RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
         return ERRORX_(INIT_DECOMPRESS,bz2Result,NULL);
       }
       break;

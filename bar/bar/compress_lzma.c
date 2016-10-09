@@ -64,7 +64,7 @@
 LOCAL void *lzmaAlloc(void *userData, size_t nmemb, size_t size)
 {
   UNUSED_VARIABLE(userData);
-  
+
 //fprintf(stderr,"%s, %d: %lu %lu \n",__FILE__,__LINE__,SIZE_MAX,nmemb*size);
   return calloc(nmemb,size);
 }
@@ -80,7 +80,7 @@ LOCAL void *lzmaAlloc(void *userData, size_t nmemb, size_t size)
 
 LOCAL void lzmaFree(void *userData, void *p)
 {
-  UNUSED_VARIABLE(userData); 
+  UNUSED_VARIABLE(userData);
 
   free(p);
 }
@@ -338,8 +338,6 @@ LOCAL Errors CompressLZMA_init(CompressInfo       *compressInfo,
       lzmaResult = lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE);
       if (lzmaResult != LZMA_OK)
       {
-        RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
-        RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
         return ERRORX_(INIT_COMPRESS,lzmaResult,"%s",lzmaErrorText(lzmaResult));
       }
       break;
@@ -347,8 +345,6 @@ LOCAL Errors CompressLZMA_init(CompressInfo       *compressInfo,
       lzmaResult = lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0);
       if (lzmaResult != LZMA_OK)
       {
-        RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
-        RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
         return ERRORX_(INIT_DECOMPRESS,lzmaResult,"%s",lzmaErrorText(lzmaResult));
       }
       break;

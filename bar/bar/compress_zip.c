@@ -267,8 +267,6 @@ LOCAL Errors CompressZIP_init(CompressInfo       *compressInfo,
       zlibResult = deflateInit(&compressInfo->zlib.stream,compressionLevel);
       if (zlibResult != Z_OK)
       {
-        RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
-        RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
         return ERRORX_(INIT_COMPRESS,zlibResult,"%s",zError(zlibResult));
       }
       break;
@@ -276,8 +274,6 @@ LOCAL Errors CompressZIP_init(CompressInfo       *compressInfo,
       zlibResult = inflateInit(&compressInfo->zlib.stream);
       if (zlibResult != Z_OK)
       {
-        RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
-        RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
         return ERRORX_(INIT_DECOMPRESS,zlibResult,"%s",zError(zlibResult));
       }
       break;

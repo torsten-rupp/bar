@@ -725,8 +725,7 @@ LOCAL Errors CompressXD3_init(CompressInfo       *compressInfo,
   xd3Result = xd3_config_stream(&compressInfo->xdelta.stream,&xd3Config);
   if (xd3Result != 0)
   {
-    RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
-    RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
+    RingBuffer_done(&compressInfo->xdelta.outputRingBuffer,NULL,NULL);
     return ERRORX_(INIT_COMPRESS,xd3Result,"%s",xd3_strerror(xd3Result));
   }
 
@@ -735,8 +734,7 @@ LOCAL Errors CompressXD3_init(CompressInfo       *compressInfo,
   if (compressInfo->xdelta.sourceBuffer == NULL)
   {
     xd3_free_stream(&compressInfo->xdelta.stream);
-    RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
-    RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
+    RingBuffer_done(&compressInfo->xdelta.outputRingBuffer,NULL,NULL);
     return ERRORX_(INIT_COMPRESS,0,"insufficient memory");
   }
 
@@ -750,10 +748,9 @@ LOCAL Errors CompressXD3_init(CompressInfo       *compressInfo,
   xd3Result = xd3_set_source(&compressInfo->xdelta.stream,&compressInfo->xdelta.source);
   if (xd3Result != 0)
   {
-    xd3_free_stream(&compressInfo->xdelta.stream);
     free(compressInfo->xdelta.sourceBuffer);
-    RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
-    RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
+    xd3_free_stream(&compressInfo->xdelta.stream);
+    RingBuffer_done(&compressInfo->xdelta.outputRingBuffer,NULL,NULL);
     return ERRORX_(INIT_COMPRESS,xd3Result,"%s",xd3_strerror(xd3Result));
   }
 
@@ -765,9 +762,9 @@ LOCAL void CompressXD3_done(CompressInfo *compressInfo)
   assert(compressInfo != NULL);
 
   xd3_close_stream(&compressInfo->xdelta.stream);
+  free(compressInfo->xdelta.sourceBuffer);
   xd3_free_stream(&compressInfo->xdelta.stream);
   RingBuffer_done(&compressInfo->xdelta.outputRingBuffer,NULL,NULL);
-  free(compressInfo->xdelta.sourceBuffer);
 }
 
 LOCAL Errors CompressXD3_reset(CompressInfo *compressInfo)

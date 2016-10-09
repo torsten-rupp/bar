@@ -763,6 +763,9 @@ bool Compress_isValidAlgorithm(uint16 n)
       break; /* not reached */
   }
   assert(error != ERROR_UNKNOWN);
+#warning remove
+//TODO
+//error=ERROR_UNKNOWN;
   if (error != ERROR_NONE)
   {
     RingBuffer_done(&compressInfo->compressRingBuffer,CALLBACK(NULL,NULL));
