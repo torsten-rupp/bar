@@ -75,6 +75,7 @@ LOCAL void printUsage(const char *programName)
   printf("          --create-newest      - re-create newest data\n");
   printf("          --create-indizes     - re-create indizes\n");
   printf("          --create-aggregates  - re-create aggregates data\n");
+  printf("          --vacuum             - collect and remove unused file space\n");
   printf("          -n|--names           - print named values\n");
   printf("          -H|--header          - print headers\n");
   printf("          -f|--no-foreign-keys - disable foreign key constrains\n");
