@@ -1322,6 +1322,8 @@ if test -d icu -o -d "`readlink icu`"; then
         --prefix=$cwd/packages \
         --disable-shared \
         --enable-static \
+        --disable-tests \
+        --disable-samples \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (configure)])
