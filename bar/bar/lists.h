@@ -254,6 +254,20 @@ typedef enum
 #define LIST_FIND(list,variable,condition) LIST_FIND_FIRST(list,variable,condition)
 
 /***********************************************************************\
+* Name   : LIST_CONTAINS
+* Purpose: check if entry is in list
+* Input  : list      - list
+*          variable  - variable name
+*          condition - condition code
+* Output : -
+* Return : TRUE iff in list
+* Notes  : usage:
+*          LIST_CONTAINS(list,variable,variable->... == ...)
+\***********************************************************************/
+
+#define LIST_CONTAINS(list,variable,condition) (LIST_FIND(list,variable,condition) != NULL)
+
+/***********************************************************************\
 * Name   : LIST_REMOVE
 * Purpose: find and remove entry in list
 * Input  : list      - list
