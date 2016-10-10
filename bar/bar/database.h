@@ -80,13 +80,25 @@ typedef enum
 // database handle
 typedef struct
 {
+  #ifndef NDEBUG
+    LIST_NODE_HEADER(struct DatabaseHandleNode);
+  #endif /* not NDEBUG */
+
   uint          priority;                   // access priority
   Semaphore     lock;                       // lock (Note: do not use sqlite mutex, because of debug facilities in semaphore.c)
   sqlite3       *handle;                    // SQlite3 handle
   long          timeout;                    // timeout [ms]
   sem_t         wakeUp;                     // unlock wake-up
   #ifndef NDEBUG
-    char fileName[256];
+    char         name[256];                 // database name (file name)
+
+    const char   *fileName;
+    ulong        lineNb;
+    #ifdef HAVE_BACKTRACE
+      void const *stackTrace[16];
+      int        stackTraceSize;
+    #endif /* HAVE_BACKTRACE */
+
     struct
     {
       ThreadId   threadId;                  // thread who aquired lock
@@ -98,7 +110,7 @@ typedef struct
     struct
     {
       ThreadId   threadId;                  // thread who started transaction
-      const char *fileName;
+      const char *fileName;                 // != NULL iff transaction
       uint       lineNb;
       void const *stackTrace[16];
       int        stackTraceSize;
@@ -933,6 +945,17 @@ int64 Database_getLastRowId(DatabaseHandle *databaseHandle);
 \***********************************************************************/
 
 void Database_debugEnable(bool enabled);
+
+/***********************************************************************\
+* Name   : Database_debugPrintInfo
+* Purpose: print debug info
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_debugPrintInfo(void);
 
 /***********************************************************************\
 * Name   : Database_debugPrintQueryInfo
