@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <sys/time.h>
 #ifdef HAVE_PCRE
   #include <pcreposix.h>
 #endif
@@ -39,6 +40,7 @@ LOCAL bool createIndizesFlag    = FALSE;  // re-create indizes
 LOCAL bool createTriggersFlag   = FALSE;  // re-create triggers
 LOCAL bool createNewestFlag     = FALSE;  // re-create newest data
 LOCAL bool createAggregatesFlag = FALSE;  // re-create aggregate data
+LOCAL bool vacuumFlag           = FALSE;  // execute vacuum
 LOCAL bool showNames            = FALSE;
 LOCAL bool showHeader           = FALSE;
 LOCAL bool headerPrinted        = FALSE;
@@ -528,6 +530,47 @@ LOCAL String formatSQLString(String     sqlString,
   return sqlString;
 }
 
+/***********************************************************************\
+* Name   : sqlProgressHandler
+* Purpose: SQLite progress handler
+* Input  : statementHandle - statement handle variable
+*          databaseHandle  - database handle
+*          command         - command string with %[l]d, %S, %s
+*          ...             - optional argument list
+* Output : statementHandle - statement handle
+* Return : SQLITE_OK or sqlite error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int sqlProgressHandler(void *userData)
+{
+  const char *WHEEL = "|/-\\";
+
+  static uint64 lastTimestamp = 0LL;
+  static uint   count         = 0;
+
+  struct timeval tv;
+  uint64         timestamp;
+
+  UNUSED_VARIABLE(userData);
+
+  // get timestamp
+  gettimeofday(&tv,NULL);
+  timestamp = (uint64)tv.tv_usec/1000L+((uint64)tv.tv_sec)*1000ULL;
+
+  // info output
+  if (timestamp > (lastTimestamp+250))
+  {
+    if (verbose)
+    {
+      fprintf(stderr,"%c\b",WHEEL[count%4]); fflush(stderr); count++;
+    }
+    lastTimestamp = timestamp;
+  }
+
+  return 0;
+}
+
 #if 0
 still not used
 /***********************************************************************\
@@ -710,7 +753,7 @@ LOCAL void printPercentage(ulong n, ulong count)
   percentage = (count > 0) ? (uint)(((double)n*100.0)/(double)count) : 0;
   if (percentage > 100) percentage = 100;
 
-  printf("%3u%%\b\b\b\b",percentage); fflush(stdout);
+  fprintf(stderr,"%3u%%\b\b\b\b",percentage); fflush(stderr);
 }
 
 /***********************************************************************\
@@ -729,7 +772,7 @@ LOCAL void createTriggers(sqlite3 *databaseHandle)
   int        sqliteResult;
   const char *errorMessage;
 
-  if (verbose) { printf("Create triggers..."); fflush(stdout); }
+  if (verbose) { fprintf(stderr,"Create triggers..."); fflush(stderr); }
 
   // delete all existing triggers
   do
@@ -783,7 +826,7 @@ LOCAL void createTriggers(sqlite3 *databaseHandle)
     exit(1);
   }
 
-  if (verbose) printf("OK  \n");
+  if (verbose) fprintf(stderr,"OK  \n");
 }
 
 /***********************************************************************\
@@ -802,7 +845,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   int        sqliteResult;
   const char *errorMessage;
 
-  if (verbose) { printf("Create indizes..."); fflush(stdout); }
+  if (verbose) { fprintf(stderr,"Create indizes..."); fflush(stderr); }
 
   // start transaction
   sqliteResult = sqlite3_exec(databaseHandle,
@@ -934,7 +977,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
     exit(1);
   }
 
-  if (verbose) printf("OK  \n");
+  if (verbose) fprintf(stderr,"OK  \n");
 }
 
 /***********************************************************************\
@@ -965,7 +1008,7 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
   }
 
   // set entries offset/size
-  if (verbose) { printf("Create newest entries..."); fflush(stdout); }
+  if (verbose) { fprintf(stderr,"Create newest entries..."); fflush(stderr); }
 
   totalCount = 0L;
   n          = 0L;
@@ -1093,7 +1136,7 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
                                 String_delete(sqlString);
                                 if (sqliteResult != SQLITE_OK)
                                 {
-                                  if (verbose) printf("FAIL!\n");
+                                  if (verbose) fprintf(stderr,"FAIL!\n");
                                   fprintf(stderr,"ERROR: create newest fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
@@ -1142,7 +1185,7 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
                                                            );
                                   if (sqliteResult != SQLITE_OK)
                                   {
-                                    if (verbose) printf("FAIL!\n");
+                                    if (verbose) fprintf(stderr,"FAIL!\n");
                                     fprintf(stderr,"ERROR: create newest fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
                                     return sqliteResult;
                                   }
@@ -1162,7 +1205,7 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create newest fail: %s!\n",errorMessage);
     exit(1);
   }
-  if (verbose) printf("OK  \n");
+  if (verbose) fprintf(stderr,"OK  \n");
 
   // end transaction
   sqliteResult = sqlite3_exec(databaseHandle,
@@ -1205,7 +1248,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
   }
 
   // set entries offset/size
-  if (verbose) { printf("Create aggregates for entries..."); fflush(stdout); }
+  if (verbose) { fprintf(stderr,"Create aggregates for entries..."); fflush(stderr); }
 
   totalCount = 0L;
   n          = 0L;
@@ -1270,7 +1313,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                          );
                                 if (sqliteResult != SQLITE_OK)
                                 {
-                                  if (verbose) printf("FAIL!\n");
+                                  if (verbose) fprintf(stderr,"FAIL!\n");
                                   fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
@@ -1327,7 +1370,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                          );
                                 if (sqliteResult != SQLITE_OK)
                                 {
-                                  if (verbose) printf("FAIL!\n");
+                                  if (verbose) fprintf(stderr,"FAIL!\n");
                                   fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
@@ -1381,7 +1424,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                          );
                                 if (sqliteResult != SQLITE_OK)
                                 {
-                                  if (verbose) printf("FAIL!\n");
+                                  if (verbose) fprintf(stderr,"FAIL!\n");
                                   fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
@@ -1435,7 +1478,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                          );
                                 if (sqliteResult != SQLITE_OK)
                                 {
-                                  if (verbose) printf("FAIL!\n");
+                                  if (verbose) fprintf(stderr,"FAIL!\n");
                                   fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
@@ -1454,10 +1497,10 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
-  if (verbose) printf("OK  \n");
+  if (verbose) fprintf(stderr,"OK  \n");
 
   // calculate directory content size/count
-  if (verbose) { printf("Create aggregates for directory content..."); fflush(stdout); }
+  if (verbose) { fprintf(stderr,"Create aggregates for directory content..."); fflush(stderr); }
 
   totalCount = 0L;
   n          = 0L;
@@ -1550,7 +1593,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                            );
                                   if (sqliteResult != SQLITE_OK)
                                   {
-                                    if (verbose) printf("FAIL!\n");
+                                    if (verbose) fprintf(stderr,"FAIL!\n");
                                     fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
                                     return sqliteResult;
                                   }
@@ -1611,7 +1654,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                            );
                                   if (sqliteResult != SQLITE_OK)
                                   {
-                                    if (verbose) printf("FAIL!\n");
+                                    if (verbose) fprintf(stderr,"FAIL!\n");
                                     fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
                                     return sqliteResult;
                                   }
@@ -1672,7 +1715,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                            );
                                   if (sqliteResult != SQLITE_OK)
                                   {
-                                    if (verbose) printf("FAIL!\n");
+                                    if (verbose) fprintf(stderr,"FAIL!\n");
                                     fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
                                     return sqliteResult;
                                   }
@@ -1739,7 +1782,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                            );
                                   if (sqliteResult != SQLITE_OK)
                                   {
-                                    if (verbose) printf("FAIL!\n");
+                                    if (verbose) fprintf(stderr,"FAIL!\n");
                                     fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
                                     return sqliteResult;
                                   }
@@ -1799,7 +1842,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                            );
                                   if (sqliteResult != SQLITE_OK)
                                   {
-                                    if (verbose) printf("FAIL!\n");
+                                    if (verbose) fprintf(stderr,"FAIL!\n");
                                     fprintf(stderr,"ERROR: create aggregates fail for entries: %s (error: %d)!\n",errorMessage,sqliteResult);
                                     return sqliteResult;
                                   }
@@ -1824,7 +1867,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
   if (verbose) printf("OK  \n");
 
   // calculate total count/size aggregates
-  if (verbose) { printf("Create aggregates for storage..."); fflush(stdout); }
+  if (verbose) { fprintf(stderr,"Create aggregates for storage..."); fflush(stderr); }
 
   totalCount = 0L;
   n          = 0L;
@@ -1904,7 +1947,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                          );
                                 if (sqliteResult != SQLITE_OK)
                                 {
-                                  if (verbose) printf("FAIL!\n");
+                                  if (verbose) fprintf(stderr,"FAIL!\n");
                                   fprintf(stderr,"ERROR: create aggregates fail for storage #%llu: %s (error: %d)!\n",storageId,errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
@@ -1920,7 +1963,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                          );
                                 if (sqliteResult != SQLITE_OK)
                                 {
-                                  if (verbose) printf("FAIL!\n");
+                                  if (verbose) fprintf(stderr,"FAIL!\n");
                                   fprintf(stderr,"ERROR: create aggregates fail for storage #%llu: %s (error: %d)!\n",storageId,errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
@@ -1964,7 +2007,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                          );
                                 if (sqliteResult != SQLITE_OK)
                                 {
-                                  if (verbose) printf("FAIL!\n");
+                                  if (verbose) fprintf(stderr,"FAIL!\n");
                                   fprintf(stderr,"ERROR: create newest aggregates fail for storage #%llu: %s (error: %d)!\n",storageId,errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
@@ -1980,7 +2023,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                                                          );
                                 if (sqliteResult != SQLITE_OK)
                                 {
-                                  if (verbose) printf("FAIL!\n");
+                                  if (verbose) fprintf(stderr,"FAIL!\n");
                                   fprintf(stderr,"ERROR: create newest aggregates fail for storage #%llu: %s (error: %d)!\n",storageId,errorMessage,sqliteResult);
                                   return sqliteResult;
                                 }
@@ -1999,7 +2042,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
-  if (verbose) printf("OK  \n");
+  if (verbose) fprintf(stderr,"OK  \n");
 
   // end transaction
   sqliteResult = sqlite3_exec(databaseHandle,
@@ -2012,6 +2055,36 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",errorMessage);
     exit(1);
   }
+}
+
+/***********************************************************************\
+* Name   : vacuum
+* Purpose: vacuum database
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void vacuum(sqlite3 *databaseHandle)
+{
+  int        sqliteResult;
+  const char *errorMessage;
+
+  if (verbose) { fprintf(stderr,"Vacuum..."); fflush(stderr); }
+
+  sqliteResult = sqlite3_exec(databaseHandle,
+                              "VACUUM",
+                              CALLBACK(NULL,NULL),
+                              (char**)&errorMessage
+                             );
+  if (sqliteResult != SQLITE_OK)
+  {
+    fprintf(stderr,"ERROR: vacuum fail: %s!\n",errorMessage);
+    exit(1);
+  }
+
+  if (verbose) fprintf(stderr,"OK  \n");
 }
 
 /***********************************************************************\
@@ -2151,6 +2224,10 @@ int main(int argc, const char *argv[])
     {
       createAggregatesFlag = TRUE;
     }
+    else if (stringEquals(argv[i],"--vacuum"))
+    {
+      vacuumFlag = TRUE;
+    }
     else if (stringEquals(argv[i],"-n") || stringEquals(argv[i],"--names"))
     {
       showNames = TRUE;
@@ -2223,7 +2300,7 @@ int main(int argc, const char *argv[])
   }
 
   // open database
-  if (verbose) { printf("Open database '%s'...",databaseFileName); fflush(stdout); }
+  if (verbose) { fprintf(stderr,"Open database '%s'...",databaseFileName); fflush(stderr); }
   if (create)
   {
     sqliteMode = SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE;
@@ -2236,10 +2313,11 @@ int main(int argc, const char *argv[])
   sqliteResult = sqlite3_open_v2(databaseFileName,&databaseHandle,sqliteMode,NULL);
   if (sqliteResult != SQLITE_OK)
   {
-    if (verbose) printf("FAIL\n");
+    if (verbose) fprintf(stderr,"FAIL\n");
     fprintf(stderr,"ERROR: cannot open database '%s' (error: %d)!\n",databaseFileName,sqliteResult);
     exit(1);
   }
+  sqlite3_progress_handler(databaseHandle,10000,sqlProgressHandler,NULL);
 
   sqliteResult = sqlite3_exec(databaseHandle,
                               "PRAGMA synchronous=OFF",
@@ -2248,7 +2326,7 @@ int main(int argc, const char *argv[])
                              );
   if (sqliteResult != SQLITE_OK)
   {
-    if (verbose) printf("FAIL\n");
+    if (verbose) fprintf(stderr,"FAIL\n");
     fprintf(stderr,"ERROR: cannot open database '%s' (error: %d)!\n",databaseFileName,sqliteResult);
     exit(1);
   }
@@ -2259,7 +2337,7 @@ int main(int argc, const char *argv[])
                              );
   if (sqliteResult != SQLITE_OK)
   {
-    if (verbose) printf("FAIL\n");
+    if (verbose) fprintf(stderr,"FAIL\n");
     fprintf(stderr,"ERROR: cannot open database '%s' (error: %d)!\n",databaseFileName,sqliteResult);
     exit(1);
   }
@@ -2278,12 +2356,12 @@ int main(int argc, const char *argv[])
                                );
     if (sqliteResult != SQLITE_OK)
     {
-      if (verbose) printf("FAIL\n");
+      if (verbose) fprintf(stderr,"FAIL\n");
       fprintf(stderr,"ERROR: cannot open database '%s' (error: %d)!\n",databaseFileName,sqliteResult);
       exit(1);
     }
   }
-  if (verbose) printf("OK  \n");
+  if (verbose) fprintf(stderr,"OK  \n");
 
   // register special functions
   sqliteResult = sqlite3_create_function(databaseHandle,
@@ -2322,7 +2400,7 @@ int main(int argc, const char *argv[])
   // create database
   if (create)
   {
-    if (verbose) { printf("Create..."); fflush(stdout); }
+    if (verbose) { fprintf(stderr,"Create..."); fflush(stderr); }
 
     sqliteResult = sqlite3_exec(databaseHandle,
                                 INDEX_DEFINITION,
@@ -2335,7 +2413,7 @@ int main(int argc, const char *argv[])
       exit(1);
     }
 
-    if (verbose) printf("OK  \n");
+    if (verbose) fprintf(stderr,"OK  \n");
   }
 
   // recreate triggeres
@@ -2362,6 +2440,12 @@ int main(int argc, const char *argv[])
     createAggregates(databaseHandle);
   }
 
+  // vacuum
+  if (vacuumFlag)
+  {
+    vacuum(databaseHandle);
+  }
+
   // execute command
   if (!String_isEmpty(sqlCommands))
   {
@@ -2370,7 +2454,7 @@ int main(int argc, const char *argv[])
                                 CALLBACK(printRow,NULL),
                                 (char**)&errorMessage
                                );
-    if (verbose) printf("Result: %d\n",sqliteResult);
+    if (verbose) fprintf(stderr,"Result: %d\n",sqliteResult);
     if (sqliteResult != SQLITE_OK)
     {
       fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",String_cString(sqlCommands),errorMessage);
@@ -2380,9 +2464,9 @@ int main(int argc, const char *argv[])
   }
 
   // close database
-  if (verbose) { printf("Close database..."); fflush(stdout); }
+  if (verbose) { fprintf(stderr,"Close database..."); fflush(stderr); }
   sqlite3_close(databaseHandle);
-  if (verbose) printf("OK  \n");
+  if (verbose) fprintf(stderr,"OK  \n");
 
   // free resources
   String_delete(sqlCommands);
