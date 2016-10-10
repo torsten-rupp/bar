@@ -110,7 +110,7 @@
       { \
         bool __locked; \
         \
-        pthread_once(&debugSemaphoreInitFlag,debugInit); \
+        pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit); \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         \
@@ -134,7 +134,7 @@
         \
         assert(timeout != WAIT_FOREVER); \
         \
-        pthread_once(&debugSemaphoreInitFlag,debugInit); \
+        pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit); \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s (timeout %ldms)\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text,timeout); \
         \
@@ -446,7 +446,7 @@
 
 #ifndef NDEBUG
 /***********************************************************************\
-* Name   : debugInit
+* Name   : debugSemaphoreInit
 * Purpose: initialize debug functions
 * Input  : -
 * Output : -
@@ -454,7 +454,7 @@
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void debugInit(void)
+LOCAL void debugSemaphoreInit(void)
 {
   // init variables
   debugSemaphoreThreadId = Thread_getCurrentId();
@@ -473,7 +473,7 @@ LOCAL void debugInit(void)
 }
 
 /***********************************************************************\
-* Name   : signalHandler
+* Name   : debugSemaphoreSignalHandler
 * Purpose: signal handler
 * Input  : signalNumber - signal number
 * Output : -
@@ -1429,7 +1429,7 @@ bool __Semaphore_init(const char *fileName,
   semaphore->endFlag            = FALSE;
 
   #ifndef NDEBUG
-    pthread_once(&debugSemaphoreInitFlag,debugInit);
+    pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit);
 
     if (List_contains(&debugSemaphoreList,semaphore,CALLBACK(NULL,NULL)))
     {
@@ -1460,7 +1460,7 @@ void Semaphore_done(Semaphore *semaphore)
   assert(semaphore != NULL);
 
   #ifndef NDEBUG
-    pthread_once(&debugSemaphoreInitFlag,debugInit);
+    pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit);
 
     pthread_mutex_lock(&debugSemaphoreLock);
     {
@@ -1653,15 +1653,6 @@ void Semaphore_setEnd(Semaphore *semaphore)
 }
 
 #ifndef NDEBUG
-/***********************************************************************\
-* Name   : Semaphore_debugPrintInfo
-* Purpose: print debug info
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
 void Semaphore_debugPrintInfo(void)
 {
   const Semaphore *semaphore;
