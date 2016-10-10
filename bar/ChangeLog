@@ -1,4 +1,4 @@
-2016-09-25 0.20
+2016-10-08 0.20
   * fixed max. size for LZO/LZ4 compression when block cannot
     be compressed
   * TLS port is now optional: if possible as SSL protected
