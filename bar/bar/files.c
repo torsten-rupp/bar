@@ -230,8 +230,8 @@ LOCAL void fileCheckValid(const char       *fileName,
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR_AT(fileName,
                              lineNb,
-                             "File 0x%08lx was closed at %s, line %lu",
-                             (ulong)fileHandle,
+                             "File %p was closed at %s, line %lu",
+                             fileHandle,
                              debugFileNode->closeFileName,
                              debugFileNode->closeLineNb
                             );
@@ -248,8 +248,8 @@ LOCAL void fileCheckValid(const char       *fileName,
       #ifdef HAVE_BACKTRACE
         debugDumpCurrentStackTrace(stderr,0,0);
       #endif /* HAVE_BACKTRACE */
-      HALT_INTERNAL_ERROR("File 0x%08lx is not open",
-                          (ulong)fileHandle
+      HALT_INTERNAL_ERROR("File %p is not open",
+                          fileHandle
                          );
     }
   }
@@ -488,15 +488,19 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
       debugFileNode->lineNb                = __lineNb__;
       #ifdef HAVE_BACKTRACE
         debugFileNode->stackTraceSize      = backtrace((void*)debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
+      #else /* not HAVE_BACKTRACE */
+        debugFileNode->stackTraceSize      = 0;
       #endif /* HAVE_BACKTRACE */
       debugFileNode->closeFileName         = NULL;
       debugFileNode->closeLineNb           = 0;
       #ifdef HAVE_BACKTRACE
         debugFileNode->closeStackTraceSize = 0;
+      #else /* not HAVE_BACKTRACE */
+        debugFileNode->closeStackTraceSize = 0;
       #endif /* HAVE_BACKTRACE */
       debugFileNode->fileHandle            = fileHandle;
 
-      // add string to open-list
+      // add file to open-list
       List_append(&debugOpenFileList,debugFileNode);
     }
     pthread_mutex_unlock(&debugFileLock);
@@ -554,10 +558,12 @@ LOCAL void doneFileHandle(const char  *__fileName__,
         List_remove(&debugOpenFileList,debugFileNode);
 
         // add to closed list
-        debugFileNode->closeFileName = __fileName__;
-        debugFileNode->closeLineNb   = __lineNb__;
+        debugFileNode->closeFileName         = __fileName__;
+        debugFileNode->closeLineNb           = __lineNb__;
         #ifdef HAVE_BACKTRACE
           debugFileNode->closeStackTraceSize = backtrace((void*)debugFileNode->closeStackTrace,SIZE_OF_ARRAY(debugFileNode->closeStackTrace));
+        #else /* not HAVE_BACKTRACE */
+          debugFileNode->closeStackTraceSize = 0;
         #endif /* HAVE_BACKTRACE */
         List_append(&debugClosedFileList,debugFileNode);
 
@@ -1367,6 +1373,8 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
       {
         #ifdef HAVE_BACKTRACE
           debugDumpStackTrace(stderr,0,debugFileNode->stackTrace,debugFileNode->stackTraceSize,0);
+        #else /* not HAVE_BACKTRACE */
+          debugFileNode->stackTraceSize = 0;
         #endif /* HAVE_BACKTRACE */
         if (debugFileNode->fileHandle->name != NULL)
         {
@@ -1414,15 +1422,19 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
       debugFileNode->lineNb                = __lineNb__;
       #ifdef HAVE_BACKTRACE
         debugFileNode->stackTraceSize      = backtrace((void*)debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
+      #else /* not HAVE_BACKTRACE */
+        debugFileNode->stackTraceSize      = 0;
       #endif /* HAVE_BACKTRACE */
       debugFileNode->closeFileName         = NULL;
       debugFileNode->closeLineNb           = 0;
       #ifdef HAVE_BACKTRACE
         debugFileNode->closeStackTraceSize = 0;
+      #else /* not HAVE_BACKTRACE */
+        debugFileNode->closeStackTraceSize = 0;
       #endif /* HAVE_BACKTRACE */
       debugFileNode->fileHandle            = fileHandle;
 
-      // add string to open-list
+      // add file to open-list
       List_append(&debugOpenFileList,debugFileNode);
     }
     pthread_mutex_unlock(&debugFileLock);
