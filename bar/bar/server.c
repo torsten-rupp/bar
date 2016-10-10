@@ -5871,7 +5871,7 @@ LOCAL void autoIndexThreadCode(void)
             {
               // read directory and scan all sub-directories for .bar files if possible
               pprintInfo(4,
-                         "INDEX",
+                         "INDEX: ",
                          "Auto-index scan '%s'\n",
                          String_cString(Storage_getPrintableName(&storageSpecifier,baseName))
                         );
