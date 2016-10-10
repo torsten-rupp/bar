@@ -148,7 +148,7 @@ mkdir packages
 %__rm -rf "%{buildroot}"
 
 %check
-%{__make} test1 test2 test3 test5 COMPRESS_NAMES_LZMA="lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7 lzma8"
+%{__make} test1 test2 test3 test5 COMPRESS_NAMES_LZMA="lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7"
 
 %post
 %{fillup_and_insserv -f -y barserver}
@@ -193,7 +193,9 @@ mkdir packages
 %doc %{_mandir}/man7/bar.7.gz
 
 %changelog
-* Sun Sep 25 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20
+* Sat Oct 08 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20
+  - fixed max. size for LZO/LZ4 compression when block cannot
+    be compressed
   - TLS port is now optional: if possible as SSL protected
     connection is establed via the standard plain port, too.
   - added option --archive-file-mode: stop, append or
@@ -253,7 +255,10 @@ mkdir packages
     a CD/DVD/BD
   - added options --blank, --(cd|dvd|bd|device)-blank to
     blank medium before writing
-    BARControl: added abort to load volume dialog
+  - BARControl: added abort to load volume dialog
+  - BARControl: renamed option --index-database-storage-list
+    -> --index-database-storages-list, added option
+    --index-database-entities-list
 
 * Sat Jan 09 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.19d
   - fixed include of multiple entries with pattern: store

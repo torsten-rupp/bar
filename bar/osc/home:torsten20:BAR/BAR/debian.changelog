@@ -1,4 +1,6 @@
 bar (0.20) stable; urgency=low
+  * fixed max. size for LZO/LZ4 compression when block cannot
+    be compressed
   * TLS port is now optional: if possible as SSL protected
     connection is establed via the standard plain port, too.
   * added option --archive-file-mode: stop, append or
@@ -58,9 +60,12 @@ bar (0.20) stable; urgency=low
     a CD/DVD/BD
   * added options --blank, --(cd|dvd|bd|device)-blank to
     blank medium before writing
-    BARControl: added abort to load volume dialog
+  * BARControl: added abort to load volume dialog
+  * BARControl: renamed option --index-database-storage-list
+    -> --index-database-storages-list, added option
+    --index-database-entities-list
 
- -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 25 Sep 2016 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 08 Oct 2016 00:00:00 +0200
 
 bar (0.19d) stable; urgency=low
   * fixed include of multiple entries with pattern: store
