@@ -4869,7 +4869,6 @@ Dprintf.dprintf("cirrect?");
                      || (treeItem.getData() instanceof EntityIndexData)
                     )
             {
-Dprintf.dprintf("");
               // expand/collapse sub-tree
               Event treeEvent = new Event();
               treeEvent.item = treeItem;
