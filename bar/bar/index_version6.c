@@ -69,16 +69,16 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
   fixBrokenIds(oldIndexHandle,"special");
 
   // transfer uuids (if not exists, ignore errors)
-  (void) Database_copyTable(&oldIndexHandle->databaseHandle,
-                            &newIndexHandle->databaseHandle,
-                            "uuids",
-                            "uuids",
-                            FALSE,  // transaction flag
-                            CALLBACK(NULL,NULL),  // pre-copy
-                            CALLBACK(NULL,NULL),  // post-copy
-                            CALLBACK(pauseCallback,NULL),
-                            NULL  // filter
-                           );
+  (void)Database_copyTable(&oldIndexHandle->databaseHandle,
+                           &newIndexHandle->databaseHandle,
+                           "uuids",
+                           "uuids",
+                           FALSE,  // transaction flag
+                           CALLBACK(NULL,NULL),  // pre-copy
+                           CALLBACK(NULL,NULL),  // post-copy
+                           CALLBACK(pauseCallback,NULL),
+                           NULL  // filter
+                          );
 
   // transfer entities with storages and entries
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -93,19 +93,24 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                UNUSED_VARIABLE(toColumnList);
                                UNUSED_VARIABLE(userData);
 
+                               // currently nothing special to do
+
                                return ERROR_NONE;
                              },NULL),
                              // post: transfer storage
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                IndexId fromEntityId;
+                               IndexId toEntityId;
 
                                UNUSED_VARIABLE(toColumnList);
                                UNUSED_VARIABLE(userData);
 
-//fprintf(stderr,"%s, %d: copy st\n",__FILE__,__LINE__);
                                fromEntityId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
-//fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"jobUUID",NULL));
+                               assert(fromEntityId != DATABASE_ID_NONE);
+                               toEntityId = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                               assert(toEntityId != DATABASE_ID_NONE);
+//fprintf(stderr,"%s, %d: entity %llu -> %llu: copy storage jobUUID=%s\n",__FILE__,__LINE__,fromEntityId,toEntityId,Database_getTableColumnListCString(fromColumnList,"jobUUID",NULL));
 
                                // transfer storages of entity
                                return Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -120,6 +125,8 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                            UNUSED_VARIABLE(toColumnList);
                                                            UNUSED_VARIABLE(userData);
 
+                                                           (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
+
                                                            return ERROR_NONE;
                                                          },NULL),
                                                          // post: transfer files, images, directories, links, special entries
@@ -131,9 +138,11 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                            UNUSED_VARIABLE(userData);
 
                                                            fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                                                           assert(fromStorageId != DATABASE_ID_NONE);
                                                            toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                                                           assert(toStorageId != DATABASE_ID_NONE);
 
-//fprintf(stderr,"%s, %d: copy en %llu %llu\n",__FILE__,__LINE__,fromStorageId,toStorageId);
+//fprintf(stderr,"%s, %d: copy entries %llu %llu\n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                                            return Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                      &newIndexHandle->databaseHandle,
                                                                                      "entries",
@@ -156,14 +165,16 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                        UNUSED_VARIABLE(userData);
 
-                                                                                       fromEntryId = Database_getTableColumnListInt64(fromColumnList,"entryId",DATABASE_ID_NONE);
-                                                                                       toEntryId   = Database_getTableColumnListInt64(toColumnList,"entryId",DATABASE_ID_NONE);
+                                                                                       fromEntryId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                                                                                       assert(fromEntryId != DATABASE_ID_NONE);
+                                                                                       toEntryId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                                                                                       assert(toEntryId != DATABASE_ID_NONE);
 
                                                                                        error = ERROR_NONE;
 
                                                                                        if (error == ERROR_NONE)
                                                                                        {
-//fprintf(stderr,"%s, %d: copy f\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy file %llu -> %llu\n",__FILE__,__LINE__,fromEntryId,toEntryId);
                                                                                          error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                     &newIndexHandle->databaseHandle,
                                                                                                                     "fileEntries",
@@ -310,7 +321,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                         );
                              },NULL),
                              CALLBACK(pauseCallback,NULL),
-                             NULL  // filter
+                             "WHERE id!=0"
                             );
   if (error != ERROR_NONE)
   {
@@ -386,7 +397,9 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                UNUSED_VARIABLE(userData);
 
                                fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                               assert(fromStorageId != DATABASE_ID_NONE);
                                toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                               assert(toStorageId != DATABASE_ID_NONE);
 
 //fprintf(stderr,"%s, %d: copy en %llu %llu\n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                return Database_copyTable(&oldIndexHandle->databaseHandle,
@@ -411,8 +424,10 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                            UNUSED_VARIABLE(userData);
 
-                                                           fromEntryId = Database_getTableColumnListInt64(fromColumnList,"entryId",DATABASE_ID_NONE);
-                                                           toEntryId   = Database_getTableColumnListInt64(toColumnList,"entryId",DATABASE_ID_NONE);
+                                                           fromEntryId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                                                           assert(fromEntryId != DATABASE_ID_NONE);
+                                                           toEntryId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                                                           assert(toEntryId != DATABASE_ID_NONE);
 
                                                            error = ERROR_NONE;
 
