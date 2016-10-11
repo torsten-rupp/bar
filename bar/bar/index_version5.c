@@ -97,7 +97,9 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                UNUSED_VARIABLE(userData);
 
                                fromEntityId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                               assert(fromEntityId != DATABASE_ID_NONE);
                                toEntityId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                               assert(toEntityId != DATABASE_ID_NONE);
 //fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"jobUUID",NULL));
 
                                // transfer storages of entity
@@ -126,7 +128,9 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                             UNUSED_VARIABLE(userData);
 
                                                             fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                                                            assert(fromStorageId != DATABASE_ID_NONE);
                                                             toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                                                            assert(toStorageId != DATABASE_ID_NONE);
 
 //fprintf(stderr,"%s, %d: start storage %llu -> %llu\n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                                             error = ERROR_NONE;
@@ -536,7 +540,9 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                UNUSED_VARIABLE(userData);
 
                                fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                               assert(fromStorageId != DATABASE_ID_NONE);
                                toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                               assert(toStorageId != DATABASE_ID_NONE);
 
                                error = ERROR_NONE;
 
