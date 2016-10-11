@@ -469,7 +469,7 @@ LOCAL String vformatSQLString(String     sqlString,
           quoteFlag = FALSE;
         }
 
-        // get format char
+        // handle format type
         switch (*s)
         {
           case 'd':
@@ -3473,6 +3473,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   uint    column;
   va_list arguments;
   bool    longFlag,longLongFlag;
+  bool    quoteFlag;
   int     maxLength;
   union
   {
@@ -3556,6 +3557,24 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
             longFlag = TRUE;
           }
         }
+
+        // quoting flag (ignore quote char)
+        if (   ((*format) != '\0')
+            && !isalpha(*format)
+            && ((*format) != '%')
+            && (   ((*(format+1)) == 's')
+                || ((*(format+1)) == 'S')
+               )
+           )
+        {
+          quoteFlag = TRUE;
+          format++;
+        }
+        else
+        {
+          quoteFlag = FALSE;
+        }
+        UNUSED_VARIABLE(quoteFlag);
 
         // handle format type
         switch (*format)
@@ -4566,7 +4585,7 @@ void Database_debugPrintInfo(void)
         if (databaseHandle->locked.threadId != THREAD_ID_NONE)
         {
           fprintf(stderr,
-                  "    locked by '%s' at %s, %u\n",
+                  "    locked by thread '%s' at %s, %u\n",
                   Thread_getName(databaseHandle->locked.threadId),
                   databaseHandle->locked.fileName,
                   databaseHandle->locked.lineNb
@@ -4575,7 +4594,7 @@ void Database_debugPrintInfo(void)
         if (databaseHandle->transaction.threadId != THREAD_ID_NONE)
         {
           fprintf(stderr,
-                  "    '%s' started transaction at %s, %u\n",
+                  "    Thread '%s' started transaction at %s, %u\n",
                   Thread_getName(databaseHandle->transaction.threadId),
                   databaseHandle->transaction.fileName,
                   databaseHandle->transaction.lineNb
