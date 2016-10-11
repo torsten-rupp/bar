@@ -35,7 +35,8 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL bool create               = FALSE;  // create new index database
+LOCAL bool infoFlag             = FALSE;  // output index database info
+LOCAL bool createFlag           = FALSE;  // create new index database
 LOCAL bool createIndizesFlag    = FALSE;  // re-create indizes
 LOCAL bool createTriggersFlag   = FALSE;  // re-create triggers
 LOCAL bool createNewestFlag     = FALSE;  // re-create newest data
@@ -70,7 +71,8 @@ LOCAL void printUsage(const char *programName)
 {
   printf("Usage %s: [<options>] <database file> [<command>...|-]\n",programName);
   printf("\n");
-  printf("Options:  --create             - create new index database\n");
+  printf("Options:  --info               - output index database infos\n");
+  printf("          --create             - create new index database\n");
   printf("          --create-triggers    - re-create triggers\n");
   printf("          --create-newest      - re-create newest data\n");
   printf("          --create-indizes     - re-create indizes\n");
@@ -2205,9 +2207,13 @@ int main(int argc, const char *argv[])
   n = 0;
   while (i < argc)
   {
-    if      (stringEquals(argv[i],"--create"))
+    if      (stringEquals(argv[i],"--info"))
     {
-      create = TRUE;
+      infoFlag = TRUE;
+    }
+    else if (stringEquals(argv[i],"--create"))
+    {
+      createFlag = TRUE;
     }
     else if (stringEquals(argv[i],"--create-triggers"))
     {
@@ -2302,7 +2308,7 @@ int main(int argc, const char *argv[])
 
   // open database
   if (verbose) { fprintf(stderr,"Open database '%s'...",databaseFileName); fflush(stderr); }
-  if (create)
+  if (createFlag)
   {
     sqliteMode = SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE;
     File_deleteCString(databaseFileName,FALSE);
@@ -2398,8 +2404,35 @@ int main(int argc, const char *argv[])
                                         );
   assert(sqliteResult == SQLITE_OK);
 
+  // output info
+  if (infoFlag)
+  {
+    sqliteResult = sqlite3_exec(databaseHandle,
+                                "SELECT name,value FROM meta",
+                                CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                                {
+                                  assert(count == 2);
+                                  assert(values[0] != NULL);
+                                  assert(values[1] != NULL);
+
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(columns);
+
+                                  printf("%s: %s\n",values[0],values[1]);
+
+                                  return SQLITE_OK;
+                                },NULL),
+                                (char**)&errorMessage
+                               );
+    if (sqliteResult != SQLITE_OK)
+    {
+      fprintf(stderr,"ERROR: create database fail: %s!\n",errorMessage);
+      exit(1);
+    }
+  }
+
   // create database
-  if (create)
+  if (createFlag)
   {
     if (verbose) { fprintf(stderr,"Create..."); fflush(stderr); }
 
