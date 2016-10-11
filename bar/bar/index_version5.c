@@ -178,7 +178,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                                                   );
                                                                                          },NULL),
-                                                                                         CALLBACK(pauseCallback,NULL),
+                                                                                         CALLBACK(NULL,NULL),  // pause
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -232,7 +232,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                                                   );
                                                                                          },NULL),
-                                                                                         CALLBACK(pauseCallback,NULL),
+                                                                                         CALLBACK(NULL,NULL),  // pause
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -292,7 +292,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                                                   );
                                                                                          },NULL),
-                                                                                         CALLBACK(pauseCallback,NULL),
+                                                                                         CALLBACK(NULL,NULL),  // pause
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -340,7 +340,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                                                   );
                                                                                          },NULL),
-                                                                                         CALLBACK(pauseCallback,NULL),
+                                                                                         CALLBACK(NULL,NULL),  // pause
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -394,7 +394,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                                                   );
                                                                                          },NULL),
-                                                                                         CALLBACK(pauseCallback,NULL),
+                                                                                         CALLBACK(NULL,NULL),  // pause
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -448,7 +448,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    Database_getTableColumnListUInt(fromColumnList,"minor",0)
                                                                                                                   );
                                                                                          },NULL),
-                                                                                         CALLBACK(pauseCallback,NULL),
+                                                                                         CALLBACK(NULL,NULL),  // pause
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -589,7 +589,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(pauseCallback,NULL),
+                                                            CALLBACK(NULL,NULL),  // pause
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -643,7 +643,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(pauseCallback,NULL),
+                                                            CALLBACK(NULL,NULL),  // pause
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -703,7 +703,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(pauseCallback,NULL),
+                                                            CALLBACK(NULL,NULL),  // pause
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -751,7 +751,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(pauseCallback,NULL),
+                                                            CALLBACK(NULL,NULL),  // pause
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -805,7 +805,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(pauseCallback,NULL),
+                                                            CALLBACK(NULL,NULL),  // pause
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -859,7 +859,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListUInt(fromColumnList,"minor",0)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(pauseCallback,NULL),
+                                                            CALLBACK(NULL,NULL),  // pause
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -867,7 +867,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                return error;
                              },NULL),
-                             CALLBACK(NULL,NULL),
+                             CALLBACK(pauseCallback,NULL),
                              "WHERE entityId IS NULL"
                             );
   if (error != ERROR_NONE)

@@ -191,7 +191,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       return ERROR_NONE;
                                                                                                                     },NULL),
                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                    CALLBACK(pauseCallback,NULL),
+                                                                                                                    CALLBACK(NULL,NULL),  // pause
                                                                                                                     "WHERE entryId=%lld",
                                                                                                                     fromEntryId
                                                                                                                    );
@@ -215,7 +215,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       return ERROR_NONE;
                                                                                                                     },NULL),
                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                    CALLBACK(pauseCallback,NULL),
+                                                                                                                    CALLBACK(NULL,NULL),  // pause
                                                                                                                     "WHERE entryId=%lld",
                                                                                                                     fromEntryId
                                                                                                                    );
@@ -239,7 +239,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       return ERROR_NONE;
                                                                                                                     },NULL),
                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                    CALLBACK(pauseCallback,NULL),
+                                                                                                                    CALLBACK(NULL,NULL),  // pause
                                                                                                                     "WHERE entryId=%lld",
                                                                                                                     fromEntryId
                                                                                                                    );
@@ -263,7 +263,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       return ERROR_NONE;
                                                                                                                     },NULL),
                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                    CALLBACK(pauseCallback,NULL),
+                                                                                                                    CALLBACK(NULL,NULL),  // pause
                                                                                                                     "WHERE entryId=%lld",
                                                                                                                     fromEntryId
                                                                                                                    );
@@ -287,7 +287,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       return ERROR_NONE;
                                                                                                                     },NULL),
                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                    CALLBACK(pauseCallback,NULL),
+                                                                                                                    CALLBACK(NULL,NULL),  // pause
                                                                                                                     "WHERE entryId=%lld",
                                                                                                                     fromEntryId
                                                                                                                    );
@@ -302,7 +302,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                     FALSE,  // transaction flag
                                                                                                                     CALLBACK(NULL,NULL),  // pre-copy
                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                    CALLBACK(pauseCallback,NULL),
+                                                                                                                    CALLBACK(NULL,NULL),  // pause
                                                                                                                     "WHERE entryId=%lld",
                                                                                                                     fromEntryId
                                                                                                                    );
@@ -310,7 +310,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                        return error;
                                                                                      },NULL),
-                                                                                     CALLBACK(pauseCallback,NULL),
+                                                                                     CALLBACK(NULL,NULL),  // pause
                                                                                      "WHERE storageId=%lld",
                                                                                      fromStorageId
                                                                                     );
@@ -450,7 +450,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                           return ERROR_NONE;
                                                                                         },NULL),
                                                                                         CALLBACK(NULL,NULL),  // post-copy
-                                                                                        CALLBACK(pauseCallback,NULL),
+                                                                                        CALLBACK(NULL,NULL),  // pause
                                                                                         "WHERE entryId=%lld",
                                                                                         fromEntryId
                                                                                        );
@@ -474,7 +474,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                           return ERROR_NONE;
                                                                                         },NULL),
                                                                                         CALLBACK(NULL,NULL),  // post-copy
-                                                                                        CALLBACK(pauseCallback,NULL),
+                                                                                        CALLBACK(NULL,NULL),  // pause
                                                                                         "WHERE entryId=%lld",
                                                                                         fromEntryId
                                                                                        );
@@ -498,7 +498,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                           return ERROR_NONE;
                                                                                         },NULL),
                                                                                         CALLBACK(NULL,NULL),  // post-copy
-                                                                                        CALLBACK(pauseCallback,NULL),
+                                                                                        CALLBACK(NULL,NULL),  // pause
                                                                                         "WHERE entryId=%lld",
                                                                                         fromEntryId
                                                                                        );
@@ -522,7 +522,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                           return ERROR_NONE;
                                                                                         },NULL),
                                                                                         CALLBACK(NULL,NULL),  // post-copy
-                                                                                        CALLBACK(pauseCallback,NULL),
+                                                                                        CALLBACK(NULL,NULL),  // pause
                                                                                         "WHERE entryId=%lld",
                                                                                         fromEntryId
                                                                                        );
@@ -546,7 +546,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                           return ERROR_NONE;
                                                                                         },NULL),
                                                                                         CALLBACK(NULL,NULL),  // post-copy
-                                                                                        CALLBACK(pauseCallback,NULL),
+                                                                                        CALLBACK(NULL,NULL),  // pause
                                                                                         "WHERE entryId=%lld",
                                                                                         fromEntryId
                                                                                        );
@@ -561,7 +561,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                         FALSE,  // transaction flag
                                                                                         CALLBACK(NULL,NULL),  // pre-copy
                                                                                         CALLBACK(NULL,NULL),  // post-copy
-                                                                                        CALLBACK(pauseCallback,NULL),
+                                                                                        CALLBACK(NULL,NULL),  // pause
                                                                                         "WHERE entryId=%lld",
                                                                                         fromEntryId
                                                                                        );
@@ -569,7 +569,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                            return error;
                                                          },NULL),
-                                                         CALLBACK(pauseCallback,NULL),
+                                                         CALLBACK(NULL,NULL),  // pause
                                                          "WHERE storageId=%lld",
                                                          fromStorageId
                                                         );
