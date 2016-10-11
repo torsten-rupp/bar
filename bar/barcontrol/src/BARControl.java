@@ -2925,7 +2925,7 @@ public class BARControl
           final int n[]           = new int[]{0};
 
           // list storage index
-          System.out.println(String.format("%-8s %-14s %-19s %-5s %-5s %s",
+          System.out.println(String.format("%-8s %-14s %-19s %-16s %-5s %s",
                                            "Id",
                                            "Size",
                                            "Date/Time",
@@ -2934,7 +2934,7 @@ public class BARControl
                                            "Name"
                                           )
                             );
-          System.out.println(StringUtils.repeat("-",8+1+14+1+19+1+5+1+5+40));
+          System.out.println(StringUtils.repeat("-",8+1+14+1+19+1+16+1+5+40));
           error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=* indexModeSet=* name=%'S",
                                                                Settings.indexDatabaseStoragesListName
                                                               ),
@@ -2951,7 +2951,7 @@ public class BARControl
                                                IndexStates state  = valueMap.getEnum  ("indexState",IndexStates.class);
                                                IndexModes mode    = valueMap.getEnum  ("indexMode",IndexModes.class  );
 
-                                               System.out.println(String.format("%8d %14d %-19s %-5s %-5s %s",
+                                               System.out.println(String.format("%8d %14d %-19s %-16s %-5s %s",
                                                                                 getDatabaseId(storageId),
                                                                                 size,
                                                                                 DATE_FORMAT.format(new Date(dateTime*1000)),
@@ -2972,7 +2972,7 @@ public class BARControl
             BARServer.disconnect();
             System.exit(1);
           }
-          System.out.println(StringUtils.repeat("-",8+1+14+1+19+1+5+1+5+40));
+          System.out.println(StringUtils.repeat("-",8+1+14+1+19+1+16+1+5+40));
           System.out.println(String.format("%d storages",n[0]));
         }
 
