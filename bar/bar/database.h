@@ -465,6 +465,8 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
 *          preCopyTableUserData  - user data for pre-copy call-back
 *          postCopyTableFunction - pre-copy call-back function
 *          postCopyTableUserData - user data for post-copy call-back
+*          pauseCallbackFunction - pause call-back
+*          pauseCallbackUserData - user data for pause call-back
 *          fromAdditional        - additional SQL condition
 *          ...                   - optional arguments for additional
 *                                  SQL condition
