@@ -810,55 +810,52 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
     return error;
   }
 
-  if (indexVersion <= INDEX_VERSION)
+  // upgrade index structure
+  switch (indexVersion)
   {
-    // upgrade index structure
-    switch (indexVersion)
-    {
-      case 1:
-        error = upgradeFromVersion1(&oldIndexHandle,indexHandle);
-        break;
-      case 2:
-        error = upgradeFromVersion2(&oldIndexHandle,indexHandle);
-        break;
-      case 3:
-        error = upgradeFromVersion3(&oldIndexHandle,indexHandle);
-        break;
-      case 4:
-        error = upgradeFromVersion4(&oldIndexHandle,indexHandle);
-        break;
-      case 5:
-        error = upgradeFromVersion5(&oldIndexHandle,indexHandle);
-        break;
-      case 6:
-        error = upgradeFromVersion6(&oldIndexHandle,indexHandle);
-        break;
-      default:
-        // unknown version if index
-        error = ERROR_DATABASE_VERSION_UNKNOWN;
-        break;
-    }
-    if (error == ERROR_NONE)
-    {
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_INDEX,
-                  "INDEX",
-                  "Imported index database '%s' (version %d)\n",
-                  String_cString(oldDatabaseFileName),
-                  indexVersion
-                 );
-    }
-    else
-    {
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_INDEX,
-                  "INDEX",
-                  "Import index database '%s' (version %d) fail: %s\n",
-                  String_cString(oldDatabaseFileName),
-                  indexVersion,
-                  Error_getText(error)
-                 );
-    }
+    case 1:
+      error = upgradeFromVersion1(&oldIndexHandle,indexHandle);
+      break;
+    case 2:
+      error = upgradeFromVersion2(&oldIndexHandle,indexHandle);
+      break;
+    case 3:
+      error = upgradeFromVersion3(&oldIndexHandle,indexHandle);
+      break;
+    case 4:
+      error = upgradeFromVersion4(&oldIndexHandle,indexHandle);
+      break;
+    case 5:
+      error = upgradeFromVersion5(&oldIndexHandle,indexHandle);
+      break;
+    case 6:
+      error = upgradeFromVersion6(&oldIndexHandle,indexHandle);
+      break;
+    default:
+      // unknown version if index
+      error = ERROR_DATABASE_VERSION_UNKNOWN;
+      break;
+  }
+  if (error == ERROR_NONE)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Imported index database '%s' (version %d)\n",
+                String_cString(oldDatabaseFileName),
+                indexVersion
+               );
+  }
+  else
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Import index database '%s' (version %d) fail: %s\n",
+                String_cString(oldDatabaseFileName),
+                indexVersion,
+                Error_getText(error)
+               );
   }
 
   // close old index
@@ -4421,7 +4418,7 @@ bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
-                             "SELECT uuids.id, \
+                             "SELECT IFNULL(uuids.id,0), \
                                      entities.id, \
                                      UNIXTIMESTAMP(entities.created), \
                                      entities.type, \
@@ -4508,11 +4505,12 @@ bool Index_findStorageById(IndexHandle *indexHandle,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
-                             "SELECT uuids.id, \
-                                     entities.id, \
+                             "SELECT IFNULL(uuids.id,0), \
                                      entities.jobUUID, \
+                                     IFNULL(entities.id,0), \
                                      entities.scheduleUUID, \
                                      storage.name, \
+                                     UNIXTIMESTAMP(storage.created), \
                                      storage.size, \
                                      storage.state, \
                                      storage.mode, \
@@ -4533,12 +4531,13 @@ bool Index_findStorageById(IndexHandle *indexHandle,
     {
       return error;
     }
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
 
     result = Database_getNextRow(&databaseQueryHandle,
-                                 "%lld %lld %S %S %'S %llu %llu %d %llu %S %llu %llu",
+                                 "%lld %S %lld %S %S %llu %llu %d %d %llu %S %llu %llu",
                                  &uuidId_,
-                                 &entityId_,
                                  jobUUID,
+                                 &entityId_,
                                  scheduleUUID,
                                  storageName,
                                  createdDateTime,
@@ -4607,10 +4606,10 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
-                             "SELECT uuids.id, \
-                                     entities.id, \
-                                     storage.id, \
+                             "SELECT IFNULL(uuids.id,0) \
                                      entities.jobUUID, \
+                                     IFNULL(entities.id,0) \
+                                     storage.id, \
                                      entities.scheduleUUID, \
                                      storage.name, \
                                      UNIXTIMESTAMP(storage.created), \
@@ -4637,11 +4636,11 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
     foundFlag   = FALSE;
     while (   !foundFlag
            && Database_getNextRow(&databaseQueryHandle,
-                                  "%lld %lld %lld %S %S %'S %llu %llu %d %d %llu %S %llu %llu",
+                                  "%lld %S %lld %lld %S %S %llu %llu %d %d %llu %S %llu %llu",
                                   &uuidId_,
+                                  jobUUID,
                                   &entityId_,
                                   &storageId_,
-                                  jobUUID,
                                   scheduleUUID,
                                   tmpStorageName,
                                   createdDateTime,
@@ -4723,10 +4722,10 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
-                             "SELECT uuids.id, \
-                                     entities.id, \
-                                     storage.id, \
+                             "SELECT IFNULL(uuids.id,0), \
                                      entities.jobUUID, \
+                                     IFNULL(entities.id,0), \
+                                     storage.id, \
                                      entities.scheduleUUID, \
                                      storage.name, \
                                      UNIXTIMESTAMP(storage.created), \
@@ -4750,11 +4749,11 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
     }
 
     result = Database_getNextRow(&databaseQueryHandle,
-                                 "%lld %lld %lld %S %S %'S %llu %llu %d %llu %S %llu %llu",
+                                 "%lld %S %lld %lld %S %S %llu %llu %d %llu %S %llu %llu",
                                  &uuidId_,
+                                 jobUUID,
                                  &entityId_,
                                  &storageId_,
-                                 jobUUID,
                                  scheduleUUID,
                                  storageName,
                                  createdDateTime,
@@ -5088,7 +5087,7 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT history.id, \
-                                   uuids.id, \
+                                   IFNULL(uuids.id,0), \
                                    history.jobUUID, \
                                    history.scheduleUUID, \
                                    history.hostName, \
@@ -5801,9 +5800,9 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
-                           "SELECT uuids.id,\
-                                   entities.id, \
+                           "SELECT IFNULL(uuids.id,0), \
                                    entities.jobUUID, \
+                                   entities.id, \
                                    entities.scheduleUUID, \
                                    UNIXTIMESTAMP(entities.created), \
                                    entities.type, \
@@ -5872,10 +5871,10 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %lld %S %S %llu %u %S %lf %lf",
+                           "%lld %S %lld %S %llu %u %S %lf %lf",
                            &uuidId_,
-                           &entityId_,
                            jobUUID,
+                           &entityId_,
                            scheduleUUID,
                            createdDateTime,
                            archiveType,
@@ -6767,9 +6766,9 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   error = Database_prepare(&indexQueryHandle->databaseQueryHandle,
                            &indexHandle->databaseHandle,
 //TODO newest
-                           "SELECT uuids.id, \
+                           "SELECT IFNULL(uuids.id,0), \
                                    entities.jobUUID, \
-                                   entities.id, \
+                                   IFNULL(entities.id,0), \
                                    entities.scheduleUUID, \
                                    entities.type, \
                                    storage.id, \
@@ -6795,7 +6794,6 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                            offset,
                            limit
                           );
-//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   if (error != ERROR_NONE)
   {
     doneIndexQueryHandle(indexQueryHandle);
@@ -6809,6 +6807,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
     String_delete(ftsName);
     return error;
   }
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
 
   // free resources
   String_delete(orderString);
@@ -7443,11 +7442,13 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                   FROM storage \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
+                                  WHERE     %S \
+                                        AND storage.state!=%d \
                                  ",
                                  newestOnly ? "storage.totalFileCountNewest" : "storage.totalFileCount",
                                  newestOnly ? "storage.totalFileSizeNewest" : "storage.totalFileSize",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
         if (error != ERROR_NONE)
         {
@@ -7479,11 +7480,13 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                   FROM storage \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
+                                  WHERE     %S \
+                                        AND storage.state!=%d \
                                  ",
                                  newestOnly ? "storage.totalImageCountNewest" : "storage.totalImageCount",
                                  newestOnly ? "storage.totalImageSizeNewest" : "storage.totalImageSize",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
         if (error != ERROR_NONE)
         {
@@ -7514,10 +7517,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                   FROM storage \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
+                                  WHERE     %S \
+                                        AND storage.state!=%d \
                                  ",
                                  newestOnly ? "storage.totalDirectoryCountNewest" : "storage.totalDirectoryCount",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
         if (error != ERROR_NONE)
         {
@@ -7544,10 +7549,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN directoryEntries ON directoryEntries.storageId=storage.id \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
+                                  WHERE     %S \
+                                        AND storage.state!=%d \
                                  ",
                                  newestOnly ? "directoryEntries.totalEntrySizeNewest" : "directoryEntries.totalEntrySize",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
         if (error != ERROR_NONE)
         {
@@ -7576,10 +7583,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                   FROM storage \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
+                                  WHERE     %S \
+                                        AND storage.state!=%d \
                                  ",
                                  newestOnly ? "storage.totalLinkCountNewest" : "storage.totalLinkCount",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
         if (error != ERROR_NONE)
         {
@@ -7608,11 +7617,13 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                   FROM storage \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
+                                  WHERE     %S \
+                                        AND storage.state!=%d \
                                  ",
                                  newestOnly ? "storage.totalHardlinkCountNewest" : "storage.totalHardlinkCount",
                                  newestOnly ? "storage.totalHardlinkSizeNewest" : "storage.totalHardlinkSize",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
         if (error != ERROR_NONE)
         {
@@ -7643,10 +7654,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                   FROM storage \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
+                                  WHERE     %S \
+                                        AND storage.state!=%d \
                                  ",
                                  newestOnly ? "storage.totalSpecialCountNewest" : "storage.totalSpecialCount",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
         if (error != ERROR_NONE)
         {
@@ -7701,8 +7714,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     entriesNewest.id IS NOT NULL \
                                         AND %S \
+                                        AND storage.state!=%d \
                                  ",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
       }
       else
@@ -7715,9 +7730,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN storage ON storage.id=entries.storageId \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
+                                  WHERE     %S \
+                                        AND storage.state!=%d \
                                  ",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
       }
       if (error != ERROR_NONE)
@@ -7751,9 +7768,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN storage ON storage.id=entries.storageId \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
+                                  WHERE     %S \
+                                        AND storage.state!=%d \
                                  ",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
       }
       else
@@ -7766,9 +7785,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN storage ON storage.id=entries.storageId \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
+                                  WHERE     %S \
+                                        AND storage.state!=%d \
                                  ",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
       }
       if (error != ERROR_NONE)
@@ -7829,8 +7850,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     entriesNewest.id IS NOT NULL \
                                         AND %S \
+                                        AND storage.state!=%d \
                                  ",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
       }
       else
@@ -7844,9 +7867,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN storage ON storage.id=entries.storageId \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
+                                  WHERE     %S \
+                                        AND storage.state!=%d \
                                  ",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
       }
       if (error != ERROR_NONE)
@@ -7881,9 +7906,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN storage ON storage.id=entries.storageId \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
+                                  WHERE     %S \
+                                        AND storage.state!=%d \
                                  ",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
       }
       else
@@ -7897,9 +7924,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN storage ON storage.id=entries.storageId \
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE %S \
+                                  WHERE     %S \
+                                        AND storage.state!=%d \
                                  ",
-                                 filterString
+                                 filterString,
+                                 INDEX_STATE_DELETED
                                 );
       }
       if (error != ERROR_NONE)
