@@ -5852,9 +5852,9 @@ LOCAL void autoIndexThreadCode(void)
             {
               error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                                 &storageSpecifier,
+                                                baseName,
                                                 &jobOptions,
-                                                SERVER_CONNECTION_PRIORITY_LOW,
-                                                baseName
+                                                SERVER_CONNECTION_PRIORITY_LOW
                                                );
               if (error == ERROR_NONE)
               {
