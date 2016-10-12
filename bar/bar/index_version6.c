@@ -102,6 +102,9 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                              {
                                IndexId fromEntityId;
                                IndexId toEntityId;
+                               uint64  t0;
+                               uint64  t1;
+                               Errors  error;
 
                                UNUSED_VARIABLE(toColumnList);
                                UNUSED_VARIABLE(userData);
@@ -113,212 +116,229 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 //fprintf(stderr,"%s, %d: entity %llu -> %llu: copy storage jobUUID=%s\n",__FILE__,__LINE__,fromEntityId,toEntityId,Database_getTableColumnListCString(fromColumnList,"jobUUID",NULL));
 
                                // transfer storages of entity
-                               return Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                         &newIndexHandle->databaseHandle,
-                                                         "storage",
-                                                         "storage",
-                                                         FALSE,  // transaction flag
-                                                         // pre: transfer storage
-                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                                                         {
-                                                           UNUSED_VARIABLE(fromColumnList);
-                                                           UNUSED_VARIABLE(toColumnList);
-                                                           UNUSED_VARIABLE(userData);
+                               t0 = Misc_getTimestamp();
+                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                          &newIndexHandle->databaseHandle,
+                                                          "storage",
+                                                          "storage",
+                                                          FALSE,  // transaction flag
+                                                          // pre: transfer storage
+                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          {
+                                                            UNUSED_VARIABLE(fromColumnList);
+                                                            UNUSED_VARIABLE(toColumnList);
+                                                            UNUSED_VARIABLE(userData);
 
-                                                           (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
+                                                            (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
 
-                                                           return ERROR_NONE;
-                                                         },NULL),
-                                                         // post: transfer files, images, directories, links, special entries
-                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                                                         {
-                                                           IndexId fromStorageId;
-                                                           IndexId toStorageId;
+                                                            return ERROR_NONE;
+                                                          },NULL),
+                                                          // post: transfer files, images, directories, links, special entries
+                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          {
+                                                            IndexId fromStorageId;
+                                                            IndexId toStorageId;
 
-                                                           UNUSED_VARIABLE(userData);
+                                                            UNUSED_VARIABLE(userData);
 
-                                                           fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
-                                                           assert(fromStorageId != DATABASE_ID_NONE);
-                                                           toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
-                                                           assert(toStorageId != DATABASE_ID_NONE);
+                                                            fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                                                            assert(fromStorageId != DATABASE_ID_NONE);
+                                                            toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                                                            assert(toStorageId != DATABASE_ID_NONE);
 
-//fprintf(stderr,"%s, %d: copy entries %llu %llu\n",__FILE__,__LINE__,fromStorageId,toStorageId);
-                                                           return Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                     &newIndexHandle->databaseHandle,
-                                                                                     "entries",
-                                                                                     "entries",
-                                                                                     TRUE,  // transaction flag
-                                                                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                                                                                     {
-                                                                                       UNUSED_VARIABLE(fromColumnList);
-                                                                                       UNUSED_VARIABLE(userData);
+ //fprintf(stderr,"%s, %d: copy entries %llu %llu\n",__FILE__,__LINE__,fromStorageId,toStorageId);
+                                                            return Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                      &newIndexHandle->databaseHandle,
+                                                                                      "entries",
+                                                                                      "entries",
+                                                                                      TRUE,  // transaction flag
+                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                      {
+                                                                                        UNUSED_VARIABLE(fromColumnList);
+                                                                                        UNUSED_VARIABLE(userData);
 
-                                                                                       (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
 
-                                                                                       return ERROR_NONE;
-                                                                                     },NULL),
-                                                                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                                                                                     {
-                                                                                       Errors  error;
-                                                                                       IndexId fromEntryId;
-                                                                                       IndexId toEntryId;
+                                                                                        return ERROR_NONE;
+                                                                                      },NULL),
+                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                      {
+                                                                                        Errors  error;
+                                                                                        IndexId fromEntryId;
+                                                                                        IndexId toEntryId;
 
-                                                                                       UNUSED_VARIABLE(userData);
+                                                                                        UNUSED_VARIABLE(userData);
 
-                                                                                       fromEntryId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
-                                                                                       assert(fromEntryId != DATABASE_ID_NONE);
-                                                                                       toEntryId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
-                                                                                       assert(toEntryId != DATABASE_ID_NONE);
+                                                                                        fromEntryId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                                                                                        assert(fromEntryId != DATABASE_ID_NONE);
+                                                                                        toEntryId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                                                                                        assert(toEntryId != DATABASE_ID_NONE);
 
-                                                                                       error = ERROR_NONE;
+                                                                                        error = ERROR_NONE;
 
-                                                                                       if (error == ERROR_NONE)
-                                                                                       {
-//fprintf(stderr,"%s, %d: copy file %llu -> %llu\n",__FILE__,__LINE__,fromEntryId,toEntryId);
-                                                                                         error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                                                    &newIndexHandle->databaseHandle,
-                                                                                                                    "fileEntries",
-                                                                                                                    "fileEntries",
-                                                                                                                    FALSE,  // transaction flag
-                                                                                                                    CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                                                                                                                    {
-                                                                                                                      UNUSED_VARIABLE(fromColumnList);
-                                                                                                                      UNUSED_VARIABLE(userData);
+                                                                                        if (error == ERROR_NONE)
+                                                                                        {
+ //fprintf(stderr,"%s, %d: copy file %llu -> %llu\n",__FILE__,__LINE__,fromEntryId,toEntryId);
+                                                                                          error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                                                     &newIndexHandle->databaseHandle,
+                                                                                                                     "fileEntries",
+                                                                                                                     "fileEntries",
+                                                                                                                     FALSE,  // transaction flag
+                                                                                                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                                                     {
+                                                                                                                       UNUSED_VARIABLE(fromColumnList);
+                                                                                                                       UNUSED_VARIABLE(userData);
 
-                                                                                                                      (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
-                                                                                                                      (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                                                       (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
+                                                                                                                       (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
 
-                                                                                                                      return ERROR_NONE;
-                                                                                                                    },NULL),
-                                                                                                                    CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                    CALLBACK(NULL,NULL),  // pause
-                                                                                                                    "WHERE entryId=%lld",
-                                                                                                                    fromEntryId
-                                                                                                                   );
-                                                                                       }
-                                                                                       if (error == ERROR_NONE)
-                                                                                       {
-//fprintf(stderr,"%s, %d: copy i\n",__FILE__,__LINE__);
-                                                                                         error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                                                    &newIndexHandle->databaseHandle,
-                                                                                                                    "imageEntries",
-                                                                                                                    "imageEntries",
-                                                                                                                    FALSE,  // transaction flag
-                                                                                                                    CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                                                                                                                    {
-                                                                                                                      UNUSED_VARIABLE(fromColumnList);
-                                                                                                                      UNUSED_VARIABLE(userData);
+                                                                                                                       return ERROR_NONE;
+                                                                                                                     },NULL),
+                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
+                                                                                                                     CALLBACK(NULL,NULL),  // pause
+                                                                                                                     "WHERE entryId=%lld",
+                                                                                                                     fromEntryId
+                                                                                                                    );
+                                                                                        }
+                                                                                        if (error == ERROR_NONE)
+                                                                                        {
+ //fprintf(stderr,"%s, %d: copy i\n",__FILE__,__LINE__);
+                                                                                          error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                                                     &newIndexHandle->databaseHandle,
+                                                                                                                     "imageEntries",
+                                                                                                                     "imageEntries",
+                                                                                                                     FALSE,  // transaction flag
+                                                                                                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                                                     {
+                                                                                                                       UNUSED_VARIABLE(fromColumnList);
+                                                                                                                       UNUSED_VARIABLE(userData);
 
-                                                                                                                      (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
-                                                                                                                      (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                                                       (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
+                                                                                                                       (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
 
-                                                                                                                      return ERROR_NONE;
-                                                                                                                    },NULL),
-                                                                                                                    CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                    CALLBACK(NULL,NULL),  // pause
-                                                                                                                    "WHERE entryId=%lld",
-                                                                                                                    fromEntryId
-                                                                                                                   );
-                                                                                       }
-                                                                                       if (error == ERROR_NONE)
-                                                                                       {
-//fprintf(stderr,"%s, %d: copy d\n",__FILE__,__LINE__);
-                                                                                         error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                                                    &newIndexHandle->databaseHandle,
-                                                                                                                    "directoryEntries",
-                                                                                                                    "directoryEntries",
-                                                                                                                    FALSE,  // transaction flag
-                                                                                                                    CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                                                                                                                    {
-                                                                                                                      UNUSED_VARIABLE(fromColumnList);
-                                                                                                                      UNUSED_VARIABLE(userData);
+                                                                                                                       return ERROR_NONE;
+                                                                                                                     },NULL),
+                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
+                                                                                                                     CALLBACK(NULL,NULL),  // pause
+                                                                                                                     "WHERE entryId=%lld",
+                                                                                                                     fromEntryId
+                                                                                                                    );
+                                                                                        }
+                                                                                        if (error == ERROR_NONE)
+                                                                                        {
+ //fprintf(stderr,"%s, %d: copy d\n",__FILE__,__LINE__);
+                                                                                          error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                                                     &newIndexHandle->databaseHandle,
+                                                                                                                     "directoryEntries",
+                                                                                                                     "directoryEntries",
+                                                                                                                     FALSE,  // transaction flag
+                                                                                                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                                                     {
+                                                                                                                       UNUSED_VARIABLE(fromColumnList);
+                                                                                                                       UNUSED_VARIABLE(userData);
 
-                                                                                                                      (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
-                                                                                                                      (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                                                       (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
+                                                                                                                       (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
 
-                                                                                                                      return ERROR_NONE;
-                                                                                                                    },NULL),
-                                                                                                                    CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                    CALLBACK(NULL,NULL),  // pause
-                                                                                                                    "WHERE entryId=%lld",
-                                                                                                                    fromEntryId
-                                                                                                                   );
-                                                                                       }
-                                                                                       if (error == ERROR_NONE)
-                                                                                       {
-//fprintf(stderr,"%s, %d: copy l\n",__FILE__,__LINE__);
-                                                                                         error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                                                    &newIndexHandle->databaseHandle,
-                                                                                                                    "linkEntries",
-                                                                                                                    "linkEntries",
-                                                                                                                    FALSE,  // transaction flag
-                                                                                                                    CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                                                                                                                    {
-                                                                                                                      UNUSED_VARIABLE(fromColumnList);
-                                                                                                                      UNUSED_VARIABLE(userData);
+                                                                                                                       return ERROR_NONE;
+                                                                                                                     },NULL),
+                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
+                                                                                                                     CALLBACK(NULL,NULL),  // pause
+                                                                                                                     "WHERE entryId=%lld",
+                                                                                                                     fromEntryId
+                                                                                                                    );
+                                                                                        }
+                                                                                        if (error == ERROR_NONE)
+                                                                                        {
+ //fprintf(stderr,"%s, %d: copy l\n",__FILE__,__LINE__);
+                                                                                          error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                                                     &newIndexHandle->databaseHandle,
+                                                                                                                     "linkEntries",
+                                                                                                                     "linkEntries",
+                                                                                                                     FALSE,  // transaction flag
+                                                                                                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                                                     {
+                                                                                                                       UNUSED_VARIABLE(fromColumnList);
+                                                                                                                       UNUSED_VARIABLE(userData);
 
-                                                                                                                      (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
-                                                                                                                      (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                                                       (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
+                                                                                                                       (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
 
-                                                                                                                      return ERROR_NONE;
-                                                                                                                    },NULL),
-                                                                                                                    CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                    CALLBACK(NULL,NULL),  // pause
-                                                                                                                    "WHERE entryId=%lld",
-                                                                                                                    fromEntryId
-                                                                                                                   );
-                                                                                       }
-                                                                                       if (error == ERROR_NONE)
-                                                                                       {
-//fprintf(stderr,"%s, %d: copy h\n",__FILE__,__LINE__);
-                                                                                         error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                                                    &newIndexHandle->databaseHandle,
-                                                                                                                    "hardlinkEntries",
-                                                                                                                    "hardlinkEntries",
-                                                                                                                    FALSE,  // transaction flag
-                                                                                                                    CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
-                                                                                                                    {
-                                                                                                                      UNUSED_VARIABLE(fromColumnList);
-                                                                                                                      UNUSED_VARIABLE(userData);
+                                                                                                                       return ERROR_NONE;
+                                                                                                                     },NULL),
+                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
+                                                                                                                     CALLBACK(NULL,NULL),  // pause
+                                                                                                                     "WHERE entryId=%lld",
+                                                                                                                     fromEntryId
+                                                                                                                    );
+                                                                                        }
+                                                                                        if (error == ERROR_NONE)
+                                                                                        {
+ //fprintf(stderr,"%s, %d: copy h\n",__FILE__,__LINE__);
+                                                                                          error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                                                     &newIndexHandle->databaseHandle,
+                                                                                                                     "hardlinkEntries",
+                                                                                                                     "hardlinkEntries",
+                                                                                                                     FALSE,  // transaction flag
+                                                                                                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                                                     {
+                                                                                                                       UNUSED_VARIABLE(fromColumnList);
+                                                                                                                       UNUSED_VARIABLE(userData);
 
-                                                                                                                      (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
-                                                                                                                      (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                                                       (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
+                                                                                                                       (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
 
-                                                                                                                      return ERROR_NONE;
-                                                                                                                    },NULL),
-                                                                                                                    CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                    CALLBACK(NULL,NULL),  // pause
-                                                                                                                    "WHERE entryId=%lld",
-                                                                                                                    fromEntryId
-                                                                                                                   );
-                                                                                       }
-                                                                                       if (error == ERROR_NONE)
-                                                                                       {
-//fprintf(stderr,"%s, %d: copy s\n",__FILE__,__LINE__);
-                                                                                         error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                                                    &newIndexHandle->databaseHandle,
-                                                                                                                    "specialEntries",
-                                                                                                                    "specialEntries",
-                                                                                                                    FALSE,  // transaction flag
-                                                                                                                    CALLBACK(NULL,NULL),  // pre-copy
-                                                                                                                    CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                    CALLBACK(NULL,NULL),  // pause
-                                                                                                                    "WHERE entryId=%lld",
-                                                                                                                    fromEntryId
-                                                                                                                   );
-                                                                                       }
+                                                                                                                       return ERROR_NONE;
+                                                                                                                     },NULL),
+                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
+                                                                                                                     CALLBACK(NULL,NULL),  // pause
+                                                                                                                     "WHERE entryId=%lld",
+                                                                                                                     fromEntryId
+                                                                                                                    );
+                                                                                        }
+                                                                                        if (error == ERROR_NONE)
+                                                                                        {
+ //fprintf(stderr,"%s, %d: copy s\n",__FILE__,__LINE__);
+                                                                                          error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                                                                                                     &newIndexHandle->databaseHandle,
+                                                                                                                     "specialEntries",
+                                                                                                                     "specialEntries",
+                                                                                                                     FALSE,  // transaction flag
+                                                                                                                     CALLBACK(NULL,NULL),  // pre-copy
+                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
+                                                                                                                     CALLBACK(NULL,NULL),  // pause
+                                                                                                                     "WHERE entryId=%lld",
+                                                                                                                     fromEntryId
+                                                                                                                    );
+                                                                                        }
 
-                                                                                       return error;
-                                                                                     },NULL),
-                                                                                     CALLBACK(NULL,NULL),  // pause
-                                                                                     "WHERE storageId=%lld",
-                                                                                     fromStorageId
-                                                                                    );
-                                                         },NULL),
-                                                         CALLBACK(pauseCallback,NULL),
-                                                         "WHERE entityId=%lld",
-                                                         fromEntityId
-                                                        );
+                                                                                        return error;
+                                                                                      },NULL),
+                                                                                      CALLBACK(NULL,NULL),  // pause
+                                                                                      "WHERE storageId=%lld",
+                                                                                      fromStorageId
+                                                                                     );
+                                                          },NULL),
+                                                          CALLBACK(pauseCallback,NULL),
+                                                          "WHERE entityId=%lld",
+                                                          fromEntityId
+                                                         );
+                               t1 = Misc_getTimestamp();
+                               if (error != ERROR_NONE)
+                               {
+                                 return error;
+                               }
+
+                               plogMessage(NULL,  // logHandle
+                                           LOG_TYPE_INDEX,
+                                           "INDEX",
+                                           "Imported entity #%llu: '%s' (%llus)\n",
+                                           toEntityId,
+                                           Database_getTableColumnListCString(fromColumnList,"jobUUID",""),
+                                           (t1-t0)/US_PER_SECOND
+                                          );
+
+                               return ERROR_NONE;
                              },NULL),
                              CALLBACK(pauseCallback,NULL),
                              "WHERE id!=0"

@@ -90,9 +90,11 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                              // post: transfer storage
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
-                               Errors  error;
                                IndexId fromEntityId;
                                IndexId toEntityId;
+                               uint64  t0;
+                               uint64  t1;
+                               Errors  error;
 
                                UNUSED_VARIABLE(userData);
 
@@ -103,6 +105,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 //fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,Database_getTableColumnListCString(fromColumnList,"jobUUID",NULL));
 
                                // transfer storages of entity
+                               t0 = Misc_getTimestamp();
                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                           &newIndexHandle->databaseHandle,
                                                           "storage",
@@ -461,7 +464,22 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                           fromEntityId
                                                          );
 
-                               return error;
+                               t1 = Misc_getTimestamp();
+                               if (error != ERROR_NONE)
+                               {
+                                 return error;
+                               }
+
+                               plogMessage(NULL,  // logHandle
+                                           LOG_TYPE_INDEX,
+                                           "INDEX",
+                                           "Imported entity #%llu: '%s' (%llus)\n",
+                                           toEntityId,
+                                           Database_getTableColumnListCString(fromColumnList,"jobUUID",""),
+                                           (t1-t0)/US_PER_SECOND
+                                          );
+
+                               return ERROR_NONE;
                              },NULL),
                              CALLBACK(pauseCallback,NULL),
                              NULL  // filter

@@ -88,16 +88,21 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                              // post: transfer storages
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
-                               Errors  error;
                                IndexId fromEntityId;
                                IndexId toEntityId;
+                               uint64  t0;
+                               uint64  t1;
+                               Errors  error;
 
                                UNUSED_VARIABLE(userData);
 
                                fromEntityId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
-                               toEntityId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                               assert(fromEntityId != DATABASE_ID_NONE);
+                               toEntityId = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                               assert(toEntityId != DATABASE_ID_NONE);
 
                                // transfer storages of entity
+                               t0 = Misc_getTimestamp();
                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                           &newIndexHandle->databaseHandle,
                                                           "storage",
@@ -454,7 +459,22 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                           fromEntityId
                                                          );
 
-                               return error;
+                               t1 = Misc_getTimestamp();
+                               if (error != ERROR_NONE)
+                               {
+                                 return error;
+                               }
+
+                               plogMessage(NULL,  // logHandle
+                                           LOG_TYPE_INDEX,
+                                           "INDEX",
+                                           "Imported entity #%llu: '%s' (%llus)\n",
+                                           toEntityId,
+                                           Database_getTableColumnListCString(fromColumnList,"jobUUID",""),
+                                           (t1-t0)/US_PER_SECOND
+                                          );
+
+                               return ERROR_NONE;
                              },NULL),
                              CALLBACK(pauseCallback,NULL),
                              NULL  // filter
