@@ -3367,9 +3367,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
 LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                           const StorageSpecifier     *storageSpecifier,
+                                          ConstString                archiveName,
                                           const JobOptions           *jobOptions,
-                                          ServerConnectionPriorities serverConnectionPriority,
-                                          ConstString                archiveName
+                                          ServerConnectionPriorities serverConnectionPriority
                                          )
 {
   #if   defined(HAVE_CURL)
@@ -3393,8 +3393,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FTP);
-
-  UNUSED_VARIABLE(storageSpecifier);
+  assert(!String_isEmpty(archiveName));
 
   #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && (!defined(HAVE_CURL) || !defined(HAVE_MXML))
     UNUSED_VARIABLE(serverConnectionPriority);

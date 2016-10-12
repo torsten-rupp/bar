@@ -2635,9 +2635,9 @@ Errors Storage_pruneDirectories(StorageHandle *storageHandle, ConstString archiv
     isEmpty = FALSE;
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                       &storageHandle->storageSpecifier,
+                                      name,
                                       NULL,  // jobOptions
-                                      SERVER_CONNECTION_PRIORITY_LOW,
-                                      name
+                                      SERVER_CONNECTION_PRIORITY_LOW
                                      );
     if (error == ERROR_NONE)
     {
@@ -2767,9 +2767,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
 Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                  const StorageSpecifier     *storageSpecifier,
+                                 ConstString                archiveName,
                                  const JobOptions           *jobOptions,
-                                 ServerConnectionPriorities serverConnectionPriority,
-                                 ConstString                archiveName
+                                 ServerConnectionPriorities serverConnectionPriority
                                 )
 {
   Errors error;
@@ -2777,11 +2777,16 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
 
-  // get archive name
-  if (archiveName == NULL) archiveName = storageSpecifier->archiveName;
-
   // initialize variables
   Storage_duplicateSpecifier(&storageDirectoryListHandle->storageSpecifier,storageSpecifier);
+
+  // get archive name
+  if (archiveName == NULL) archiveName = storageDirectoryListHandle->storageSpecifier.archiveName;
+  if (String_isEmpty(archiveName))
+  {
+    Storage_doneSpecifier(&storageDirectoryListHandle->storageSpecifier);
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
 
   // open directory listing
   error = ERROR_UNKNOWN;
@@ -2790,10 +2795,10 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      error = StorageFile_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
+      error = StorageFile_openDirectoryList(storageDirectoryListHandle,storageSpecifier,archiveName,jobOptions,serverConnectionPriority);
       break;
     case STORAGE_TYPE_FTP:
-      error = StorageFTP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
+      error = StorageFTP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,archiveName,jobOptions,serverConnectionPriority);
       break;
     case STORAGE_TYPE_SSH:
       UNUSED_VARIABLE(jobOptions);
@@ -2806,21 +2811,21 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
-      error = StorageSCP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
+      error = StorageSCP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,archiveName,jobOptions,serverConnectionPriority);
       break;
     case STORAGE_TYPE_SFTP:
-      error = StorageSFTP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
+      error = StorageSFTP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,archiveName,jobOptions,serverConnectionPriority);
       break;
     case STORAGE_TYPE_WEBDAV:
-      error = StorageWebDAV_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
+      error = StorageWebDAV_openDirectoryList(storageDirectoryListHandle,storageSpecifier,archiveName,jobOptions,serverConnectionPriority);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      error = StorageOptical_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
+      error = StorageOptical_openDirectoryList(storageDirectoryListHandle,storageSpecifier,archiveName,jobOptions,serverConnectionPriority);
       break;
     case STORAGE_TYPE_DEVICE:
-      error = StorageDevice_openDirectoryList(storageDirectoryListHandle,storageSpecifier,jobOptions,serverConnectionPriority,archiveName);
+      error = StorageDevice_openDirectoryList(storageDirectoryListHandle,storageSpecifier,archiveName,jobOptions,serverConnectionPriority);
       break;
     default:
       #ifndef NDEBUG
@@ -3131,9 +3136,9 @@ Errors Storage_forAll(ConstString     storagePatternString,
       // open directory
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
+                                        fileName,
                                         &jobOptions,
-                                        SERVER_CONNECTION_PRIORITY_LOW,
-                                        fileName
+                                        SERVER_CONNECTION_PRIORITY_LOW
                                        );
 
       if (error == ERROR_NONE)

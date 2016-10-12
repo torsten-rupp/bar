@@ -1562,9 +1562,9 @@ LOCAL Errors StorageSFTP_getFileInfo(StorageHandle *storageHandle,
 
 LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                            const StorageSpecifier     *storageSpecifier,
+                                           ConstString                archiveName,
                                            const JobOptions           *jobOptions,
-                                           ServerConnectionPriorities serverConnectionPriority,
-                                           ConstString                archiveName
+                                           ServerConnectionPriorities serverConnectionPriority
                                           )
 {
   #ifdef HAVE_SSH2
@@ -1576,8 +1576,8 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_SFTP);
+  assert(!String_isEmpty(archiveName));
 
-  UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(serverConnectionPriority);
 
   #ifdef HAVE_SSH2

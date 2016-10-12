@@ -1433,11 +1433,11 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
 * Purpose: open storage directory list for reading directory entries
 * Input  : storageDirectoryListHandle - storage directory list handle
 *                                       variable
-*          storageName                - storage name
+*          storageSpecifier           - storage specifier
+*          archiveName                - archive name
 *                                       (prefix+specifier+path only)
 *          jobOptions                 - job options
 *          serverConnectionPriority   - server connection priority
-*          archiveName                - archive name or NULL
 * Output : storageDirectoryListHandle - initialized storage directory
 *                                       list handle
 * Return : ERROR_NONE or errorcode
@@ -1446,9 +1446,9 @@ Errors Storage_getFileInfo(StorageHandle *storageHandle,
 
 Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                  const StorageSpecifier     *storageSpecifier,
+                                 ConstString                archiveName,
                                  const JobOptions           *jobOptions,
-                                 ServerConnectionPriorities serverConnectionPriority,
-                                 ConstString                archiveName
+                                 ServerConnectionPriorities serverConnectionPriority
                                 );
 
 /***********************************************************************\

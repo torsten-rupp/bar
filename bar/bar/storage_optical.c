@@ -1976,9 +1976,9 @@ LOCAL Errors StorageOptical_getFileInfo(StorageHandle *storageHandle,
 
 LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                               const StorageSpecifier     *storageSpecifier,
+                                              ConstString                archiveName,
                                               const JobOptions           *jobOptions,
-                                              ServerConnectionPriorities serverConnectionPriority,
-                                              ConstString                archiveName
+                                              ServerConnectionPriorities serverConnectionPriority
                                              )
 {
   AutoFreeList autoFreeList;
@@ -1987,6 +1987,7 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
+  assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(jobOptions);
@@ -1994,8 +1995,6 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
 
   // initialize variables
   AutoFree_init(&autoFreeList);
-
-  // init variables
   error = ERROR_UNKNOWN;
   switch (storageDirectoryListHandle->storageSpecifier.type)
   {

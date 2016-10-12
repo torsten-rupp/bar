@@ -3781,9 +3781,9 @@ Errors Command_list(StringList          *storageNameList,
       // open directory list
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
+                                        NULL,  // archiveName
                                         jobOptions,
-                                        SERVER_CONNECTION_PRIORITY_HIGH,
-                                        NULL  // archiveName
+                                        SERVER_CONNECTION_PRIORITY_HIGH
                                        );
       if (error == ERROR_NONE)
       {

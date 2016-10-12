@@ -2247,9 +2247,9 @@ LOCAL Errors StorageWebDAV_getFileInfo(StorageHandle *storageHandle,
 
 LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                              const StorageSpecifier     *storageSpecifier,
+                                             ConstString                archiveName,
                                              const JobOptions           *jobOptions,
-                                             ServerConnectionPriorities serverConnectionPriority,
-                                             ConstString                archiveName
+                                             ServerConnectionPriorities serverConnectionPriority
                                             )
 {
   #if defined(HAVE_CURL) && defined(HAVE_MXML)
@@ -2268,12 +2268,11 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
+  assert(!String_isEmpty(archiveName));
 
   #if defined(HAVE_CURL) && defined(HAVE_MXML)
     UNUSED_VARIABLE(serverConnectionPriority);
   #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
-
-  UNUSED_VARIABLE(storageSpecifier);
 
   // open directory listing
   #if defined(HAVE_CURL) && defined(HAVE_MXML)

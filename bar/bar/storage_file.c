@@ -603,9 +603,9 @@ LOCAL Errors StorageFile_getFileInfo(StorageHandle *storageHandle,
 
 LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                            const StorageSpecifier     *storageSpecifier,
+                                           ConstString                archiveName,
                                            const JobOptions           *jobOptions,
-                                           ServerConnectionPriorities serverConnectionPriority,
-                                           ConstString                archiveName
+                                           ServerConnectionPriorities serverConnectionPriority
                                           )
 {
   Errors error;

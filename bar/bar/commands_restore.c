@@ -2642,9 +2642,9 @@ Errors Command_restore(const StringList                *storageNameList,
       // restore all matching archives content
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
+                                        NULL,  // archiveName
                                         jobOptions,
-                                        SERVER_CONNECTION_PRIORITY_HIGH,
-                                        NULL  // archiveName
+                                        SERVER_CONNECTION_PRIORITY_HIGH
                                        );
       if (error == ERROR_NONE)
       {

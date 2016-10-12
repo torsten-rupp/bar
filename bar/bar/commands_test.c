@@ -1866,9 +1866,9 @@ Errors Command_test(const StringList    *storageNameList,
     {
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
+                                        NULL,  // archiveName
                                         jobOptions,
-                                        SERVER_CONNECTION_PRIORITY_HIGH,
-                                        NULL  // archiveName
+                                        SERVER_CONNECTION_PRIORITY_HIGH
                                        );
       if (error == ERROR_NONE)
       {

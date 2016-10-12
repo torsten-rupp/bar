@@ -280,9 +280,9 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     //open directory list
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                       &storageSpecifier,
+                                      NULL,  // archiveName
                                       &jobOptions,
-                                      SERVER_CONNECTION_PRIORITY_LOW,
-                                      NULL  // archiveName
+                                      SERVER_CONNECTION_PRIORITY_LOW
                                      );
     if (error == ERROR_NONE)
     {
@@ -417,9 +417,9 @@ UNUSED_VARIABLE(id);
     //open directory list
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                       &storageSpecifier,
+                                      NULL,  // archiveName
                                       &jobOptions,
-                                      SERVER_CONNECTION_PRIORITY_LOW,
-                                      NULL  // archiveName
+                                      SERVER_CONNECTION_PRIORITY_LOW
                                      );
     if (error == ERROR_NONE)
     {
