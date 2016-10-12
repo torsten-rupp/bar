@@ -4606,9 +4606,9 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
   {
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
-                             "SELECT IFNULL(uuids.id,0) \
+                             "SELECT IFNULL(uuids.id,0), \
                                      entities.jobUUID, \
-                                     IFNULL(entities.id,0) \
+                                     IFNULL(entities.id,0), \
                                      storage.id, \
                                      entities.scheduleUUID, \
                                      storage.name, \
