@@ -5539,158 +5539,161 @@ LOCAL void indexThreadCode(void)
     pauseIndexUpdate();
     if (quitFlag) break;
 
-    // get all job crypt passwords and crypt private keys (including no password and default crypt password)
-    addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
-    addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    if (Index_isInitialized())
     {
-      LIST_ITERATE(&jobList,jobNode)
+      // get all job crypt passwords and crypt private keys (including no password and default crypt password)
+      addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
+      addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
-        if (jobNode->jobOptions.cryptPassword != NULL)
+        LIST_ITERATE(&jobList,jobNode)
         {
-          addIndexCryptPasswordNode(&indexCryptPasswordList,jobNode->jobOptions.cryptPassword,jobNode->jobOptions.cryptPrivateKeyFileName);
+          if (jobNode->jobOptions.cryptPassword != NULL)
+          {
+            addIndexCryptPasswordNode(&indexCryptPasswordList,jobNode->jobOptions.cryptPassword,jobNode->jobOptions.cryptPrivateKeyFileName);
+          }
         }
       }
-    }
 
-    // update index entries
-    while (   !quitFlag
-           && Index_findStorageByState(indexHandle,
-                                       INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
-                                       NULL,  // uuidId
-                                       NULL,  // jobUUID
-                                       NULL,  // entityId
-                                       NULL,  // scheduleUUID
-                                       &storageId,
-                                       storageName,
-                                       NULL,  // createdDateTime
-                                       NULL,  // size
-                                       NULL,  // indexMode
-                                       NULL,  // lastCheckedDateTime
-                                       NULL,  // errorMessage
-                                       NULL,  // totalEntryCount
-                                       NULL  // totalEntrySize
-                                      )
-          )
-    {
-      // pause
-      pauseIndexUpdate();
-      if (quitFlag) break;
+      // update index entries
+      while (   !quitFlag
+             && Index_findStorageByState(indexHandle,
+                                         INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
+                                         NULL,  // uuidId
+                                         NULL,  // jobUUID
+                                         NULL,  // entityId
+                                         NULL,  // scheduleUUID
+                                         &storageId,
+                                         storageName,
+                                         NULL,  // createdDateTime
+                                         NULL,  // size
+                                         NULL,  // indexMode
+                                         NULL,  // lastCheckedDateTime
+                                         NULL,  // errorMessage
+                                         NULL,  // totalEntryCount
+                                         NULL  // totalEntrySize
+                                        )
+            )
+      {
+        // pause
+        pauseIndexUpdate();
+        if (quitFlag) break;
 
-      // parse storage name, get printable name
-      error = Storage_parseName(&storageSpecifier,storageName);
-      if (error == ERROR_NONE)
-      {
-        String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
-      }
-      else
-      {
-        String_set(printableStorageName,storageName);
-      }
+        // parse storage name, get printable name
+        error = Storage_parseName(&storageSpecifier,storageName);
+        if (error == ERROR_NONE)
+        {
+          String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+        }
+        else
+        {
+          String_set(printableStorageName,storageName);
+        }
 //fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,String_cString(storageSpecifier.fileName));
 
-      // init storage
-      startTimestamp = 0LL;
-      endTimestamp   = 0LL;
-      initJobOptions(&jobOptions);
-      error = Storage_init(&storageHandle,
-                           &storageSpecifier,
-                           &jobOptions,
-                           &globalOptions.indexDatabaseMaxBandWidthList,
-                           SERVER_CONNECTION_PRIORITY_LOW,
-                           CALLBACK(NULL,NULL),  // updateStatusInfo
-                           CALLBACK(NULL,NULL),  // getPassword
-                           CALLBACK(NULL,NULL)  // requestVolume
-                          );
-      if (error == ERROR_NONE)
-      {
-        // try to create index
-        LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
+        // init storage
+        startTimestamp = 0LL;
+        endTimestamp   = 0LL;
+        initJobOptions(&jobOptions);
+        error = Storage_init(&storageHandle,
+                             &storageSpecifier,
+                             &jobOptions,
+                             &globalOptions.indexDatabaseMaxBandWidthList,
+                             SERVER_CONNECTION_PRIORITY_LOW,
+                             CALLBACK(NULL,NULL),  // updateStatusInfo
+                             CALLBACK(NULL,NULL),  // getPassword
+                             CALLBACK(NULL,NULL)  // requestVolume
+                            );
+        if (error == ERROR_NONE)
         {
-          // index update
+          // try to create index
+          LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
+          {
+            // index update
 //TODO
 #ifndef WERROR
 #warning todo init?
 #endif
-          startTimestamp = Misc_getTimestamp();
-          jobOptions.cryptPassword           = Password_duplicate(indexCryptPasswordNode->cryptPassword);
-          jobOptions.cryptPrivateKeyFileName = String_duplicate(indexCryptPasswordNode->cryptPrivateKeyFileName);
-          error = Archive_updateIndex(indexHandle,
-                                      storageId,
-                                      &storageHandle,
-                                      storageName,
-                                      &jobOptions,
-                                      &totalTimeLastChanged,
-                                      &totalEntryCount,
-                                      &totalEntrySize,
-                                      CALLBACK(indexPauseCallback,NULL),
-                                      CALLBACK(indexAbortCallback,NULL),
-                                      NULL  // logHandle
-                                     );
-          endTimestamp = Misc_getTimestamp();
+            startTimestamp = Misc_getTimestamp();
+            jobOptions.cryptPassword           = Password_duplicate(indexCryptPasswordNode->cryptPassword);
+            jobOptions.cryptPrivateKeyFileName = String_duplicate(indexCryptPasswordNode->cryptPrivateKeyFileName);
+            error = Archive_updateIndex(indexHandle,
+                                        storageId,
+                                        &storageHandle,
+                                        storageName,
+                                        &jobOptions,
+                                        &totalTimeLastChanged,
+                                        &totalEntryCount,
+                                        &totalEntrySize,
+                                        CALLBACK(indexPauseCallback,NULL),
+                                        CALLBACK(indexAbortCallback,NULL),
+                                        NULL  // logHandle
+                                       );
+            endTimestamp = Misc_getTimestamp();
 
-          // stop if done, interrupted, or quit
-          if (   (error == ERROR_NONE)
-              || (Error_getCode(error) == ERROR_INTERRUPTED)
-              || quitFlag
-             )
-          {
-            break;
+            // stop if done, interrupted, or quit
+            if (   (error == ERROR_NONE)
+                || (Error_getCode(error) == ERROR_INTERRUPTED)
+                || quitFlag
+               )
+            {
+              break;
+            }
           }
-        }
 
-        // done storage
-        (void)Storage_done(&storageHandle);
-      }
-      else
-      {
-        Index_setState(indexHandle,
-                       storageId,
-                       INDEX_STATE_ERROR,
-                       0LL,
-                       "Cannot initialise storage (error: %s)",
-                       Error_getText(error)
-                      );
-      }
-      doneJobOptions(&jobOptions);
-
-      if (!quitFlag)
-      {
-        if (error == ERROR_NONE)
-        {
-          plogMessage(NULL,  // logHandle,
-                      LOG_TYPE_INDEX,
-                      "INDEX",
-                      "Created index for '%s', %llu entries/%.1f%s (%llu bytes), %lus\n",
-                      String_cString(printableStorageName),
-                      totalEntryCount,
-                      BYTES_SHORT(totalEntrySize),
-                      BYTES_UNIT(totalEntrySize),
-                      totalEntrySize,
-                      (endTimestamp-startTimestamp)/US_PER_SECOND
-                     );
-        }
-        else if (Error_getCode(error) == ERROR_INTERRUPTED)
-        {
-          // nothing to do
+          // done storage
+          (void)Storage_done(&storageHandle);
         }
         else
         {
-          plogMessage(NULL,  // logHandle,
-                      LOG_TYPE_INDEX,
-                      "INDEX",
-                      "Cannot create index for '%s' (error: %s)\n",
-                      String_cString(printableStorageName),
-                      Error_getText(error)
-                     );
+          Index_setState(indexHandle,
+                         storageId,
+                         INDEX_STATE_ERROR,
+                         0LL,
+                         "Cannot initialise storage (error: %s)",
+                         Error_getText(error)
+                        );
+        }
+        doneJobOptions(&jobOptions);
+
+        if (!quitFlag)
+        {
+          if (error == ERROR_NONE)
+          {
+            plogMessage(NULL,  // logHandle,
+                        LOG_TYPE_INDEX,
+                        "INDEX",
+                        "Created index for '%s', %llu entries/%.1f%s (%llu bytes), %lus\n",
+                        String_cString(printableStorageName),
+                        totalEntryCount,
+                        BYTES_SHORT(totalEntrySize),
+                        BYTES_UNIT(totalEntrySize),
+                        totalEntrySize,
+                        (endTimestamp-startTimestamp)/US_PER_SECOND
+                       );
+          }
+          else if (Error_getCode(error) == ERROR_INTERRUPTED)
+          {
+            // nothing to do
+          }
+          else
+          {
+            plogMessage(NULL,  // logHandle,
+                        LOG_TYPE_INDEX,
+                        "INDEX",
+                        "Cannot create index for '%s' (error: %s)\n",
+                        String_cString(printableStorageName),
+                        Error_getText(error)
+                       );
+          }
         }
       }
+
+      // free resources
+      List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
     }
 
-    // free resources
-    List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
-
-    // sleep, check quit flag
+    // sleep
     delayIndexThread();
   }
 
