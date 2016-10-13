@@ -791,6 +791,10 @@ class ReadThread extends Thread
                       if (!data.isEmpty())
                       {
                         command.result.add(data);
+                        if (command.result.size() > 4096)
+                        {
+                          if (Settings.debugLevel > 0) System.err.println("Network: received more than "+command.result.size()+" results");
+                        }
                       }
                       command.setErrorCode(Errors.NONE);
                     }
@@ -912,6 +916,10 @@ class ReadThread extends Thread
       {
         command = new Command(commandString,debugLevel,timeout,resultHandler,handler);
         commandHashMap.put(command.id,command);
+        if (commandHashMap.size() > 256)
+        {
+          if (Settings.debugLevel > 0) System.err.println("Network: more than "+command.result.size()+" commands");
+        }
         commandHashMap.notifyAll();
       }
       else
