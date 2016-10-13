@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2016-10-13 08:58+0200\n"
-"PO-Revision-Date: 2016-09-30 14:52+0100\n"
+"PO-Revision-Date: 2016-10-13 09:04+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: DE\n"
@@ -108,28 +108,28 @@ msgstr "Sekunden"
 
 #: src/BARControl.java:1082
 msgid "hour"
-msgstr ""
+msgstr "Stunde"
 
 #: src/BARControl.java:1083
 msgid "hours"
-msgstr ""
+msgstr "Stunden"
 
 #: src/BARControl.java:1084
 msgid "m"
-msgstr ""
+msgstr "Minute"
 
 #: src/BARControl.java:1086 src/BARWidgets.java:761 src/BARWidgets.java:802
 #: src/BARWidgets.java:852
 msgid "mins"
-msgstr ""
+msgstr "Minuten"
 
 #: src/BARControl.java:1088
 msgid "second"
-msgstr ""
+msgstr "Sekunde"
 
 #: src/BARControl.java:1089
 msgid "seconds"
-msgstr ""
+msgstr "Sekunden"
 
 #: src/BARControl.java:1800
 msgid "Login BAR server"
@@ -2232,7 +2232,7 @@ msgstr ""
 
 #: src/TabJobs.java:7451
 msgid "blank medium"
-msgstr ""
+msgstr "Medium löschen"
 
 #: src/TabJobs.java:7452
 msgid "Blank medium before writing."
@@ -2934,7 +2934,7 @@ msgstr "Letzter Fehler"
 #: src/TabStatus.java:2519
 #, java-format
 msgid "{0}"
-msgstr ""
+msgstr "{0}"
 
 #: src/TabRestore.java:4130 src/TabRestore.java:4272 src/TabRestore.java:4424
 #: src/TabRestore.java:4601
@@ -3886,7 +3886,7 @@ msgstr "Anhalten"
 #: src/TabStatus.java:2049
 #, java-format
 msgid "Please insert volume #{0}"
-msgstr ""
+msgstr "Bitte Medium {0} einlegen"
 
 #: src/TabStatus.java:2053
 #, java-format
@@ -4016,9 +4016,9 @@ msgid "Storages"
 msgstr "Sicherungen"
 
 #: src/TabStatus.java:2483 src/TabStatus.java:2499
-#, fuzzy, java-format
+#, java-format
 msgid "{0} ({1} bytes)"
-msgstr "{0} Einträge/{1} ({2} bytes)"
+msgstr "{0} ({1} bytes)"
 
 #: src/TabStatus.java:2515
 msgid "Execution count"
