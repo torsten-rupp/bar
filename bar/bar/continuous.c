@@ -148,6 +148,15 @@ LOCAL bool           quitFlag;
 #ifndef NDEBUG
 //TODO
 #ifndef WERROR
+/***********************************************************************\
+* Name   : printNotifies
+* Purpose: print notifies
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void printNotifies(void)
 {
   SemaphoreLock      semaphoreLock;
