@@ -78,10 +78,10 @@ typedef enum
 /***************************** Datatypes *******************************/
 
 // database handle
-typedef struct
+typedef struct DatabaseHandle
 {
   #ifndef NDEBUG
-    LIST_NODE_HEADER(struct DatabaseHandleNode);
+    LIST_NODE_HEADER(struct DatabaseHandle);
   #endif /* not NDEBUG */
 
   uint          priority;                   // access priority

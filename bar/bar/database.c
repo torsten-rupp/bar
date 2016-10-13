@@ -4569,8 +4569,7 @@ void Database_debugEnable(bool enabled)
 
 void Database_debugPrintInfo(void)
 {
-  const DatabaseHandle *databaseHandle;
-  uint                 i;
+  DatabaseHandle *databaseHandle;
 
   pthread_once(&debugDatabaseInitFlag,debugDatabaseInit);
 
@@ -4582,7 +4581,7 @@ void Database_debugPrintInfo(void)
       LIST_ITERATE(&debugDatabaseHandleList,databaseHandle)
       {
         fprintf(stderr,"  '%s' (%s, line %lu):\n",databaseHandle->name,databaseHandle->fileName,databaseHandle->lineNb);
-        if (databaseHandle->locked.threadId != THREAD_ID_NONE)
+        if (!Thread_equalThreads(databaseHandle->locked.threadId,THREAD_ID_NONE))
         {
           fprintf(stderr,
                   "    locked by thread '%s' at %s, %u\n",
@@ -4591,7 +4590,7 @@ void Database_debugPrintInfo(void)
                   databaseHandle->locked.lineNb
                  );
         }
-        if (databaseHandle->transaction.threadId != THREAD_ID_NONE)
+        if (Thread_equalThreads(databaseHandle->transaction.threadId,THREAD_ID_NONE))
         {
           fprintf(stderr,
                   "    Thread '%s' started transaction at %s, %u\n",

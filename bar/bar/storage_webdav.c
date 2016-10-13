@@ -2270,6 +2270,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
   assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
   assert(!String_isEmpty(archiveName));
 
+  UNUSED_VARIABLE(storageSpecifier);
   #if defined(HAVE_CURL) && defined(HAVE_MXML)
     UNUSED_VARIABLE(serverConnectionPriority);
   #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */

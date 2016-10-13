@@ -3395,6 +3395,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
   assert(storageSpecifier->type == STORAGE_TYPE_FTP);
   assert(!String_isEmpty(archiveName));
 
+  UNUSED_VARIABLE(storageSpecifier);
   #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && (!defined(HAVE_CURL) || !defined(HAVE_MXML))
     UNUSED_VARIABLE(serverConnectionPriority);
   #endif

@@ -1578,6 +1578,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
   assert(storageSpecifier->type == STORAGE_TYPE_SFTP);
   assert(!String_isEmpty(archiveName));
 
+  UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(serverConnectionPriority);
 
   #ifdef HAVE_SSH2
