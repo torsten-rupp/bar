@@ -2464,7 +2464,7 @@ public class TabStatus
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,Long.toString(totalEntityCount));
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("{0}",totalEntityCount));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -2474,13 +2474,13 @@ public class TabStatus
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,Long.toString(totalStorageCount));
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("{0}",totalStorageCount));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
-    label = Widgets.newLabel(widgetJobTableToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(totalStorageSize),totalStorageSize));
+    label = Widgets.newLabel(widgetJobTableToolTip,String.format(BARControl.tr("{0} ({1} bytes)",Units.formatByteSize(totalStorageSize),totalStorageSize)));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -2490,13 +2490,13 @@ public class TabStatus
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,Long.toString(totalEntryCount));
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("{0}",totalEntryCount));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
-    label = Widgets.newLabel(widgetJobTableToolTip,String.format(BARControl.tr("%s (%d bytes)"),Units.formatByteSize(totalEntrySize),totalEntrySize));
+    label = Widgets.newLabel(widgetJobTableToolTip,String.format(BARControl.tr("{0} ({1} bytes)",Units.formatByteSize(totalEntrySize),totalEntrySize)));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -2516,7 +2516,7 @@ public class TabStatus
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
-    label = Widgets.newLabel(widgetJobTableToolTip,Long.toString(executionCount));
+    label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("{0}",executionCount));
     label.setForeground(COLOR_FORGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);

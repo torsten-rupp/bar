@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-10-11 12:15+0200\n"
+"POT-Creation-Date: 2016-10-13 08:58+0200\n"
 "PO-Revision-Date: 2016-09-30 14:52+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2929,6 +2929,13 @@ msgstr "Letzte Ausführung"
 msgid "Last error"
 msgstr "Letzter Fehler"
 
+#: src/TabRestore.java:4120 src/TabRestore.java:4262 src/TabRestore.java:4414
+#: src/TabStatus.java:2467 src/TabStatus.java:2477 src/TabStatus.java:2493
+#: src/TabStatus.java:2519
+#, java-format
+msgid "{0}"
+msgstr ""
+
 #: src/TabRestore.java:4130 src/TabRestore.java:4272 src/TabRestore.java:4424
 #: src/TabRestore.java:4601
 #, java-format
@@ -4009,8 +4016,9 @@ msgid "Storages"
 msgstr "Sicherungen"
 
 #: src/TabStatus.java:2483 src/TabStatus.java:2499
-msgid "%s (%d bytes)"
-msgstr "%s (%d Bytes)"
+#, fuzzy, java-format
+msgid "{0} ({1} bytes)"
+msgstr "{0} Einträge/{1} ({2} bytes)"
 
 #: src/TabStatus.java:2515
 msgid "Execution count"
@@ -4019,6 +4027,9 @@ msgstr "Anzahl Ausführungen"
 #: src/TabStatus.java:2525
 msgid "Average execution time"
 msgstr "Durchschnittliche Ausführungszeit"
+
+#~ msgid "%s (%d bytes)"
+#~ msgstr "%s (%d Bytes)"
 
 #~ msgid "Verbosity && Log"
 #~ msgstr "Detailierungsgrad und Logging"
@@ -4061,9 +4072,6 @@ msgstr "Durchschnittliche Ausführungszeit"
 
 #~ msgid "{0} ({1} {2,choice,0#bytes|1#byte|1<bytes})"
 #~ msgstr "{0} ({1} {2,choice,0#Bytes|1#Byte|1<Bytes})"
-
-#~ msgid "{0} entries/{1} ({2} bytes)"
-#~ msgstr "{0} Einträge/{1} ({2} bytes)"
 
 #~ msgid "Refresh index for {0} {0,choice,0#entries|1#entry|1<entries}?"
 #~ msgstr "{0} {0,choice,0#Indizes|1#Index|1<Indizes} neu erstellen?"

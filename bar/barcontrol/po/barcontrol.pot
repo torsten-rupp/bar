@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-10-11 15:44+0200\n"
+"POT-Creation-Date: 2016-10-13 08:59+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2675,6 +2675,13 @@ msgstr ""
 msgid "Last error"
 msgstr ""
 
+#: src/TabRestore.java:4120 src/TabRestore.java:4262 src/TabRestore.java:4414
+#: src/TabStatus.java:2467 src/TabStatus.java:2477 src/TabStatus.java:2493
+#: src/TabStatus.java:2519
+#, java-format
+msgid "{0}"
+msgstr ""
+
 #: src/TabRestore.java:4130 src/TabRestore.java:4272 src/TabRestore.java:4424
 #: src/TabRestore.java:4601
 #, java-format
@@ -3631,7 +3638,8 @@ msgid "Storages"
 msgstr ""
 
 #: src/TabStatus.java:2483 src/TabStatus.java:2499
-msgid "%s (%d bytes)"
+#, java-format
+msgid "{0} ({1} bytes)"
 msgstr ""
 
 #: src/TabStatus.java:2515
