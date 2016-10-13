@@ -2063,7 +2063,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Clean-u %lu duplicate indizes\n",
+                "Clean-up %lu duplicate indizes\n",
                 n
                );
   }
