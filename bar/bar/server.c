@@ -342,9 +342,9 @@ typedef struct AuthorizationFailNode
 {
   LIST_NODE_HEADER(struct AuthorizationFailNode);
 
-  String clientName;
-  uint   count;
-  uint64 lastTimestamp;
+  String clientName;                                    // client name
+  uint   count;                                         // number of authentification failures
+  uint64 lastTimestamp;                                 // timestamp last failture [us]
 } AuthorizationFailNode;
 
 // authorization fail list
@@ -18337,7 +18337,7 @@ LOCAL void freeAuthorizationFailNode(AuthorizationFailNode *authorizationFailNod
 }
 
 /***********************************************************************\
-* Name   : getAuthorizationFailNode
+* Name   : newAuthorizationFailNode
 * Purpose: new authorazation fail node
 * Input  : clientName - client name
 * Output : -
@@ -18505,7 +18505,7 @@ Errors Server_run(uint              port,
   uint                  maxPollfdCount;
   uint                  pollfdCount;
   uint                  pollServerSocketIndex,pollServerTLSSocketIndex;
-  uint64                nowTimestamp,waitTimeout,nextTimestamp;
+  uint64                nowTimestamp,waitTimeout,nextTimestamp;  // [us]
   bool                  clientOkFlag;
   struct timespec       pollTimeout;
   AuthorizationFailNode *authorizationFailNode,*oldestAuthorizationFailNode;
@@ -18798,7 +18798,7 @@ Errors Server_run(uint              port,
       // check if client should be served now
       if (clientNode->clientInfo.authorizationFailNode != NULL)
       {
-        nextTimestamp = clientNode->clientInfo.authorizationFailNode->lastTimestamp+(uint64)SQUARE(clientNode->clientInfo.authorizationFailNode->count)*(uint64)AUTHORIZATION_PENALITY_TIME*1000LL;
+        nextTimestamp = clientNode->clientInfo.authorizationFailNode->lastTimestamp+(uint64)SQUARE(clientNode->clientInfo.authorizationFailNode->count)*(uint64)AUTHORIZATION_PENALITY_TIME*US_PER_MS;
         if (nowTimestamp <= nextTimestamp)
         {
           clientOkFlag = FALSE;
@@ -18823,8 +18823,8 @@ Errors Server_run(uint              port,
         pollfdCount++;
       }
     }
-    pollTimeout.tv_sec  = (long)(waitTimeout / 1000000LL);
-    pollTimeout.tv_nsec = (long)((waitTimeout % 1000000LL) * 1000LL);
+    pollTimeout.tv_sec  = (long)(waitTimeout /US_PER_SECOND);
+    pollTimeout.tv_nsec = (long)((waitTimeout%US_PER_SECOND)*1000LL);
     (void)ppoll(pollfds,pollfdCount,&pollTimeout,&signalMask);
 
     // connect new clients
@@ -18974,18 +18974,16 @@ Errors Server_run(uint              port,
                 case AUTHORIZATION_STATE_WAITING:
                   break;
                 case AUTHORIZATION_STATE_OK:
-                  // remove from authorization fail list
+                  // reset authorization failure
                   authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
                   if (authorizationFailNode != NULL)
                   {
-                    List_removeAndFree(&authorizationFailList,
-                                       authorizationFailNode,
-                                       CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
-                                      );
+                    authorizationFailNode->count = 0;
+                    authorizationFailNode->lastTimestamp = Misc_getTimestamp();
                   }
                   break;
                 case AUTHORIZATION_STATE_FAIL:
-                  // add to/update authorization fail list
+                  // add to/update authorization failure list
                   authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
                   if (authorizationFailNode == NULL)
                   {
@@ -19015,17 +19013,12 @@ Errors Server_run(uint              port,
               case AUTHORIZATION_STATE_WAITING:
                 break;
               case AUTHORIZATION_STATE_OK:
-                // remove from authorization fail list
-#ifndef WERROR
-#warning ERRRORRRRRR: two clients from same host, then disconnect: node is deleted twice
-#endif
+                // reset authorization failure
                 authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
                 if (authorizationFailNode != NULL)
                 {
-                  List_removeAndFree(&authorizationFailList,
-                                     authorizationFailNode,
-                                     CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
-                                    );
+                  authorizationFailNode->count = 0;
+                  authorizationFailNode->lastTimestamp = Misc_getTimestamp();
                 }
                 break;
               case AUTHORIZATION_STATE_FAIL:
@@ -19088,7 +19081,7 @@ Errors Server_run(uint              port,
     authorizationFailNode = authorizationFailList.head;
     while (authorizationFailNode != NULL)
     {
-      // find active client
+      // find client
       clientNode = LIST_FIND(&clientList,
                              clientNode,
                              clientNode->clientInfo.authorizationFailNode == authorizationFailNode
@@ -19096,7 +19089,7 @@ Errors Server_run(uint              port,
 
       // check if authorization fail timed out for not active clients
       if (   (clientNode == NULL)
-          && (nowTimestamp > (authorizationFailNode->lastTimestamp+(uint64)MAX_AUTHORIZATION_HISTORY_KEEP_TIME*1000LL))
+          && (nowTimestamp > (authorizationFailNode->lastTimestamp+(uint64)MAX_AUTHORIZATION_HISTORY_KEEP_TIME*US_PER_MS))
          )
       {
         authorizationFailNode = List_removeAndFree(&authorizationFailList,
@@ -19117,11 +19110,11 @@ Errors Server_run(uint              port,
       oldestAuthorizationFailNode = authorizationFailList.head;
       LIST_ITERATE(&authorizationFailList,authorizationFailNode)
       {
-        // find active client
-        LIST_ITERATE(&clientList,clientNode)
-        {
-          if (clientNode->clientInfo.authorizationFailNode == authorizationFailNode) break;
-        }
+        // find client
+        clientNode = LIST_FIND(&clientList,
+                               clientNode,
+                               clientNode->clientInfo.authorizationFailNode == authorizationFailNode
+                              );
 
         // get oldest not active client
         if (   (clientNode == NULL)
