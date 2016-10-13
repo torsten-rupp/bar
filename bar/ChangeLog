@@ -1,4 +1,4 @@
-2016-10-08 0.20
+2016-10-13 0.20
   * fixed max. size for LZO/LZ4 compression when block cannot
     be compressed
   * TLS port is now optional: if possible as SSL protected
@@ -63,8 +63,9 @@
   * BARControl: added abort to load volume dialog
   * BARControl: renamed option --index-database-storage-list
     -> --index-database-storages-list, added option
-    --index-database-entities-list
-
+    --index-database-entities-list  
+  * fixed crash with multiple connections from same host
+    and authetification failure
 
 2016-01-09 0.19d
   * fixed include of multiple entries with pattern: store

@@ -189,7 +189,7 @@ export NO_BRP_CHECK_BYTECODE_VERSION=true
 %doc %{_mandir}/man7/bar.7.gz
 
 %changelog
-* Sat Oct 08 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20
+* Thu Oct 13 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20
   - fixed max. size for LZO/LZ4 compression when block cannot
     be compressed
   - TLS port is now optional: if possible as SSL protected
@@ -254,7 +254,9 @@ export NO_BRP_CHECK_BYTECODE_VERSION=true
   - BARControl: added abort to load volume dialog
   - BARControl: renamed option --index-database-storage-list
     -> --index-database-storages-list, added option
-    --index-database-entities-list
+    --index-database-entities-list  
+  - fixed crash with multiple connections from same host
+    and authetification failure
 
 * Sat Jan 09 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.19d
   - fixed include of multiple entries with pattern: store
