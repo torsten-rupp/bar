@@ -198,10 +198,14 @@ systemctl disable barserver.service 1>/dev/null 2>/dev/null
 
 %changelog
 * Thu Oct 13 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20
-  - fixed max. size for LZO/LZ4 compression when block cannot
-    be compressed
+  - added (semi-) continuous backup of changed files
+  - new index database with much better performance
+  - support full-text-search in index database
+  - started basic support of remote jobs
+  - BARControl: added dialog for major server settings;
+    support on-the-fly changes
   - TLS port is now optional: if possible as SSL protected
-    connection is establed via the standard plain port, too.
+    connection is establed via the standard plain port
   - added option --archive-file-mode: stop, append or
     override; removed configurationm option
     overwrite-archive-files (deprecated)
@@ -213,12 +217,9 @@ systemctl disable barserver.service 1>/dev/null 2>/dev/null
   - BARControl: added unit TByte/TB
   - added option --log-format for log date format, standard
     log date format is now YYYY-MM-DD hh:mm:ss
-  - fixed clean-up duplicate database entries: delete
-    storage index
   - improved delete database entries
   - separate log for each executed job
   - removed macro %%last for archive names
-  - support full-text-search in database
   - BARControl: removed "connector" button in restore tab;
     search is automatically filtered by selected entities,
   - BARControl: new restore dialog with list, destination
@@ -232,39 +233,42 @@ systemctl disable barserver.service 1>/dev/null 2>/dev/null
     include-image-command, exclude-command
   - add job option comment: free text comment
   - added code-coverage analysis to build process
-  - improved database access
   - moved database file /usr/lib/bar -> /var/lib/bar
   - change option: --stop-on-error -> --no-stop-on-error,
     --stop-on-error is now deprecated
-  - webDAV: fixed race condition in receive data
   - create temporary log file in system temporary directory
-  - upgrade libssh2: 1.7.0
-  - fixed possible dead-lock when a specific error
-    occurred while executing a job
-  - fixed possible wrong error text
   - improved parsing configuration files: reject unknown
     values
-  - fixed init script on CentOS
   - added option --server-max-connections: limit max.
     number of concurrent server connections, default 8
   - BARControl: added option --force-ssl
-  - Upgrade bzip2 to 1.0.6
+  - upgrade libssh2: 1.7.0
+  - upgrade bzip2: 1.0.6
   - added bar-sqlite3 tool
   - added logrotate script, support for log rotate
+  - added options --blank, --(cd|dvd|bd|device)-blank to
+    blank medium before writing
+  - BARControl: added abort to load volume dialog
+  - BARControl: renamed option --index-database-storage-list
+    -> --index-database-storages-list, added option
+    --index-database-entities-list
+  - fixed crash with multiple connections from same host
+    and authetification failure
+  - fixed max. size for LZO/LZ4 compression when block cannot
+    be compressed
+  - fixed init script on CentOS
+  - fixed possible wrong error text
+  - fixed possible dead-lock when a specific error
+    occurred while executing a job
+  - fixed clean-up duplicate database entries: delete
+    storage index
+  - webDAV: fixed race condition in receive data
   - fixed auto-index: search for .bar files
   - BARControl: fixed login credentials on command line
   - BARControl: fixed archive name editor %%S, %%s, _
   - fixed storage of splitted hardlink-entries!
   - fixed abort when there is an error when writing
     a CD/DVD/BD
-  - added options --blank, --(cd|dvd|bd|device)-blank to
-    blank medium before writing
-  - BARControl: added abort to load volume dialog
-  - BARControl: renamed option --index-database-storage-list
-    -> --index-database-storages-list, added option
-    --index-database-entities-list  
-  - fixed crash with multiple connections from same host
-    and authetification failure
 
 * Sat Jan 09 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.19d
   - fixed include of multiple entries with pattern: store
