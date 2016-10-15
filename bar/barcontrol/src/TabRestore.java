@@ -6571,26 +6571,29 @@ Dprintf.dprintf("remove");
   private HashSet<IndexData> getSelectedIndexData()
   {
     HashSet<IndexData> indexDataHashSet = new HashSet<IndexData>();
+    IndexData          indexData;
 
     switch (widgetStorageTabFolder.getSelectionIndex())
     {
       case 0:
         // tree view
-        IndexData indexData;
         for (TreeItem treeItem : widgetStorageTree.getSelection())
         {
           indexData = (IndexData)treeItem.getData();
-
-          indexDataHashSet.add(indexData);
-
-          if      (indexData instanceof UUIDIndexData)
+          if (indexData != null)
           {
+            indexDataHashSet.add(indexData);
           }
-          else if (indexData instanceof EntityIndexData)
+        }
+        for (TreeItem treeItem : Widgets.getAllTreeItems(widgetStorageTree))
+        {
+          if (treeItem.getChecked())
           {
-          }
-          else if (indexData instanceof StorageIndexData)
-          {
+            indexData = (IndexData)treeItem.getData();
+            if (indexData != null)
+            {
+              indexDataHashSet.add(indexData);
+            }
           }
         }
         break;
@@ -6598,10 +6601,21 @@ Dprintf.dprintf("remove");
         // table view
         for (TableItem tableItem : widgetStorageTable.getSelection())
         {
-          StorageIndexData storageIndexData = (StorageIndexData)tableItem.getData();
-          if ((storageIndexData != null) && !tableItem.getGrayed())
+          indexData = (IndexData)tableItem.getData();
+          if ((indexData != null) && !tableItem.getGrayed())
           {
-            indexDataHashSet.add(storageIndexData);
+            indexDataHashSet.add(indexData);
+          }
+        }
+        for (TableItem tableItem : widgetStorageTable.getItems())
+        {
+          if (tableItem.getChecked())
+          {
+            indexData = (IndexData)tableItem.getData();
+            if ((indexData != null) && !tableItem.getGrayed())
+            {
+              indexDataHashSet.add(indexData);
+            }
           }
         }
         break;
@@ -6974,6 +6988,7 @@ Dprintf.dprintf("remove");
         String[] errorMessage = new String[1];
         ValueMap valueMap     = new ValueMap();
 
+Dprintf.dprintf("indexDataHashSet=%d",indexDataHashSet.size());
         error = BARServer.executeCommand(StringParser.format("INDEX_ENTITY_ADD jobUUID=%'S scheduleUUID=%'S archiveType=%s createdDateTime=%ld",
                                                              toJobUUID,
                                                              (toScheduleUUID != null) ? toScheduleUUID : "",
