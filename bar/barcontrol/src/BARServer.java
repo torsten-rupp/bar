@@ -793,7 +793,7 @@ class ReadThread extends Thread
                         command.result.add(data);
                         if (command.result.size() > 4096)
                         {
-                          if (Settings.debugLevel > 0) System.err.println("Network: received more than "+command.result.size()+" results");
+                          if (Settings.debugLevel > 0) System.err.println("Network: received "+command.result.size()+" results");
                         }
                       }
                       command.setErrorCode(Errors.NONE);
@@ -918,7 +918,7 @@ class ReadThread extends Thread
         commandHashMap.put(command.id,command);
         if (commandHashMap.size() > 256)
         {
-          if (Settings.debugLevel > 0) System.err.println("Network: more than "+command.result.size()+" commands");
+          if (Settings.debugLevel > 0) System.err.println("Network: warning "+commandHashMap.size()+" commands");
         }
         commandHashMap.notifyAll();
       }
@@ -1584,9 +1584,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   static void abortCommand(Command command)
   {
-    // send abort command to command
+    // send abort for command
     executeCommand(StringParser.format("ABORT commandId=%d",command.id),0);
-    readThread.commandRemove(command);
+    removeCommand(command);
 
     // set error aborted
     command.setError(Errors.ABORTED,"aborted");
@@ -1600,9 +1600,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   static void timeoutCommand(Command command)
   {
-    // send abort command to command
+    // send abort for command
     executeCommand(StringParser.format("ABORT commandId=%d",command.id),0);
-    readThread.commandRemove(command);
+    removeCommand(command);
 
     // set error timeout
     command.setError(Errors.NETWORK_TIMEOUT,"timeout");
@@ -1773,6 +1773,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
     if (command.isAborted())
     {
+      removeCommand(command);
       return Errors.ABORTED;
     }
 
@@ -1789,13 +1790,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
     if (errorMessage != null) errorMessage[0] = command.getErrorMessage();
 
-    synchronized(lock)
-    {
-      if (readThread != null)
-      {
-        readThread.commandRemove(command);
-      }
-    }
+    removeCommand(command);
 
     return command.getErrorCode();
   }
@@ -3529,6 +3524,20 @@ throw new Error("NYI");
     throws IOException
   {
     return syncExecuteCommand(commandString,(String[])null);
+  }
+
+  /** remove command
+   * @param command command
+   */
+  public static void removeCommand(Command command)
+  {
+    synchronized(lock)
+    {
+      if (readThread != null)
+      {
+        readThread.commandRemove(command);
+      }
+    }
   }
 }
 
