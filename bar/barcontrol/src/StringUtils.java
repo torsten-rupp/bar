@@ -1254,22 +1254,25 @@ public class StringUtils
    */
   public static Enum parseEnum(Class enumClass, String string)
   {
-    int n;
-    try
+    if (string != null)
     {
-      n = Integer.parseInt(string);
-    }
-    catch (NumberFormatException exception)
-    {
-      n = -1;
-    }
-    for (Enum enumConstant : (Enum[])enumClass.getEnumConstants())
-    {
-      if (   string.equalsIgnoreCase(enumConstant.toString())
-          || (enumConstant.ordinal() == n)
-         )
+      int n;
+      try
       {
-        return enumConstant;
+        n = Integer.parseInt(string);
+      }
+      catch (NumberFormatException exception)
+      {
+        n = -1;
+      }
+      for (Enum enumConstant : (Enum[])enumClass.getEnumConstants())
+      {
+        if (   string.equalsIgnoreCase(enumConstant.toString())
+            || (enumConstant.ordinal() == n)
+           )
+        {
+          return enumConstant;
+        }
       }
     }
 
