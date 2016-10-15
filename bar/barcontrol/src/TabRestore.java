@@ -2601,8 +2601,6 @@ Dprintf.dprintf("cirrect?");
           {
             for (TreeItem treeItem : removeStorageTreeItemSet)
             {
-              Widgets.removeTreeItem(widgetStorageTree,treeItem);
-
               IndexData indexData = (IndexData)treeItem.getData();
               if (indexData != null)
               {
@@ -2610,6 +2608,8 @@ Dprintf.dprintf("cirrect?");
 //TODO: remove?
                 indexData.clearTreeItem();
               }
+
+              Widgets.removeTreeItem(widgetStorageTree,treeItem);
             }
           }
         });
@@ -5740,7 +5740,7 @@ Dprintf.dprintf("");
           @Override
           public void focusLost(FocusEvent focusEvent)
           {
-Dprintf.dprintf("");
+//TODO
 //            Text widget = (Text)focusEvent.widget;
 //            updateStorageTreeTableThread.triggerUpdateStorageName(widget.getText());
           }
