@@ -38,7 +38,7 @@ import org.xnap.commons.i18n.I18nFactory;
 
 /** busy dialog
  */
-class BusyDialog
+public class BusyDialog
 {
   // --------------------------- constants --------------------------------
 
