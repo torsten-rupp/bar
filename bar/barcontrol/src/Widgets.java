@@ -206,7 +206,7 @@ class WidgetVariable<T>
 
   /** create widget variable
    * @param name name
-   * @param b/l/d/string/enumeration value
+   * @param b/i/l/d/string/enumeration value
    */
   WidgetVariable(String name, boolean b)
   {
@@ -218,6 +218,17 @@ class WidgetVariable<T>
   WidgetVariable(boolean b)
   {
     this((String)null,b);
+  }
+  WidgetVariable(String name, int i)
+  {
+    this.name   = name;
+    this.type   = Integer.class;
+    this.values = null;
+    this.value  = (T)new Integer(i);
+  }
+  WidgetVariable(int i)
+  {
+    this((String)null,i);
   }
   WidgetVariable(String name, long l)
   {
@@ -261,7 +272,7 @@ class WidgetVariable<T>
   /** get value
    * @return value
    */
-  T getValue()
+  T get()
   {
     return value;
   }
@@ -270,7 +281,7 @@ class WidgetVariable<T>
    * @param value value
    * @return true iff changed
    */
-  boolean setValue(T value)
+  boolean set(T value)
   {
     boolean changedFlag;
 
@@ -290,6 +301,16 @@ class WidgetVariable<T>
     assert type == Boolean.class;
 
     return (Boolean)value;
+  }
+
+  /** get integer value
+   * @return value
+   */
+  long getInteger()
+  {
+    assert type == Integer.class;
+
+    return (Integer)value;
   }
 
   /** get long value
@@ -335,6 +356,24 @@ class WidgetVariable<T>
     changedFlag = ((Boolean)this.value != value);
 
     this.value = (T)new Boolean(value);
+    Widgets.modified(this);
+
+    return changedFlag;
+  }
+
+  /** set int value
+   * @param l value
+   * @return true iff changed
+   */
+  boolean set(int value)
+  {
+    boolean changedFlag;
+
+    assert type == Integer.class;
+
+    changedFlag = ((Integer)this.value != value);
+
+    this.value = (T)new Integer(value);
     Widgets.modified(this);
 
     return changedFlag;
@@ -493,6 +532,10 @@ class WidgetModifyListener
     {
       widgetVariable = new WidgetVariable<Boolean>((Boolean)object);
     }
+    else if (object instanceof Integer)
+    {
+      widgetVariable = new WidgetVariable<Integer>((Integer)object);
+    }
     else if (object instanceof Long)
     {
       widgetVariable = new WidgetVariable<Long>((Long)object);
@@ -568,7 +611,7 @@ class WidgetModifyListener
   }
 
   /** compare variables
-   * @param otherWidgetVariable variable object
+   * @param object variable object
    * @return true iff equal variable object is equal to some variable
    */
   public boolean equals(Object object)
@@ -577,7 +620,7 @@ class WidgetModifyListener
     {
       if (variable != null)
       {
-        if (variable.getValue() == object) return true;
+        if (variable.get() == object) return true;
       }
     }
 
@@ -926,13 +969,21 @@ class WidgetModifyListener
 
   /** notify modify variable
    * Note: required because it can be overwritten by specific handler
+   * @param label label modified
+   */
+  void modified(Label label)
+  {
+    modified((Control)label);
+  }
+
+  /** notify modify variable
+   * Note: required because it can be overwritten by specific handler
    * @param button button modified
    */
   void modified(Button button)
   {
     modified((Control)button);
   }
-
 
   /** notify modify variable
    * Note: required because it can be overwritten by specific handler
@@ -965,7 +1016,11 @@ class WidgetModifyListener
    */
   public void modified()
   {
-    if      (widget instanceof Button)
+    if      (widget instanceof Label)
+    {
+      modified((Label)widget);
+    }
+    else if (widget instanceof Button)
     {
       modified((Button)widget);
     }

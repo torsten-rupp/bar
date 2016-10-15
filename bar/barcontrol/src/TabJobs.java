@@ -1683,14 +1683,14 @@ public class TabJobs
 
   // BAR variables
   private WidgetVariable  remoteHostName          = new WidgetVariable<String> ("remote-host-name","");
-  private WidgetVariable  remoteHostPort          = new WidgetVariable<Long>   ("remote-host-port",0);
+  private WidgetVariable  remoteHostPort          = new WidgetVariable<Long>   ("remote-host-port",0L);
   private WidgetVariable  remoteHostForceSSL      = new WidgetVariable<Boolean>("remote-host-force-ssl",false);
   private WidgetVariable  includeFileCommand      = new WidgetVariable<String> ("include-file-command","");
   private WidgetVariable  includeImageCommand     = new WidgetVariable<String> ("include-image-command","");
   private WidgetVariable  excludeCommand          = new WidgetVariable<String> ("exclude-command","");
   private WidgetVariable  archiveType             = new WidgetVariable<String> ("archive-type",new String[]{"normal","full","incremental","differential","continuous"},"normal");
   private WidgetVariable  archivePartSizeFlag     = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  archivePartSize         = new WidgetVariable<Long>   ("archive-part-size",0);
+  private WidgetVariable  archivePartSize         = new WidgetVariable<Long>   ("archive-part-size",0L);
   private WidgetVariable  deltaCompressAlgorithm  = new WidgetVariable<String> ("delta-compress-algorithm",
                                                                                 new String[]{"none",
                                                                                              "xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"
@@ -1708,7 +1708,7 @@ public class TabJobs
                                                                                             },
                                                                                 "none"
                                                                                );
-  private WidgetVariable  compressMinSize         = new WidgetVariable<Long>   ("compress-min-size",0);
+  private WidgetVariable  compressMinSize         = new WidgetVariable<Long>   ("compress-min-size",0L);
   private WidgetVariable  cryptAlgorithm          = new WidgetVariable<String> ("crypt-algorithm",
                                                                                 new String[]{"none",
                                                                                              "3DES",
@@ -1740,18 +1740,18 @@ public class TabJobs
                                                                                 "filesystem"
                                                                                );
   private WidgetVariable  storageHostName         = new WidgetVariable<String> ("");
-  private WidgetVariable  storageHostPort         = new WidgetVariable<Long>   ("",0);
+  private WidgetVariable  storageHostPort         = new WidgetVariable<Integer>("",0);
   private WidgetVariable  storageLoginName        = new WidgetVariable<String> ("","");
   private WidgetVariable  storageLoginPassword    = new WidgetVariable<String> ("","");
   private WidgetVariable  storageDeviceName       = new WidgetVariable<String> ("","");
   private WidgetVariable  storageFileName         = new WidgetVariable<String> ("","");
-  private WidgetVariable  maxStorageSize          = new WidgetVariable<Long>   ("max-storage-size",0);
+  private WidgetVariable  maxStorageSize          = new WidgetVariable<Long>   ("max-storage-size",0L);
   private WidgetVariable  archiveFileMode         = new WidgetVariable<String> ("archive-file-mode",new String[]{"stop","overwrite","append"},"stop");
   private WidgetVariable  sshPublicKeyFileName    = new WidgetVariable<String> ("ssh-public-key","");
   private WidgetVariable  sshPrivateKeyFileName   = new WidgetVariable<String> ("ssh-private-key","");
   private WidgetVariable  maxBandWidthFlag        = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  maxBandWidth            = new WidgetVariable<Long>   ("max-band-width",0);
-  private WidgetVariable  volumeSize              = new WidgetVariable<Long>   ("volume-size",0);
+  private WidgetVariable  maxBandWidth            = new WidgetVariable<Long>   ("max-band-width",0L);
+  private WidgetVariable  volumeSize              = new WidgetVariable<Long>   ("volume-size",0L);
   private WidgetVariable  ecc                     = new WidgetVariable<Boolean>("ecc",false);
   private WidgetVariable  blank                   = new WidgetVariable<Boolean>("blank",false);
   private WidgetVariable  waitFirstVolume         = new WidgetVariable<Boolean>("wait-first-volume",false);

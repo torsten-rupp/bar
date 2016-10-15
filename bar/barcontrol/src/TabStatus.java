@@ -446,15 +446,15 @@ public class TabStatus
   public  Button      widgetButtonQuit;
 
   // BAR variables
-  private WidgetVariable doneCount             = new WidgetVariable<Long>(0);
-  private WidgetVariable doneSize              = new WidgetVariable<Long>(0);
-  private WidgetVariable storageTotalSize      = new WidgetVariable<Long>(0);
-  private WidgetVariable skippedEntryCount     = new WidgetVariable<Long>(0);
-  private WidgetVariable skippedEntrySize      = new WidgetVariable<Long>(0);
-  private WidgetVariable errorEntryCount       = new WidgetVariable<Long>(0);
-  private WidgetVariable errorEntrySize        = new WidgetVariable<Long>(0);
-  private WidgetVariable totalEntryCount       = new WidgetVariable<Long>(0);
-  private WidgetVariable totalEntrySize        = new WidgetVariable<Long>(0);
+  private WidgetVariable doneCount             = new WidgetVariable<Long>(0L);
+  private WidgetVariable doneSize              = new WidgetVariable<Long>(0L);
+  private WidgetVariable storageTotalSize      = new WidgetVariable<Long>(0L);
+  private WidgetVariable skippedEntryCount     = new WidgetVariable<Long>(0L);
+  private WidgetVariable skippedEntrySize      = new WidgetVariable<Long>(0L);
+  private WidgetVariable errorEntryCount       = new WidgetVariable<Long>(0L);
+  private WidgetVariable errorEntrySize        = new WidgetVariable<Long>(0L);
+  private WidgetVariable totalEntryCount       = new WidgetVariable<Long>(0L);
+  private WidgetVariable totalEntrySize        = new WidgetVariable<Long>(0L);
 
   private WidgetVariable filesPerSecond        = new WidgetVariable<Double>(0.0);
   private WidgetVariable bytesPerSecond        = new WidgetVariable<Double>(0.0);
@@ -465,12 +465,12 @@ public class TabStatus
   private WidgetVariable fileProgress          = new WidgetVariable<Double>(0.0);
   private WidgetVariable storageName           = new WidgetVariable<String>("");
   private WidgetVariable storageProgress       = new WidgetVariable<Double>(0.0);
-  private WidgetVariable volumeNumber          = new WidgetVariable<Long>(0);
+  private WidgetVariable volumeNumber          = new WidgetVariable<Long>(0L);
   private WidgetVariable volumeProgress        = new WidgetVariable<Double>(0.0);
   private WidgetVariable totalEntriesProgress  = new WidgetVariable<Double>(0.0);
   private WidgetVariable totalBytesProgress    = new WidgetVariable<Double>(0.0);
   private WidgetVariable collectTotalSumDone   = new WidgetVariable<Boolean>(false);
-  private WidgetVariable requestedVolumeNumber = new WidgetVariable<Long>(0);
+  private WidgetVariable requestedVolumeNumber = new WidgetVariable<Integer>(0);
   private WidgetVariable message               = new WidgetVariable<String>("");
 
   // variables
@@ -2046,11 +2046,11 @@ public class TabStatus
             case REQUEST_VOLUME:
               if (text.isEmpty())
               {
-                message.set(BARControl.tr("Please insert volume #{0}",requestedVolumeNumber.getLong()));
+                message.set(BARControl.tr("Please insert volume #{0}",requestedVolumeNumber.getInteger()));
               }
               else
               {
-                message.set(BARControl.tr("Please insert replacement volume #{0}:\n\n{1}",requestedVolumeNumber.getLong(),text));
+                message.set(BARControl.tr("Please insert replacement volume #{0}:\n\n{1}",requestedVolumeNumber.getInteger(),text));
               }
               break;
             case DONE:
@@ -2328,7 +2328,7 @@ public class TabStatus
   {
     assert selectedJobData != null;
 
-    long     volumeNumber = requestedVolumeNumber.getLong();
+    long     volumeNumber = requestedVolumeNumber.getInteger();
     String[] resultErrorMessage = new String[1];
     int      error              = Errors.NONE;
     switch (Dialogs.select(shell,

@@ -25,7 +25,7 @@ import org.eclipse.swt.widgets.Composite;
 
 /** progress bar with percentage view
  */
-class ProgressBar extends Canvas
+public class ProgressBar extends Canvas
 {
   // --------------------------- constants --------------------------------
 

@@ -275,8 +275,8 @@ public class ServerSettings
 
     WidgetVariable          tmpDirectory               = new WidgetVariable<String >("tmp-directory",                 ""   );
     WidgetVariable          maxTmpSize                 = new WidgetVariable<String >("max-tmp-size",                  ""   );
-    WidgetVariable          niceLevel                  = new WidgetVariable<Long   >("nice-level",                    0    );
-    WidgetVariable          maxThreads                 = new WidgetVariable<Long   >("max-threads",                   0    );
+    WidgetVariable          niceLevel                  = new WidgetVariable<Integer>("nice-level",                    0    );
+    WidgetVariable          maxThreads                 = new WidgetVariable<Integer>("max-threads",                   0    );
 //    WidgetVariable          maxBandWidth               = new WidgetVariable<String >("max-band-width",              ""   );
     WidgetVariable          compressMinSize            = new WidgetVariable<String >("compress-min-size",             ""   );
     WidgetVariable          serverJobsDirectory        = new WidgetVariable<String >("server-jobs-directory",         ""   );
@@ -355,14 +355,14 @@ public class ServerSettings
     WidgetVariable          deviceWritePostCommand     = new WidgetVariable<String >("device-write-post-command",     ""   );
     WidgetVariable          deviceWriteCommand         = new WidgetVariable<String >("device-write-command",          ""   );
 
-    WidgetVariable          serverPort                 = new WidgetVariable<Long   >("server-port",                   0    );
-//    WidgetVariable          serverTLSPort              = new WidgetVariable<Long   >("server-tls-port",               0    );
+    WidgetVariable          serverPort                 = new WidgetVariable<Integer>("server-port",                   0    );
+//    WidgetVariable          serverTLSPort              = new WidgetVariable<Integer>("server-tls-port",               0    );
     WidgetVariable          serverCAFile               = new WidgetVariable<String >("server-ca-file",                ""   );
     WidgetVariable          serverCertFile             = new WidgetVariable<String >("server-cert-file",              ""   );
     WidgetVariable          serverKeyFile              = new WidgetVariable<String >("server-key-file",               ""   );
     WidgetVariable          serverPassword             = new WidgetVariable<String >("server-password",               ""   );
 
-    WidgetVariable          verbose                    = new WidgetVariable<Long   >("verbose",                       0    );
+    WidgetVariable          verbose                    = new WidgetVariable<Integer>("verbose",                       0    );
     WidgetVariable          log                        = new WidgetVariable<String >("log",                           ""   );
     WidgetVariable          logFile                    = new WidgetVariable<String >("log-file",                      ""   );
     WidgetVariable          logFormat                  = new WidgetVariable<String >("log-format",                    ""   );
