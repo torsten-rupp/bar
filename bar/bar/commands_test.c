@@ -117,6 +117,903 @@ typedef struct
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : testFileEntry
+* Purpose: test a file entry in archive
+* Input  : archiveInfo          - archive info structure
+*          offset               - offset
+*          includeEntryList     - include entry list
+*          excludePatternList   - exclude pattern list
+*          printableStorageName - printable storage name
+*          jobOptions           - job options
+*          fragmentList         - fragment list
+*          buffer               - buffer for temporary data
+*          bufferSize           - size of data buffer
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors testFileEntry(ArchiveInfo       *archiveInfo,
+                           uint64            offset,
+                           const EntryList   *includeEntryList,
+                           const PatternList *excludePatternList,
+                           const char        *printableStorageName,
+                           const JobOptions  *jobOptions,
+                           FragmentList      *fragmentList,
+                           byte              *buffer,
+                           uint              bufferSize
+                          )
+{
+  Errors           error;
+  ArchiveEntryInfo archiveEntryInfo;
+  String           fileName;
+  FileInfo         fileInfo;
+  uint64           fragmentOffset,fragmentSize;
+  FragmentNode     *fragmentNode;
+  uint64           length;
+  ulong            n;
+
+  // seek to start of entry
+  error = Archive_seek(archiveInfo,offset);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    return error;
+  }
+
+  // open archive entry
+  fileName = String_new();
+  error = Archive_readFileEntry(&archiveEntryInfo,
+                                archiveInfo,
+                                NULL,  // deltaCompressAlgorithm
+                                NULL,  // byteCompressAlgorithm
+                                NULL,  // cryptAlgorithm
+                                NULL,  // cryptType
+                                fileName,
+                                &fileInfo,
+                                NULL,  // fileExtendedAttributeList
+                                NULL,  // deltaSourceName
+                                NULL,  // deltaSourceSize
+                                &fragmentOffset,
+                                &fragmentSize
+                               );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    String_delete(fileName);
+    return error;
+  }
+
+  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+      && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+     )
+  {
+    printInfo(1,"  Test file '%s'...",String_cString(fileName));
+
+    if (!jobOptions->noFragmentsCheckFlag)
+    {
+      // get file fragment list
+      fragmentNode = FragmentList_find(fragmentList,fileName);
+      if (fragmentNode == NULL)
+      {
+        fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
+      }
+      assert(fragmentNode != NULL);
+    }
+    else
+    {
+      fragmentNode = NULL;
+    }
+  //FragmentList_print(fragmentNode,String_cString(fileName));
+
+    // read file content
+    length = 0LL;
+    while (length < fragmentSize)
+    {
+      n = (ulong)MIN(fragmentSize-length,BUFFER_SIZE);
+
+      // read archive file
+      error = Archive_readData(&archiveEntryInfo,buffer,n);
+      if (error != ERROR_NONE)
+      {
+        printInfo(1,"FAIL!\n");
+        printError("Cannot read content of archive '%s' (error: %s)!\n",
+                   printableStorageName,
+                   Error_getText(error)
+                  );
+        break;
+      }
+
+      length += (uint64)n;
+
+      printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
+    }
+    if (error != ERROR_NONE)
+    {
+      (void)Archive_closeEntry(&archiveEntryInfo);
+      String_delete(fileName);
+      return error;
+    }
+    printInfo(2,"    \b\b\b\b");
+
+    if (fragmentNode != NULL)
+    {
+      // add fragment to file fragment list
+      FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+
+      // discard fragment list if file is complete
+      if (FragmentList_isEntryComplete(fragmentNode))
+      {
+        FragmentList_discard(fragmentList,fragmentNode);
+      }
+    }
+
+    /* check if all data read.
+       Note: it is not possible to check if all data is read when
+       compression is used. The decompressor may not be at the end
+       of a compressed data chunk even compressed data is _not_
+       corrupt.
+    */
+    if (   !Compress_isCompressed(archiveEntryInfo.file.deltaCompressAlgorithm)
+        && !Compress_isCompressed(archiveEntryInfo.file.byteCompressAlgorithm)
+        && !Archive_eofData(&archiveEntryInfo)
+       )
+    {
+      printInfo(1,"FAIL!\n");
+      printError("unexpected data at end of file entry '%S'!\n",fileName);
+      (void)Archive_closeEntry(&archiveEntryInfo);
+      String_delete(fileName);
+      return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
+    }
+
+    printInfo(1,"OK\n");
+  }
+  else
+  {
+    // skip
+    printInfo(2,"Test '%s'...skipped\n",String_cString(fileName));
+  }
+
+  // close archive entry
+  error = Archive_closeEntry(&archiveEntryInfo);
+  if (error != ERROR_NONE)
+  {
+    printError("closing 'file' entry fail (error: %s)!\n",
+               Error_getText(error)
+              );
+    String_delete(fileName);
+    return error;
+  }
+
+  // free resources
+  String_delete(fileName);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : testImageEntry
+* Purpose: test a image entry in archive
+* Input  : archiveInfo          - archive info structure
+*          offset               - offset
+*          printableStorageName - printable storage name
+*          jobOptions           - job options
+*          fragmentList         - fragment list
+*          buffer               - buffer for temporary data
+*          bufferSize           - size of data buffer
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors testImageEntry(ArchiveInfo       *archiveInfo,
+                            uint64            offset,
+                            const EntryList   *includeEntryList,
+                            const PatternList *excludePatternList,
+                            const char        *printableStorageName,
+                            const JobOptions  *jobOptions,
+                            FragmentList      *fragmentList,
+                            byte              *buffer,
+                            uint              bufferSize
+                           )
+{
+  Errors           error;
+  ArchiveEntryInfo archiveEntryInfo;
+  String           deviceName;
+  DeviceInfo       deviceInfo;
+  uint64           blockOffset,blockCount;
+  FragmentNode     *fragmentNode;
+  uint64           block;
+  ulong            bufferBlockCount;
+
+  // seek to start of entry
+  error = Archive_seek(archiveInfo,offset);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    return error;
+  }
+
+  // open archive entry
+  deviceName = String_new();
+  error = Archive_readImageEntry(&archiveEntryInfo,
+                                 archiveInfo,
+                                 NULL,  // deltaCompressAlgorithm
+                                 NULL,  // byteCompressAlgorithm
+                                 NULL,  // cryptAlgorithm
+                                 NULL,  // cryptType
+                                 deviceName,
+                                 &deviceInfo,
+                                 NULL,  // fileSystemType
+                                 NULL,  // deltaSourceName
+                                 NULL,  // deltaSourceSize
+                                 &blockOffset,
+                                 &blockCount
+                                );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    String_delete(deviceName);
+    return error;
+  }
+  if (deviceInfo.blockSize > BUFFER_SIZE)
+  {
+    printError("Device block size %llu on '%s' is too big (max: %llu)\n",
+               deviceInfo.blockSize,
+               String_cString(deviceName),
+               BUFFER_SIZE
+              );
+    String_delete(deviceName);
+    return ERROR_INVALID_DEVICE_BLOCK_SIZE;
+  }
+  assert(deviceInfo.blockSize > 0);
+
+  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
+      && !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
+     )
+  {
+    printInfo(1,"  Test image '%s'...",String_cString(deviceName));
+
+    if (!jobOptions->noFragmentsCheckFlag)
+    {
+      // get file fragment node
+      fragmentNode = FragmentList_find(fragmentList,deviceName);
+      if (fragmentNode == NULL)
+      {
+        fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0);
+      }
+//FragmentList_print(fragmentNode,String_cString(deviceName));
+      assert(fragmentNode != NULL);
+    }
+    else
+    {
+      fragmentNode = NULL;
+    }
+
+    // read image content
+    block = 0LL;
+    while (block < blockCount)
+    {
+      bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
+
+      // read archive file
+      error = Archive_readData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
+      if (error != ERROR_NONE)
+      {
+        printInfo(1,"FAIL!\n");
+        printError("Cannot read content of archive '%s' (error: %s)!\n",
+                   printableStorageName,
+                   Error_getText(error)
+                  );
+        break;
+      }
+
+      block += (uint64)bufferBlockCount;
+
+      printInfo(2,"%3d%%\b\b\b\b",(uint)((block*100LL)/blockCount));
+    }
+    if (error != ERROR_NONE)
+    {
+      (void)Archive_closeEntry(&archiveEntryInfo);
+      String_delete(deviceName);
+      return error;
+    }
+    printInfo(2,"    \b\b\b\b");
+
+    if (fragmentNode != NULL)
+    {
+      // add fragment to file fragment list
+      FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
+
+      // discard fragment list if file is complete
+      if (FragmentList_isEntryComplete(fragmentNode))
+      {
+        FragmentList_discard(fragmentList,fragmentNode);
+      }
+    }
+
+    /* check if all data read.
+       Note: it is not possible to check if all data is read when
+       compression is used. The decompressor may not be at the end
+       of a compressed data chunk even compressed data is _not_
+       corrupt.
+    */
+    if (   !Compress_isCompressed(archiveEntryInfo.image.deltaCompressAlgorithm)
+        && !Compress_isCompressed(archiveEntryInfo.image.byteCompressAlgorithm)
+        && !Archive_eofData(&archiveEntryInfo))
+    {
+      printInfo(1,"FAIL!\n");
+      printError("unexpected data at end of image entry '%S'!\n",deviceName);
+      (void)Archive_closeEntry(&archiveEntryInfo);
+      String_delete(deviceName);
+      return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(deviceName));
+    }
+
+    printInfo(1,"OK\n");
+  }
+  else
+  {
+    // skip
+    printInfo(2,"  Test '%s'...skipped\n",String_cString(deviceName));
+  }
+
+  // close archive entry
+  error = Archive_closeEntry(&archiveEntryInfo);
+  if (error != ERROR_NONE)
+  {
+    printError("closing 'image' entry fail (error: %s)!\n",
+               Error_getText(error)
+              );
+    String_delete(deviceName);
+    return error;
+  }
+
+  // free resources
+  String_delete(deviceName);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : testDirectoryEntry
+* Purpose: test a directory entry in archive
+* Input  : archiveInfo          - archive info structure
+*          offset               - offset
+*          printableStorageName - printable storage name
+*          jobOptions           - job options
+*          fragmentList         - fragment list
+*          buffer               - buffer for temporary data
+*          bufferSize           - size of data buffer
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors testDirectoryEntry(ArchiveInfo       *archiveInfo,
+                                uint64            offset,
+                                const EntryList   *includeEntryList,
+                                const PatternList *excludePatternList,
+                                const char        *printableStorageName,
+                                const JobOptions  *jobOptions,
+                                FragmentList      *fragmentList,
+                                byte              *buffer,
+                                uint              bufferSize
+                               )
+{
+  Errors           error;
+  ArchiveEntryInfo archiveEntryInfo;
+  String           directoryName;
+  FileInfo         fileInfo;
+
+  // seek to start of entry
+  error = Archive_seek(archiveInfo,offset);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    return error;
+  }
+
+  // open archive entry
+  directoryName = String_new();
+  error = Archive_readDirectoryEntry(&archiveEntryInfo,
+                                     archiveInfo,
+                                     NULL,  // cryptAlgorithm
+                                     NULL,  // cryptType
+                                     directoryName,
+                                     &fileInfo,
+                                     NULL   // fileExtendedAttributeList
+                                    );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    String_delete(directoryName);
+    return error;
+  }
+
+  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
+      && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+     )
+  {
+    printInfo(1,"  Test directory '%s'...",String_cString(directoryName));
+
+    // check if all data read
+    if (!Archive_eofData(&archiveEntryInfo))
+    {
+      printInfo(1,"FAIL!\n");
+      printError("unexpected data at end of directory entry '%S'!\n",directoryName);
+      (void)Archive_closeEntry(&archiveEntryInfo);
+      String_delete(directoryName);
+      return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(directoryName));
+    }
+
+    printInfo(1,"OK\n");
+
+    // free resources
+  }
+  else
+  {
+    // skip
+    printInfo(2,"Test '%s'...skipped\n",String_cString(directoryName));
+  }
+
+  // close archive entry
+  error = Archive_closeEntry(&archiveEntryInfo);
+  if (error != ERROR_NONE)
+  {
+    printError("closing 'directory' entry fail (error: %s)!\n",
+               Error_getText(error)
+              );
+    String_delete(directoryName);
+    return error;
+  }
+
+  // free resources
+  String_delete(directoryName);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : testLinkEntry
+* Purpose: test a link entry in archive
+* Input  : archiveInfo          - archive info structure
+*          offset               - offset
+*          printableStorageName - printable storage name
+*          jobOptions           - job options
+*          fragmentList         - fragment list
+*          buffer               - buffer for temporary data
+*          bufferSize           - size of data buffer
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors testLinkEntry(ArchiveInfo       *archiveInfo,
+                           uint64            offset,
+                           const EntryList   *includeEntryList,
+                           const PatternList *excludePatternList,
+                           const char        *printableStorageName,
+                           const JobOptions  *jobOptions,
+                           FragmentList      *fragmentList,
+                           byte              *buffer,
+                           uint              bufferSize
+                          )
+{
+  Errors           error;
+  ArchiveEntryInfo archiveEntryInfo;
+  String           linkName;
+  String           fileName;
+  FileInfo         fileInfo;
+
+  // seek to start of entry
+  error = Archive_seek(archiveInfo,offset);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    return error;
+  }
+
+  // open archive entry
+  linkName = String_new();
+  fileName = String_new();
+  error = Archive_readLinkEntry(&archiveEntryInfo,
+                                archiveInfo,
+                                NULL,  // cryptAlgorithm
+                                NULL,  // cryptType
+                                linkName,
+                                fileName,
+                                &fileInfo,
+                                NULL   // fileExtendedAttributeList
+                               );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    String_delete(fileName);
+    String_delete(linkName);
+    return error;
+  }
+
+  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
+      && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+     )
+  {
+    printInfo(1,"  Test link '%s'...",String_cString(linkName));
+
+    // check if all data read
+    if (!Archive_eofData(&archiveEntryInfo))
+    {
+      printInfo(1,"FAIL!\n");
+      printError("unexpected data at end of link entry '%S'!\n",linkName);
+      (void)Archive_closeEntry(&archiveEntryInfo);
+      String_delete(fileName);
+      String_delete(linkName);
+      return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(linkName));
+    }
+
+    printInfo(1,"OK\n");
+
+    // free resources
+  }
+  else
+  {
+    // skip
+    printInfo(2,"  Test '%s'...skipped\n",String_cString(linkName));
+  }
+
+  // close archive file
+  error = Archive_closeEntry(&archiveEntryInfo);
+  if (error != ERROR_NONE)
+  {
+    printError("closing 'link' entry fail (error: %s)!\n",
+               Error_getText(error)
+              );
+    String_delete(fileName);
+    String_delete(linkName);
+    return error;
+  }
+
+  // free resources
+  String_delete(fileName);
+  String_delete(linkName);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : testHardLinkEntry
+* Purpose: test a hardlink entry in archive
+* Input  : archiveInfo          - archive info structure
+*          offset               - offset
+*          printableStorageName - printable storage name
+*          jobOptions           - job options
+*          fragmentList         - fragment list
+*          buffer               - buffer for temporary data
+*          bufferSize           - size of data buffer
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors testHardLinkEntry(ArchiveInfo       *archiveInfo,
+                               uint64            offset,
+                               const EntryList   *includeEntryList,
+                               const PatternList *excludePatternList,
+                               const char        *printableStorageName,
+                               const JobOptions  *jobOptions,
+                               FragmentList      *fragmentList,
+                               byte              *buffer,
+                               uint              bufferSize
+                              )
+{
+  Errors           error;
+  ArchiveEntryInfo archiveEntryInfo;
+  StringList       fileNameList;
+  FileInfo         fileInfo;
+  uint64           fragmentOffset,fragmentSize;
+  bool             testedDataFlag;
+  const StringNode *stringNode;
+  String           fileName;
+  FragmentNode     *fragmentNode;
+  uint64           length;
+  ulong            n;
+
+  // seek to start of entry
+  error = Archive_seek(archiveInfo,offset);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    return error;
+  }
+
+  // open archive entry
+  StringList_init(&fileNameList);
+  error = Archive_readHardLinkEntry(&archiveEntryInfo,
+                                    archiveInfo,
+                                    NULL,  // deltaCompressAlgorithm
+                                    NULL,  // byteCompressAlgorithm
+                                    NULL,  // cryptAlgorithm
+                                    NULL,  // cryptType
+                                    &fileNameList,
+                                    &fileInfo,
+                                    NULL,  // fileExtendedAttributeList
+                                    NULL,  // deltaSourceName
+                                    NULL,  // deltaSourceSize
+                                    &fragmentOffset,
+                                    &fragmentSize
+                                   );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    StringList_done(&fileNameList);
+    return error;
+  }
+
+  testedDataFlag = FALSE;
+  STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
+  {
+    if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+        && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+       )
+    {
+      printInfo(1,"  Test hard link '%s'...",String_cString(fileName));
+
+      if (!testedDataFlag && (error == ERROR_NONE))
+      {
+        // read hard link data
+
+        if (!jobOptions->noFragmentsCheckFlag)
+        {
+          // get file fragment list
+          fragmentNode = FragmentList_find(fragmentList,fileName);
+          if (fragmentNode == NULL)
+          {
+            fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
+          }
+          assert(fragmentNode != NULL);
+//FragmentList_print(fragmentNode,String_cString(fileName));
+        }
+        else
+        {
+          fragmentNode = NULL;
+        }
+
+        // read hard link content
+        length = 0LL;
+        while (length < fragmentSize)
+        {
+          n = (ulong)MIN(fragmentSize-length,BUFFER_SIZE);
+
+          // read archive file
+          error = Archive_readData(&archiveEntryInfo,buffer,n);
+          if (error != ERROR_NONE)
+          {
+            printInfo(1,"FAIL!\n");
+            printError("Cannot read content of archive '%s' (error: %s)!\n",
+                       printableStorageName,
+                       Error_getText(error)
+                      );
+            break;
+          }
+
+          length += (uint64)n;
+
+          printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
+        }
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
+        printInfo(2,"    \b\b\b\b");
+
+        if (fragmentNode != NULL)
+        {
+          // add fragment to file fragment list
+          FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+
+          // discard fragment list if file is complete
+          if (FragmentList_isEntryComplete(fragmentNode))
+          {
+            FragmentList_discard(fragmentList,fragmentNode);
+          }
+        }
+
+        /* check if all data read.
+           Note: it is not possible to check if all data is read when
+           compression is used. The decompressor may not be at the end
+           of a compressed data chunk even compressed data is _not_
+           corrupt.
+        */
+        if (   !Compress_isCompressed(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
+            && !Compress_isCompressed(archiveEntryInfo.hardLink.byteCompressAlgorithm)
+            && !Archive_eofData(&archiveEntryInfo))
+        {
+          printError("unexpected data at end of hard link entry '%S'!\n",fileName);
+          error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
+          break;
+        }
+
+        printInfo(1,"OK\n");
+
+        testedDataFlag = TRUE;
+      }
+      else
+      {
+        if (error == ERROR_NONE)
+        {
+          printInfo(1,"OK\n");
+        }
+        else
+        {
+          printInfo(1,"FAIL!\n");
+        }
+      }
+    }
+    else
+    {
+      // skip
+      printInfo(2,"  Test '%s'...skipped\n",String_cString(fileName));
+    }
+  }
+  if (error != ERROR_NONE)
+  {
+    (void)Archive_closeEntry(&archiveEntryInfo);
+    StringList_done(&fileNameList);
+    return error;
+  }
+
+  // close archive entry
+  error = Archive_closeEntry(&archiveEntryInfo);
+  if (error != ERROR_NONE)
+  {
+    printError("closing 'hard link' entry fail (error: %s)!\n",
+               Error_getText(error)
+              );
+    StringList_done(&fileNameList);
+    return error;
+  }
+
+  // free resources
+  StringList_done(&fileNameList);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : testSpecialEntry
+* Purpose: test a special entry in archive
+* Input  : archiveInfo          - archive info structure
+*          offset               - offset
+*          printableStorageName - printable storage name
+*          jobOptions           - job options
+*          fragmentList         - fragment list
+*          buffer               - buffer for temporary data
+*          bufferSize           - size of data buffer
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors testSpecialEntry(ArchiveInfo       *archiveInfo,
+                              uint64            offset,
+                              const EntryList   *includeEntryList,
+                              const PatternList *excludePatternList,
+                              const char        *printableStorageName,
+                              const JobOptions  *jobOptions,
+                              FragmentList      *fragmentList,
+                              byte              *buffer,
+                              uint              bufferSize
+                             )
+{
+  Errors           error;
+  ArchiveEntryInfo archiveEntryInfo;
+  String           fileName;
+  FileInfo         fileInfo;
+
+  // seek to start of entry
+  error = Archive_seek(archiveInfo,offset);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    return error;
+  }
+
+  // open archive entry
+  fileName = String_new();
+  error = Archive_readSpecialEntry(&archiveEntryInfo,
+                                   archiveInfo,
+                                   NULL,  // cryptAlgorithm
+                                   NULL,  // cryptType
+                                   fileName,
+                                   &fileInfo,
+                                   NULL   // fileExtendedAttributeList
+                                  );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    String_delete(fileName);
+    return error;
+  }
+
+  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+      && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+     )
+  {
+    printInfo(1,"  Test special device '%s'...",String_cString(fileName));
+
+    // check if all data read
+    if (!Archive_eofData(&archiveEntryInfo))
+    {
+      printInfo(1,"FAIL!\n");
+      printError("unexpected data at end of special entry '%S'!\n",fileName);
+      (void)Archive_closeEntry(&archiveEntryInfo);
+      String_delete(fileName);
+      return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
+    }
+
+    printInfo(1,"OK\n");
+
+    // free resources
+  }
+  else
+  {
+    // skip
+    printInfo(2,"  Test '%s'...skipped\n",String_cString(fileName));
+  }
+
+  // close archive entry
+  error = Archive_closeEntry(&archiveEntryInfo);
+  if (error != ERROR_NONE)
+  {
+    printError("closing 'special' entry fail (error: %s)!\n",
+               Error_getText(error)
+              );
+    String_delete(fileName);
+    return error;
+  }
+
+  // free resources
+  String_delete(fileName);
+
+  return ERROR_NONE;
+}
+
 //TODO WIP
 #if 0
 /***********************************************************************\
@@ -131,7 +1028,7 @@ typedef struct
 LOCAL void testThreadCode(TestInfo *testInfo)
 {
   byte              *buffer;
-  EntryMsg entryMsg;
+  EntryMsg          entryMsg;
   StorageHandle     storageHandle;
   Errors            failError;
   Errors            error;
@@ -226,709 +1123,111 @@ LOCAL void testThreadCode(TestInfo *testInfo)
       break;
     }
 
+    // get offset
+    offset = Archive_tell(&archiveInfo);
+
     switch (archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
+        error = testFileEntry(&archiveInfo,
+                              offset,
+                              includeEntryList,
+                              excludePatternList,
+                              Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                              jobOptions,
+                              fragmentList,
+                              buffer,
+                              BUFFER_SIZE
+                             );
+        if (error != ERROR_NONE)
         {
-          String       fileName;
-          FileInfo     fileInfo;
-          uint64       fragmentOffset,fragmentSize;
-          FragmentNode *fragmentNode;
-          uint64       length;
-          ulong        n;
-
-          // read file
-          fileName = String_new();
-          error = Archive_readFileEntry(&archiveEntryInfo,
-                                        &archiveInfo,
-                                        NULL,  // deltaCompressAlgorithm
-                                        NULL,  // byteCompressAlgorithm
-                                        NULL,  // cryptAlgorithm
-                                        NULL,  // cryptType
-                                        fileName,
-                                        &fileInfo,
-                                        NULL,  // fileExtendedAttributeList
-                                        NULL,  // deltaSourceName
-                                        NULL,  // deltaSourceSize
-                                        &fragmentOffset,
-                                        &fragmentSize
-                                       );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                       Error_getText(error)
-                      );
-            String_delete(fileName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-              && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-             )
-          {
-            printInfo(1,"  Test file '%s'...",String_cString(fileName));
-
-            if (!jobOptions->noFragmentsCheckFlag)
-            {
-              // get file fragment list
-              fragmentNode = FragmentList_find(fragmentList,fileName);
-              if (fragmentNode == NULL)
-              {
-                fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
-              }
-              assert(fragmentNode != NULL);
-            }
-            else
-            {
-              fragmentNode = NULL;
-            }
-//FragmentList_print(fragmentNode,String_cString(fileName));
-
-            // read file content
-            length = 0LL;
-            while (length < fragmentSize)
-            {
-              n = (ulong)MIN(fragmentSize-length,BUFFER_SIZE);
-
-              // read archive file
-              error = Archive_readData(&archiveEntryInfo,buffer,n);
-              if (error != ERROR_NONE)
-              {
-                printInfo(1,"FAIL!\n");
-                printError("Cannot read content of archive '%s' (error: %s)!\n",
-                           Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                           Error_getText(error)
-                          );
-                break;
-              }
-
-              length += (uint64)n;
-
-              printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
-            }
-            if (error != ERROR_NONE)
-            {
-              if (failError == ERROR_NONE) failError = error;
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(fileName);
-              continue;
-            }
-            printInfo(2,"    \b\b\b\b");
-
-            if (fragmentNode != NULL)
-            {
-              // add fragment to file fragment list
-              FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-              // discard fragment list if file is complete
-              if (FragmentList_isEntryComplete(fragmentNode))
-              {
-                FragmentList_discard(fragmentList,fragmentNode);
-              }
-            }
-
-            /* check if all data read.
-               Note: it is not possible to check if all data is read when
-               compression is used. The decompressor may not be at the end
-               of a compressed data chunk even compressed data is _not_
-               corrupt.
-            */
-            if (   !Compress_isCompressed(archiveEntryInfo.file.deltaCompressAlgorithm)
-                && !Compress_isCompressed(archiveEntryInfo.file.byteCompressAlgorithm)
-                && !Archive_eofData(&archiveEntryInfo)
-               )
-            {
-              printInfo(1,"FAIL!\n");
-              printError("unexpected data at end of file entry '%S'!\n",fileName);
-              if (failError == ERROR_NONE)
-              {
-                failError = ERRORX_(CORRUPT_DATA,0,String_cString(fileName));
-              }
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(fileName);
-              break;
-            }
-
-            printInfo(1,"OK\n");
-          }
-          else
-          {
-            // skip
-            printInfo(2,"  Test '%s'...skipped\n",String_cString(fileName));
-          }
-
-          // close archive file, free resources
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printError("closing 'file' entry fail (error: %s)!\n",
-                       Error_getText(error)
-                      );
-            String_delete(fileName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          // free resources
-          String_delete(fileName);
+          if (failError == ERROR_NONE) failError = error;
+          break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
+        error = testImageEntry(&archiveInfo,
+                               offset,
+                               includeEntryList,
+                               excludePatternList,
+                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               jobOptions,
+                               fragmentList,
+                               buffer,
+                               BUFFER_SIZE
+                              );
+        if (error != ERROR_NONE)
         {
-          String       deviceName;
-          DeviceInfo   deviceInfo;
-          uint64       blockOffset,blockCount;
-          FragmentNode *fragmentNode;
-          uint64       block;
-          ulong        bufferBlockCount;
-
-          // read image
-          deviceName = String_new();
-          error = Archive_readImageEntry(&archiveEntryInfo,
-                                         &archiveInfo,
-                                         NULL,  // deltaCompressAlgorithm
-                                         NULL,  // byteCompressAlgorithm
-                                         NULL,  // cryptAlgorithm
-                                         NULL,  // cryptType
-                                         deviceName,
-                                         &deviceInfo,
-                                         NULL,  // fileSystemType
-                                         NULL,  // deltaSourceName
-                                         NULL,  // deltaSourceSize
-                                         &blockOffset,
-                                         &blockCount
-                                        );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                       Error_getText(error)
-                      );
-            String_delete(deviceName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-          if (deviceInfo.blockSize > BUFFER_SIZE)
-          {
-            printError("Device block size %llu on '%s' is too big (max: %llu)\n",
-                       deviceInfo.blockSize,
-                       String_cString(deviceName),
-                       BUFFER_SIZE
-                      );
-            String_delete(deviceName);
-            if (failError == ERROR_NONE)
-            {
-              failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
-            }
-            break;
-          }
-          assert(deviceInfo.blockSize > 0);
-
-          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
-              && !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
-             )
-          {
-            printInfo(1,"  Test image '%s'...",String_cString(deviceName));
-
-            if (!jobOptions->noFragmentsCheckFlag)
-            {
-              // get file fragment node
-              fragmentNode = FragmentList_find(fragmentList,deviceName);
-              if (fragmentNode == NULL)
-              {
-                fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0);
-              }
-//FragmentList_print(fragmentNode,String_cString(deviceName));
-              assert(fragmentNode != NULL);
-            }
-            else
-            {
-              fragmentNode = NULL;
-            }
-
-            // read image content
-            block = 0LL;
-            while (block < blockCount)
-            {
-              bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
-
-              // read archive file
-              error = Archive_readData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
-              if (error != ERROR_NONE)
-              {
-                printInfo(1,"FAIL!\n");
-                printError("Cannot read content of archive '%s' (error: %s)!\n",
-                           Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                           Error_getText(error)
-                          );
-                break;
-              }
-
-              block += (uint64)bufferBlockCount;
-
-              printInfo(2,"%3d%%\b\b\b\b",(uint)((block*100LL)/blockCount));
-            }
-            if (error != ERROR_NONE)
-            {
-              if (failError == ERROR_NONE) failError = error;
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(deviceName);
-              continue;
-            }
-            printInfo(2,"    \b\b\b\b");
-
-            if (fragmentNode != NULL)
-            {
-              // add fragment to file fragment list
-              FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
-
-              // discard fragment list if file is complete
-              if (FragmentList_isEntryComplete(fragmentNode))
-              {
-                FragmentList_discard(fragmentList,fragmentNode);
-              }
-            }
-
-            /* check if all data read.
-               Note: it is not possible to check if all data is read when
-               compression is used. The decompressor may not be at the end
-               of a compressed data chunk even compressed data is _not_
-               corrupt.
-            */
-            if (   !Compress_isCompressed(archiveEntryInfo.image.deltaCompressAlgorithm)
-                && !Compress_isCompressed(archiveEntryInfo.image.byteCompressAlgorithm)
-                && !Archive_eofData(&archiveEntryInfo))
-            {
-              printInfo(1,"FAIL!\n");
-              printError("unexpected data at end of image entry '%S'!\n",deviceName);
-              if (failError == ERROR_NONE)
-              {
-                failError = ERRORX_(CORRUPT_DATA,0,String_cString(deviceName));
-              }
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(deviceName);
-              break;
-            }
-
-            printInfo(1,"OK\n");
-          }
-          else
-          {
-            // skip
-            printInfo(2,"  Test '%s'...skipped\n",String_cString(deviceName));
-          }
-
-          // close archive file, free resources
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printError("closing 'image' entry fail (error: %s)!\n",
-                       Error_getText(error)
-                      );
-            String_delete(deviceName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          // free resources
-          String_delete(deviceName);
+          if (failError == ERROR_NONE) failError = error;
+          break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+        error = testDirectoryEntry(&archiveInfo,
+                                   offset,
+                                   includeEntryList,
+                                   excludePatternList,
+                                   Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                                   jobOptions,
+                                   fragmentList,
+                                   buffer,
+                                   BUFFER_SIZE
+                                  );
+        if (error != ERROR_NONE)
         {
-          String   directoryName;
-          FileInfo fileInfo;
-
-          // read directory
-          directoryName = String_new();
-          error = Archive_readDirectoryEntry(&archiveEntryInfo,
-                                             &archiveInfo,
-                                             NULL,  // cryptAlgorithm
-                                             NULL,  // cryptType
-                                             directoryName,
-                                             &fileInfo,
-                                             NULL   // fileExtendedAttributeList
-                                            );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                       Error_getText(error)
-                      );
-            String_delete(directoryName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
-              && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
-             )
-          {
-            printInfo(1,"  Test directory '%s'...",String_cString(directoryName));
-
-            // check if all data read
-            if (!Archive_eofData(&archiveEntryInfo))
-            {
-              printInfo(1,"FAIL!\n");
-              printError("unexpected data at end of directory entry '%S'!\n",directoryName);
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(directoryName);
-              if (failError == ERROR_NONE)
-              {
-                failError = ERRORX_(CORRUPT_DATA,0,String_cString(directoryName));
-              }
-              break;
-            }
-
-            printInfo(1,"OK\n");
-
-            // free resources
-          }
-          else
-          {
-            // skip
-            printInfo(2,"Test '%s'...skipped\n",String_cString(directoryName));
-          }
-
-          // close archive file
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printError("closing 'directory' entry fail (error: %s)!\n",
-                       Error_getText(error)
-                      );
-            String_delete(directoryName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          // free resources
-          String_delete(directoryName);
+          if (failError == ERROR_NONE) failError = error;
+          break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
+        error = testLinkEntry(&archiveInfo,
+                              offset,
+                              includeEntryList,
+                              excludePatternList,
+                              Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                              jobOptions,
+                              fragmentList,
+                              buffer,
+                              BUFFER_SIZE
+                             );
+        if (error != ERROR_NONE)
         {
-          String   linkName;
-          String   fileName;
-          FileInfo fileInfo;
-
-          // read link
-          linkName = String_new();
-          fileName = String_new();
-          error = Archive_readLinkEntry(&archiveEntryInfo,
-                                        &archiveInfo,
-                                        NULL,  // cryptAlgorithm
-                                        NULL,  // cryptType
-                                        linkName,
-                                        fileName,
-                                        &fileInfo,
-                                        NULL   // fileExtendedAttributeList
-                                       );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                       Error_getText(error)
-                      );
-            String_delete(fileName);
-            String_delete(linkName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
-              && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
-             )
-          {
-            printInfo(1,"  Test link '%s'...",String_cString(linkName));
-
-            // check if all data read
-            if (!Archive_eofData(&archiveEntryInfo))
-            {
-              printInfo(1,"FAIL!\n");
-              printError("unexpected data at end of link entry '%S'!\n",linkName);
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(fileName);
-              String_delete(linkName);
-              if (failError == ERROR_NONE)
-              {
-                failError = ERRORX_(CORRUPT_DATA,0,String_cString(linkName));
-              }
-              break;
-            }
-
-            printInfo(1,"OK\n");
-
-            // free resources
-          }
-          else
-          {
-            // skip
-            printInfo(2,"  Test '%s'...skipped\n",String_cString(linkName));
-          }
-
-          // close archive file
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printError("closing 'link' entry fail (error: %s)!\n",
-                       Error_getText(error)
-                      );
-            String_delete(fileName);
-            String_delete(linkName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          // free resources
-          String_delete(fileName);
-          String_delete(linkName);
+          if (failError == ERROR_NONE) failError = error;
+          break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
+        error = testHardLinkEntry(&archiveInfo,
+                                  offset,
+                                  includeEntryList,
+                                  excludePatternList,
+                                  Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                                  jobOptions,
+                                  fragmentList,
+                                  buffer,
+                                  BUFFER_SIZE
+                                 );
+        if (error != ERROR_NONE)
         {
-          StringList       fileNameList;
-          FileInfo         fileInfo;
-          uint64           fragmentOffset,fragmentSize;
-          bool             testedDataFlag;
-          const StringNode *stringNode;
-          String           fileName;
-          FragmentNode     *fragmentNode;
-          uint64           length;
-          ulong            n;
-
-          // read hard linke
-          StringList_init(&fileNameList);
-          error = Archive_readHardLinkEntry(&archiveEntryInfo,
-                                            &archiveInfo,
-                                            NULL,  // deltaCompressAlgorithm
-                                            NULL,  // byteCompressAlgorithm
-                                            NULL,  // cryptAlgorithm
-                                            NULL,  // cryptType
-                                            &fileNameList,
-                                            &fileInfo,
-                                            NULL,  // fileExtendedAttributeList
-                                            NULL,  // deltaSourceName
-                                            NULL,  // deltaSourceSize
-                                            &fragmentOffset,
-                                            &fragmentSize
-                                           );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                       Error_getText(error)
-                      );
-            StringList_done(&fileNameList);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          testedDataFlag = FALSE;
-          STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
-          {
-            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-               )
-            {
-              printInfo(1,"  Test hard link '%s'...",String_cString(fileName));
-
-              if (!testedDataFlag && (failError == ERROR_NONE))
-              {
-                // read hard link data
-
-                if (!jobOptions->noFragmentsCheckFlag)
-                {
-                  // get file fragment list
-                  fragmentNode = FragmentList_find(fragmentList,fileName);
-                  if (fragmentNode == NULL)
-                  {
-                    fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
-                  }
-                  assert(fragmentNode != NULL);
-//FragmentList_print(fragmentNode,String_cString(fileName));
-                }
-                else
-                {
-                  fragmentNode = NULL;
-                }
-
-                // read hard link content
-                length = 0LL;
-                while (length < fragmentSize)
-                {
-                  n = (ulong)MIN(fragmentSize-length,BUFFER_SIZE);
-
-                  // read archive file
-                  error = Archive_readData(&archiveEntryInfo,buffer,n);
-                  if (error != ERROR_NONE)
-                  {
-                    printInfo(1,"FAIL!\n");
-                    printError("Cannot read content of archive '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                               Error_getText(error)
-                              );
-                    break;
-                  }
-
-                  length += (uint64)n;
-
-                  printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
-                }
-                if (error != ERROR_NONE)
-                {
-                  if (failError == ERROR_NONE) failError = error;
-                  break;
-                }
-                printInfo(2,"    \b\b\b\b");
-
-                if (fragmentNode != NULL)
-                {
-                  // add fragment to file fragment list
-                  FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-                  // discard fragment list if file is complete
-                  if (FragmentList_isEntryComplete(fragmentNode))
-                  {
-                    FragmentList_discard(fragmentList,fragmentNode);
-                  }
-                }
-
-                /* check if all data read.
-                   Note: it is not possible to check if all data is read when
-                   compression is used. The decompressor may not be at the end
-                   of a compressed data chunk even compressed data is _not_
-                   corrupt.
-                */
-                if (   !Compress_isCompressed(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
-                    && !Compress_isCompressed(archiveEntryInfo.hardLink.byteCompressAlgorithm)
-                    && !Archive_eofData(&archiveEntryInfo))
-                {
-                  printError("unexpected data at end of hard link entry '%S'!\n",fileName);
-                  if (failError == ERROR_NONE)
-                  {
-                    failError = ERRORX_(CORRUPT_DATA,0,String_cString(fileName));
-                  }
-                  break;
-                }
-
-                printInfo(1,"OK\n");
-
-                testedDataFlag = TRUE;
-              }
-              else
-              {
-                if (failError == ERROR_NONE)
-                {
-                  printInfo(1,"OK\n");
-                }
-                else
-                {
-                  printInfo(1,"FAIL!\n");
-                }
-              }
-            }
-            else
-            {
-              // skip
-              printInfo(2,"  Test '%s'...skipped\n",String_cString(fileName));
-            }
-          }
-          if (failError != ERROR_NONE)
-          {
-            (void)Archive_closeEntry(&archiveEntryInfo);
-            StringList_done(&fileNameList);
-            break;
-          }
-
-          // close archive file, free resources
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printError("closing 'hard link' entry fail (error: %s)!\n",
-                       Error_getText(error)
-                      );
-            StringList_done(&fileNameList);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          // free resources
-          StringList_done(&fileNameList);
+          if (failError == ERROR_NONE) failError = error;
+          break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
+        error = testSpecialEntry(&archiveInfo,
+                                 offset,
+                                 includeEntryList,
+                                 excludePatternList,
+                                 Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                                 jobOptions,
+                                 fragmentList,
+                                 buffer,
+                                 BUFFER_SIZE
+                                );
+        if (error != ERROR_NONE)
         {
-          String   fileName;
-          FileInfo fileInfo;
-
-          // read special
-          fileName = String_new();
-          error = Archive_readSpecialEntry(&archiveEntryInfo,
-                                           &archiveInfo,
-                                           NULL,  // cryptAlgorithm
-                                           NULL,  // cryptType
-                                           fileName,
-                                           &fileInfo,
-                                           NULL   // fileExtendedAttributeList
-                                          );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                       Error_getText(error)
-                      );
-            String_delete(fileName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-              && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-             )
-          {
-            printInfo(1,"  Test special device '%s'...",String_cString(fileName));
-
-            // check if all data read
-            if (!Archive_eofData(&archiveEntryInfo))
-            {
-              printInfo(1,"FAIL!\n");
-              printError("unexpected data at end of special entry '%S'!\n",fileName);
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(fileName);
-              if (failError == ERROR_NONE)
-              {
-                failError = ERRORX_(CORRUPT_DATA,0,String_cString(fileName));
-              }
-              break;
-            }
-
-            printInfo(1,"OK\n");
-
-            // free resources
-          }
-          else
-          {
-            // skip
-            printInfo(2,"  Test '%s'...skipped\n",String_cString(fileName));
-          }
-
-          // close archive file
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printError("closing 'special' entry fail (error: %s)!\n",
-                       Error_getText(error)
-                      );
-            String_delete(fileName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          // free resources
-          String_delete(fileName);
+          if (failError == ERROR_NONE) failError = error;
+          break;
         }
         break;
       default:
@@ -987,8 +1286,9 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   Errors            failError;
   Errors            error;
   ArchiveInfo       archiveInfo;
-  ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
+  uint64            offset;
+  ArchiveEntryInfo  archiveEntryInfo;
 
   assert(storageSpecifier != NULL);
   assert(includeEntryList != NULL);
@@ -1069,709 +1369,111 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
       break;
     }
 
+    // get offset
+    offset = Archive_tell(&archiveInfo);
+
     switch (archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
+        error = testFileEntry(&archiveInfo,
+                              offset,
+                              includeEntryList,
+                              excludePatternList,
+                              Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                              jobOptions,
+                              fragmentList,
+                              buffer,
+                              BUFFER_SIZE
+                             );
+        if (error != ERROR_NONE)
         {
-          String       fileName;
-          FileInfo     fileInfo;
-          uint64       fragmentOffset,fragmentSize;
-          FragmentNode *fragmentNode;
-          uint64       length;
-          ulong        n;
-
-          // read file
-          fileName = String_new();
-          error = Archive_readFileEntry(&archiveEntryInfo,
-                                        &archiveInfo,
-                                        NULL,  // deltaCompressAlgorithm
-                                        NULL,  // byteCompressAlgorithm
-                                        NULL,  // cryptAlgorithm
-                                        NULL,  // cryptType
-                                        fileName,
-                                        &fileInfo,
-                                        NULL,  // fileExtendedAttributeList
-                                        NULL,  // deltaSourceName
-                                        NULL,  // deltaSourceSize
-                                        &fragmentOffset,
-                                        &fragmentSize
-                                       );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                       Error_getText(error)
-                      );
-            String_delete(fileName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-              && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-             )
-          {
-            printInfo(1,"  Test file '%s'...",String_cString(fileName));
-
-            if (!jobOptions->noFragmentsCheckFlag)
-            {
-              // get file fragment list
-              fragmentNode = FragmentList_find(fragmentList,fileName);
-              if (fragmentNode == NULL)
-              {
-                fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
-              }
-              assert(fragmentNode != NULL);
-            }
-            else
-            {
-              fragmentNode = NULL;
-            }
-//FragmentList_print(fragmentNode,String_cString(fileName));
-
-            // read file content
-            length = 0LL;
-            while (length < fragmentSize)
-            {
-              n = (ulong)MIN(fragmentSize-length,BUFFER_SIZE);
-
-              // read archive file
-              error = Archive_readData(&archiveEntryInfo,buffer,n);
-              if (error != ERROR_NONE)
-              {
-                printInfo(1,"FAIL!\n");
-                printError("Cannot read content of archive '%s' (error: %s)!\n",
-                           Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                           Error_getText(error)
-                          );
-                break;
-              }
-
-              length += (uint64)n;
-
-              printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
-            }
-            if (error != ERROR_NONE)
-            {
-              if (failError == ERROR_NONE) failError = error;
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(fileName);
-              continue;
-            }
-            printInfo(2,"    \b\b\b\b");
-
-            if (fragmentNode != NULL)
-            {
-              // add fragment to file fragment list
-              FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-              // discard fragment list if file is complete
-              if (FragmentList_isEntryComplete(fragmentNode))
-              {
-                FragmentList_discard(fragmentList,fragmentNode);
-              }
-            }
-
-            /* check if all data read.
-               Note: it is not possible to check if all data is read when
-               compression is used. The decompressor may not be at the end
-               of a compressed data chunk even compressed data is _not_
-               corrupt.
-            */
-            if (   !Compress_isCompressed(archiveEntryInfo.file.deltaCompressAlgorithm)
-                && !Compress_isCompressed(archiveEntryInfo.file.byteCompressAlgorithm)
-                && !Archive_eofData(&archiveEntryInfo)
-               )
-            {
-              printInfo(1,"FAIL!\n");
-              printError("unexpected data at end of file entry '%S'!\n",fileName);
-              if (failError == ERROR_NONE)
-              {
-                failError = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
-              }
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(fileName);
-              break;
-            }
-
-            printInfo(1,"OK\n");
-          }
-          else
-          {
-            // skip
-            printInfo(2,"  Test '%s'...skipped\n",String_cString(fileName));
-          }
-
-          // close archive file, free resources
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printError("closing 'file' entry fail (error: %s)!\n",
-                       Error_getText(error)
-                      );
-            String_delete(fileName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          // free resources
-          String_delete(fileName);
+          if (failError == ERROR_NONE) failError = error;
+          break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
+        error = testImageEntry(&archiveInfo,
+                               offset,
+                               includeEntryList,
+                               excludePatternList,
+                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               jobOptions,
+                               fragmentList,
+                               buffer,
+                               BUFFER_SIZE
+                              );
+        if (error != ERROR_NONE)
         {
-          String       deviceName;
-          DeviceInfo   deviceInfo;
-          uint64       blockOffset,blockCount;
-          FragmentNode *fragmentNode;
-          uint64       block;
-          ulong        bufferBlockCount;
-
-          // read image
-          deviceName = String_new();
-          error = Archive_readImageEntry(&archiveEntryInfo,
-                                         &archiveInfo,
-                                         NULL,  // deltaCompressAlgorithm
-                                         NULL,  // byteCompressAlgorithm
-                                         NULL,  // cryptAlgorithm
-                                         NULL,  // cryptType
-                                         deviceName,
-                                         &deviceInfo,
-                                         NULL,  // fileSystemType
-                                         NULL,  // deltaSourceName
-                                         NULL,  // deltaSourceSize
-                                         &blockOffset,
-                                         &blockCount
-                                        );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                       Error_getText(error)
-                      );
-            String_delete(deviceName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-          if (deviceInfo.blockSize > BUFFER_SIZE)
-          {
-            printError("Device block size %llu on '%s' is too big (max: %llu)\n",
-                       deviceInfo.blockSize,
-                       String_cString(deviceName),
-                       BUFFER_SIZE
-                      );
-            String_delete(deviceName);
-            if (failError == ERROR_NONE)
-            {
-              failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
-            }
-            break;
-          }
-          assert(deviceInfo.blockSize > 0);
-
-          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
-              && !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
-             )
-          {
-            printInfo(1,"  Test image '%s'...",String_cString(deviceName));
-
-            if (!jobOptions->noFragmentsCheckFlag)
-            {
-              // get file fragment node
-              fragmentNode = FragmentList_find(fragmentList,deviceName);
-              if (fragmentNode == NULL)
-              {
-                fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0);
-              }
-//FragmentList_print(fragmentNode,String_cString(deviceName));
-              assert(fragmentNode != NULL);
-            }
-            else
-            {
-              fragmentNode = NULL;
-            }
-
-            // read image content
-            block = 0LL;
-            while (block < blockCount)
-            {
-              bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
-
-              // read archive file
-              error = Archive_readData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
-              if (error != ERROR_NONE)
-              {
-                printInfo(1,"FAIL!\n");
-                printError("Cannot read content of archive '%s' (error: %s)!\n",
-                           Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                           Error_getText(error)
-                          );
-                break;
-              }
-
-              block += (uint64)bufferBlockCount;
-
-              printInfo(2,"%3d%%\b\b\b\b",(uint)((block*100LL)/blockCount));
-            }
-            if (error != ERROR_NONE)
-            {
-              if (failError == ERROR_NONE) failError = error;
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(deviceName);
-              continue;
-            }
-            printInfo(2,"    \b\b\b\b");
-
-            if (fragmentNode != NULL)
-            {
-              // add fragment to file fragment list
-              FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
-
-              // discard fragment list if file is complete
-              if (FragmentList_isEntryComplete(fragmentNode))
-              {
-                FragmentList_discard(fragmentList,fragmentNode);
-              }
-            }
-
-            /* check if all data read.
-               Note: it is not possible to check if all data is read when
-               compression is used. The decompressor may not be at the end
-               of a compressed data chunk even compressed data is _not_
-               corrupt.
-            */
-            if (   !Compress_isCompressed(archiveEntryInfo.image.deltaCompressAlgorithm)
-                && !Compress_isCompressed(archiveEntryInfo.image.byteCompressAlgorithm)
-                && !Archive_eofData(&archiveEntryInfo))
-            {
-              printInfo(1,"FAIL!\n");
-              printError("unexpected data at end of image entry '%S'!\n",deviceName);
-              if (failError == ERROR_NONE)
-              {
-                failError = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(deviceName));
-              }
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(deviceName);
-              break;
-            }
-
-            printInfo(1,"OK\n");
-          }
-          else
-          {
-            // skip
-            printInfo(2,"  Test '%s'...skipped\n",String_cString(deviceName));
-          }
-
-          // close archive file, free resources
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printError("closing 'image' entry fail (error: %s)!\n",
-                       Error_getText(error)
-                      );
-            String_delete(deviceName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          // free resources
-          String_delete(deviceName);
+          if (failError == ERROR_NONE) failError = error;
+          break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+        error = testDirectoryEntry(&archiveInfo,
+                                   offset,
+                                   includeEntryList,
+                                   excludePatternList,
+                                   Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                                   jobOptions,
+                                   fragmentList,
+                                   buffer,
+                                   BUFFER_SIZE
+                                  );
+        if (error != ERROR_NONE)
         {
-          String   directoryName;
-          FileInfo fileInfo;
-
-          // read directory
-          directoryName = String_new();
-          error = Archive_readDirectoryEntry(&archiveEntryInfo,
-                                             &archiveInfo,
-                                             NULL,  // cryptAlgorithm
-                                             NULL,  // cryptType
-                                             directoryName,
-                                             &fileInfo,
-                                             NULL   // fileExtendedAttributeList
-                                            );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                       Error_getText(error)
-                      );
-            String_delete(directoryName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
-              && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
-             )
-          {
-            printInfo(1,"  Test directory '%s'...",String_cString(directoryName));
-
-            // check if all data read
-            if (!Archive_eofData(&archiveEntryInfo))
-            {
-              printInfo(1,"FAIL!\n");
-              printError("unexpected data at end of directory entry '%S'!\n",directoryName);
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(directoryName);
-              if (failError == ERROR_NONE)
-              {
-                failError = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(directoryName));
-              }
-              break;
-            }
-
-            printInfo(1,"OK\n");
-
-            // free resources
-          }
-          else
-          {
-            // skip
-            printInfo(2,"Test '%s'...skipped\n",String_cString(directoryName));
-          }
-
-          // close archive file
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printError("closing 'directory' entry fail (error: %s)!\n",
-                       Error_getText(error)
-                      );
-            String_delete(directoryName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          // free resources
-          String_delete(directoryName);
+          if (failError == ERROR_NONE) failError = error;
+          break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
+        error = testLinkEntry(&archiveInfo,
+                              offset,
+                              includeEntryList,
+                              excludePatternList,
+                              Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                              jobOptions,
+                              fragmentList,
+                              buffer,
+                              BUFFER_SIZE
+                             );
+        if (error != ERROR_NONE)
         {
-          String   linkName;
-          String   fileName;
-          FileInfo fileInfo;
-
-          // read link
-          linkName = String_new();
-          fileName = String_new();
-          error = Archive_readLinkEntry(&archiveEntryInfo,
-                                        &archiveInfo,
-                                        NULL,  // cryptAlgorithm
-                                        NULL,  // cryptType
-                                        linkName,
-                                        fileName,
-                                        &fileInfo,
-                                        NULL   // fileExtendedAttributeList
-                                       );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                       Error_getText(error)
-                      );
-            String_delete(fileName);
-            String_delete(linkName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
-              && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
-             )
-          {
-            printInfo(1,"  Test link '%s'...",String_cString(linkName));
-
-            // check if all data read
-            if (!Archive_eofData(&archiveEntryInfo))
-            {
-              printInfo(1,"FAIL!\n");
-              printError("unexpected data at end of link entry '%S'!\n",linkName);
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(fileName);
-              String_delete(linkName);
-              if (failError == ERROR_NONE)
-              {
-                failError = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(linkName));
-              }
-              break;
-            }
-
-            printInfo(1,"OK\n");
-
-            // free resources
-          }
-          else
-          {
-            // skip
-            printInfo(2,"  Test '%s'...skipped\n",String_cString(linkName));
-          }
-
-          // close archive file
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printError("closing 'link' entry fail (error: %s)!\n",
-                       Error_getText(error)
-                      );
-            String_delete(fileName);
-            String_delete(linkName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          // free resources
-          String_delete(fileName);
-          String_delete(linkName);
+          if (failError == ERROR_NONE) failError = error;
+          break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
+        error = testHardLinkEntry(&archiveInfo,
+                                  offset,
+                                  includeEntryList,
+                                  excludePatternList,
+                                  Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                                  jobOptions,
+                                  fragmentList,
+                                  buffer,
+                                  BUFFER_SIZE
+                                 );
+        if (error != ERROR_NONE)
         {
-          StringList       fileNameList;
-          FileInfo         fileInfo;
-          uint64           fragmentOffset,fragmentSize;
-          bool             testedDataFlag;
-          const StringNode *stringNode;
-          String           fileName;
-          FragmentNode     *fragmentNode;
-          uint64           length;
-          ulong            n;
-
-          // read hard linke
-          StringList_init(&fileNameList);
-          error = Archive_readHardLinkEntry(&archiveEntryInfo,
-                                            &archiveInfo,
-                                            NULL,  // deltaCompressAlgorithm
-                                            NULL,  // byteCompressAlgorithm
-                                            NULL,  // cryptAlgorithm
-                                            NULL,  // cryptType
-                                            &fileNameList,
-                                            &fileInfo,
-                                            NULL,  // fileExtendedAttributeList
-                                            NULL,  // deltaSourceName
-                                            NULL,  // deltaSourceSize
-                                            &fragmentOffset,
-                                            &fragmentSize
-                                           );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                       Error_getText(error)
-                      );
-            StringList_done(&fileNameList);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          testedDataFlag = FALSE;
-          STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
-          {
-            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-               )
-            {
-              printInfo(1,"  Test hard link '%s'...",String_cString(fileName));
-
-              if (!testedDataFlag && (failError == ERROR_NONE))
-              {
-                // read hard link data
-
-                if (!jobOptions->noFragmentsCheckFlag)
-                {
-                  // get file fragment list
-                  fragmentNode = FragmentList_find(fragmentList,fileName);
-                  if (fragmentNode == NULL)
-                  {
-                    fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
-                  }
-                  assert(fragmentNode != NULL);
-//FragmentList_print(fragmentNode,String_cString(fileName));
-                }
-                else
-                {
-                  fragmentNode = NULL;
-                }
-
-                // read hard link content
-                length = 0LL;
-                while (length < fragmentSize)
-                {
-                  n = (ulong)MIN(fragmentSize-length,BUFFER_SIZE);
-
-                  // read archive file
-                  error = Archive_readData(&archiveEntryInfo,buffer,n);
-                  if (error != ERROR_NONE)
-                  {
-                    printInfo(1,"FAIL!\n");
-                    printError("Cannot read content of archive '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                               Error_getText(error)
-                              );
-                    break;
-                  }
-
-                  length += (uint64)n;
-
-                  printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
-                }
-                if (error != ERROR_NONE)
-                {
-                  if (failError == ERROR_NONE) failError = error;
-                  break;
-                }
-                printInfo(2,"    \b\b\b\b");
-
-                if (fragmentNode != NULL)
-                {
-                  // add fragment to file fragment list
-                  FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-                  // discard fragment list if file is complete
-                  if (FragmentList_isEntryComplete(fragmentNode))
-                  {
-                    FragmentList_discard(fragmentList,fragmentNode);
-                  }
-                }
-
-                /* check if all data read.
-                   Note: it is not possible to check if all data is read when
-                   compression is used. The decompressor may not be at the end
-                   of a compressed data chunk even compressed data is _not_
-                   corrupt.
-                */
-                if (   !Compress_isCompressed(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
-                    && !Compress_isCompressed(archiveEntryInfo.hardLink.byteCompressAlgorithm)
-                    && !Archive_eofData(&archiveEntryInfo))
-                {
-                  printError("unexpected data at end of hard link entry '%S'!\n",fileName);
-                  if (failError == ERROR_NONE)
-                  {
-                    failError = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
-                  }
-                  break;
-                }
-
-                printInfo(1,"OK\n");
-
-                testedDataFlag = TRUE;
-              }
-              else
-              {
-                if (failError == ERROR_NONE)
-                {
-                  printInfo(1,"OK\n");
-                }
-                else
-                {
-                  printInfo(1,"FAIL!\n");
-                }
-              }
-            }
-            else
-            {
-              // skip
-              printInfo(2,"  Test '%s'...skipped\n",String_cString(fileName));
-            }
-          }
-          if (failError != ERROR_NONE)
-          {
-            (void)Archive_closeEntry(&archiveEntryInfo);
-            StringList_done(&fileNameList);
-            break;
-          }
-
-          // close archive file, free resources
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printError("closing 'hard link' entry fail (error: %s)!\n",
-                       Error_getText(error)
-                      );
-            StringList_done(&fileNameList);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          // free resources
-          StringList_done(&fileNameList);
+          if (failError == ERROR_NONE) failError = error;
+          break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
+        error = testSpecialEntry(&archiveInfo,
+                                 offset,
+                                 includeEntryList,
+                                 excludePatternList,
+                                 Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                                 jobOptions,
+                                 fragmentList,
+                                 buffer,
+                                 BUFFER_SIZE
+                                );
+        if (error != ERROR_NONE)
         {
-          String   fileName;
-          FileInfo fileInfo;
-
-          // read special
-          fileName = String_new();
-          error = Archive_readSpecialEntry(&archiveEntryInfo,
-                                           &archiveInfo,
-                                           NULL,  // cryptAlgorithm
-                                           NULL,  // cryptType
-                                           fileName,
-                                           &fileInfo,
-                                           NULL   // fileExtendedAttributeList
-                                          );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                       Error_getText(error)
-                      );
-            String_delete(fileName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-              && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-             )
-          {
-            printInfo(1,"  Test special device '%s'...",String_cString(fileName));
-
-            // check if all data read
-            if (!Archive_eofData(&archiveEntryInfo))
-            {
-              printInfo(1,"FAIL!\n");
-              printError("unexpected data at end of special entry '%S'!\n",fileName);
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(fileName);
-              if (failError == ERROR_NONE)
-              {
-                failError = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
-              }
-              break;
-            }
-
-            printInfo(1,"OK\n");
-
-            // free resources
-          }
-          else
-          {
-            // skip
-            printInfo(2,"  Test '%s'...skipped\n",String_cString(fileName));
-          }
-
-          // close archive file
-          error = Archive_closeEntry(&archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            printError("closing 'special' entry fail (error: %s)!\n",
-                       Error_getText(error)
-                      );
-            String_delete(fileName);
-            if (failError == ERROR_NONE) failError = error;
-            break;
-          }
-
-          // free resources
-          String_delete(fileName);
+          if (failError == ERROR_NONE) failError = error;
+          break;
         }
         break;
       default:
