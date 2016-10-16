@@ -4829,6 +4829,11 @@ widgetArchivePartSize.setListVisible(true);
             {
               cryptPasswordMode.set("default");
               BARServer.setJobOption(selectedJobData.uuid,cryptPasswordMode);
+
+              cryptPassword.set("");
+              BARServer.setJobOption(selectedJobData.uuid,cryptPassword);
+              widgetCryptPassword1.setBackground(null);
+              widgetCryptPassword2.setBackground(null);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptPasswordMode)
@@ -4865,6 +4870,11 @@ widgetArchivePartSize.setListVisible(true);
             {
               cryptPasswordMode.set("ask");
               BARServer.setJobOption(selectedJobData.uuid,cryptPasswordMode);
+
+              cryptPassword.set("");
+              BARServer.setJobOption(selectedJobData.uuid,cryptPassword);
+              widgetCryptPassword1.setBackground(null);
+              widgetCryptPassword2.setBackground(null);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptPasswordMode)
