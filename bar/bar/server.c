@@ -2701,6 +2701,18 @@ LOCAL Errors writeJob(JobNode *jobNode)
       return error;
     }
 
+    // correct config values
+    switch (jobNode->jobOptions.cryptPasswordMode)
+    {
+      case PASSWORD_MODE_DEFAULT:
+      case PASSWORD_MODE_ASK:
+        if (jobNode->jobOptions.cryptPassword != NULL) Password_clear(jobNode->jobOptions.cryptPassword);
+        break;
+      case PASSWORD_MODE_CONFIG:
+        // nothing to do
+        break;
+    }
+
     // update line list
     CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,NULL,i)
     {
