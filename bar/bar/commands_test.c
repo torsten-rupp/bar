@@ -50,6 +50,7 @@
 // test info
 typedef struct
 {
+//  StorageHandle               *storageHandle;
   StorageSpecifier            *storageSpecifier;                  // storage specifier structure
   ConstString                 jobUUID;                            // unique job id to store or NULL
   ConstString                 scheduleUUID;                       // unique schedule id to store or NULL
@@ -217,7 +218,7 @@ LOCAL Errors testFileEntry(ArchiveInfo       *archiveInfo,
     length = 0LL;
     while (length < fragmentSize)
     {
-      n = (ulong)MIN(fragmentSize-length,BUFFER_SIZE);
+      n = (ulong)MIN(fragmentSize-length,bufferSize);
 
       // read archive file
       error = Archive_readData(&archiveEntryInfo,buffer,n);
@@ -369,7 +370,7 @@ LOCAL Errors testImageEntry(ArchiveInfo       *archiveInfo,
     String_delete(deviceName);
     return error;
   }
-  if (deviceInfo.blockSize > BUFFER_SIZE)
+  if (deviceInfo.blockSize > bufferSize)
   {
     printError("Device block size %llu on '%s' is too big (max: %llu)\n",
                deviceInfo.blockSize,
@@ -407,7 +408,7 @@ LOCAL Errors testImageEntry(ArchiveInfo       *archiveInfo,
     block = 0LL;
     while (block < blockCount)
     {
-      bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
+      bufferBlockCount = MIN(blockCount-block,bufferSize/deviceInfo.blockSize);
 
       // read archive file
       error = Archive_readData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
@@ -506,11 +507,7 @@ LOCAL Errors testDirectoryEntry(ArchiveInfo       *archiveInfo,
                                 uint64            offset,
                                 const EntryList   *includeEntryList,
                                 const PatternList *excludePatternList,
-                                const char        *printableStorageName,
-                                const JobOptions  *jobOptions,
-                                FragmentList      *fragmentList,
-                                byte              *buffer,
-                                uint              bufferSize
+                                const char        *printableStorageName
                                )
 {
   Errors           error;
@@ -611,11 +608,7 @@ LOCAL Errors testLinkEntry(ArchiveInfo       *archiveInfo,
                            uint64            offset,
                            const EntryList   *includeEntryList,
                            const PatternList *excludePatternList,
-                           const char        *printableStorageName,
-                           const JobOptions  *jobOptions,
-                           FragmentList      *fragmentList,
-                           byte              *buffer,
-                           uint              bufferSize
+                           const char        *printableStorageName
                           )
 {
   Errors           error;
@@ -812,7 +805,7 @@ LOCAL Errors testHardLinkEntry(ArchiveInfo       *archiveInfo,
         length = 0LL;
         while (length < fragmentSize)
         {
-          n = (ulong)MIN(fragmentSize-length,BUFFER_SIZE);
+          n = (ulong)MIN(fragmentSize-length,bufferSize);
 
           // read archive file
           error = Archive_readData(&archiveEntryInfo,buffer,n);
@@ -928,11 +921,7 @@ LOCAL Errors testSpecialEntry(ArchiveInfo       *archiveInfo,
                               uint64            offset,
                               const EntryList   *includeEntryList,
                               const PatternList *excludePatternList,
-                              const char        *printableStorageName,
-                              const JobOptions  *jobOptions,
-                              FragmentList      *fragmentList,
-                              byte              *buffer,
-                              uint              bufferSize
+                              const char        *printableStorageName
                              )
 {
   Errors           error;
@@ -1028,14 +1017,14 @@ LOCAL Errors testSpecialEntry(ArchiveInfo       *archiveInfo,
 LOCAL void testThreadCode(TestInfo *testInfo)
 {
   byte              *buffer;
+  ArchiveInfo       archiveInfo;
   EntryMsg          entryMsg;
-  StorageHandle     storageHandle;
   Errors            failError;
   Errors            error;
-  ArchiveInfo       archiveInfo;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
 
+  assert(testInfo != NULL);
 //  assert(storageSpecifier != NULL);
 //  assert(includeEntryList != NULL);
 //  assert(excludePatternList != NULL);
@@ -1049,39 +1038,11 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  // test entries
-  while (   (testInfo->failError == ERROR_NONE)
-//         && !isAborted(testInfo)
-         && MsgQueue_get(&testInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
-        )
-  {
-  }
-
-#if 0
-  // init storage
-  error = Storage_init(&storageHandle,
-                       storageSpecifier,
-                       jobOptions,
-                       &globalOptions.maxBandWidthList,
-                       SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK(NULL,NULL),
-                       CALLBACK(NULL,NULL)
-                      );
-  if (error != ERROR_NONE)
-  {
-    printError("Cannot initialize storage '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,archiveName),
-               Error_getText(error)
-              );
-    free(buffer);
-    return error;
-  }
-
   // open archive
   error = Archive_open(&archiveInfo,
-                       &storageHandle,
-                       storageSpecifier,
-                       archiveName,
+                       testInfo->storageHandle,
+                       testInfo->storageSpecifier,
+                       testInfo->archiveName,
                        deltaSourceList,
                        jobOptions,
                        archiveGetCryptPasswordFunction,
@@ -1099,33 +1060,12 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     return error;
   }
 
-  // read archive entries
-  printInfo(0,
-            "Test storage '%s'%s",
-            Storage_getPrintableNameCString(storageSpecifier,archiveName),
-            !isPrintInfo(1) ? "..." : ":\n"
-           );
-  failError = ERROR_NONE;
-  while (!Archive_eof(&archiveInfo,FALSE))
+  // test entries
+  while (   (testInfo->failError == ERROR_NONE)
+//         && !isAborted(testInfo)
+         && MsgQueue_get(&testInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
+        )
   {
-    // get next archive entry type
-    error = Archive_getNextArchiveEntryType(&archiveInfo,
-                                            &archiveEntryType,
-                                            FALSE
-                                           );
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot read next entry in archive '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                 Error_getText(error)
-                );
-      if (failError == ERROR_NONE) failError = error;
-      break;
-    }
-
-    // get offset
-    offset = Archive_tell(&archiveInfo);
-
     switch (archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
@@ -1168,10 +1108,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
                                    includeEntryList,
                                    excludePatternList,
                                    Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                                   jobOptions,
-                                   fragmentList,
-                                   buffer,
-                                   BUFFER_SIZE
+                                   jobOptions
                                   );
         if (error != ERROR_NONE)
         {
@@ -1185,10 +1122,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
                               includeEntryList,
                               excludePatternList,
                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                              jobOptions,
-                              fragmentList,
-                              buffer,
-                              BUFFER_SIZE
+                              jobOptions
                              );
         if (error != ERROR_NONE)
         {
@@ -1219,10 +1153,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
                                  includeEntryList,
                                  excludePatternList,
                                  Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                                 jobOptions,
-                                 fragmentList,
-                                 buffer,
-                                 BUFFER_SIZE
+                                 jobOptions
                                 );
         if (error != ERROR_NONE)
         {
@@ -1241,10 +1172,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 
   // close archive
   Archive_close(&archiveInfo);
-
-  // done storage
-  (void)Storage_done(&storageHandle);
-#endif
 
   // free resources
   free(buffer);
@@ -1274,7 +1201,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                                 const EntryList     *includeEntryList,
                                 const PatternList   *excludePatternList,
                                 DeltaSourceList     *deltaSourceList,
-                                JobOptions          *jobOptions,
+                                const JobOptions          *jobOptions,
                                 GetPasswordFunction getPasswordFunction,
                                 void                *getPasswordUserData,
                                 FragmentList        *fragmentList,
@@ -1288,7 +1215,6 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   ArchiveInfo       archiveInfo;
   ArchiveEntryTypes archiveEntryType;
   uint64            offset;
-  ArchiveEntryInfo  archiveEntryInfo;
 
   assert(storageSpecifier != NULL);
   assert(includeEntryList != NULL);
@@ -1413,11 +1339,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                                    offset,
                                    includeEntryList,
                                    excludePatternList,
-                                   Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                                   jobOptions,
-                                   fragmentList,
-                                   buffer,
-                                   BUFFER_SIZE
+                                   Storage_getPrintableNameCString(storageSpecifier,archiveName)
                                   );
         if (error != ERROR_NONE)
         {
@@ -1430,11 +1352,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                               offset,
                               includeEntryList,
                               excludePatternList,
-                              Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                              jobOptions,
-                              fragmentList,
-                              buffer,
-                              BUFFER_SIZE
+                              Storage_getPrintableNameCString(storageSpecifier,archiveName)
                              );
         if (error != ERROR_NONE)
         {
@@ -1464,11 +1382,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                                  offset,
                                  includeEntryList,
                                  excludePatternList,
-                                 Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                                 jobOptions,
-                                 fragmentList,
-                                 buffer,
-                                 BUFFER_SIZE
+                                 Storage_getPrintableNameCString(storageSpecifier,archiveName)
                                 );
         if (error != ERROR_NONE)
         {
