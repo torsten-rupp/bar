@@ -306,7 +306,7 @@ class WidgetVariable<T>
   /** get integer value
    * @return value
    */
-  long getInteger()
+  int getInteger()
   {
     assert type == Integer.class;
 

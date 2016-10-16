@@ -6271,7 +6271,7 @@ widgetArchivePartSize.setListVisible(true);
                 try
                 {
                   long n = !string.equals("") ? Long.parseLong(string) : 0;
-                  if (storageHostPort.getLong() == n) color = null;
+                  if (storageHostPort.getInteger() == n) color = null;
                 }
                 catch (NumberFormatException exception)
                 {
@@ -6781,7 +6781,7 @@ widgetArchivePartSize.setListVisible(true);
                 try
                 {
                   long n = !string.equals("") ? Long.parseLong(string) : 0;
-                  if (storageHostPort.getLong() == n) color = null;
+                  if (storageHostPort.getInteger() == n) color = null;
                 }
                 catch (NumberFormatException exception)
                 {
@@ -8806,7 +8806,7 @@ throw new Error("NYI");
                                                              storageLoginName.getString(),
                                                              storageLoginPassword.getString(),
                                                              storageHostName.getString(),
-                                                             (int)storageHostPort.getLong(),
+                                                             storageHostPort.getInteger(),
                                                              storageDeviceName.getString(),
                                                              storageFileName.getString()
                                                             );
