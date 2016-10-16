@@ -19,6 +19,7 @@
 #include "global.h"
 #include "lists.h"
 #include "strings.h"
+#include "semaphores.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -57,6 +58,8 @@ typedef struct FragmentNode
 typedef struct
 {
   LIST_HEADER(FragmentNode);
+
+  Semaphore lock;
 } FragmentList;
 
 /***************************** Variables *******************************/

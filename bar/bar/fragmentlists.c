@@ -105,12 +105,14 @@ void FragmentList_init(FragmentList *fragmentList)
   assert(fragmentList != NULL);
 
   List_init(fragmentList);
+  Semaphore_init(&fragmentList->lock);
 }
 
 void FragmentList_done(FragmentList *fragmentList)
 {
   assert(fragmentList != NULL);
 
+  Semaphore_done(&fragmentList->lock);
   List_done(fragmentList,(ListNodeFreeFunction)freeFragmentNode,NULL);
 }
 
