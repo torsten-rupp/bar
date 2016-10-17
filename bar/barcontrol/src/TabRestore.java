@@ -4841,7 +4841,7 @@ Dprintf.dprintf("cirrect?");
           // remove all selected sub-ids
           for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
           {
-            if (subTreeItem.isDisposed())
+            if (!subTreeItem.isDisposed())
             {
               IndexData indexData = (IndexData)subTreeItem.getData();
               if (indexData != null)
@@ -4923,7 +4923,7 @@ Dprintf.dprintf("cirrect?");
                 // set/reset checked in sub-tree
                 for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
                 {
-                  if (subTreeItem.isDisposed())
+                  if (!subTreeItem.isDisposed())
                   {
                     subTreeItem.setChecked(isChecked);
                     IndexData subIndexData = (IndexData)subTreeItem.getData();
