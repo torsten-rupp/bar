@@ -4841,10 +4841,13 @@ Dprintf.dprintf("cirrect?");
           // remove all selected sub-ids
           for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
           {
-            IndexData indexData = (IndexData)subTreeItem.getData();
-            if (indexData != null)
+            if (subTreeItem.isDisposed())
             {
-              setStorageList(indexData.id,false);
+              IndexData indexData = (IndexData)subTreeItem.getData();
+              if (indexData != null)
+              {
+                setStorageList(indexData.id,false);
+              }
             }
           }
 
@@ -4920,12 +4923,15 @@ Dprintf.dprintf("cirrect?");
                 // set/reset checked in sub-tree
                 for (TreeItem subTreeItem : Widgets.getAllTreeItems(treeItem))
                 {
-                  subTreeItem.setChecked(isChecked);
-                  IndexData subIndexData = (IndexData)subTreeItem.getData();
-                  if (subIndexData != null)
+                  if (subTreeItem.isDisposed())
                   {
-                    checkedIndexIdSet.set(subIndexData.id,isChecked);
-                    setStorageList(subIndexData.id,isChecked);
+                    subTreeItem.setChecked(isChecked);
+                    IndexData subIndexData = (IndexData)subTreeItem.getData();
+                    if (subIndexData != null)
+                    {
+                      checkedIndexIdSet.set(subIndexData.id,isChecked);
+                      setStorageList(subIndexData.id,isChecked);
+                    }
                   }
                 }
                 checkedIndexIdSet.set(indexData.id,isChecked);
