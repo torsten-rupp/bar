@@ -1709,87 +1709,90 @@ public class TabStatus
         {
           public void run()
           {
-            synchronized(jobDataMap)
+            if (!widgetJobTable.isDisposed())
             {
-              // get table items
-              HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
-              for (TableItem tableItem : widgetJobTable.getItems())
+              synchronized(jobDataMap)
               {
-                removeTableItemSet.add(tableItem);
-              }
-
-              for (JobData jobData : jobDataMap.values())
-              {
-                // find table item
-                TableItem tableItem = Widgets.getTableItem(widgetJobTable,jobData);
-
-                // update/create table item
-                if (tableItem != null)
+                // get table items
+                HashSet<TableItem> removeTableItemSet = new HashSet<TableItem>();
+                for (TableItem tableItem : widgetJobTable.getItems())
                 {
-                  Widgets.updateTableItem(tableItem,
-                                          jobData,
-                                          jobData.name,
-                                          (status == States.RUNNING) ? jobData.state.toString() : BARControl.tr("suspended"),
-                                          jobData.remoteHostName,
-                                          jobData.archiveType.toString(),
-                                          (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
-                                          jobData.formatCompressAlgorithm(),
-                                          jobData.formatCryptAlgorithm(),
-                                          jobData.formatLastExecutedDateTime(),
-                                          jobData.formatEstimatedRestTime()
-                                         );
-
-                  // keep table item
-                  removeTableItemSet.remove(tableItem);
-                }
-                else
-                {
-                  // insert new item
-                  tableItem = Widgets.insertTableItem(widgetJobTable,
-                                                      findJobTableItemIndex(jobData),
-                                                      jobData,
-                                                      jobData.name,
-                                                      (status == States.RUNNING) ? jobData.state.toString() : BARControl.tr("suspended"),
-                                                      jobData.remoteHostName,
-                                                      jobData.archiveType.toString(),
-                                                      (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
-                                                      jobData.formatCompressAlgorithm(),
-                                                      jobData.formatCryptAlgorithm(),
-                                                      jobData.formatLastExecutedDateTime(),
-                                                      jobData.formatEstimatedRestTime()
-                                                     );
-                  tableItem.setData(jobData);
+                  removeTableItemSet.add(tableItem);
                 }
 
-                switch (jobData.state)
+                for (JobData jobData : jobDataMap.values())
                 {
-                  case RUNNING:
-                  case DRY_RUNNING:
-                    tableItem.setBackground(COLOR_RUNNING);
-                    break;
-                  case REQUEST_FTP_PASSWORD:
-                  case REQUEST_SSH_PASSWORD:
-                  case REQUEST_WEBDAV_PASSWORD:
-                  case REQUEST_CRYPT_PASSWORD:
-                  case REQUEST_VOLUME:
-                    tableItem.setBackground(COLOR_REQUEST);
-                    break;
-                  case ERROR:
-                    tableItem.setBackground(COLOR_ERROR);
-                    break;
-                  case ABORTED:
-                    tableItem.setBackground(COLOR_ABORTED);
-                    break;
-                  default:
-                    tableItem.setBackground(null);
-                    break;
-                }
-              }
+                  // find table item
+                  TableItem tableItem = Widgets.getTableItem(widgetJobTable,jobData);
 
-              // remove not existing entries
-              for (TableItem tableItem : removeTableItemSet)
-              {
-                Widgets.removeTableItem(widgetJobTable,tableItem);
+                  // update/create table item
+                  if (tableItem != null)
+                  {
+                    Widgets.updateTableItem(tableItem,
+                                            jobData,
+                                            jobData.name,
+                                            (status == States.RUNNING) ? jobData.state.toString() : BARControl.tr("suspended"),
+                                            jobData.remoteHostName,
+                                            jobData.archiveType.toString(),
+                                            (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
+                                            jobData.formatCompressAlgorithm(),
+                                            jobData.formatCryptAlgorithm(),
+                                            jobData.formatLastExecutedDateTime(),
+                                            jobData.formatEstimatedRestTime()
+                                           );
+
+                    // keep table item
+                    removeTableItemSet.remove(tableItem);
+                  }
+                  else
+                  {
+                    // insert new item
+                    tableItem = Widgets.insertTableItem(widgetJobTable,
+                                                        findJobTableItemIndex(jobData),
+                                                        jobData,
+                                                        jobData.name,
+                                                        (status == States.RUNNING) ? jobData.state.toString() : BARControl.tr("suspended"),
+                                                        jobData.remoteHostName,
+                                                        jobData.archiveType.toString(),
+                                                        (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
+                                                        jobData.formatCompressAlgorithm(),
+                                                        jobData.formatCryptAlgorithm(),
+                                                        jobData.formatLastExecutedDateTime(),
+                                                        jobData.formatEstimatedRestTime()
+                                                       );
+                    tableItem.setData(jobData);
+                  }
+
+                  switch (jobData.state)
+                  {
+                    case RUNNING:
+                    case DRY_RUNNING:
+                      tableItem.setBackground(COLOR_RUNNING);
+                      break;
+                    case REQUEST_FTP_PASSWORD:
+                    case REQUEST_SSH_PASSWORD:
+                    case REQUEST_WEBDAV_PASSWORD:
+                    case REQUEST_CRYPT_PASSWORD:
+                    case REQUEST_VOLUME:
+                      tableItem.setBackground(COLOR_REQUEST);
+                      break;
+                    case ERROR:
+                      tableItem.setBackground(COLOR_ERROR);
+                      break;
+                    case ABORTED:
+                      tableItem.setBackground(COLOR_ABORTED);
+                      break;
+                    default:
+                      tableItem.setBackground(null);
+                      break;
+                  }
+                }
+
+                // remove not existing entries
+                for (TableItem tableItem : removeTableItemSet)
+                {
+                  Widgets.removeTableItem(widgetJobTable,tableItem);
+                }
               }
             }
           }
@@ -1879,8 +1882,14 @@ public class TabStatus
         {
           public void run()
           {
-            widgetButtonPause.setText(String.format(BARControl.tr("Pause [%3dmin]"),(pauseTime > 0) ? (pauseTime+59)/60:1));
-            widgetButtonSuspendContinue.setText(BARControl.tr("Continue"));
+            if (!widgetButtonPause.isDisposed())
+            {
+              widgetButtonPause.setText(String.format(BARControl.tr("Pause [%3dmin]"),(pauseTime > 0) ? (pauseTime+59)/60:1));
+            }
+            if (!widgetButtonSuspendContinue.isDisposed())
+            {
+              widgetButtonSuspendContinue.setText(BARControl.tr("Continue"));
+            }
           }
         });
         break;
@@ -1889,8 +1898,14 @@ public class TabStatus
         {
           public void run()
           {
-            widgetButtonPause.setText(BARControl.tr("Pause"));
-            widgetButtonSuspendContinue.setText(BARControl.tr("Continue"));
+            if (!widgetButtonPause.isDisposed())
+            {
+              widgetButtonPause.setText(BARControl.tr("Pause"));
+            }
+            if (!widgetButtonSuspendContinue.isDisposed())
+            {
+              widgetButtonSuspendContinue.setText(BARControl.tr("Continue"));
+            }
           }
         });
         break;
@@ -1899,8 +1914,14 @@ public class TabStatus
         {
           public void run()
           {
-            widgetButtonPause.setText(BARControl.tr("Pause"));
-            widgetButtonSuspendContinue.setText(BARControl.tr("Suspend"));
+            if (!widgetButtonPause.isDisposed())
+            {
+              widgetButtonPause.setText(BARControl.tr("Pause"));
+            }
+            if (!widgetButtonSuspendContinue.isDisposed())
+            {
+              widgetButtonSuspendContinue.setText(BARControl.tr("Suspend"));
+            }
           }
         });
         break;
@@ -2016,16 +2037,25 @@ public class TabStatus
           requestedVolumeNumber.set(resultMap.getInt("requestedVolumeNumber"));
 
           // enable/disable buttons
-          widgetButtonStart.setEnabled(   (state != JobData.States.RUNNING)
-                                       && (state != JobData.States.DRY_RUNNING)
-                                       && (state != JobData.States.WAITING)
-                                      );
-          widgetButtonAbort.setEnabled(   (state == JobData.States.WAITING)
-                                       || (state == JobData.States.RUNNING)
-                                       || (state == JobData.States.DRY_RUNNING)
-                                       || (state == JobData.States.REQUEST_VOLUME)
-                                      );
-          widgetButtonVolume.setEnabled(state == JobData.States.REQUEST_VOLUME);
+          if (!widgetButtonStart.isDisposed())
+          {
+            widgetButtonStart.setEnabled(   (state != JobData.States.RUNNING)
+                                         && (state != JobData.States.DRY_RUNNING)
+                                         && (state != JobData.States.WAITING)
+                                        );
+          }
+          if (!widgetButtonAbort.isDisposed())
+          {
+            widgetButtonAbort.setEnabled(   (state == JobData.States.WAITING)
+                                         || (state == JobData.States.RUNNING)
+                                         || (state == JobData.States.DRY_RUNNING)
+                                         || (state == JobData.States.REQUEST_VOLUME)
+                                        );
+          }
+          if (!widgetButtonVolume.isDisposed())
+          {
+            widgetButtonVolume.setEnabled(state == JobData.States.REQUEST_VOLUME);
+          }
 
           // set message
           switch (state)
@@ -2094,9 +2124,18 @@ public class TabStatus
           requestedVolumeNumber.set(0);
           message.set              ("");
 
-          widgetButtonStart.setEnabled(false);
-          widgetButtonAbort.setEnabled(false);
-          widgetButtonVolume.setEnabled(false);
+          if (!widgetButtonStart.isDisposed())
+          {
+            widgetButtonStart.setEnabled(false);
+          }
+          if (!widgetButtonAbort.isDisposed())
+          {
+            widgetButtonAbort.setEnabled(false);
+          }
+          if (!widgetButtonVolume.isDisposed())
+          {
+            widgetButtonVolume.setEnabled(false);
+          }
         }
       });
     }

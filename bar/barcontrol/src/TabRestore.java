@@ -3827,7 +3827,10 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            widgetEntryTable.setRedraw(false);
+            if (!widgetEntryTable.isDisposed())
+            {
+              widgetEntryTable.setRedraw(false);
+            }
           }
         });
       }
@@ -3837,77 +3840,80 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            int i = 0;
-            for (EntryIndexData entryIndexData : entryIndexDataList)
+            if (!widgetEntryTable.isDisposed())
             {
-              TableItem tableItem = widgetEntryTable.getItem(offset+i);
-
-              switch (entryIndexData.entryType)
+              int i = 0;
+              for (EntryIndexData entryIndexData : entryIndexDataList)
               {
-                case FILE:
-                  Widgets.updateTableItem(tableItem,
-                                          (Object)entryIndexData,
-                                          entryIndexData.storageName,
-                                          entryIndexData.name,
-                                          entryIndexData.entryType.toString(),
-                                          Units.formatByteSize(entryIndexData.size),
-                                          SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                         );
-                  break;
-                case IMAGE:
-                  Widgets.updateTableItem(tableItem,
-                                          (Object)entryIndexData,
-                                          entryIndexData.storageName,
-                                          entryIndexData.name,
-                                          entryIndexData.entryType.toString(),
-                                          Units.formatByteSize(entryIndexData.size),
-                                          SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                         );
-                  break;
-                case DIRECTORY:
-                  Widgets.updateTableItem(tableItem,
-                                          (Object)entryIndexData,
-                                          entryIndexData.storageName,
-                                          entryIndexData.name,
-                                          entryIndexData.entryType.toString(),
-                                          (entryIndexData.size > 0L) ? Units.formatByteSize(entryIndexData.size) : "",
-                                          SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                         );
-                  break;
-                case LINK:
-                  Widgets.updateTableItem(tableItem,
-                                          (Object)entryIndexData,
-                                          entryIndexData.storageName,
-                                          entryIndexData.name,
-                                          entryIndexData.entryType.toString(),
-                                          "",
-                                          SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                         );
-                  break;
-                case HARDLINK:
-                  Widgets.updateTableItem(tableItem,
-                                          (Object)entryIndexData,
-                                          entryIndexData.storageName,
-                                          entryIndexData.name,
-                                          entryIndexData.entryType.toString(),
-                                          Units.formatByteSize(entryIndexData.size),
-                                          SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                         );
-                  break;
-                case SPECIAL:
-                  Widgets.updateTableItem(tableItem,
-                                          (Object)entryIndexData,
-                                          entryIndexData.storageName,
-                                          entryIndexData.name,
-                                          entryIndexData.entryType.toString(),
-                                          Units.formatByteSize(entryIndexData.size),
-                                          SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                         );
-                  break;
-              }
-              tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
+                TableItem tableItem = widgetEntryTable.getItem(offset+i);
 
-              i++;
+                switch (entryIndexData.entryType)
+                {
+                  case FILE:
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryIndexData,
+                                            entryIndexData.storageName,
+                                            entryIndexData.name,
+                                            entryIndexData.entryType.toString(),
+                                            Units.formatByteSize(entryIndexData.size),
+                                            SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                           );
+                    break;
+                  case IMAGE:
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryIndexData,
+                                            entryIndexData.storageName,
+                                            entryIndexData.name,
+                                            entryIndexData.entryType.toString(),
+                                            Units.formatByteSize(entryIndexData.size),
+                                            SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                           );
+                    break;
+                  case DIRECTORY:
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryIndexData,
+                                            entryIndexData.storageName,
+                                            entryIndexData.name,
+                                            entryIndexData.entryType.toString(),
+                                            (entryIndexData.size > 0L) ? Units.formatByteSize(entryIndexData.size) : "",
+                                            SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                           );
+                    break;
+                  case LINK:
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryIndexData,
+                                            entryIndexData.storageName,
+                                            entryIndexData.name,
+                                            entryIndexData.entryType.toString(),
+                                            "",
+                                            SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                           );
+                    break;
+                  case HARDLINK:
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryIndexData,
+                                            entryIndexData.storageName,
+                                            entryIndexData.name,
+                                            entryIndexData.entryType.toString(),
+                                            Units.formatByteSize(entryIndexData.size),
+                                            SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                           );
+                    break;
+                  case SPECIAL:
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)entryIndexData,
+                                            entryIndexData.storageName,
+                                            entryIndexData.name,
+                                            entryIndexData.entryType.toString(),
+                                            Units.formatByteSize(entryIndexData.size),
+                                            SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                           );
+                    break;
+                }
+                tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
+
+                i++;
+              }
             }
           }
         });
@@ -3919,7 +3925,10 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            widgetEntryTable.setRedraw(true);
+            if (!widgetEntryTable.isDisposed())
+            {
+              widgetEntryTable.setRedraw(true);
+            }
           }
         });
       }
@@ -3937,7 +3946,10 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            widgetEntryTable.setRedraw(false);
+            if (!widgetEntryTable.isDisposed())
+            {
+              widgetEntryTable.setRedraw(false);
+            }
           }
         });
       }
@@ -3956,7 +3968,10 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            widgetEntryTable.setRedraw(true);
+            if (!widgetEntryTable.isDisposed())
+            {
+              widgetEntryTable.setRedraw(true);
+            }
           }
         });
       }
