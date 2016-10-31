@@ -1,3 +1,10 @@
+2016-10-31 0.20a
+  * BARControl: fixed type error in archive name editor
+  * BARControl: clear encryption password if type set to
+    "default" or "ask"
+  * BARControl: fixed default restore path
+  * BARControl: fixed dead-lock when restore is aborted
+
 2016-10-13 0.20
   * added (semi-) continuous backup of changed files
   * new index database with much better performance

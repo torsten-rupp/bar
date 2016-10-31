@@ -235,10 +235,10 @@ LOCAL void doneRestoreInfo(RestoreInfo *restoreInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL String getDestinationFileName(String       destinationFileName,
-                                    String       fileName,
-                                    const String destination,
-                                    int          directoryStripCount
+LOCAL String getDestinationFileName(String      destinationFileName,
+                                    String      fileName,
+                                    ConstString destination,
+                                    int         directoryStripCount
                                    )
 {
   String          pathName,baseName;
@@ -250,7 +250,7 @@ LOCAL String getDestinationFileName(String       destinationFileName,
   assert(fileName != NULL);
 
   // get destination base directory
-  if (destination != NULL)
+  if (!String_isEmpty(destination))
   {
     File_setFileName(destinationFileName,destination);
   }
@@ -304,15 +304,15 @@ LOCAL String getDestinationFileName(String       destinationFileName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL String getDestinationDeviceName(String       destinationDeviceName,
-                                      String       imageName,
-                                      const String destination
+LOCAL String getDestinationDeviceName(String      destinationDeviceName,
+                                      String      imageName,
+                                      ConstString destination
                                      )
 {
   assert(destinationDeviceName != NULL);
   assert(imageName != NULL);
 
-  if (destination != NULL)
+  if (!String_isEmpty(destination))
   {
     if (File_isDirectory(destination))
     {

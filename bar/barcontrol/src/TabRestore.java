@@ -9153,20 +9153,20 @@ Dprintf.dprintf("");
             {
               case ARCHIVES:
                 command = StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteEntries=%y",
-                                              restoreToDirectory,
+                                              (restoreToDirectory != null) ? restoreToDirectory : "",
                                               overwriteEntries
                                              );
                 break;
               case ENTRIES:
                 command = StringParser.format("RESTORE type=ENTRIES destination=%'S directoryContent=%y overwriteEntries=%y",
-                                              restoreToDirectory,
+                                              (restoreToDirectory != null) ? restoreToDirectory : "",
                                               directoryContent,
                                               overwriteEntries
                                              );
                 break;
             }
             int error = BARServer.executeCommand(command,
-                                                 1,  // debugLevel
+                                                 0,  // debugLevel
                                                  errorMessage,
                                                  new Command.ResultHandler()
                                                  {
@@ -9206,22 +9206,22 @@ Dprintf.dprintf("");
                                                                                                 );
                                                                    if (data != null)
                                                                    {
-                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d name=%S encryptType=%s encryptedPassword=%S",
-                                                                                                                  Errors.NONE,
-                                                                                                                  data[0],
-                                                                                                                  BARServer.getPasswordEncryptType(),
-                                                                                                                  BARServer.encryptPassword(data[1])
-                                                                                                                 ),
-                                                                                              0  // debugLevel
-                                                                                             );
+                                                                     BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d name=%S encryptType=%s encryptedPassword=%S",
+                                                                                                                       Errors.NONE,
+                                                                                                                       data[0],
+                                                                                                                       BARServer.getPasswordEncryptType(),
+                                                                                                                       BARServer.encryptPassword(data[1])
+                                                                                                                      ),
+                                                                                                   0  // debugLevel
+                                                                                                  );
                                                                    }
                                                                    else
                                                                    {
-                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                                  Errors.NO_PASSWORD
-                                                                                                                 ),
-                                                                                              0  // debugLevel
-                                                                                             );
+                                                                     BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                                       Errors.NO_PASSWORD
+                                                                                                                      ),
+                                                                                                   0  // debugLevel
+                                                                                                  );
                                                                    }
                                                                  }
                                                                  else
@@ -9233,21 +9233,21 @@ Dprintf.dprintf("");
                                                                                                      );
                                                                    if (password != null)
                                                                    {
-                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
-                                                                                                                  Errors.NONE,
-                                                                                                                  BARServer.getPasswordEncryptType(),
-                                                                                                                  BARServer.encryptPassword(password)
-                                                                                                                 ),
-                                                                                              0  // debugLevel
-                                                                                             );
+                                                                     BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d encryptType=%s encryptedPassword=%S",
+                                                                                                                       Errors.NONE,
+                                                                                                                       BARServer.getPasswordEncryptType(),
+                                                                                                                       BARServer.encryptPassword(password)
+                                                                                                                      ),
+                                                                                                   0  // debugLevel
+                                                                                                  );
                                                                    }
                                                                    else
                                                                    {
-                                                                     BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                                  Errors.NO_PASSWORD
-                                                                                                                 ),
-                                                                                              0  // debugLevel
-                                                                                             );
+                                                                     BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                                       Errors.NO_PASSWORD
+                                                                                                                      ),
+                                                                                                   0  // debugLevel
+                                                                                                  );
                                                                    }
                                                                  }
                                                                }
@@ -9298,11 +9298,11 @@ System.exit(1);
                                                              {
                                                                resultError[0] = Errors.NONE;
                                                              }
-                                                             BARServer.executeCommand(StringParser.format("ACTION_RESULT error=%d",
-                                                                                                          resultError[0]
-                                                                                                         ),
-                                                                                      0  // debugLevel
-                                                                                     );
+                                                             BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT error=%d",
+                                                                                                               resultError[0]
+                                                                                                              ),
+                                                                                           0  // debugLevel
+                                                                                          );
                                                              break;
                                                          }
                                                        }

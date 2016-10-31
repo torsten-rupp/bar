@@ -749,107 +749,138 @@ class ReadThread extends Thread
           long    commandId     = Long.parseLong(parts[0]);
           boolean completedFlag = (Integer.parseInt(parts[1]) != 0);
           int     errorCode     = Integer.parseInt(parts[2]);
+          String  errorMessage  = "";
+          String  result        = null;
           String  data          = parts[3].trim();
 
           // store result
+          Command command = null;
           synchronized(commandHashMap)
           {
-            Command command = commandHashMap.get(commandId);
-            if (command != null)
-            {
-              if (Settings.debugLevel > command.debugLevel) System.err.println("Network: received '"+line+"'");
+            command = commandHashMap.get(commandId);
+          }
+          if (command != null)
+          {
+            if (Settings.debugLevel > command.debugLevel) System.err.println("Network: received '"+line+"'");
 
-              synchronized(command)
+            if (completedFlag)
+            {
+              if (errorCode == Errors.NONE)
               {
-                if (completedFlag)
+                if (command.resultHandler != null)
                 {
-                  if (errorCode == Errors.NONE)
-                  {
-                    if (command.resultHandler != null)
-                    {
-                      if (!data.isEmpty())
-                      {
-                        valueMap.clear();
-                        if (StringParser.parse(data,valueMap))
-                        {
-                          // call handler
-                          errorCode = command.resultHandler.handle(command.resultCount,valueMap);
-                          command.setErrorCode(errorCode);
-                        }
-                        else
-                        {
-                          command.setError(Errors.NETWORK_PARSE,"parse '"+data+"' fail");
-                        }
-                      }
-                      else
-                      {
-                        command.setErrorCode(Errors.NONE);
-                      }
-                    }
-                    else
-                    {
-                      if (!data.isEmpty())
-                      {
-                        command.result.add(data);
-                        if (command.result.size() > 4096)
-                        {
-                          if (Settings.debugLevel > 0) System.err.println("Network: received "+command.result.size()+" results");
-                        }
-                      }
-                      command.setErrorCode(Errors.NONE);
-                    }
-                  }
-                  else
-                  {
-                    command.setError(errorCode,data);
-                  }
-                  command.setCompleted();
-                  command.notifyAll();
-                  if (command.handler != null)
-                  {
-                    command.handler.handle(command);
-                  }
-                }
-                else
-                {
-                  if (command.resultHandler != null)
+                  // parse and call result handler
+                  if (!data.isEmpty())
                   {
                     valueMap.clear();
                     if (StringParser.parse(data,valueMap))
                     {
-                      errorCode = command.resultHandler.handle(command.resultCount,valueMap);
-                      command.setErrorCode(errorCode);
-                      if (errorCode != Errors.NONE)
-                      {
-                        command.setCompleted();
-                        command.notifyAll();
-                      }
+                      // call handler
+                      errorCode    = command.resultHandler.handle(command.resultCount,valueMap);
+                      errorMessage = "";
                     }
                     else
                     {
-                      command.setError(Errors.NETWORK_PARSE,"parse '"+data+"' fail");
-                      command.setCompleted();
-                      command.notifyAll();
-                    }
-                  }
-                  else
-                  {
-                    command.setErrorCode(Errors.NONE);
-                    if (!data.isEmpty())
-                    {
-                      command.result.add(data);
-                      command.notifyAll();
+                      // parse error
+                      errorCode    = Errors.NETWORK_PARSE;
+                      errorMessage = "parse '"+data+"' fail";
                     }
                   }
                 }
+                else
+                {
+                  // store data
+                  errorCode = Errors.NONE;
+                  if (!data.isEmpty())
+                  {
+                    result = data;
+                  }
+                }
+              }
+              else
+              {
+                // error occurred
+                errorMessage = data;
+              }
+
+              // store into command
+              synchronized(command)
+              {
+                command.setError(errorCode,errorMessage);
+                if (result != null)
+                {
+                  command.result.add(result);
+                  if (command.result.size() > 4096)
+                  {
+                    if (Settings.debugLevel > 0) System.err.println("Network: received "+command.result.size()+" results");
+                  }
+                }
+                command.setCompleted();
+                command.notifyAll();
                 command.resultCount++;
+              }
+
+              // call command handler
+              if (command.handler != null)
+              {
+                command.handler.handle(command);
               }
             }
             else
             {
-              // result for unknown command -> currently ignored
-              if (Settings.debugLevel > 0) System.err.println("Network: received unknown command result '"+line+"'");
+              if (command.resultHandler != null)
+              {
+                // parse and call result handler
+                valueMap.clear();
+                if (StringParser.parse(data,valueMap))
+                {
+                  errorCode    = command.resultHandler.handle(command.resultCount,valueMap);
+                  errorMessage = "";
+                }
+                else
+                {
+                  errorCode    = Errors.NETWORK_PARSE;
+                  errorMessage = "parse '"+data+"' fail";
+                }
+              }
+              else
+              {
+                // store data
+                errorCode = Errors.NONE;
+                if (!data.isEmpty())
+                {
+                  result = data;
+                }
+              }
+
+              // store into command
+              synchronized(command)
+              {
+                command.setError(errorCode,errorMessage);
+                if (result != null)
+                {
+                  command.result.add(result);
+                  if (command.result.size() > 4096)
+                  {
+                    if (Settings.debugLevel > 0) System.err.println("Network: received "+command.result.size()+" results");
+                  }
+                }
+                if (errorCode != Errors.NONE)
+                {
+                  command.setCompleted();
+                }
+                if ((errorCode != Errors.NONE) || (result != null))
+                {
+                  command.notifyAll();
+                }
+                command.resultCount++;
+              }
             }
+          }
+          else
+          {
+            // result for unknown command -> currently ignored
+            if (Settings.debugLevel > 0) System.err.println("Network: received unknown command result '"+line+"'");
           }
         }
         catch (SocketTimeoutException exception)
@@ -2925,7 +2956,7 @@ throw new Error("NYI");
       {
         passwordCipher.init(Cipher.ENCRYPT_MODE,passwordKey);
         encryptedPasswordBytes = passwordCipher.doFinal(encodedPassword);
-  //Dprintf.dprintf("encryptedPasswordBytes.length=%d serverPassword.getBytes.length=%d",encryptedPasswordBytes.length,password.getBytes("UTF-8").length);
+//Dprintf.dprintf("encryptedPasswordBytes.length=%d serverPassword.getBytes.length=%d",encryptedPasswordBytes.length,password.getBytes("UTF-8").length);
       }
       catch (InvalidKeyException exception)
       {
