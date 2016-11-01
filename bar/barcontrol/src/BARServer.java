@@ -750,131 +750,113 @@ class ReadThread extends Thread
           boolean completedFlag = (Integer.parseInt(parts[1]) != 0);
           int     errorCode     = Integer.parseInt(parts[2]);
           String  errorMessage  = "";
-          String  result        = null;
           String  data          = parts[3].trim();
 
           // store result
-          Command command = null;
-          synchronized(commandHashMap)
-          {
-            command = commandHashMap.get(commandId);
-          }
+          Command command = commandHashMap.get(commandId);
           if (command != null)
           {
-            if (Settings.debugLevel > command.debugLevel) System.err.println("Network: received '"+line+"'");
-
-            if (completedFlag)
+            synchronized(command)
             {
-              if (errorCode == Errors.NONE)
+              if (Settings.debugLevel > command.debugLevel) System.err.println("Network: received '"+line+"'");
+
+              if (completedFlag)
+              {
+                if (errorCode == Errors.NONE)
+                {
+                  if (command.resultHandler != null)
+                  {
+                    // parse and call result handler
+                    if (!data.isEmpty())
+                    {
+                      valueMap.clear();
+                      if (StringParser.parse(data,valueMap))
+                      {
+                        // call handler
+                        errorCode    = command.resultHandler.handle(command.resultCount,valueMap);
+                        errorMessage = "";
+                      }
+                      else
+                      {
+                        // parse error
+                        errorCode    = Errors.NETWORK_PARSE;
+                        errorMessage = "parse '"+data+"' fail";
+                      }
+                    }
+                  }
+                  else
+                  {
+                    // store result
+                    errorCode = Errors.NONE;
+                    if (!data.isEmpty())
+                    {
+                      command.result.add(data);
+                      if (command.result.size() > 4096)
+                      {
+                        if (Settings.debugLevel > 0) System.err.println("Network: received "+command.result.size()+" results");
+                      }
+                      command.notifyAll();
+                    }
+                  }
+                }
+                else
+                {
+                  // error occurred
+                  errorMessage = data;
+                }
+
+                // update command state
+                command.setError(errorCode,errorMessage);
+                command.setCompleted();
+
+                // call command handler
+                if (command.handler != null)
+                {
+                  command.handler.handle(command);
+                }
+              }
+              else
               {
                 if (command.resultHandler != null)
                 {
                   // parse and call result handler
-                  if (!data.isEmpty())
+                  valueMap.clear();
+                  if (StringParser.parse(data,valueMap))
                   {
-                    valueMap.clear();
-                    if (StringParser.parse(data,valueMap))
-                    {
-                      // call handler
-                      errorCode    = command.resultHandler.handle(command.resultCount,valueMap);
-                      errorMessage = "";
-                    }
-                    else
-                    {
-                      // parse error
-                      errorCode    = Errors.NETWORK_PARSE;
-                      errorMessage = "parse '"+data+"' fail";
-                    }
+                    // call handler
+                    errorCode    = command.resultHandler.handle(command.resultCount,valueMap);
+                    errorMessage = "";
+                  }
+                  else
+                  {
+                    // parse error
+                    errorCode    = Errors.NETWORK_PARSE;
+                    errorMessage = "parse '"+data+"' fail";
                   }
                 }
                 else
                 {
-                  // store data
+                  // get result
                   errorCode = Errors.NONE;
                   if (!data.isEmpty())
                   {
-                    result = data;
+                    command.result.add(data);
+                    if (command.result.size() > 4096)
+                    {
+                      if (Settings.debugLevel > 0) System.err.println("Network: received "+command.result.size()+" results");
+                    }
+                    command.notifyAll();
                   }
                 }
-              }
-              else
-              {
-                // error occurred
-                errorMessage = data;
-              }
 
-              // store into command
-              synchronized(command)
-              {
+                // update command state
                 command.setError(errorCode,errorMessage);
-                if (result != null)
-                {
-                  command.result.add(result);
-                  if (command.result.size() > 4096)
-                  {
-                    if (Settings.debugLevel > 0) System.err.println("Network: received "+command.result.size()+" results");
-                  }
-                }
-                command.setCompleted();
-                command.notifyAll();
-                command.resultCount++;
-              }
-
-              // call command handler
-              if (command.handler != null)
-              {
-                command.handler.handle(command);
-              }
-            }
-            else
-            {
-              if (command.resultHandler != null)
-              {
-                // parse and call result handler
-                valueMap.clear();
-                if (StringParser.parse(data,valueMap))
-                {
-                  errorCode    = command.resultHandler.handle(command.resultCount,valueMap);
-                  errorMessage = "";
-                }
-                else
-                {
-                  errorCode    = Errors.NETWORK_PARSE;
-                  errorMessage = "parse '"+data+"' fail";
-                }
-              }
-              else
-              {
-                // store data
-                errorCode = Errors.NONE;
-                if (!data.isEmpty())
-                {
-                  result = data;
-                }
-              }
-
-              // store into command
-              synchronized(command)
-              {
-                command.setError(errorCode,errorMessage);
-                if (result != null)
-                {
-                  command.result.add(result);
-                  if (command.result.size() > 4096)
-                  {
-                    if (Settings.debugLevel > 0) System.err.println("Network: received "+command.result.size()+" results");
-                  }
-                }
                 if (errorCode != Errors.NONE)
                 {
                   command.setCompleted();
                 }
-                if ((errorCode != Errors.NONE) || (result != null))
-                {
-                  command.notifyAll();
-                }
-                command.resultCount++;
               }
+              command.resultCount++;
             }
           }
           else
@@ -1912,7 +1894,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param handler handler
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String                 commandString,
+  public static int executeCommand(String                commandString,
                                    int                   debugLevel,
                                    final String[]        errorMessage,
                                    Command.ResultHandler resultHandler,
@@ -1994,7 +1976,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param handler handler
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String           commandString,
+  public static int executeCommand(String          commandString,
                                    int             debugLevel,
                                    final String[]  errorMessage,
                                    Command.Handler handler
@@ -2009,7 +1991,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param handler handler
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String           commandString,
+  public static int executeCommand(String          commandString,
                                    int             debugLevel,
                                    Command.Handler handler
                                   )
@@ -2037,7 +2019,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     return executeCommand(commandString,
                           debugLevel,
                           errorMessage,
-                          null,  //result handler
+                          null,  // result handler
                           new Command.Handler()
                           {
                             public int handle(Command command)
@@ -2199,6 +2181,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                       ) == Errors.NONE
        )
     {
+      assert resultMap.size() > 0;
+
       if      (clazz == Boolean.class)
       {
         data = (T)new Boolean(resultMap.getBoolean("value"));
@@ -2350,10 +2334,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                errorMessage,
                                resultMap
                               );
-    if (error !=- Errors.NONE)
+    if (error != Errors.NONE)
     {
       return error;
     }
+    assert resultMap.size() > 0;
 
     if      (widgetVariable.getType() == Boolean.class)
     {
@@ -2499,6 +2484,8 @@ throw new Error("NYI");
                       ) == Errors.NONE
        )
     {
+      assert resultMap.size() > 0;
+
       if      (clazz == Boolean.class)
       {
         data = (T)new Boolean(resultMap.getBoolean("value"));
@@ -2629,6 +2616,8 @@ throw new Error("NYI");
                       ) == Errors.NONE
        )
     {
+      assert resultMap.size() > 0;
+
       if      (clazz == Boolean.class)
       {
         data = (T)new Boolean(resultMap.getBoolean("value"));
