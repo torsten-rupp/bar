@@ -1992,8 +1992,8 @@ public class TabStatus
     if (selectedJobData != null)
     {
       // get job info
-      final String resultErrorMessage[] = new String[1];
-      final ValueMap resultMap          = new ValueMap();
+      final String   resultErrorMessage[] = new String[1];
+      final ValueMap resultMap            = new ValueMap();
       int error = BARServer.executeCommand(StringParser.format("JOB_STATUS jobUUID=%s",selectedJobData.uuid),
                                            1,  // debugLevel
                                            resultErrorMessage,
