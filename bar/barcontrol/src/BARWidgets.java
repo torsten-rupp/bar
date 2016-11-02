@@ -41,13 +41,30 @@ public class BARWidgets
    */
   static class Listener
   {
+    /** get int value
+     * @param widgetVariable widget variable
+     * @return value
+     */
+    public int getInt(WidgetVariable widgetVariable)
+    {
+      return 0;
+    }
+
+    /** set int value
+     * @param widgetVariable widget variable
+     * @param value value
+     */
+    public void setInt(WidgetVariable widgetVariable, int value)
+    {
+    }
+
     /** get long value
      * @param widgetVariable widget variable
      * @return value
      */
     public long getLong(WidgetVariable widgetVariable)
     {
-      return 0;
+      return 0L;
     }
 
     /** set long value
@@ -243,7 +260,7 @@ public class BARWidgets
     spinner.setToolTipText(toolTipText);
     spinner.setMinimum(min);
     spinner.setMaximum(max);
-    spinner.setSelection((int)widgetVariable.getLong());
+    spinner.setSelection(widgetVariable.getInteger());
 
     spinner.addModifyListener(new ModifyListener()
     {
@@ -256,11 +273,11 @@ public class BARWidgets
 
         if (listener != null)
         {
-          if ((int)listener.getLong(widgetVariable) == n) color = null;
+          if (listener.getInt(widgetVariable) == n) color = null;
         }
         else
         {
-          if ((int)widgetVariable.getLong() == n) color = null;
+          if (widgetVariable.getInteger() == n) color = null;
         }
 
         widget.setBackground(color);
@@ -276,7 +293,7 @@ public class BARWidgets
 
         if (listener != null)
         {
-          listener.setLong(widgetVariable,n);
+          listener.setInt(widgetVariable,n);
         }
         else
         {
@@ -292,7 +309,7 @@ public class BARWidgets
 
         if (listener != null)
         {
-          listener.setLong(widgetVariable,n);
+          listener.setInt(widgetVariable,n);
         }
         else
         {
@@ -316,7 +333,7 @@ public class BARWidgets
 
         if (listener != null)
         {
-          listener.setLong(widgetVariable,n);
+          listener.setInt(widgetVariable,n);
         }
         else
         {
@@ -332,7 +349,7 @@ public class BARWidgets
         {
           void modified(Widget widget, WidgetVariable variable)
           {
-            spinner.setSelection((int)listener.getLong(widgetVariable));
+            spinner.setSelection(listener.getInt(widgetVariable));
           }
         }
       : new WidgetModifyListener(spinner,widgetVariable);
@@ -347,11 +364,11 @@ public class BARWidgets
 
     if (listener != null)
     {
-      spinner.setSelection((int)listener.getLong(widgetVariable));
+      spinner.setSelection(listener.getInt(widgetVariable));
     }
     else
     {
-      spinner.setSelection((int)widgetVariable.getLong());
+      spinner.setSelection(widgetVariable.getInteger());
     }
 
     return spinner;

@@ -3910,7 +3910,7 @@ public class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               boolean changedFlag = archivePartSizeFlag.set(false);
-              archivePartSize.set(0);
+              archivePartSize.set(0L);
               BARServer.setJobOption(selectedJobData.uuid,archivePartSize);
 
               if (   changedFlag
@@ -4022,7 +4022,7 @@ public class TabJobs
               String string = widget.getText();
               try
               {
-                long  n = Units.parseByteSize(string);
+                long n = Units.parseByteSize(string);
                 archivePartSize.set(n);
                 BARServer.setJobOption(selectedJobData.uuid,archivePartSize);
                 widget.setText(Units.formatByteSize(n));

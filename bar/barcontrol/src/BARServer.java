@@ -2187,6 +2187,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         data = (T)new Boolean(resultMap.getBoolean("value"));
       }
+      else if (clazz == Integer.class)
+      {
+        data = (T)new Integer(resultMap.getInt("value"));
+      }
       else if (clazz == Long.class)
       {
         data = (T)new Long(resultMap.getLong("value"));
@@ -2344,6 +2348,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       widgetVariable.set(resultMap.getBoolean("value"));
     }
+    else if (widgetVariable.getType() == Integer.class)
+    {
+      widgetVariable.set(resultMap.getInt("value"));
+    }
     else if (widgetVariable.getType() == Long.class)
     {
       widgetVariable.set(resultMap.getLong("value"));
@@ -2400,9 +2408,20 @@ throw new Error("NYI");
                              errorMessage
                             );
     }
-    else if (widgetVariable.getType() == Long.class)
+    else if (widgetVariable.getType() == Integer.class)
     {
       error = executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%d",
+                                                 jobUUID,
+                                                 widgetVariable.getName(),
+                                                 widgetVariable.getInteger()
+                                                ),
+                             0,
+                             errorMessage
+                            );
+    }
+    else if (widgetVariable.getType() == Long.class)
+    {
+      error = executeCommand(StringParser.format("JOB_OPTION_SET jobUUID=%s name=%S value=%ld",
                                                  jobUUID,
                                                  widgetVariable.getName(),
                                                  widgetVariable.getLong()
@@ -2489,6 +2508,10 @@ throw new Error("NYI");
       if      (clazz == Boolean.class)
       {
         data = (T)new Boolean(resultMap.getBoolean("value"));
+      }
+      else if (clazz == Integer.class)
+      {
+        data = (T)new Integer(resultMap.getInt("value"));
       }
       else if (clazz == Long.class)
       {
@@ -2621,6 +2644,10 @@ throw new Error("NYI");
       if      (clazz == Boolean.class)
       {
         data = (T)new Boolean(resultMap.getBoolean("value"));
+      }
+      else if (clazz == Integer.class)
+      {
+        data = (T)new Integer(resultMap.getInt("value"));
       }
       else if (clazz == Long.class)
       {
@@ -2774,6 +2801,10 @@ throw new Error("NYI");
     {
       widgetVariable.set(resultMap.getBoolean("value"));
     }
+    else if (widgetVariable.getType() == Integer.class)
+    {
+      widgetVariable.set(resultMap.getInt("value"));
+    }
     else if (widgetVariable.getType() == Long.class)
     {
       widgetVariable.set(resultMap.getLong("value"));
@@ -2827,9 +2858,19 @@ throw new Error("NYI");
                              errorMessage
                             );
     }
-    else if (widgetVariable.getType() == Long.class)
+    else if (widgetVariable.getType() == Integer.class)
     {
       error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%d",
+                                                 widgetVariable.getName(),
+                                                 widgetVariable.getInteger()
+                                                ),
+                             0,
+                             errorMessage
+                            );
+    }
+    else if (widgetVariable.getType() == Long.class)
+    {
+      error = executeCommand(StringParser.format("SERVER_OPTION_SET name=%S value=%ld",
                                                  widgetVariable.getName(),
                                                  widgetVariable.getLong()
                                                 ),
