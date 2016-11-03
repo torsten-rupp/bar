@@ -4107,7 +4107,7 @@ Errors Index_init(const char *fileName)
   }
 
   // initial clean-up
-  error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,INDEX_PRIORITY_HIGH,NO_WAIT);
+  error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ_WRITE,INDEX_PRIORITY_HIGH,NO_WAIT);
   if (error != ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
