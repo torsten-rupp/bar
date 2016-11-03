@@ -956,6 +956,12 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
   storageName          = String_new();
   printableStorageName = String_new();
 
+  (void)Database_execute(&indexHandle->databaseHandle,
+                         CALLBACK(NULL,NULL),  // databaseRowFunction
+                         NULL,  // changedRowCount
+                         "UPDATE entities SET lockedCount=0"
+                        );
+
   error = ERROR_NONE;
   while (Index_findStorageByState(indexHandle,
                                   INDEX_STATE_SET(INDEX_STATE_UPDATE),
@@ -2287,8 +2293,9 @@ LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
                                NULL,  // archiveType,
                                NULL,  // createdDateTime,
                                NULL,  // lastErrorMessage
-                               NULL,  // totalEntryCount,
-                               NULL  // totalEntrySize,
+                               NULL,  // totalEntryCount
+                               NULL,  // totalEntrySize
+                               NULL  // lockedCount
                               )
           )
     {
@@ -2571,17 +2578,9 @@ LOCAL void indexThreadCode(void)
   // single clean-ups
   if (!quitFlag)
   {
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Started initial clean-up index database\n"
-               );
     BLOCK_DO(Database_lock(&indexHandle.databaseHandle),
              Database_unlock(&indexHandle.databaseHandle),
     {
-      if (!quitFlag) (void)cleanUpDuplicateMeta(&indexHandle);
-      if (!quitFlag) (void)cleanUpIncompleteUpdate(&indexHandle);
-      if (!quitFlag) (void)cleanUpIncompleteCreate(&indexHandle);
       if (!quitFlag) (void)cleanUpStorageNoName(&indexHandle);
       if (!quitFlag) (void)cleanUpStorageNoEntity(&indexHandle);
 //TODO: required here or only regulary below?
@@ -3558,8 +3557,9 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
                              NULL,  // archiveType,
                              NULL,  // createdDateTime,
                              NULL,  // lastErrorMessage
-                             NULL,  // totalEntryCount,
-                             NULL  // totalEntrySize,
+                             NULL,  // totalEntryCount
+                             NULL,  // totalEntrySize
+                             NULL  // lockedCount
                             )
         )
   {
@@ -3625,8 +3625,9 @@ LOCAL Errors assignJobToEntity(IndexHandle  *indexHandle,
                              NULL,  // archiveType,
                              NULL,  // createdDateTime,
                              NULL,  // lastErrorMessage
-                             NULL,  // totalEntryCount,
-                             NULL  // totalEntrySize,
+                             NULL,  // totalEntryCount
+                             NULL,  // totalEntrySize
+                             NULL  // lockedCount
                             )
         )
   {
@@ -4095,6 +4096,7 @@ Errors Index_init(const char *fileName)
                  );
       return error;
     }
+
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
@@ -4103,6 +4105,33 @@ Errors Index_init(const char *fileName)
                 indexVersion
                );
   }
+
+  // initial clean-up
+  error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,INDEX_PRIORITY_HIGH,NO_WAIT);
+  if (error != ERROR_NONE)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_ERROR,
+                "INDEX",
+                "Cannot get index database version from '%s': %s\n",
+                indexDatabaseFileName,
+                Error_getText(error)
+               );
+    return error;
+  }
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Started initial clean-up index database\n"
+             );
+  BLOCK_DO(Database_lock(&indexHandle.databaseHandle),
+           Database_unlock(&indexHandle.databaseHandle),
+  {
+    (void)cleanUpDuplicateMeta(&indexHandle);
+    (void)cleanUpIncompleteUpdate(&indexHandle);
+    (void)cleanUpIncompleteCreate(&indexHandle);
+  });
+  closeIndex(&indexHandle);
 
   // start clean-up thread
   quitFlag = FALSE;
@@ -5808,7 +5837,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                    entities.type, \
                                    (SELECT errorMessage FROM storage WHERE storage.entityId=entities.id ORDER BY created DESC LIMIT 0,1), \
                                    TOTAL(storage.totalEntryCount), \
-                                   TOTAL(storage.totalEntrySize) \
+                                   TOTAL(storage.totalEntrySize), \
+                                   entities.lockedCount \
                             FROM entities \
                               LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                               LEFT JOIN storage ON storage.entityId=entities.id \
@@ -5854,7 +5884,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          uint64           *createdDateTime,
                          String           lastErrorMessage,
                          ulong            *totalEntryCount,
-                         uint64           *totalEntrySize
+                         uint64           *totalEntrySize,
+                         uint             *lockedCount
                         )
 {
   DatabaseId uuidId_,entityId_;
@@ -5871,7 +5902,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %lld %S %llu %u %S %lf %lf",
+                           "%lld %S %lld %S %llu %u %S %lf %lf %d",
                            &uuidId_,
                            jobUUID,
                            &entityId_,
@@ -5880,7 +5911,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                            archiveType,
                            lastErrorMessage,
                            &totalEntryCount_,
-                           &totalEntrySize_
+                           &totalEntrySize_,
+                           &lockedCount
                           )
      )
   {
@@ -5899,6 +5931,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                        ConstString  scheduleUUID,
                        ArchiveTypes archiveType,
                        uint64       createdDateTime,
+                       bool         locked,
                        IndexId      *entityId
                       )
 {
@@ -5945,7 +5978,8 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                                  created, \
                                  type, \
                                  parentJobUUID, \
-                                 bidFlag\
+                                 bidFlag, \
+                                 lockedCount \
                                 ) \
                               VALUES \
                                 ( \
@@ -5954,13 +5988,15 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                                  %llu, \
                                  %u, \
                                  '', \
-                                 0\
+                                 0, \
+                                 %d \
                                 ); \
                              ",
                              jobUUID,
                              scheduleUUID,
                              (createdDateTime != 0LL) ? createdDateTime : Misc_getCurrentDateTime(),
-                             archiveType
+                             archiveType,
+                             locked ? 1 : 0
                             );
     if (error != ERROR_NONE)
     {
@@ -6043,6 +6079,76 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
         return error;
       }
       (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
+}
+
+Errors Index_lockEntity(IndexHandle *indexHandle,
+                        IndexId     entityId
+                       )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "UPDATE entities SET lockedCount=lockedCount+1 WHERE id=%lld;",
+                             Index_getDatabaseId(entityId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
+}
+
+Errors Index_unlockEntity(IndexHandle *indexHandle,
+                          IndexId     entityId
+                         )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "UPDATE entities SET lockedCount=lockedCount-1 WHERE id=%lld AND lockedCount>0;",
+                             Index_getDatabaseId(entityId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
     }
 
     return ERROR_NONE;
@@ -11110,8 +11216,9 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
                                NULL,  // archiveType,
                                NULL,  // createdDateTime,
                                NULL,  // lastErrorMessage
-                               NULL,  // totalEntryCount,
-                               NULL  // totalEntrySize,
+                               NULL,  // totalEntryCount
+                               NULL,  // totalEntrySize
+                               NULL  // lockedCount
                               )
           )
     {
@@ -11163,6 +11270,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   IndexId          storageId;
+  int64            lockedCount;
   bool             existsStorageFlag;
 
   assert(indexHandle != NULL);
@@ -11224,26 +11332,42 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
 
     if (Index_getDatabaseId(entityId) != INDEX_DEFAULT_ENTITY_ID)
     {
-      // check if storage exists
-      existsStorageFlag = Database_exists(&indexHandle->databaseHandle,
-                                          "storage",
-                                          "id",
-                                          "WHERE entityId=%lld",
-                                          Index_getDatabaseId(entityId)
-                                         );
-
-      // prune entity if empty
-      if (!existsStorageFlag)
+      // get locked count
+      error = Database_getInteger64(&indexHandle->databaseHandle,
+                                    &lockedCount,
+                                    "entities",
+                                    "lockedCount",
+                                    "WHERE id=%lld",
+                                    Index_getDatabaseId(entityId)
+                                   );
+      if (error != ERROR_NONE)
       {
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 "DELETE FROM entities WHERE id=%lld;",
-                                 Index_getDatabaseId(entityId)
-                                );
-        if (error != ERROR_NONE)
+        return error;
+      }
+
+      if (lockedCount == 0LL)
+      {
+        // check if storage exists
+        existsStorageFlag = Database_exists(&indexHandle->databaseHandle,
+                                            "storage",
+                                            "id",
+                                            "WHERE entityId=%lld",
+                                            Index_getDatabaseId(entityId)
+                                           );
+
+        // prune entity if empty
+        if (!existsStorageFlag)
         {
-          return error;
+          error = Database_execute(&indexHandle->databaseHandle,
+                                   CALLBACK(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount
+                                   "DELETE FROM entities WHERE id=%lld;",
+                                   Index_getDatabaseId(entityId)
+                                  );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
         }
       }
     }

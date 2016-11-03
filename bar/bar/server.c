@@ -2708,6 +2708,7 @@ LOCAL Errors writeJob(JobNode *jobNode)
       case PASSWORD_MODE_ASK:
         if (jobNode->jobOptions.cryptPassword != NULL) Password_clear(jobNode->jobOptions.cryptPassword);
         break;
+      case PASSWORD_MODE_NONE:
       case PASSWORD_MODE_CONFIG:
         // nothing to do
         break;
@@ -4859,8 +4860,9 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                                 NULL,  // archiveType
                                 NULL,  // createdDateTime
                                 NULL,  // lastErrorMessage
-                                NULL,  // entries
-                                NULL  // size
+                                NULL,  // totalEntryCount
+                                NULL,  // totalEntrySize
+                                NULL  // lockedCount
                                )
         )
   {
@@ -5169,6 +5171,7 @@ LOCAL void purgeExpiredThreadCode(void)
   ArchiveTypes       archiveType;
   ulong              totalEntryCount;
   uint64             totalEntrySize;
+  uint               lockedCount;
 
   // init variables
   jobName = String_new();
@@ -5224,11 +5227,12 @@ LOCAL void purgeExpiredThreadCode(void)
                                         &createdDateTime,
                                         NULL,  // lastErrorMessage
                                         &totalEntryCount,
-                                        &totalEntrySize
+                                        &totalEntrySize,
+                                        &lockedCount
                                        )
                 )
           {
-            if (!String_isEmpty(scheduleUUID))
+            if ((lockedCount == 0) && !String_isEmpty(scheduleUUID))
             {
               // get job name, schedule min./max. keep, max. age
               String_clear(jobName);
@@ -5308,26 +5312,30 @@ LOCAL void purgeExpiredThreadCode(void)
                                                   &createdDateTime,
                                                   NULL,  // lastErrorMessage
                                                   &totalEntryCount,
-                                                  &totalEntrySize
+                                                  &totalEntrySize,
+                                                  &lockedCount
                                                  )
                           )
                     {
-                      error = deleteEntity(indexHandle,entityId);
-                      if (error == ERROR_NONE)
+                      if (lockedCount == 0)
                       {
-                        surplusEntityId = entityId;
-                        plogMessage(NULL,  // logHandle,
-                                    LOG_TYPE_INDEX,
-                                    "INDEX",
-                                    "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
-                                    String_cString(jobName),
-                                    ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
-                                    String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
-                                    totalEntryCount,
-                                    BYTES_SHORT(totalEntrySize),
-                                    BYTES_UNIT(totalEntrySize),
-                                    totalEntrySize
-                                   );
+                        error = deleteEntity(indexHandle,entityId);
+                        if (error == ERROR_NONE)
+                        {
+                          surplusEntityId = entityId;
+                          plogMessage(NULL,  // logHandle,
+                                      LOG_TYPE_INDEX,
+                                      "INDEX",
+                                      "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
+                                      String_cString(jobName),
+                                      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                                      String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
+                                      totalEntryCount,
+                                      BYTES_SHORT(totalEntrySize),
+                                      BYTES_UNIT(totalEntrySize),
+                                      totalEntrySize
+                                     );
+                        }
                       }
                     }
                     Index_doneList(&indexQueryHandle2);
@@ -14569,9 +14577,9 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     }
   }
 
-  // delete all storage files of entity
   if (entityId != INDEX_ID_NONE)
   {
+    // delete entity
     error = deleteEntity(indexHandle,entityId);
     if (error != ERROR_NONE)
     {
@@ -15402,7 +15410,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                                 &createdDateTime,
                                 lastErrorMessage,
                                 &totalEntryCount,
-                                &totalEntrySize
+                                &totalEntrySize,
+                                NULL  // lockedCount
                                )
         )
   {
@@ -16106,6 +16115,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
                            scheduleUUID,
                            archiveType,
                            createdDateTime,
+                           FALSE,  // not locked
                            &entityId
                           );
   if (error != ERROR_NONE)
@@ -16404,6 +16414,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
                            NULL,  // scheduleUUID,
                            archiveType,
                            createdDateTime,
+                           FALSE,  // not locked
                            &entityId
                           );
   if (error != ERROR_NONE)
@@ -16520,6 +16531,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                               toScheduleUUID,
                               archiveType,
                               createdDateTime,
+                              TRUE,  // locked
                               &toEntityId
                              );
       if (error != ERROR_NONE)
@@ -16541,6 +16553,16 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        return;
+      }
+
+      // unlock
+      error = Index_unlockEntity(indexHandle,
+                                 entityId
+                                );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,error,"unlock entity fail");
         return;
       }
     }
@@ -16616,6 +16638,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                               toScheduleUUID,
                               archiveType,
                               createdDateTime,
+                              TRUE,  // locked
                               &toEntityId
                              );
       if (error != ERROR_NONE)
@@ -16637,6 +16660,16 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        return;
+      }
+
+      // unlock
+      error = Index_unlockEntity(indexHandle,
+                                 entityId
+                                );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,error,"unlock entity fail");
         return;
       }
     }
@@ -17203,7 +17236,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
 
   if (entityId != INDEX_ID_NONE)
   {
-    // delete entity index
+    // delete entity
     error = Index_deleteEntity(indexHandle,entityId);
     if (error != ERROR_NONE)
     {

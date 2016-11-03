@@ -62,13 +62,13 @@ CREATE TABLE IF NOT EXISTS entities(
   type                INTEGER,
   parentJobUUID       INTEGER,
   bidFlag             INTEGER,
-  lockedFlag          INTEGER,
+  lockedCount         INTEGER DEFAULT 0,
   comment             TEXT
 );
 CREATE INDEX ON entities (jobUUID,created,type);
 
 // insert default entity
-INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag,lockedFlag) VALUES ($DEFAULT_ENTITY_ID,'','',0,0,0,0,0);
+INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES ($DEFAULT_ENTITY_ID,'','',0,0,0,0);
 
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON entities

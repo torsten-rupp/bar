@@ -56,7 +56,8 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                  IndexHandle *newIndexHandle
                                 )
 {
-  Errors error;
+  Errors  error;
+  IndexId entityId;
 
   error = ERROR_NONE;
 
@@ -499,7 +500,6 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                              {
                                Errors       error;
                                StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-                               IndexId      entityId;
 
                                UNUSED_VARIABLE(fromColumnList);
                                UNUSED_VARIABLE(userData);
@@ -541,7 +541,8 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                          Misc_getUUID(jobUUID),
                                                          NULL,  // scheduleUUID
                                                          ARCHIVE_TYPE_FULL,
-                                                         0LL,  // createdDateTime
+                                                         0LL,  // createdDateTime,
+                                                         TRUE,  // locked
                                                          &entityId
                                                         );
                                }
@@ -882,6 +883,8 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                             fromStorageId
                                                            );
                                }
+
+                               (void)Index_unlockEntity(newIndexHandle,entityId);
 
                                return error;
                              },NULL),

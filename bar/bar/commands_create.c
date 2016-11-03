@@ -3396,7 +3396,8 @@ LOCAL Errors archiveStore(IndexHandle  *indexHandle,
 
 /***********************************************************************\
 * Name   : purgeStorageIndex
-* Purpose: purge storage index
+* Purpose: purge storage index and delete entity, uuid if empty and not
+*          locked
 * Input  : indexHandle      - index handle or NULL if no index
 *          storageId        - index storage id to purge
 *          storageSpecifier - storage specifier
@@ -3478,7 +3479,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
       }
       DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
 
-      // delete entity index if empty
+      // delete entity index if empty and not locked
       error = Index_pruneEntity(indexHandle,oldEntityId);
       if (error != ERROR_NONE)
       {
@@ -3515,7 +3516,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
 * Purpose: purge old storages by job UUID
 * Input  : indexHandle    - index handle or NULL if no index
 *          jobUUID        - job UUID
-*          limit          - limit [bytes] or 0
+*          limit          - size limit of existing storages [bytes] or 0
 *          maxStorageSize - max. storage size [bytes]
 *          logHandle      - log handle (can be NULL)
 * Output : -
@@ -3628,7 +3629,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
     }
     Index_doneList(&indexQueryHandle);
 
-//fprintf(stderr,"%s, %d: totalStorageSize=%llu\n",__FILE__,__LINE__,totalStorageSize);
+//fprintf(stderr,"%s, %d: totalStorageSize=%llu limit=%llu oldestStorageId=%llu\n",__FILE__,__LINE__,totalStorageSize,limit,oldestStorageId);
     if ((totalStorageSize > limit) && (oldestStorageId != INDEX_ID_NONE))
     {
       // delete oldest storage entry
@@ -4055,15 +4056,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     if (!createInfo->jobOptions->dryRunFlag && (createInfo->jobOptions->maxStorageSize > 0LL))
     {
       // purge archives by max. job storage size
-      if (createInfo->jobOptions->maxStorageSize > fileInfo.size)
-      {
-        purgeStorageByJobUUID(createInfo->indexHandle,
-                              createInfo->jobUUID,
-                              createInfo->jobOptions->maxStorageSize-fileInfo.size,
-                              createInfo->jobOptions->maxStorageSize,
-                              createInfo->logHandle
-                             );
-      }
+      purgeStorageByJobUUID(createInfo->indexHandle,
+                            createInfo->jobUUID,
+                            (createInfo->jobOptions->maxStorageSize > fileInfo.size)\
+                              ? createInfo->jobOptions->maxStorageSize-fileInfo.size
+                              : 0LL,
+                            createInfo->jobOptions->maxStorageSize,
+                            createInfo->logHandle
+                           );
 
       // purge archives by max. server storage size
       getServerSettings(createInfo->storageSpecifier,createInfo->jobOptions,&server);
@@ -4272,7 +4272,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                     )
          )
       {
-        // assign storage index entries to existing storage index
+        // append index: assign storage index entries to existing storage index
 //fprintf(stderr,"%s, %d: append to storage %llu\n",__FILE__,__LINE__,storageId);
         error = Index_assignTo(createInfo->indexHandle,
                                NULL,  // jobUUID
@@ -4295,7 +4295,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           continue;
         }
 
-        // delete index of storage (is empty now)
+        // delete index of storage (have to be empty now)
         assert(Index_isEmptyStorage(createInfo->indexHandle,storageMsg.storageId));
         (void)Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
 
@@ -4305,7 +4305,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       else
       {
 //fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
-        // keep new storage
+        // replace index: keep new storage
         storageId = storageMsg.storageId;
 
         // delete old indizes for same storage file
@@ -4326,8 +4326,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           continue;
         }
 
-#if 1
-        // append storage to existing entity with same directory
+        // append storage to existing entity which have the same storage directory
         if (createInfo->storageHandle.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
         {
 //fprintf(stderr,"%s, %d: append to entity of uuid %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
@@ -4407,16 +4406,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           // prune entity (maybe empty now)
           (void)Index_pruneEntity(createInfo->indexHandle,storageMsg.entityId);
         }
-#endif
       }
 
-      // update storages info (aggregated values)
-      if (error == ERROR_NONE)
-      {
-        error = Index_updateStorageInfos(createInfo->indexHandle,
-                                         storageId
-                                        );
-      }
       // update index database archive name and size
       if (error == ERROR_NONE)
       {
@@ -4426,6 +4417,15 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                     archiveSize
                                    );
       }
+
+      // update storages info (aggregated values)
+      if (error == ERROR_NONE)
+      {
+        error = Index_updateStorageInfos(createInfo->indexHandle,
+                                         storageId
+                                        );
+      }
+
       // set index database state and time stamp
       if (error == ERROR_NONE)
       {
@@ -6660,6 +6660,7 @@ Errors Command_create(ConstString                  jobUUID,
                             scheduleUUID,
                             archiveType,
                             0LL, // createdDateTime
+                            TRUE,  // locked
                             &entityId
                            );
     if (error != ERROR_NONE)
@@ -6792,6 +6793,11 @@ Errors Command_create(ConstString                  jobUUID,
   // update index
   if (indexHandle != NULL)
   {
+    assert(entityId != INDEX_ID_NONE);
+
+    // unlock entity
+    (void)Index_unlockEntity(indexHandle,entityId);
+
     // delete entity if nothing created
     error = Index_pruneEntity(indexHandle,entityId);
     if (error != ERROR_NONE)

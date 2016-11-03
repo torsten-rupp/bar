@@ -1162,6 +1162,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 *          lastErrorMessage - last storage error message (can be NULL)
 *          totalEntryCount  - total number of entries (can be NULL)
 *          totalEntrySize   - total storage size [bytes] (can be NULL)
+*          lockedCount      - locked count (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1175,7 +1176,8 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          uint64           *createdDateTime,
                          String           lastErrorMessage,
                          ulong            *totalEntryCount,
-                         uint64           *totalEntrySize
+                         uint64           *totalEntrySize,
+                         uint             *lockedCount
                         );
 
 /***********************************************************************\
@@ -1186,9 +1188,10 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 *          scheduleUUID    - unique schedule UUID (can be NULL)
 *          archiveType     - archive type
 *          createdDateTime - created date/time stamp or 0
+*          locked          - TRUE for locked entity
 * Output : entityId - index id of new entity index
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : entity have to be unlocked!
 \***********************************************************************/
 
 Errors Index_newEntity(IndexHandle  *indexHandle,
@@ -1197,6 +1200,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                        ConstString  scheduleUUID,
                        ArchiveTypes archiveType,
                        uint64       createdDateTime,
+                       bool         locked,
                        IndexId      *entityId
                       );
 
@@ -1210,6 +1214,32 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
 \***********************************************************************/
 
 Errors Index_deleteEntity(IndexHandle *indexHandle,
+                          IndexId     entityId
+                         );
+
+/***********************************************************************\
+* Name   : Index_lockEntity
+* Purpose: lock entity index
+* Input  : indexQueryHandle - index query handle
+*          entityId         - index id of entity index
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_lockEntity(IndexHandle *indexHandle,
+                        IndexId     entityId
+                       );
+
+/***********************************************************************\
+* Name   : Index_unlockEntity
+* Purpose: unlock entity index
+* Input  : indexQueryHandle - index query handle
+*          entityId         - index id of entity index
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_unlockEntity(IndexHandle *indexHandle,
                           IndexId     entityId
                          );
 
