@@ -15150,6 +15150,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   UUIDNode         *uuidNode;
   SemaphoreLock    semaphoreLock;
   JobNode          *jobNode;
+  bool             exitsFlag;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -15196,7 +15197,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   List_init(&uuidList);
   lastErrorMessage = String_new();
 
-  // get UUIDs (Note: use list to avoid dead-lock in job list)
+  // get UUIDs from database (Note: use list to avoid dead-lock in job list)
   error = Index_initListUUIDs(&indexQueryHandle,
                               indexHandle,
                               indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
@@ -15269,6 +15270,29 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
                        uuidNode->totalEntryCount,
                        uuidNode->totalEntrySize
                       );
+    }
+  }
+
+  // send job UUIDs without database entry
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    LIST_ITERATE(&jobList,jobNode)
+    {
+      // check if exists in database
+      exitsFlag = FALSE;
+      LIST_ITERATEX(&uuidList,uuidNode,!exitsFlag)
+      {
+        exitsFlag = String_equals(jobNode->uuid,uuidNode->jobUUID);
+      }
+
+      if (!exitsFlag)
+      {
+        sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                         "uuidId=0 jobUUID=%S name=%'S lastExecutedDateTime=0 lastErrorMessage='' totalEntryCount=%llu totalEntrySize=0",
+                         jobNode->uuid,
+                         jobNode->name
+                        );
+      }
     }
   }
 
@@ -16111,13 +16135,13 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
 
   // create new entity
   error = Index_newEntity(indexHandle,
-                           jobUUID,
-                           scheduleUUID,
-                           archiveType,
-                           createdDateTime,
-                           FALSE,  // not locked
-                           &entityId
-                          );
+                          jobUUID,
+                          scheduleUUID,
+                          archiveType,
+                          createdDateTime,
+                          FALSE,  // not locked
+                          &entityId
+                         );
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,error,"add entity fail");
@@ -16410,13 +16434,13 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
 
   // create new entity
   error = Index_newEntity(indexHandle,
-                           jobUUID,
-                           NULL,  // scheduleUUID,
-                           archiveType,
-                           createdDateTime,
-                           FALSE,  // not locked
-                           &entityId
-                          );
+                          jobUUID,
+                          NULL,  // scheduleUUID,
+                          archiveType,
+                          createdDateTime,
+                          FALSE,  // not locked
+                          &entityId
+                         );
   if (error != ERROR_NONE)
   {
     sendClientResult(clientInfo,id,TRUE,error,"add entity fail");
