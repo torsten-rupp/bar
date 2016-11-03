@@ -593,8 +593,10 @@ $(DISTRIBUTION_NAME).tar.bz2: \
   doc/COPYING \
   doc/bar.odt \
   doc/*.txt \
-  doc/images/*.png \
-  $(DOC)
+  $(DOC) \
+  $(DOC_IMAGES) \
+  $(DOC_IMAGES_SMALL) \
+  $(DOC_IMAGES_LARGE)
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)
 	$(INSTALL) -m 775 \
                    configure \
