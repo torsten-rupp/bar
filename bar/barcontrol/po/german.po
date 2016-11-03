@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-10-31 12:48+0100\n"
+"POT-Creation-Date: 2016-11-03 10:19+0100\n"
 "PO-Revision-Date: 2016-10-13 09:04+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -74,8 +74,8 @@ msgstr "KBytes"
 msgid "bytes"
 msgstr "Bytes"
 
-#: src/BARControl.java:987 src/BARControl.java:1078 src/BARWidgets.java:758
-#: src/BARWidgets.java:799 src/BARWidgets.java:849
+#: src/BARControl.java:987 src/BARControl.java:1078 src/BARWidgets.java:775
+#: src/BARWidgets.java:816 src/BARWidgets.java:866
 msgid "weeks"
 msgstr "Wochen"
 
@@ -83,8 +83,8 @@ msgstr "Wochen"
 msgid "week"
 msgstr "Woche"
 
-#: src/BARControl.java:988 src/BARControl.java:1080 src/BARWidgets.java:759
-#: src/BARWidgets.java:800 src/BARWidgets.java:850
+#: src/BARControl.java:988 src/BARControl.java:1080 src/BARWidgets.java:776
+#: src/BARWidgets.java:817 src/BARWidgets.java:867
 msgid "days"
 msgstr "Tage"
 
@@ -92,8 +92,8 @@ msgstr "Tage"
 msgid "day"
 msgstr "Tag"
 
-#: src/BARControl.java:989 src/BARControl.java:1081 src/BARWidgets.java:760
-#: src/BARWidgets.java:801 src/BARWidgets.java:851
+#: src/BARControl.java:989 src/BARControl.java:1081 src/BARWidgets.java:777
+#: src/BARWidgets.java:818 src/BARWidgets.java:868
 msgid "h"
 msgstr "Stunden"
 
@@ -101,8 +101,8 @@ msgstr "Stunden"
 msgid "min"
 msgstr "min."
 
-#: src/BARControl.java:991 src/BARControl.java:1087 src/BARWidgets.java:762
-#: src/BARWidgets.java:803 src/BARWidgets.java:853
+#: src/BARControl.java:991 src/BARControl.java:1087 src/BARWidgets.java:779
+#: src/BARWidgets.java:820 src/BARWidgets.java:870
 msgid "s"
 msgstr "Sekunden"
 
@@ -118,8 +118,8 @@ msgstr "Stunden"
 msgid "m"
 msgstr "Minute"
 
-#: src/BARControl.java:1086 src/BARWidgets.java:761 src/BARWidgets.java:802
-#: src/BARWidgets.java:852
+#: src/BARControl.java:1086 src/BARWidgets.java:778 src/BARWidgets.java:819
+#: src/BARWidgets.java:869
 msgid "mins"
 msgstr "Minuten"
 
@@ -307,7 +307,7 @@ msgstr "Bitte {0} Passwort eingeben für: {1}"
 msgid "Cannot restore ''{0}'': {1} - skipped"
 msgstr "Fehler bei der Wiederherstellung von ''{0}'': {1}"
 
-#: src/BARWidgets.java:544 src/BARWidgets.java:574 src/BARWidgets.java:613
+#: src/BARWidgets.java:561 src/BARWidgets.java:591 src/BARWidgets.java:630
 #: src/TabJobs.java:4013 src/TabJobs.java:4036 src/TabJobs.java:4068
 #: src/TabJobs.java:5782 src/TabJobs.java:5805 src/TabJobs.java:5837
 #: src/TabJobs.java:7334 src/TabJobs.java:7366 src/TabJobs.java:7407
@@ -324,7 +324,7 @@ msgstr ""
 "Bitte geben Sie eine Zahl 'n' oder 'n.m' ein. Optional kann die Einheit KB, "
 "MB oder GB angehängt werden."
 
-#: src/BARWidgets.java:756 src/BARWidgets.java:797 src/BARWidgets.java:847
+#: src/BARWidgets.java:773 src/BARWidgets.java:814 src/BARWidgets.java:864
 #, java-format
 msgid ""
 "''{0}'' is not valid time!\n"
@@ -335,20 +335,20 @@ msgstr ""
 "\n"
 "Bitte geben Sie eine Zeit ein im Format ''n<{1}|{2}|{3}|{4}|{5}''."
 
-#: src/BARWidgets.java:1068
+#: src/BARWidgets.java:1085
 msgid "Select path name. Ctrl+Click to select local directory."
 msgstr "Pfad auswählen. Strg+Klick um einen lokalen Pfad auszuwählen."
 
-#: src/BARWidgets.java:1082 src/BARWidgets.java:1090 src/Dialogs.java:4342
+#: src/BARWidgets.java:1099 src/BARWidgets.java:1107 src/Dialogs.java:4342
 #: src/TabRestore.java:8790 src/TabRestore.java:8798
 msgid "Select path"
 msgstr "Pfad auswählen"
 
-#: src/BARWidgets.java:1188
+#: src/BARWidgets.java:1205
 msgid "Select file name. Ctrl+Click to select local file."
 msgstr "Datei auswählen. Strg+Klick um eine lokale Datei auszuwählen."
 
-#: src/BARWidgets.java:1202 src/BARWidgets.java:1212
+#: src/BARWidgets.java:1219 src/BARWidgets.java:1229
 msgid "Select file"
 msgstr "Datei auswählen"
 

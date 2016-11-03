@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-10-31 12:48+0100\n"
+"POT-Creation-Date: 2016-11-03 10:19+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -70,8 +70,8 @@ msgstr "キロバイト"
 msgid "bytes"
 msgstr "バイト"
 
-#: src/BARControl.java:987 src/BARControl.java:1078 src/BARWidgets.java:758
-#: src/BARWidgets.java:799 src/BARWidgets.java:849
+#: src/BARControl.java:987 src/BARControl.java:1078 src/BARWidgets.java:775
+#: src/BARWidgets.java:816 src/BARWidgets.java:866
 msgid "weeks"
 msgstr ""
 
@@ -79,8 +79,8 @@ msgstr ""
 msgid "week"
 msgstr ""
 
-#: src/BARControl.java:988 src/BARControl.java:1080 src/BARWidgets.java:759
-#: src/BARWidgets.java:800 src/BARWidgets.java:850
+#: src/BARControl.java:988 src/BARControl.java:1080 src/BARWidgets.java:776
+#: src/BARWidgets.java:817 src/BARWidgets.java:867
 #, fuzzy
 msgid "days"
 msgstr "曜日"
@@ -90,8 +90,8 @@ msgstr "曜日"
 msgid "day"
 msgstr "曜日"
 
-#: src/BARControl.java:989 src/BARControl.java:1081 src/BARWidgets.java:760
-#: src/BARWidgets.java:801 src/BARWidgets.java:851
+#: src/BARControl.java:989 src/BARControl.java:1081 src/BARWidgets.java:777
+#: src/BARWidgets.java:818 src/BARWidgets.java:868
 msgid "h"
 msgstr ""
 
@@ -100,8 +100,8 @@ msgstr ""
 msgid "min"
 msgstr "最小"
 
-#: src/BARControl.java:991 src/BARControl.java:1087 src/BARWidgets.java:762
-#: src/BARWidgets.java:803 src/BARWidgets.java:853
+#: src/BARControl.java:991 src/BARControl.java:1087 src/BARWidgets.java:779
+#: src/BARWidgets.java:820 src/BARWidgets.java:870
 msgid "s"
 msgstr ""
 
@@ -117,8 +117,8 @@ msgstr ""
 msgid "m"
 msgstr ""
 
-#: src/BARControl.java:1086 src/BARWidgets.java:761 src/BARWidgets.java:802
-#: src/BARWidgets.java:852
+#: src/BARControl.java:1086 src/BARWidgets.java:778 src/BARWidgets.java:819
+#: src/BARWidgets.java:869
 msgid "mins"
 msgstr ""
 
@@ -314,7 +314,7 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/BARWidgets.java:544 src/BARWidgets.java:574 src/BARWidgets.java:613
+#: src/BARWidgets.java:561 src/BARWidgets.java:591 src/BARWidgets.java:630
 #: src/TabJobs.java:4013 src/TabJobs.java:4036 src/TabJobs.java:4068
 #: src/TabJobs.java:5782 src/TabJobs.java:5805 src/TabJobs.java:5837
 #: src/TabJobs.java:7334 src/TabJobs.java:7366 src/TabJobs.java:7407
@@ -331,7 +331,7 @@ msgstr ""
 "フォーマット''n''または''n.m''に番号を入力してください。オプションユニットは"
 "KB、MBまたはGBです。"
 
-#: src/BARWidgets.java:756 src/BARWidgets.java:797 src/BARWidgets.java:847
+#: src/BARWidgets.java:773 src/BARWidgets.java:814 src/BARWidgets.java:864
 #, fuzzy, java-format
 msgid ""
 "''{0}'' is not valid time!\n"
@@ -343,20 +343,20 @@ msgstr ""
 "フォーマット''n''または''n.m''に番号を入力してください。オプションユニットは"
 "KB、MBまたはGBです。"
 
-#: src/BARWidgets.java:1068
+#: src/BARWidgets.java:1085
 msgid "Select path name. Ctrl+Click to select local directory."
 msgstr ""
 
-#: src/BARWidgets.java:1082 src/BARWidgets.java:1090 src/Dialogs.java:4342
+#: src/BARWidgets.java:1099 src/BARWidgets.java:1107 src/Dialogs.java:4342
 #: src/TabRestore.java:8790 src/TabRestore.java:8798
 msgid "Select path"
 msgstr "パスを選択"
 
-#: src/BARWidgets.java:1188
+#: src/BARWidgets.java:1205
 msgid "Select file name. Ctrl+Click to select local file."
 msgstr ""
 
-#: src/BARWidgets.java:1202 src/BARWidgets.java:1212
+#: src/BARWidgets.java:1219 src/BARWidgets.java:1229
 #, fuzzy
 msgid "Select file"
 msgstr "ソースファイル選択"
