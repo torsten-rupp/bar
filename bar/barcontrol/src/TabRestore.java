@@ -6921,7 +6921,7 @@ Dprintf.dprintf("remove");
     final ArrayList<AssignToData> assignToDataList = new ArrayList<AssignToData>();
     BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%'S archiveType=%s",
                                                  jobUUID,
-                                                 archiveType.toString()
+                                                 archiveType.name()
                                                 ),
                              1,  // debugLevel
                              new Command.ResultHandler()
@@ -7009,11 +7009,10 @@ Dprintf.dprintf("remove");
         String[] errorMessage = new String[1];
         ValueMap valueMap     = new ValueMap();
 
-Dprintf.dprintf("indexDataHashSet=%d",indexDataHashSet.size());
         error = BARServer.executeCommand(StringParser.format("INDEX_ENTITY_ADD jobUUID=%'S scheduleUUID=%'S archiveType=%s createdDateTime=%ld",
                                                              toJobUUID,
                                                              (toScheduleUUID != null) ? toScheduleUUID : "",
-                                                             archiveType.toString(),
+                                                             archiveType.name(),
                                                              dateTime
                                                             ),
                                          0,  // debugLevel
@@ -7032,7 +7031,7 @@ Dprintf.dprintf("indexDataHashSet=%d",indexDataHashSet.size());
             {
               error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s jobUUID=%'S",
                                                                    entityId,
-                                                                   archiveType.toString(),
+                                                                   archiveType.name(),
                                                                    ((UUIDIndexData)indexData).jobUUID
                                                                   ),
                                                0,  // debugLevel
@@ -7043,7 +7042,7 @@ Dprintf.dprintf("indexDataHashSet=%d",indexDataHashSet.size());
             {
               error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
                                                                    entityId,
-                                                                   archiveType.toString(),
+                                                                   archiveType.name(),
                                                                    indexData.id
                                                                   ),
                                                0,  // debugLevel
@@ -7054,7 +7053,7 @@ Dprintf.dprintf("indexDataHashSet=%d",indexDataHashSet.size());
             {
               error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s storageId=%lld",
                                                                    entityId,
-                                                                   archiveType.toString(),
+                                                                   archiveType.name(),
                                                                    indexData.id
                                                                   ),
                                                0,  // debugLevel
@@ -7300,7 +7299,7 @@ Dprintf.dprintf("indexDataHashSet=%d",indexDataHashSet.size());
 
             error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toJobUUID=%'S archiveType=%s jobUUID=%'S",
                                                                  uuidIndexData.jobUUID,
-                                                                 archiveType.toString(),
+                                                                 archiveType.name(),
                                                                  uuidIndexData.jobUUID
                                                                 ),
                                              0,  // debugLevel
@@ -7313,7 +7312,7 @@ Dprintf.dprintf("indexDataHashSet=%d",indexDataHashSet.size());
 
             error = BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
                                                                  entityIndexData.id,
-                                                                 archiveType.toString(),
+                                                                 archiveType.name(),
                                                                  entityIndexData.id
                                                                 ),
                                              0,  // debugLevel
