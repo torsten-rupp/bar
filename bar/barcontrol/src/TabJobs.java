@@ -9650,7 +9650,10 @@ Dprintf.dprintf("clearJobData");
    */
   private void clearIncludeList()
   {
-    Widgets.removeAllTableItems(widgetIncludeTable);
+    if (!widgetIncludeTable.isDisposed())
+    {
+      Widgets.removeAllTableItems(widgetIncludeTable);
+    }
   }
 
   /** update include list
@@ -9659,49 +9662,52 @@ Dprintf.dprintf("clearJobData");
   {
     assert selectedJobData != null;
 
-    String[]            resultErrorMessage = new String[1];
-    ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-    int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST jobUUID=%s",
-                                                             selectedJobData.uuid
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage,
-                                         resultMapList
-                                        );
-    if (error != Errors.NONE)
+    if (!widgetIncludeTable.isDisposed())
     {
-      return;
-    }
-
-    includeHashMap.clear();
-    Widgets.removeAllTableItems(widgetIncludeTable);
-    for (ValueMap resultMap : resultMapList)
-    {
-      try
+      String[]            resultErrorMessage = new String[1];
+      ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+      int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST jobUUID=%s",
+                                                               selectedJobData.uuid
+                                                              ),
+                                           0,  // debugLevel
+                                           resultErrorMessage,
+                                           resultMapList
+                                          );
+      if (error != Errors.NONE)
       {
-        // get data
-        EntryTypes   entryType   = resultMap.getEnum  ("entryType",  EntryTypes.class  );
-        PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
-        String       pattern     = resultMap.getString("pattern"                       );
-
-        if (!pattern.equals(""))
-        {
-          EntryData entryData = new EntryData(entryType,pattern);
-
-          includeHashMap.put(pattern,entryData);
-          Widgets.insertTableItem(widgetIncludeTable,
-                                  findTableIndex(widgetIncludeTable,entryData),
-                                  (Object)entryData,
-                                  entryData.getImage(),
-                                  entryData.pattern
-                                 );
-        }
+        return;
       }
-      catch (IllegalArgumentException exception)
+
+      includeHashMap.clear();
+      Widgets.removeAllTableItems(widgetIncludeTable);
+      for (ValueMap resultMap : resultMapList)
       {
-        if (Settings.debugLevel > 0)
+        try
         {
-          System.err.println("ERROR: "+exception.getMessage());
+          // get data
+          EntryTypes   entryType   = resultMap.getEnum  ("entryType",  EntryTypes.class  );
+          PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
+          String       pattern     = resultMap.getString("pattern"                       );
+
+          if (!pattern.equals(""))
+          {
+            EntryData entryData = new EntryData(entryType,pattern);
+
+            includeHashMap.put(pattern,entryData);
+            Widgets.insertTableItem(widgetIncludeTable,
+                                    findTableIndex(widgetIncludeTable,entryData),
+                                    (Object)entryData,
+                                    entryData.getImage(),
+                                    entryData.pattern
+                                   );
+          }
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
+          }
         }
       }
     }
@@ -9711,7 +9717,10 @@ Dprintf.dprintf("clearJobData");
    */
   private void clearExcludeList()
   {
-    Widgets.removeAllListItems(widgetExcludeList);
+    if (!widgetExcludeList.isDisposed())
+    {
+      Widgets.removeAllListItems(widgetExcludeList);
+    }
   }
 
   /** update exclude list
@@ -9720,46 +9729,49 @@ Dprintf.dprintf("clearJobData");
   {
     assert selectedJobData != null;
 
-    String[]            resultErrorMessage = new String[1];
-    ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST jobUUID=%s",
-                                                             selectedJobData.uuid
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage,
-                                         resultMapList
-                                        );
-    if (error != Errors.NONE)
+    if (!widgetExcludeList.isDisposed())
     {
-      return;
-    }
-
-    excludeHashSet.clear();
-    Widgets.removeAllListItems(widgetExcludeList);
-
-    for (ValueMap resultMap : resultMapList)
-    {
-      try
+      String[]            resultErrorMessage = new String[1];
+      ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+      int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST jobUUID=%s",
+                                                               selectedJobData.uuid
+                                                              ),
+                                           0,  // debugLevel
+                                           resultErrorMessage,
+                                           resultMapList
+                                          );
+      if (error != Errors.NONE)
       {
-        // get data
-        PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
-        String       pattern     = resultMap.getString("pattern"                       );
-
-        if (!pattern.equals(""))
-        {
-          excludeHashSet.add(pattern);
-          Widgets.insertListItem(widgetExcludeList,
-                                 findListIndex(widgetExcludeList,pattern),
-                                 (Object)pattern,
-                                 pattern
-                                );
-        }
+        return;
       }
-      catch (IllegalArgumentException exception)
+
+      excludeHashSet.clear();
+      Widgets.removeAllListItems(widgetExcludeList);
+
+      for (ValueMap resultMap : resultMapList)
       {
-        if (Settings.debugLevel > 0)
+        try
         {
-          System.err.println("ERROR: "+exception.getMessage());
+          // get data
+          PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
+          String       pattern     = resultMap.getString("pattern"                       );
+
+          if (!pattern.equals(""))
+          {
+            excludeHashSet.add(pattern);
+            Widgets.insertListItem(widgetExcludeList,
+                                   findListIndex(widgetExcludeList,pattern),
+                                   (Object)pattern,
+                                   pattern
+                                  );
+          }
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
+          }
         }
       }
     }
@@ -9771,47 +9783,50 @@ Dprintf.dprintf("clearJobData");
   {
     assert selectedJobData != null;
 
-    String[]            resultErrorMessage = new String[1];
-    ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
-    int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST jobUUID=%s",
-                                                             selectedJobData.uuid
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage,
-                                         resultMapList
-                                        );
-    if (error != Errors.NONE)
+    if (!widgetMountTable.isDisposed())
     {
-      return;
-    }
-
-    Widgets.removeAllTableItems(widgetMountTable);
-    for (ValueMap resultMap : resultMapList)
-    {
-      try
+      String[]            resultErrorMessage = new String[1];
+      ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+      int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST jobUUID=%s",
+                                                               selectedJobData.uuid
+                                                              ),
+                                           0,  // debugLevel
+                                           resultErrorMessage,
+                                           resultMapList
+                                          );
+      if (error != Errors.NONE)
       {
-        // get data
-        int     id            = resultMap.getInt    ("id"           );
-        String  name          = resultMap.getString ("name"         );
-        boolean alwaysUnmount = resultMap.getBoolean("alwaysUnmount");
-
-        if (!name.equals(""))
-        {
-          MountData mountData = new MountData(id,name,alwaysUnmount);
-
-          Widgets.insertTableItem(widgetMountTable,
-                                  findTableIndex(widgetMountTable,mountData),
-                                  (Object)mountData,
-                                  mountData.name,
-                                  mountData.alwaysUnmount ? "\u2713" : "-"
-                                 );
-        }
+        return;
       }
-      catch (IllegalArgumentException exception)
+
+      Widgets.removeAllTableItems(widgetMountTable);
+      for (ValueMap resultMap : resultMapList)
       {
-        if (Settings.debugLevel > 0)
+        try
         {
-          System.err.println("ERROR: "+exception.getMessage());
+          // get data
+          int     id            = resultMap.getInt    ("id"           );
+          String  name          = resultMap.getString ("name"         );
+          boolean alwaysUnmount = resultMap.getBoolean("alwaysUnmount");
+
+          if (!name.equals(""))
+          {
+            MountData mountData = new MountData(id,name,alwaysUnmount);
+
+            Widgets.insertTableItem(widgetMountTable,
+                                    findTableIndex(widgetMountTable,mountData),
+                                    (Object)mountData,
+                                    mountData.name,
+                                    mountData.alwaysUnmount ? "\u2713" : "-"
+                                   );
+          }
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
+          }
         }
       }
     }
@@ -9878,7 +9893,10 @@ Dprintf.dprintf("clearJobData");
    */
   private void clearCompressExcludeList()
   {
-    Widgets.removeAllListItems(widgetCompressExcludeList);
+    if (!widgetCompressExcludeList.isDisposed())
+    {
+      Widgets.removeAllListItems(widgetCompressExcludeList);
+    }
   }
 
   /** update compress exclude list
@@ -9887,46 +9905,49 @@ Dprintf.dprintf("clearJobData");
   {
     assert selectedJobData != null;
 
-    String[]            resultErrorMessage  = new String[1];
-    ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
-    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST jobUUID=%s",
-                                                             selectedJobData.uuid
-                                                            ),
-                                         0,  // debugLevel
-                                         resultErrorMessage,
-                                         resultMapList
-                                        );
-    if (error != Errors.NONE)
+    if (!widgetCompressExcludeList.isDisposed())
     {
-      return;
-    }
-
-    compressExcludeHashSet.clear();
-    Widgets.removeAllListItems(widgetCompressExcludeList);
-
-    for (ValueMap resultMap : resultMapList)
-    {
-      try
+      String[]            resultErrorMessage  = new String[1];
+      ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
+      int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST jobUUID=%s",
+                                                               selectedJobData.uuid
+                                                              ),
+                                           0,  // debugLevel
+                                           resultErrorMessage,
+                                           resultMapList
+                                          );
+      if (error != Errors.NONE)
       {
-        // get data
-        PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
-        String       pattern     = resultMap.getString("pattern"                       );
-
-        if (!pattern.equals(""))
-        {
-           compressExcludeHashSet.add(pattern);
-           Widgets.insertListItem(widgetCompressExcludeList,
-                                  findListIndex(widgetCompressExcludeList,pattern),
-                                  (Object)pattern,
-                                  pattern
-                                 );
-        }
+        return;
       }
-      catch (IllegalArgumentException exception)
+
+      compressExcludeHashSet.clear();
+      Widgets.removeAllListItems(widgetCompressExcludeList);
+
+      for (ValueMap resultMap : resultMapList)
       {
-        if (Settings.debugLevel > 0)
+        try
         {
-          System.err.println("ERROR: "+exception.getMessage());
+          // get data
+          PatternTypes patternType = resultMap.getEnum  ("patternType",PatternTypes.class);
+          String       pattern     = resultMap.getString("pattern"                       );
+
+          if (!pattern.equals(""))
+          {
+             compressExcludeHashSet.add(pattern);
+             Widgets.insertListItem(widgetCompressExcludeList,
+                                    findListIndex(widgetCompressExcludeList,pattern),
+                                    (Object)pattern,
+                                    pattern
+                                   );
+          }
+        }
+        catch (IllegalArgumentException exception)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            System.err.println("ERROR: "+exception.getMessage());
+          }
         }
       }
     }
@@ -13183,7 +13204,7 @@ throw new Error("NYI");
                                                                scheduleData.getDate(),
                                                                scheduleData.getWeekDays(),
                                                                scheduleData.getTime(),
-                                                               scheduleData.archiveType.toString(),
+                                                               scheduleData.archiveType.name(),
                                                                scheduleData.interval,
                                                                scheduleData.customText,
                                                                scheduleData.minKeep,
@@ -13249,7 +13270,7 @@ throw new Error("NYI");
         }
         if (error == Errors.NONE)
         {
-          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"archive-type",scheduleData.archiveType.toString(),errorMessage);
+          error = BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"archive-type",scheduleData.archiveType.name(),errorMessage);
         }
         if (error == Errors.NONE)
         {
@@ -13320,7 +13341,7 @@ throw new Error("NYI");
                                                                  newScheduleData.getDate(),
                                                                  newScheduleData.getWeekDays(),
                                                                  newScheduleData.getTime(),
-                                                                 newScheduleData.archiveType.toString(),
+                                                                 newScheduleData.archiveType.name(),
                                                                  newScheduleData.customText,
                                                                  newScheduleData.minKeep,
                                                                  newScheduleData.maxKeep,
