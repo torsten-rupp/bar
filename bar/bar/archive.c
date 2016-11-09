@@ -1142,7 +1142,6 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
     // split needed -> close archive file
     if (archiveInfo->file.openFlag)
     {
-fprintf(stderr,"%s, %d: split \n",__FILE__,__LINE__);
       error = closeArchiveFile(archiveInfo,indexHandle);
       if (error != ERROR_NONE)
       {
