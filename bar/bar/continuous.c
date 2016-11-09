@@ -47,9 +47,9 @@
 /***************************** Constants *******************************/
 
 #ifdef HAVE_IN_EXCL_UNLINK
-  #define NOTIFY_FLAGS (IN_EXCL_UNLINK|IN_ISDIR)
+  #define NOTIFY_FLAGS (IN_EXCL_UNLINK)
 #else
-  #define NOTIFY_FLAGS (IN_ISDIR)
+  #define NOTIFY_FLAGS 0
 #endif
 //#define NOTIFY_EVENTS IN_ALL_EVENTS
 #define NOTIFY_EVENTS (IN_CREATE|IN_MODIFY|IN_ATTRIB|IN_CLOSE_WRITE|IN_DELETE|IN_DELETE_SELF|IN_MODIFY|IN_MOVE_SELF|IN_MOVED_FROM|IN_MOVED_TO)
@@ -99,7 +99,7 @@ typedef struct
 {
   UUIDList uuidList;
   int      watchHandle;
-  String   directory;
+  String   name;
 } NotifyInfo;
 
 // init notify message
@@ -119,7 +119,7 @@ typedef struct
 /***************************** Variables *******************************/
 LOCAL Semaphore      notifyLock;                  // lock
 LOCAL Dictionary     notifyHandles;
-LOCAL Dictionary     notifyDirectories;
+LOCAL Dictionary     notifyNames;
 LOCAL DatabaseHandle continuousDatabaseHandle;
 LOCAL int            inotifyHandle;
 LOCAL MsgQueue       initDoneNotifyMsgQueue;
@@ -185,7 +185,7 @@ LOCAL void printNotifies(void)
 
       printf("%3d: %s\n",
              notifyInfo->watchHandle,
-             String_cString(notifyInfo->directory)
+             String_cString(notifyInfo->name)
             );
       LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
       {
@@ -420,7 +420,7 @@ LOCAL void freeNotifyInfo(NotifyInfo *notifyInfo, void *userData)
   UNUSED_VARIABLE(userData);
 
   List_done(&notifyInfo->uuidList,CALLBACK_NULL);
-  String_delete(notifyInfo->directory);
+  String_delete(notifyInfo->name);
 }
 
 /***********************************************************************\
@@ -464,7 +464,7 @@ LOCAL NotifyInfo *getNotifyInfoByDirectory(ConstString directory)
 {
   NotifyInfo *notifyInfo;
 
-  if (!Dictionary_find(&notifyDirectories,
+  if (!Dictionary_find(&notifyNames,
                        String_cString(directory),
                        String_length(directory),
                        (void**)&notifyInfo,
@@ -487,25 +487,25 @@ LOCAL NotifyInfo *getNotifyInfoByDirectory(ConstString directory)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL NotifyInfo *addNotify(ConstString directory)
+LOCAL NotifyInfo *addNotify(ConstString name)
 {
   int        watchHandle;
   NotifyInfo *notifyInfo;
 
-  assert(directory != NULL);
+  assert(name != NULL);
   assert(Semaphore_isLocked(&notifyLock));
 
-  notifyInfo = getNotifyInfoByDirectory(directory);
+  notifyInfo = getNotifyInfoByDirectory(name);
   if (notifyInfo == NULL)
   {
     // create notify
-    watchHandle = inotify_add_watch(inotifyHandle,String_cString(directory),NOTIFY_FLAGS|NOTIFY_EVENTS);
+    watchHandle = inotify_add_watch(inotifyHandle,String_cString(name),NOTIFY_FLAGS|NOTIFY_EVENTS);
     if (watchHandle == -1)
     {
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_CONTINUOUS,
                   "CONTINUOUS","Add notify watch for '%s' fail (error: %s)\n",
-                  String_cString(directory),strerror(errno)
+                  String_cString(name),strerror(errno)
                  );
       return NULL;
     }
@@ -517,7 +517,7 @@ LOCAL NotifyInfo *addNotify(ConstString directory)
       HALT_INSUFFICIENT_MEMORY();
     }
     notifyInfo->watchHandle = watchHandle;
-    notifyInfo->directory   = String_duplicate(directory);
+    notifyInfo->name        = String_duplicate(name);
     List_init(&notifyInfo->uuidList);
 
     // add notify
@@ -525,13 +525,13 @@ LOCAL NotifyInfo *addNotify(ConstString directory)
                    &notifyInfo->watchHandle,sizeof(notifyInfo->watchHandle),
                    notifyInfo,sizeof(NotifyInfo*)
                   );
-    Dictionary_add(&notifyDirectories,
-                   String_cString(notifyInfo->directory),String_length(notifyInfo->directory),
+    Dictionary_add(&notifyNames,
+                   String_cString(notifyInfo->name),String_length(notifyInfo->name),
                    notifyInfo,sizeof(NotifyInfo*)
                   );
   }
 
-//fprintf(stderr,"%s, %d: add notify %d: %s\n",__FILE__,__LINE__,notifyInfo->watchHandle,String_cString(notifyInfo->directory));
+//fprintf(stderr,"%s, %d: add notify %d: %s\n",__FILE__,__LINE__,notifyInfo->watchHandle,String_cString(notifyInfo->name));
 
   return notifyInfo;
 }
@@ -554,9 +554,9 @@ LOCAL void removeNotify(NotifyInfo *notifyInfo)
   assert(Semaphore_isLocked(&notifyLock));
 
   // remove notify
-  Dictionary_remove(&notifyDirectories,
-                    String_cString(notifyInfo->directory),
-                    String_length(notifyInfo->directory)
+  Dictionary_remove(&notifyNames,
+                    String_cString(notifyInfo->name),
+                    String_length(notifyInfo->name)
                    );
   Dictionary_remove(&notifyHandles,
                     &notifyInfo->watchHandle,
@@ -576,13 +576,13 @@ LOCAL void removeNotify(NotifyInfo *notifyInfo)
 * Purpose: add notify for directorty and all sub-directories
 * Input  : jobUUID      - job UUID
 *          scheduleUUID - schedule UUID
-*          directory    - directory to add
+*          name         - file or directory to add
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID, String directory)
+LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID, ConstString baseName)
 {
   StringList          directoryList;
   String              name;
@@ -597,7 +597,7 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
   StringList_init(&directoryList);
   name = String_new();
 
-  StringList_append(&directoryList,directory);
+  StringList_append(&directoryList,baseName);
   while (   !StringList_isEmpty(&directoryList)
          && !quitFlag
         )
@@ -654,7 +654,7 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
       // scan sub-directories
       if (fileInfo.type == FILE_TYPE_DIRECTORY)
       {
-        // open directory contents
+        // open directory content
         error = File_openDirectoryList(&directoryListHandle,name);
         if (error == ERROR_NONE)
         {
@@ -708,13 +708,13 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
 /***********************************************************************\
 * Name   : removeNotifySubDirectories
 * Purpose: remove notify for directorty and all sub-directories
-* Input  : directory - directory
+* Input  : name - name
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void removeNotifySubDirectories(ConstString directory)
+LOCAL void removeNotifySubDirectories(ConstString name)
 {
   DictionaryIterator dictionaryIterator;
   const void         *keyData;
@@ -723,7 +723,7 @@ LOCAL void removeNotifySubDirectories(ConstString directory)
   ulong              length;
   NotifyInfo         *notifyInfo;
 
-  assert(directory != NULL);
+  assert(name != NULL);
   assert(Semaphore_isLocked(&notifyLock));
 
   Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
@@ -740,8 +740,8 @@ LOCAL void removeNotifySubDirectories(ConstString directory)
 
     notifyInfo = (NotifyInfo*)data;
 
-    if (   String_length(notifyInfo->directory) >= String_length(directory)
-        && String_startsWith(notifyInfo->directory,directory)
+    if (   String_length(notifyInfo->name) >= String_length(name)
+        && String_startsWith(notifyInfo->name,name)
        )
     {
       removeNotify(notifyInfo);
@@ -982,7 +982,7 @@ LOCAL void continuousInitThreadCode(void)
 {
   InitNotifyMsg   initNotifyMsg;
   StringList      nameList;
-  String          basePath;
+  String          baseName;
 
   EntryNode       *includeEntryNode;
   StringTokenizer fileNameTokenizer;
@@ -990,7 +990,7 @@ LOCAL void continuousInitThreadCode(void)
 
   // init variables
   StringList_init(&nameList);
-  basePath = String_new();
+  baseName = String_new();
 
   while (   !quitFlag
          && MsgQueue_get(&initDoneNotifyMsgQueue,&initNotifyMsg,NULL,sizeof(initNotifyMsg),WAIT_FOREVER)
@@ -1018,21 +1018,21 @@ LOCAL void continuousInitThreadCode(void)
           {
             if (!String_isEmpty(token))
             {
-              File_setFileName(basePath,token);
+              File_setFileName(baseName,token);
             }
             else
             {
-              File_setFileNameChar(basePath,FILES_PATHNAME_SEPARATOR_CHAR);
+              File_setFileNameChar(baseName,FILES_PATHNAME_SEPARATOR_CHAR);
             }
           }
           while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
           {
-            File_appendFileName(basePath,token);
+            File_appendFileName(baseName,token);
           }
           File_doneSplitFileName(&fileNameTokenizer);
 
           // add directory and sub-directories to notify
-          addNotifySubDirectories(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID,basePath);
+          addNotifySubDirectories(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID,baseName);
         }
 
         // clean not existing notifies for job
@@ -1046,7 +1046,6 @@ LOCAL void continuousInitThreadCode(void)
                    );
         break;
       case DONE:
-//fprintf(stderr,"%s, %d: DONE job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
         removeNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
         break;
     }
@@ -1056,7 +1055,7 @@ LOCAL void continuousInitThreadCode(void)
   }
 
   // free resources
-  String_delete(basePath);
+  String_delete(baseName);
   StringList_done(&nameList);
 }
 
@@ -1222,9 +1221,7 @@ LOCAL void continuousThreadCode(void)
     inotifyEvent = (const struct inotify_event*)buffer;
     while ((n > 0) && !quitFlag)
     {
-//fprintf(stderr,"%s, %d: n=%d\n",__FILE__,__LINE__,n);
-      if (inotifyEvent->len > 0)
-      {
+//fprintf(stderr,"%s, %d: n=%d %d\n",__FILE__,__LINE__,n,inotifyEvent->len);
 #if 0
 fprintf(stderr,"%s, %d: inotify event wd=%d mask=%08x: name=%s ->",__FILE__,__LINE__,inotifyEvent->wd,inotifyEvent->mask,inotifyEvent->name);
    if (inotifyEvent->mask & IN_ACCESS)        fprintf(stderr," IN_ACCESS"       );
@@ -1245,182 +1242,179 @@ fprintf(stderr,"%s, %d: inotify event wd=%d mask=%08x: name=%s ->",__FILE__,__LI
    if (inotifyEvent->mask & IN_UNMOUNT)       fprintf(stderr," IN_UNMOUNT"      );
 fprintf(stderr,"\n");
 #endif
-
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        notifyInfo = getNotifyInfo(inotifyEvent->wd);
+        if (notifyInfo != NULL)
         {
-          notifyInfo = getNotifyInfo(inotifyEvent->wd);
-          if (notifyInfo != NULL)
+          String_set(absoluteName,notifyInfo->name);
+          if (inotifyEvent->len > 0) File_appendFileNameCString(absoluteName,inotifyEvent->name);
+
+          if (IS_INOTIFY(inotifyEvent->mask,IN_ISDIR))
           {
-            File_appendFileNameCString(String_set(absoluteName,notifyInfo->directory),inotifyEvent->name);
-
-            if (IS_INOTIFY(inotifyEvent->mask,IN_ISDIR))
+            // directory changed
+            if      (IS_INOTIFY(inotifyEvent->mask,IN_CREATE))
             {
-              // directory changed
-
-              if      (IS_INOTIFY(inotifyEvent->mask,IN_CREATE))
+              // add directory and sub-directories to notify
+              BLOCK_DO(Database_lock(&continuousDatabaseHandle),
+                       Database_unlock(&continuousDatabaseHandle),
               {
-                // add directory and sub-directories to notify
-                BLOCK_DO(Database_lock(&continuousDatabaseHandle),
-                         Database_unlock(&continuousDatabaseHandle),
+                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
-                  LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+                  // store into notify database
+                  error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                  if (error == ERROR_NONE)
                   {
-                    // store into notify database
-                    error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
-                    if (error == ERROR_NONE)
-                    {
-                      plogMessage(NULL,  // logHandle
-                                  LOG_TYPE_CONTINUOUS,
-                                  "CONTINUOUS",
-                                  "Marked for storage '%s'\n",
-                                  String_cString(absoluteName)
-                                 );
-                    }
-                    else
-                    {
-                      plogMessage(NULL,  // logHandle
-                                  LOG_TYPE_CONTINUOUS,
-                                  "CONTINUOUS",
-                                  "Store continuous entry fail (error: %s)\n",
-                                  Error_getText(error)
-                                 );
-                    }
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                "CONTINUOUS",
+                                "Marked for storage '%s'\n",
+                                String_cString(absoluteName)
+                               );
+                  }
+                  else
+                  {
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                "CONTINUOUS",
+                                "Store continuous entry fail (error: %s)\n",
+                                Error_getText(error)
+                               );
+                  }
 
-                    // add directory and sub-directories to notify
-                    addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
-                  }
-                });
-              }
-              else if (IS_INOTIFY(inotifyEvent->mask,IN_DELETE))
+                  // add directory and sub-directories to notify
+                  addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                }
+              });
+            }
+            else if (IS_INOTIFY(inotifyEvent->mask,IN_DELETE))
+            {
+              // remove directory and sub-directories from notify
+              notifyInfo = getNotifyInfo(inotifyEvent->wd);
+              removeNotifySubDirectories(absoluteName);
+            }
+            else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_FROM))
+            {
+              // remove directory and sub-directories from notify
+              removeNotifySubDirectories(absoluteName);
+            }
+            else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_TO))
+            {
+              // add directory and sub-directories to notify
+              BLOCK_DO(Database_lock(&continuousDatabaseHandle),
+                       Database_unlock(&continuousDatabaseHandle),
               {
-                // remove directory and sub-directories from notify
-                notifyInfo = getNotifyInfo(inotifyEvent->wd);
-                removeNotifySubDirectories(absoluteName);
-              }
-              else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_FROM))
-              {
-                // remove directory and sub-directories from notify
-                removeNotifySubDirectories(absoluteName);
-              }
-              else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_TO))
-              {
-                // add directory and sub-directories to notify
-                BLOCK_DO(Database_lock(&continuousDatabaseHandle),
-                         Database_unlock(&continuousDatabaseHandle),
+                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
-                  LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+                  // store into notify database
+                  error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                  if (error == ERROR_NONE)
                   {
-                    // store into notify database
-                    error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
-                    if (error == ERROR_NONE)
-                    {
-                      plogMessage(NULL,  // logHandle
-                                  LOG_TYPE_CONTINUOUS,
-                                  "CONTINUOUS",
-                                  "Marked for storage '%s'\n",
-                                  String_cString(absoluteName)
-                                 );
-                    }
-                    else
-                    {
-                      plogMessage(NULL,  // logHandle
-                                  LOG_TYPE_CONTINUOUS,
-                                  "CONTINUOUS",
-                                  "Store continuous entry fail (error: %s)\n",
-                                  Error_getText(error)
-                                 );
-                    }
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                "CONTINUOUS",
+                                "Marked for storage '%s'\n",
+                                String_cString(absoluteName)
+                               );
+                  }
+                  else
+                  {
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                "CONTINUOUS",
+                                "Store continuous entry fail (error: %s)\n",
+                                Error_getText(error)
+                               );
+                  }
 
-                    // add directory and sub-directories to notify
-                    addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
-                  }
-                });
-              }
-              else
-              {
-                // add directory and sub-directories to notify
-                BLOCK_DO(Database_lock(&continuousDatabaseHandle),
-                         Database_unlock(&continuousDatabaseHandle),
-                {
-                  LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
-                  {
-                    // store into notify database
-                    error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
-                    if (error == ERROR_NONE)
-                    {
-                      plogMessage(NULL,  // logHandle
-                                  LOG_TYPE_CONTINUOUS,
-                                  "CONTINUOUS",
-                                  "Marked for storage '%s'\n",
-                                  String_cString(absoluteName)
-                                 );
-                    }
-                    else
-                    {
-                      plogMessage(NULL,  // logHandle
-                                  LOG_TYPE_CONTINUOUS,
-                                  "CONTINUOUS",
-                                  "Store continuous entry fail (error: %s)\n",
-                                  Error_getText(error)
-                                 );
-                    }
-                  }
-                });
-              }
+                  // add directory and sub-directories to notify
+                  addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                }
+              });
             }
             else
             {
-              // file changed
-
-              if      (IS_INOTIFY(inotifyEvent->mask,IN_DELETE))
+              // add directory and sub-directories to notify
+              BLOCK_DO(Database_lock(&continuousDatabaseHandle),
+                       Database_unlock(&continuousDatabaseHandle),
               {
-                // file deleted -> nothing to do
-              }
-              else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_FROM))
-              {
-                // file move away -> nothing to do
-              }
-              else
-              {
-                // file move or changed -> store into notify database
-                BLOCK_DO(Database_lock(&continuousDatabaseHandle),
-                         Database_unlock(&continuousDatabaseHandle),
+                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
-                  LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+                  // store into notify database
+                  error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                  if (error == ERROR_NONE)
                   {
-                    if (!existsContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
-                    {
-                      error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
-                      if (error == ERROR_NONE)
-                      {
-                        plogMessage(NULL,  // logHandle
-                                    LOG_TYPE_CONTINUOUS,
-                                    "CONTINUOUS",
-                                    "Marked for storage '%s'\n",
-                                    String_cString(absoluteName)
-                                   );
-                      }
-                      else
-                      {
-                        plogMessage(NULL,  // logHandle
-                                    LOG_TYPE_CONTINUOUS,
-                                    "CONTINUOUS",
-                                    "Store continuous entry fail (error: %s)\n",
-                                    Error_getText(error)
-                                   );
-                      }
-                    }
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                "CONTINUOUS",
+                                "Marked for storage '%s'\n",
+                                String_cString(absoluteName)
+                               );
                   }
-                });
-              }
+                  else
+                  {
+                    plogMessage(NULL,  // logHandle
+                                LOG_TYPE_CONTINUOUS,
+                                "CONTINUOUS",
+                                "Store continuous entry fail (error: %s)\n",
+                                Error_getText(error)
+                               );
+                  }
+                }
+              });
             }
           }
           else
           {
-            #ifndef NDEBUG
-              fprintf(stderr,"%s, %d: Warning: inotify event 0x%08x received for unknown handle %d!\n",__FILE__,__LINE__,inotifyEvent->mask,inotifyEvent->wd);
-            #endif /* not NDEBUG */
+            // file changed
+            if      (IS_INOTIFY(inotifyEvent->mask,IN_DELETE))
+            {
+              // file deleted -> nothing to do
+            }
+            else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_FROM))
+            {
+              // file move away -> nothing to do
+            }
+            else
+            {
+              // file move or changed -> store into notify database
+              BLOCK_DO(Database_lock(&continuousDatabaseHandle),
+                       Database_unlock(&continuousDatabaseHandle),
+              {
+                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+                {
+                  if (!existsContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName))
+                  {
+                    error = addContinuousEntry(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                    if (error == ERROR_NONE)
+                    {
+                      plogMessage(NULL,  // logHandle
+                                  LOG_TYPE_CONTINUOUS,
+                                  "CONTINUOUS",
+                                  "Marked for storage '%s'\n",
+                                  String_cString(absoluteName)
+                                 );
+                    }
+                    else
+                    {
+                      plogMessage(NULL,  // logHandle
+                                  LOG_TYPE_CONTINUOUS,
+                                  "CONTINUOUS",
+                                  "Store continuous entry fail (error: %s)\n",
+                                  Error_getText(error)
+                                 );
+                    }
+                  }
+                }
+              });
+            }
           }
+        }
+        else
+        {
+          #ifndef NDEBUG
+            fprintf(stderr,"%s, %d: Warning: inotify event 0x%08x received for unknown handle %d!\n",__FILE__,__LINE__,inotifyEvent->mask,inotifyEvent->wd);
+          #endif /* not NDEBUG */
         }
       }
 
@@ -1459,7 +1453,7 @@ Errors Continuous_initAll(void)
                   },NULL),
                   CALLBACK_NULL  // dictionaryCompareFunction
                  );
-  Dictionary_init(&notifyDirectories,
+  Dictionary_init(&notifyNames,
                   CALLBACK_NULL,  // dictionaryCopyFunction
                   CALLBACK_NULL,  // dictionaryFreeFunction (Note: free done in notifyHandles)
                   CALLBACK_NULL  // dictionaryCompareFunction
@@ -1489,7 +1483,7 @@ void Continuous_doneAll(void)
 {
   MsgQueue_done(&initDoneNotifyMsgQueue,CALLBACK((MsgQueueMsgFreeFunction)freeInitNotifyMsg,NULL));
   close(inotifyHandle);
-  Dictionary_done(&notifyDirectories);
+  Dictionary_done(&notifyNames);
   Dictionary_done(&notifyHandles);
   Semaphore_done(&notifyLock);
 }
