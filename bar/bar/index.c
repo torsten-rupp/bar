@@ -2488,8 +2488,10 @@ LOCAL void indexThreadCode(void)
   uint                oldDatabaseCount;
   uint64              lastCleanupTimestamp;
   SemaphoreLock       semaphoreLock;
-  uint                sleepTime;
+  DatabaseQueryHandle databaseQueryHandle;
   DatabaseId          databaseId;
+  String              storageName;
+  uint                sleepTime;
 
   assert(indexDatabaseFileName != NULL);
 
@@ -2603,19 +2605,25 @@ LOCAL void indexThreadCode(void)
   indexInitializedFlag = TRUE;
 
   // regular clean-ups
+  storageName          = String_new();
   lastCleanupTimestamp = Misc_getTimestamp();
   while (!quitFlag)
   {
     // remove deleted storages from index
-    do
-    {
-      error = Database_getId(&indexHandle.databaseHandle,
-                             &databaseId,
-                             "storage",
-                             "WHERE state=%d",
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle.databaseHandle,
+                             "SELECT id,name FROM storage WHERE state=%d",
                              INDEX_STATE_DELETED
                             );
-      if ((error == ERROR_NONE) && (databaseId != DATABASE_ID_NONE))
+    if (error == ERROR_NONE)
+    {
+      while (   (error == ERROR_NONE)
+             && Database_getNextRow(&databaseQueryHandle,
+                                    "%lld %S",
+                                    &databaseId,
+                                    storageName
+                                   )
+            )
       {
         if (error == ERROR_NONE)
         {
@@ -2691,16 +2699,20 @@ LOCAL void indexThreadCode(void)
         }
         if (error == ERROR_NONE)
         {
-          plogMessage(NULL,  // logHandle
-                      LOG_TYPE_INDEX,
-                      "INDEX",
-                      "Removed storage #%llu from index\n",
-                      databaseId
-                     );
+          if (!String_isEmpty(storageName))
+          {
+            plogMessage(NULL,  // logHandle
+                        LOG_TYPE_INDEX,
+                        "INDEX",
+                        "Removed storage #%llu from index: '%s'\n",
+                        databaseId,
+                        String_cString(storageName)
+                       );
+          }
         }
       }
+      Database_finalize(&databaseQueryHandle);
     }
-    while ((error == ERROR_NONE) && (databaseId != INDEX_ID_NONE));
 
     if (Misc_getTimestamp() > (lastCleanupTimestamp+TIME_INDEX_CLEANUP*US_PER_SECOND))
     {
@@ -2734,6 +2746,7 @@ LOCAL void indexThreadCode(void)
       }
     }
   }
+  String_delete(storageName);
 
   // free resources
   closeIndex(&indexHandle);
@@ -6242,15 +6255,15 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
     switch (Index_getType(indexIds[i]))
     {
       case INDEX_TYPE_UUID:
-        if (i > 0) String_appendChar(uuidIdsString,',');
+        if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
         String_format(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
         break;
       case INDEX_TYPE_ENTITY:
-        if (i > 0) String_appendChar(entityIdsString,',');
+        if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
         String_format(entityIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
         break;
       case INDEX_TYPE_STORAGE:
-        if (i > 0) String_appendChar(storageIdsString,',');
+        if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
         String_format(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
         break;
       default:
@@ -6827,15 +6840,15 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
     switch (Index_getType(indexIds[i]))
     {
       case INDEX_TYPE_UUID:
-        if (i > 0) String_appendChar(uuidIdsString,',');
+        if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
         String_format(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
         break;
       case INDEX_TYPE_ENTITY:
-        if (i > 0) String_appendChar(entityIdsString,',');
+        if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
         String_format(entityIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
         break;
       case INDEX_TYPE_STORAGE:
-        if (i > 0) String_appendChar(storageIdsString,',');
+        if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
         String_format(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
         break;
       default:
