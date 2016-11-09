@@ -103,9 +103,7 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - barcontrol: show for each directory total size+included size
 - tape library support
 - spare files
-- BAR header: create time, user, host, user comment
 - NDMP
-- delete expired: delete directory if empty
 - Reed Solomo Codes for file protection and recovery
 - restore with stripping some/all directories
 - decrementelles backup
@@ -121,19 +119,15 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - check if crypt password is correct, output error message
 - test archives: CRC? fragments?
 - convert local encoding of names always into UTF8
-- /etc/logroate.d script
 - fix error message when connection is refused
 - BARControl: show warning when path does not exists
 - create and error message when /tmp is full
-- continuous: append archives
-- continuous: empty db entries
 - bash complete: /etc/bash_completion.d
 - barcontrol: tooltips: timer to hide
 - barcontrol: improve busy animation
-- barcontrol: add index with patterns
 - database entity: store host, run time
 - clean-up: storageName/archiveName, file path/directory/name
-- FQA: open("/share/backup/temp/lanzarote/macio/svndmz/svndmz.vmxf",
+- FQA: open("/share/backup/temp/lanzarote/xxx/svndmz/svndmz.vmxf",
 - O_RDONLY|O_NONBLOCK|O_NOATIME) = 6
   ioctl(6, FS_IOC32_GETFLAGS or FS_IOC_GETFLAGS, 0x7ffd24be5518) = -1 ENOTTY
   - (Inappropriate ioctl for device)
@@ -146,7 +140,10 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - support min/max keep for job, max. age for job
 - BARControl restore: filter storages by "will never expire"
 - if connect via SSL fail, show dialog and connect with non-SSL
-
+- info chunk/BAR header: create time, user, host, user comment
+- signature chunk
+- salt+pepper for encryption
+- multi-encryption
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
 Mon 02 Feb 2015 05:47:11 PM CET> Start job 'shares'
