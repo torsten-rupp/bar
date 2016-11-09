@@ -3511,7 +3511,7 @@ LOCAL void jobThreadCode(void)
   IndexHandle      *indexHandle;
   uint64           startDateTime,endDateTime;
   StringList       storageNameList;
-  TextMacro        textMacros[4];
+  TextMacro        textMacros[5];
   StaticString     (s,64);
   uint             n;
   Errors           error;
@@ -3651,9 +3651,10 @@ LOCAL void jobThreadCode(void)
       case JOB_TYPE_CREATE:
         logMessage(&logHandle,
                    LOG_TYPE_ALWAYS,
-                   "Started job '%s'%s%s%s\n",
+                   "Started job '%s'%s %s%s%s\n",
                    String_cString(jobName),
                    !String_isEmpty(s) ? String_cString(s) : "",
+                   getArchiveTypeName(archiveType),
                    !String_isEmpty(byName) ? " by " : "",
                    String_cString(byName)
                   );
@@ -3716,8 +3717,9 @@ LOCAL void jobThreadCode(void)
         // get script
         TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
         TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-        TEXT_MACRO_N_STRING (textMacros[2],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
-        TEXT_MACRO_N_STRING (textMacros[3],"%file",     storageSpecifier.archiveName,NULL);
+        TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeName(archiveType),NULL);
+        TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
+        TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
         script = expandTemplate(String_cString(jobNode->jobOptions.preProcessScript),
                                 EXPAND_MACRO_MODE_STRING,
                                 startDateTime,
@@ -3991,8 +3993,9 @@ NULL,//                                                        scheduleTitle,
         // get script
         TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
         TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-        TEXT_MACRO_N_STRING (textMacros[2],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
-        TEXT_MACRO_N_STRING (textMacros[3],"%file",     storageSpecifier.archiveName,NULL);
+        TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeName(archiveType),NULL);
+        TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
+        TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
         script = expandTemplate(String_cString(jobNode->jobOptions.postProcessScript),
                                 EXPAND_MACRO_MODE_STRING,
                                 startDateTime,
