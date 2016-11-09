@@ -487,6 +487,10 @@ public class Settings
   @SettingValue(name="serverName",type=String.class,obsolete=true)
   public static LinkedHashSet<String> serverNames                     = new LinkedHashSet<String>();
   @SettingValue
+  public static String                serverCAFileName                = null;
+  @SettingValue
+  public static String                serverCertificateFileName       = null;
+  @SettingValue
   public static String                serverKeyFileName               = null;
   public static boolean               serverForceSSL                  = false;
 

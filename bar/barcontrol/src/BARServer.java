@@ -28,12 +28,22 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
+import java.security.KeyManagementException;
+import java.security.KeyPair;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.Security;
 import java.security.spec.RSAPublicKeySpec;
+import java.security.UnrecoverableKeyException;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -50,26 +60,21 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NullCipher;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
-import java.security.KeyPair;
-import java.security.KeyStore;
-import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
-import java.security.Security;
 
-import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
 import org.bouncycastle.openssl.PEMDecryptorProvider;
 import org.bouncycastle.openssl.PEMEncryptedKeyPair;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
-import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
 
 import org.eclipse.swt.widgets.Display;
 
@@ -1009,12 +1014,15 @@ public class BARServer
   private final static int   PROTOCOL_VERSION_MAJOR = 4;
   private final static int   PROTOCOL_VERSION_MINOR = 0;
 
-  public final static String JAVA_SSL_KEY_FILE_NAME = "bar.jks";  // default name Java TLS/SSL key
+  public final static String DEFAULT_CA_FILE_NAME          = "bar-server-cert.pem";  // default certificate authority file name
+  public final static String DEFAULT_CERTIFICATE_FILE_NAME = "bar-ca.pem";           // default certificate file name
+  public final static String DEFAULT_KEY_FILE_NAME         = "bar-key.pem";          // default key file name
+  public final static String DEFAULT_JAVA_KEY_FILE_NAME    = "bar.jks";              // default Java key file name
 
   public static char         fileSeparator;
 
-  private final static int   SOCKET_READ_TIMEOUT    = 20*1000;    // timeout reading socket [ms]
-  private final static int   TIMEOUT                = 120*1000;   // global timeout [ms]
+  private final static int   SOCKET_READ_TIMEOUT    = 20*1000;                       // timeout reading socket [ms]
+  private final static int   TIMEOUT                = 120*1000;                      // global timeout [ms]
 
   private static byte[]      RANDOM_DATA = new byte[64];
 
@@ -1031,39 +1039,56 @@ public class BARServer
   };
 
   // --------------------------- variables --------------------------------
-  private static Object         lock    = new Object();
-  private static Display        display = null;
-  private static String         name;
-  private static int            port;
+  private static Object                      lock = new Object();
+  private static JcaX509CertificateConverter certificateConverter;
+  private static Display                     display = null;
+  private static String                      name;
+  private static int                         port;
 
-  private static byte[]         sessionId;
-  private static String         passwordEncryptType;
-  private static Cipher         passwordCipher;
-  private static Key            passwordKey;
+  private static byte[]                      sessionId;
+  private static String                      passwordEncryptType;
+  private static Cipher                      passwordCipher;
+  private static Key                         passwordKey;
 
-  private static Socket         socket;
-  private static BufferedWriter output;
-  private static BufferedReader input;
-  private static ReadThread     readThread;
+  private static Socket                      socket;
+  private static BufferedWriter              output;
+  private static BufferedReader              input;
+  private static ReadThread                  readThread;
 
   // ------------------------ native functions ----------------------------
 
   // ---------------------------- methods ---------------------------------
 
-  // init random data
   static
   {
+    // add BouncyCastle as a security provider
+    Security.addProvider(new BouncyCastleProvider());
+    certificateConverter = new JcaX509CertificateConverter().setProvider("BC");
+
+    // init random data
     Random random = new Random(System.currentTimeMillis());
     random.nextBytes(RANDOM_DATA);
   }
 
   /** connect to BAR server
+   * @param display display
    * @param name host name
    * @param port host port number or 0
    * @param tlsPort TLS port number of 0
-   * @param serverPassword server password
+   * @param password server password
+   * @param caFileName server CA file name
+   * @param certificateFileName server certificate file name
+   * @param keyFileName server key file name
    */
-  public static void connect(Display display, String name, int port, int tlsPort, String serverPassword, String serverKeyFileName)
+  public static void connect(Display display,
+                             String  name,
+                             int     port,
+                             int     tlsPort,
+                             String  password,
+                             String  caFileName,
+                             String  certificateFileName,
+                             String  keyFileName
+                            )
   {
     Socket         socket = null;
     BufferedWriter output = null;
@@ -1072,23 +1097,71 @@ public class BARServer
     assert name != null;
     assert (port != 0) || (tlsPort != 0);
 
-    // get all possible bar.jks file names
-    String[] javaSSLKeyFileNames = null;
-    if (serverKeyFileName != null)
+    // get all possible certificate/key file names
+    String[] caFileNames          = null;
+    String[] certificateFileNames = null;
+    String[] keyFileNames         = null;
+    String[] javaKeyFileNames     = null;
+    if (caFileName != null)
     {
-      javaSSLKeyFileNames = new String[]
+      caFileNames = new String[]
       {
-        serverKeyFileName
+        caFileName
       };
     }
     else
     {
-      javaSSLKeyFileNames = new String[]
+      caFileNames = new String[]
       {
-        JAVA_SSL_KEY_FILE_NAME,
-        System.getProperty("user.home")+File.separator+".bar"+File.separator+JAVA_SSL_KEY_FILE_NAME,
-        Config.CONFIG_DIR+File.separator+JAVA_SSL_KEY_FILE_NAME,
-        Config.TLS_DIR+File.separator+"private"+File.separator+JAVA_SSL_KEY_FILE_NAME
+        DEFAULT_CA_FILE_NAME,
+        System.getProperty("user.home")+File.separator+".bar"+File.separator+DEFAULT_CA_FILE_NAME,
+        Config.CONFIG_DIR+File.separator+DEFAULT_CA_FILE_NAME,
+        Config.TLS_DIR+File.separator+"private"+File.separator+DEFAULT_CA_FILE_NAME
+      };
+    }
+    if (certificateFileName != null)
+    {
+      certificateFileNames = new String[]
+      {
+        certificateFileName
+      };
+    }
+    else
+    {
+      certificateFileNames = new String[]
+      {
+        DEFAULT_CERTIFICATE_FILE_NAME,
+        System.getProperty("user.home")+File.separator+".bar"+File.separator+DEFAULT_CERTIFICATE_FILE_NAME,
+        Config.CONFIG_DIR+File.separator+DEFAULT_CERTIFICATE_FILE_NAME,
+        Config.TLS_DIR+File.separator+"private"+File.separator+DEFAULT_CERTIFICATE_FILE_NAME
+      };
+    }
+    if (keyFileName != null)
+    {
+      keyFileNames = new String[]
+      {
+        keyFileName
+      };
+      javaKeyFileNames = new String[]
+      {
+        keyFileName
+      };
+    }
+    else
+    {
+      keyFileNames = new String[]
+      {
+        DEFAULT_KEY_FILE_NAME,
+        System.getProperty("user.home")+File.separator+".bar"+File.separator+DEFAULT_KEY_FILE_NAME,
+        Config.CONFIG_DIR+File.separator+DEFAULT_KEY_FILE_NAME,
+        Config.TLS_DIR+File.separator+"private"+File.separator+DEFAULT_KEY_FILE_NAME
+      };
+      javaKeyFileNames = new String[]
+      {
+        DEFAULT_JAVA_KEY_FILE_NAME,
+        System.getProperty("user.home")+File.separator+".bar"+File.separator+DEFAULT_JAVA_KEY_FILE_NAME,
+        Config.CONFIG_DIR+File.separator+DEFAULT_JAVA_KEY_FILE_NAME,
+        Config.TLS_DIR+File.separator+"private"+File.separator+DEFAULT_JAVA_KEY_FILE_NAME
       };
     }
 
@@ -1096,13 +1169,136 @@ public class BARServer
     String connectErrorMessage = null;
     if ((socket == null) && (port != 0))
     {
-      // try to create TLS socket with plain socket+startSSL
-      for (String javaSSLKeyFileName : javaSSLKeyFileNames)
+      // try to create TLS socket with PEM and plain socket+startSSL
+      for (String javaKeyFileName : javaKeyFileNames)
       {
-        File file = new File(javaSSLKeyFileName);
+        File file = new File(javaKeyFileName);
         if (file.exists() && file.isFile() && file.canRead())
         {
-          System.setProperty("javax.net.ssl.trustStore",javaSSLKeyFileName);
+          try
+          {
+            SSLSocketFactory sslSocketFactory;
+            SSLSocket        sslSocket;
+
+//            sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
+            sslSocketFactory = getSocketFactory("../bar-server-cert.pem",
+                                                "../bar-ca.pem",
+                                                "../bar-key.pem",
+                                                ""
+                                               );
+Dprintf.dprintf("getSocketFactory done");
+
+            Socket plainSocket = new Socket(name,port);
+            plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
+Dprintf.dprintf("");
+
+            input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream()));
+            output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream()));
+Dprintf.dprintf("");
+
+            // get session
+            startSession(input,output);
+Dprintf.dprintf("");
+
+            // send startSSL, wait for response
+            String[] errorMessage = new String[1];
+            if (syncExecuteCommand(input,
+                                   output,
+                                   StringParser.format("START_SSL"),
+                                   errorMessage
+                                  ) != Errors.NONE
+               )
+            {
+              throw new ConnectionError("Start SSL fail");
+            }
+Dprintf.dprintf("");
+
+            // create TLS socket on plain socket
+            sslSocket = (SSLSocket)sslSocketFactory.createSocket(plainSocket,name,tlsPort,false);
+            sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
+            sslSocket.startHandshake();
+Dprintf.dprintf("");
+
+            input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
+            output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
+Dprintf.dprintf("");
+
+/**/
+Dprintf.dprintf("ssl info");
+String[] ss;
+
+ss = sslSocket.getSupportedCipherSuites();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedCipherSuites=%s",s);
+}
+ss = sslSocket.getSupportedProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedProtocols=%s",s);
+}
+ss = sslSocket.getEnabledProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getEnabledProtocols=%s",s);
+}
+//sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_RC4_128_MD5","SSL_RSA_WITH_RC4_128_SHA","TLS_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_DSS_WITH_AES_128_CBC_SHA"," SSL_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"," SSL_RSA_WITH_DES_CBC_SHA"," SSL_DHE_RSA_WITH_DES_CBC_SHA"," SSL_DHE_DSS_WITH_DES_CBC_SHA"," SSL_RSA_EXPORT_WITH_RC4_40_MD5"," SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA","SSL_RSA_WITH_DES_CBC_SHA","SSL_DHE_RSA_WITH_DES_CBC_SHA","SSL_DHE_DSS_WITH_DES_CBC_SHA","SSL_RSA_EXPORT_WITH_RC4_40_MD5","SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
+/**/
+
+//java.security.cert.Certificate[] serverCerts = sslSocket.getSession().getPeerCertificates();
+//Dprintf.dprintf("serverCerts=%s\n",serverCerts);
+
+            // connection established => done
+            socket = sslSocket;
+            break;
+          }
+          catch (ConnectionError exception)
+          {
+            connectErrorMessage = exception.getMessage();
+          }
+          catch (SocketTimeoutException exception)
+          {
+            connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
+          }
+          catch (ConnectException exception)
+          {
+            connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
+          }
+          catch (NoRouteToHostException exception)
+          {
+            connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (no route to host)";
+          }
+          catch (UnknownHostException exception)
+          {
+            connectErrorMessage = "unknown host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"'";
+          }
+          catch (RuntimeException exception)
+          {
+            connectErrorMessage = exception.getMessage();
+          }
+          catch (IOException exception)
+          {
+            connectErrorMessage = BARControl.reniceIOException(exception).getMessage();
+          }
+          catch (Exception exception)
+          {
+            connectErrorMessage = exception.getMessage();
+          }
+        }
+      }
+    }
+
+    if ((socket == null) && (port != 0))
+    {
+      // try to create TLS socket with JKS and plain socket+startSSL
+      for (String javaKeyFileName : javaKeyFileNames)
+      {
+        File file = new File(javaKeyFileName);
+        if (file.exists() && file.isFile() && file.canRead())
+        {
+          System.setProperty("javax.net.ssl.trustStore",javaKeyFileName);
           try
           {
             SSLSocketFactory sslSocketFactory;
@@ -1219,22 +1415,27 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
 Dprintf.dprintf("ferti: %s",connectErrorMessage);
 //System.exit(1);
+
     if ((socket == null) && (tlsPort != 0))
     {
-      // try to create TLS socket
-      for (String javaSSLKeyFileName : javaSSLKeyFileNames)
+      // try to create TLS socket with PEM
+      for (String javaKeyFileName : javaKeyFileNames)
       {
-        File file = new File(javaSSLKeyFileName);
+        File file = new File(javaKeyFileName);
         if (file.exists() && file.isFile() && file.canRead())
         {
-          System.setProperty("javax.net.ssl.trustStore",javaSSLKeyFileName);
-//Dprintf.dprintf("javaSSLKeyFileName=%s\n",javaSSLKeyFileName);
+//Dprintf.dprintf("javaKeyFileName=%s\n",javaKeyFileName);
           try
           {
             SSLSocketFactory sslSocketFactory;
             SSLSocket        sslSocket;
 
-            sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
+//            sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
+            sslSocketFactory = getSocketFactory("../bar-server-cert.pem",
+                                                "../bar-ca.pem",
+                                                "../bar-key.pem",
+                                                ""
+                                               );
 
             // create TLS socket
             sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
@@ -1308,6 +1509,102 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         }
       }
     }
+
+    if ((socket == null) && (tlsPort != 0))
+    {
+      // try to create TLS socket with JKS
+      for (String javaKeyFileName : javaKeyFileNames)
+      {
+        File file = new File(javaKeyFileName);
+        if (file.exists() && file.isFile() && file.canRead())
+        {
+          System.setProperty("javax.net.ssl.trustStore",javaKeyFileName);
+//Dprintf.dprintf("javaKeyFileName=%s\n",javaKeyFileName);
+          try
+          {
+            SSLSocketFactory sslSocketFactory;
+            SSLSocket        sslSocket;
+
+//            sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
+            sslSocketFactory = getSocketFactory("../bar-server-cert.pem",
+                                                "../bar-ca.pem",
+                                                "../bar-key.pem",
+                                                ""
+                                               );
+
+            // create TLS socket
+            sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
+            sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
+            sslSocket.startHandshake();
+
+            input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
+            output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
+
+            // get session
+            startSession(input,output);
+
+/*
+String[] ss;
+
+ss = sslSocket.getSupportedCipherSuites();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedCipherSuites=%s",s);
+}
+ss = sslSocket.getSupportedProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedProtocols=%s",s);
+}
+ss = sslSocket.getEnabledProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getEnabledProtocols=%s",s);
+}
+//sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_RC4_128_MD5","SSL_RSA_WITH_RC4_128_SHA","TLS_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_DSS_WITH_AES_128_CBC_SHA"," SSL_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"," SSL_RSA_WITH_DES_CBC_SHA"," SSL_DHE_RSA_WITH_DES_CBC_SHA"," SSL_DHE_DSS_WITH_DES_CBC_SHA"," SSL_RSA_EXPORT_WITH_RC4_40_MD5"," SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA","SSL_RSA_WITH_DES_CBC_SHA","SSL_DHE_RSA_WITH_DES_CBC_SHA","SSL_DHE_DSS_WITH_DES_CBC_SHA","SSL_RSA_EXPORT_WITH_RC4_40_MD5","SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
+*/
+
+//java.security.cert.Certificate[] serverCerts = sslSocket.getSession().getPeerCertificates();
+//Dprintf.dprintf("serverCerts=%s\n",serverCerts);
+
+            // connection established => done
+            socket = sslSocket;
+            break;
+          }
+          catch (SocketTimeoutException exception)
+          {
+            connectErrorMessage = "host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
+          }
+          catch (ConnectException exception)
+          {
+            connectErrorMessage = "host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
+          }
+          catch (NoRouteToHostException exception)
+          {
+            connectErrorMessage = "host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (no route to host)";
+          }
+          catch (UnknownHostException exception)
+          {
+            connectErrorMessage = "unknown host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"'";
+          }
+          catch (RuntimeException exception)
+          {
+            connectErrorMessage = exception.getMessage();
+          }
+          catch (IOException exception)
+          {
+            connectErrorMessage = BARControl.reniceIOException(exception).getMessage();
+          }
+          catch (Exception exception)
+          {
+            connectErrorMessage = exception.getMessage();
+          }
+        }
+      }
+    }
+
     if ((socket == null) && (port != 0) && !Settings.serverForceSSL)
     {
       // try to create plain socket
@@ -1362,7 +1659,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                              output,
                              StringParser.format("AUTHORIZE encryptType=%s encryptedPassword=%s",
                                                  passwordEncryptType,
-                                                 encryptPassword(serverPassword)
+                                                 encryptPassword(password)
                                                 ),
                              errorMessage
                             ) != Errors.NONE
@@ -1439,12 +1736,29 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param name host name
    * @param port host port number or 0
    * @param tlsPort TLS port number of 0
-   * @param serverPassword server password
-   * @param serverKeyFileName server key file name
+   * @param password server password
+   * @param caFileName server CA file name
+   * @param certificateFileName server certificate file name
+   * @param keyFileName server key file name
    */
-  public static void connect(String name, int port, int tlsPort, String serverPassword, String serverKeyFileName)
+  public static void connect(String  name,
+                             int     port,
+                             int     tlsPort,
+                             String  password,
+                             String  caFileName,
+                             String  certificateFileName,
+                             String  keyFileName
+                            )
   {
-    connect((Display)null,name,port,tlsPort,serverPassword,serverKeyFileName);
+    connect((Display)null,
+            name,
+            port,
+            tlsPort,
+            password,
+            caFileName,
+            certificateFileName,
+            keyFileName
+           );
   }
 
   /** disconnect from BAR server
@@ -3380,102 +3694,84 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
-// https://gist.github.com/rohanag12/07ab7eb22556244e9698
-  public static SSLSocketFactory getSocketFactory(String caCrtFile,
-                                                  String crtFile,
-                                                  String keyFile,
+  /** create SSL socket factor from with PEM files
+   * original from: https://gist.github.com/rohanag12/07ab7eb22556244e9698
+   * @param caCrtFileName - certificate authority PEM file name
+   * @param crtFile - certificate PEM file name
+   * @param keyFile - PEM key file name
+   * @param password - password or null
+   * @return socket factory
+   */
+  public static SSLSocketFactory getSocketFactory(String caCrtFileName,
+                                                  String crtFileName,
+                                                  String keyFileName,
                                                   String password
                                                  )
+    throws KeyManagementException,NoSuchAlgorithmException,KeyStoreException,UnrecoverableKeyException,IOException,CertificateException
   {
-    try
+    PEMParser reader;
+    char[]    passwordChars;
+    KeyStore  keyStore;
+
+    passwordChars = (password != null) ? password.toCharArray() : new char[0];
+
+    // load certificate authority (CA) certificate
+    reader = new PEMParser(new FileReader(caCrtFileName));
+    X509CertificateHolder caCertHolder = (X509CertificateHolder)reader.readObject();
+    reader.close();
+    X509Certificate caCertificate = certificateConverter.getCertificate(caCertHolder);
+
+    // load certificate
+    reader = new PEMParser(new FileReader(crtFileName));
+    X509CertificateHolder certHolder = (X509CertificateHolder)reader.readObject();
+    reader.close();
+    X509Certificate certificate = certificateConverter.getCertificate(certHolder);
+
+    // load private key
+    reader = new PEMParser(new FileReader(keyFileName));
+    Object keyObject = reader.readObject();
+    reader.close();
+    PEMDecryptorProvider pemDecryptorProvider = new JcePEMDecryptorProviderBuilder().build(passwordChars);
+    JcaPEMKeyConverter keyConverter = new JcaPEMKeyConverter().setProvider("BC");
+
+    // init key pair
+    KeyPair key;
+    if (keyObject instanceof PEMEncryptedKeyPair)
     {
-Dprintf.dprintf("getSocketFactory");
-      /**
-       * Add BouncyCastle as a Security Provider
-       */
-      Security.addProvider(new BouncyCastleProvider());
-
-      JcaX509CertificateConverter certificateConverter = new JcaX509CertificateConverter().setProvider("BC");
-
-      /**
-       * Load Certificate Authority (CA) certificate
-       */
-      PEMParser reader = new PEMParser(new FileReader(caCrtFile));
-      X509CertificateHolder caCertHolder = (X509CertificateHolder) reader.readObject();
-      reader.close();
-
-      X509Certificate caCert = certificateConverter.getCertificate(caCertHolder);
-
-      /**
-       * Load client certificate
-       */
-      reader = new PEMParser(new FileReader(crtFile));
-      X509CertificateHolder certHolder = (X509CertificateHolder) reader.readObject();
-      reader.close();
-
-      X509Certificate cert = certificateConverter.getCertificate(certHolder);
-
-      /**
-       * Load client private key
-       */
-      reader = new PEMParser(new FileReader(keyFile));
-      Object keyObject = reader.readObject();
-      reader.close();
-
-      PEMDecryptorProvider provider = new JcePEMDecryptorProviderBuilder().build(password.toCharArray());
-      JcaPEMKeyConverter keyConverter = new JcaPEMKeyConverter().setProvider("BC");
-
-      KeyPair key;
-      if (keyObject instanceof PEMEncryptedKeyPair)
-      {
-        key = keyConverter.getKeyPair(((PEMEncryptedKeyPair) keyObject).decryptKeyPair(provider));
-      }
-      else
-      {
-        key = keyConverter.getKeyPair((PEMKeyPair) keyObject);
-      }
-
-      /**
-       * CA certificate is used to authenticate server
-       */
-      KeyStore caKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-      caKeyStore.load(null, null);
-      caKeyStore.setCertificateEntry("ca-certificate", caCert);
-
-      TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-      trustManagerFactory.init(caKeyStore);
-
-      /**
-       * Client key and certificates are sent to server so it can authenticate the client
-       */
-      KeyStore clientKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-      clientKeyStore.load(null, null);
-      clientKeyStore.setCertificateEntry("certificate", cert);
-      clientKeyStore.setKeyEntry("private-key",
-                                 key.getPrivate(),
-                                 password.toCharArray(),
-                                 new Certificate[]{cert}
-                                );
-
-      KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-      keyManagerFactory.init(clientKeyStore, password.toCharArray());
-
-      /**
-       * Create SSL socket factory
-       */
-      SSLContext context = SSLContext.getInstance("TLSv1.2");
-      context.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
-
-      /**
-       * Return the newly created socket factory object
-       */
-      return context.getSocketFactory();
-    } catch (Exception e) {
-        e.printStackTrace();
-System.exit(1);
+      key = keyConverter.getKeyPair(((PEMEncryptedKeyPair)keyObject).decryptKeyPair(pemDecryptorProvider));
+    }
+    else
+    {
+      key = keyConverter.getKeyPair((PEMKeyPair)keyObject);
     }
 
-    return null;
+    // CA certificate used to authenticate server
+    keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+    keyStore.load(null, null);
+    keyStore.setCertificateEntry("ca-certificate",caCertificate);
+    TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+    trustManagerFactory.init(keyStore);
+
+    // send client key and certificates to server for authentication
+    keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+    keyStore.load(null, null);
+    keyStore.setCertificateEntry("certificate",certificate);
+    keyStore.setKeyEntry("private-key",
+                         key.getPrivate(),
+                         passwordChars,
+                         new Certificate[]{certificate}
+                        );
+    KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+    keyManagerFactory.init(keyStore,passwordChars);
+
+    // create SSL socket factory
+    SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+    sslContext.init(keyManagerFactory.getKeyManagers(),
+                    trustManagerFactory.getTrustManagers(),
+                    null
+                   );
+
+    return sslContext.getSocketFactory();
   }
 
   /** decode hex string

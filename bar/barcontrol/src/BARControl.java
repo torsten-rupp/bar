@@ -1401,6 +1401,8 @@ public class BARControl
     new Option("--password",                    null,Options.Types.STRING,     "serverPassword"),
     new Option("--port",                        "-p",Options.Types.INTEGER,    "serverPort"),
     new Option("--tls-port",                    null,Options.Types.INTEGER,    "serverTLSPort"),
+    new Option("--ca-file",                     null,Options.Types.STRING,     "serverCAFileName"),
+    new Option("--certificate-file",            null,Options.Types.STRING,     "serverCertificateFileName"),
     new Option("--key-file",                    null,Options.Types.STRING,     "serverKeyFileName"),
     new Option("--force-ssl",                   null,Options.Types.BOOLEAN,    "serverForceSSL"),
     new Option("--select-job",                  null,Options.Types.STRING,     "selectedJobName"),
@@ -1608,9 +1610,9 @@ public class BARControl
     System.out.println("         --password=<password>                      - server password (use with care!)");
     System.out.println("         --login-dialog                             - force to open login dialog");
     System.out.println("         --key-file=<file name>                     - key file name (default: ");
-    System.out.println("                                                        ."+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
-    System.out.println("                                                        "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
-    System.out.println("                                                        "+Config.CONFIG_DIR+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME);
+    System.out.println("                                                        ."+File.separator+BARServer.DEFAULT_JAVA_KEY_FILE_NAME+" or ");
+    System.out.println("                                                        "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.DEFAULT_JAVA_KEY_FILE_NAME+" or ");
+    System.out.println("                                                        "+Config.CONFIG_DIR+File.separator+BARServer.DEFAULT_JAVA_KEY_FILE_NAME);
     System.out.println("                                                      )" );
     System.out.println("         --force-ssl                                - force SSL connection");
     System.out.println("");
@@ -1708,7 +1710,7 @@ public class BARControl
     // check arguments
     if ((Settings.serverKeyFileName != null) && !Settings.serverKeyFileName.isEmpty())
     {
-      // check if JKS file is readable
+      // check if PEM/JKS file is readable
       try
       {
         KeyStore keyStore = java.security.KeyStore.getInstance("JKS");
@@ -2081,6 +2083,8 @@ public class BARControl
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
                                   loginData.password,
+                                  "",  // server CA file name
+                                  "",  // server certificate file name
                                   Settings.serverKeyFileName
                                  );
                 shell.setText("BAR control: "+BARServer.getInfo());
@@ -2114,6 +2118,8 @@ public class BARControl
                                     loginData.serverPort,
                                     loginData.serverTLSPort,
                                     loginData.password,
+                                    "",  // server CA file name
+                                    "",  // server certificate file name
                                     Settings.serverKeyFileName
                                    );
                   shell.setText("BAR control: "+BARServer.getInfo());
@@ -2177,6 +2183,8 @@ public class BARControl
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
                                   loginData.password,
+                                  "",  // server CA file name
+                                  "",  // server certificate file name
                                   Settings.serverKeyFileName
                                  );
                 shell.setText("BAR control: "+BARServer.getInfo());
@@ -2613,6 +2621,8 @@ public class BARControl
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
                                 loginData.password,
+                                "",  // server CA file name
+                                "",  // server certificate file name
                                 Settings.serverKeyFileName
                                );
               shell.setText("BAR control: "+BARServer.getInfo());
@@ -2650,6 +2660,8 @@ public class BARControl
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
                                 loginData.password,
+                                "",  // server CA file name
+                                "",  // server certificate file name
                                 Settings.serverKeyFileName
                                );
               shell.setText("BAR control: "+BARServer.getInfo());
@@ -2757,6 +2769,8 @@ public class BARControl
                             loginData.serverPort,
                             loginData.serverTLSPort,
                             loginData.password,
+                            "",  // server CA file name
+                            "",  // server certificate file name
                             Settings.serverKeyFileName
                            );
         }
@@ -3557,6 +3571,8 @@ Dprintf.dprintf("still not supported");
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
                                 loginData.password,
+                                "",  // server CA file name
+                                "",  // server certificate file name
                                 Settings.serverKeyFileName
                                );
               connectOkFlag = true;
@@ -3575,7 +3591,9 @@ Dprintf.dprintf("still not supported");
                                 loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
-                                "",
+                                "",  // password
+                                "",  // server CA file name
+                                "",  // server certificate file name
                                 Settings.serverKeyFileName
                                );
               connectOkFlag = true;
@@ -3607,6 +3625,8 @@ Dprintf.dprintf("still not supported");
                               loginData.serverPort,
                               loginData.serverTLSPort,
                               loginData.password,
+                              "",  // server CA file name
+                              "",  // server certificate file name
                               Settings.serverKeyFileName
                              );
             connectOkFlag = true;
