@@ -51,6 +51,7 @@
 # SPE0
 #   SENT
 #   [SEAT]
+# SIG0
 #
 # The ordering of the chunks *0 is arbitrary. The sub-chunks should always
 # be ordered like shown above.
@@ -229,6 +230,25 @@ CHUNK BAR "BAR0" Bar
 # never compress/encrypted
 CHUNK KEY "KEY0" Key
   data   data
+  crc32  crc
+
+# ----------------------------------------------------------------------
+
+#TODO
+# optional info data
+#
+# parent: none
+# never compress, encrypted as specified
+CHUNK INFO_DATA "INF0" InfoData
+  uint16 cryptAlgorithm;
+  uint64 salt;
+  string name;
+  string host;
+  string jobUUID;
+  string scheduleUUID;
+  uint16 type;
+  uint64 created;
+  string comment;
   crc32  crc
 
 # ----------------------------------------------------------------------
@@ -502,6 +522,18 @@ CHUNK SPECIAL_EXTENDED_ATTRIBUTE "SEAT" SpecialExtendedAttribute
   ENCRYPT
   string name
   byte[] value
+  crc32  crc
+
+# ----------------------------------------------------------------------
+
+#TODO
+# signature with SHA-256
+#
+# parent: none
+# never compress/encrypted
+CHUNK SIGNATURE "SIG0" Signature
+  uint64 salt;
+  byte[] value;
   crc32  crc
 
 # ----------------------------------------------------------------------
