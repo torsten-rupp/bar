@@ -4058,7 +4058,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       // purge archives by max. job storage size
       purgeStorageByJobUUID(createInfo->indexHandle,
                             createInfo->jobUUID,
-                            (createInfo->jobOptions->maxStorageSize > fileInfo.size)\
+                            (createInfo->jobOptions->maxStorageSize > fileInfo.size)
                               ? createInfo->jobOptions->maxStorageSize-fileInfo.size
                               : 0LL,
                             createInfo->jobOptions->maxStorageSize,
@@ -4163,7 +4163,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         pauseStorage(createInfo);
         if (isAborted(createInfo)) break;
 
-        // read data from local file
+        // read data from local intermediate file
         error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
         if (error != ERROR_NONE)
         {
@@ -4176,7 +4176,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         }
         DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
 
-        // store data
+        // store data into storage file
         error = Storage_write(&storageArchiveHandle,buffer,bufferLength);
         if (error != ERROR_NONE)
         {
@@ -4244,7 +4244,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
     // done
     printInfo(1,"OK\n");
-    logMessage(createInfo->logHandle,LOG_TYPE_STORAGE,"Stored '%s' (%llu bytes)\n",String_cString(printableStorageName),archiveSize);
+    logMessage(createInfo->logHandle,
+               LOG_TYPE_STORAGE,
+               "%s '%s' (%llu bytes)\n",
+               appendFlag ? "Appended to" : "Storged",
+               String_cString(printableStorageName),
+               archiveSize
+              );
 
     // update index database and set state
     if (storageMsg.storageId != INDEX_ID_NONE)
@@ -4272,6 +4278,30 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                     )
          )
       {
+        // set index database state
+        error = Index_setState(createInfo->indexHandle,
+                               storageId,
+                               INDEX_STATE_CREATE,
+                               0LL,  // lastCheckedDateTime
+                               NULL // errorMessage
+                              );
+        if (error != ERROR_NONE)
+        {
+          if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+          continue;
+        }
+        AUTOFREE_ADD(&autoFreeList,&storageMsg.storageId,
+        {
+          (void)Index_setState(createInfo->indexHandle,
+                               storageId,
+                               INDEX_STATE_ERROR,
+                               0LL,  // lastCheckedDateTime
+                               NULL // errorMessage
+                              );
+        });
+
         // append index: assign storage index entries to existing storage index
 //fprintf(stderr,"%s, %d: append to storage %llu\n",__FILE__,__LINE__,storageId);
         error = Index_assignTo(createInfo->indexHandle,
@@ -4307,6 +4337,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 //fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
         // replace index: keep new storage
         storageId = storageMsg.storageId;
+        AUTOFREE_ADD(&autoFreeList,&storageMsg.storageId,
+        {
+          // nothing to do
+        });
 
         // delete old indizes for same storage file
         error = purgeStorageIndex(createInfo->indexHandle,
@@ -4450,6 +4484,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         continue;
       }
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
+
+      AUTOFREE_REMOVE(&autoFreeList,&storageMsg.storageId);
     }
 
     // post-process
