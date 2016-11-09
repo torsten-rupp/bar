@@ -41,66 +41,71 @@ INSTALL_TLS_DIR    = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
-JAVA_DATA_MODEL    = @JAVA_DATA_MODEL@
+JAVA_DATA_MODEL     = @JAVA_DATA_MODEL@
 
-JAVA               = @JAVA@
-JAVA_FLAGS         = @JAVA_FLAGS@ -Xmx128m -enableassertions
+JAVA                = @JAVA@
+JAVA_FLAGS          = @JAVA_FLAGS@ -Xmx128m -enableassertions
 
-JAVAC              = @JAVAC@
-JAVAC_FLAGS        = @JAVAC_FLAGS@ -source 1.6
+JAVAC               = @JAVAC@
+JAVAC_FLAGS         = @JAVAC_FLAGS@ -source 1.6
 # -Xlint
 
-JAR                = @JAR@
+JAR                 = @JAR@
 
-XGETTEXT           = @XGETTEXT@
-XGETTEXT_FLAGS     = -L java -k -ktr
-MSGMERGE           = @MSGMERGE@
-MSGFMT             = @MSGFMT@
+XGETTEXT            = @XGETTEXT@
+XGETTEXT_FLAGS      = -L java -k -ktr
+MSGMERGE            = @MSGMERGE@
+MSGFMT              = @MSGFMT@
 
-SWT_JAR_LINUX      = $(SOURCE_DIR)/jars/linux/swt-4.4.jar
-SWT_JAR_LINUX_64   = $(SOURCE_DIR)/jars/linux/swt-4.4_64.jar
-SWT_JAR_SOLARIS    = $(SOURCE_DIR)/jars/solaris/swt-4.4.jar
-SWT_JAR_MACOSX     = $(SOURCE_DIR)/jars/macosx/swt-4.4.jar
-SWT_JAR_MACOSX_64  = $(SOURCE_DIR)/jars/macosx/swt-4.4_64.jar
-SWT_JAR_WINDOWS    = $(SOURCE_DIR)/jars/windows/swt-4.4.jar
-SWT_JAR_WINDOWS_64 = $(SOURCE_DIR)/jars/windows/swt-4.4_64.jar
+SWT_JAR_LINUX       = $(SOURCE_DIR)/jars/linux/swt-4.4.jar
+SWT_JAR_LINUX_64    = $(SOURCE_DIR)/jars/linux/swt-4.4_64.jar
+SWT_JAR_SOLARIS     = $(SOURCE_DIR)/jars/solaris/swt-4.4.jar
+SWT_JAR_MACOSX      = $(SOURCE_DIR)/jars/macosx/swt-4.4.jar
+SWT_JAR_MACOSX_64   = $(SOURCE_DIR)/jars/macosx/swt-4.4_64.jar
+SWT_JAR_WINDOWS     = $(SOURCE_DIR)/jars/windows/swt-4.4.jar
+SWT_JAR_WINDOWS_64  = $(SOURCE_DIR)/jars/windows/swt-4.4_64.jar
 
 ifneq ($(SWT_DIR),)
-SWT_JAR          = $(SWT_DIR)/swt.jar
+SWT_JARS           = $(SWT_DIR)/swt.jar
 else
 ifeq ($(PLATFORM),LINUX)
 ifeq ($(JAVA_DATA_MODEL),64)
-SWT_JAR          = $(SWT_JAR_LINUX_64)
+SWT_JARS           = $(SWT_JAR_LINUX_64)
 else
-SWT_JAR          = $(SWT_JAR_LINUX)
+SWT_JARS           = $(SWT_JAR_LINUX)
 endif
 endif
 ifeq ($(PLATFORM),SOLARIS)
-SWT_JAR          = $(SWT_JAR_SOLARIS)
+SWT_JARS           = $(SWT_JAR_SOLARIS)
 endif
 ifeq ($(PLATFORM),MAC_OSX)
 ifeq ($(JAVA_DATA_MODEL),64)
-SWT_JAR          = $(SWT_JAR_MACOSX_64)
+SWT_JARS           = $(SWT_JAR_MACOSX_64)
 else
-SWT_JAR          = $(SWT_JAR_MACOSX)
+SWT_JARS           = $(SWT_JAR_MACOSX)
 endif
 endif
 ifeq ($(PLATFORM),WINDOWS)
 ifeq ($(JAVA_DATA_MODEL),64)
-SWT_JAR          = $(SWT_JAR_WINDOWS_64)
+SWT_JARS           = $(SWT_JAR_WINDOWS_64)
 else
-SWT_JAR          = $(SWT_JAR_WINDOWS)
+SWT_JARS           = $(SWT_JAR_WINDOWS)
 endif
 endif
 endif
 
-GETTEXT_JAR      = $(SOURCE_DIR)/jars/gettext-commons-0.9.6.jar
+GETTEXT_JARS       = $(SOURCE_DIR)/jars/gettext-commons-0.9.6.jar
+BOUNCY_CASTLE_JARS = $(SOURCE_DIR)/jars/bcprov-jdk15on-155.jar \
+                     $(SOURCE_DIR)/jars/bcpkix-jdk15on-155.jar
 
-CLASSPATH        = classes:$(SWT_JAR):$(GETTEXT_JAR)
+CLASSPATH          = $(subst $() $(),:,classes $(SWT_JARS) $(GETTEXT_JARS) $(BOUNCY_CASTLE_JARS))
 
-ENVIRONMENT      = SWT_GTK3=0
+ENVIRONMENT        = SWT_GTK3=0
 
 #---------------------------------- commands----------------------------------
+
+x:
+	echo $(CLASSPATH)
 
 CAT        = cat
 CD         = cd
@@ -378,12 +383,14 @@ barcontrol-linux.jar: \
   $(SOURCE_DIR)/jar.txt \
   $(OBJECTS) \
   $(SWT_JAR_LINUX) \
-  $(GETTEXT_JAR) \
+  $(GETTEXT_JARS) \
+  $(BOUNCY_CASTLE_JARS) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_LINUX) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
@@ -397,12 +404,14 @@ barcontrol-linux_64.jar: \
   $(SOURCE_DIR)/jar.txt \
   $(OBJECTS) \
   $(SWT_JAR_LINUX_64) \
-  $(GETTEXT_JAR) \
+  $(GETTEXT_JARS) \
+  $(BOUNCY_CASTLE_JARS) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_LINUX_64) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
@@ -416,12 +425,14 @@ barcontrol-solaris.jar: \
   $(SOURCE_DIR)/jar.txt \
   $(OBJECTS) \
   $(SWT_JAR_LINUX) \
-  $(GETTEXT_JAR) \
+  $(GETTEXT_JARS) \
+  $(BOUNCY_CASTLE_JARS) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_SOLARIS) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
@@ -435,12 +446,14 @@ barcontrol-macosx.jar: \
   $(SOURCE_DIR)/jar.txt \
   $(OBJECTS) \
   $(SWT_JAR_MACOSX) \
-  $(GETTEXT_JAR) \
+  $(GETTEXT_JARS) \
+  $(BOUNCY_CASTLE_JARS) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_MACOSX) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
@@ -454,12 +467,14 @@ barcontrol-macosx_64.jar: \
   $(SOURCE_DIR)/jar.txt \
   $(OBJECTS) \
   $(SWT_JAR_MACOSX_64) \
-  $(GETTEXT_JAR) \
+  $(GETTEXT_JARS) \
+  $(BOUNCY_CASTLE_JARS) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_MACOSX_64) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
@@ -473,12 +488,14 @@ barcontrol-windows.jar: \
   $(SOURCE_DIR)/jar.txt \
   $(OBJECTS) \
   $(SWT_JAR_WINDOWS) \
-  $(GETTEXT_JAR) \
+  $(GETTEXT_JARS) \
+  $(BOUNCY_CASTLE_JARS) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_WINDOWS) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
@@ -492,12 +509,14 @@ barcontrol-windows_64.jar: \
   $(SOURCE_DIR)/jar.txt \
   $(OBJECTS) \
   $(SWT_JAR_WINDOWS_64) \
-  $(GETTEXT_JAR) \
+  $(GETTEXT_JARS) \
+  $(BOUNCY_CASTLE_JARS) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_WINDOWS_64) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/$@; $(UNZIP) ../../$(GETTEXT_JAR) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
