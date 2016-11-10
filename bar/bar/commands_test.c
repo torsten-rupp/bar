@@ -46,60 +46,45 @@
 // file data buffer size
 #define BUFFER_SIZE (64*1024)
 
+#define MAX_ENTRY_MSG_QUEUE 256
+
 /***************************** Datatypes *******************************/
 // test info
 typedef struct
 {
-//  StorageHandle               *storageHandle;
+//  Storage               *storage;
+//  ConstString                 *printableStorageName;               // printable storage name
+//  ConstString                 archiveName;
   StorageSpecifier            *storageSpecifier;                  // storage specifier structure
+  FragmentList                *fragmentList;
+//TODO: needed?
   ConstString                 jobUUID;                            // unique job id to store or NULL
   ConstString                 scheduleUUID;                       // unique schedule id to store or NULL
   const EntryList             *includeEntryList;                  // list of included entries
   const PatternList           *excludePatternList;                // list of exclude patterns
   const PatternList           *compressExcludePatternList;        // exclude compression pattern list
-  const DeltaSourceList       *deltaSourceList;                   // delta sources
+  DeltaSourceList             *deltaSourceList;                   // delta sources
   const JobOptions            *jobOptions;
-  ArchiveTypes                archiveType;                        // archive type to create
-  ConstString                 scheduleTitle;                      // schedule title or NULL
-  ConstString                 scheduleCustomText;                 // schedule custom text or NULL
-  bool                        *pauseCreateFlag;                   // TRUE for pause creation
-  bool                        *pauseStorageFlag;                  // TRUE for pause storage
-  bool                        *requestedAbortFlag;                // TRUE to abort create
+  GetPasswordFunction         getPasswordFunction;
+  void                        *getPasswordUserData;
   LogHandle                   *logHandle;                         // log handle
 
-  bool                        partialFlag;                        // TRUE for create incremental/differential archive
-  bool                        storeIncrementalFileInfoFlag;       // TRUE to store incremental file data
-  StorageHandle               storageHandle;                      // storage handle
-  time_t                      startTime;                          // start time [ms] (unix time)
+  bool                        *pauseTestFlag;                     // TRUE for pause creation
+  bool                        *requestedAbortFlag;                // TRUE to abort create
+
+  Storage                     storage;                      // storage handle
 
   MsgQueue                    entryMsgQueue;                      // queue with entries to store
 
   ArchiveInfo                 archiveInfo;
 
-  bool                        collectorSumThreadExitedFlag;       // TRUE iff collector sum thread exited
-
-  MsgQueue                    storageMsgQueue;                    // queue with waiting storage files
-  Semaphore                   storageInfoLock;                    // lock semaphore for storage info
-  struct
-  {
-    uint                      count;                              // number of current storage files
-    uint64                    bytes;                              // number of bytes in current storage files
-  }                           storageInfo;
-  bool                        storageThreadExitFlag;
-  StringList                  storageFileList;                    // list with stored storage files
-
   Errors                      failError;                          // failure error
-
-//  CreateStatusInfoFunction    statusInfoFunction;                 // status info call back
-//  void                        *statusInfoUserData;                // user data for status info call back
-//  CreateStatusInfo            statusInfo;                         // status info
-  Semaphore                   statusInfoLock;                     // status info lock
-  Semaphore                   statusInfoNameLock;                 // status info name lock
 } TestInfo;
 
-// entry message, send from collector thread -> main
+// entry message send to test threads
 typedef struct
 {
+  uint64     offset;
   EntryTypes entryType;
   FileTypes  fileType;
   String     name;                                                // file/image/directory/link/special name
@@ -117,6 +102,103 @@ typedef struct
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : freeEntryMsg
+* Purpose: free file entry message call back
+* Input  : entryMsg - entry message
+*          userData - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
+{
+  assert(entryMsg != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+//      StringList_done(&entryMsg->nameList);
+//      String_delete(entryMsg->name);
+}
+
+/***********************************************************************\
+* Name   : initTestInfo
+* Purpose: initialize test info
+* Input  : testInfo                   - test info variable
+*          storageSpecifier           - storage specifier structure
+*          includeEntryList           - include entry list
+*          excludePatternList         - exclude pattern list
+*          deltaSourceList            - delta source list
+*          jobOptions                 - job options
+*          pauseTestFlag              - pause creation flag (can be
+*                                       NULL)
+*          requestedAbortFlag         - request abort flag (can be NULL)
+*          logHandle                  - log handle (can be NULL)
+* Output : createInfo - initialized test info variable
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initTestInfo(TestInfo          *testInfo,
+                        StorageSpecifier  *storageSpecifier,
+                        const EntryList   *includeEntryList,
+                        const PatternList *excludePatternList,
+                        DeltaSourceList   *deltaSourceList,
+                        const JobOptions  *jobOptions,
+                        bool              *pauseTestFlag,
+                        bool              *requestedAbortFlag,
+                        LogHandle         *logHandle
+                       )
+{
+  assert(testInfo != NULL);
+
+  // init variables
+  testInfo->storageSpecifier   = storageSpecifier;
+  testInfo->includeEntryList   = includeEntryList;
+  testInfo->excludePatternList = excludePatternList;
+  testInfo->deltaSourceList    = deltaSourceList;
+  testInfo->jobOptions         = jobOptions;
+  testInfo->pauseTestFlag      = pauseTestFlag;
+  testInfo->requestedAbortFlag = requestedAbortFlag;
+  testInfo->logHandle          = logHandle;
+  testInfo->failError          = ERROR_NONE;
+
+  // init entry name queue, storage queue
+  if (!MsgQueue_init(&testInfo->entryMsgQueue,MAX_ENTRY_MSG_QUEUE))
+  {
+    HALT_FATAL_ERROR("Cannot initialize entry message queue!");
+  }
+
+#if 0
+  // init locks
+  if (!Semaphore_init(&testInfo->storageInfoLock))
+  {
+    HALT_FATAL_ERROR("Cannot initialize storage semaphore!");
+  }
+#endif
+
+  DEBUG_ADD_RESOURCE_TRACE(testInfo,sizeof(TestInfo));
+}
+
+/***********************************************************************\
+* Name   : doneTestInfo
+* Purpose: deinitialize test info
+* Input  : testInfo - test info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneTestInfo(TestInfo *testInfo)
+{
+  assert(testInfo != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(testInfo,sizeof(TestInfo));
+
+  MsgQueue_done(&testInfo->entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
+}
 
 /***********************************************************************\
 * Name   : testFileEntry
@@ -495,9 +577,6 @@ LOCAL Errors testImageEntry(ArchiveInfo       *archiveInfo,
 *          offset               - offset
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
-*          fragmentList         - fragment list
-*          buffer               - buffer for temporary data
-*          bufferSize           - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -507,13 +586,16 @@ LOCAL Errors testDirectoryEntry(ArchiveInfo       *archiveInfo,
                                 uint64            offset,
                                 const EntryList   *includeEntryList,
                                 const PatternList *excludePatternList,
-                                const char        *printableStorageName
+                                const char        *printableStorageName,
+                                const JobOptions  *jobOptions
                                )
 {
   Errors           error;
   ArchiveEntryInfo archiveEntryInfo;
   String           directoryName;
   FileInfo         fileInfo;
+
+  UNUSED_VARIABLE(jobOptions);
 
   // seek to start of entry
   error = Archive_seek(archiveInfo,offset);
@@ -596,9 +678,6 @@ LOCAL Errors testDirectoryEntry(ArchiveInfo       *archiveInfo,
 *          offset               - offset
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
-*          fragmentList         - fragment list
-*          buffer               - buffer for temporary data
-*          bufferSize           - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -608,7 +687,8 @@ LOCAL Errors testLinkEntry(ArchiveInfo       *archiveInfo,
                            uint64            offset,
                            const EntryList   *includeEntryList,
                            const PatternList *excludePatternList,
-                           const char        *printableStorageName
+                           const char        *printableStorageName,
+                           const JobOptions  *jobOptions
                           )
 {
   Errors           error;
@@ -616,6 +696,8 @@ LOCAL Errors testLinkEntry(ArchiveInfo       *archiveInfo,
   String           linkName;
   String           fileName;
   FileInfo         fileInfo;
+
+  UNUSED_VARIABLE(jobOptions);
 
   // seek to start of entry
   error = Archive_seek(archiveInfo,offset);
@@ -909,9 +991,6 @@ LOCAL Errors testHardLinkEntry(ArchiveInfo       *archiveInfo,
 *          offset               - offset
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
-*          fragmentList         - fragment list
-*          buffer               - buffer for temporary data
-*          bufferSize           - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -921,13 +1000,16 @@ LOCAL Errors testSpecialEntry(ArchiveInfo       *archiveInfo,
                               uint64            offset,
                               const EntryList   *includeEntryList,
                               const PatternList *excludePatternList,
-                              const char        *printableStorageName
+                              const char        *printableStorageName,
+                              const JobOptions  *jobOptions
                              )
 {
   Errors           error;
   ArchiveEntryInfo archiveEntryInfo;
   String           fileName;
   FileInfo         fileInfo;
+
+  UNUSED_VARIABLE(jobOptions);
 
   // seek to start of entry
   error = Archive_seek(archiveInfo,offset);
@@ -1004,7 +1086,7 @@ LOCAL Errors testSpecialEntry(ArchiveInfo       *archiveInfo,
 }
 
 //TODO WIP
-#if 0
+#if 1
 /***********************************************************************\
 * Name   : testThreadCode
 * Purpose: test worker thread
@@ -1019,9 +1101,8 @@ LOCAL void testThreadCode(TestInfo *testInfo)
   byte              *buffer;
   ArchiveInfo       archiveInfo;
   EntryMsg          entryMsg;
-  Errors            failError;
   Errors            error;
-  ArchiveEntryInfo  archiveEntryInfo;
+//  ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
 
   assert(testInfo != NULL);
@@ -1040,24 +1121,25 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 
   // open archive
   error = Archive_open(&archiveInfo,
-                       testInfo->storageHandle,
+                       &testInfo->storage,
                        testInfo->storageSpecifier,
-                       testInfo->archiveName,
-                       deltaSourceList,
-                       jobOptions,
-                       archiveGetCryptPasswordFunction,
-                       archiveGetCryptPasswordUserData,
-                       logHandle
+                       NULL,  // archiveName,
+                       testInfo->deltaSourceList,
+                       testInfo->jobOptions,
+                       testInfo->getPasswordFunction,
+                       testInfo->getPasswordUserData,
+                       testInfo->logHandle
                       );
   if (error != ERROR_NONE)
   {
     printError("Cannot open storage '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
                Error_getText(error)
               );
-    (void)Storage_done(&storageHandle);
+//    (void)Storage_done(&storage);
     free(buffer);
-    return error;
+    if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
+    return;
   }
 
   // test entries
@@ -1070,94 +1152,94 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
         error = testFileEntry(&archiveInfo,
-                              offset,
-                              includeEntryList,
-                              excludePatternList,
-                              Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                              jobOptions,
-                              fragmentList,
+                              entryMsg.offset,
+                              testInfo->includeEntryList,
+                              testInfo->excludePatternList,
+                              Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
+                              testInfo->jobOptions,
+                              testInfo->fragmentList,
                               buffer,
                               BUFFER_SIZE
                              );
         if (error != ERROR_NONE)
         {
-          if (failError == ERROR_NONE) failError = error;
+          if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
           break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
         error = testImageEntry(&archiveInfo,
-                               offset,
-                               includeEntryList,
-                               excludePatternList,
-                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                               jobOptions,
-                               fragmentList,
+                               entryMsg.offset,
+                               testInfo->includeEntryList,
+                               testInfo->excludePatternList,
+                               Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
+                               testInfo->jobOptions,
+                               testInfo->fragmentList,
                                buffer,
                                BUFFER_SIZE
                               );
         if (error != ERROR_NONE)
         {
-          if (failError == ERROR_NONE) failError = error;
+          if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
           break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
         error = testDirectoryEntry(&archiveInfo,
-                                   offset,
-                                   includeEntryList,
-                                   excludePatternList,
-                                   Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                                   jobOptions
+                                   entryMsg.offset,
+                                   testInfo->includeEntryList,
+                                   testInfo->excludePatternList,
+                                   Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
+                                   testInfo->jobOptions
                                   );
         if (error != ERROR_NONE)
         {
-          if (failError == ERROR_NONE) failError = error;
+          if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
           break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
         error = testLinkEntry(&archiveInfo,
-                              offset,
-                              includeEntryList,
-                              excludePatternList,
-                              Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                              jobOptions
+                              entryMsg.offset,
+                              testInfo->includeEntryList,
+                              testInfo->excludePatternList,
+                              Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
+                              testInfo->jobOptions
                              );
         if (error != ERROR_NONE)
         {
-          if (failError == ERROR_NONE) failError = error;
+          if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
           break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
         error = testHardLinkEntry(&archiveInfo,
-                                  offset,
-                                  includeEntryList,
-                                  excludePatternList,
-                                  Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                                  jobOptions,
-                                  fragmentList,
+                                  entryMsg.offset,
+                                  testInfo->includeEntryList,
+                                  testInfo->excludePatternList,
+                                  Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
+                                  testInfo->jobOptions,
+                                  testInfo->fragmentList,
                                   buffer,
                                   BUFFER_SIZE
                                  );
         if (error != ERROR_NONE)
         {
-          if (failError == ERROR_NONE) failError = error;
+          if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
           break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         error = testSpecialEntry(&archiveInfo,
-                                 offset,
-                                 includeEntryList,
-                                 excludePatternList,
-                                 Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                                 jobOptions
+                                 entryMsg.offset,
+                                 testInfo->includeEntryList,
+                                 testInfo->excludePatternList,
+                                 Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
+                                 testInfo->jobOptions
                                 );
         if (error != ERROR_NONE)
         {
-          if (failError == ERROR_NONE) failError = error;
+          if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
           break;
         }
         break;
@@ -1168,7 +1250,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         break; /* not reached */
     }
   }
-  if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
+  if (!isPrintInfo(1)) printInfo(0,"%s",(testInfo->failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // close archive
   Archive_close(&archiveInfo);
@@ -1201,7 +1283,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                                 const EntryList     *includeEntryList,
                                 const PatternList   *excludePatternList,
                                 DeltaSourceList     *deltaSourceList,
-                                const JobOptions          *jobOptions,
+                                const JobOptions    *jobOptions,
                                 GetPasswordFunction getPasswordFunction,
                                 void                *getPasswordUserData,
                                 FragmentList        *fragmentList,
@@ -1209,7 +1291,11 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                                )
 {
   byte              *buffer;
-  StorageHandle     storageHandle;
+  TestInfo          testInfo;
+  Thread            *createThreads;
+  uint              createThreadCount;
+//  Storage     storage;
+  uint              i;
   Errors            failError;
   Errors            error;
   ArchiveInfo       archiveInfo;
@@ -1229,8 +1315,21 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
     HALT_INSUFFICIENT_MEMORY();
   }
 
+  // init test info
+  initTestInfo(&testInfo,
+               storageSpecifier,
+               includeEntryList,
+               excludePatternList,
+               deltaSourceList,
+               jobOptions,
+NULL,  //               pauseTestFlag,
+NULL,  //               requestedAbortFlag,
+               logHandle
+              );
+//  AUTOFREE_ADD(&autoFreeList,&createInfo,{ doneCreateInfo(&createInfo); });
+
   // init storage
-  error = Storage_init(&storageHandle,
+  error = Storage_init(&testInfo.storage,
                        storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
@@ -1242,16 +1341,34 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize storage '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               Storage_getPrintableNameCString(storageSpecifier,NULL),
                Error_getText(error)
               );
     free(buffer);
     return error;
   }
 
+  // init threads
+  createThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  createThreads = (Thread*)malloc(createThreadCount*sizeof(Thread));
+  if (createThreads == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+//  AUTOFREE_ADD(&autoFreeList,createThreads,{ free(createThreads); });
+
+  // start test threads
+  for (i = 0; i < createThreadCount; i++)
+  {
+    if (!Thread_init(&createThreads[i],"BAR test",globalOptions.niceLevel,testThreadCode,&testInfo))
+    {
+      HALT_FATAL_ERROR("Cannot initialize create thread!");
+    }
+  }
+
   // open archive
   error = Archive_open(&archiveInfo,
-                       &storageHandle,
+                       &testInfo.storage,
                        storageSpecifier,
                        archiveName,
                        deltaSourceList,
@@ -1263,10 +1380,10 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   if (error != ERROR_NONE)
   {
     printError("Cannot open storage '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               Storage_getPrintableNameCString(storageSpecifier,NULL),
                Error_getText(error)
               );
-    (void)Storage_done(&storageHandle);
+    (void)Storage_done(&testInfo.storage);
     free(buffer);
     return error;
   }
@@ -1274,7 +1391,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   // read archive entries
   printInfo(0,
             "Test storage '%s'%s",
-            Storage_getPrintableNameCString(storageSpecifier,archiveName),
+            Storage_getPrintableNameCString(storageSpecifier,NULL),
             !isPrintInfo(1) ? "..." : ":\n"
            );
   failError = ERROR_NONE;
@@ -1288,7 +1405,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
     if (error != ERROR_NONE)
     {
       printError("Cannot read next entry in archive '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                 Storage_getPrintableNameCString(storageSpecifier,NULL),
                  Error_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
@@ -1305,7 +1422,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                               offset,
                               includeEntryList,
                               excludePatternList,
-                              Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                              Storage_getPrintableNameCString(storageSpecifier,NULL),
                               jobOptions,
                               fragmentList,
                               buffer,
@@ -1322,7 +1439,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                                offset,
                                includeEntryList,
                                excludePatternList,
-                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Storage_getPrintableNameCString(storageSpecifier,NULL),
                                jobOptions,
                                fragmentList,
                                buffer,
@@ -1339,7 +1456,8 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                                    offset,
                                    includeEntryList,
                                    excludePatternList,
-                                   Storage_getPrintableNameCString(storageSpecifier,archiveName)
+                                   Storage_getPrintableNameCString(storageSpecifier,NULL),
+                                   jobOptions
                                   );
         if (error != ERROR_NONE)
         {
@@ -1352,7 +1470,8 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                               offset,
                               includeEntryList,
                               excludePatternList,
-                              Storage_getPrintableNameCString(storageSpecifier,archiveName)
+                              Storage_getPrintableNameCString(storageSpecifier,NULL),
+                              jobOptions
                              );
         if (error != ERROR_NONE)
         {
@@ -1365,7 +1484,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                                   offset,
                                   includeEntryList,
                                   excludePatternList,
-                                  Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                                  Storage_getPrintableNameCString(storageSpecifier,NULL),
                                   jobOptions,
                                   fragmentList,
                                   buffer,
@@ -1382,7 +1501,8 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                                  offset,
                                  includeEntryList,
                                  excludePatternList,
-                                 Storage_getPrintableNameCString(storageSpecifier,archiveName)
+                                 Storage_getPrintableNameCString(storageSpecifier,NULL),
+                                 jobOptions
                                 );
         if (error != ERROR_NONE)
         {
@@ -1403,7 +1523,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   Archive_close(&archiveInfo);
 
   // done storage
-  (void)Storage_done(&storageHandle);
+  (void)Storage_done(&testInfo.storage);
 
   // free resources
   free(buffer);

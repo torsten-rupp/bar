@@ -123,7 +123,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                                   )
 {
   byte              *archiveBuffer,*buffer;
-  StorageHandle     storageHandle;
+  Storage           storage;
   Errors            failError;
   Errors            error;
   ArchiveInfo       archiveInfo;
@@ -150,7 +150,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
   }
 
   // init storage
-  error = Storage_init(&storageHandle,
+  error = Storage_init(&storage,
                        storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
@@ -172,7 +172,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
 
   // open archive
   error = Archive_open(&archiveInfo,
-                       &storageHandle,
+                       &storage,
                        storageSpecifier,
                        archiveName,
                        deltaSourceList,
@@ -187,12 +187,12 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                Storage_getPrintableNameCString(storageSpecifier,archiveName),
                Error_getText(error)
               );
-    (void)Storage_done(&storageHandle);
+    (void)Storage_done(&storage);
     free(buffer);
     free(archiveBuffer);
     return error;
   }
-  DEBUG_TESTCODE() { (void)Archive_close(&archiveInfo); (void)Storage_done(&storageHandle); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { (void)Archive_close(&archiveInfo); (void)Storage_done(&storage); return DEBUG_TESTCODE_ERROR(); }
 
   // read archive entries
   printInfo(0,
@@ -1514,7 +1514,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
   Archive_close(&archiveInfo);
 
   // done storage
-  (void)Storage_done(&storageHandle);
+  (void)Storage_done(&storage);
 
   // free resources
   free(buffer);

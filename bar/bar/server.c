@@ -4588,7 +4588,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
   const JobNode    *jobNode;
   StorageSpecifier storageSpecifier;
   Errors           error;
-  StorageHandle    storageHandle;
+  Storage          storage;
 
   assert(indexHandle != NULL);
 
@@ -4640,7 +4640,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
         {
           // try to init scp-storage first with sftp
           storageSpecifier.type = STORAGE_TYPE_SFTP;
-          resultError = Storage_init(&storageHandle,
+          resultError = Storage_init(&storage,
                                      &storageSpecifier,
                                      (jobNode != NULL) ? &jobNode->jobOptions : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
@@ -4653,7 +4653,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
           {
             // init scp-storage
             storageSpecifier.type = STORAGE_TYPE_SCP;
-            resultError = Storage_init(&storageHandle,
+            resultError = Storage_init(&storage,
                                        &storageSpecifier,
                                        (jobNode != NULL) ? &jobNode->jobOptions : NULL,
                                        &globalOptions.indexDatabaseMaxBandWidthList,
@@ -4667,7 +4667,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
         else
         {
           // init other storage types
-          resultError = Storage_init(&storageHandle,
+          resultError = Storage_init(&storage,
                                      &storageSpecifier,
                                      (jobNode != NULL) ? &jobNode->jobOptions : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
@@ -4679,24 +4679,24 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
         }
         if (resultError == ERROR_NONE)
         {
-          if (Storage_exists(&storageHandle,
+          if (Storage_exists(&storage,
                              NULL  // archiveName
                             )
              )
           {
             // delete storage
-            resultError = Storage_delete(&storageHandle,
+            resultError = Storage_delete(&storage,
                                          NULL  // archiveName
                                         );
           }
 
           // prune empty directories
-          Storage_pruneDirectories(&storageHandle,
+          Storage_pruneDirectories(&storage,
                                    NULL  // archiveName
                                   );
 
           // close storage
-          Storage_done(&storageHandle);
+          Storage_done(&storage);
         }
       }
       Storage_doneSpecifier(&storageSpecifier);
@@ -5521,7 +5521,7 @@ LOCAL void indexThreadCode(void)
   IndexId                storageId;
   StorageSpecifier       storageSpecifier;
   String                 storageName,printableStorageName;
-  StorageHandle          storageHandle;
+  Storage                storage;
   IndexCryptPasswordList indexCryptPasswordList;
   SemaphoreLock          semaphoreLock;
   JobOptions             jobOptions;
@@ -5618,7 +5618,7 @@ LOCAL void indexThreadCode(void)
         startTimestamp = 0LL;
         endTimestamp   = 0LL;
         initJobOptions(&jobOptions);
-        error = Storage_init(&storageHandle,
+        error = Storage_init(&storage,
                              &storageSpecifier,
                              &jobOptions,
                              &globalOptions.indexDatabaseMaxBandWidthList,
@@ -5642,7 +5642,7 @@ LOCAL void indexThreadCode(void)
             jobOptions.cryptPrivateKeyFileName = String_duplicate(indexCryptPasswordNode->cryptPrivateKeyFileName);
             error = Archive_updateIndex(indexHandle,
                                         storageId,
-                                        &storageHandle,
+                                        &storage,
                                         storageName,
                                         &jobOptions,
                                         &totalTimeLastChanged,
@@ -5665,7 +5665,7 @@ LOCAL void indexThreadCode(void)
           }
 
           // done storage
-          (void)Storage_done(&storageHandle);
+          (void)Storage_done(&storage);
         }
         else
         {
@@ -13518,7 +13518,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 {
   String            storageName;
   StorageSpecifier  storageSpecifier;
-  StorageHandle     storageHandle;
+  Storage           storage;
   Errors            error;
   ArchiveInfo       archiveInfo;
   ArchiveEntryInfo  archiveEntryInfo;
@@ -13549,7 +13549,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   }
 
   // init storage
-  error = Storage_init(&storageHandle,
+  error = Storage_init(&storage,
                        &storageSpecifier,
                        &clientInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
@@ -13568,7 +13568,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 
   // open archive
   error = Archive_open(&archiveInfo,
-                       &storageHandle,
+                       &storage,
                        &storageSpecifier,
                        NULL,  // archive name
                        NULL,  // deltaSourceList
@@ -13954,7 +13954,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   Archive_close(&archiveInfo);
 
   // done storage
-  (void)Storage_done(&storageHandle);
+  (void)Storage_done(&storage);
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
@@ -16180,7 +16180,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   PatternTypes     patternType;
   bool             forceRefresh;
   StorageSpecifier storageSpecifier;
-  StorageHandle    storageHandle;
+  Storage          storage;
   IndexId          storageId;
   Errors           error;
 
@@ -16224,7 +16224,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
         && !Storage_isPatternSpecifier(&storageSpecifier)
        )
     {
-      if (Storage_init(&storageHandle,
+      if (Storage_init(&storage,
                        &storageSpecifier,
                        NULL, // jobOptions
                        &globalOptions.indexDatabaseMaxBandWidthList,
@@ -16278,7 +16278,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                    &storageId
                                   );
         }
-        Storage_done(&storageHandle);
+        Storage_done(&storage);
 
         if (error == ERROR_NONE)
         {

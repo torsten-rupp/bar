@@ -288,7 +288,7 @@ DEVICE_RANDOM  = /dev/urandom
 
 # memory limits for tests
 MEMORY_LIMIT     = $(shell $(ECHO) 10*1024*1024|$(BC))    # 10G
-MEMORY_LIMIT_LOW = $(shell $(ECHO) 50*1024|$(BC))         # 50M
+MEMORY_LIMIT_LOW = $(shell $(ECHO) 70*1024|$(BC))         # 50M
 
 #---------------------------------- rules ------------------------------------
 

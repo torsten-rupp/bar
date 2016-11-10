@@ -218,8 +218,8 @@ LOCAL CURLcode initWebDAVHandle(CURL *curlHandle, ConstString url, ConstString l
            CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
            Instead install a signal handler to catch the not wanted
            signal.
-  (void)curl_easy_setopt(storageHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
-  (void)curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,1L);
+  (void)curl_easy_setopt(storage->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
+  (void)curl_easy_setopt(storage->webdav.curlHandle,CURLOPT_NOSIGNAL,1L);
   */
 
   // set URL
@@ -331,25 +331,25 @@ LOCAL size_t curlWebDAVReadDataCallback(void   *buffer,
                                         void   *userData
                                        )
 {
-  StorageArchiveHandle *storageArchiveHandle = (StorageArchiveHandle*)userData;
-  size_t               bytesSent;
+  StorageHandle *storageHandle = (StorageHandle*)userData;
+  size_t        bytesSent;
 
   assert(buffer != NULL);
   assert(size > 0);
-  assert(storageArchiveHandle != NULL);
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
-  assert(storageArchiveHandle->webdav.sendBuffer.data != NULL);
+  assert(storageHandle != NULL);
+  assert(storageHandle->storage != NULL);
+  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
+  assert(storageHandle->webdav.sendBuffer.data != NULL);
 
 //TODO: progress callback?
 
-  if (storageArchiveHandle->webdav.sendBuffer.index < storageArchiveHandle->webdav.sendBuffer.length)
+  if (storageHandle->webdav.sendBuffer.index < storageHandle->webdav.sendBuffer.length)
   {
-    bytesSent = MIN(n,(size_t)(storageArchiveHandle->webdav.sendBuffer.length-storageArchiveHandle->webdav.sendBuffer.index)/size)*size;
+    bytesSent = MIN(n,(size_t)(storageHandle->webdav.sendBuffer.length-storageHandle->webdav.sendBuffer.index)/size)*size;
 
-    memcpy(buffer,storageArchiveHandle->webdav.sendBuffer.data+storageArchiveHandle->webdav.sendBuffer.index,bytesSent);
-    storageArchiveHandle->webdav.sendBuffer.index += (ulong)bytesSent;
+    memcpy(buffer,storageHandle->webdav.sendBuffer.data+storageHandle->webdav.sendBuffer.index,bytesSent);
+    storageHandle->webdav.sendBuffer.index += (ulong)bytesSent;
   }
   else
   {
@@ -379,17 +379,17 @@ LOCAL size_t curlWebDAVWriteDataCallback(const void *buffer,
                                          void       *userData
                                         )
 {
-  StorageArchiveHandle *storageArchiveHandle = (StorageArchiveHandle*)userData;
-  size_t               bytesReceived;
-  ulong                newSize;
-  byte                 *newData;
+  StorageHandle *storageHandle = (StorageHandle*)userData;
+  size_t        bytesReceived;
+  ulong         newSize;
+  byte          *newData;
 
   assert(buffer != NULL);
   assert(size > 0);
-  assert(storageArchiveHandle != NULL);
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+  assert(storageHandle != NULL);
+  assert(storageHandle->storage != NULL);
+  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
 
 //TODO: progress callback?
 
@@ -397,24 +397,24 @@ LOCAL size_t curlWebDAVWriteDataCallback(const void *buffer,
   bytesReceived = n*size;
 
   // increase buffer size if required
-  if ((storageArchiveHandle->webdav.receiveBuffer.length+(ulong)bytesReceived) > storageArchiveHandle->webdav.receiveBuffer.size)
+  if ((storageHandle->webdav.receiveBuffer.length+(ulong)bytesReceived) > storageHandle->webdav.receiveBuffer.size)
   {
-    newSize = ((storageArchiveHandle->webdav.receiveBuffer.length+(ulong)bytesReceived+INCREMENT_BUFFER_SIZE-1)/INCREMENT_BUFFER_SIZE)*INCREMENT_BUFFER_SIZE;
-    newData = (byte*)realloc(storageArchiveHandle->webdav.receiveBuffer.data,newSize);
+    newSize = ((storageHandle->webdav.receiveBuffer.length+(ulong)bytesReceived+INCREMENT_BUFFER_SIZE-1)/INCREMENT_BUFFER_SIZE)*INCREMENT_BUFFER_SIZE;
+    newData = (byte*)realloc(storageHandle->webdav.receiveBuffer.data,newSize);
     if (newData == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    storageArchiveHandle->webdav.receiveBuffer.data = newData;
-    storageArchiveHandle->webdav.receiveBuffer.size = newSize;
+    storageHandle->webdav.receiveBuffer.data = newData;
+    storageHandle->webdav.receiveBuffer.size = newSize;
   }
 
   // append data to buffer
-  memcpy(storageArchiveHandle->webdav.receiveBuffer.data+storageArchiveHandle->webdav.receiveBuffer.length,buffer,(ulong)bytesReceived);
-  storageArchiveHandle->webdav.receiveBuffer.length += (ulong)bytesReceived;
+  memcpy(storageHandle->webdav.receiveBuffer.data+storageHandle->webdav.receiveBuffer.length,buffer,(ulong)bytesReceived);
+  storageHandle->webdav.receiveBuffer.length += (ulong)bytesReceived;
 //static size_t totalReceived = 0;
 //totalReceived+=bytesReceived;
-//fprintf(stderr,"%s, %d: storageArchiveHandle->webdav.receiveBuffer.length=%d bytesReceived=%d %d\n",__FILE__,__LINE__,storageArchiveHandle->webdav.receiveBuffer.length,bytesReceived,totalReceived);
+//fprintf(stderr,"%s, %d: storageHandle->webdav.receiveBuffer.length=%d bytesReceived=%d %d\n",__FILE__,__LINE__,storageHandle->webdav.receiveBuffer.length,bytesReceived,totalReceived);
 
   return bytesReceived;
 }
@@ -628,7 +628,7 @@ LOCAL ConstString StorageWebDAV_getPrintableName(StorageSpecifier *storageSpecif
   return storageSpecifier->storageName;
 }
 
-LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
+LOCAL Errors StorageWebDAV_init(Storage                    *storage,
                                 const StorageSpecifier     *storageSpecifier,
                                 const JobOptions           *jobOptions,
                                 BandWidthList              *maxBandWidthList,
@@ -641,7 +641,7 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
     WebDAVServer webDAVServer;
   #endif /* HAVE_CURL */
 
-  assert(storageHandle != NULL);
+  assert(storage != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
 
@@ -654,93 +654,93 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
   #ifdef HAVE_CURL
     // init variables
     AutoFree_init(&autoFreeList);
-    initBandWidthLimiter(&storageHandle->webdav.bandWidthLimiter,maxBandWidthList);
-    AUTOFREE_ADD(&autoFreeList,&storageHandle->webdav.bandWidthLimiter,{ doneBandWidthLimiter(&storageHandle->webdav.bandWidthLimiter); });
+    initBandWidthLimiter(&storage->webdav.bandWidthLimiter,maxBandWidthList);
+    AUTOFREE_ADD(&autoFreeList,&storage->webdav.bandWidthLimiter,{ doneBandWidthLimiter(&storage->webdav.bandWidthLimiter); });
 
     // get WebDAV server settings
-    storageHandle->webdav.serverId = getWebDAVServerSettings(storageHandle->storageSpecifier.hostName,jobOptions,&webDAVServer);
-    if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,webDAVServer.loginName);
-    if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
-    if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
-    if (String_isEmpty(storageHandle->storageSpecifier.hostName))
+    storage->webdav.serverId = getWebDAVServerSettings(storage->storageSpecifier.hostName,jobOptions,&webDAVServer);
+    if (String_isEmpty(storage->storageSpecifier.loginName)) String_set(storage->storageSpecifier.loginName,webDAVServer.loginName);
+    if (String_isEmpty(storage->storageSpecifier.loginName)) String_setCString(storage->storageSpecifier.loginName,getenv("LOGNAME"));
+    if (String_isEmpty(storage->storageSpecifier.loginName)) String_setCString(storage->storageSpecifier.loginName,getenv("USER"));
+    if (String_isEmpty(storage->storageSpecifier.hostName))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_NO_HOST_NAME;
     }
 
     // allocate WebDAV server
-    if (!allocateServer(storageHandle->webdav.serverId,serverConnectionPriority,60*1000L))
+    if (!allocateServer(storage->webdav.serverId,serverConnectionPriority,60*1000L))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_TOO_MANY_CONNECTIONS;
     }
-    AUTOFREE_ADD(&autoFreeList,&storageHandle->webdav.serverId,{ freeServer(storageHandle->webdav.serverId); });
+    AUTOFREE_ADD(&autoFreeList,&storage->webdav.serverId,{ freeServer(storage->webdav.serverId); });
 
     // check WebDAV login, get correct password
     error = ERROR_WEBDAV_SESSION_FAIL;
-    if ((error != ERROR_NONE) && !Password_isEmpty(storageHandle->storageSpecifier.loginPassword))
+    if ((error != ERROR_NONE) && !Password_isEmpty(storage->storageSpecifier.loginPassword))
     {
-      error = checkWebDAVLogin(storageHandle->storageSpecifier.hostName,
-                               storageHandle->storageSpecifier.loginName,
-                               storageHandle->storageSpecifier.loginPassword
+      error = checkWebDAVLogin(storage->storageSpecifier.hostName,
+                               storage->storageSpecifier.loginName,
+                               storage->storageSpecifier.loginPassword
                               );
     }
     if ((error != ERROR_NONE) && !Password_isEmpty(webDAVServer.password))
     {
-      error = checkWebDAVLogin(storageHandle->storageSpecifier.hostName,
-                               storageHandle->storageSpecifier.loginName,
+      error = checkWebDAVLogin(storage->storageSpecifier.hostName,
+                               storage->storageSpecifier.loginName,
                                webDAVServer.password
                               );
       if (error == ERROR_NONE)
       {
-        Password_set(storageHandle->storageSpecifier.loginPassword,webDAVServer.password);
+        Password_set(storage->storageSpecifier.loginPassword,webDAVServer.password);
       }
     }
     if ((error != ERROR_NONE) && !Password_isEmpty(defaultWebDAVPassword))
     {
-      error = checkWebDAVLogin(storageHandle->storageSpecifier.hostName,
-                               storageHandle->storageSpecifier.loginName,
+      error = checkWebDAVLogin(storage->storageSpecifier.hostName,
+                               storage->storageSpecifier.loginName,
                                defaultWebDAVPassword
                               );
       if (error == ERROR_NONE)
       {
-        Password_set(storageHandle->storageSpecifier.loginPassword,defaultWebDAVPassword);
+        Password_set(storage->storageSpecifier.loginPassword,defaultWebDAVPassword);
       }
     }
     if (error != ERROR_NONE)
     {
       // initialize default password
       while (   (error != ERROR_NONE)
-             && initWebDAVLogin(storageHandle->storageSpecifier.hostName,
-                                storageHandle->storageSpecifier.loginName,
-                                storageHandle->storageSpecifier.loginPassword,
+             && initWebDAVLogin(storage->storageSpecifier.hostName,
+                                storage->storageSpecifier.loginName,
+                                storage->storageSpecifier.loginPassword,
                                 jobOptions,
-                                CALLBACK(storageHandle->getPasswordFunction,storageHandle->getPasswordUserData)
+                                CALLBACK(storage->getPasswordFunction,storage->getPasswordUserData)
                                )
             )
       {
-        error = checkWebDAVLogin(storageHandle->storageSpecifier.hostName,
-                                 storageHandle->storageSpecifier.loginName,
-                                 storageHandle->storageSpecifier.loginPassword
+        error = checkWebDAVLogin(storage->storageSpecifier.hostName,
+                                 storage->storageSpecifier.loginName,
+                                 storage->storageSpecifier.loginPassword
                                 );
       }
       if (error != ERROR_NONE)
       {
-        error = (!Password_isEmpty(storageHandle->storageSpecifier.loginPassword) || !Password_isEmpty(webDAVServer.password) || !Password_isEmpty(defaultWebDAVPassword))
-                  ? ERRORX_(INVALID_WEBDAV_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName))
-                  : ERRORX_(NO_WEBDAV_PASSWORD,0,"%s",String_cString(storageHandle->storageSpecifier.hostName));
+        error = (!Password_isEmpty(storage->storageSpecifier.loginPassword) || !Password_isEmpty(webDAVServer.password) || !Password_isEmpty(defaultWebDAVPassword))
+                  ? ERRORX_(INVALID_WEBDAV_PASSWORD,0,"%s",String_cString(storage->storageSpecifier.hostName))
+                  : ERRORX_(NO_WEBDAV_PASSWORD,0,"%s",String_cString(storage->storageSpecifier.hostName));
       }
 
       // store passwrd as default webDAV password
       if (error == ERROR_NONE)
       {
         if (defaultWebDAVPassword == NULL) defaultWebDAVPassword = Password_new();
-        Password_set(defaultWebDAVPassword,storageHandle->storageSpecifier.loginPassword);
+        Password_set(defaultWebDAVPassword,storage->storageSpecifier.loginPassword);
       }
     }
     if (error != ERROR_NONE)
     {
-      doneBandWidthLimiter(&storageHandle->webdav.bandWidthLimiter);
+      doneBandWidthLimiter(&storage->webdav.bandWidthLimiter);
       return error;
     }
 
@@ -749,7 +749,7 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
 
     return ERROR_NONE;
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(storage);
     UNUSED_VARIABLE(storageSpecifier);
     UNUSED_VARIABLE(jobOptions);
     UNUSED_VARIABLE(maxBandWidthList);
@@ -759,33 +759,33 @@ LOCAL Errors StorageWebDAV_init(StorageHandle              *storageHandle,
   #endif /* HAVE_CURL */
 }
 
-LOCAL Errors StorageWebDAV_done(StorageHandle *storageHandle)
+LOCAL Errors StorageWebDAV_done(Storage *storage)
 {
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storage != NULL);
+  assert(storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
   // free WebDAV server connection
   #ifdef HAVE_CURL
-    freeServer(storageHandle->webdav.serverId);
+    freeServer(storage->webdav.serverId);
   #else /* not HAVE_CURL || HAVE_FTP */
-    UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(storage);
   #endif /* HAVE_CURL || HAVE_FTP */
 
   return ERROR_NONE;
 }
 
-LOCAL bool StorageWebDAV_isServerAllocationPending(StorageHandle *storageHandle)
+LOCAL bool StorageWebDAV_isServerAllocationPending(Storage *storage)
 {
   bool serverAllocationPending;
 
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storage != NULL);
+  assert(storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
   serverAllocationPending = FALSE;
   #ifdef HAVE_CURL
-    serverAllocationPending = isServerAllocationPending(storageHandle->webdav.serverId);
+    serverAllocationPending = isServerAllocationPending(storage->webdav.serverId);
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(storage);
 
     serverAllocationPending = FALSE;
   #endif /* HAVE_CURL */
@@ -793,10 +793,10 @@ LOCAL bool StorageWebDAV_isServerAllocationPending(StorageHandle *storageHandle)
   return serverAllocationPending;
 }
 
-LOCAL Errors StorageWebDAV_preProcess(StorageHandle *storageHandle,
-                                      ConstString   archiveName,
-                                      time_t        timestamp,
-                                      bool          initialFlag
+LOCAL Errors StorageWebDAV_preProcess(Storage     *storage,
+                                      ConstString archiveName,
+                                      time_t      timestamp,
+                                      bool        initialFlag
                                      )
 {
   Errors error;
@@ -805,19 +805,19 @@ LOCAL Errors StorageWebDAV_preProcess(StorageHandle *storageHandle,
     String    script;
   #endif /* HAVE_CURL */
 
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storage != NULL);
+  assert(storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
   error = ERROR_NONE;
 
   #ifdef HAVE_CURL
-    if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+    if ((storage->jobOptions == NULL) || !storage->jobOptions->dryRunFlag)
     {
       if (!initialFlag)
       {
         // init macros
         TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
-        TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber,NULL);
+        TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storage->volumeNumber,NULL);
 
         // write pre-processing
         if (globalOptions.ftp.writePreProcessCommand != NULL)
@@ -851,7 +851,7 @@ LOCAL Errors StorageWebDAV_preProcess(StorageHandle *storageHandle,
       }
     }
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(storage);
     UNUSED_VARIABLE(archiveName);
     UNUSED_VARIABLE(timestamp);
     UNUSED_VARIABLE(initialFlag);
@@ -862,10 +862,10 @@ LOCAL Errors StorageWebDAV_preProcess(StorageHandle *storageHandle,
   return error;
 }
 
-LOCAL Errors StorageWebDAV_postProcess(StorageHandle *storageHandle,
-                                       ConstString   archiveName,
-                                       time_t        timestamp,
-                                       bool          finalFlag
+LOCAL Errors StorageWebDAV_postProcess(Storage     *storage,
+                                       ConstString archiveName,
+                                       time_t      timestamp,
+                                       bool        finalFlag
                                       )
 {
   Errors error;
@@ -874,19 +874,19 @@ LOCAL Errors StorageWebDAV_postProcess(StorageHandle *storageHandle,
     String    script;
   #endif /* HAVE_CURL */
 
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storage != NULL);
+  assert(storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
   error = ERROR_NONE;
 
   #ifdef HAVE_CURL
-    if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+    if ((storage->jobOptions == NULL) || !storage->jobOptions->dryRunFlag)
     {
       if (!finalFlag)
       {
         // init macros
-        TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
-        TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->volumeNumber,NULL);
+        TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,          NULL);
+        TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storage->volumeNumber,NULL);
 
         // write post-process
         if (globalOptions.ftp.writePostProcessCommand != NULL)
@@ -920,7 +920,7 @@ LOCAL Errors StorageWebDAV_postProcess(StorageHandle *storageHandle,
       }
     }
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(storage);
     UNUSED_VARIABLE(archiveName);
     UNUSED_VARIABLE(timestamp);
     UNUSED_VARIABLE(finalFlag);
@@ -931,19 +931,19 @@ LOCAL Errors StorageWebDAV_postProcess(StorageHandle *storageHandle,
   return error;
 }
 
-LOCAL bool StorageWebDAV_exists(StorageHandle *storageHandle, ConstString archiveName)
+LOCAL bool StorageWebDAV_exists(Storage *storage, ConstString archiveName)
 {
-  assert(storageHandle != NULL);
+  assert(storage != NULL);
   assert(!String_isEmpty(archiveName));
 
 //TODO: still not implemented
-  UNUSED_VARIABLE(storageHandle);
+  UNUSED_VARIABLE(storage);
   UNUSED_VARIABLE(archiveName);
 
   return File_exists(archiveName);
 }
 
-LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
+LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
                                   ConstString   archiveName,
                                   uint64        archiveSize
                                  )
@@ -959,43 +959,43 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
     int             runningHandles;
   #endif /* HAVE_CURL */
 
-  assert(storageArchiveHandle != NULL);
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle != NULL);
+  assert(storageHandle->storage != NULL);
+  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
   assert(!String_isEmpty(archiveName));
 
   #ifdef HAVE_CURL
     // initialize variables
-    storageArchiveHandle->webdav.curlMultiHandle      = NULL;
-    storageArchiveHandle->webdav.curlHandle           = NULL;
-    storageArchiveHandle->webdav.index                = 0LL;
-    storageArchiveHandle->webdav.size                 = archiveSize;
-    storageArchiveHandle->webdav.receiveBuffer.data   = NULL;
-    storageArchiveHandle->webdav.receiveBuffer.size   = 0LL;
-    storageArchiveHandle->webdav.receiveBuffer.offset = 0LL;
-    storageArchiveHandle->webdav.receiveBuffer.length = 0L;
-    storageArchiveHandle->webdav.sendBuffer.data      = NULL;
-    storageArchiveHandle->webdav.sendBuffer.index     = 0L;
-    storageArchiveHandle->webdav.sendBuffer.length    = 0L;
+    storageHandle->webdav.curlMultiHandle      = NULL;
+    storageHandle->webdav.curlHandle           = NULL;
+    storageHandle->webdav.index                = 0LL;
+    storageHandle->webdav.size                 = archiveSize;
+    storageHandle->webdav.receiveBuffer.data   = NULL;
+    storageHandle->webdav.receiveBuffer.size   = 0LL;
+    storageHandle->webdav.receiveBuffer.offset = 0LL;
+    storageHandle->webdav.receiveBuffer.length = 0L;
+    storageHandle->webdav.sendBuffer.data      = NULL;
+    storageHandle->webdav.sendBuffer.index     = 0L;
+    storageHandle->webdav.sendBuffer.length    = 0L;
 
     // open Curl handles
-    storageArchiveHandle->webdav.curlMultiHandle = curl_multi_init();
-    if (storageArchiveHandle->webdav.curlMultiHandle == NULL)
+    storageHandle->webdav.curlMultiHandle = curl_multi_init();
+    if (storageHandle->webdav.curlMultiHandle == NULL)
     {
       return ERROR_WEBDAV_SESSION_FAIL;
     }
-    storageArchiveHandle->webdav.curlHandle = curl_easy_init();
-    if (storageArchiveHandle->webdav.curlHandle == NULL)
+    storageHandle->webdav.curlHandle = curl_easy_init();
+    if (storageHandle->webdav.curlHandle == NULL)
     {
-      curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
+      curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
       return ERROR_WEBDAV_SESSION_FAIL;
     }
 
     // get base URL
-    baseURL = String_format(String_new(),"http://%S",storageArchiveHandle->storageHandle->storageSpecifier.hostName);
-    if (storageArchiveHandle->storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageArchiveHandle->storageHandle->storageSpecifier.hostPort);
+    baseURL = String_format(String_new(),"http://%S",storageHandle->storage->storageSpecifier.hostName);
+    if (storageHandle->storage->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storage->storageSpecifier.hostPort);
 
-    if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
     {
       // get pathname, basename
       pathName = File_getFilePathName(String_new(),archiveName);
@@ -1013,40 +1013,40 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
           String_appendChar(url,'/');
 
           // check if sub-directory exists
-          curlCode = initWebDAVHandle(storageArchiveHandle->webdav.curlHandle,
+          curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
                                       url,
-                                      storageArchiveHandle->storageHandle->storageSpecifier.loginName,
-                                      storageArchiveHandle->storageHandle->storageSpecifier.loginPassword,
+                                      storageHandle->storage->storageSpecifier.loginName,
+                                      storageHandle->storage->storageSpecifier.loginPassword,
                                       WEBDAV_TIMEOUT
                                     );
           if (curlCode == CURLE_OK)
           {
-            curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
+            curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
           }
           if (curlCode == CURLE_OK)
           {
-            curlCode = curl_easy_perform(storageArchiveHandle->webdav.curlHandle);
+            curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
           }
           if (curlCode != CURLE_OK)
           {
             // create sub-directory
-            curlCode = initWebDAVHandle(storageArchiveHandle->webdav.curlHandle,
+            curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
                                         url,
-                                        storageArchiveHandle->storageHandle->storageSpecifier.loginName,
-                                        storageArchiveHandle->storageHandle->storageSpecifier.loginPassword,
+                                        storageHandle->storage->storageSpecifier.loginName,
+                                        storageHandle->storage->storageSpecifier.loginPassword,
                                         WEBDAV_TIMEOUT
                                       );
             if (curlCode == CURLE_OK)
             {
-              curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
+              curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
             }
             if (curlCode == CURLE_OK)
             {
-              curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"MKCOL");
+              curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"MKCOL");
             }
             if (curlCode == CURLE_OK)
             {
-              curlCode = curl_easy_perform(storageArchiveHandle->webdav.curlHandle);
+              curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
             }
           }
         }
@@ -1057,17 +1057,17 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
           String_delete(baseName);
           String_delete(pathName);
           String_delete(baseURL);
-          (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
-          (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
+          (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
+          (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
           return ERRORX_(CREATE_DIRECTORY,0,"%s",curl_easy_strerror(curlCode));
         }
         String_delete(url);
       }
 
       // first delete file if overwrite requested
-      if (   (storageArchiveHandle->storageHandle->jobOptions != NULL)
-          && (   (storageArchiveHandle->storageHandle->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_OVERWRITE)
-              || storageArchiveHandle->storageHandle->jobOptions->archiveFileModeOverwriteFlag
+      if (   (storageHandle->storage->jobOptions != NULL)
+          && (   (storageHandle->storage->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_OVERWRITE)
+              || storageHandle->storage->jobOptions->archiveFileModeOverwriteFlag
              )
          )
       {
@@ -1083,40 +1083,40 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
         String_append(url,baseName);
 
         // check if file exists
-        curlCode = initWebDAVHandle(storageArchiveHandle->webdav.curlHandle,
+        curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
                                     url,
-                                    storageArchiveHandle->storageHandle->storageSpecifier.loginName,
-                                    storageArchiveHandle->storageHandle->storageSpecifier.loginPassword,
+                                    storageHandle->storage->storageSpecifier.loginName,
+                                    storageHandle->storage->storageSpecifier.loginPassword,
                                     WEBDAV_TIMEOUT
                                    );
         if (curlCode == CURLE_OK)
         {
-          curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
+          curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
         }
         if (curlCode == CURLE_OK)
         {
-          curlCode = curl_easy_perform(storageArchiveHandle->webdav.curlHandle);
+          curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
         }
         if (curlCode == CURLE_OK)
         {
           // delete file
-          curlCode = initWebDAVHandle(storageArchiveHandle->webdav.curlHandle,
+          curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
                                       url,
-                                      storageArchiveHandle->storageHandle->storageSpecifier.loginName,
-                                      storageArchiveHandle->storageHandle->storageSpecifier.loginPassword,
+                                      storageHandle->storage->storageSpecifier.loginName,
+                                      storageHandle->storage->storageSpecifier.loginPassword,
                                       WEBDAV_TIMEOUT
                                     );
           if (curlCode == CURLE_OK)
           {
-            curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
+            curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
           }
           if (curlCode == CURLE_OK)
           {
-            curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
+            curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
           }
           if (curlCode == CURLE_OK)
           {
-            curlCode = curl_easy_perform(storageArchiveHandle->webdav.curlHandle);
+            curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
           }
           if (curlCode != CURLE_OK)
           {
@@ -1124,8 +1124,8 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
             String_delete(baseName);
             String_delete(pathName);
             String_delete(baseURL);
-            (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
-            (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
+            (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
+            (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
             return ERRORX_(DELETE_FILE,0,"%s",curl_easy_strerror(curlCode));
           }
         }
@@ -1145,35 +1145,35 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
       File_doneSplitFileName(&nameTokenizer);
       String_append(url,baseName);
 
-      curlCode = initWebDAVHandle(storageArchiveHandle->webdav.curlHandle,
+      curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
                                   url,
-                                  storageArchiveHandle->storageHandle->storageSpecifier.loginName,
-                                  storageArchiveHandle->storageHandle->storageSpecifier.loginPassword,
+                                  storageHandle->storage->storageSpecifier.loginName,
+                                  storageHandle->storage->storageSpecifier.loginPassword,
                                   WEBDAV_TIMEOUT
                                  );
       if (curlCode == CURLE_OK)
       {
-        curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_NOBODY,0L);
+        curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,0L);
       }
       if (curlCode == CURLE_OK)
       {
-        curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"PUT");
+        curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"PUT");
       }
       if (curlCode == CURLE_OK)
       {
-        curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_UPLOAD,1L);
+        curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_UPLOAD,1L);
       }
       if (curlCode == CURLE_OK)
       {
-        curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_READFUNCTION,curlWebDAVReadDataCallback);
+        curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_READFUNCTION,curlWebDAVReadDataCallback);
       }
       if (curlCode == CURLE_OK)
       {
-        curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_READDATA,storageArchiveHandle);
+        curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_READDATA,storageHandle);
       }
       if (curlCode == CURLE_OK)
       {
-        curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_INFILESIZE_LARGE,(curl_off_t)storageArchiveHandle->webdav.size);
+        curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_INFILESIZE_LARGE,(curl_off_t)storageHandle->webdav.size);
       }
       if (curlCode != CURLE_OK)
       {
@@ -1181,19 +1181,19 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
         String_delete(baseName);
         String_delete(pathName);
         String_delete(baseURL);
-        (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
-        (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
+        (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
+        (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
         return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
       }
-      curlMCode = curl_multi_add_handle(storageArchiveHandle->webdav.curlMultiHandle,storageArchiveHandle->webdav.curlHandle);
+      curlMCode = curl_multi_add_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
       if (curlMCode != CURLM_OK)
       {
         String_delete(url);
         String_delete(baseName);
         String_delete(pathName);
         String_delete(baseURL);
-        (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
-        (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
+        (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
+        (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
         return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
       }
       String_delete(url);
@@ -1201,7 +1201,7 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
       // start WebDAV upload
       do
       {
-        curlMCode = curl_multi_perform(storageArchiveHandle->webdav.curlMultiHandle,&runningHandles);
+        curlMCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
       }
       while (   (curlMCode == CURLM_CALL_MULTI_PERFORM)
              && (runningHandles > 0)
@@ -1211,9 +1211,9 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
         String_delete(baseName);
         String_delete(pathName);
         String_delete(baseURL);
-        (void)curl_multi_remove_handle(storageArchiveHandle->webdav.curlMultiHandle,storageArchiveHandle->webdav.curlHandle);
-        (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
-        (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
+        (void)curl_multi_remove_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
+        (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
+        (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
         return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
       }
 
@@ -1225,11 +1225,11 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
     // free resources
     String_delete(baseURL);
 
-    DEBUG_ADD_RESOURCE_TRACE(&storageArchiveHandle->webdav,sizeof(storageArchiveHandle->webdav));
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->webdav,sizeof(storageHandle->webdav));
 
     return ERROR_NONE;
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(archiveName);
     UNUSED_VARIABLE(archiveSize);
 
@@ -1237,8 +1237,8 @@ LOCAL Errors StorageWebDAV_create(StorageArchiveHandle *storageArchiveHandle,
   #endif /* HAVE_CURL */
 }
 
-LOCAL Errors StorageWebDAV_open(StorageArchiveHandle *storageArchiveHandle,
-                                ConstString archiveName
+LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
+                                ConstString   archiveName
                                )
 {
   #ifdef HAVE_CURL
@@ -1253,50 +1253,50 @@ LOCAL Errors StorageWebDAV_open(StorageArchiveHandle *storageArchiveHandle,
     int             runningHandles;
   #endif /* HAVE_CURL */
 
-  assert(storageArchiveHandle != NULL);
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle != NULL);
+  assert(storageHandle->storage != NULL);
+  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
   assert(!String_isEmpty(archiveName));
 
   #ifdef HAVE_CURL
     // initialize variables
-    storageArchiveHandle->webdav.curlMultiHandle      = NULL;
-    storageArchiveHandle->webdav.curlHandle           = NULL;
-    storageArchiveHandle->webdav.index                = 0LL;
-    storageArchiveHandle->webdav.size                 = 0LL;
-    storageArchiveHandle->webdav.receiveBuffer.data   = NULL;
-    storageArchiveHandle->webdav.receiveBuffer.size   = INITIAL_BUFFER_SIZE;
-    storageArchiveHandle->webdav.receiveBuffer.offset = 0LL;
-    storageArchiveHandle->webdav.receiveBuffer.length = 0L;
-    storageArchiveHandle->webdav.sendBuffer.data      = NULL;
-    storageArchiveHandle->webdav.sendBuffer.index     = 0L;
-    storageArchiveHandle->webdav.sendBuffer.length    = 0L;
+    storageHandle->webdav.curlMultiHandle      = NULL;
+    storageHandle->webdav.curlHandle           = NULL;
+    storageHandle->webdav.index                = 0LL;
+    storageHandle->webdav.size                 = 0LL;
+    storageHandle->webdav.receiveBuffer.data   = NULL;
+    storageHandle->webdav.receiveBuffer.size   = INITIAL_BUFFER_SIZE;
+    storageHandle->webdav.receiveBuffer.offset = 0LL;
+    storageHandle->webdav.receiveBuffer.length = 0L;
+    storageHandle->webdav.sendBuffer.data      = NULL;
+    storageHandle->webdav.sendBuffer.index     = 0L;
+    storageHandle->webdav.sendBuffer.length    = 0L;
 
     // allocate transfer buffer
-    storageArchiveHandle->webdav.receiveBuffer.data = (byte*)malloc(storageArchiveHandle->webdav.receiveBuffer.size);
-    if (storageArchiveHandle->webdav.receiveBuffer.data == NULL)
+    storageHandle->webdav.receiveBuffer.data = (byte*)malloc(storageHandle->webdav.receiveBuffer.size);
+    if (storageHandle->webdav.receiveBuffer.data == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
 
     // open Curl handles
-    storageArchiveHandle->webdav.curlMultiHandle = curl_multi_init();
-    if (storageArchiveHandle->webdav.curlMultiHandle == NULL)
+    storageHandle->webdav.curlMultiHandle = curl_multi_init();
+    if (storageHandle->webdav.curlMultiHandle == NULL)
     {
-      free(storageArchiveHandle->webdav.receiveBuffer.data);
+      free(storageHandle->webdav.receiveBuffer.data);
       return ERROR_WEBDAV_SESSION_FAIL;
     }
-    storageArchiveHandle->webdav.curlHandle = curl_easy_init();
-    if (storageArchiveHandle->webdav.curlHandle == NULL)
+    storageHandle->webdav.curlHandle = curl_easy_init();
+    if (storageHandle->webdav.curlHandle == NULL)
     {
-      curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
-      free(storageArchiveHandle->webdav.receiveBuffer.data);
+      curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
+      free(storageHandle->webdav.receiveBuffer.data);
       return ERROR_WEBDAV_SESSION_FAIL;
     }
 
     // get base URL
-    baseURL = String_format(String_new(),"http://%S",storageArchiveHandle->storageHandle->storageSpecifier.hostName);
-    if (storageArchiveHandle->storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageArchiveHandle->storageHandle->storageSpecifier.hostPort);
+    baseURL = String_format(String_new(),"http://%S",storageHandle->storage->storageSpecifier.hostName);
+    if (storageHandle->storage->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storage->storageSpecifier.hostPort);
 
     // get pathname, basename
     pathName = File_getFilePathName(String_new(),archiveName);
@@ -1314,19 +1314,19 @@ LOCAL Errors StorageWebDAV_open(StorageArchiveHandle *storageArchiveHandle,
     String_append(url,baseName);
 
     // check if file exists
-    curlCode = initWebDAVHandle(storageArchiveHandle->webdav.curlHandle,
+    curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
                                 url,
-                                storageArchiveHandle->storageHandle->storageSpecifier.loginName,
-                                storageArchiveHandle->storageHandle->storageSpecifier.loginPassword,
+                                storageHandle->storage->storageSpecifier.loginName,
+                                storageHandle->storage->storageSpecifier.loginPassword,
                                 WEBDAV_TIMEOUT
                               );
     if (curlCode == CURLE_OK)
     {
-      curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,1L);
     }
     if (curlCode == CURLE_OK)
     {
-      curlCode = curl_easy_perform(storageArchiveHandle->webdav.curlHandle);
+      curlCode = curl_easy_perform(storageHandle->webdav.curlHandle);
     }
     if (curlCode != CURLE_OK)
     {
@@ -1334,15 +1334,15 @@ LOCAL Errors StorageWebDAV_open(StorageArchiveHandle *storageArchiveHandle,
       String_delete(baseName);
       String_delete(pathName);
       String_delete(baseURL);
-      (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
-      (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
-      free(storageArchiveHandle->webdav.receiveBuffer.data);
+      (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
+      (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
+      free(storageHandle->webdav.receiveBuffer.data);
       return ERROR_FILE_NOT_FOUND_;
     }
     String_delete(url);
 
     // get file size
-    curlCode = curl_easy_getinfo(storageArchiveHandle->webdav.curlHandle,CURLINFO_CONTENT_LENGTH_DOWNLOAD,&fileSize);
+    curlCode = curl_easy_getinfo(storageHandle->webdav.curlHandle,CURLINFO_CONTENT_LENGTH_DOWNLOAD,&fileSize);
     if (   (curlCode != CURLE_OK)
         || (fileSize < 0.0)
        )
@@ -1350,12 +1350,12 @@ LOCAL Errors StorageWebDAV_open(StorageArchiveHandle *storageArchiveHandle,
       String_delete(baseName);
       String_delete(pathName);
       String_delete(baseURL);
-      (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
-      (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
-      free(storageArchiveHandle->webdav.receiveBuffer.data);
+      (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
+      (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
+      free(storageHandle->webdav.receiveBuffer.data);
       return ERROR_WEBDAV_GET_SIZE;
     }
-    storageArchiveHandle->webdav.size = (uint64)fileSize;
+    storageHandle->webdav.size = (uint64)fileSize;
 
     // init WebDAV download
     url = String_format(String_duplicate(baseURL),"/");
@@ -1368,47 +1368,47 @@ LOCAL Errors StorageWebDAV_open(StorageArchiveHandle *storageArchiveHandle,
     File_doneSplitFileName(&nameTokenizer);
     String_append(url,baseName);
 
-    curlCode = initWebDAVHandle(storageArchiveHandle->webdav.curlHandle,
+    curlCode = initWebDAVHandle(storageHandle->webdav.curlHandle,
                                 url,
-                                storageArchiveHandle->storageHandle->storageSpecifier.loginName,
-                                storageArchiveHandle->storageHandle->storageSpecifier.loginPassword,
+                                storageHandle->storage->storageSpecifier.loginName,
+                                storageHandle->storage->storageSpecifier.loginPassword,
                                 WEBDAV_TIMEOUT
                               );
     if (curlCode == CURLE_OK)
     {
-      curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"GET");
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"GET");
     }
     if (curlCode == CURLE_OK)
     {
-      curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_NOBODY,0L);
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,0L);
     }
     if (curlCode == CURLE_OK)
     {
-      curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_WRITEFUNCTION,curlWebDAVWriteDataCallback);
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_WRITEFUNCTION,curlWebDAVWriteDataCallback);
     }
     if (curlCode == CURLE_OK)
     {
-      curlCode = curl_easy_setopt(storageArchiveHandle->webdav.curlHandle,CURLOPT_WRITEDATA,storageArchiveHandle);
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_WRITEDATA,storageHandle);
     }
     if (curlCode != CURLE_OK)
     {
       String_delete(baseName);
       String_delete(pathName);
       String_delete(baseURL);
-      (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
-      (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
-      free(storageArchiveHandle->webdav.receiveBuffer.data);
+      (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
+      (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
+      free(storageHandle->webdav.receiveBuffer.data);
       return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
     }
-    curlMCode = curl_multi_add_handle(storageArchiveHandle->webdav.curlMultiHandle,storageArchiveHandle->webdav.curlHandle);
+    curlMCode = curl_multi_add_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
     if (curlMCode != CURLM_OK)
     {
       String_delete(baseName);
       String_delete(pathName);
       String_delete(baseURL);
-      (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
-      (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
-      free(storageArchiveHandle->webdav.receiveBuffer.data);
+      (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
+      (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
+      free(storageHandle->webdav.receiveBuffer.data);
       return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
     }
     String_delete(url);
@@ -1416,7 +1416,7 @@ LOCAL Errors StorageWebDAV_open(StorageArchiveHandle *storageArchiveHandle,
     // start WebDAV download
     do
     {
-      curlMCode = curl_multi_perform(storageArchiveHandle->webdav.curlMultiHandle,&runningHandles);
+      curlMCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
     }
     while (   (curlMCode == CURLM_CALL_MULTI_PERFORM)
            && (runningHandles > 0)
@@ -1426,10 +1426,10 @@ LOCAL Errors StorageWebDAV_open(StorageArchiveHandle *storageArchiveHandle,
       String_delete(baseName);
       String_delete(pathName);
       String_delete(baseURL);
-      (void)curl_multi_remove_handle(storageArchiveHandle->webdav.curlMultiHandle,storageArchiveHandle->webdav.curlHandle);
-      (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
-      (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
-      free(storageArchiveHandle->webdav.receiveBuffer.data);
+      (void)curl_multi_remove_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
+      (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
+      (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
+      free(storageHandle->webdav.receiveBuffer.data);
       return ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
     }
 
@@ -1438,67 +1438,67 @@ LOCAL Errors StorageWebDAV_open(StorageArchiveHandle *storageArchiveHandle,
     String_delete(pathName);
     String_delete(baseURL);
 
-    DEBUG_ADD_RESOURCE_TRACE(&storageArchiveHandle->webdav,sizeof(storageArchiveHandle->webdav));
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->webdav,sizeof(storageHandle->webdav));
 
     return ERROR_NONE;
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(archiveName);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL */
 }
 
-LOCAL void StorageWebDAV_close(StorageArchiveHandle *storageArchiveHandle)
+LOCAL void StorageWebDAV_close(StorageHandle *storageHandle)
 {
-  assert(storageArchiveHandle != NULL);
+  assert(storageHandle != NULL);
   #ifdef HAVE_CURL
-    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storage != NULL);
+  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
   #ifdef HAVE_CURL
-    assert(storageArchiveHandle->webdav.curlHandle != NULL);
-    assert(storageArchiveHandle->webdav.curlMultiHandle != NULL);
+    assert(storageHandle->webdav.curlHandle != NULL);
+    assert(storageHandle->webdav.curlMultiHandle != NULL);
 
-    DEBUG_REMOVE_RESOURCE_TRACE(&storageArchiveHandle->webdav,sizeof(storageArchiveHandle->webdav));
+    DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->webdav,sizeof(storageHandle->webdav));
 
-    (void)curl_multi_remove_handle(storageArchiveHandle->webdav.curlMultiHandle,storageArchiveHandle->webdav.curlHandle);
-    (void)curl_easy_cleanup(storageArchiveHandle->webdav.curlHandle);
-    (void)curl_multi_cleanup(storageArchiveHandle->webdav.curlMultiHandle);
-    if (storageArchiveHandle->webdav.receiveBuffer.data != NULL) free(storageArchiveHandle->webdav.receiveBuffer.data);
+    (void)curl_multi_remove_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
+    (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
+    (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
+    if (storageHandle->webdav.receiveBuffer.data != NULL) free(storageHandle->webdav.receiveBuffer.data);
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
   #endif /* HAVE_CURL */
 }
 
-LOCAL bool StorageWebDAV_eof(StorageArchiveHandle *storageArchiveHandle)
+LOCAL bool StorageWebDAV_eof(StorageHandle *storageHandle)
 {
-  assert(storageArchiveHandle != NULL);
+  assert(storageHandle != NULL);
   #ifdef HAVE_CURL
-    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
-  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storage != NULL);
+  assert(storageHandle->mode == STORAGE_MODE_READ);
+  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
   #ifdef HAVE_CURL
-    if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
     {
-      return storageArchiveHandle->webdav.index >= storageArchiveHandle->webdav.size;
+      return storageHandle->webdav.index >= storageHandle->webdav.size;
     }
     else
     {
       return TRUE;
     }
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
     return TRUE;
   #endif /* HAVE_CURL */
 }
 
-LOCAL Errors StorageWebDAV_read(StorageArchiveHandle *storageArchiveHandle,
+LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
                                 void          *buffer,
                                 ulong         size,
                                 ulong         *bytesRead
@@ -1514,56 +1514,56 @@ LOCAL Errors StorageWebDAV_read(StorageArchiveHandle *storageArchiveHandle,
     int       runningHandles;
   #endif /* HAVE_CURL */
 
-  assert(storageArchiveHandle != NULL);
+  assert(storageHandle != NULL);
   #ifdef HAVE_CURL
-    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
-  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storage != NULL);
+  assert(storageHandle->mode == STORAGE_MODE_READ);
+  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
   assert(buffer != NULL);
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
   error = ERROR_NONE;
   #ifdef HAVE_CURL
-    if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
     {
-      assert(storageArchiveHandle->webdav.curlMultiHandle != NULL);
-      assert(storageArchiveHandle->webdav.receiveBuffer.data != NULL);
+      assert(storageHandle->webdav.curlMultiHandle != NULL);
+      assert(storageHandle->webdav.receiveBuffer.data != NULL);
 
       while (   (size > 0L)
-             && (storageArchiveHandle->webdav.index < storageArchiveHandle->webdav.size)
+             && (storageHandle->webdav.index < storageHandle->webdav.size)
              && (error == ERROR_NONE)
             )
       {
         // copy as much data as available from receive buffer
-        if (   (storageArchiveHandle->webdav.index >= storageArchiveHandle->webdav.receiveBuffer.offset)
-            && (storageArchiveHandle->webdav.index < (storageArchiveHandle->webdav.receiveBuffer.offset+storageArchiveHandle->webdav.receiveBuffer.length))
+        if (   (storageHandle->webdav.index >= storageHandle->webdav.receiveBuffer.offset)
+            && (storageHandle->webdav.index < (storageHandle->webdav.receiveBuffer.offset+storageHandle->webdav.receiveBuffer.length))
            )
         {
           // copy data from receive buffer
-          index      = (ulong)(storageArchiveHandle->webdav.index-storageArchiveHandle->webdav.receiveBuffer.offset);
-          bytesAvail = MIN(size,storageArchiveHandle->webdav.receiveBuffer.length-index);
-          memcpy(buffer,storageArchiveHandle->webdav.receiveBuffer.data+index,bytesAvail);
+          index      = (ulong)(storageHandle->webdav.index-storageHandle->webdav.receiveBuffer.offset);
+          bytesAvail = MIN(size,storageHandle->webdav.receiveBuffer.length-index);
+          memcpy(buffer,storageHandle->webdav.receiveBuffer.data+index,bytesAvail);
 
           // adjust buffer, size, bytes read, index
           buffer = (byte*)buffer+bytesAvail;
           size -= bytesAvail;
           if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-          storageArchiveHandle->webdav.index += (uint64)bytesAvail;
+          storageHandle->webdav.index += (uint64)bytesAvail;
         }
 
         // read rest of data
         if (   (size > 0L)
-            && (storageArchiveHandle->webdav.index < storageArchiveHandle->webdav.size)
+            && (storageHandle->webdav.index < storageHandle->webdav.size)
            )
         {
-          assert(storageArchiveHandle->webdav.index >= (storageArchiveHandle->webdav.receiveBuffer.offset+storageArchiveHandle->webdav.receiveBuffer.length));
+          assert(storageHandle->webdav.index >= (storageHandle->webdav.receiveBuffer.offset+storageHandle->webdav.receiveBuffer.length));
 
           // get max. number of bytes to receive in one step
-          if (storageArchiveHandle->storageHandle->webdav.bandWidthLimiter.maxBandWidthList != NULL)
+          if (storageHandle->storage->webdav.bandWidthLimiter.maxBandWidthList != NULL)
           {
-            length = MIN(storageArchiveHandle->storageHandle->webdav.bandWidthLimiter.blockSize,size);
+            length = MIN(storageHandle->storage->webdav.bandWidthLimiter.blockSize,size);
           }
           else
           {
@@ -1575,23 +1575,23 @@ LOCAL Errors StorageWebDAV_read(StorageArchiveHandle *storageArchiveHandle,
           startTimestamp = Misc_getTimestamp();
 
           // receive data
-          storageArchiveHandle->webdav.receiveBuffer.length = 0L;
+          storageHandle->webdav.receiveBuffer.length = 0L;
           runningHandles = 1;
-          while (   (storageArchiveHandle->webdav.receiveBuffer.length < length)
+          while (   (storageHandle->webdav.receiveBuffer.length < length)
                  && (runningHandles > 0)
                  && (error == ERROR_NONE)
                 )
           {
             // wait for socket
-            error = waitCurlSocket(storageArchiveHandle->webdav.curlMultiHandle);
+            error = waitCurlSocket(storageHandle->webdav.curlMultiHandle);
 
             // perform curl action
             if (error == ERROR_NONE)
             {
               do
               {
-                curlmCode = curl_multi_perform(storageArchiveHandle->webdav.curlMultiHandle,&runningHandles);
-//fprintf(stderr,"%s, %d: curlmCode=%d %ld receive=%ld length=%ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageArchiveHandle->webdav.sendBuffer.index,storageArchiveHandle->webdav.receiveBuffer.length,length,runningHandles);
+                curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
+//fprintf(stderr,"%s, %d: curlmCode=%d %ld receive=%ld length=%ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageHandle->webdav.sendBuffer.index,storageHandle->webdav.receiveBuffer.length,length,runningHandles);
               }
               while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
                      && (runningHandles > 0)
@@ -1607,16 +1607,16 @@ LOCAL Errors StorageWebDAV_read(StorageArchiveHandle *storageArchiveHandle,
             break;
           }
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__,length);
-          else if ((storageArchiveHandle->webdav.receiveBuffer.length < length) && (runningHandles <= 0))
+          else if ((storageHandle->webdav.receiveBuffer.length < length) && (runningHandles <= 0))
           {
             const CURLMsg *curlMsg;
             int           n,i;
 
             error = ERROR_NETWORK_RECEIVE;
-            curlMsg = curl_multi_info_read(storageArchiveHandle->webdav.curlMultiHandle,&n);
+            curlMsg = curl_multi_info_read(storageHandle->webdav.curlMultiHandle,&n);
             for (i = 0; i < n; i++)
             {
-              if ((curlMsg[i].easy_handle == storageArchiveHandle->webdav.curlHandle) && (curlMsg[i].msg == CURLMSG_DONE))
+              if ((curlMsg[i].easy_handle == storageHandle->webdav.curlHandle) && (curlMsg[i].msg == CURLMSG_DONE))
               {
                 error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_easy_strerror(curlMsg[i].data.result));
                 break;
@@ -1625,17 +1625,17 @@ LOCAL Errors StorageWebDAV_read(StorageArchiveHandle *storageArchiveHandle,
             }
             break;
           }
-          storageArchiveHandle->webdav.receiveBuffer.offset = storageArchiveHandle->webdav.index;
+          storageHandle->webdav.receiveBuffer.offset = storageHandle->webdav.index;
 
           // copy data from receive buffer
-          bytesAvail = MIN(length,storageArchiveHandle->webdav.receiveBuffer.length);
-          memcpy(buffer,storageArchiveHandle->webdav.receiveBuffer.data,bytesAvail);
+          bytesAvail = MIN(length,storageHandle->webdav.receiveBuffer.length);
+          memcpy(buffer,storageHandle->webdav.receiveBuffer.data,bytesAvail);
 
           // adjust buffer, size, bytes read, index
           buffer = (byte*)buffer+bytesAvail;
           size -= bytesAvail;
           if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-          storageArchiveHandle->webdav.index += (uint64)bytesAvail;
+          storageHandle->webdav.index += (uint64)bytesAvail;
 
           // get end time
           endTimestamp = Misc_getTimestamp();
@@ -1646,7 +1646,7 @@ LOCAL Errors StorageWebDAV_read(StorageArchiveHandle *storageArchiveHandle,
           */
           if (endTimestamp >= startTimestamp)
           {
-            limitBandWidth(&storageArchiveHandle->storageHandle->webdav.bandWidthLimiter,
+            limitBandWidth(&storageHandle->storage->webdav.bandWidthLimiter,
                            bytesAvail,
                            endTimestamp-startTimestamp
                           );
@@ -1655,7 +1655,7 @@ LOCAL Errors StorageWebDAV_read(StorageArchiveHandle *storageArchiveHandle,
       }
     }
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
     UNUSED_VARIABLE(size);
     UNUSED_VARIABLE(bytesRead);
@@ -1667,7 +1667,7 @@ LOCAL Errors StorageWebDAV_read(StorageArchiveHandle *storageArchiveHandle,
   return error;
 }
 
-LOCAL Errors StorageWebDAV_write(StorageArchiveHandle *storageArchiveHandle,
+LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
                                  const void    *buffer,
                                  ulong         size
                                 )
@@ -1681,28 +1681,28 @@ LOCAL Errors StorageWebDAV_write(StorageArchiveHandle *storageArchiveHandle,
     int       runningHandles;
   #endif /* HAVE_CURL */
 
-  assert(storageArchiveHandle != NULL);
+  assert(storageHandle != NULL);
   #ifdef HAVE_CURL
-    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert(storageArchiveHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storage != NULL);
+  assert(storageHandle->mode == STORAGE_MODE_WRITE);
+  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
   #ifdef HAVE_CURL
-    if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
     {
-      assert(storageArchiveHandle->webdav.curlMultiHandle != NULL);
+      assert(storageHandle->webdav.curlMultiHandle != NULL);
 
       writtenBytes = 0L;
       while (writtenBytes < size)
       {
         // get max. number of bytes to send in one step
-        if (storageArchiveHandle->storageHandle->webdav.bandWidthLimiter.maxBandWidthList != NULL)
+        if (storageHandle->storage->webdav.bandWidthLimiter.maxBandWidthList != NULL)
         {
-          length = MIN(storageArchiveHandle->storageHandle->webdav.bandWidthLimiter.blockSize,size-writtenBytes);
+          length = MIN(storageHandle->storage->webdav.bandWidthLimiter.blockSize,size-writtenBytes);
         }
         else
         {
@@ -1714,25 +1714,25 @@ LOCAL Errors StorageWebDAV_write(StorageArchiveHandle *storageArchiveHandle,
         startTimestamp = Misc_getTimestamp();
 
         // send data
-        storageArchiveHandle->webdav.sendBuffer.data   = buffer;
-        storageArchiveHandle->webdav.sendBuffer.index  = 0L;
-        storageArchiveHandle->webdav.sendBuffer.length = length;
+        storageHandle->webdav.sendBuffer.data   = buffer;
+        storageHandle->webdav.sendBuffer.index  = 0L;
+        storageHandle->webdav.sendBuffer.length = length;
         runningHandles = 1;
-        while (   (storageArchiveHandle->webdav.sendBuffer.index < storageArchiveHandle->webdav.sendBuffer.length)
+        while (   (storageHandle->webdav.sendBuffer.index < storageHandle->webdav.sendBuffer.length)
                && (error == ERROR_NONE)
                && (runningHandles > 0)
               )
         {
           // wait for socket
-          error = waitCurlSocket(storageArchiveHandle->webdav.curlMultiHandle);
+          error = waitCurlSocket(storageHandle->webdav.curlMultiHandle);
 
           // perform curl action
           if (error == ERROR_NONE)
           {
             do
             {
-              curlmCode = curl_multi_perform(storageArchiveHandle->webdav.curlMultiHandle,&runningHandles);
-//fprintf(stderr,"%s, %d: curlmCode=%d %ld %ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageArchiveHandle->webdav.sendBuffer.index,storageArchiveHandle->webdav.sendBuffer.length,runningHandles);
+              curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
+//fprintf(stderr,"%s, %d: curlmCode=%d %ld %ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageHandle->webdav.sendBuffer.index,storageHandle->webdav.sendBuffer.length,runningHandles);
             }
             while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
                    && (runningHandles > 0)
@@ -1747,13 +1747,13 @@ LOCAL Errors StorageWebDAV_write(StorageArchiveHandle *storageArchiveHandle,
         {
           break;
         }
-        if (storageArchiveHandle->webdav.sendBuffer.index < storageArchiveHandle->webdav.sendBuffer.length)
+        if (storageHandle->webdav.sendBuffer.index < storageHandle->webdav.sendBuffer.length)
         {
           error = ERROR_NETWORK_SEND;
           break;
         }
-        buffer = (byte*)buffer+storageArchiveHandle->webdav.sendBuffer.length;
-        writtenBytes += storageArchiveHandle->webdav.sendBuffer.length;
+        buffer = (byte*)buffer+storageHandle->webdav.sendBuffer.length;
+        writtenBytes += storageHandle->webdav.sendBuffer.length;
 
         // get end time
         endTimestamp = Misc_getTimestamp();
@@ -1764,15 +1764,15 @@ LOCAL Errors StorageWebDAV_write(StorageArchiveHandle *storageArchiveHandle,
         */
         if (endTimestamp >= startTimestamp)
         {
-          limitBandWidth(&storageArchiveHandle->storageHandle->webdav.bandWidthLimiter,
-                         storageArchiveHandle->webdav.sendBuffer.length,
+          limitBandWidth(&storageHandle->storage->webdav.bandWidthLimiter,
+                         storageHandle->webdav.sendBuffer.length,
                          endTimestamp-startTimestamp
                         );
         }
       }
     }
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
     UNUSED_VARIABLE(size);
 
@@ -1783,55 +1783,55 @@ LOCAL Errors StorageWebDAV_write(StorageArchiveHandle *storageArchiveHandle,
   return error;
 }
 
-LOCAL uint64 StorageWebDAV_getSize(StorageArchiveHandle *storageArchiveHandle)
+LOCAL uint64 StorageWebDAV_getSize(StorageHandle *storageHandle)
 {
   uint64 size;
 
-  assert(storageArchiveHandle != NULL);
+  assert(storageHandle != NULL);
   #ifdef HAVE_CURL
-    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storage != NULL);
+  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
   size = 0LL;
   #ifdef HAVE_CURL
-    if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
     {
-      size = storageArchiveHandle->webdav.size;
+      size = storageHandle->webdav.size;
     }
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
   #endif /* HAVE_CURL */
 
   return size;
 }
 
-LOCAL Errors StorageWebDAV_tell(StorageArchiveHandle *storageArchiveHandle,
+LOCAL Errors StorageWebDAV_tell(StorageHandle *storageHandle,
                                 uint64        *offset
                                )
 {
   Errors error;
 
-  assert(storageArchiveHandle != NULL);
+  assert(storageHandle != NULL);
   #ifdef HAVE_CURL
-    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storage != NULL);
+  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
   assert(offset != NULL);
 
   (*offset) = 0LL;
 
   error = ERROR_NONE;
   #ifdef HAVE_CURL
-    if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
     {
-      (*offset) = storageArchiveHandle->webdav.index;
+      (*offset) = storageHandle->webdav.index;
       error     = ERROR_NONE;
     }
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(offset);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1841,7 +1841,7 @@ LOCAL Errors StorageWebDAV_tell(StorageArchiveHandle *storageArchiveHandle,
   return error;
 }
 
-LOCAL Errors StorageWebDAV_seek(StorageArchiveHandle *storageArchiveHandle,
+LOCAL Errors StorageWebDAV_seek(StorageHandle *storageHandle,
                                 uint64        offset
                                )
 {
@@ -1856,48 +1856,48 @@ LOCAL Errors StorageWebDAV_seek(StorageArchiveHandle *storageArchiveHandle,
     int       runningHandles;
   #endif /* HAVE_CURL */
 
-  assert(storageArchiveHandle != NULL);
+  assert(storageHandle != NULL);
   #ifdef HAVE_CURL
-    DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->webdav);
+    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert(storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storage != NULL);
+  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
 
   error = ERROR_NONE;
   #ifdef HAVE_CURL
-    if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
     {
-      assert(storageArchiveHandle->webdav.receiveBuffer.data != NULL);
+      assert(storageHandle->webdav.receiveBuffer.data != NULL);
 
-      if      (offset > storageArchiveHandle->webdav.index)
+      if      (offset > storageHandle->webdav.index)
       {
         // seek forward
 
         // calculate number of bytes to skip
-        skip = offset-storageArchiveHandle->webdav.index;
+        skip = offset-storageHandle->webdav.index;
 
         while (skip > 0LL)
         {
           // skip data in receive buffer
-          if (   (storageArchiveHandle->webdav.index >= storageArchiveHandle->webdav.receiveBuffer.offset)
-              && (storageArchiveHandle->webdav.index < (storageArchiveHandle->webdav.receiveBuffer.offset+storageArchiveHandle->webdav.receiveBuffer.length))
+          if (   (storageHandle->webdav.index >= storageHandle->webdav.receiveBuffer.offset)
+              && (storageHandle->webdav.index < (storageHandle->webdav.receiveBuffer.offset+storageHandle->webdav.receiveBuffer.length))
              )
           {
-            i = (ulong)storageArchiveHandle->webdav.index-storageArchiveHandle->webdav.receiveBuffer.offset;
-            n = MIN(skip,storageArchiveHandle->webdav.receiveBuffer.length-i);
+            i = (ulong)storageHandle->webdav.index-storageHandle->webdav.receiveBuffer.offset;
+            n = MIN(skip,storageHandle->webdav.receiveBuffer.length-i);
 
             skip -= (uint64)n;
-            storageArchiveHandle->webdav.index += (uint64)n;
+            storageHandle->webdav.index += (uint64)n;
           }
 
           if (skip > 0LL)
           {
-            assert(storageArchiveHandle->webdav.index >= (storageArchiveHandle->webdav.receiveBuffer.offset+storageArchiveHandle->webdav.receiveBuffer.length));
+            assert(storageHandle->webdav.index >= (storageHandle->webdav.receiveBuffer.offset+storageHandle->webdav.receiveBuffer.length));
 
             // get max. number of bytes to receive in one step
-            if (storageArchiveHandle->storageHandle->webdav.bandWidthLimiter.maxBandWidthList != NULL)
+            if (storageHandle->storage->webdav.bandWidthLimiter.maxBandWidthList != NULL)
             {
-              length = MIN(storageArchiveHandle->storageHandle->webdav.bandWidthLimiter.blockSize,MIN(skip,MAX_BUFFER_SIZE));
+              length = MIN(storageHandle->storage->webdav.bandWidthLimiter.blockSize,MIN(skip,MAX_BUFFER_SIZE));
             }
             else
             {
@@ -1909,15 +1909,15 @@ LOCAL Errors StorageWebDAV_seek(StorageArchiveHandle *storageArchiveHandle,
             startTimestamp = Misc_getTimestamp();
 
             // receive data
-            storageArchiveHandle->webdav.receiveBuffer.length = 0L;
+            storageHandle->webdav.receiveBuffer.length = 0L;
             runningHandles = 1;
-            while (   (storageArchiveHandle->webdav.receiveBuffer.length < length)
+            while (   (storageHandle->webdav.receiveBuffer.length < length)
                    && (error == ERROR_NONE)
                    && (runningHandles > 0)
                   )
             {
               // wait for socket
-              error = waitCurlSocket(storageArchiveHandle->webdav.curlMultiHandle);
+              error = waitCurlSocket(storageHandle->webdav.curlMultiHandle);
               if (error != ERROR_NONE)
               {
                 break;
@@ -1926,8 +1926,8 @@ LOCAL Errors StorageWebDAV_seek(StorageArchiveHandle *storageArchiveHandle,
               // perform curl action
               do
               {
-                curlmCode = curl_multi_perform(storageArchiveHandle->webdav.curlMultiHandle,&runningHandles);
-//fprintf(stderr,"%s, %d: curlmCode=%d %ld %ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageArchiveHandle->webdav.receiveBuffer.length,length,runningHandles);
+                curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
+//fprintf(stderr,"%s, %d: curlmCode=%d %ld %ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageHandle->webdav.receiveBuffer.length,length,runningHandles);
               }
               while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
                      && (runningHandles > 0)
@@ -1941,12 +1941,12 @@ LOCAL Errors StorageWebDAV_seek(StorageArchiveHandle *storageArchiveHandle,
             {
               break;
             }
-            if (storageArchiveHandle->webdav.receiveBuffer.length < length)
+            if (storageHandle->webdav.receiveBuffer.length < length)
             {
               error = ERROR_IO_ERROR;
               break;
             }
-            storageArchiveHandle->webdav.receiveBuffer.offset = storageArchiveHandle->webdav.index;
+            storageHandle->webdav.receiveBuffer.offset = storageHandle->webdav.index;
 
             // get end time
             endTimestamp = Misc_getTimestamp();
@@ -1957,7 +1957,7 @@ LOCAL Errors StorageWebDAV_seek(StorageArchiveHandle *storageArchiveHandle,
             */
             if (endTimestamp >= startTimestamp)
             {
-              limitBandWidth(&storageArchiveHandle->storageHandle->webdav.bandWidthLimiter,
+              limitBandWidth(&storageHandle->storage->webdav.bandWidthLimiter,
                              length,
                              endTimestamp-startTimestamp
                             );
@@ -1965,21 +1965,21 @@ LOCAL Errors StorageWebDAV_seek(StorageArchiveHandle *storageArchiveHandle,
           }
         }
       }
-      else if (   (offset >= storageArchiveHandle->webdav.receiveBuffer.offset)
-               && (offset < storageArchiveHandle->webdav.receiveBuffer.offset+(uint64)storageArchiveHandle->webdav.receiveBuffer.length)
+      else if (   (offset >= storageHandle->webdav.receiveBuffer.offset)
+               && (offset < storageHandle->webdav.receiveBuffer.offset+(uint64)storageHandle->webdav.receiveBuffer.length)
               )
       {
         // seek inside receive buffer (backward/forward)
-        storageArchiveHandle->webdav.index = offset;
+        storageHandle->webdav.index = offset;
       }
-      else if (offset < storageArchiveHandle->webdav.index)
+      else if (offset < storageHandle->webdav.index)
       {
         // seek backward (not supported)
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       }
     }
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(offset);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1989,8 +1989,8 @@ LOCAL Errors StorageWebDAV_seek(StorageArchiveHandle *storageArchiveHandle,
   return error;
 }
 
-LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
-                                  ConstString   archiveName
+LOCAL Errors StorageWebDAV_delete(Storage     *storage,
+                                  ConstString archiveName
                                  )
 {
   Errors      error;
@@ -2004,9 +2004,9 @@ LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
     ConstString     token;
   #endif /* HAVE_CURL */
 
-  assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storage != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
   assert(!String_isEmpty(archiveName));
 
   error = ERROR_UNKNOWN;
@@ -2016,8 +2016,8 @@ LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
     if (curlHandle != NULL)
     {
       // get base URL
-      baseURL = String_format(String_new(),"http://%S",storageHandle->storageSpecifier.hostName);
-      if (storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageSpecifier.hostPort);
+      baseURL = String_format(String_new(),"http://%S",storage->storageSpecifier.hostName);
+      if (storage->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storage->storageSpecifier.hostPort);
 
       // get pathname, basename
       pathName = File_getFilePathName(String_new(),archiveName);
@@ -2034,13 +2034,13 @@ LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
       File_doneSplitFileName(&nameTokenizer);
       String_append(url,baseName);
 
-      if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+      if ((storage->jobOptions == NULL) || !storage->jobOptions->dryRunFlag)
       {
         // delete file
         curlCode = initWebDAVHandle(curlHandle,
                                     url,
-                                    storageHandle->storageSpecifier.loginName,
-                                    storageHandle->storageSpecifier.loginPassword,
+                                    storage->storageSpecifier.loginName,
+                                    storage->storageSpecifier.loginPassword,
                                     WEBDAV_TIMEOUT
                                    );
         if (curlCode == CURLE_OK)
@@ -2069,8 +2069,8 @@ LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
         {
           curlCode = initWebDAVHandle(curlHandle,
                                       url,
-                                      storageHandle->storageSpecifier.loginName,
-                                      storageHandle->storageSpecifier.loginPassword,
+                                      storage->storageSpecifier.loginName,
+                                      storage->storageSpecifier.loginPassword,
                                       WEBDAV_TIMEOUT
                                      );
           if (curlCode == CURLE_OK)
@@ -2112,7 +2112,7 @@ LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
       error = ERROR_WEBDAV_SESSION_FAIL;
     }
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(storage);
     UNUSED_VARIABLE(archiveName);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -2124,9 +2124,9 @@ LOCAL Errors StorageWebDAV_delete(StorageHandle *storageHandle,
 
 #if 0
 still not complete
-LOCAL Errors StorageWebDAV_getFileInfo(StorageHandle *storageHandle,
-                                       ConstString   fileName,
-                                       FileInfo      *fileInfo
+LOCAL Errors StorageWebDAV_getFileInfo(Storage     *storage,
+                                       ConstString fileName,
+                                       FileInfo    *fileInfo
                                       )
 {
   String infoFileName;
@@ -2143,21 +2143,21 @@ LOCAL Errors StorageWebDAV_getFileInfo(StorageHandle *storageHandle,
     ConstString       token;
   #endif /* HAVE_CURL */
 
-  assert(storageHandle != NULL);
-  assert(storageHandle->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storage != NULL);
+  assert(storage->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
   assert(fileInfo != NULL);
 
-  infoFileName = (fileName != NULL) ? fileName : storageHandle->storageSpecifier.archiveName;
+  infoFileName = (fileName != NULL) ? fileName : storage->storageSpecifier.archiveName;
   memset(fileInfo,0,sizeof(fileInfo));
 
   error = ERROR_UNKNOWN;
   #ifdef HAVE_CURL
     // get WebDAV server settings
-    getFTPServerSettings(storageHandle->storageSpecifier.hostName,storageHandle->jobOptions,&server);
-    if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_set(storageHandle->storageSpecifier.loginName,ftpServer.loginName);
-    if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("LOGNAME"));
-    if (String_isEmpty(storageHandle->storageSpecifier.loginName)) String_setCString(storageHandle->storageSpecifier.loginName,getenv("USER"));
-    if (String_isEmpty(storageHandle->storageSpecifier.hostName))
+    getFTPServerSettings(storage->storageSpecifier.hostName,storage->jobOptions,&server);
+    if (String_isEmpty(storage->storageSpecifier.loginName)) String_set(storage->storageSpecifier.loginName,ftpServer.loginName);
+    if (String_isEmpty(storage->storageSpecifier.loginName)) String_setCString(storage->storageSpecifier.loginName,getenv("LOGNAME"));
+    if (String_isEmpty(storage->storageSpecifier.loginName)) String_setCString(storage->storageSpecifier.loginName,getenv("USER"));
+    if (String_isEmpty(storage->storageSpecifier.hostName))
     {
       return ERROR_NO_HOST_NAME;
     }
@@ -2176,8 +2176,8 @@ LOCAL Errors StorageWebDAV_getFileInfo(StorageHandle *storageHandle,
     }
 
     // get base URL
-    baseURL = String_format(String_new(),"http://%S",storageHandle->storageSpecifier.hostName);
-    if (storageHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageSpecifier.hostPort);
+    baseURL = String_format(String_new(),"http://%S",storage->storageSpecifier.hostName);
+    if (storage->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storage->storageSpecifier.hostPort);
 
     // get pathname, basename
     pathName = File_getFilePathName(String_new(),infoFileName);
@@ -2197,8 +2197,8 @@ LOCAL Errors StorageWebDAV_getFileInfo(StorageHandle *storageHandle,
     // get file info
     curlCode = initWebDAVHandle(curlHandle,
                                 url,
-                                storageHandle->storageSpecifier.loginName,
-                                storageHandle->storageSpecifier.loginPassword,
+                                storage->storageSpecifier.loginName,
+                                storage->storageSpecifier.loginPassword,
                                 WEBDAV_TIMEOUT
                               );
     if (curlCode == CURLE_OK)
@@ -2231,7 +2231,7 @@ LOCAL Errors StorageWebDAV_getFileInfo(StorageHandle *storageHandle,
     (void)curl_easy_cleanup(curlHandle);
     freeServer(&server);
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(storage);
     UNUSED_VARIABLE(fileName);
     UNUSED_VARIABLE(fileInfo);
 

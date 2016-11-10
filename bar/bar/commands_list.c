@@ -2050,13 +2050,13 @@ remoteBarFlag=FALSE;
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
       {
-        StorageHandle     storageHandle;
+        Storage           storage;
         ArchiveInfo       archiveInfo;
         ArchiveEntryInfo  archiveEntryInfo;
         ArchiveEntryTypes archiveEntryType;
 
         // init storage
-        error = Storage_init(&storageHandle,
+        error = Storage_init(&storage,
                              storageSpecifier,
                              jobOptions,
                              &globalOptions.maxBandWidthList,
@@ -2072,7 +2072,7 @@ remoteBarFlag=FALSE;
 
         // open archive
         error = Archive_open(&archiveInfo,
-                             &storageHandle,
+                             &storage,
                              storageSpecifier,
                              archiveName,
                              NULL,  // deltaSourceList
@@ -2083,7 +2083,7 @@ remoteBarFlag=FALSE;
                             );
         if (error != ERROR_NONE)
         {
-          (void)Storage_done(&storageHandle);
+          (void)Storage_done(&storage);
           break;
         }
 
@@ -2677,7 +2677,7 @@ remoteBarFlag=FALSE;
         Archive_close(&archiveInfo);
 
         // done storage
-        (void)Storage_done(&storageHandle);
+        (void)Storage_done(&storage);
       }
       break;
     case STORAGE_TYPE_SSH:

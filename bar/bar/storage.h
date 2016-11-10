@@ -372,12 +372,12 @@ typedef struct
   };
 
   StorageStatusInfo runningInfo;
-} StorageHandle;
+} Storage;
 
 // storage handle
 typedef struct
 {
-  StorageHandle                *storageHandle;
+  Storage                      *storage;
   StorageModes                 mode;                         // storage mode: READ, WRITE
   String                       archiveName;                  // archive name
 
@@ -539,7 +539,7 @@ typedef struct
       FileHandle fileHandle;
     } device;
   };
-} StorageArchiveHandle;
+} StorageHandle;
 
 // directory list handle
 typedef struct
@@ -1058,7 +1058,7 @@ Errors Storage_prepare(const String     storageName,
 /***********************************************************************\
 * Name   : Storage_init
 * Purpose: init new storage
-* Input  : storageHandle                   - storage storage variable
+* Input  : storage                         - storage variable
 *          storageSpecifier                - storage specifier structure
 *          jobOptions                      - job options or NULL
 *          maxBandWidthList                - list with max. band width
@@ -1074,13 +1074,13 @@ Errors Storage_prepare(const String     storageName,
 *          storageRequestVolumeFunction    - volume request call-back
 *          storageRequestVolumeUserData    - user data for volume
 *                                            request call-back
-* Output : storageHandle - initialized storage handle
+* Output : storage - initialized storage
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Storage_init(StorageHandle                   *storageHandle,
+  Errors Storage_init(Storage                         *storage,
                       const StorageSpecifier          *storageSpecifier,
                       const JobOptions                *jobOptions,
                       BandWidthList                   *maxBandWidthList,
@@ -1095,7 +1095,7 @@ Errors Storage_prepare(const String     storageName,
 #else /* not NDEBUG */
   Errors __Storage_init(const char                      *__fileName__,
                         ulong                           __lineNb__,
-                        StorageHandle                   *storageHandle,
+                        Storage                         *storage,
                         const StorageSpecifier          *storageSpecifier,
                         const JobOptions                *jobOptions,
                         BandWidthList                   *maxBandWidthList,
@@ -1112,147 +1112,147 @@ Errors Storage_prepare(const String     storageName,
 /***********************************************************************\
 * Name   : Storage_done
 * Purpose: deinit storage
-* Input  : storageHandle - storage handle
+* Input  : storage - storage
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Storage_done(StorageHandle *storageHandle);
+  Errors Storage_done(Storage *storage);
 #else /* not NDEBUG */
-  Errors __Storage_done(const char    *__fileName__,
-                        ulong         __lineNb__,
-                        StorageHandle *storageHandle
+  Errors __Storage_done(const char *__fileName__,
+                        ulong      __lineNb__,
+                        Storage    *storage
                        );
 #endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Storage_isServerAllocationPending
 * Purpose: check if a server allocation with high priority is pending
-* Input  : storageHandle - storage handle
+* Input  : storage - storage
 * Output : -
 * Return : TRUE if server allocation with high priority is pending,
 *          FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_isServerAllocationPending(StorageHandle *storageHandle);
+bool Storage_isServerAllocationPending(Storage *storage);
 
 /***********************************************************************\
 * Name   : Storage_getStorageSpecifier
 * Purpose: get storage specifier from from storage handle
-* Input  : storageHandle - storage handle
+* Input  : storage - storage
 * Output : -
 * Return : storage specifier
 * Notes  : -
 \***********************************************************************/
 
-const StorageSpecifier *Storage_getStorageSpecifier(const StorageHandle *storageHandle);
+const StorageSpecifier *Storage_getStorageSpecifier(const Storage *storage);
 
 /***********************************************************************\
 * Name   : Storage_preProcess
 * Purpose: pre-process storage
-* Input  : storageHandle - storage handle
+* Input  : storage - storage
 *          initialFlag   - TRUE iff initial call, FALSE otherwise
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_preProcess(StorageHandle *storageHandle,
-                          ConstString   archiveName,
-                          time_t        time,
-                          bool          initialFlag
+Errors Storage_preProcess(Storage     *storage,
+                          ConstString archiveName,
+                          time_t      time,
+                          bool        initialFlag
                          );
 
 /***********************************************************************\
 * Name   : Storage_postProcess
 * Purpose: post-process storage
-* Input  : storageHandle - storage handle
+* Input  : storage - storage
 *          finalFlag     - TRUE iff final call, FALSE otherwise
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_postProcess(StorageHandle *storageHandle,
-                           ConstString   archiveName,
-                           time_t        time,
-                           bool          finalFlag
+Errors Storage_postProcess(Storage     *storage,
+                           ConstString archiveName,
+                           time_t      time,
+                           bool        finalFlag
                           );
 
 /***********************************************************************\
 * Name   : Storage_getVolumeNumber
 * Purpose: get current volume number
-* Input  : storageHandle - storage handle
+* Input  : storage - storage
 * Output : -
 * Return : volume number
 * Notes  : -
 \***********************************************************************/
 
-uint Storage_getVolumeNumber(const StorageHandle *storageHandle);
+uint Storage_getVolumeNumber(const Storage *storage);
 
 /***********************************************************************\
 * Name   : Storage_setVolumeNumber
 * Purpose: set volume number
-* Input  : storageHandle - storage handle
-*          volumeNumber  - volume number
+* Input  : storage      - storage
+*          volumeNumber - volume number
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Storage_setVolumeNumber(StorageHandle *storageHandle,
-                             uint          volumeNumber
+void Storage_setVolumeNumber(Storage *storage,
+                             uint    volumeNumber
                             );
 
 /***********************************************************************\
 * Name   : Storage_unloadVolume
 * Purpose: unload volume
-* Input  : storageHandle - storage handle
+* Input  : storage - storage
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_unloadVolume(StorageHandle *storageHandle);
+Errors Storage_unloadVolume(Storage *storage);
 
 /***********************************************************************\
 * Name   : Storage_exists
 * Purpose: check if storage file exists
-* Input  : storageHandle - storage handle
-*          archiveName   - archive file name (can be NULL)
+* Input  : storage     - storage
+*          archiveName - archive file name (can be NULL)
 * Output : -
 * Return : TRUE iff exists
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_exists(StorageHandle *storageHandle, ConstString archiveName);
+bool Storage_exists(Storage *storage, ConstString archiveName);
 
 /***********************************************************************\
 * Name   : Storage_create
 * Purpose: create new/append to storage
-* Input  : storageArchiveHandle - storage archive handle variable
-*          storageHandle        - storage info
-*          archiveName          - archive file name
-*          archiveSize          - archive file size [bytes]
+* Input  : StorageHandle - storage handle variable
+*          storage       - storage
+*          archiveName   - archive file name
+*          archiveSize   - archive file size [bytes]
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Storage_create(StorageArchiveHandle *storageArchiveHandle,
-                        StorageHandle *storageHandle,
+  Errors Storage_create(StorageHandle *StorageHandle,
+                        Storage       *storage,
                         ConstString   archiveName,
                         uint64        archiveSize
                        );
 #else /* not NDEBUG */
   Errors __Storage_create(const char    *__fileName__,
                           ulong         __lineNb__,
-                          StorageArchiveHandle *storageArchiveHandle,
-                          StorageHandle *storageHandle,
+                          StorageHandle *StorageHandle,
+                          Storage       *storage,
                           ConstString   archiveName,
                           uint64        archiveSize
                          );
@@ -1261,24 +1261,24 @@ bool Storage_exists(StorageHandle *storageHandle, ConstString archiveName);
 /***********************************************************************\
 * Name   : Storage_open
 * Purpose: open storage for reading
-* Input  : storageArchiveHandle - storage archive handle variable
-*          storageHandle        - storage handle
-*          archiveName          - archive name or NULL
+* Input  : storageHandle - storage handle variable
+*          storage       - storage
+*          archiveName   - archive name or NULL
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Storage_open(StorageArchiveHandle *storageArchiveHandle,
-                      StorageHandle *storageHandle,
+  Errors Storage_open(StorageHandle *storageHandle,
+                      Storage       *storage,
                       ConstString   archiveName
                      );
 #else /* not NDEBUG */
   Errors __Storage_open(const char    *__fileName__,
                         ulong         __lineNb__,
-                        StorageArchiveHandle *storageArchiveHandle,
                         StorageHandle *storageHandle,
+                        Storage       *storage,
                         ConstString   archiveName
                        );
 #endif /* NDEBUG */
@@ -1293,29 +1293,29 @@ bool Storage_exists(StorageHandle *storageHandle, ConstString archiveName);
 \***********************************************************************/
 
 #ifdef NDEBUG
-  void Storage_close(StorageArchiveHandle *storageArchiveHandle);
+  void Storage_close(StorageHandle *storageHandle);
 #else /* not NDEBUG */
   void __Storage_close(const char    *__fileName__,
                        ulong         __lineNb__,
-                       StorageArchiveHandle *storageArchiveHandle
+                       StorageHandle *storageHandle
                       );
 #endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Storage_eof
 * Purpose: check if end-of-file in storage file
-* Input  : storageHandle - storage handle
+* Input  : storage - storage
 * Output : -
 * Return : TRUE if end-of-file, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_eof(StorageArchiveHandle *storageHandle);
+bool Storage_eof(StorageHandle *storage);
 
 /***********************************************************************\
 * Name   : Storage_read
 * Purpose: read from storage file
-* Input  : storageHandle - storage file handle
+* Input  : storageHandle - storage handle
 *          buffer        - buffer with data to write
 *          size          - data size
 *          bytesRead     - number of bytes read or NULL
@@ -1324,7 +1324,7 @@ bool Storage_eof(StorageArchiveHandle *storageHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_read(StorageArchiveHandle *storageHandle,
+Errors Storage_read(StorageHandle *storageHandle,
                     void          *buffer,
                     ulong         size,
                     ulong         *bytesRead
@@ -1341,7 +1341,7 @@ Errors Storage_read(StorageArchiveHandle *storageHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_write(StorageArchiveHandle *storageHandle,
+Errors Storage_write(StorageHandle *storageHandle,
                      const void    *buffer,
                      ulong         size
                     );
@@ -1355,7 +1355,7 @@ Errors Storage_write(StorageArchiveHandle *storageHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_tell(StorageArchiveHandle *storageHandle,
+Errors Storage_tell(StorageHandle *storageHandle,
                     uint64        *offset
                    );
 
@@ -1369,7 +1369,7 @@ Errors Storage_tell(StorageArchiveHandle *storageHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_seek(StorageArchiveHandle *storageHandle,
+Errors Storage_seek(StorageHandle *storageHandle,
                     uint64        offset
                    );
 
@@ -1382,47 +1382,47 @@ Errors Storage_seek(StorageArchiveHandle *storageHandle,
 * Notes  : -
 \***********************************************************************/
 
-uint64 Storage_getSize(StorageArchiveHandle *storageHandle);
+uint64 Storage_getSize(StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_delete
 * Purpose: delete storage file
-* Input  : storageHandle - storage handle
-*          archiveName   - archive file name (can be NULL)
+* Input  : storage     - storage
+*          archiveName - archive file name (can be NULL)
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_delete(StorageHandle *storageHandle, ConstString archiveName);
+Errors Storage_delete(Storage *storage, ConstString archiveName);
 
 /***********************************************************************\
 * Name   : Storage_pruneDirectories
 * Purpose: delete empty directories in path
-* Input  : storageHandle - storage handle
-*          archiveName   - archive file name (can be NULL)
+* Input  : storage     - storage
+*          archiveName - archive file name (can be NULL)
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_pruneDirectories(StorageHandle *storageHandle, ConstString archiveName);
+Errors Storage_pruneDirectories(Storage *storage, ConstString archiveName);
 
 #if 0
 still not complete
 /***********************************************************************\
 * Name   : Storage_getFileInfo
 * Purpose: get storage file info
-* Input  : storageHandle - storage handle
-*          archiveName   - archive file name (can be NULL)
-*          fileInfo      - file info variable
+* Input  : storage     - storage
+*          archiveName - archive file name (can be NULL)
+*          fileInfo    - file info variable
 * Output : fileInfo - file info
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_getFileInfo(StorageHandle *storageHandle,
-                           FileInfo      *fileInfo
+Errors Storage_getFileInfo(Storage  *storage,
+                           FileInfo *fileInfo
                           );
 #endif /* 0 */
 

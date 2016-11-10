@@ -77,8 +77,8 @@
 // execute I/IO info
 typedef struct
 {
-  StorageHandle *storageHandle;
-  StringList    stderrList;
+  Storage    *storage;
+  StringList stderrList;
 } ExecuteIOInfo;
 
 /***************************** Variables *******************************/
@@ -117,7 +117,7 @@ LOCAL void libcdioLogCallback(cdio_log_level_t level, const char *message)
 /***********************************************************************\
 * Name   : requestNewOpticalMedium
 * Purpose: request new cd/dvd/bd medium
-* Input  : storageHandle - storage file handle
+* Input  : storage - storage file handle
            message       - message to show (or NULL)
 *          waitFlag      - TRUE to wait for new medium
 * Output : -
@@ -125,39 +125,39 @@ LOCAL void libcdioLogCallback(cdio_log_level_t level, const char *message)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle,
-                                     const char    *message,
-                                     bool          waitFlag
+LOCAL Errors requestNewOpticalMedium(Storage    *storage,
+                                     const char *message,
+                                     bool       waitFlag
                                     )
 {
   TextMacro                   textMacros[2];
   bool                        mediumRequestedFlag;
   StorageRequestVolumeResults storageRequestVolumeResult;
 
-  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageHandle->storageSpecifier.deviceName,NULL);
-  TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageHandle->requestedVolumeNumber,      NULL);
+  TEXT_MACRO_N_STRING (textMacros[0],"%device",storage->storageSpecifier.deviceName,NULL);
+  TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storage->requestedVolumeNumber,      NULL);
 
-  if (   (storageHandle->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
-      || (storageHandle->volumeState == STORAGE_VOLUME_STATE_LOADED)
+  if (   (storage->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
+      || (storage->volumeState == STORAGE_VOLUME_STATE_LOADED)
      )
   {
     // sleep a short time to give hardware time for finishing volume, then unload current volume
-    printInfo(1,"Unload medium #%d...",storageHandle->volumeNumber);
+    printInfo(1,"Unload medium #%d...",storage->volumeNumber);
     Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
-    Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.unloadVolumeCommand),
+    Misc_executeCommand(String_cString(storage->opticalDisk.write.unloadVolumeCommand),
                         textMacros,SIZE_OF_ARRAY(textMacros),
                         CALLBACK(executeIOOutput,NULL),
                         CALLBACK(executeIOOutput,NULL)
                        );
     printInfo(1,"OK\n");
 
-    storageHandle->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
+    storage->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
   }
 
   // request new medium
   mediumRequestedFlag  = FALSE;
   storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_UNKNOWN;
-  if      (storageHandle->requestVolumeFunction != NULL)
+  if      (storage->requestVolumeFunction != NULL)
   {
     // request volume via callback
     mediumRequestedFlag = TRUE;
@@ -165,16 +165,16 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle,
     // request new medium via call back, unload if requested
     do
     {
-      storageRequestVolumeResult = storageHandle->requestVolumeFunction(STORAGE_REQUEST_VOLUME_TYPE_NEW,
-                                                                        storageHandle->requestedVolumeNumber,
+      storageRequestVolumeResult = storage->requestVolumeFunction(STORAGE_REQUEST_VOLUME_TYPE_NEW,
+                                                                        storage->requestedVolumeNumber,
                                                                         message,
-                                                                        storageHandle->requestVolumeUserData
+                                                                        storage->requestVolumeUserData
                                                                        );
       if (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_UNLOAD)
       {
         // sleep a short time to give hardware time for finishing volume, then unload current medium
         printInfo(1,"Unload medium...");
-        Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.unloadVolumeCommand),
+        Misc_executeCommand(String_cString(storage->opticalDisk.write.unloadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             CALLBACK(executeIOOutput,NULL),
                             CALLBACK(executeIOOutput,NULL)
@@ -184,16 +184,16 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle,
     }
     while (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_UNLOAD);
 
-    storageHandle->volumeState = STORAGE_VOLUME_STATE_WAIT;
+    storage->volumeState = STORAGE_VOLUME_STATE_WAIT;
   }
-  else if (storageHandle->opticalDisk.write.requestVolumeCommand != NULL)
+  else if (storage->opticalDisk.write.requestVolumeCommand != NULL)
   {
     // request volume via external command
     mediumRequestedFlag = TRUE;
 
     // request new volume via external command
-    printInfo(1,"Request new medium #%d...",storageHandle->requestedVolumeNumber);
-    if (Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.requestVolumeCommand),
+    printInfo(1,"Request new medium #%d...",storage->requestedVolumeNumber);
+    if (Misc_executeCommand(String_cString(storage->opticalDisk.write.requestVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             CALLBACK(executeIOOutput,NULL),
                             CALLBACK(executeIOOutput,NULL)
@@ -209,25 +209,25 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle,
       storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_FAIL;
     }
 
-    storageHandle->volumeState = STORAGE_VOLUME_STATE_WAIT;
+    storage->volumeState = STORAGE_VOLUME_STATE_WAIT;
   }
   else
   {
     // request volume via console
-    if (storageHandle->volumeState == STORAGE_VOLUME_STATE_UNLOADED)
+    if (storage->volumeState == STORAGE_VOLUME_STATE_UNLOADED)
     {
       if (waitFlag)
       {
         mediumRequestedFlag = TRUE;
 
-        printInfo(0,"Please insert medium #%d into drive '%s' and press ENTER to continue\n",storageHandle->requestedVolumeNumber,String_cString(storageHandle->storageSpecifier.deviceName));
+        printInfo(0,"Please insert medium #%d into drive '%s' and press ENTER to continue\n",storage->requestedVolumeNumber,String_cString(storage->storageSpecifier.deviceName));
         Misc_waitEnter();
 
         storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
       }
       else
       {
-        printInfo(0,"Please insert medium #%d into drive '%s'\n",storageHandle->requestedVolumeNumber,String_cString(storageHandle->storageSpecifier.deviceName));
+        printInfo(0,"Please insert medium #%d into drive '%s'\n",storage->requestedVolumeNumber,String_cString(storage->storageSpecifier.deviceName));
       }
     }
     else
@@ -243,7 +243,7 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle,
       }
     }
 
-    storageHandle->volumeState = STORAGE_VOLUME_STATE_WAIT;
+    storage->volumeState = STORAGE_VOLUME_STATE_WAIT;
   }
 
   if (mediumRequestedFlag)
@@ -252,8 +252,8 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle,
     {
       case STORAGE_REQUEST_VOLUME_RESULT_OK:
         // load medium, then sleep a short time to give hardware time for reading medium information
-        printInfo(1,"Load medium #%d...",storageHandle->requestedVolumeNumber);
-        Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.loadVolumeCommand),
+        printInfo(1,"Load medium #%d...",storage->requestedVolumeNumber);
+        Misc_executeCommand(String_cString(storage->opticalDisk.write.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             CALLBACK(executeIOOutput,NULL),
                             CALLBACK(executeIOOutput,NULL)
@@ -262,19 +262,19 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle,
         printInfo(1,"OK\n");
 
         // store new medium number
-        storageHandle->volumeNumber = storageHandle->requestedVolumeNumber;
+        storage->volumeNumber = storage->requestedVolumeNumber;
 
         // update status info
-        storageHandle->runningInfo.volumeNumber = storageHandle->volumeNumber;
-        updateStorageStatusInfo(storageHandle);
+        storage->runningInfo.volumeNumber = storage->volumeNumber;
+        updateStorageStatusInfo(storage);
 
-        storageHandle->volumeState = STORAGE_VOLUME_STATE_LOADED;
+        storage->volumeState = STORAGE_VOLUME_STATE_LOADED;
         return ERROR_NONE;
         break;
       case STORAGE_REQUEST_VOLUME_RESULT_ABORTED:
         // load medium
-        printInfo(1,"Load medium #%d...",storageHandle->requestedVolumeNumber);
-        Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.loadVolumeCommand),
+        printInfo(1,"Load medium #%d...",storage->requestedVolumeNumber);
+        Misc_executeCommand(String_cString(storage->opticalDisk.write.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             CALLBACK(executeIOOutput,NULL),
                             CALLBACK(executeIOOutput,NULL)
@@ -297,24 +297,24 @@ LOCAL Errors requestNewOpticalMedium(StorageHandle *storageHandle,
 /***********************************************************************\
 * Name   : executeIOmkisofsOutput
 * Purpose: process mkisofs output
-* Input  : storageHandle - storage handle
+* Input  : storage - storage handle
 *          line          - line
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOmkisofsOutput(StorageHandle *storageHandle,
-                                  ConstString   line
+LOCAL void executeIOmkisofsOutput(Storage     *storage,
+                                  ConstString line
                                  )
 {
   String s;
   double p;
 
-  assert(storageHandle != NULL);
-  assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storage != NULL);
+  assert((storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storage->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(line != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(storage);
 
 //fprintf(stderr,"%s,%d: mkisofs line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
@@ -322,8 +322,8 @@ LOCAL void executeIOmkisofsOutput(StorageHandle *storageHandle,
   {
     p = String_toDouble(s,0,NULL,NULL,0);
 //fprintf(stderr,"%s,%d: mkisofs: %s -> %lf\n",__FILE__,__LINE__,String_cString(line),p);
-    storageHandle->runningInfo.volumeProgress = ((double)storageHandle->opticalDisk.write.step*100.0+p)/(double)(storageHandle->opticalDisk.write.steps*100);
-    updateStorageStatusInfo(storageHandle);
+    storage->runningInfo.volumeProgress = ((double)storage->opticalDisk.write.step*100.0+p)/(double)(storage->opticalDisk.write.steps*100);
+    updateStorageStatusInfo(storage);
   }
   String_delete(s);
 }
@@ -345,9 +345,9 @@ LOCAL void executeIOmkisofsStdout(ConstString line,
   ExecuteIOInfo *executeIOInfo = (ExecuteIOInfo*)userData;
 
   assert(executeIOInfo != NULL);
-  assert(executeIOInfo->storageHandle != NULL);
+  assert(executeIOInfo->storage != NULL);
 
-  executeIOmkisofsOutput(executeIOInfo->storageHandle,line);
+  executeIOmkisofsOutput(executeIOInfo->storage,line);
   executeIOOutput(line,NULL);
 }
 
@@ -368,33 +368,33 @@ LOCAL void executeIOmkisofsStderr(ConstString line,
   ExecuteIOInfo *executeIOInfo = (ExecuteIOInfo*)userData;
 
   assert(executeIOInfo != NULL);
-  assert(executeIOInfo->storageHandle != NULL);
+  assert(executeIOInfo->storage != NULL);
 
-  executeIOmkisofsOutput(executeIOInfo->storageHandle,line);
+  executeIOmkisofsOutput(executeIOInfo->storage,line);
   executeIOOutput(line,&executeIOInfo->stderrList);
 }
 
 /***********************************************************************\
 * Name   : executeIOdvdisasterOutput
 * Purpose: process dvdisaster output
-* Input  : storageHandle - storage handle
+* Input  : storage - storage handle
 *          line          - line
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOdvdisasterOutput(StorageHandle *storageHandle,
-                                     ConstString   line
+LOCAL void executeIOdvdisasterOutput(Storage     *storage,
+                                     ConstString line
                                     )
 {
   String s;
   double p;
 
-  assert(storageHandle != NULL);
-  assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storage != NULL);
+  assert((storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storage->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(line != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(storage);
 
 //fprintf(stderr,"%s,%d: dvdisaster line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
@@ -402,15 +402,15 @@ LOCAL void executeIOdvdisasterOutput(StorageHandle *storageHandle,
   {
     p = String_toDouble(s,0,NULL,NULL,0);
 //fprintf(stderr,"%s,%d: dvdisaster add space: %s -> %lf\n",__FILE__,__LINE__,String_cString(line),p);
-    storageHandle->runningInfo.volumeProgress = ((double)(storageHandle->opticalDisk.write.step+0)*100.0+p)/(double)(storageHandle->opticalDisk.write.steps*100);
-    updateStorageStatusInfo(storageHandle);
+    storage->runningInfo.volumeProgress = ((double)(storage->opticalDisk.write.step+0)*100.0+p)/(double)(storage->opticalDisk.write.steps*100);
+    updateStorageStatusInfo(storage);
   }
   if (String_matchCString(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,STRING_NO_ASSIGN,s,NULL))
   {
     p = String_toDouble(s,0,NULL,NULL,0);
 //fprintf(stderr,"%s,%d: dvdisaster codes: %s -> %lf\n",__FILE__,__LINE__,String_cString(line),p);
-    storageHandle->runningInfo.volumeProgress = ((double)(storageHandle->opticalDisk.write.step+1)*100.0+p)/(double)(storageHandle->opticalDisk.write.steps*100);
-    updateStorageStatusInfo(storageHandle);
+    storage->runningInfo.volumeProgress = ((double)(storage->opticalDisk.write.step+1)*100.0+p)/(double)(storage->opticalDisk.write.steps*100);
+    updateStorageStatusInfo(storage);
   }
   String_delete(s);
 }
@@ -432,9 +432,9 @@ LOCAL void executeIOdvdisasterStdout(ConstString line,
   ExecuteIOInfo *executeIOInfo = (ExecuteIOInfo*)userData;
 
   assert(executeIOInfo != NULL);
-  assert(executeIOInfo->storageHandle != NULL);
+  assert(executeIOInfo->storage != NULL);
 
-  executeIOdvdisasterOutput(executeIOInfo->storageHandle,line);
+  executeIOdvdisasterOutput(executeIOInfo->storage,line);
   executeIOOutput(line,NULL);
 }
 
@@ -455,33 +455,33 @@ LOCAL void executeIOdvdisasterStderr(ConstString line,
   ExecuteIOInfo *executeIOInfo = (ExecuteIOInfo*)userData;
 
   assert(executeIOInfo != NULL);
-  assert(executeIOInfo->storageHandle != NULL);
+  assert(executeIOInfo->storage != NULL);
 
-  executeIOdvdisasterOutput(executeIOInfo->storageHandle,line);
+  executeIOdvdisasterOutput(executeIOInfo->storage,line);
   executeIOOutput(line,&executeIOInfo->stderrList);
 }
 
 /***********************************************************************\
 * Name   : executeIOblankOutput
 * Purpose: process blank output
-* Input  : storageHandle - storage handle
+* Input  : storage - storage handle
 *          line          - line
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOblankOutput(StorageHandle *storageHandle,
-                                ConstString   line
+LOCAL void executeIOblankOutput(Storage     *storage,
+                                ConstString line
                                )
 {
   String s;
   double p;
 
-  assert(storageHandle != NULL);
-  assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storage != NULL);
+  assert((storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storage->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(line != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(storage);
 
 //fprintf(stderr,"%s,%d: blank line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
@@ -489,8 +489,8 @@ LOCAL void executeIOblankOutput(StorageHandle *storageHandle,
   {
     p = String_toDouble(s,0,NULL,NULL,0);
 //fprintf(stderr,"%s,%d: blank: %s -> %lf\n",__FILE__,__LINE__,String_cString(line),p);
-    storageHandle->runningInfo.volumeProgress = ((double)storageHandle->opticalDisk.write.step*100.0+p)/(double)(storageHandle->opticalDisk.write.steps*100);
-    updateStorageStatusInfo(storageHandle);
+    storage->runningInfo.volumeProgress = ((double)storage->opticalDisk.write.step*100.0+p)/(double)(storage->opticalDisk.write.steps*100);
+    updateStorageStatusInfo(storage);
   }
   String_delete(s);
 }
@@ -512,9 +512,9 @@ LOCAL void executeIOblankStdout(ConstString line,
   ExecuteIOInfo *executeIOInfo = (ExecuteIOInfo*)userData;
 
   assert(executeIOInfo != NULL);
-  assert(executeIOInfo->storageHandle != NULL);
+  assert(executeIOInfo->storage != NULL);
 
-  executeIOblankOutput(executeIOInfo->storageHandle,line);
+  executeIOblankOutput(executeIOInfo->storage,line);
   executeIOOutput(line,NULL);
 }
 
@@ -535,33 +535,33 @@ LOCAL void executeIOblankStderr(ConstString line,
   ExecuteIOInfo *executeIOInfo = (ExecuteIOInfo*)userData;
 
   assert(executeIOInfo != NULL);
-  assert(executeIOInfo->storageHandle != NULL);
+  assert(executeIOInfo->storage != NULL);
 
-  executeIOblankOutput(executeIOInfo->storageHandle,line);
+  executeIOblankOutput(executeIOInfo->storage,line);
   executeIOOutput(line,&executeIOInfo->stderrList);
 }
 
 /***********************************************************************\
 * Name   : executeIOgrowisofs
 * Purpose: process growisofs output
-* Input  : storageHandle - storage handle
+* Input  : storage - storage handle
 *          line          - line
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOgrowisofsOutput(StorageHandle *storageHandle,
-                                    ConstString   line
+LOCAL void executeIOgrowisofsOutput(Storage     *storage,
+                                    ConstString line
                                    )
 {
   String s;
   double p;
 
-  assert(storageHandle != NULL);
-  assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storage != NULL);
+  assert((storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storage->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(line != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(storage);
 
 //fprintf(stderr,"%s,%d: growisofs line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
@@ -569,8 +569,8 @@ LOCAL void executeIOgrowisofsOutput(StorageHandle *storageHandle,
   {
     p = String_toDouble(s,0,NULL,NULL,0);
 //fprintf(stderr,"%s,%d: growisofs: %s -> %lf\n",__FILE__,__LINE__,String_cString(line),p);
-    storageHandle->runningInfo.volumeProgress = ((double)storageHandle->opticalDisk.write.step*100.0+p)/(double)(storageHandle->opticalDisk.write.steps*100);
-    updateStorageStatusInfo(storageHandle);
+    storage->runningInfo.volumeProgress = ((double)storage->opticalDisk.write.step*100.0+p)/(double)(storage->opticalDisk.write.steps*100);
+    updateStorageStatusInfo(storage);
   }
   String_delete(s);
 }
@@ -592,9 +592,9 @@ LOCAL void executeIOgrowisofsStdout(ConstString line,
   ExecuteIOInfo *executeIOInfo = (ExecuteIOInfo*)userData;
 
   assert(executeIOInfo != NULL);
-  assert(executeIOInfo->storageHandle != NULL);
+  assert(executeIOInfo->storage != NULL);
 
-  executeIOgrowisofsOutput(executeIOInfo->storageHandle,line);
+  executeIOgrowisofsOutput(executeIOInfo->storage,line);
   executeIOOutput(line,NULL);
 }
 
@@ -615,9 +615,9 @@ LOCAL void executeIOgrowisofsStderr(ConstString line,
   ExecuteIOInfo *executeIOInfo = (ExecuteIOInfo*)userData;
 
   assert(executeIOInfo != NULL);
-  assert(executeIOInfo->storageHandle != NULL);
+  assert(executeIOInfo->storage != NULL);
 
-  executeIOgrowisofsOutput(executeIOInfo->storageHandle,line);
+  executeIOgrowisofsOutput(executeIOInfo->storage,line);
   executeIOOutput(line,&executeIOInfo->stderrList);
 }
 
@@ -839,7 +839,7 @@ LOCAL ConstString StorageOptical_getPrintableName(StorageSpecifier *storageSpeci
   return storageSpecifier->storageName;
 }
 
-LOCAL Errors StorageOptical_init(StorageHandle          *storageHandle,
+LOCAL Errors StorageOptical_init(Storage                *storage,
                                  const StorageSpecifier *storageSpecifier,
                                  const JobOptions       *jobOptions
                                 )
@@ -850,25 +850,25 @@ LOCAL Errors StorageOptical_init(StorageHandle          *storageHandle,
   FileSystemInfo fileSystemInfo;
   String         sourceFileName,fileBaseName,destinationFileName;
 
-  assert(storageHandle != NULL);
+  assert(storage != NULL);
   assert(storageSpecifier != NULL);
   assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
 
   UNUSED_VARIABLE(storageSpecifier);
 
   // get device name
-  if (String_isEmpty(storageHandle->storageSpecifier.deviceName))
+  if (String_isEmpty(storage->storageSpecifier.deviceName))
   {
-    switch (storageHandle->storageSpecifier.type)
+    switch (storage->storageSpecifier.type)
     {
       case STORAGE_TYPE_CD:
-        String_set(storageHandle->storageSpecifier.deviceName,globalOptions.cd.deviceName);
+        String_set(storage->storageSpecifier.deviceName,globalOptions.cd.deviceName);
         break;
       case STORAGE_TYPE_DVD:
-        String_set(storageHandle->storageSpecifier.deviceName,globalOptions.dvd.deviceName);
+        String_set(storage->storageSpecifier.deviceName,globalOptions.dvd.deviceName);
         break;
       case STORAGE_TYPE_BD:
-        String_set(storageHandle->storageSpecifier.deviceName,globalOptions.bd.deviceName);
+        String_set(storage->storageSpecifier.deviceName,globalOptions.bd.deviceName);
         break;
       default:
         #ifndef NDEBUG
@@ -879,7 +879,7 @@ LOCAL Errors StorageOptical_init(StorageHandle          *storageHandle,
   }
 
   // get cd/dvd/bd settings
-  switch (storageHandle->storageSpecifier.type)
+  switch (storage->storageSpecifier.type)
   {
     case STORAGE_TYPE_CD:
       getCDSettings(jobOptions,&opticalDisk);
@@ -908,7 +908,7 @@ LOCAL Errors StorageOptical_init(StorageHandle          *storageHandle,
   }
   volumeSize    = 0LL;
   maxMediumSize = 0LL;
-  switch (storageHandle->storageSpecifier.type)
+  switch (storage->storageSpecifier.type)
   {
     case STORAGE_TYPE_CD:
       volumeSize = CD_VOLUME_SIZE;
@@ -947,45 +947,45 @@ LOCAL Errors StorageOptical_init(StorageHandle          *storageHandle,
                 );
   }
 
-  storageHandle->opticalDisk.write.requestVolumeCommand   = opticalDisk.requestVolumeCommand;
-  storageHandle->opticalDisk.write.unloadVolumeCommand    = opticalDisk.unloadVolumeCommand;
-  storageHandle->opticalDisk.write.loadVolumeCommand      = opticalDisk.loadVolumeCommand;
-  storageHandle->opticalDisk.write.volumeSize             = volumeSize;
-  storageHandle->opticalDisk.write.imagePreProcessCommand = opticalDisk.imagePreProcessCommand;
-  storageHandle->opticalDisk.write.imagePostProcessCommand= opticalDisk.imagePostProcessCommand;
-  storageHandle->opticalDisk.write.imageCommand           = opticalDisk.imageCommand;
-  storageHandle->opticalDisk.write.eccPreProcessCommand   = opticalDisk.eccPreProcessCommand;
-  storageHandle->opticalDisk.write.eccPostProcessCommand  = opticalDisk.eccPostProcessCommand;
-  storageHandle->opticalDisk.write.eccCommand             = opticalDisk.eccCommand;
-  storageHandle->opticalDisk.write.blankCommand           = opticalDisk.blankCommand;
-  storageHandle->opticalDisk.write.writePreProcessCommand = opticalDisk.writePreProcessCommand;
-  storageHandle->opticalDisk.write.writePostProcessCommand= opticalDisk.writePostProcessCommand;
-  storageHandle->opticalDisk.write.writeCommand           = opticalDisk.writeCommand;
-  storageHandle->opticalDisk.write.writeImageCommand      = opticalDisk.writeImageCommand;
-  storageHandle->opticalDisk.write.steps                  = 1;
-  if ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag) storageHandle->opticalDisk.write.steps += 3;
-  if ((jobOptions != NULL) && jobOptions->blankFlag) storageHandle->opticalDisk.write.steps += 1;
-  storageHandle->opticalDisk.write.directory              = String_new();
-  storageHandle->opticalDisk.write.step                   = 0;
+  storage->opticalDisk.write.requestVolumeCommand   = opticalDisk.requestVolumeCommand;
+  storage->opticalDisk.write.unloadVolumeCommand    = opticalDisk.unloadVolumeCommand;
+  storage->opticalDisk.write.loadVolumeCommand      = opticalDisk.loadVolumeCommand;
+  storage->opticalDisk.write.volumeSize             = volumeSize;
+  storage->opticalDisk.write.imagePreProcessCommand = opticalDisk.imagePreProcessCommand;
+  storage->opticalDisk.write.imagePostProcessCommand= opticalDisk.imagePostProcessCommand;
+  storage->opticalDisk.write.imageCommand           = opticalDisk.imageCommand;
+  storage->opticalDisk.write.eccPreProcessCommand   = opticalDisk.eccPreProcessCommand;
+  storage->opticalDisk.write.eccPostProcessCommand  = opticalDisk.eccPostProcessCommand;
+  storage->opticalDisk.write.eccCommand             = opticalDisk.eccCommand;
+  storage->opticalDisk.write.blankCommand           = opticalDisk.blankCommand;
+  storage->opticalDisk.write.writePreProcessCommand = opticalDisk.writePreProcessCommand;
+  storage->opticalDisk.write.writePostProcessCommand= opticalDisk.writePostProcessCommand;
+  storage->opticalDisk.write.writeCommand           = opticalDisk.writeCommand;
+  storage->opticalDisk.write.writeImageCommand      = opticalDisk.writeImageCommand;
+  storage->opticalDisk.write.steps                  = 1;
+  if ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag) storage->opticalDisk.write.steps += 3;
+  if ((jobOptions != NULL) && jobOptions->blankFlag) storage->opticalDisk.write.steps += 1;
+  storage->opticalDisk.write.directory              = String_new();
+  storage->opticalDisk.write.step                   = 0;
   if ((jobOptions != NULL) && jobOptions->waitFirstVolumeFlag)
   {
-    storageHandle->opticalDisk.write.number        = 0;
-    storageHandle->opticalDisk.write.newVolumeFlag = TRUE;
+    storage->opticalDisk.write.number        = 0;
+    storage->opticalDisk.write.newVolumeFlag = TRUE;
   }
   else
   {
-    storageHandle->opticalDisk.write.number        = 1;
-    storageHandle->opticalDisk.write.newVolumeFlag = FALSE;
+    storage->opticalDisk.write.number        = 1;
+    storage->opticalDisk.write.newVolumeFlag = FALSE;
   }
-  StringList_init(&storageHandle->opticalDisk.write.fileNameList);
-  storageHandle->opticalDisk.write.totalSize              = 0LL;
+  StringList_init(&storage->opticalDisk.write.fileNameList);
+  storage->opticalDisk.write.totalSize              = 0LL;
 
   // create temporary directory for medium files
-  error = File_getTmpDirectoryName(storageHandle->opticalDisk.write.directory,NULL,tmpDirectory);
+  error = File_getTmpDirectoryName(storage->opticalDisk.write.directory,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
-    StringList_done(&storageHandle->opticalDisk.write.fileNameList);
-    String_delete(storageHandle->opticalDisk.write.directory);
+    StringList_done(&storage->opticalDisk.write.fileNameList);
+    String_delete(storage->opticalDisk.write.directory);
     return error;
   }
 
@@ -994,9 +994,9 @@ LOCAL Errors StorageOptical_init(StorageHandle          *storageHandle,
     // store a copy of BAR executable on medium (ignore errors)
     sourceFileName = String_newCString(globalOptions.barExecutable);
     fileBaseName = File_getFileBaseName(String_new(),sourceFileName);
-    destinationFileName = File_appendFileName(String_duplicate(storageHandle->opticalDisk.write.directory),fileBaseName);
+    destinationFileName = File_appendFileName(String_duplicate(storage->opticalDisk.write.directory),fileBaseName);
     File_copy(sourceFileName,destinationFileName);
-    StringList_append(&storageHandle->opticalDisk.write.fileNameList,destinationFileName);
+    StringList_append(&storage->opticalDisk.write.fileNameList,destinationFileName);
     String_delete(destinationFileName);
     String_delete(fileBaseName);
     String_delete(sourceFileName);
@@ -1005,22 +1005,22 @@ LOCAL Errors StorageOptical_init(StorageHandle          *storageHandle,
   return ERROR_NONE;
 }
 
-LOCAL Errors StorageOptical_done(StorageHandle *storageHandle)
+LOCAL Errors StorageOptical_done(Storage *storage)
 {
   Errors error;
   String fileName;
   Errors tmpError;
 
-  assert(storageHandle != NULL);
-  assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storage != NULL);
+  assert((storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storage->storageSpecifier.type == STORAGE_TYPE_BD));
 
   error = ERROR_NONE;
 
   // delete files
   fileName = String_new();
-  while (!StringList_isEmpty(&storageHandle->opticalDisk.write.fileNameList))
+  while (!StringList_isEmpty(&storage->opticalDisk.write.fileNameList))
   {
-    StringList_removeFirst(&storageHandle->opticalDisk.write.fileNameList,fileName);
+    StringList_removeFirst(&storage->opticalDisk.write.fileNameList,fileName);
     tmpError = File_delete(fileName,FALSE);
     if (tmpError != ERROR_NONE)
     {
@@ -1030,19 +1030,19 @@ LOCAL Errors StorageOptical_done(StorageHandle *storageHandle)
   String_delete(fileName);
 
   // delete temporare directory
-  File_delete(storageHandle->opticalDisk.write.directory,FALSE);
+  File_delete(storage->opticalDisk.write.directory,FALSE);
 
   // free resources
-  StringList_done(&storageHandle->opticalDisk.write.fileNameList);
-  String_delete(storageHandle->opticalDisk.write.directory);
+  StringList_done(&storage->opticalDisk.write.fileNameList);
+  String_delete(storage->opticalDisk.write.directory);
 
   return error;
 }
 
-LOCAL Errors StorageOptical_preProcess(StorageHandle *storageHandle,
-                                       ConstString   archiveName,
-                                       time_t        timestamp,
-                                       bool          initialFlag
+LOCAL Errors StorageOptical_preProcess(Storage     *storage,
+                                       ConstString archiveName,
+                                       time_t      timestamp,
+                                       bool        initialFlag
                                       )
 {
   TextMacro   textMacros[3];
@@ -1050,38 +1050,38 @@ LOCAL Errors StorageOptical_preProcess(StorageHandle *storageHandle,
   ConstString template;
   String      script;
 
-  assert(storageHandle != NULL);
-  assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storage != NULL);
+  assert((storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storage->storageSpecifier.type == STORAGE_TYPE_BD));
 
   UNUSED_VARIABLE(initialFlag);
 
   error = ERROR_NONE;
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+  if ((storage->jobOptions == NULL) || !storage->jobOptions->dryRunFlag)
   {
     // request next medium
-    if (storageHandle->opticalDisk.write.newVolumeFlag)
+    if (storage->opticalDisk.write.newVolumeFlag)
     {
-      storageHandle->opticalDisk.write.number++;
-      storageHandle->opticalDisk.write.newVolumeFlag = FALSE;
+      storage->opticalDisk.write.number++;
+      storage->opticalDisk.write.newVolumeFlag = FALSE;
 
-      storageHandle->requestedVolumeNumber = storageHandle->opticalDisk.write.number;
+      storage->requestedVolumeNumber = storage->opticalDisk.write.number;
     }
 
     // check if new medium is required
-    if (storageHandle->volumeNumber != storageHandle->requestedVolumeNumber)
+    if (storage->volumeNumber != storage->requestedVolumeNumber)
     {
       // request load new medium
-      error = requestNewOpticalMedium(storageHandle,NULL,FALSE);
+      error = requestNewOpticalMedium(storage,NULL,FALSE);
     }
 
     // init macros
-    TEXT_MACRO_N_STRING (textMacros[0],"%device",storageHandle->storageSpecifier.deviceName,NULL);
+    TEXT_MACRO_N_STRING (textMacros[0],"%device",storage->storageSpecifier.deviceName,NULL);
     TEXT_MACRO_N_STRING (textMacros[1],"%file",  archiveName,                               NULL);
-    TEXT_MACRO_N_INTEGER(textMacros[2],"%number",storageHandle->requestedVolumeNumber,      NULL);
+    TEXT_MACRO_N_INTEGER(textMacros[2],"%number",storage->requestedVolumeNumber,      NULL);
 
     // write pre-processing
     template = NULL;
-    switch (storageHandle->storageSpecifier.type)
+    switch (storage->storageSpecifier.type)
     {
       case STORAGE_TYPE_CD:  template = globalOptions.cd.writePreProcessCommand;  break;
       case STORAGE_TYPE_DVD: template = globalOptions.dvd.writePreProcessCommand; break;
@@ -1122,10 +1122,10 @@ LOCAL Errors StorageOptical_preProcess(StorageHandle *storageHandle,
   return error;
 }
 
-LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
-                                        ConstString   archiveName,
-                                        time_t        timestamp,
-                                        bool          finalFlag
+LOCAL Errors StorageOptical_postProcess(Storage     *storage,
+                                        ConstString archiveName,
+                                        time_t      timestamp,
+                                        bool        finalFlag
                                        )
 {
   Errors        error;
@@ -1138,27 +1138,27 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
   ConstString   template;
   String        script;
 
-  assert(storageHandle != NULL);
-  assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storage != NULL);
+  assert((storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storage->storageSpecifier.type == STORAGE_TYPE_BD));
 
   error = ERROR_NONE;
 
-  if ((storageHandle->jobOptions == NULL) || !storageHandle->jobOptions->dryRunFlag)
+  if ((storage->jobOptions == NULL) || !storage->jobOptions->dryRunFlag)
   {
-    if (   (storageHandle->opticalDisk.write.totalSize > storageHandle->opticalDisk.write.volumeSize)
-        || (finalFlag && (storageHandle->opticalDisk.write.totalSize > 0LL))
+    if (   (storage->opticalDisk.write.totalSize > storage->opticalDisk.write.volumeSize)
+        || (finalFlag && (storage->opticalDisk.write.totalSize > 0LL))
        )
     {
       // medium size limit reached or final medium -> create medium and request new volume
 
       // init variables
-      storageHandle->opticalDisk.write.step = 0;
-      executeIOInfo.storageHandle           = storageHandle;
+      storage->opticalDisk.write.step = 0;
+      executeIOInfo.storage           = storage;
       StringList_init(&executeIOInfo.stderrList);
 
       // update info
-      storageHandle->runningInfo.volumeProgress = 0.0;
-      updateStorageStatusInfo(storageHandle);
+      storage->runningInfo.volumeProgress = 0.0;
+      updateStorageStatusInfo(storage);
 
       // get temporary image file name
       imageFileName = String_new();
@@ -1170,19 +1170,19 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
       }
 
       // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%device",   storageHandle->storageSpecifier.deviceName,NULL);
-      TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageHandle->opticalDisk.write.directory,NULL);
+      TEXT_MACRO_N_STRING (textMacros[0],"%device",   storage->storageSpecifier.deviceName,NULL);
+      TEXT_MACRO_N_STRING (textMacros[1],"%directory",storage->opticalDisk.write.directory,NULL);
       TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName,                             NULL);
       TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",  0,                                         NULL);
       TEXT_MACRO_N_STRING (textMacros[4],"%file",     archiveName,                               NULL);
-      TEXT_MACRO_N_INTEGER(textMacros[5],"%number",   storageHandle->volumeNumber,               NULL);
+      TEXT_MACRO_N_INTEGER(textMacros[5],"%number",   storage->volumeNumber,               NULL);
 
-      if ((storageHandle->jobOptions != NULL) && (storageHandle->jobOptions->alwaysCreateImageFlag || storageHandle->jobOptions->errorCorrectionCodesFlag))
+      if ((storage->jobOptions != NULL) && (storage->jobOptions->alwaysCreateImageFlag || storage->jobOptions->errorCorrectionCodesFlag))
       {
         // create medium image
-        printInfo(1,"Make medium image #%d with %d part(s)...",storageHandle->opticalDisk.write.number,StringList_count(&storageHandle->opticalDisk.write.fileNameList));
+        printInfo(1,"Make medium image #%d with %d part(s)...",storage->opticalDisk.write.number,StringList_count(&storage->opticalDisk.write.fileNameList));
         StringList_clear(&executeIOInfo.stderrList);
-        error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.imageCommand),
+        error = Misc_executeCommand(String_cString(storage->opticalDisk.write.imageCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
                                     CALLBACK(executeIOmkisofsStdout,&executeIOInfo),
                                     CALLBACK(executeIOmkisofsStderr,&executeIOInfo)
@@ -1197,14 +1197,14 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
         }
         File_getFileInfo(imageFileName,&fileInfo);
         printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
-        storageHandle->opticalDisk.write.step++;
+        storage->opticalDisk.write.step++;
 
-        if (storageHandle->jobOptions->errorCorrectionCodesFlag)
+        if (storage->jobOptions->errorCorrectionCodesFlag)
         {
           // add error-correction codes to medium image
-          printInfo(1,"Add ECC to image #%d...",storageHandle->opticalDisk.write.number);
+          printInfo(1,"Add ECC to image #%d...",storage->opticalDisk.write.number);
           StringList_clear(&executeIOInfo.stderrList);
-          error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.eccCommand),
+          error = Misc_executeCommand(String_cString(storage->opticalDisk.write.eccCommand),
                                       textMacros,SIZE_OF_ARRAY(textMacros),
                                       CALLBACK(executeIOdvdisasterStdout,&executeIOInfo),
                                       CALLBACK(executeIOdvdisasterStderr,&executeIOInfo)
@@ -1219,7 +1219,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
           }
           File_getFileInfo(imageFileName,&fileInfo);
           printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
-          storageHandle->opticalDisk.write.step++;
+          storage->opticalDisk.write.step++;
         }
 
         // get number of image sectors
@@ -1229,10 +1229,10 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
         }
 
         // check if new medium is required
-        if (storageHandle->volumeNumber != storageHandle->requestedVolumeNumber)
+        if (storage->volumeNumber != storage->requestedVolumeNumber)
         {
           // request load new medium
-          error = requestNewOpticalMedium(storageHandle,NULL,TRUE);
+          error = requestNewOpticalMedium(storage,NULL,TRUE);
           if (error != ERROR_NONE)
           {
             File_delete(imageFileName,FALSE);
@@ -1240,16 +1240,16 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
             StringList_done(&executeIOInfo.stderrList);
             return error;
           }
-          updateStorageStatusInfo(storageHandle);
+          updateStorageStatusInfo(storage);
         }
 
         // blank mediuam
-        if (storageHandle->jobOptions->blankFlag)
+        if (storage->jobOptions->blankFlag)
         {
           // add error-correction codes to medium image
-          printInfo(1,"Blank medium #%d...",storageHandle->opticalDisk.write.number);
+          printInfo(1,"Blank medium #%d...",storage->opticalDisk.write.number);
           StringList_clear(&executeIOInfo.stderrList);
-          error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.blankCommand),
+          error = Misc_executeCommand(String_cString(storage->opticalDisk.write.blankCommand),
                                       textMacros,SIZE_OF_ARRAY(textMacros),
                                       CALLBACK(executeIOblankStdout,&executeIOInfo),
                                       CALLBACK(executeIOblankStderr,&executeIOInfo)
@@ -1263,7 +1263,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
             return error;
           }
           printInfo(1,"OK\n");
-          storageHandle->opticalDisk.write.step++;
+          storage->opticalDisk.write.step++;
         }
 
         retryFlag = TRUE;
@@ -1272,9 +1272,9 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
           retryFlag = FALSE;
 
           // write image to medium
-          printInfo(1,"Write image to medium #%d...",storageHandle->opticalDisk.write.number);
+          printInfo(1,"Write image to medium #%d...",storage->opticalDisk.write.number);
           StringList_clear(&executeIOInfo.stderrList);
-          error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.writeImageCommand),
+          error = Misc_executeCommand(String_cString(storage->opticalDisk.write.writeImageCommand),
                                       textMacros,SIZE_OF_ARRAY(textMacros),
                                       CALLBACK(executeIOgrowisofsStdout,&executeIOInfo),
                                       CALLBACK(executeIOgrowisofsStderr,&executeIOInfo)
@@ -1293,7 +1293,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
             }
             else
             {
-              retryFlag = (requestNewOpticalMedium(storageHandle,Error_getText(error),TRUE) == ERROR_NONE);
+              retryFlag = (requestNewOpticalMedium(storage,Error_getText(error),TRUE) == ERROR_NONE);
             }
           }
         }
@@ -1305,15 +1305,15 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
           StringList_done(&executeIOInfo.stderrList);
           return error;
         }
-        storageHandle->opticalDisk.write.step++;
+        storage->opticalDisk.write.step++;
       }
       else
       {
         // check if new medium is required
-        if (storageHandle->volumeNumber != storageHandle->requestedVolumeNumber)
+        if (storage->volumeNumber != storage->requestedVolumeNumber)
         {
           // request load new medium
-          error = requestNewOpticalMedium(storageHandle,NULL,TRUE);
+          error = requestNewOpticalMedium(storage,NULL,TRUE);
           if (error != ERROR_NONE)
           {
             File_delete(imageFileName,FALSE);
@@ -1321,16 +1321,16 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
             StringList_done(&executeIOInfo.stderrList);
             return error;
           }
-          updateStorageStatusInfo(storageHandle);
+          updateStorageStatusInfo(storage);
         }
 
         // blank mediuam
-        if (storageHandle->jobOptions->blankFlag)
+        if (storage->jobOptions->blankFlag)
         {
           // add error-correction codes to medium image
-          printInfo(1,"Blank medium #%d...",storageHandle->opticalDisk.write.number);
+          printInfo(1,"Blank medium #%d...",storage->opticalDisk.write.number);
           StringList_clear(&executeIOInfo.stderrList);
-          error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.blankCommand),
+          error = Misc_executeCommand(String_cString(storage->opticalDisk.write.blankCommand),
                                       textMacros,SIZE_OF_ARRAY(textMacros),
                                       CALLBACK(executeIOblankStdout,&executeIOInfo),
                                       CALLBACK(executeIOblankStderr,&executeIOInfo)
@@ -1344,7 +1344,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
             return error;
           }
           printInfo(1,"OK\n");
-          storageHandle->opticalDisk.write.step++;
+          storage->opticalDisk.write.step++;
         }
 
         retryFlag = TRUE;
@@ -1353,9 +1353,9 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
           retryFlag = FALSE;
 
           // write to medium
-          printInfo(1,"Write medium #%d with %d part(s)...",storageHandle->opticalDisk.write.number,StringList_count(&storageHandle->opticalDisk.write.fileNameList));
+          printInfo(1,"Write medium #%d with %d part(s)...",storage->opticalDisk.write.number,StringList_count(&storage->opticalDisk.write.fileNameList));
           StringList_clear(&executeIOInfo.stderrList);
-          error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.writeCommand),
+          error = Misc_executeCommand(String_cString(storage->opticalDisk.write.writeCommand),
                                       textMacros,SIZE_OF_ARRAY(textMacros),
                                       CALLBACK(executeIOgrowisofsStdout,&executeIOInfo),
                                       CALLBACK(executeIOgrowisofsStderr,&executeIOInfo)
@@ -1373,7 +1373,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
             }
             else
             {
-              retryFlag = (requestNewOpticalMedium(storageHandle,Error_getText(error),TRUE) == ERROR_NONE);
+              retryFlag = (requestNewOpticalMedium(storage,Error_getText(error),TRUE) == ERROR_NONE);
             }
           }
         }
@@ -1385,7 +1385,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
           StringList_done(&executeIOInfo.stderrList);
           return error;
         }
-        storageHandle->opticalDisk.write.step++;
+        storage->opticalDisk.write.step++;
       }
 
       // delete image
@@ -1393,14 +1393,14 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
       String_delete(imageFileName);
 
       // update info
-      storageHandle->runningInfo.volumeProgress = 1.0;
-      updateStorageStatusInfo(storageHandle);
+      storage->runningInfo.volumeProgress = 1.0;
+      updateStorageStatusInfo(storage);
 
       // delete stored files
       fileName = String_new();
-      while (!StringList_isEmpty(&storageHandle->opticalDisk.write.fileNameList))
+      while (!StringList_isEmpty(&storage->opticalDisk.write.fileNameList))
       {
-        StringList_removeFirst(&storageHandle->opticalDisk.write.fileNameList,fileName);
+        StringList_removeFirst(&storage->opticalDisk.write.fileNameList,fileName);
         error = File_delete(fileName,FALSE);
         if (error != ERROR_NONE)
         {
@@ -1414,8 +1414,8 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
       }
 
       // reset
-      storageHandle->opticalDisk.write.newVolumeFlag = TRUE;
-      storageHandle->opticalDisk.write.totalSize     = 0;
+      storage->opticalDisk.write.newVolumeFlag = TRUE;
+      storage->opticalDisk.write.totalSize     = 0;
 
       // free resources
       StringList_done(&executeIOInfo.stderrList);
@@ -1423,7 +1423,7 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
 
     // write post-processing
     template = NULL;
-    switch (storageHandle->storageSpecifier.type)
+    switch (storage->storageSpecifier.type)
     {
       case STORAGE_TYPE_CD:  template = globalOptions.cd.writePostProcessCommand;  break;
       case STORAGE_TYPE_DVD: template = globalOptions.dvd.writePostProcessCommand; break;
@@ -1463,26 +1463,26 @@ LOCAL Errors StorageOptical_postProcess(StorageHandle *storageHandle,
   else
   {
     // update info
-    storageHandle->opticalDisk.write.step     = storageHandle->opticalDisk.write.steps;
-    storageHandle->runningInfo.volumeProgress = 1.0;
-    updateStorageStatusInfo(storageHandle);
+    storage->opticalDisk.write.step     = storage->opticalDisk.write.steps;
+    storage->runningInfo.volumeProgress = 1.0;
+    updateStorageStatusInfo(storage);
   }
 
   return error;
 }
 
-LOCAL Errors StorageOptical_unloadVolume(StorageHandle *storageHandle)
+LOCAL Errors StorageOptical_unloadVolume(Storage *storage)
 {
   Errors    error;
   TextMacro textMacros[1];
 
-  assert(storageHandle != NULL);
-  assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storage != NULL);
+  assert((storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storage->storageSpecifier.type == STORAGE_TYPE_BD));
 
   error = ERROR_UNKNOWN;
 
-  TEXT_MACRO_N_STRING(textMacros[0],"%device",storageHandle->storageSpecifier.deviceName,NULL);
-  error = Misc_executeCommand(String_cString(storageHandle->opticalDisk.write.unloadVolumeCommand),
+  TEXT_MACRO_N_STRING(textMacros[0],"%device",storage->storageSpecifier.deviceName,NULL);
+  error = Misc_executeCommand(String_cString(storage->opticalDisk.write.unloadVolumeCommand),
                               textMacros,SIZE_OF_ARRAY(textMacros),
                               CALLBACK(executeIOOutput,NULL),
                               CALLBACK(executeIOOutput,NULL)
@@ -1492,19 +1492,19 @@ LOCAL Errors StorageOptical_unloadVolume(StorageHandle *storageHandle)
   return error;
 }
 
-LOCAL bool StorageOptical_exists(StorageHandle *storageHandle, ConstString archiveName)
+LOCAL bool StorageOptical_exists(Storage *storage, ConstString archiveName)
 {
-  assert(storageHandle != NULL);
+  assert(storage != NULL);
   assert(!String_isEmpty(archiveName));
 
 //TODO: still not implemented
-  UNUSED_VARIABLE(storageHandle);
+  UNUSED_VARIABLE(storage);
   UNUSED_VARIABLE(archiveName);
 
   return FALSE;
 }
 
-LOCAL Errors StorageOptical_create(StorageArchiveHandle *storageArchiveHandle,
+LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
                                    ConstString   archiveName,
                                    uint64        archiveSize
                                   )
@@ -1512,31 +1512,31 @@ LOCAL Errors StorageOptical_create(StorageArchiveHandle *storageArchiveHandle,
   Errors error;
   String directoryName;
 
-  assert(storageArchiveHandle != NULL);
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storageHandle != NULL);
+  assert(storageHandle->storage != NULL);
+  assert((storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(archiveSize);
 
   // init variables
   #ifdef HAVE_ISO9660
-    storageArchiveHandle->opticalDisk.read.iso9660Handle     = NULL;
-    storageArchiveHandle->opticalDisk.read.iso9660Stat       = NULL;
-    storageArchiveHandle->opticalDisk.read.index             = 0LL;
-    storageArchiveHandle->opticalDisk.read.buffer.blockIndex = 0LL;
-    storageArchiveHandle->opticalDisk.read.buffer.length     = 0L;
+    storageHandle->opticalDisk.read.iso9660Handle     = NULL;
+    storageHandle->opticalDisk.read.iso9660Stat       = NULL;
+    storageHandle->opticalDisk.read.index             = 0LL;
+    storageHandle->opticalDisk.read.buffer.blockIndex = 0LL;
+    storageHandle->opticalDisk.read.buffer.length     = 0L;
   #endif /* HAVE_ISO9660 */
-  storageArchiveHandle->opticalDisk.write.fileName               = String_new();
+  storageHandle->opticalDisk.write.fileName               = String_new();
 
   // create file name
-  String_set(storageArchiveHandle->opticalDisk.write.fileName,storageArchiveHandle->storageHandle->opticalDisk.write.directory);
-  File_appendFileName(storageArchiveHandle->opticalDisk.write.fileName,archiveName);
+  String_set(storageHandle->opticalDisk.write.fileName,storageHandle->storage->opticalDisk.write.directory);
+  File_appendFileName(storageHandle->opticalDisk.write.fileName,archiveName);
 
-  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+  if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
   {
     // create directory if not existing
-    directoryName = File_getFilePathName(String_new(),storageArchiveHandle->opticalDisk.write.fileName);
+    directoryName = File_getFilePathName(String_new(),storageHandle->opticalDisk.write.fileName);
     if (!String_isEmpty(directoryName) && !File_exists(directoryName))
     {
       error = File_makeDirectory(directoryName,
@@ -1553,8 +1553,8 @@ LOCAL Errors StorageOptical_create(StorageArchiveHandle *storageArchiveHandle,
     String_delete(directoryName);
 
     // create file
-    error = File_open(&storageArchiveHandle->opticalDisk.write.fileHandle,
-                      storageArchiveHandle->opticalDisk.write.fileName,
+    error = File_open(&storageHandle->opticalDisk.write.fileHandle,
+                      storageHandle->opticalDisk.write.fileName,
                       FILE_OPEN_CREATE
                      );
     if (error != ERROR_NONE)
@@ -1563,112 +1563,112 @@ LOCAL Errors StorageOptical_create(StorageArchiveHandle *storageArchiveHandle,
     }
   }
 
-  DEBUG_ADD_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk,sizeof(storageArchiveHandle->opticalDisk));
+  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->opticalDisk,sizeof(storageHandle->opticalDisk));
 
   return ERROR_NONE;
 }
 
-LOCAL Errors StorageOptical_open(StorageArchiveHandle *storageArchiveHandle,
-                                 ConstString          archiveName
+LOCAL Errors StorageOptical_open(StorageHandle *storageHandle,
+                                 ConstString   archiveName
                                 )
 {
-  assert(storageArchiveHandle != NULL);
-  assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storageHandle != NULL);
+  assert((storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(!String_isEmpty(archiveName));
 
   #ifdef HAVE_ISO9660
     {
       // initialize variables
-      storageArchiveHandle->opticalDisk.read.iso9660Handle     = NULL;
-      storageArchiveHandle->opticalDisk.read.iso9660Stat       = NULL;
-      storageArchiveHandle->opticalDisk.read.index             = 0LL;
-      storageArchiveHandle->opticalDisk.read.buffer.blockIndex = 0LL;
-      storageArchiveHandle->opticalDisk.read.buffer.length     = 0L;
+      storageHandle->opticalDisk.read.iso9660Handle     = NULL;
+      storageHandle->opticalDisk.read.iso9660Stat       = NULL;
+      storageHandle->opticalDisk.read.index             = 0LL;
+      storageHandle->opticalDisk.read.buffer.blockIndex = 0LL;
+      storageHandle->opticalDisk.read.buffer.length     = 0L;
 
-      storageArchiveHandle->opticalDisk.read.buffer.data = (byte*)malloc(ISO_BLOCKSIZE);
-      if (storageArchiveHandle->opticalDisk.read.buffer.data == NULL)
+      storageHandle->opticalDisk.read.buffer.data = (byte*)malloc(ISO_BLOCKSIZE);
+      if (storageHandle->opticalDisk.read.buffer.data == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
 
       // check if device exists
-      if (String_isEmpty(storageArchiveHandle->storageHandle->storageSpecifier.deviceName))
+      if (String_isEmpty(storageHandle->storage->storageSpecifier.deviceName))
       {
-        free(storageArchiveHandle->opticalDisk.read.buffer.data);
+        free(storageHandle->opticalDisk.read.buffer.data);
         return ERROR_NO_DEVICE_NAME;
       }
-      if (!File_exists(storageArchiveHandle->storageHandle->storageSpecifier.deviceName))
+      if (!File_exists(storageHandle->storage->storageSpecifier.deviceName))
       {
-        free(storageArchiveHandle->opticalDisk.read.buffer.data);
-        return ERRORX_(OPTICAL_DISK_NOT_FOUND,0,"%s",String_cString(storageArchiveHandle->storageHandle->storageSpecifier.deviceName));
+        free(storageHandle->opticalDisk.read.buffer.data);
+        return ERRORX_(OPTICAL_DISK_NOT_FOUND,0,"%s",String_cString(storageHandle->storage->storageSpecifier.deviceName));
       }
 
       // open optical disk/ISO 9660 file
-      storageArchiveHandle->opticalDisk.read.iso9660Handle = iso9660_open_ext(String_cString(storageArchiveHandle->storageHandle->storageSpecifier.deviceName),ISO_EXTENSION_ROCK_RIDGE);//ISO_EXTENSION_ALL);
-      if (storageArchiveHandle->opticalDisk.read.iso9660Handle == NULL)
+      storageHandle->opticalDisk.read.iso9660Handle = iso9660_open_ext(String_cString(storageHandle->storage->storageSpecifier.deviceName),ISO_EXTENSION_ROCK_RIDGE);//ISO_EXTENSION_ALL);
+      if (storageHandle->opticalDisk.read.iso9660Handle == NULL)
       {
-        if (File_isFile(storageArchiveHandle->storageHandle->storageSpecifier.deviceName))
+        if (File_isFile(storageHandle->storage->storageSpecifier.deviceName))
         {
-          free(storageArchiveHandle->opticalDisk.read.buffer.data);
-          return ERRORX_(OPEN_ISO9660_FILE,errno,"%s",String_cString(storageArchiveHandle->storageHandle->storageSpecifier.deviceName));
+          free(storageHandle->opticalDisk.read.buffer.data);
+          return ERRORX_(OPEN_ISO9660_FILE,errno,"%s",String_cString(storageHandle->storage->storageSpecifier.deviceName));
         }
         else
         {
-          free(storageArchiveHandle->opticalDisk.read.buffer.data);
-          return ERRORX_(OPEN_OPTICAL_DISK,errno,"%s",String_cString(storageArchiveHandle->storageHandle->storageSpecifier.deviceName));
+          free(storageHandle->opticalDisk.read.buffer.data);
+          return ERRORX_(OPEN_OPTICAL_DISK,errno,"%s",String_cString(storageHandle->storage->storageSpecifier.deviceName));
         }
       }
 
       // prepare file for reading
-      storageArchiveHandle->opticalDisk.read.iso9660Stat = iso9660_ifs_stat_translate(storageArchiveHandle->opticalDisk.read.iso9660Handle,
+      storageHandle->opticalDisk.read.iso9660Stat = iso9660_ifs_stat_translate(storageHandle->opticalDisk.read.iso9660Handle,
                                                                                String_cString(archiveName)
                                                                               );
-      if (storageArchiveHandle->opticalDisk.read.iso9660Stat == NULL)
+      if (storageHandle->opticalDisk.read.iso9660Stat == NULL)
       {
-        iso9660_close(storageArchiveHandle->opticalDisk.read.iso9660Handle);
-        free(storageArchiveHandle->opticalDisk.read.buffer.data);
+        iso9660_close(storageHandle->opticalDisk.read.iso9660Handle);
+        free(storageHandle->opticalDisk.read.buffer.data);
         return ERRORX_(FILE_NOT_FOUND_,errno,"%s",String_cString(archiveName));
       }
 
-      DEBUG_ADD_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk,sizeof(storageArchiveHandle->opticalDisk));
+      DEBUG_ADD_RESOURCE_TRACE(&storageHandle->opticalDisk,sizeof(storageHandle->opticalDisk));
     }
 
     return ERROR_NONE;
   #else /* not HAVE_ISO9660 */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(archiveName);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_ISO9660 */
 }
 
-LOCAL void StorageOptical_close(StorageArchiveHandle *storageArchiveHandle)
+LOCAL void StorageOptical_close(StorageHandle *storageHandle)
 {
-  assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
-  assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
+  assert((storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_BD));
 
-  DEBUG_REMOVE_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk,sizeof(storageArchiveHandle->opticalDisk));
+  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->opticalDisk,sizeof(storageHandle->opticalDisk));
 
-  switch (storageArchiveHandle->mode)
+  switch (storageHandle->mode)
   {
     case STORAGE_MODE_READ:
       #ifdef HAVE_ISO9660
-        assert(storageArchiveHandle->opticalDisk.read.iso9660Handle != NULL);
-        assert(storageArchiveHandle->opticalDisk.read.iso9660Stat != NULL);
+        assert(storageHandle->opticalDisk.read.iso9660Handle != NULL);
+        assert(storageHandle->opticalDisk.read.iso9660Stat != NULL);
 
-        free(storageArchiveHandle->opticalDisk.read.iso9660Stat);
-        iso9660_close(storageArchiveHandle->opticalDisk.read.iso9660Handle);
+        free(storageHandle->opticalDisk.read.iso9660Stat);
+        iso9660_close(storageHandle->opticalDisk.read.iso9660Handle);
       #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_MODE_WRITE:
-      if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
       {
-        storageArchiveHandle->storageHandle->opticalDisk.write.totalSize += File_getSize(&storageArchiveHandle->opticalDisk.write.fileHandle);
-        File_close(&storageArchiveHandle->opticalDisk.write.fileHandle);
+        storageHandle->storage->opticalDisk.write.totalSize += File_getSize(&storageHandle->opticalDisk.write.fileHandle);
+        File_close(&storageHandle->opticalDisk.write.fileHandle);
       }
-      StringList_append(&storageArchiveHandle->storageHandle->opticalDisk.write.fileNameList,storageArchiveHandle->opticalDisk.write.fileName);
-      String_delete(storageArchiveHandle->opticalDisk.write.fileName);
+      StringList_append(&storageHandle->storage->opticalDisk.write.fileNameList,storageHandle->opticalDisk.write.fileName);
+      String_delete(storageHandle->opticalDisk.write.fileName);
       break;
     #ifndef NDEBUG
       default:
@@ -1678,34 +1678,34 @@ LOCAL void StorageOptical_close(StorageArchiveHandle *storageArchiveHandle)
   }
 }
 
-LOCAL bool StorageOptical_eof(StorageArchiveHandle *storageArchiveHandle)
+LOCAL bool StorageOptical_eof(StorageHandle *storageHandle)
 {
-  assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
-  assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
+  assert(storageHandle->storage != NULL);
+  assert(storageHandle->mode == STORAGE_MODE_READ);
+  assert((storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_BD));
 
   #ifdef HAVE_ISO9660
-    assert(storageArchiveHandle->opticalDisk.read.iso9660Handle != NULL);
-    assert(storageArchiveHandle->opticalDisk.read.iso9660Stat != NULL);
+    assert(storageHandle->opticalDisk.read.iso9660Handle != NULL);
+    assert(storageHandle->opticalDisk.read.iso9660Stat != NULL);
 
-    if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
     {
-      return storageArchiveHandle->opticalDisk.read.index >= storageArchiveHandle->opticalDisk.read.iso9660Stat->size;
+      return storageHandle->opticalDisk.read.index >= storageHandle->opticalDisk.read.iso9660Stat->size;
     }
     else
     {
       return TRUE;
     }
   #else /* not HAVE_ISO9660 */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
 
     return TRUE;
   #endif /* HAVE_ISO9660 */
 }
 
-LOCAL Errors StorageOptical_read(StorageArchiveHandle *storageArchiveHandle,
+LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
                                  void          *buffer,
                                  ulong         size,
                                  ulong         *bytesRead
@@ -1713,11 +1713,11 @@ LOCAL Errors StorageOptical_read(StorageArchiveHandle *storageArchiveHandle,
 {
   Errors error;
 
-  assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert(storageArchiveHandle->mode == STORAGE_MODE_READ);
-  assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
+  assert(storageHandle->storage != NULL);
+  assert(storageHandle->mode == STORAGE_MODE_READ);
+  assert((storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(buffer != NULL);
 
 //fprintf(stderr,"%s,%d: size=%lu\n",__FILE__,__LINE__,size);
@@ -1730,29 +1730,29 @@ LOCAL Errors StorageOptical_read(StorageArchiveHandle *storageArchiveHandle,
       long int n;
       ulong    bytesAvail;
 
-      assert(storageArchiveHandle->opticalDisk.read.iso9660Handle != NULL);
-      assert(storageArchiveHandle->opticalDisk.read.iso9660Stat != NULL);
+      assert(storageHandle->opticalDisk.read.iso9660Handle != NULL);
+      assert(storageHandle->opticalDisk.read.iso9660Stat != NULL);
 
-      if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+      if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
       {
-        assert(storageArchiveHandle->opticalDisk.read.buffer.data != NULL);
+        assert(storageHandle->opticalDisk.read.buffer.data != NULL);
 
         while (   (size > 0L)
-               && (storageArchiveHandle->opticalDisk.read.index < (uint64)storageArchiveHandle->opticalDisk.read.iso9660Stat->size)
+               && (storageHandle->opticalDisk.read.index < (uint64)storageHandle->opticalDisk.read.iso9660Stat->size)
               )
         {
           // get ISO9660 block index, offset
-          blockIndex  = (int64)(storageArchiveHandle->opticalDisk.read.index/ISO_BLOCKSIZE);
-          blockOffset = (uint)(storageArchiveHandle->opticalDisk.read.index%ISO_BLOCKSIZE);
+          blockIndex  = (int64)(storageHandle->opticalDisk.read.index/ISO_BLOCKSIZE);
+          blockOffset = (uint)(storageHandle->opticalDisk.read.index%ISO_BLOCKSIZE);
 
-          if (   (blockIndex != storageArchiveHandle->opticalDisk.read.buffer.blockIndex)
-              || (blockOffset >= storageArchiveHandle->opticalDisk.read.buffer.length)
+          if (   (blockIndex != storageHandle->opticalDisk.read.buffer.blockIndex)
+              || (blockOffset >= storageHandle->opticalDisk.read.buffer.length)
              )
           {
             // read ISO9660 block
-            n = iso9660_iso_seek_read(storageArchiveHandle->opticalDisk.read.iso9660Handle,
-                                      storageArchiveHandle->opticalDisk.read.buffer.data,
-                                      storageArchiveHandle->opticalDisk.read.iso9660Stat->lsn+(lsn_t)blockIndex,
+            n = iso9660_iso_seek_read(storageHandle->opticalDisk.read.iso9660Handle,
+                                      storageHandle->opticalDisk.read.buffer.data,
+                                      storageHandle->opticalDisk.read.iso9660Stat->lsn+(lsn_t)blockIndex,
                                       1 // read 1 block
                                      );
             if (n < ISO_BLOCKSIZE)
@@ -1760,26 +1760,26 @@ LOCAL Errors StorageOptical_read(StorageArchiveHandle *storageArchiveHandle,
               error = ERROR_(IO_ERROR,errno);
               break;
             }
-            storageArchiveHandle->opticalDisk.read.buffer.blockIndex = blockIndex;
-            storageArchiveHandle->opticalDisk.read.buffer.length     = (((blockIndex+1)*ISO_BLOCKSIZE) <= (uint64)storageArchiveHandle->opticalDisk.read.iso9660Stat->size)
+            storageHandle->opticalDisk.read.buffer.blockIndex = blockIndex;
+            storageHandle->opticalDisk.read.buffer.length     = (((blockIndex+1)*ISO_BLOCKSIZE) <= (uint64)storageHandle->opticalDisk.read.iso9660Stat->size)
                                                                   ? ISO_BLOCKSIZE
-                                                                  : (ulong)(storageArchiveHandle->opticalDisk.read.iso9660Stat->size%ISO_BLOCKSIZE);
+                                                                  : (ulong)(storageHandle->opticalDisk.read.iso9660Stat->size%ISO_BLOCKSIZE);
           }
 
           // copy data
-          bytesAvail = MIN(size,storageArchiveHandle->opticalDisk.read.buffer.length-blockOffset);
-          memcpy(buffer,storageArchiveHandle->opticalDisk.read.buffer.data+blockOffset,bytesAvail);
+          bytesAvail = MIN(size,storageHandle->opticalDisk.read.buffer.length-blockOffset);
+          memcpy(buffer,storageHandle->opticalDisk.read.buffer.data+blockOffset,bytesAvail);
 
           // adjust buffer, size, bytes read, index
           buffer = (byte*)buffer+bytesAvail;
           size -= bytesAvail;
           if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-          storageArchiveHandle->opticalDisk.read.index += (uint64)bytesAvail;
+          storageHandle->opticalDisk.read.index += (uint64)bytesAvail;
         }
       }
     }
   #else /* not HAVE_ISO9660 */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
     UNUSED_VARIABLE(size);
     UNUSED_VARIABLE(bytesRead);
@@ -1791,55 +1791,55 @@ LOCAL Errors StorageOptical_read(StorageArchiveHandle *storageArchiveHandle,
   return error;
 }
 
-LOCAL Errors StorageOptical_write(StorageArchiveHandle *storageArchiveHandle,
+LOCAL Errors StorageOptical_write(StorageHandle *storageHandle,
                                   const void    *buffer,
                                   ulong         size
                                  )
 {
   Errors error;
 
-  assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert(storageArchiveHandle->mode == STORAGE_MODE_WRITE);
-  assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
+  assert(storageHandle->storage != NULL);
+  assert(storageHandle->mode == STORAGE_MODE_WRITE);
+  assert((storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(buffer != NULL);
 
   error = ERROR_NONE;
-  if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+  if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
   {
-    error = File_write(&storageArchiveHandle->opticalDisk.write.fileHandle,buffer,size);
+    error = File_write(&storageHandle->opticalDisk.write.fileHandle,buffer,size);
   }
 
   return error;
 }
 
-LOCAL Errors StorageOptical_tell(StorageArchiveHandle *storageArchiveHandle,
+LOCAL Errors StorageOptical_tell(StorageHandle *storageHandle,
                                  uint64        *offset
                                 )
 {
   Errors error;
 
-  assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
+  assert(storageHandle->storage != NULL);
+  assert((storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(offset != NULL);
 
   (*offset) = 0LL;
 
   error = ERROR_NONE;
   #ifdef HAVE_ISO9660
-    if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
     {
-      switch (storageArchiveHandle->mode)
+      switch (storageHandle->mode)
       {
         case STORAGE_MODE_READ:
-          (*offset) = storageArchiveHandle->opticalDisk.read.index;
+          (*offset) = storageHandle->opticalDisk.read.index;
           error     = ERROR_NONE;
           break;
         case STORAGE_MODE_WRITE:
-          error = File_tell(&storageArchiveHandle->opticalDisk.write.fileHandle,offset);
+          error = File_tell(&storageHandle->opticalDisk.write.fileHandle,offset);
           break;
         #ifndef NDEBUG
           default:
@@ -1849,7 +1849,7 @@ LOCAL Errors StorageOptical_tell(StorageArchiveHandle *storageArchiveHandle,
       }
     }
   #else /* not HAVE_ISO9660 */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(offset);
   #endif /* HAVE_ISO9660 */
   assert(error != ERROR_UNKNOWN);
@@ -1857,29 +1857,29 @@ LOCAL Errors StorageOptical_tell(StorageArchiveHandle *storageArchiveHandle,
   return error;
 }
 
-LOCAL Errors StorageOptical_seek(StorageArchiveHandle *storageArchiveHandle,
+LOCAL Errors StorageOptical_seek(StorageHandle *storageHandle,
                                  uint64        offset
                                 )
 {
   Errors error;
 
-  assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
+  assert(storageHandle->storage != NULL);
+  assert((storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_BD));
 
   error = ERROR_NONE;
   #ifdef HAVE_ISO9660
-    if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
     {
-      switch (storageArchiveHandle->mode)
+      switch (storageHandle->mode)
       {
         case STORAGE_MODE_READ:
-          storageArchiveHandle->opticalDisk.read.index = offset;
+          storageHandle->opticalDisk.read.index = offset;
           error = ERROR_NONE;
           break;
         case STORAGE_MODE_WRITE:
-          error = File_seek(&storageArchiveHandle->opticalDisk.write.fileHandle,offset);
+          error = File_seek(&storageHandle->opticalDisk.write.fileHandle,offset);
           break;
         #ifndef NDEBUG
           default:
@@ -1889,7 +1889,7 @@ LOCAL Errors StorageOptical_seek(StorageArchiveHandle *storageArchiveHandle,
       }
     }
   #else /* not HAVE_ISO9660 */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(offset);
   #endif /* HAVE_ISO9660 */
   assert(error != ERROR_UNKNOWN);
@@ -1897,27 +1897,27 @@ LOCAL Errors StorageOptical_seek(StorageArchiveHandle *storageArchiveHandle,
   return error;
 }
 
-LOCAL uint64 StorageOptical_getSize(StorageArchiveHandle *storageArchiveHandle)
+LOCAL uint64 StorageOptical_getSize(StorageHandle *storageHandle)
 {
   uint64 size;
 
-  assert(storageArchiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageArchiveHandle->opticalDisk);
-  assert(storageArchiveHandle->storageHandle != NULL);
-  assert((storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageArchiveHandle->storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
+  assert(storageHandle->storage != NULL);
+  assert((storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_BD));
 
   size = 0LL;
   #ifdef HAVE_ISO9660
-    if ((storageArchiveHandle->storageHandle->jobOptions == NULL) || !storageArchiveHandle->storageHandle->jobOptions->dryRunFlag)
+    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
     {
-      switch (storageArchiveHandle->mode)
+      switch (storageHandle->mode)
       {
         case STORAGE_MODE_READ:
-          assert(storageArchiveHandle->opticalDisk.read.iso9660Stat);
-          size = (uint64)storageArchiveHandle->opticalDisk.read.iso9660Stat->size;
+          assert(storageHandle->opticalDisk.read.iso9660Stat);
+          size = (uint64)storageHandle->opticalDisk.read.iso9660Stat->size;
           break;
         case STORAGE_MODE_WRITE:
-          size = File_getSize(&storageArchiveHandle->opticalDisk.write.fileHandle);
+          size = File_getSize(&storageHandle->opticalDisk.write.fileHandle);
           break;
         #ifndef NDEBUG
           default:
@@ -1927,22 +1927,22 @@ LOCAL uint64 StorageOptical_getSize(StorageArchiveHandle *storageArchiveHandle)
       }
     }
   #else /* not HAVE_ISO9660 */
-    UNUSED_VARIABLE(storageArchiveHandle);
+    UNUSED_VARIABLE(storageHandle);
   #endif /* HAVE_ISO9660 */
 
   return size;
 }
 
-LOCAL Errors StorageOptical_delete(StorageHandle *storageHandle,
-                                   ConstString   archiveName
+LOCAL Errors StorageOptical_delete(Storage     *storage,
+                                   ConstString archiveName
                                   )
 {
-  assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert((storageHandle->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(storage != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert((storage->storageSpecifier.type == STORAGE_TYPE_CD) || (storage->storageSpecifier.type == STORAGE_TYPE_DVD) || (storage->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(!String_isEmpty(archiveName));
 
-  UNUSED_VARIABLE(storageHandle);
+  UNUSED_VARIABLE(storage);
   UNUSED_VARIABLE(archiveName);
 
   return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1950,19 +1950,19 @@ LOCAL Errors StorageOptical_delete(StorageHandle *storageHandle,
 
 #if 0
 still not complete
-LOCAL Errors StorageOptical_getFileInfo(StorageHandle *storageHandle,
-                                        ConstString   fileName,
-                                        FileInfo      *fileInfo
+LOCAL Errors StorageOptical_getFileInfo(Storage     *storage,
+                                        ConstString fileName,
+                                        FileInfo    *fileInfo
                                        )
 {
   String infoFileName;
   Errors error;
 
-  assert(storageHandle != NULL);
+  assert(storage != NULL);
   assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
   assert(fileInfo != NULL);
 
-  infoFileName = (fileName != NULL) ? fileName : storageHandle->storageSpecifier.archiveName;
+  infoFileName = (fileName != NULL) ? fileName : storage->storageSpecifier.archiveName;
   memset(fileInfo,0,sizeof(fileInfo));
 
   error = ERROR_FUNCTION_NOT_SUPPORTED;

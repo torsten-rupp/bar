@@ -3399,28 +3399,28 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 }
 
 #ifdef NDEBUG
-  Errors Archive_open(ArchiveInfo         *archiveInfo,
-                      StorageHandle       *storageHandle,
-                      StorageSpecifier    *storageSpecifier,
-                      ConstString         fileName,
-                      DeltaSourceList     *deltaSourceList,
-                      const JobOptions    *jobOptions,
-                      GetPasswordFunction getPasswordFunction,
-                      void                *getPasswordUserData,
-                      LogHandle           *logHandle
+  Errors Archive_open(ArchiveInfo            *archiveInfo,
+                      Storage                *storage,
+                      const StorageSpecifier *storageSpecifier,
+                      ConstString            fileName,
+                      DeltaSourceList        *deltaSourceList,
+                      const JobOptions       *jobOptions,
+                      GetPasswordFunction    getPasswordFunction,
+                      void                   *getPasswordUserData,
+                      LogHandle              *logHandle
                      )
 #else /* not NDEBUG */
-  Errors __Archive_open(const char          *__fileName__,
-                        ulong               __lineNb__,
-                        ArchiveInfo         *archiveInfo,
-                        StorageHandle       *storageHandle,
-                        StorageSpecifier    *storageSpecifier,
-                        ConstString         fileName,
-                        DeltaSourceList     *deltaSourceList,
-                        const JobOptions    *jobOptions,
-                        GetPasswordFunction getPasswordFunction,
-                        void                *getPasswordUserData,
-                        LogHandle           *logHandle
+  Errors __Archive_open(const char             *__fileName__,
+                        ulong                  __lineNb__,
+                        ArchiveInfo            *archiveInfo,
+                        Storage                *storage,
+                        const StorageSpecifier *storageSpecifier,
+                        ConstString            fileName,
+                        DeltaSourceList        *deltaSourceList,
+                        const JobOptions       *jobOptions,
+                        GetPasswordFunction    getPasswordFunction,
+                        void                   *getPasswordUserData,
+                        LogHandle              *logHandle
                        )
 #endif /* NDEBUG */
 {
@@ -3455,11 +3455,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   archiveInfo->ioType                  = ARCHIVE_IO_TYPE_STORAGE_FILE;
   Storage_duplicateSpecifier(&archiveInfo->storage.storageSpecifier,storageSpecifier);
-  archiveInfo->storage.storageHandle   = storageHandle;
-  archiveInfo->printableStorageName    = String_duplicate(Storage_getPrintableName(storageSpecifier,fileName));
+  archiveInfo->storage.storage   = storage;
+  archiveInfo->printableStorageName    = String_duplicate(Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,fileName));
   Semaphore_init(&archiveInfo->chunkIOLock);
   archiveInfo->chunkIO                 = &CHUNK_IO_STORAGE_FILE;
-  archiveInfo->chunkIOUserData         = &archiveInfo->storage.storageArchiveHandle;
+  archiveInfo->chunkIOUserData         = &archiveInfo->storage.storageHandle;
 
 //  archiveInfo->indexHandle             = NULL;
   archiveInfo->jobUUID                 = NULL;
@@ -3481,8 +3481,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AUTOFREE_ADD(&autoFreeList,archiveInfo->printableStorageName,{ String_delete(archiveInfo->printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_done(&archiveInfo->chunkIOLock); });
 
-  error = Storage_open(&archiveInfo->storage.storageArchiveHandle,
-                       archiveInfo->storage.storageHandle,
+  error = Storage_open(&archiveInfo->storage.storageHandle,
+                       archiveInfo->storage.storage,
                        fileName
                       );
   if (error != ERROR_NONE)
@@ -3490,7 +3490,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,archiveInfo->storage.storageHandle,{ Storage_close(&archiveInfo->storage.storageArchiveHandle); });
+  AUTOFREE_ADD(&autoFreeList,archiveInfo->storage.storage,{ Storage_close(&archiveInfo->storage.storageHandle); });
   DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // check if BAR archive file
@@ -3557,7 +3557,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       error = closeArchiveFile(archiveInfo,archiveInfo->indexHandle);
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      Storage_close(&archiveInfo->storage.storageArchiveHandle);
+      Storage_close(&archiveInfo->storage.storageHandle);
       error = ERROR_NONE;
       break;
     #ifndef NDEBUG
@@ -3627,12 +3627,12 @@ Errors Archive_storageInterrupt(ArchiveInfo *archiveInfo)
       }
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      error = Storage_tell(&archiveInfo->storage.storageArchiveHandle,&archiveInfo->interrupt.offset);
+      error = Storage_tell(&archiveInfo->storage.storageHandle,&archiveInfo->interrupt.offset);
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Storage_close(&archiveInfo->storage.storageArchiveHandle);
+      Storage_close(&archiveInfo->storage.storageHandle);
       break;
     #ifndef NDEBUG
       default:
@@ -3676,8 +3676,8 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
       }
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      error = Storage_open(&archiveInfo->storage.storageArchiveHandle,
-                           archiveInfo->storage.storageHandle,
+      error = Storage_open(&archiveInfo->storage.storageHandle,
+                           archiveInfo->storage.storage,
                            NULL  // archiveName
                           );
       if (error != ERROR_NONE)
@@ -3687,7 +3687,7 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
 #ifndef WERROR
 #warning seek?
 #endif
-      error = Storage_seek(&archiveInfo->storage.storageArchiveHandle,archiveInfo->interrupt.offset);
+      error = Storage_seek(&archiveInfo->storage.storageHandle,archiveInfo->interrupt.offset);
       if (error != ERROR_NONE)
       {
         return error;
@@ -10480,7 +10480,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo)
 }
 
 Errors Archive_addToIndex(IndexHandle      *indexHandle,
-                          StorageHandle    *storageHandle,
+                          Storage          *storage,
                           ConstString      storageName,
                           IndexModes       indexMode,
                           const JobOptions *jobOptions,
@@ -10512,7 +10512,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
   // add index
   error = Archive_updateIndex(indexHandle,
                               storageId,
-                              storageHandle,
+                              storage,
                               storageName,
                               jobOptions,
                               totalTimeLastChanged,
@@ -10533,7 +10533,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 
 Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            IndexId                      storageId,
-                           StorageHandle                *storageHandle,
+                           Storage                      *storage,
                            ConstString                  storageName,
                            const JobOptions             *jobOptions,
                            uint64                       *totalTimeLastChanged,
@@ -10586,7 +10586,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     // try to open scp-storage first with sftp
     storageSpecifier.type = STORAGE_TYPE_SFTP;
     error = Archive_open(&archiveInfo,
-                         storageHandle,
+                         storage,
                          &storageSpecifier,
                          NULL,  // archive name
                          NULL,  // deltaSourceList
@@ -10600,7 +10600,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       // open scp-storage
       storageSpecifier.type = STORAGE_TYPE_SCP;
       error = Archive_open(&archiveInfo,
-                           storageHandle,
+                           storage,
                            &storageSpecifier,
                            NULL,  // archive name
                            NULL,  // deltaSourceList
@@ -10614,7 +10614,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   {
     // open other storage types
     error = Archive_open(&archiveInfo,
-                         storageHandle,
+                         storage,
                          &storageSpecifier,
                          NULL,  // archive name
                          NULL,  // deltaSourceList
@@ -10697,7 +10697,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   // read archive content
   timeLastChanged             = 0LL;
   abortedFlag                 = (abortCallbackFunction != NULL) && abortCallbackFunction(abortCallbackUserData);
-  serverAllocationPendingFlag = Storage_isServerAllocationPending(storageHandle);
+  serverAllocationPendingFlag = Storage_isServerAllocationPending(storage);
   fileName        = String_new();
   imageName       = String_new();
   directoryName   = String_new();
@@ -11152,7 +11152,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
     // check if aborted, check if server allocation pending
     abortedFlag                 = (abortCallbackFunction != NULL) && abortCallbackFunction(abortCallbackUserData);
-    serverAllocationPendingFlag = Storage_isServerAllocationPending(storageHandle);
+    serverAllocationPendingFlag = Storage_isServerAllocationPending(storage);
   }
   String_delete(destinationName);
   String_delete(linkName);

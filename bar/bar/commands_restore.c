@@ -2345,7 +2345,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
 {
   AutoFreeList      autoFreeList;
   byte              *buffer;
-  StorageHandle     storageHandle;
+  Storage           storage;
   Errors            error;
   ArchiveInfo       archiveInfo;
   Errors            failError;
@@ -2372,7 +2372,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
   updateStatusInfo(restoreInfo,TRUE);
 
   // init storage
-  error = Storage_init(&storageHandle,
+  error = Storage_init(&storage,
                        storageSpecifier,
                        restoreInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
@@ -2391,11 +2391,11 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
     error = handleError(restoreInfo,error);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,&storageHandle,{ Storage_done(&storageHandle); });
+  AUTOFREE_ADD(&autoFreeList,&storage,{ Storage_done(&storage); });
 
   // open archive
   error = Archive_open(&archiveInfo,
-                       &storageHandle,
+                       &storage,
                        storageSpecifier,
                        archiveName,
                        restoreInfo->deltaSourceList,
@@ -2541,7 +2541,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
   Archive_close(&archiveInfo);
 
   // done storage
-  (void)Storage_done(&storageHandle);
+  (void)Storage_done(&storage);
 
   // free resources
   free(buffer);

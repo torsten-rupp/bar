@@ -55,8 +55,7 @@
 
 /***************************** Constants *******************************/
 
-#define MAX_FILE_MSG_QUEUE_ENTRIES    256
-#define MAX_STORAGE_MSG_QUEUE_ENTRIES 256
+#define MAX_ENTRY_MSG_QUEUE 256
 
 // file data buffer size
 #define BUFFER_SIZE                   (64*1024)
@@ -109,7 +108,7 @@ typedef struct
   bool                        partialFlag;                        // TRUE for create incremental/differential archive
   Dictionary                  namesDictionary;                    // dictionary with files (used for incremental/differental backup)
   bool                        storeIncrementalFileInfoFlag;       // TRUE to store incremental file data
-  StorageHandle               storageHandle;                      // storage handle
+  Storage                     storage;                      // storage handle
   time_t                      startTime;                          // start time [ms] (unix time)
 
   MsgQueue                    entryMsgQueue;                      // queue with entries to store
@@ -307,7 +306,7 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
                           const PatternList        *excludePatternList,
                           const PatternList        *compressExcludePatternList,
                           const DeltaSourceList    *deltaSourceList,
-                          JobOptions               *jobOptions,
+                          const JobOptions         *jobOptions,
                           ArchiveTypes             archiveType,
                           ConstString              scheduleTitle,
                           ConstString              scheduleCustomText,
@@ -371,7 +370,7 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   }
 
   // init entry name queue, storage queue
-  if (!MsgQueue_init(&createInfo->entryMsgQueue,MAX_FILE_MSG_QUEUE_ENTRIES))
+  if (!MsgQueue_init(&createInfo->entryMsgQueue,MAX_ENTRY_MSG_QUEUE))
   {
     HALT_FATAL_ERROR("Cannot initialize entry message queue!");
   }
@@ -3230,11 +3229,11 @@ LOCAL uint64 archiveGetSize(IndexHandle *indexHandle,
                             void        *userData
                            )
 {
-  CreateInfo           *createInfo = (CreateInfo*)userData;
-  String               archiveName;
-  Errors               error;
-  StorageArchiveHandle storageArchiveHandle;
-  uint64               archiveSize;
+  CreateInfo    *createInfo = (CreateInfo*)userData;
+  String        archiveName;
+  Errors        error;
+  StorageHandle storageHandle;
+  uint64        archiveSize;
 
   assert(createInfo != NULL);
 
@@ -3262,14 +3261,14 @@ LOCAL uint64 archiveGetSize(IndexHandle *indexHandle,
   DEBUG_TESTCODE() { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
 
   // get archive size
-  error = Storage_open(&storageArchiveHandle,&createInfo->storageHandle,archiveName);
+  error = Storage_open(&storageHandle,&createInfo->storage,archiveName);
   if (error != ERROR_NONE)
   {
     String_delete(archiveName);
     return 0LL;
   }
-  archiveSize = Storage_getSize(&storageArchiveHandle);
-  Storage_close(&storageArchiveHandle);
+  archiveSize = Storage_getSize(&storageHandle);
+  Storage_close(&storageHandle);
 
   // free resources
   String_delete(archiveName);
@@ -3547,7 +3546,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
   IndexId          storageId;
   uint64           createdDateTime;
   uint64           size;
-  StorageHandle    storageHandle;
+  Storage          storage;
   String           dateTime;
 
   assert(jobUUID != NULL);
@@ -3636,7 +3635,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
       error = Storage_parseName(&storageSpecifier,oldestStorageName);
       if (error == ERROR_NONE)
       {
-        error = Storage_init(&storageHandle,
+        error = Storage_init(&storage,
                              &storageSpecifier,
                              NULL,  // jobOptions
                              &globalOptions.indexDatabaseMaxBandWidthList,
@@ -3648,12 +3647,12 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
         if (error == ERROR_NONE)
         {
           // delete storage
-          (void)Storage_delete(&storageHandle,
+          (void)Storage_delete(&storage,
                                NULL  // archiveName
                               );
 
           // prune empty directories
-          (void)Storage_pruneDirectories(&storageHandle,oldestStorageName);
+          (void)Storage_pruneDirectories(&storage,oldestStorageName);
         }
         else
         {
@@ -3667,7 +3666,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                      Error_getText(error)
                     );
         }
-        Storage_done(&storageHandle);
+        Storage_done(&storage);
       }
 
       // delete index of storage
@@ -3745,7 +3744,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
   IndexId          storageId;
   uint64           createdDateTime;
   uint64           size;
-  StorageHandle    storageHandle;
+  Storage          storage;
   String           dateTime;
 
   assert(server != NULL);
@@ -3839,7 +3838,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
       error = Storage_parseName(&storageSpecifier,oldestStorageName);
       if (error == ERROR_NONE)
       {
-        error = Storage_init(&storageHandle,
+        error = Storage_init(&storage,
                              &storageSpecifier,
                              NULL,  // jobOptions
                              &globalOptions.indexDatabaseMaxBandWidthList,
@@ -3851,12 +3850,12 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
         if (error == ERROR_NONE)
         {
           // delete storage
-          (void)Storage_delete(&storageHandle,
+          (void)Storage_delete(&storage,
                                NULL  // archiveName
                               );
 
           // prune empty directories
-          (void)Storage_pruneDirectories(&storageHandle,oldestStorageName);
+          (void)Storage_pruneDirectories(&storage,oldestStorageName);
         }
         else
         {
@@ -3870,7 +3869,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                      Error_getText(error)
                     );
         }
-        Storage_done(&storageHandle);
+        Storage_done(&storage);
       }
 
       // delete index of storage
@@ -3925,31 +3924,31 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 {
   #define MAX_RETRIES 3
 
-  AutoFreeList               autoFreeList;
-  byte                       *buffer;
-  void                       *autoFreeSavePoint;
-  StorageMsg                 storageMsg;
-  Errors                     error;
-  ConstString                printableStorageName;
-  FileInfo                   fileInfo;
-  Server                     server;
-  FileHandle                 fileHandle;
-  uint                       retryCount;
-  uint64                     archiveSize;
-  bool                       appendFlag;
-  StorageArchiveHandle       storageArchiveHandle;
-  ulong                      bufferLength;
-  SemaphoreLock              semaphoreLock;
-  String                     pattern;
+  AutoFreeList     autoFreeList;
+  byte             *buffer;
+  void             *autoFreeSavePoint;
+  StorageMsg       storageMsg;
+  Errors           error;
+  ConstString      printableStorageName;
+  FileInfo         fileInfo;
+  Server           server;
+  FileHandle       fileHandle;
+  uint             retryCount;
+  uint64           archiveSize;
+  bool             appendFlag;
+  StorageHandle    storageHandle;
+  ulong            bufferLength;
+  SemaphoreLock    semaphoreLock;
+  String           pattern;
 
-  String                     pathName;
-  IndexQueryHandle           indexQueryHandle;
-  IndexId                    storageId;
-  IndexId                    existingEntityId;
-  IndexId                    existingStorageId;
-  String                     existingStorageName;
-  String                     existingPathName;
-  StorageSpecifier           existingStorageSpecifier;
+  String           pathName;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          storageId;
+  IndexId          existingEntityId;
+  IndexId          existingStorageId;
+  String           existingStorageName;
+  String           existingPathName;
+  StorageSpecifier existingStorageSpecifier;
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
@@ -3983,7 +3982,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // pre-process
     if (!isAborted(createInfo))
     {
-      error = Storage_preProcess(&createInfo->storageHandle,NULL,createInfo->startTime,TRUE);
+      error = Storage_preProcess(&createInfo->storage,NULL,createInfo->startTime,TRUE);
       if (error != ERROR_NONE)
       {
         printError("Cannot pre-process storage (error: %s)!\n",
@@ -4023,7 +4022,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.archiveName);
 
     // pre-process
-    error = Storage_preProcess(&createInfo->storageHandle,storageMsg.archiveName,createInfo->startTime,FALSE);
+    error = Storage_preProcess(&createInfo->storage,storageMsg.archiveName,createInfo->startTime,FALSE);
     if (error != ERROR_NONE)
     {
       printError("Cannot pre-process file '%s' (error: %s)!\n",
@@ -4119,13 +4118,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       if (isAborted(createInfo)) break;
 
       // check if append to storage
-      appendFlag =    (createInfo->storageHandle.jobOptions != NULL)
-                   && (createInfo->storageHandle.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
-                   && Storage_exists(&createInfo->storageHandle,storageMsg.archiveName);
+      appendFlag =    (createInfo->storage.jobOptions != NULL)
+                   && (createInfo->storage.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
+                   && Storage_exists(&createInfo->storage,storageMsg.archiveName);
 
       // create/append storage file
-      error = Storage_create(&storageArchiveHandle,
-                             &createInfo->storageHandle,
+      error = Storage_create(&storageHandle,
+                             &createInfo->storage,
                              storageMsg.archiveName,
                              fileInfo.size
                             );
@@ -4146,7 +4145,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           break;
         }
       }
-      DEBUG_TESTCODE() { Storage_close(&storageArchiveHandle); error = DEBUG_TESTCODE_ERROR(); break; }
+      DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
 
       // update status info
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
@@ -4177,7 +4176,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
 
         // store data into storage file
-        error = Storage_write(&storageArchiveHandle,buffer,bufferLength);
+        error = Storage_write(&storageHandle,buffer,bufferLength);
         if (error != ERROR_NONE)
         {
           if (retryCount <= MAX_RETRIES)
@@ -4212,10 +4211,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 //TODO: on error restore to original size/delete
 
       // get archive size
-      archiveSize = Storage_getSize(&storageArchiveHandle);
+      archiveSize = Storage_getSize(&storageHandle);
 
       // close storage
-      Storage_close(&storageArchiveHandle);
+      Storage_close(&storageHandle);
     }
     while (   ((error != ERROR_NONE) && (Error_getCode(error) != ENOSPC))      // some error amd not "no space left"
            && (retryCount <= MAX_RETRIES)                                      // still some retry left
@@ -4361,7 +4360,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         }
 
         // append storage to existing entity which have the same storage directory
-        if (createInfo->storageHandle.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
+        if (createInfo->storage.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
         {
 //fprintf(stderr,"%s, %d: append to entity of uuid %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
           printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.archiveName);
@@ -4489,7 +4488,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     }
 
     // post-process
-    error = Storage_postProcess(&createInfo->storageHandle,storageMsg.archiveName,createInfo->startTime,FALSE);
+    error = Storage_postProcess(&createInfo->storage,storageMsg.archiveName,createInfo->startTime,FALSE);
     if (error != ERROR_NONE)
     {
       printError("Cannot post-process storage file '%s' (error: %s)!\n",
@@ -4555,7 +4554,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // post-processing
     if (!isAborted(createInfo))
     {
-      error = Storage_postProcess(&createInfo->storageHandle,NULL,createInfo->startTime,TRUE);
+      error = Storage_postProcess(&createInfo->storage,NULL,createInfo->startTime,TRUE);
       if (error != ERROR_NONE)
       {
         printError("Cannot post-process storage (error: %s)!\n",
@@ -4607,7 +4606,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                  // find in storage list
                                  if (StringList_find(&createInfo->storageFileList,storageSpecifier.archiveName) == NULL)
                                  {
-                                   Storage_delete(&createInfo->storageHandle,storageName);
+                                   Storage_delete(&createInfo->storage,storageName);
                                  }
                                }
 
@@ -6490,7 +6489,7 @@ Errors Command_create(ConstString                  jobUUID,
   Thread           storageThread;                      // storage thread
   Thread           *createThreads;
   uint             createThreadCount;
-  uint             z;
+  uint             i;
   Errors           error;
   MountNode        *mountNode;
 
@@ -6581,7 +6580,7 @@ Errors Command_create(ConstString                  jobUUID,
   }
 
   // init storage
-  error = Storage_init(&createInfo.storageHandle,
+  error = Storage_init(&createInfo.storage,
                        createInfo.storageSpecifier,
                        createInfo.jobOptions,
                        &globalOptions.maxBandWidthList,
@@ -6599,8 +6598,8 @@ Errors Command_create(ConstString                  jobUUID,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE() { Storage_done(&createInfo.storageHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&createInfo.storageHandle,{ Storage_done(&createInfo.storageHandle); });
+  DEBUG_TESTCODE() { Storage_done(&createInfo.storage); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&createInfo.storage,{ Storage_done(&createInfo.storage); });
 
   if (   (createInfo.archiveType == ARCHIVE_TYPE_FULL)
       || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL)
@@ -6773,9 +6772,9 @@ Errors Command_create(ConstString                  jobUUID,
   AUTOFREE_ADD(&autoFreeList,&storageThread,{ MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue); Thread_join(&storageThread); Thread_done(&storageThread); });
 
   // start create threads
-  for (z = 0; z < createThreadCount; z++)
+  for (i = 0; i < createThreadCount; i++)
   {
-    if (!Thread_init(&createThreads[z],"BAR create",globalOptions.niceLevel,createThreadCode,&createInfo))
+    if (!Thread_init(&createThreads[i],"BAR create",globalOptions.niceLevel,createThreadCode,&createInfo))
     {
       HALT_FATAL_ERROR("Cannot initialize create thread!");
     }
@@ -6793,13 +6792,13 @@ Errors Command_create(ConstString                  jobUUID,
 
   // wait for and done create threads
   MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
-  for (z = 0; z < createThreadCount; z++)
+  for (i = 0; i < createThreadCount; i++)
   {
-    if (!Thread_join(&createThreads[z]))
+    if (!Thread_join(&createThreads[i]))
     {
       HALT_FATAL_ERROR("Cannot stop create thread!");
     }
-    Thread_done(&createThreads[z]);
+    Thread_done(&createThreads[i]);
   }
 
   // close archive
@@ -6956,7 +6955,7 @@ Errors Command_create(ConstString                  jobUUID,
     String_delete(incrementalListFileName);
     Dictionary_done(&createInfo.namesDictionary);
   }
-  Storage_done(&createInfo.storageHandle);
+  Storage_done(&createInfo.storage);
   doneCreateInfo(&createInfo);
   Index_close(indexHandle);
   free(createThreads);

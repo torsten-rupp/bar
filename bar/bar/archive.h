@@ -179,7 +179,7 @@ typedef struct
 {
   String                   jobUUID;
   String                   scheduleUUID;
-  DeltaSourceList          *deltaSourceList;                           // list with delta sources
+  const DeltaSourceList          *deltaSourceList;                           // list with delta sources
   const JobOptions         *jobOptions;
   IndexHandle              *indexHandle;                               // index handle or NULL (owned by opener/creator of archive)
   IndexId                  uuidId;                                     // index UUID id
@@ -223,8 +223,8 @@ typedef struct
     {
       StorageSpecifier     storageSpecifier;                           // storage specifier structure
       String               storageFileName;                            // storage storage name
-      StorageHandle        *storageHandle;                             // storage handle
-      StorageArchiveHandle storageArchiveHandle;
+      Storage              *storage;                                   // storage
+      StorageHandle        storageHandle;
     } storage;
   };
   String                   printableStorageName;                       // printable storage name
@@ -597,7 +597,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 * Name   : Archive_open
 * Purpose: open archive
 * Input  : archiveInfo         - archive info data
-*          storageHandle       - storage handle
+*          storage             - storage
 *          storageSpecifier    - storage specifier structure
 *          fileName            - file name or NULL
 *          jobOptions          - option settings
@@ -610,28 +610,28 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Archive_open(ArchiveInfo         *archiveInfo,
-                      StorageHandle       *storageHandle,
-                      StorageSpecifier    *storageSpecifier,
-                      ConstString         fileName,
-                      DeltaSourceList     *deltaSourceList,
-                      const JobOptions    *jobOptions,
-                      GetPasswordFunction getPasswordFunction,
-                      void                *getPasswordUserData,
-                      LogHandle           *logHandle
+  Errors Archive_open(ArchiveInfo            *archiveInfo,
+                      Storage                *storage,
+                      const StorageSpecifier *storageSpecifier,
+                      ConstString            fileName,
+                      DeltaSourceList        *deltaSourceList,
+                      const JobOptions       *jobOptions,
+                      GetPasswordFunction    getPasswordFunction,
+                      void                   *getPasswordUserData,
+                      LogHandle              *logHandle
                      );
 #else /* not NDEBUG */
-  Errors __Archive_open(const char          *__fileName__,
-                        ulong               __lineNb__,
-                        ArchiveInfo         *archiveInfo,
-                        StorageHandle       *storageHandle,
-                        StorageSpecifier    *storageSpecifier,
-                        ConstString         fileName,
-                        DeltaSourceList     *deltaSourceList,
-                        const JobOptions    *jobOptions,
-                        GetPasswordFunction getPasswordFunction,
-                        void                *getPasswordUserData,
-                        LogHandle           *logHandle
+  Errors __Archive_open(const char             *__fileName__,
+                        ulong                  __lineNb__,
+                        ArchiveInfo            *archiveInfo,
+                        Storage                *storage,
+                        const StorageSpecifier *storageSpecifier,
+                        ConstString            fileName,
+                        DeltaSourceList        *deltaSourceList,
+                        const JobOptions       *jobOptions,
+                        GetPasswordFunction    getPasswordFunction,
+                        void                   *getPasswordUserData,
+                        LogHandle              *logHandle
                        );
 #endif /* NDEBUG */
 
@@ -1366,12 +1366,12 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 /***********************************************************************\
 * Name   : Archive_addToIndex
 * Purpose: add storage index
-* Input  : indexHandle   - index handle
-*          storageHandle - storage handle
-*          storageName   - storage name
-*          indexMode     - index mode
-*          jobOptions    - job options
-*          logHandle     - log handle (can be NULL)
+* Input  : indexHandle - index handle
+*          storage     - storage
+*          storageName - storage name
+*          indexMode   - index mode
+*          jobOptions  - job options
+*          logHandle   - log handle (can be NULL)
 * Output : totalTimeLastChanged - total last change time [s] (can be
 *                                 NULL)
 *          totalEntries         - total entries (can be NULL)
@@ -1381,7 +1381,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 \***********************************************************************/
 
 Errors Archive_addToIndex(IndexHandle      *indexHandle,
-                          StorageHandle    *storageHandle,
+                          Storage          *storage,
                           ConstString      storageName,
                           IndexModes       indexMode,
                           const JobOptions *jobOptions,
@@ -1394,15 +1394,15 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 /***********************************************************************\
 * Name   : Archive_updateIndex
 * Purpose: update storage index
-* Input  : indexHandle             - index handle
-*          storageId               - database id of storage
-*          storageHandle           - storage handle
-*          storageName             - storage name
-*          jobOptions              - job options
-*          pauseCallbackFunction   - pause check callback (can be NULL)
-*          pauseCallbackUserData   - pause user data
-*          abortCallbackFunction   - abort check callback (can be NULL)
-*          abortCallbackUserData   - abort user data
+* Input  : indexHandle           - index handle
+*          storageId             - database id of storage
+*          storage               - storage
+*          storageName           - storage name
+*          jobOptions            - job options
+*          pauseCallbackFunction - pause check callback (can be NULL)
+*          pauseCallbackUserData - pause user data
+*          abortCallbackFunction - abort check callback (can be NULL)
+*          abortCallbackUserData - abort user data
 * Output : totalTimeLastChanged - total last change time [s] (can be
 *                                 NULL)
 *          totalEntries         - total entries (can be NULL)
@@ -1413,7 +1413,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 
 Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            IndexId                      storageId,
-                           StorageHandle                *storageHandle,
+                           Storage                      *storage,
                            ConstString                  storageName,
                            const JobOptions             *jobOptions,
                            uint64                       *totalTimeLastChanged,
