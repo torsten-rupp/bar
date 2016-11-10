@@ -492,7 +492,7 @@ public class Settings
   public static String                serverCertificateFileName       = null;
   @SettingValue
   public static String                serverKeyFileName               = null;
-  public static boolean               serverForceSSL                  = false;
+  public static boolean               forceSSL                        = true;
 
   // file requester shortcuts
   @SettingComment(text={"","Shortcuts"})

@@ -1272,24 +1272,27 @@ public class BARControl
    */
   class LoginData
   {
-    String serverName;       // server name
-    int    serverPort;       // server port
-    int    serverTLSPort;    // server TLS port
-    String password;         // login password
+    String  serverName;       // server name
+    int     serverPort;       // server port
+    int     serverTLSPort;    // server TLS port
+    boolean forceSSL;         // force SSL
+    String  password;         // login password
 
     /** create login data
      * @param serverName server name
      * @param port server port
      * @param tlsPort server TLS port
      * @param password server password
+     * @param forceSSL TRUE to force SSL
      */
-    LoginData(String name, int port, int tlsPort, String password)
+    LoginData(String name, int port, int tlsPort, boolean forceSSL, String password)
     {
       final Settings.Server defaultServer = Settings.getLastServer();
 
       this.serverName    = !name.isEmpty()     ? name     : ((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME);
       this.serverPort    = (port != 0        ) ? port     : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT);
       this.serverTLSPort = (port != 0        ) ? tlsPort  : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT);
+      this.forceSSL      = forceSSL;
       this.password      = !password.isEmpty() ? password : "";
 
       // get last used server if no name given
@@ -1304,19 +1307,21 @@ public class BARControl
      * @param serverName server name
      * @param port server port
      * @param tlsPort server TLS port
+     * @param forceSSL TRUE to force SSL
      */
-    LoginData(String name, int port, int tlsPort)
+    LoginData(String name, int port, int tlsPort, boolean forceSSL)
     {
-      this(name,port,tlsPort,"");
+      this(name,port,tlsPort,forceSSL,"");
     }
 
     /** create login data
      * @param port server port
      * @param tlsPort server TLS port
+     * @param forceSSL TRUE to force SSL
      */
-    LoginData(int port, int tlsPort)
+    LoginData(int port, int tlsPort, boolean forceSSL)
     {
-      this("",port,tlsPort);
+      this("",port,tlsPort,forceSSL);
     }
 
     /** convert data to string
@@ -1324,7 +1329,7 @@ public class BARControl
      */
     public String toString()
     {
-      return "LoginData {"+serverName+", "+serverPort+", "+serverTLSPort+"}";
+      return "LoginData {"+serverName+", "+serverPort+", "+serverTLSPort+", "+(forceSSL ? "SSL" : "plain")+"}";
     }
   }
 
@@ -1708,6 +1713,8 @@ public class BARControl
 //        Settings.serverNames.add(args[z]);
 
     // check arguments
+if (false) {
+//TODO: check PEM
     if ((Settings.serverKeyFileName != null) && !Settings.serverKeyFileName.isEmpty())
     {
       // check if PEM/JKS file is readable
@@ -1737,6 +1744,7 @@ public class BARControl
         throw new Error("not a Java Key Store (JKS) file '"+Settings.serverKeyFileName+"'",exception);
       }
     }
+}
   }
 
   /** get database id
@@ -1818,9 +1826,9 @@ public class BARControl
       serverData[i] = servers[i].getData();
     }
 
-    // password
     final Combo   widgetServerName;
     final Spinner widgetServerPort;
+    final Button  widgetForceSSL;
     final Text    widgetPassword;
     final Button  widgetLoginButton;
     composite = new Composite(dialog,SWT.NONE);
@@ -1835,25 +1843,29 @@ public class BARControl
       subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0},2));
       subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
       {
-        widgetServerName = new Combo(subComposite,SWT.LEFT|SWT.BORDER);
+        widgetServerName = Widgets.newCombo(subComposite,SWT.LEFT|SWT.BORDER);
         widgetServerName.setItems(serverData);
         if (loginData.serverName != null) widgetServerName.setText(loginData.serverName);
-        widgetServerName.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+        Widgets.layout(widgetServerName,0,0,TableLayoutData.WE);
 
-        widgetServerPort = new Spinner(subComposite,SWT.RIGHT|SWT.BORDER);
+        widgetServerPort = Widgets.newSpinner(subComposite,SWT.RIGHT|SWT.BORDER);
         widgetServerPort.setMinimum(0);
         widgetServerPort.setMaximum(65535);
         widgetServerPort.setSelection(loginData.serverPort);
-        widgetServerPort.setLayoutData(new TableLayoutData(0,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT));
+        Widgets.layout(widgetServerPort,0,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+
+        widgetForceSSL = Widgets.newCheckbox(subComposite,BARControl.tr("SSL"));
+        widgetForceSSL.setSelection(loginData.forceSSL);
+        Widgets.layout(widgetForceSSL,0,2,TableLayoutData.W);
       }
 
-      label = new Label(composite,SWT.LEFT);
+      label = Widgets.newLabel(composite);
       label.setText(BARControl.tr("Password")+":");
-      label.setLayoutData(new TableLayoutData(1,0,TableLayoutData.W));
+      Widgets.layout(label,1,0,TableLayoutData.W);
 
-      widgetPassword = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
+      widgetPassword = Widgets.newPassword(composite);
       if ((loginData.password != null) && !loginData.password.isEmpty()) widgetPassword.setText(loginData.password);
-      widgetPassword.setLayoutData(new TableLayoutData(1,1,TableLayoutData.WE));
+      Widgets.layout(widgetPassword,1,1,TableLayoutData.WE);
     }
 
     // buttons
@@ -1861,9 +1873,9 @@ public class BARControl
     composite.setLayout(new TableLayout(0.0,1.0));
     composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));
     {
-      widgetLoginButton = new Button(composite,SWT.CENTER);
+      widgetLoginButton = Widgets.newButton(composite);
       widgetLoginButton.setText(BARControl.tr("Login"));
-      widgetLoginButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT));
+      Widgets.layout(widgetLoginButton,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
       widgetLoginButton.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -1875,14 +1887,15 @@ public class BARControl
         {
           loginData.serverName = widgetServerName.getText();
           loginData.serverPort = widgetServerPort.getSelection();
+          loginData.forceSSL   = widgetForceSSL.getSelection();
           loginData.password   = widgetPassword.getText();
           Dialogs.close(dialog,true);
         }
       });
 
-      button = new Button(composite,SWT.CENTER);
+      button = Widgets.newButton(composite);
       button.setText(BARControl.tr("Cancel"));
-      button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT));
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -1930,6 +1943,7 @@ public class BARControl
 
     Widgets.setNextFocus(widgetServerName,
                          widgetServerPort,
+                         widgetForceSSL,
                          widgetPassword,
                          widgetLoginButton
                         );
@@ -2074,6 +2088,7 @@ public class BARControl
               loginData = new LoginData((!server.name.isEmpty()    ) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                         (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                         (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
+                                        Settings.forceSSL,
                                         (!server.password.isEmpty()) ? server.password : ""
                                        );
               try
@@ -2082,9 +2097,10 @@ public class BARControl
                                   loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
+                                  loginData.forceSSL,
                                   loginData.password,
-                                  "",  // server CA file name
-                                  "",  // server certificate file name
+                                  Settings.serverCAFileName,
+                                  Settings.serverCertificateFileName,
                                   Settings.serverKeyFileName
                                  );
                 shell.setText("BAR control: "+BARServer.getInfo());
@@ -2107,7 +2123,8 @@ public class BARControl
             {
               loginData = new LoginData((!server.name.isEmpty()) ? server.name : Settings.DEFAULT_SERVER_NAME,
                                         (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
-                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT
+                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
+                                        Settings.forceSSL
                                        );
               if (getLoginData(loginData))
               {
@@ -2117,9 +2134,10 @@ public class BARControl
                                     loginData.serverName,
                                     loginData.serverPort,
                                     loginData.serverTLSPort,
+                                    loginData.forceSSL,
                                     loginData.password,
-                                    "",  // server CA file name
-                                    "",  // server certificate file name
+                                    Settings.serverCAFileName,
+                                    Settings.serverCertificateFileName,
                                     Settings.serverKeyFileName
                                    );
                   shell.setText("BAR control: "+BARServer.getInfo());
@@ -2172,7 +2190,8 @@ public class BARControl
           {
             final Settings.Server defaultServer = Settings.getLastServer();
             loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
-                                      (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT
+                                      (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
+                                      Settings.forceSSL
                                      );
             if (getLoginData(loginData))
             {
@@ -2182,9 +2201,10 @@ public class BARControl
                                   loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
+                                  loginData.forceSSL,
                                   loginData.password,
-                                  "",  // server CA file name
-                                  "",  // server certificate file name
+                                  Settings.serverCAFileName,
+                                  Settings.serverCertificateFileName,
                                   Settings.serverKeyFileName
                                  );
                 shell.setText("BAR control: "+BARServer.getInfo());
@@ -2620,9 +2640,10 @@ public class BARControl
                                 loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
+                                loginData.forceSSL,
                                 loginData.password,
-                                "",  // server CA file name
-                                "",  // server certificate file name
+                                Settings.serverCAFileName,
+                                Settings.serverCertificateFileName,
                                 Settings.serverKeyFileName
                                );
               shell.setText("BAR control: "+BARServer.getInfo());
@@ -2659,9 +2680,10 @@ public class BARControl
                                 loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
+                                loginData.forceSSL,
                                 loginData.password,
-                                "",  // server CA file name
-                                "",  // server certificate file name
+                                Settings.serverCAFileName,
+                                Settings.serverCertificateFileName,
                                 Settings.serverKeyFileName
                                );
               shell.setText("BAR control: "+BARServer.getInfo());
@@ -2735,6 +2757,7 @@ public class BARControl
       loginData = new LoginData((server != null) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
+                                Settings.forceSSL,
                                 (server != null) ? server.password : ""
                                );
       if (Settings.serverName     != null) loginData.serverName    = Settings.serverName;
@@ -2768,9 +2791,10 @@ public class BARControl
           BARServer.connect(loginData.serverName,
                             loginData.serverPort,
                             loginData.serverTLSPort,
+                            loginData.forceSSL,
                             loginData.password,
-                            "",  // server CA file name
-                            "",  // server certificate file name
+                            Settings.serverCAFileName,
+                            Settings.serverCertificateFileName,
                             Settings.serverKeyFileName
                            );
         }
@@ -3570,9 +3594,10 @@ Dprintf.dprintf("still not supported");
                                 loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
+                                loginData.forceSSL,
                                 loginData.password,
-                                "",  // server CA file name
-                                "",  // server certificate file name
+                                Settings.serverCAFileName,
+                                Settings.serverCertificateFileName,
                                 Settings.serverKeyFileName
                                );
               connectOkFlag = true;
@@ -3591,9 +3616,10 @@ Dprintf.dprintf("still not supported");
                                 loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
+                                loginData.forceSSL,
                                 "",  // password
-                                "",  // server CA file name
-                                "",  // server certificate file name
+                                Settings.serverCAFileName,
+                                Settings.serverCertificateFileName,
                                 Settings.serverKeyFileName
                                );
               connectOkFlag = true;
@@ -3607,10 +3633,12 @@ Dprintf.dprintf("still not supported");
         while (!connectOkFlag)
         {
           // get login data
+Dprintf.dprintf("");
           if (!getLoginData(loginData))
           {
             System.exit(0);
           }
+Dprintf.dprintf("loginData=%s",loginData);
           if ((loginData.serverPort == 0) && (loginData.serverTLSPort == 0))
           {
             throw new Error("Cannot connect to server. No server ports specified!");
@@ -3624,9 +3652,10 @@ Dprintf.dprintf("still not supported");
                               loginData.serverName,
                               loginData.serverPort,
                               loginData.serverTLSPort,
+                              loginData.forceSSL,
                               loginData.password,
-                              "",  // server CA file name
-                              "",  // server certificate file name
+                              Settings.serverCAFileName,
+                              Settings.serverCertificateFileName,
                               Settings.serverKeyFileName
                              );
             connectOkFlag = true;
