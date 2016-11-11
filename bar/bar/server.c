@@ -18675,15 +18675,13 @@ Errors Server_run(uint              port,
   {
     error = Network_initServer(&serverSocketHandle,
                                port,
-                               SERVER_SOCKET_TYPE_PLAIN
-#if 0
+                               SERVER_SOCKET_TYPE_PLAIN,
                                NULL,
                                0,
                                NULL,
                                0,
                                NULL,
                                0
-#endif
                               );
     if (error != ERROR_NONE)
     {
@@ -18708,7 +18706,13 @@ Errors Server_run(uint              port,
       #ifdef HAVE_GNU_TLS
         error = Network_initServer(&serverTLSSocketHandle,
                                    tlsPort,
-                                   SERVER_SOCKET_TYPE_TLS
+                                   SERVER_SOCKET_TYPE_TLS,
+                                   serverCA->data,
+                                   serverCA->length,
+                                   serverCert->data,
+                                   serverCert->length,
+                                   serverKey->data,
+                                   serverKey->length
                                   );
         if (error != ERROR_NONE)
         {

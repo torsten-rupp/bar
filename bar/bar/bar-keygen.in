@@ -68,6 +68,7 @@ certtoolFlag=0
 opensslFlag=0
 forceFlag=0
 quietFlag=0
+jksFlag=0
 debugFlag=0
 
 # ---------------------------------- functions -------------------------------
@@ -233,6 +234,7 @@ Options: -d|--tls-directory=<path>       - TLS directory (default: $DEFAULT_TLS_
          -f|--force                      - force overwriting existing keys
          --certtool                      - use certtool to generate keys
          --openssl                       - use openssl to generate keys
+         --jks                           - create Java key store file
          -h|--help                       - print this help
 EOT
 }
@@ -283,6 +285,14 @@ while test $# != 0; do
       shift
       shift
       ;;
+    -f=* | --force=*)
+      forceFlag=`$ECHO "$1" | sed 's/^[^=]*=\(.*\)$/\1/g'`
+      shift
+      ;;
+    -f | --force)
+      forceFlag=1
+      shift
+      ;;
     --certtool=*)
       certtoolFlag=`$ECHO "$1" | sed 's/^[^=]*=\(.*\)$/\1/g'`
       shift
@@ -299,12 +309,8 @@ while test $# != 0; do
       opensslFlag=1
       shift
       ;;
-    -f=* | --force=*)
-      forceFlag=`$ECHO "$1" | sed 's/^[^=]*=\(.*\)$/\1/g'`
-      shift
-      ;;
-    -f | --force)
-      forceFlag=1
+    --jks)
+      jksFlag=1
       shift
       ;;
     --quiet=*)
@@ -414,7 +420,7 @@ if test -z "$certsDir"; then
   certsDir="$tlsDir/certs"
 fi
 
-# get key file names
+# key file names
 barKey="$privateDir/bar-key.pem"
 barCA="$certsDir/bar-ca.pem"
 barServerKey="$privateDir/bar-server-key.pem"
@@ -439,9 +445,11 @@ if test $forceFlag -eq 0; then
     println "'$barServerCert' already exists! Use option --force to overwrite existing keys."
     exit $EXITCODE_OK
   fi
-  if test -f "$barJKS"; then
-    println "'$barJKS' already exists! Use option --force to overwrite existing keys."
-    exit $EXITCODE_OK
+  if test $jksFlag -eq 1; then
+    if test -f "$barJKS"; then
+      println "'$barJKS' already exists! Use option --force to overwrite existing keys."
+      exit $EXITCODE_OK
+    fi
   fi
 fi
 
@@ -507,7 +515,7 @@ if test ! -d "$certsDir"; then
   fi
 fi
 
-# create bar-key.pem
+# create bar-key.pem (1024 bit without pass phrase)
 print "Create '$barKey'..."
 if   test $OPENSSL_OK -eq 1; then
   $OPENSSL \
@@ -531,16 +539,18 @@ if test $rc -ne 0; then
 fi
 println "OK"
 
-# create bar-ca.pem
+# create bar-ca.pem (validity 10 years)
 print "Create '$barCA'..."
 if   test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     req \
+    -batch \
     -new \
     -config "$tmpDir/ca.tmpl" \
     -key "$barKey" \
     -x509 \
     -nodes \
+    -days 3650 \
     -out "$barCA" \
     1>$stdout 2>$stderr
   rc=$?
@@ -561,7 +571,7 @@ if test $rc -ne 0; then
 fi
 println "OK"
 
-# create bar-server-key.pem
+# create bar-server-key.pem (1024 bit)
 print "Create '$barServerKey'..."
 if   test $OPENSSL_OK -eq 1; then
   $OPENSSL \
@@ -585,20 +595,32 @@ if test $rc -ne 0; then
 fi
 println "OK"
 
-# create bar-server-cert.pem
+# create bar-server-cert.pem (validity 1 year, self-signed)
 print "Create '$barServerCert'..."
 if   test $OPENSSL_OK -eq 1; then
   $OPENSSL \
     req \
+    -batch \
     -config $tmpDir/server.tmpl \
     -new \
     -key "$barServerKey" \
     -x509 \
     -nodes \
-    -days 365 \
-    -out "$barServerCert" \
+    -out "$tmpDir/bar.csr" \
     1>$stdout 2>$stderr
   rc=$?
+  if test $rc -eq 0; then
+    $OPENSSL \
+      x509 \
+      -in "$tmpDir/bar.csr" \
+      -CA "$barCA" \
+      -CAkey "$barKey" \
+      -days 365 \
+      -set_serial 01 \
+      -out "$barServerCert" \
+      1>$stdout 2>$stderr
+    rc=$?
+  fi
 elif test $CERTTOOL_OK -eq 1; then
   $CERTTOOL \
     --generate-certificate \
@@ -618,27 +640,29 @@ if test $rc -ne 0; then
 fi
 println "OK"
 
-# create Java key
-if test $KEYTOOL_OK -eq 1; then
-  print "Create '$barJKS'..."
-  $RMF $barJKS
-  $KEYTOOL \
-    -import \
-    -trustcacerts \
-    -keypass not_needed \
-    -storepass not_needed \
-    -noprompt \
-    -file "$barServerCert" \
-    -keystore "$barJKS" \
-    1>$stdout 2>$stderr
-  rc=$?
-  if test $rc -ne 0; then
-    println "FAIL"
-    printError "Cannot create BAR Java key '$barJKS' (exitcode: $rc)"
-    catStderr $stderr
-    exit $EXITCODE_CREATE_KEY_FAIL
+if test $jksFlag -eq 1; then
+  # create Java key
+  if test $KEYTOOL_OK -eq 1; then
+    print "Create '$barJKS'..."
+    $RMF $barJKS
+    $KEYTOOL \
+      -import \
+      -trustcacerts \
+      -keypass not_needed \
+      -storepass not_needed \
+      -noprompt \
+      -file "$barServerCert" \
+      -keystore "$barJKS" \
+      1>$stdout 2>$stderr
+    rc=$?
+    if test $rc -ne 0; then
+      println "FAIL"
+      printError "Cannot create BAR Java key '$barJKS' (exitcode: $rc)"
+      catStderr $stderr
+      exit $EXITCODE_CREATE_KEY_FAIL
+    fi
+    println "OK"
   fi
-  println "OK"
 fi
 
 # free resources

@@ -89,12 +89,12 @@ typedef struct
   ServerSocketTypes socketType;
   int               handle;
   #ifdef HAVE_GNU_TLS
-    void *caData;
-    uint caLength;
-    void *certData;
-    uint certLength;
-    void *keyData;
-    uint keyLength;
+    const void *caData;
+    uint       caLength;
+    const void *certData;
+    uint       certLength;
+    const void *keyData;
+    uint       keyLength;
   #endif /* HAVE_GNU_TLS */
 } ServerSocketHandle;
 
@@ -362,6 +362,12 @@ Errors Network_writeLine(SocketHandle *socketHandle,
 * Input  : serverPort        - server port (host byte order)
 *          ServerSocketTypes - server socket type; see
 *                              SERVER_SOCKET_TYPE_*
+*          caData            - TLS CA data or NULL
+*          caLength          - TLS CA data length
+*          cert              - TLS cerificate or NULL
+*          certLength        - TLS cerificate data length
+*          key               - TLS private key or NULL
+*          keyLength         - TLS private key data length
 * Output : serverSocketHandle - server socket handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -369,7 +375,13 @@ Errors Network_writeLine(SocketHandle *socketHandle,
 
 Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
                           uint               serverPort,
-                          ServerSocketTypes  serverSocketType
+                          ServerSocketTypes  serverSocketType,
+                          const void         *caData,
+                          uint               caLength,
+                          const void         *certData,
+                          uint               certLength,
+                          const void         *keyData,
+                          uint               keyLength
                          );
 
 /***********************************************************************\
@@ -410,7 +422,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
                      );
 
 /***********************************************************************\
-* Name   : Network_startServerSSL
+* Name   : Network_startSSL
 * Purpose: start SSL/TLS encryption on socket connection
 * Input  : socketHandle - socket handle
 *          caData       - TLS CA data or NULL

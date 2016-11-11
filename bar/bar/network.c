@@ -100,7 +100,7 @@
 #endif
 
 #ifdef GNUTLS_DEBUG
-LOCAL void gnuTLSLog(int level, char *s)
+LOCAL void gnuTLSLog(int level, const char *s)
 {
   fprintf(stderr,"DEBUG GNU TLS %d: %s",level,s);
 }
@@ -254,7 +254,7 @@ or
 
 LOCAL Errors initSSL(SocketHandle *socketHandle,
                      const void   *caData,
-                     uint         caDataLength,
+                     uint         caLength,
                      const void   *certData,
                      uint         certLength,
                      const void   *keyData,
@@ -265,14 +265,14 @@ LOCAL Errors initSSL(SocketHandle *socketHandle,
   int            result;
 
   assert(socketHandle != NULL);
-//TODO
-//  assert(caData != NULL);
-//  assert(certData != NULL);
-//  assert(keyData != NULL);
+  assert(caData != NULL);
+  assert(certData != NULL);
+  assert(keyData != NULL);
 
+//TODO
 UNUSED_VARIABLE(caDatum);
 UNUSED_VARIABLE(caData);
-UNUSED_VARIABLE(caDataLength);
+UNUSED_VARIABLE(caLength);
 
   // init certificate and key
   if (gnutls_certificate_allocate_credentials(&socketHandle->gnuTLS.credentials) != GNUTLS_E_SUCCESS)
@@ -280,22 +280,10 @@ UNUSED_VARIABLE(caDataLength);
     return ERROR_INIT_TLS;
   }
 
-#if 0
-  result = gnutls_certificate_set_x509_key_file(socketHandle->gnuTLS.credentials,
-                                                "/tmp/bar-server-cert.pem",
-                                                "/tmp/bar-server-key.pem",
-                                                GNUTLS_X509_FMT_PEM
-                                               );
-#elif 0
-  result = gnutls_certificate_set_x509_key_file(socketHandle->gnuTLS.credentials,
-                                                "/tmp/x509-server.pem",
-                                                "/tmp/x509-server-key.pem",
-                                                GNUTLS_X509_FMT_PEM
-                                               );
-#else
   #ifdef GNUTLS_DEBUG
-    fprintf(stderr,"DEBUG GNU TLS: certificate: ");write(2,certData,certLength);fprintf(stderr,"\n");
-    fprintf(stderr,"DEBUG GNU TLS: key:");write(2,keyData,keyLength);fprintf(stderr,"\n");
+    fprintf(stderr,"DEBUG GNU TLS: CA: "); write(STDERR_FILENO,caData,caLength); fprintf(stderr,"\n");
+    fprintf(stderr,"DEBUG GNU TLS: certificate: "); write(STDERR_FILENO,certData,certLength); fprintf(stderr,"\n");
+    fprintf(stderr,"DEBUG GNU TLS: key:"); write(STDERR_FILENO,keyData,keyLength); fprintf(stderr,"\n");
   #endif /* GNUTLS_DEBUG */
 
   certDatum.data = (void*)certData;
@@ -307,7 +295,6 @@ UNUSED_VARIABLE(caDataLength);
                                                &keyDatum,
                                                GNUTLS_X509_FMT_PEM
                                               );
-#endif
   if (result != GNUTLS_E_SUCCESS)
   {
     gnutls_certificate_free_credentials(socketHandle->gnuTLS.credentials);
@@ -435,7 +422,7 @@ Errors Network_initAll(void)
     gnutls_global_init();
     #ifdef GNUTLS_DEBUG
       gnutls_global_set_log_level(10);
-      gnutls_global_set_log_function(tlslog);
+      gnutls_global_set_log_function(gnuTLSLog);
     #endif /* GNUTLS_DEBUG */
   #endif /* HAVE_GNU_TLS */
 
@@ -720,7 +707,6 @@ Errors Network_connect(SocketHandle *socketHandle,
         }
 
         // init SSL session
-#if 1
         socketHandle->ssh2.session = libssh2_session_init();
         if (socketHandle->ssh2.session == NULL)
         {
@@ -816,16 +802,6 @@ Errors Network_connect(SocketHandle *socketHandle,
           return error;
         }
 #endif /* 0 */
-#else
-        error = Network_startSSLSession(socketHandle,
-                                        loginName,
-                                        password,
-                                        sshPublicKeyData,
-                                        sshPublicKeyLength,
-                                        sshPrivateKeyData,
-                                        sshPrivateKeyLength
-                                       );
-#endif
         if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
         {
           // enable non-blocking
@@ -893,148 +869,6 @@ void Network_disconnect(SocketHandle *socketHandle)
   }
   close(socketHandle->handle);
 }
-
-#if 0
-Errors Network_startSSLSession(SocketHandle *socketHandle,
-                               ConstString  loginName,
-                               Password     *password,
-                               const void   *sshPublicKeyData,
-                               uint         sshPublicKeyLength,
-                               const void   *sshPrivateKeyData,
-                               uint         sshPrivateKeyLength
-                              )
-{
-  #if   defined(HAVE_GETHOSTBYNAME_R)
-    char           buffer[512];
-    struct hostent bufferAddressEntry;
-    int            getHostByNameError;
-  #elif defined(HAVE_GETHOSTBYNAME)
-  #endif /* HAVE_GETHOSTBYNAME* */
-  struct hostent     *hostAddressEntry;
-  #ifdef PLATFORM_LINUX
-    in_addr_t          ipAddress;
-  #else /* not PLATFORM_LINUX */
-    unsigned long      ipAddress;
-  #endif /* PLATFORM_LINUX */
-  struct sockaddr_in socketAddress;
-  #ifdef HAVE_SSH2
-    int                ssh2Error;
-    char               *ssh2ErrorText;
-  #endif /* HAVE_SSH2 */
-  Errors             error;
-
-        const char *plainPassword;
-        #if  defined(PLATFORM_LINUX)
-          long       socketFlags;
-        #elif defined(PLATFORM_WINDOWS)
-          u_long     n;
-        #endif /* PLATFORM_... */
-        int result;
-
-
-  assert(socketHandle != NULL);
-
-
-  // init session
-  socketHandle->ssh2.session = libssh2_session_init();
-  if (socketHandle->ssh2.session == NULL)
-  {
-    close(socketHandle->handle);
-    return ERROR_SSH_SESSION_FAIL;
-  }
-  if      (globalOptions.verboseLevel >= 6) libssh2_trace(socketHandle->ssh2.session,
-                                                            LIBSSH2_TRACE_SOCKET
-                                                          | LIBSSH2_TRACE_TRANS
-                                                          | LIBSSH2_TRACE_KEX
-                                                          | LIBSSH2_TRACE_AUTH
-                                                          | LIBSSH2_TRACE_CONN
-                                                          | LIBSSH2_TRACE_SCP
-                                                          | LIBSSH2_TRACE_SFTP
-                                                          | LIBSSH2_TRACE_ERROR
-                                                          | LIBSSH2_TRACE_PUBLICKEY
-                                                         );
-  else if (globalOptions.verboseLevel >= 5) libssh2_trace(socketHandle->ssh2.session,
-                                                            LIBSSH2_TRACE_KEX
-                                                          | LIBSSH2_TRACE_AUTH
-                                                          | LIBSSH2_TRACE_SCP
-                                                          | LIBSSH2_TRACE_SFTP
-                                                          | LIBSSH2_TRACE_ERROR
-                                                          | LIBSSH2_TRACE_PUBLICKEY
-                                                         );
-  if (libssh2_session_startup(socketHandle->ssh2.session,
-                              socketHandle->handle
-                             ) != 0
-     )
-  {
-    libssh2_session_disconnect(socketHandle->ssh2.session,"");
-    libssh2_session_free(socketHandle->ssh2.session);
-    close(socketHandle->handle);
-    return ERROR_SSH_SESSION_FAIL;
-  }
-  #ifdef HAVE_SSH2_KEEPALIVE_CONFIG
-// NYI/???: does not work?
-//          libssh2_keepalive_config(socketHandle->ssh2.session,0,2*60);
-  #endif /* HAVE_SSH2_KEEPALIVE_CONFIG */
-
-#if 1
-  // authorize with key
-  plainPassword = Password_deploy(password);
-  result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
-                                                 String_cString(loginName),
-                                                 String_length(loginName),
-                                                 sshPublicKeyData,
-                                                 sshPublicKeyLength,
-                                                 sshPrivateKeyData,
-                                                 sshPrivateKeyLength,
-                                                 plainPassword
-                                                );
-  if (result != 0)
-  {
-    ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
-    // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
-    if (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
-    {
-      error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"Unable to initialize private key from file");
-    }
-    else
-    {
-      error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s",ssh2ErrorText);
-    }
-    Password_undeploy(password);
-    libssh2_session_disconnect(socketHandle->ssh2.session,"");
-    libssh2_session_free(socketHandle->ssh2.session);
-    close(socketHandle->handle);
-    return error;
-  }
-  Password_undeploy(password);
-#else
-  // authorize interactive
-  if (libssh2_userauth_keyboard_interactive(socketHandle->ssh2.session,
-                                            String_cString(loginName),
-                                            NULL
-                                          ) != 0
-     )
-  {
-    ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
-    // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
-    if (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
-    {
-      error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"Unable to initialize private key");
-    }
-    else
-    {
-      error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s",ssh2ErrorText);
-    }
-    libssh2_session_disconnect(socketHandle->ssh2.session,"");
-    libssh2_session_free(socketHandle->ssh2.session);
-    close(socketHandle->handle);
-    return error;
-  }
-#endif /* 0 */
-
-  return ERROR_NONE;
-}
-#endif
 
 bool Network_eof(SocketHandle *socketHandle)
 {
@@ -1394,15 +1228,13 @@ Errors Network_writeLine(SocketHandle *socketHandle,
 
 Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
                           uint               serverPort,
-                          ServerSocketTypes  serverSocketType
-#if 0
+                          ServerSocketTypes  serverSocketType,
                           const void         *caData,
                           uint               caLength,
                           const void         *certData,
                           uint               certLength,
                           const void         *keyData,
                           uint               keyLength
-#endif
                          )
 {
   struct sockaddr_in socketAddress;
@@ -1412,7 +1244,6 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
   assert(serverSocketHandle != NULL);
 
   // init variables
-//  serverSocketHandle->socketType = SOCKET_TYPE_PLAIN;
   serverSocketHandle->socketType = serverSocketType;
 
   // create socket
@@ -1447,8 +1278,6 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
   }
   listen(serverSocketHandle->handle,5);
 
-//TODO: remove
-#if 0
   switch (serverSocketType)
   {
     case SERVER_SOCKET_TYPE_PLAIN:
@@ -1484,7 +1313,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           close(serverSocketHandle->handle);
           return ERROR_INVALID_TLS_CERTIFICATE;
         }
-        datum.data = certData;
+        datum.data = (void*)certData;
         datum.size = certLength;
         if (gnutls_x509_crt_import(cert,&datum,GNUTLS_X509_FMT_PEM) != GNUTLS_E_SUCCESS)
         {
@@ -1537,6 +1366,7 @@ or
 #endif /* 0 */
         gnutls_x509_crt_deinit(cert);
 
+        // store CA, certificate, key for connect requests
         serverSocketHandle->caData     = caData;
         serverSocketHandle->caLength   = caLength;
         serverSocketHandle->certData   = certData;
@@ -1556,7 +1386,6 @@ or
         break; /* not reached */
     #endif /* NDEBUG */
   }
-#endif
 
   return ERROR_NONE;
 }
@@ -1716,7 +1545,6 @@ Errors Network_accept(SocketHandle             *socketHandle,
     return error;
   }
 
-#if 0
   switch (serverSocketHandle->socketType)
   {
     case SERVER_SOCKET_TYPE_PLAIN:
@@ -1727,7 +1555,6 @@ Errors Network_accept(SocketHandle             *socketHandle,
 fprintf(stderr,"%s, %d: call initSSL\n",__FILE__,__LINE__);
         // init SSL
         error = initSSL(socketHandle,
-//TODO
                         serverSocketHandle->caData,
                         serverSocketHandle->caLength,
                         serverSocketHandle->certData,
@@ -1735,6 +1562,8 @@ fprintf(stderr,"%s, %d: call initSSL\n",__FILE__,__LINE__);
                         serverSocketHandle->keyData,
                         serverSocketHandle->keyLength
                        );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
         if (error != ERROR_NONE)
         {
           return error;
@@ -1742,7 +1571,7 @@ fprintf(stderr,"%s, %d: call initSSL\n",__FILE__,__LINE__);
 
         socketHandle->type = SOCKET_TYPE_TLS;
       #else /* not HAVE_GNU_TLS */
-        UNUSED_VARIABLE(serverSocketHandle);
+        UNUSED_VARIABLE(socketHandle);
         UNUSED_VARIABLE(serverSocketHandle);
         UNUSED_VARIABLE(flags);
 
@@ -1755,9 +1584,6 @@ fprintf(stderr,"%s, %d: call initSSL\n",__FILE__,__LINE__);
           break; /* not reached */
       #endif /* NDEBUG */
   }
-#else
-      socketHandle->type = SOCKET_TYPE_PLAIN;
-#endif
 
   if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
   {
