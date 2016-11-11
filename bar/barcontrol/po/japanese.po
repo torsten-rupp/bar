@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-11-11 14:55+0100\n"
+"POT-Creation-Date: 2016-11-11 16:37+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -156,7 +156,7 @@ msgstr "ログイン"
 
 #: src/BARControl.java:1897 src/BARControl.java:2632 src/BARControl.java:2656
 #: src/BARControl.java:2663 src/BARControl.java:2696 src/BARControl.java:2703
-#: src/BARControl.java:3672 src/BARControl.java:3684 src/BARControl.java:3706
+#: src/BARControl.java:3670 src/BARControl.java:3682 src/BARControl.java:3704
 #: src/BARControl.java:3723 src/Dialogs.java:2007 src/Dialogs.java:2077
 #: src/Dialogs.java:2578 src/Dialogs.java:2761 src/Dialogs.java:2998
 #: src/Dialogs.java:3600 src/Dialogs.java:4442 src/Dialogs.java:4608
@@ -174,8 +174,8 @@ msgstr "キャンセル"
 #: src/BARControl.java:2113 src/BARControl.java:2117 src/BARControl.java:2150
 #: src/BARControl.java:2154 src/BARControl.java:2216 src/BARControl.java:2220
 #: src/BARControl.java:2656 src/BARControl.java:2663 src/BARControl.java:2696
-#: src/BARControl.java:2703 src/BARControl.java:3672 src/BARControl.java:3684
-#: src/BARControl.java:3706 src/BARControl.java:3723
+#: src/BARControl.java:2703 src/BARControl.java:3670 src/BARControl.java:3682
+#: src/BARControl.java:3704 src/BARControl.java:3723
 msgid "Connection fail"
 msgstr "接続ミス"
 
@@ -275,13 +275,13 @@ msgstr "接続ミス"
 
 #: src/BARControl.java:2632 src/BARControl.java:2656 src/BARControl.java:2663
 #: src/BARControl.java:2696 src/BARControl.java:2703 src/BARControl.java:2724
-#: src/BARControl.java:3672 src/BARControl.java:3706 src/BARControl.java:3723
+#: src/BARControl.java:3670 src/BARControl.java:3704 src/BARControl.java:3723
 msgid "Error: "
 msgstr "エラー："
 
 #: src/BARControl.java:2632 src/BARControl.java:2656 src/BARControl.java:2663
-#: src/BARControl.java:2696 src/BARControl.java:2703 src/BARControl.java:3672
-#: src/BARControl.java:3706 src/BARControl.java:3723
+#: src/BARControl.java:2696 src/BARControl.java:2703 src/BARControl.java:3670
+#: src/BARControl.java:3704 src/BARControl.java:3723
 msgid "Try again"
 msgstr "再試行"
 
@@ -320,11 +320,11 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/BARControl.java:3684
+#: src/BARControl.java:3682
 msgid "Connection fail. Try to connect without TLS/SSL?"
 msgstr ""
 
-#: src/BARControl.java:3684
+#: src/BARControl.java:3682
 msgid "Try without TLS/SSL"
 msgstr ""
 

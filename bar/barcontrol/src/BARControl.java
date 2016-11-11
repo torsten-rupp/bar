@@ -3633,12 +3633,10 @@ Dprintf.dprintf("still not supported");
         while (!connectOkFlag)
         {
           // get login data
-Dprintf.dprintf("");
           if (!getLoginData(loginData))
           {
             System.exit(0);
           }
-Dprintf.dprintf("loginData=%s",loginData);
           if ((loginData.serverPort == 0) && (loginData.serverTLSPort == 0))
           {
             throw new Error("Cannot connect to server. No server ports specified!");
@@ -3691,9 +3689,9 @@ Dprintf.dprintf("loginData=%s",loginData);
                                   loginData.serverTLSPort,
                                   false,  // forceSSL
                                   loginData.password,
-                                  Settings.serverCAFileName,
-                                  Settings.serverCertificateFileName,
-                                  Settings.serverKeyFileName
+                                  (String)null,  // serverCAFileName
+                                  (String)null,  // serverCertificateFileName
+                                  (String)null  // serverKeyFileName
                                  );
                 connectOkFlag = true;
               }
@@ -3720,9 +3718,12 @@ Dprintf.dprintf("loginData=%s",loginData);
           }
 
           // check if connected
-          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+errorMessage,BARControl.tr("Try again"),BARControl.tr("Cancel")))
+          if (!connectOkFlag)
           {
-            System.exit(1);
+            if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+errorMessage,BARControl.tr("Try again"),BARControl.tr("Cancel")))
+            {
+              System.exit(1);
+            }
           }
         }
 
