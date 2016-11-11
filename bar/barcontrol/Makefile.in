@@ -45,6 +45,7 @@ JAVA_DATA_MODEL     = @JAVA_DATA_MODEL@
 
 JAVA                = @JAVA@
 JAVA_FLAGS          = @JAVA_FLAGS@ -Xmx128m -enableassertions
+# -Djavax.net.debug=al
 
 JAVAC               = @JAVAC@
 JAVAC_FLAGS         = @JAVAC_FLAGS@ -source 1.6
