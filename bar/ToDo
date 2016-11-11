@@ -87,7 +87,6 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - read/write tar-format at stdin/stdout for pipeling
 - signal handler to show internal state on stdout
 - pre/post-commands in GUI
-- barcontrol: use bouncycastle to read .pem key, remove bar.jks
 - barcontrol: show connected server, ssl/none
 - option to select ctime or mtime
 - doc: ext4
