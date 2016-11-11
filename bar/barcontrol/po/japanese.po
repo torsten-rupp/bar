@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-11-10 11:03+0100\n"
+"POT-Creation-Date: 2016-11-11 14:55+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -156,24 +156,26 @@ msgstr "ログイン"
 
 #: src/BARControl.java:1897 src/BARControl.java:2632 src/BARControl.java:2656
 #: src/BARControl.java:2663 src/BARControl.java:2696 src/BARControl.java:2703
-#: src/BARControl.java:3665 src/BARControl.java:3672 src/Dialogs.java:2007
-#: src/Dialogs.java:2077 src/Dialogs.java:2578 src/Dialogs.java:2761
-#: src/Dialogs.java:2998 src/Dialogs.java:3600 src/Dialogs.java:4442
-#: src/Dialogs.java:4608 src/Dialogs.java:4794 src/Dialogs.java:5132
-#: src/Dialogs.java:5232 src/Dialogs.java:5584 src/Dialogs.java:5678
-#: src/Dialogs.java:5768 src/ServerSettings.java:2042
-#: src/ServerSettings.java:2659 src/TabJobs.java:8429 src/TabJobs.java:8547
-#: src/TabJobs.java:8678 src/TabJobs.java:10097 src/TabJobs.java:10427
-#: src/TabJobs.java:10785 src/TabJobs.java:11228 src/TabJobs.java:12518
-#: src/TabJobs.java:13106 src/TabRestore.java:7554 src/TabRestore.java:8869
-#: src/TabStatus.java:2173 src/TabStatus.java:2379
+#: src/BARControl.java:3672 src/BARControl.java:3684 src/BARControl.java:3706
+#: src/BARControl.java:3723 src/Dialogs.java:2007 src/Dialogs.java:2077
+#: src/Dialogs.java:2578 src/Dialogs.java:2761 src/Dialogs.java:2998
+#: src/Dialogs.java:3600 src/Dialogs.java:4442 src/Dialogs.java:4608
+#: src/Dialogs.java:4794 src/Dialogs.java:5132 src/Dialogs.java:5232
+#: src/Dialogs.java:5584 src/Dialogs.java:5678 src/Dialogs.java:5768
+#: src/ServerSettings.java:2042 src/ServerSettings.java:2659
+#: src/TabJobs.java:8429 src/TabJobs.java:8547 src/TabJobs.java:8678
+#: src/TabJobs.java:10097 src/TabJobs.java:10427 src/TabJobs.java:10785
+#: src/TabJobs.java:11228 src/TabJobs.java:12518 src/TabJobs.java:13106
+#: src/TabRestore.java:7554 src/TabRestore.java:8869 src/TabStatus.java:2173
+#: src/TabStatus.java:2379
 msgid "Cancel"
 msgstr "キャンセル"
 
 #: src/BARControl.java:2113 src/BARControl.java:2117 src/BARControl.java:2150
 #: src/BARControl.java:2154 src/BARControl.java:2216 src/BARControl.java:2220
 #: src/BARControl.java:2656 src/BARControl.java:2663 src/BARControl.java:2696
-#: src/BARControl.java:2703 src/BARControl.java:3665 src/BARControl.java:3672
+#: src/BARControl.java:2703 src/BARControl.java:3672 src/BARControl.java:3684
+#: src/BARControl.java:3706 src/BARControl.java:3723
 msgid "Connection fail"
 msgstr "接続ミス"
 
@@ -273,13 +275,13 @@ msgstr "接続ミス"
 
 #: src/BARControl.java:2632 src/BARControl.java:2656 src/BARControl.java:2663
 #: src/BARControl.java:2696 src/BARControl.java:2703 src/BARControl.java:2724
-#: src/BARControl.java:3665 src/BARControl.java:3672
+#: src/BARControl.java:3672 src/BARControl.java:3706 src/BARControl.java:3723
 msgid "Error: "
 msgstr "エラー："
 
 #: src/BARControl.java:2632 src/BARControl.java:2656 src/BARControl.java:2663
-#: src/BARControl.java:2696 src/BARControl.java:2703 src/BARControl.java:3665
-#: src/BARControl.java:3672
+#: src/BARControl.java:2696 src/BARControl.java:2703 src/BARControl.java:3672
+#: src/BARControl.java:3706 src/BARControl.java:3723
 msgid "Try again"
 msgstr "再試行"
 
@@ -317,6 +319,14 @@ msgstr ""
 "''{0}''\n"
 "\n"
 "(エラー: {1})"
+
+#: src/BARControl.java:3684
+msgid "Connection fail. Try to connect without TLS/SSL?"
+msgstr ""
+
+#: src/BARControl.java:3684
+msgid "Try without TLS/SSL"
+msgstr ""
 
 #: src/BARWidgets.java:561 src/BARWidgets.java:591 src/BARWidgets.java:630
 #: src/TabJobs.java:4013 src/TabJobs.java:4036 src/TabJobs.java:4068

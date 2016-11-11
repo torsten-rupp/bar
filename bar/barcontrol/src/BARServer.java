@@ -1206,7 +1206,7 @@ public class BARServer
             input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
             output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
 
-/**/
+/*
 Dprintf.dprintf("ssl info");
 String[] ss;
 
@@ -1269,7 +1269,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         }
       }
     }
-Dprintf.dprintf("ferti: %s",connectErrorMessage);
 
     if ((socket == null) && (tlsPort != 0))
     {
@@ -1364,7 +1363,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         }
       }
     }
-Dprintf.dprintf("ferti: %s",connectErrorMessage);
 
     if ((socket == null) && (port != 0))
     {
@@ -1418,7 +1416,7 @@ Dprintf.dprintf("ferti: %s",connectErrorMessage);
             input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
             output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
 
-/**/
+/*
 Dprintf.dprintf("ssl info");
 String[] ss;
 
@@ -1481,7 +1479,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         }
       }
     }
-Dprintf.dprintf("ferti: %s",connectErrorMessage);
 
     if ((socket == null) && (tlsPort != 0))
     {
@@ -1574,7 +1571,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         }
       }
     }
-Dprintf.dprintf("ferti: %s",connectErrorMessage);
 
     if ((socket == null) && (port != 0) && !forceSSL)
     {
@@ -1613,8 +1609,6 @@ Dprintf.dprintf("ferti: %s",connectErrorMessage);
         if (connectErrorMessage == null) connectErrorMessage = exception.getMessage();
       }
     }
-Dprintf.dprintf("ferti: %s",connectErrorMessage);
-System.exit(1);
 
     if (socket == null)
     {

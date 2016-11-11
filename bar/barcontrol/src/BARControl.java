@@ -3646,33 +3646,83 @@ Dprintf.dprintf("loginData=%s",loginData);
 /// ??? host name scheck
 
           // try to connect to server
-          try
+          String errorMessage = null;
+          if (!connectOkFlag)
           {
-            BARServer.connect(display,
-                              loginData.serverName,
-                              loginData.serverPort,
-                              loginData.serverTLSPort,
-                              loginData.forceSSL,
-                              loginData.password,
-                              Settings.serverCAFileName,
-                              Settings.serverCertificateFileName,
-                              Settings.serverKeyFileName
-                             );
-            connectOkFlag = true;
+            try
+            {
+              BARServer.connect(display,
+                                loginData.serverName,
+                                loginData.serverPort,
+                                loginData.serverTLSPort,
+                                loginData.forceSSL,
+                                loginData.password,
+                                Settings.serverCAFileName,
+                                Settings.serverCertificateFileName,
+                                Settings.serverKeyFileName
+                               );
+              connectOkFlag = true;
+            }
+            catch (ConnectionError error)
+            {
+              errorMessage = error.getMessage();
+            }
+            catch (CommunicationError error)
+            {
+              if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+              {
+                continue;
+              }
+              else
+              {
+                System.exit(1);
+              }
+            }
           }
-          catch (ConnectionError error)
+          if (!connectOkFlag && loginData.forceSSL)
           {
-            if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+            if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Connection fail. Try to connect without TLS/SSL?"),BARControl.tr("Try without TLS/SSL"),BARControl.tr("Cancel")))
+            {
+              try
+              {
+                BARServer.connect(display,
+                                  loginData.serverName,
+                                  loginData.serverPort,
+                                  loginData.serverTLSPort,
+                                  false,  // forceSSL
+                                  loginData.password,
+                                  Settings.serverCAFileName,
+                                  Settings.serverCertificateFileName,
+                                  Settings.serverKeyFileName
+                                 );
+                connectOkFlag = true;
+              }
+              catch (ConnectionError error)
+              {
+                errorMessage = error.getMessage();
+              }
+              catch (CommunicationError error)
+              {
+                if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+                {
+                  continue;
+                }
+                else
+                {
+                  System.exit(1);
+                }
+              }
+            }
+            else
             {
               System.exit(1);
             }
           }
-          catch (CommunicationError error)
+
+          // check if connected
+          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+errorMessage,BARControl.tr("Try again"),BARControl.tr("Cancel")))
           {
-            if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
-            {
-              break;
-            }
+            System.exit(1);
           }
         }
 
