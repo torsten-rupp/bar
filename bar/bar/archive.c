@@ -3400,7 +3400,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
 #ifdef NDEBUG
   Errors Archive_open(ArchiveInfo            *archiveInfo,
-                      Storage                *storage,
+                      StorageInfo            *storageInfo,
                       const StorageSpecifier *storageSpecifier,
                       ConstString            fileName,
                       DeltaSourceList        *deltaSourceList,
@@ -3413,7 +3413,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   Errors __Archive_open(const char             *__fileName__,
                         ulong                  __lineNb__,
                         ArchiveInfo            *archiveInfo,
-                        Storage                *storage,
+                        StorageInfo            *storageInfo,
                         const StorageSpecifier *storageSpecifier,
                         ConstString            fileName,
                         DeltaSourceList        *deltaSourceList,
@@ -3429,6 +3429,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   ChunkHeader  chunkHeader;
 
   assert(archiveInfo != NULL);
+  assert(storageInfo != NULL);
   assert(storageSpecifier != NULL);
 
   // init variables
@@ -3455,7 +3456,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   archiveInfo->ioType                  = ARCHIVE_IO_TYPE_STORAGE_FILE;
   Storage_duplicateSpecifier(&archiveInfo->storage.storageSpecifier,storageSpecifier);
-  archiveInfo->storage.storage   = storage;
+  archiveInfo->storage.storageInfo     = storageInfo;
   archiveInfo->printableStorageName    = String_duplicate(Storage_getPrintableName(&archiveInfo->storage.storageSpecifier,fileName));
   Semaphore_init(&archiveInfo->chunkIOLock);
   archiveInfo->chunkIO                 = &CHUNK_IO_STORAGE_FILE;
@@ -3482,7 +3483,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->chunkIOLock,{ Semaphore_done(&archiveInfo->chunkIOLock); });
 
   error = Storage_open(&archiveInfo->storage.storageHandle,
-                       archiveInfo->storage.storage,
+                       archiveInfo->storage.storageInfo,
                        fileName
                       );
   if (error != ERROR_NONE)
@@ -3490,7 +3491,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,archiveInfo->storage.storage,{ Storage_close(&archiveInfo->storage.storageHandle); });
+  AUTOFREE_ADD(&autoFreeList,&archiveInfo->storage.storageHandle,{ Storage_close(&archiveInfo->storage.storageHandle); });
   DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // check if BAR archive file
@@ -3677,7 +3678,7 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
       error = Storage_open(&archiveInfo->storage.storageHandle,
-                           archiveInfo->storage.storage,
+                           archiveInfo->storage.storageInfo,
                            NULL  // archiveName
                           );
       if (error != ERROR_NONE)
@@ -10480,7 +10481,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo)
 }
 
 Errors Archive_addToIndex(IndexHandle      *indexHandle,
-                          Storage          *storage,
+                          StorageInfo      *storageInfo,
                           ConstString      storageName,
                           IndexModes       indexMode,
                           const JobOptions *jobOptions,
@@ -10494,6 +10495,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
   IndexId storageId;
 
   assert(indexHandle != NULL);
+  assert(storageInfo != NULL);
   assert(storageName != NULL);
 
   // create new storage index
@@ -10512,7 +10514,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
   // add index
   error = Archive_updateIndex(indexHandle,
                               storageId,
-                              storage,
+                              storageInfo,
                               storageName,
                               jobOptions,
                               totalTimeLastChanged,
@@ -10533,7 +10535,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 
 Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            IndexId                      storageId,
-                           Storage                      *storage,
+                           StorageInfo                  *storageInfo,
                            ConstString                  storageName,
                            const JobOptions             *jobOptions,
                            uint64                       *totalTimeLastChanged,
@@ -10564,6 +10566,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   String            destinationName;
 
   assert(indexHandle != NULL);
+  assert(storageInfo != NULL);
   assert(storageName != NULL);
 
   // init variables
@@ -10586,7 +10589,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     // try to open scp-storage first with sftp
     storageSpecifier.type = STORAGE_TYPE_SFTP;
     error = Archive_open(&archiveInfo,
-                         storage,
+                         storageInfo,
                          &storageSpecifier,
                          NULL,  // archive name
                          NULL,  // deltaSourceList
@@ -10600,7 +10603,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       // open scp-storage
       storageSpecifier.type = STORAGE_TYPE_SCP;
       error = Archive_open(&archiveInfo,
-                           storage,
+                           storageInfo,
                            &storageSpecifier,
                            NULL,  // archive name
                            NULL,  // deltaSourceList
@@ -10614,7 +10617,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   {
     // open other storage types
     error = Archive_open(&archiveInfo,
-                         storage,
+                         storageInfo,
                          &storageSpecifier,
                          NULL,  // archive name
                          NULL,  // deltaSourceList
@@ -10697,7 +10700,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   // read archive content
   timeLastChanged             = 0LL;
   abortedFlag                 = (abortCallbackFunction != NULL) && abortCallbackFunction(abortCallbackUserData);
-  serverAllocationPendingFlag = Storage_isServerAllocationPending(storage);
+  serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
   fileName        = String_new();
   imageName       = String_new();
   directoryName   = String_new();
@@ -11152,7 +11155,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
     // check if aborted, check if server allocation pending
     abortedFlag                 = (abortCallbackFunction != NULL) && abortCallbackFunction(abortCallbackUserData);
-    serverAllocationPendingFlag = Storage_isServerAllocationPending(storage);
+    serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
   }
   String_delete(destinationName);
   String_delete(linkName);

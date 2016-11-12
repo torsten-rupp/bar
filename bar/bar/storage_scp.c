@@ -102,8 +102,8 @@ LOCAL LIBSSH2_SEND_FUNC(scpSendCallback)
 
   storageHandle = *((StorageHandle**)abstract);
   assert(storageHandle != NULL);
-  assert(storageHandle->storage != NULL);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo != NULL);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   assert(storageHandle->scp.oldSendCallback != NULL);
 
@@ -136,8 +136,8 @@ LOCAL LIBSSH2_RECV_FUNC(scpReceiveCallback)
 
   storageHandle = *((StorageHandle**)abstract);
   assert(storageHandle != NULL);
-  assert(storageHandle->storage != NULL);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo != NULL);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   assert(storageHandle->scp.oldReceiveCallback != NULL);
 
@@ -335,7 +335,7 @@ LOCAL ConstString StorageSCP_getPrintableName(StorageSpecifier *storageSpecifier
   return storageSpecifier->storageName;
 }
 
-LOCAL Errors StorageSCP_init(Storage                    *storage,
+LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
                              const StorageSpecifier     *storageSpecifier,
                              const JobOptions           *jobOptions,
                              BandWidthList              *maxBandWidthList,
@@ -348,8 +348,8 @@ LOCAL Errors StorageSCP_init(Storage                    *storage,
     SSHServer   sshServer;
   #endif /* HAVE_SSH2 */
 
-  assert(storage != NULL);
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   assert(storageSpecifier != NULL);
 
   UNUSED_VARIABLE(storageSpecifier);
@@ -357,20 +357,20 @@ LOCAL Errors StorageSCP_init(Storage                    *storage,
   #ifdef HAVE_SSH2
     // init variables
     AutoFree_init(&autoFreeList);
-    storage->scp.sshPublicKeyFileName   = NULL;
-    storage->scp.sshPrivateKeyFileName  = NULL;
-    initBandWidthLimiter(&storage->scp.bandWidthLimiter,maxBandWidthList);
-    AUTOFREE_ADD(&autoFreeList,&storage->scp.bandWidthLimiter,{ doneBandWidthLimiter(&storage->scp.bandWidthLimiter); });
+    storageInfo->scp.sshPublicKeyFileName   = NULL;
+    storageInfo->scp.sshPrivateKeyFileName  = NULL;
+    initBandWidthLimiter(&storageInfo->scp.bandWidthLimiter,maxBandWidthList);
+    AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.bandWidthLimiter,{ doneBandWidthLimiter(&storageInfo->scp.bandWidthLimiter); });
 
     // get SSH server settings
-    storage->scp.serverId = getSSHServerSettings(storage->storageSpecifier.hostName,jobOptions,&sshServer);
-    if (String_isEmpty(storage->storageSpecifier.loginName)) String_set(storage->storageSpecifier.loginName,sshServer.loginName);
-    if (String_isEmpty(storage->storageSpecifier.loginName)) String_setCString(storage->storageSpecifier.loginName,getenv("LOGNAME"));
-    if (String_isEmpty(storage->storageSpecifier.loginName)) String_setCString(storage->storageSpecifier.loginName,getenv("USER"));
-    if (storage->storageSpecifier.hostPort == 0) storage->storageSpecifier.hostPort = sshServer.port;
-    storage->sftp.publicKey  = sshServer.publicKey;
-    storage->sftp.privateKey = sshServer.privateKey;
-    if (String_isEmpty(storage->storageSpecifier.hostName))
+    storageInfo->scp.serverId = getSSHServerSettings(storageInfo->storageSpecifier.hostName,jobOptions,&sshServer);
+    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,sshServer.loginName);
+    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
+    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
+    if (storageInfo->storageSpecifier.hostPort == 0) storageInfo->storageSpecifier.hostPort = sshServer.port;
+    storageInfo->sftp.publicKey  = sshServer.publicKey;
+    storageInfo->sftp.privateKey = sshServer.privateKey;
+    if (String_isEmpty(storageInfo->storageSpecifier.hostName))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_NO_HOST_NAME;
@@ -387,65 +387,65 @@ LOCAL Errors StorageSCP_init(Storage                    *storage,
     }
 
     // allocate SSH server
-    if (!allocateServer(storage->scp.serverId,serverConnectionPriority,60*1000L))
+    if (!allocateServer(storageInfo->scp.serverId,serverConnectionPriority,60*1000L))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_TOO_MANY_CONNECTIONS;
     }
-    AUTOFREE_ADD(&autoFreeList,&storage->scp.serverId,{ freeServer(storage->scp.serverId); });
+    AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.serverId,{ freeServer(storageInfo->scp.serverId); });
 
     // check if SSH login is possible
     error = ERROR_UNKNOWN;
     if ((error == ERROR_UNKNOWN) && !Password_isEmpty(sshServer.password))
     {
-      error = checkSSHLogin(storage->storageSpecifier.hostName,
-                            storage->storageSpecifier.hostPort,
-                            storage->storageSpecifier.loginName,
+      error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
+                            storageInfo->storageSpecifier.hostPort,
+                            storageInfo->storageSpecifier.loginName,
                             sshServer.password,
-                            storage->scp.publicKey.data,
-                            storage->scp.publicKey.length,
-                            storage->scp.privateKey.data,
-                            storage->scp.privateKey.length
+                            storageInfo->scp.publicKey.data,
+                            storageInfo->scp.publicKey.length,
+                            storageInfo->scp.privateKey.data,
+                            storageInfo->scp.privateKey.length
                            );
       if (error == ERROR_NONE)
       {
-        Password_set(storage->storageSpecifier.loginPassword,sshServer.password);
+        Password_set(storageInfo->storageSpecifier.loginPassword,sshServer.password);
       }
     }
     if (error == ERROR_UNKNOWN)
     {
       // initialize default password
       while (   (error != ERROR_NONE)
-             && initSSHLogin(storage->storageSpecifier.hostName,
-                             storage->storageSpecifier.loginName,
-                             storage->storageSpecifier.loginPassword,
+             && initSSHLogin(storageInfo->storageSpecifier.hostName,
+                             storageInfo->storageSpecifier.loginName,
+                             storageInfo->storageSpecifier.loginPassword,
                              jobOptions,
-                             CALLBACK(storage->getPasswordFunction,storage->getPasswordUserData)
+                             CALLBACK(storageInfo->getPasswordFunction,storageInfo->getPasswordUserData)
                             )
          )
       {
-        error = checkSSHLogin(storage->storageSpecifier.hostName,
-                              storage->storageSpecifier.hostPort,
-                              storage->storageSpecifier.loginName,
-                              storage->storageSpecifier.loginPassword,
-                              storage->scp.publicKey.data,
-                              storage->scp.publicKey.length,
-                              storage->scp.privateKey.data,
-                              storage->scp.privateKey.length
+        error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
+                              storageInfo->storageSpecifier.hostPort,
+                              storageInfo->storageSpecifier.loginName,
+                              storageInfo->storageSpecifier.loginPassword,
+                              storageInfo->scp.publicKey.data,
+                              storageInfo->scp.publicKey.length,
+                              storageInfo->scp.privateKey.data,
+                              storageInfo->scp.privateKey.length
                              );
       }
       if (error != ERROR_NONE)
       {
         error = (!Password_isEmpty(sshServer.password) || !Password_isEmpty(defaultSSHPassword))
-                  ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storage->storageSpecifier.hostName))
-                  : ERRORX_(NO_SSH_PASSWORD,0,"%s",String_cString(storage->storageSpecifier.hostName));
+                  ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName))
+                  : ERRORX_(NO_SSH_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName));
       }
 
       // store passwrd as default SSH password
       if (error == ERROR_NONE)
       {
         if (defaultSSHPassword == NULL) defaultSSHPassword = Password_new();
-        Password_set(defaultSSHPassword,storage->storageSpecifier.loginPassword);
+        Password_set(defaultSSHPassword,storageInfo->storageSpecifier.loginPassword);
       }
     }
     assert(error != ERROR_UNKNOWN);
@@ -458,7 +458,7 @@ LOCAL Errors StorageSCP_init(Storage                    *storage,
     // free resources
     AutoFree_done(&autoFreeList);
   #else /* not HAVE_SSH2 */
-    UNUSED_VARIABLE(storage);
+    UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(jobOptions);
     UNUSED_VARIABLE(maxBandWidthList);
     UNUSED_VARIABLE(serverConnectionPriority);
@@ -469,33 +469,33 @@ LOCAL Errors StorageSCP_init(Storage                    *storage,
   return ERROR_NONE;
 }
 
-LOCAL Errors StorageSCP_done(Storage *storage)
+LOCAL Errors StorageSCP_done(StorageInfo *storageInfo)
 {
-  assert(storage != NULL);
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
 
   // free SSH server connection
   #ifdef HAVE_SSH2
-    freeServer(storage->scp.serverId);
+    freeServer(storageInfo->scp.serverId);
   #else /* not HAVE_SSH2 */
-    UNUSED_VARIABLE(storage);
+    UNUSED_VARIABLE(storageInfo);
   #endif /* HAVE_SSH2 */
 
   return ERROR_NONE;
 }
 
-LOCAL bool StorageSCP_isServerAllocationPending(Storage *storage)
+LOCAL bool StorageSCP_isServerAllocationPending(StorageInfo *storageInfo)
 {
   bool serverAllocationPending;
 
-  assert(storage != NULL);
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
 
   serverAllocationPending = FALSE;
   #if defined(HAVE_SSH2)
-    serverAllocationPending = isServerAllocationPending(storage->scp.serverId);
+    serverAllocationPending = isServerAllocationPending(storageInfo->scp.serverId);
   #else /* not HAVE_SSH2 */
-    UNUSED_VARIABLE(storage);
+    UNUSED_VARIABLE(storageInfo);
 
     serverAllocationPending = FALSE;
   #endif /* HAVE_SSH2 */
@@ -503,7 +503,7 @@ LOCAL bool StorageSCP_isServerAllocationPending(Storage *storage)
   return serverAllocationPending;
 }
 
-LOCAL Errors StorageSCP_preProcess(Storage     *storage,
+LOCAL Errors StorageSCP_preProcess(StorageInfo *storageInfo,
                                    ConstString archiveName,
                                    time_t      timestamp,
                                    bool        initialFlag
@@ -515,20 +515,20 @@ LOCAL Errors StorageSCP_preProcess(Storage     *storage,
     String    script;
   #endif /* HAVE_SSH2 */
 
-  assert(storage != NULL);
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
 
   error = ERROR_NONE;
 
   #ifdef HAVE_SSH2
     {
-      if ((storage->jobOptions == NULL) || !storage->jobOptions->dryRunFlag)
+      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
       {
         if (!initialFlag)
         {
           // init macros
           TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
-          TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storage->volumeNumber,NULL);
+          TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
           if (globalOptions.scp.writePreProcessCommand != NULL)
           {
@@ -563,7 +563,7 @@ LOCAL Errors StorageSCP_preProcess(Storage     *storage,
       }
     }
   #else /* not HAVE_SSH2 */
-    UNUSED_VARIABLE(storage);
+    UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
     UNUSED_VARIABLE(timestamp);
     UNUSED_VARIABLE(initialFlag);
@@ -574,7 +574,7 @@ LOCAL Errors StorageSCP_preProcess(Storage     *storage,
   return error;
 }
 
-LOCAL Errors StorageSCP_postProcess(Storage     *storage,
+LOCAL Errors StorageSCP_postProcess(StorageInfo *storageInfo,
                                     ConstString archiveName,
                                     time_t      timestamp,
                                     bool        finalFlag
@@ -586,20 +586,20 @@ LOCAL Errors StorageSCP_postProcess(Storage     *storage,
     String    script;
   #endif /* HAVE_SSH2 */
 
-  assert(storage != NULL);
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
 
   error = ERROR_NONE;
 
   #ifdef HAVE_SSH2
     {
-      if ((storage->jobOptions == NULL) || !storage->jobOptions->dryRunFlag)
+      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
       {
         if (!finalFlag)
         {
           // init macros
           TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
-          TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storage->volumeNumber,NULL);
+          TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
           if (globalOptions.scp.writePostProcessCommand != NULL)
           {
@@ -634,7 +634,7 @@ LOCAL Errors StorageSCP_postProcess(Storage     *storage,
       }
     }
   #else /* not HAVE_SSH2 */
-    UNUSED_VARIABLE(storage);
+    UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
     UNUSED_VARIABLE(timestamp);
     UNUSED_VARIABLE(finalFlag);
@@ -645,13 +645,13 @@ LOCAL Errors StorageSCP_postProcess(Storage     *storage,
   return error;
 }
 
-LOCAL bool StorageSCP_exists(Storage *storage, ConstString archiveName)
+LOCAL bool StorageSCP_exists(StorageInfo *storageInfo, ConstString archiveName)
 {
-  assert(storage != NULL);
+  assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
 
 //TODO: still not implemented
-  UNUSED_VARIABLE(storage);
+  UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
   return File_exists(archiveName);
@@ -667,7 +667,7 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(archiveSize);
@@ -688,14 +688,14 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
     // connect
     error = Network_connect(&storageHandle->scp.socketHandle,
                             SOCKET_TYPE_SSH,
-                            storageHandle->storage->storageSpecifier.hostName,
-                            storageHandle->storage->storageSpecifier.hostPort,
-                            storageHandle->storage->storageSpecifier.loginName,
-                            storageHandle->storage->storageSpecifier.loginPassword,
-                            storageHandle->storage->scp.publicKey.data,
-                            storageHandle->storage->scp.publicKey.length,
-                            storageHandle->storage->scp.privateKey.data,
-                            storageHandle->storage->scp.privateKey.length,
+                            storageHandle->storageInfo->storageSpecifier.hostName,
+                            storageHandle->storageInfo->storageSpecifier.hostPort,
+                            storageHandle->storageInfo->storageSpecifier.loginName,
+                            storageHandle->storageInfo->storageSpecifier.loginPassword,
+                            storageHandle->storageInfo->scp.publicKey.data,
+                            storageHandle->storageInfo->scp.publicKey.length,
+                            storageHandle->storageInfo->scp.privateKey.data,
+                            storageHandle->storageInfo->scp.privateKey.length,
                             0
                            );
     if (error != ERROR_NONE)
@@ -712,7 +712,7 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
     storageHandle->scp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,scpSendCallback   );
     storageHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,scpReceiveCallback);
 
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       // open channel and file for writing
       #ifdef HAVE_SSH2_SCP_SEND64
@@ -771,7 +771,7 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   assert(!String_isEmpty(archiveName));
 
   #ifdef HAVE_SSH2
@@ -797,14 +797,14 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
     // connect
     error = Network_connect(&storageHandle->scp.socketHandle,
                             SOCKET_TYPE_SSH,
-                            storageHandle->storage->storageSpecifier.hostName,
-                            storageHandle->storage->storageSpecifier.hostPort,
-                            storageHandle->storage->storageSpecifier.loginName,
-                            storageHandle->storage->storageSpecifier.loginPassword,
-                            storageHandle->storage->scp.publicKey.data,
-                            storageHandle->storage->scp.publicKey.length,
-                            storageHandle->storage->scp.privateKey.data,
-                            storageHandle->storage->scp.privateKey.length,
+                            storageHandle->storageInfo->storageSpecifier.hostName,
+                            storageHandle->storageInfo->storageSpecifier.hostPort,
+                            storageHandle->storageInfo->storageSpecifier.loginName,
+                            storageHandle->storageInfo->storageSpecifier.loginPassword,
+                            storageHandle->storageInfo->scp.publicKey.data,
+                            storageHandle->storageInfo->scp.publicKey.length,
+                            storageHandle->storageInfo->scp.privateKey.data,
+                            storageHandle->storageInfo->scp.privateKey.length,
                             0
                            );
     if (error != ERROR_NONE)
@@ -865,8 +865,8 @@ LOCAL void StorageSCP_close(StorageHandle *storageHandle)
   assert(storageHandle != NULL);
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   #endif /* HAVE_SSH2 */
-  assert(storageHandle->storage != NULL);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo != NULL);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
 
   #ifdef HAVE_SSH2
     libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
@@ -881,7 +881,7 @@ LOCAL void StorageSCP_close(StorageHandle *storageHandle)
         free(storageHandle->scp.readAheadBuffer.data);
         break;
       case STORAGE_MODE_WRITE:
-        if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
         {
           result = 0;
 
@@ -943,12 +943,12 @@ LOCAL bool StorageSCP_eof(StorageHandle *storageHandle)
   #ifdef HAVE_SSH2
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   #endif /* HAVE_SSH2 */
-  assert(storageHandle->storage != NULL);
+  assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
 
   #ifdef HAVE_SSH2
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       return storageHandle->scp.index >= storageHandle->scp.size;
     }
@@ -983,16 +983,16 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
   #ifdef HAVE_SSH2
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   #endif /* HAVE_SSH2 */
-  assert(storageHandle->storage != NULL);
+  assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   assert(buffer != NULL);
 
 //fprintf(stderr,"%s,%d: size=%lu\n",__FILE__,__LINE__,size);
   if (bytesRead != NULL) (*bytesRead) = 0L;
   #ifdef HAVE_SSH2
     error = ERROR_NONE;
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->scp.channel != NULL);
       assert(storageHandle->scp.readAheadBuffer.data != NULL);
@@ -1024,9 +1024,9 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
           assert(storageHandle->scp.index >= (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length));
 
           // get max. number of bytes to receive in one step
-          if (storageHandle->storage->scp.bandWidthLimiter.maxBandWidthList != NULL)
+          if (storageHandle->storageInfo->scp.bandWidthLimiter.maxBandWidthList != NULL)
           {
-            length = MIN(storageHandle->storage->scp.bandWidthLimiter.blockSize,size);
+            length = MIN(storageHandle->storageInfo->scp.bandWidthLimiter.blockSize,size);
           }
           else
           {
@@ -1106,7 +1106,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
           */
           if (endTimestamp >= startTimestamp)
           {
-            limitBandWidth(&storageHandle->storage->scp.bandWidthLimiter,
+            limitBandWidth(&storageHandle->storageInfo->scp.bandWidthLimiter,
                            endTotalReceivedBytes-startTotalReceivedBytes,
                            endTimestamp-startTimestamp
                           );
@@ -1144,14 +1144,14 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
   #ifdef HAVE_SSH2
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   #endif /* HAVE_SSH2 */
-  assert(storageHandle->storage != NULL);
+  assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   assert(buffer != NULL);
 
   #ifdef HAVE_SSH2
     error = ERROR_NONE;
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->scp.channel != NULL);
 
@@ -1159,9 +1159,9 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
       while (writtenBytes < size)
       {
         // get max. number of bytes to send in one step
-        if (storageHandle->storage->scp.bandWidthLimiter.maxBandWidthList != NULL)
+        if (storageHandle->storageInfo->scp.bandWidthLimiter.maxBandWidthList != NULL)
         {
-          length = MIN(storageHandle->storage->scp.bandWidthLimiter.blockSize,size-writtenBytes);
+          length = MIN(storageHandle->storageInfo->scp.bandWidthLimiter.blockSize,size-writtenBytes);
         }
         else
         {
@@ -1225,7 +1225,7 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
         */
         if (endTimestamp >= startTimestamp)
         {
-          limitBandWidth(&storageHandle->storage->scp.bandWidthLimiter,
+          limitBandWidth(&storageHandle->storageInfo->scp.bandWidthLimiter,
                          endTotalSentBytes-startTotalSentBytes,
                          endTimestamp-startTimestamp
                         );
@@ -1252,12 +1252,12 @@ LOCAL uint64 StorageSCP_getSize(StorageHandle *storageHandle)
   #ifdef HAVE_SSH2
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   #endif /* HAVE_SSH2 */
-  assert(storageHandle->storage != NULL);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo != NULL);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
 
   size = 0LL;
   #ifdef HAVE_SSH2
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       size = storageHandle->scp.size;
     }
@@ -1278,15 +1278,15 @@ LOCAL Errors StorageSCP_tell(StorageHandle *storageHandle,
   #ifdef HAVE_SSH2
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   #endif /* HAVE_SSH2 */
-  assert(storageHandle->storage != NULL);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo != NULL);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   assert(offset != NULL);
 
   (*offset) = 0LL;
 
   error = ERROR_NONE;
   #ifdef HAVE_SSH2
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       (*offset) = storageHandle->scp.index;
       error     = ERROR_NONE;
@@ -1314,8 +1314,8 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
   #ifdef HAVE_SSH2
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   #endif /* HAVE_SSH2 */
-  assert(storageHandle->storage != NULL);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo != NULL);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
 
   #ifdef HAVE_SSH2
     /* scp protocol does not support a seek-function. Thus try to
@@ -1325,7 +1325,7 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
     */
 
     error = ERROR_NONE;
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->scp.channel != NULL);
       assert(storageHandle->scp.readAheadBuffer.data != NULL);
@@ -1393,22 +1393,22 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 }
 
-LOCAL Errors StorageSCP_delete(Storage     *storage,
+LOCAL Errors StorageSCP_delete(StorageInfo *storageInfo,
                                ConstString archiveName
                               )
 {
 //  ConstString deleteFileName;
   Errors      error;
 
-  assert(storage != NULL);
+  assert(storageInfo != NULL);
   #ifdef HAVE_SSH2
-    DEBUG_CHECK_RESOURCE_TRACE(storage);
+    DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
   #endif /* HAVE_SSH2 */
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   assert(!String_isEmpty(archiveName));
 
-//  deleteFileName = (storageFileName != NULL) ? storageFileName : storage->storageSpecifier.archiveName;
-UNUSED_VARIABLE(storage);
+//  deleteFileName = (storageFileName != NULL) ? storageFileName : storageInfo->storageSpecifier.archiveName;
+UNUSED_VARIABLE(storageInfo);
 UNUSED_VARIABLE(archiveName);
 
   error = ERROR_UNKNOWN;
@@ -1418,19 +1418,19 @@ whould this be a possible implementation?
     {
       String command;
 
-      assert(storage->scp.channel != NULL);
+      assert(storageInfo->scp.channel != NULL);
 
       // there is no unlink command for scp: execute either 'rm' or 'del' on remote server
       command = String_new();
       String_format(String_clear(command),"rm %'S",deleteFileName);
-      error = (libssh2_channel_exec(storage->scp.channel,
+      error = (libssh2_channel_exec(storageInfo->scp.channel,
                                     String_cString(command)
                                    ) != 0
               ) ? ERROR_NONE : ERROR_DELETE_FILE;
       if (error != ERROR_NONE)
       {
         String_format(String_clear(command),"del %'S",deleteFileName);
-        error = (libssh2_channel_exec(storage->scp.channel,
+        error = (libssh2_channel_exec(storageInfo->scp.channel,
                                       String_cString(command)
                                      ) != 0
                 ) ? ERROR_NONE : ERROR_DELETE_FILE;
@@ -1438,7 +1438,7 @@ whould this be a possible implementation?
       String_delete(command);
     }
   #else /* not HAVE_SSH2 */
-    UNUSED_VARIABLE(storage);
+    UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1453,7 +1453,7 @@ whould this be a possible implementation?
 
 #if 0
 still not complete
-LOCAL Errors StorageSCP_getFileInfo(Storage     *storage,
+LOCAL Errors StorageSCP_getFileInfo(StorageInfo *storageInfo,
                                     ConstString fileName,
                                     FileInfo    *fileInfo
                                    )
@@ -1461,15 +1461,15 @@ LOCAL Errors StorageSCP_getFileInfo(Storage     *storage,
   String infoFileName;
   Errors error;
 
-  assert(storage != NULL);
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   assert(fileInfo != NULL);
 
-  infoFileName = (fileName != NULL) ? fileName : storage->storageSpecifier.archiveName;
+  infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
   memset(fileInfo,0,sizeof(fileInfo));
 
   error = ERROR_UNKNOWN;
-  switch (storage->storageSpecifier.type)
+  switch (storageInfo->storageSpecifier.type)
       error = ERROR_FUNCTION_NOT_SUPPORTED;
   assert(error != ERROR_UNKNOWN);
 

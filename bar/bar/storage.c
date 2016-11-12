@@ -108,22 +108,22 @@ LOCAL void signalHandler(int signalNumber)
 /***********************************************************************\
 * Name   : updateStorageStatusInfo
 * Purpose: update storage status info
-* Input  : storage - storage
+* Input  : storageInfo - storage info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateStorageStatusInfo(const Storage *storage)
+LOCAL void updateStorageStatusInfo(const StorageInfo *storageInfo)
 {
-  assert(storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
-  if (storage->updateStatusInfoFunction != NULL)
+  if (storageInfo->updateStatusInfoFunction != NULL)
   {
-    storage->updateStatusInfoFunction(&storage->runningInfo,
-                                      storage->updateStatusInfoUserData
-                                     );
+    storageInfo->updateStatusInfoFunction(&storageInfo->runningInfo,
+                                          storageInfo->updateStatusInfoUserData
+                                         );
   }
 }
 
@@ -1527,7 +1527,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
 }
 
 #ifdef NDEBUG
-  Errors Storage_init(Storage                         *storage,
+  Errors Storage_init(StorageInfo                     *storageInfo,
                       const StorageSpecifier          *storageSpecifier,
                       const JobOptions                *jobOptions,
                       BandWidthList                   *maxBandWidthList,
@@ -1542,7 +1542,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
 #else /* not NDEBUG */
   Errors __Storage_init(const char                      *__fileName__,
                         ulong                           __lineNb__,
-                        Storage                         *storage,
+                        StorageInfo                     *storageInfo,
                         const StorageSpecifier          *storageSpecifier,
                         const JobOptions                *jobOptions,
                         BandWidthList                   *maxBandWidthList,
@@ -1559,7 +1559,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
   AutoFreeList autoFreeList;
   Errors       error;
 
-  assert(storage != NULL);
+  assert(storageInfo != NULL);
   assert(storageSpecifier != NULL);
 
   #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && !defined(HAVE_SSH2)
@@ -1568,31 +1568,31 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
 
   // initialize variables
   AutoFree_init(&autoFreeList);
-  Storage_duplicateSpecifier(&storage->storageSpecifier,storageSpecifier);
-  storage->jobOptions                = jobOptions;
-  storage->updateStatusInfoFunction  = storageUpdateStatusInfoFunction;
-  storage->updateStatusInfoUserData  = storageUpdateStatusInfoUserData;
-  storage->getPasswordFunction       = getPasswordFunction;
-  storage->getPasswordUserData       = getPasswordUserData;
-  storage->requestVolumeFunction     = storageRequestVolumeFunction;
-  storage->requestVolumeUserData     = storageRequestVolumeUserData;
+  Storage_duplicateSpecifier(&storageInfo->storageSpecifier,storageSpecifier);
+  storageInfo->jobOptions                = jobOptions;
+  storageInfo->updateStatusInfoFunction  = storageUpdateStatusInfoFunction;
+  storageInfo->updateStatusInfoUserData  = storageUpdateStatusInfoUserData;
+  storageInfo->getPasswordFunction       = getPasswordFunction;
+  storageInfo->getPasswordUserData       = getPasswordUserData;
+  storageInfo->requestVolumeFunction     = storageRequestVolumeFunction;
+  storageInfo->requestVolumeUserData     = storageRequestVolumeUserData;
   if ((jobOptions != NULL) && jobOptions->waitFirstVolumeFlag)
   {
-    storage->volumeNumber            = 0;
-    storage->requestedVolumeNumber   = 0;
-    storage->volumeState             = STORAGE_VOLUME_STATE_UNKNOWN;
+    storageInfo->volumeNumber            = 0;
+    storageInfo->requestedVolumeNumber   = 0;
+    storageInfo->volumeState             = STORAGE_VOLUME_STATE_UNKNOWN;
   }
   else
   {
-    storage->volumeNumber            = 1;
-    storage->requestedVolumeNumber   = 1;
-    storage->volumeState             = STORAGE_VOLUME_STATE_LOADED;
+    storageInfo->volumeNumber            = 1;
+    storageInfo->requestedVolumeNumber   = 1;
+    storageInfo->volumeState             = STORAGE_VOLUME_STATE_LOADED;
   }
-  AUTOFREE_ADD(&autoFreeList,&storage->storageSpecifier,{ Storage_doneSpecifier(&storage->storageSpecifier); });
+  AUTOFREE_ADD(&autoFreeList,&storageInfo->storageSpecifier,{ Storage_doneSpecifier(&storageInfo->storageSpecifier); });
 
   // init protocol specific values
   error = ERROR_UNKNOWN;
-  switch (storage->storageSpecifier.type)
+  switch (storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       UNUSED_VARIABLE(maxBandWidthList);
@@ -1600,10 +1600,10 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
     case STORAGE_TYPE_FILESYSTEM:
       UNUSED_VARIABLE(maxBandWidthList);
 
-      error = StorageFile_init(storage,storageSpecifier,jobOptions);
+      error = StorageFile_init(storageInfo,storageSpecifier,jobOptions);
       break;
     case STORAGE_TYPE_FTP:
-      error = StorageFTP_init(storage,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
+      error = StorageFTP_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
       break;
     case STORAGE_TYPE_SSH:
       UNUSED_VARIABLE(maxBandWidthList);
@@ -1612,21 +1612,21 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
       return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
-      error = StorageSCP_init(storage,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
+      error = StorageSCP_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
       break;
     case STORAGE_TYPE_SFTP:
-      error = StorageSFTP_init(storage,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
+      error = StorageSFTP_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
       break;
     case STORAGE_TYPE_WEBDAV:
-      error = StorageWebDAV_init(storage,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
+      error = StorageWebDAV_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      error = StorageOptical_init(storage,storageSpecifier,jobOptions);
+      error = StorageOptical_init(storageInfo,storageSpecifier,jobOptions);
       break;
     case STORAGE_TYPE_DEVICE:
-      error = StorageDevice_init(storage,storageSpecifier,jobOptions);
+      error = StorageDevice_init(storageInfo,storageSpecifier,jobOptions);
       break;
     default:
       UNUSED_VARIABLE(maxBandWidthList);
@@ -1642,72 +1642,72 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
     return error;
   }
 
-  storage->runningInfo.volumeNumber   = 0;
-  storage->runningInfo.volumeProgress = 0;
+  storageInfo->runningInfo.volumeNumber   = 0;
+  storageInfo->runningInfo.volumeProgress = 0;
 
   // free resources
   AutoFree_done(&autoFreeList);
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(storage,sizeof(Storage));
+    DEBUG_ADD_RESOURCE_TRACE(storageInfo,sizeof(Storage));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,storage,sizeof(Storage));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,storageInfo,sizeof(StorageInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
 }
 
 #ifdef NDEBUG
-  Errors Storage_done(Storage *storage)
+  Errors Storage_done(StorageInfo *storageInfo)
 #else /* not NDEBUG */
-  Errors __Storage_done(const char *__fileName__,
-                        ulong      __lineNb__,
-                        Storage    *storage
+  Errors __Storage_done(const char  *__fileName__,
+                        ulong       __lineNb__,
+                        StorageInfo *storageInfo
                        )
 #endif /* NDEBUG */
 {
   Errors error;
 
-  assert(storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(storage,sizeof(Storage));
+    DEBUG_REMOVE_RESOURCE_TRACE(storageInfo,sizeof(Storage));
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,storage,sizeof(Storage));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,storageInfo,sizeof(StorageInfo));
   #endif /* NDEBUG */
 
   error = ERROR_NONE;
 
-  switch (storage->storageSpecifier.type)
+  switch (storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      error = StorageFile_done(storage);
+      error = StorageFile_done(storageInfo);
       break;
     case STORAGE_TYPE_FTP:
-      error = StorageFTP_done(storage);
+      error = StorageFTP_done(storageInfo);
       break;
     case STORAGE_TYPE_SSH:
       // free SSH server connection
       break;
     case STORAGE_TYPE_SCP:
-      error = StorageSCP_done(storage);
+      error = StorageSCP_done(storageInfo);
       break;
     case STORAGE_TYPE_SFTP:
-      error = StorageSFTP_done(storage);
+      error = StorageSFTP_done(storageInfo);
       break;
     case STORAGE_TYPE_WEBDAV:
-      error = StorageWebDAV_done(storage);
+      error = StorageWebDAV_done(storageInfo);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      error = StorageOptical_done(storage);
+      error = StorageOptical_done(storageInfo);
       break;
     case STORAGE_TYPE_DEVICE:
-      error = StorageDevice_done(storage);
+      error = StorageDevice_done(storageInfo);
       break;
     default:
       #ifndef NDEBUG
@@ -1716,44 +1716,44 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
       break;
   }
 
-  Storage_doneSpecifier(&storage->storageSpecifier);
+  Storage_doneSpecifier(&storageInfo->storageSpecifier);
 
   return error;
 }
 
-bool Storage_isServerAllocationPending(Storage *storage)
+bool Storage_isServerAllocationPending(StorageInfo *storageInfo)
 {
   bool serverAllocationPending;
 
-  assert(storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   serverAllocationPending = FALSE;
-  switch (storage->storageSpecifier.type)
+  switch (storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      serverAllocationPending = StorageFile_isServerAllocationPending(storage);
+      serverAllocationPending = StorageFile_isServerAllocationPending(storageInfo);
       break;
     case STORAGE_TYPE_FTP:
-      serverAllocationPending = StorageFTP_isServerAllocationPending(storage);
+      serverAllocationPending = StorageFTP_isServerAllocationPending(storageInfo);
       break;
     case STORAGE_TYPE_SSH:
       #if defined(HAVE_SSH2)
-        serverAllocationPending = isServerAllocationPending(storage->ssh.serverId);
+        serverAllocationPending = isServerAllocationPending(storageInfo->ssh.serverId);
       #else /* not HAVE_SSH2 */
         serverAllocationPending = FALSE;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
-      serverAllocationPending = StorageSCP_isServerAllocationPending(storage);
+      serverAllocationPending = StorageSCP_isServerAllocationPending(storageInfo);
       break;
     case STORAGE_TYPE_SFTP:
-      serverAllocationPending = StorageSFTP_isServerAllocationPending(storage);
+      serverAllocationPending = StorageSFTP_isServerAllocationPending(storageInfo);
       break;
     case STORAGE_TYPE_WEBDAV:
-      serverAllocationPending = StorageWebDAV_isServerAllocationPending(storage);
+      serverAllocationPending = StorageWebDAV_isServerAllocationPending(storageInfo);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
@@ -1771,14 +1771,14 @@ bool Storage_isServerAllocationPending(Storage *storage)
   return serverAllocationPending;
 }
 
-const StorageSpecifier *Storage_getStorageSpecifier(const Storage *storage)
+const StorageSpecifier *Storage_getStorageSpecifier(const StorageInfo *storageInfo)
 {
-  assert(storage != NULL);
+  assert(storageInfo != NULL);
 
-  return &storage->storageSpecifier;
+  return &storageInfo->storageSpecifier;
 }
 
-Errors Storage_preProcess(Storage     *storage,
+Errors Storage_preProcess(StorageInfo *storageInfo,
                           ConstString archiveName,
                           time_t      time,
                           bool        initialFlag
@@ -1786,38 +1786,38 @@ Errors Storage_preProcess(Storage     *storage,
 {
   Errors error;
 
-  assert(storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   error = ERROR_NONE;
-  switch (storage->storageSpecifier.type)
+  switch (storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      error = StorageFile_preProcess(storage,archiveName,time,initialFlag);
+      error = StorageFile_preProcess(storageInfo,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_FTP:
-      error = StorageFTP_preProcess(storage,archiveName,time,initialFlag);
+      error = StorageFTP_preProcess(storageInfo,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_SSH:
       break;
     case STORAGE_TYPE_SCP:
-      error = StorageSCP_preProcess(storage,archiveName,time,initialFlag);
+      error = StorageSCP_preProcess(storageInfo,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_SFTP:
-      error = StorageSFTP_preProcess(storage,archiveName,time,initialFlag);
+      error = StorageSFTP_preProcess(storageInfo,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_WEBDAV:
-      error = StorageWebDAV_preProcess(storage,archiveName,time,initialFlag);
+      error = StorageWebDAV_preProcess(storageInfo,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      error = StorageOptical_preProcess(storage,archiveName,time,initialFlag);
+      error = StorageOptical_preProcess(storageInfo,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_DEVICE:
-      error = StorageDevice_preProcess(storage,archiveName,time,initialFlag);
+      error = StorageDevice_preProcess(storageInfo,archiveName,time,initialFlag);
       break;
     default:
       #ifndef NDEBUG
@@ -1829,7 +1829,7 @@ Errors Storage_preProcess(Storage     *storage,
   return error;
 }
 
-Errors Storage_postProcess(Storage     *storage,
+Errors Storage_postProcess(StorageInfo *storageInfo,
                            ConstString archiveName,
                            time_t      time,
                            bool        finalFlag
@@ -1837,38 +1837,38 @@ Errors Storage_postProcess(Storage     *storage,
 {
   Errors error;
 
-  assert(storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   error = ERROR_NONE;
-  switch (storage->storageSpecifier.type)
+  switch (storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      error = StorageFile_postProcess(storage,archiveName,time,finalFlag);
+      error = StorageFile_postProcess(storageInfo,archiveName,time,finalFlag);
       break;
     case STORAGE_TYPE_FTP:
-      error = StorageFTP_postProcess(storage,archiveName,time,finalFlag);
+      error = StorageFTP_postProcess(storageInfo,archiveName,time,finalFlag);
       break;
     case STORAGE_TYPE_SSH:
       break;
     case STORAGE_TYPE_SCP:
-      error = StorageSCP_postProcess(storage,archiveName,time,finalFlag);
+      error = StorageSCP_postProcess(storageInfo,archiveName,time,finalFlag);
       break;
     case STORAGE_TYPE_SFTP:
-      error = StorageSFTP_postProcess(storage,archiveName,time,finalFlag);
+      error = StorageSFTP_postProcess(storageInfo,archiveName,time,finalFlag);
       break;
     case STORAGE_TYPE_WEBDAV:
-      error = StorageWebDAV_postProcess(storage,archiveName,time,finalFlag);
+      error = StorageWebDAV_postProcess(storageInfo,archiveName,time,finalFlag);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      error = StorageOptical_postProcess(storage,archiveName,time,finalFlag);
+      error = StorageOptical_postProcess(storageInfo,archiveName,time,finalFlag);
       break;
     case STORAGE_TYPE_DEVICE:
-      error = StorageDevice_postProcess(storage,archiveName,time,finalFlag);
+      error = StorageDevice_postProcess(storageInfo,archiveName,time,finalFlag);
       break;
     default:
       #ifndef NDEBUG
@@ -1880,38 +1880,38 @@ Errors Storage_postProcess(Storage     *storage,
   return error;
 }
 
-uint Storage_getVolumeNumber(const Storage *storage)
+uint Storage_getVolumeNumber(const StorageInfo *storageInfo)
 {
-  assert(storage != NULL);
+  assert(storageInfo != NULL);
 
-  return storage->volumeNumber;
+  return storageInfo->volumeNumber;
 }
 
-void Storage_setVolumeNumber(Storage *storage,
-                             uint    volumeNumber
+void Storage_setVolumeNumber(StorageInfo *storageInfo,
+                             uint        volumeNumber
                             )
 {
-  assert(storage != NULL);
+  assert(storageInfo != NULL);
 
-  storage->volumeNumber = volumeNumber;
+  storageInfo->volumeNumber = volumeNumber;
 }
 
-Errors Storage_unloadVolume(Storage *storage)
+Errors Storage_unloadVolume(StorageInfo *storageInfo)
 {
   Errors error;
 
-  assert(storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   error = ERROR_UNKNOWN;
-  switch (storage->storageSpecifier.type)
+  switch (storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
     case STORAGE_TYPE_FILESYSTEM:
       error = ERROR_NONE;
       break;
     case STORAGE_TYPE_FTP:
-      error = StorageFTP_unloadVolume(storage);
+      error = StorageFTP_unloadVolume(storageInfo);
       break;
     case STORAGE_TYPE_SSH:
     case STORAGE_TYPE_SCP:
@@ -1926,10 +1926,10 @@ Errors Storage_unloadVolume(Storage *storage)
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      error = StorageOptical_unloadVolume(storage);
+      error = StorageOptical_unloadVolume(storageInfo);
       break;
     case STORAGE_TYPE_DEVICE:
-      error = StorageDevice_unloadVolume(storage);
+      error = StorageDevice_unloadVolume(storageInfo);
       break;
     default:
       #ifndef NDEBUG
@@ -1942,48 +1942,48 @@ Errors Storage_unloadVolume(Storage *storage)
   return error;
 }
 
-bool Storage_exists(Storage *storage, ConstString archiveName)
+bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
 {
   bool existsFlag;
 
-  assert(storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   // get archive name
-  if (archiveName == NULL) archiveName = storage->storageSpecifier.archiveName;
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
   if (String_isEmpty(archiveName))
   {
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
   existsFlag = FALSE;
-  switch (storage->storageSpecifier.type)
+  switch (storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_FILESYSTEM:
-      existsFlag = StorageFile_exists(storage,archiveName);
+      existsFlag = StorageFile_exists(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_FTP:
-      existsFlag = StorageFTP_exists(storage,archiveName);
+      existsFlag = StorageFTP_exists(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_SSH:
       existsFlag = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
-      existsFlag = StorageSCP_exists(storage,archiveName);
+      existsFlag = StorageSCP_exists(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_SFTP:
-      existsFlag = StorageSFTP_exists(storage,archiveName);
+      existsFlag = StorageSFTP_exists(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_WEBDAV:
-      existsFlag = StorageWebDAV_exists(storage,archiveName);
+      existsFlag = StorageWebDAV_exists(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      existsFlag = StorageOptical_exists(storage,archiveName);
+      existsFlag = StorageOptical_exists(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_DEVICE:
-      existsFlag = StorageDevice_exists(storage,archiveName);
+      existsFlag = StorageDevice_exists(storageInfo,archiveName);
       break;
     default:
       #ifndef NDEBUG
@@ -1997,7 +1997,7 @@ bool Storage_exists(Storage *storage, ConstString archiveName)
 
 #ifdef NDEBUG
   Errors Storage_create(StorageHandle *storageHandle,
-                        Storage       *storage,
+                        StorageInfo   *storageInfo,
                         ConstString   archiveName,
                         uint64        archiveSize
                        )
@@ -2005,7 +2005,7 @@ bool Storage_exists(Storage *storage, ConstString archiveName)
   Errors __Storage_create(const char    *__fileName__,
                           ulong         __lineNb__,
                           StorageHandle *storageHandle,
-                          Storage       *storage,
+                          StorageInfo   *storageInfo,
                           ConstString   archiveName,
                           uint64        archiveSize
                          )
@@ -2014,22 +2014,22 @@ bool Storage_exists(Storage *storage, ConstString archiveName)
   Errors error;
 
   assert(storageHandle != NULL);
-  assert(storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   // init variables
-  storageHandle->storage = storage;
-  storageHandle->mode    = STORAGE_MODE_WRITE;
+  storageHandle->storageInfo = storageInfo;
+  storageHandle->mode        = STORAGE_MODE_WRITE;
 
   // get archive name
-  if (archiveName == NULL) archiveName = storage->storageSpecifier.archiveName;
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
   if (String_isEmpty(archiveName))
   {
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
   error = ERROR_UNKNOWN;
-  switch (storageHandle->storage->storageSpecifier.type)
+  switch (storageHandle->storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_FILESYSTEM:
       error = StorageFile_create(storageHandle,archiveName,archiveSize);
@@ -2080,36 +2080,36 @@ bool Storage_exists(Storage *storage, ConstString archiveName)
 
 #ifdef NDEBUG
   Errors Storage_open(StorageHandle *storageHandle,
-                      Storage       *storage,
+                      StorageInfo   *storageInfo,
                       ConstString   archiveName
                      )
 #else /* not NDEBUG */
   Errors __Storage_open(const char    *__fileName__,
                         ulong         __lineNb__,
                         StorageHandle *storageHandle,
-                        Storage       *storage,
+                        StorageInfo   *storageInfo,
                         ConstString   archiveName
                        )
 #endif /* NDEBUG */
 {
   Errors error;
 
-  assert(storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   // init variables
-  storageHandle->storage = storage;
-  storageHandle->mode    = STORAGE_MODE_READ;
+  storageHandle->storageInfo = storageInfo;
+  storageHandle->mode        = STORAGE_MODE_READ;
 
   // get archive name
-  if (archiveName == NULL) archiveName = storage->storageSpecifier.archiveName;
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
   if (String_isEmpty(archiveName))
   {
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
   error = ERROR_UNKNOWN;
-  switch (storageHandle->storage->storageSpecifier.type)
+  switch (storageHandle->storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
@@ -2171,10 +2171,10 @@ bool Storage_exists(Storage *storage, ConstString archiveName)
 {
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storage);
+  assert(storageHandle->storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
 
-  switch (storageHandle->storage->storageSpecifier.type)
+  switch (storageHandle->storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
@@ -2221,13 +2221,13 @@ bool Storage_eof(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storage);
+  assert(storageHandle->storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storage);
+  assert(storageHandle->storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
 
-  switch (storageHandle->storage->storageSpecifier.type)
+  switch (storageHandle->storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
@@ -2280,14 +2280,14 @@ Errors Storage_read(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storage);
+  assert(storageHandle->storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(buffer != NULL);
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
   error = ERROR_NONE;
-  switch (storageHandle->storage->storageSpecifier.type)
+  switch (storageHandle->storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
@@ -2337,13 +2337,13 @@ Errors Storage_write(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storage);
+  assert(storageHandle->storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
-  switch (storageHandle->storage->storageSpecifier.type)
+  switch (storageHandle->storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
@@ -2392,14 +2392,14 @@ Errors Storage_tell(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storage);
+  assert(storageHandle->storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
   assert(offset != NULL);
 
   (*offset) = 0LL;
 
   error = ERROR_NONE;
-  switch (storageHandle->storage->storageSpecifier.type)
+  switch (storageHandle->storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
@@ -2453,11 +2453,11 @@ Errors Storage_seek(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storage);
+  assert(storageHandle->storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
 
   error = ERROR_NONE;
-  switch (storageHandle->storage->storageSpecifier.type)
+  switch (storageHandle->storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
@@ -2508,11 +2508,11 @@ uint64 Storage_getSize(StorageHandle *storageHandle)
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storage);
+  assert(storageHandle->storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
 
   size = 0LL;
-  switch (storageHandle->storage->storageSpecifier.type)
+  switch (storageHandle->storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
@@ -2555,30 +2555,30 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   return size;
 }
 
-Errors Storage_delete(Storage *storage, ConstString archiveName)
+Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName)
 {
   Errors error;
 
-  assert(storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   // get archive name
-  if (archiveName == NULL) archiveName = storage->storageSpecifier.archiveName;
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
   if (String_isEmpty(archiveName))
   {
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
   error = ERROR_UNKNOWN;
-  switch (storage->storageSpecifier.type)
+  switch (storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      error = StorageFile_delete(storage,archiveName);
+      error = StorageFile_delete(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_FTP:
-      error = StorageFTP_delete(storage,archiveName);
+      error = StorageFTP_delete(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -2587,21 +2587,21 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
-      error = StorageSCP_delete(storage,archiveName);
+      error = StorageSCP_delete(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_SFTP:
-      error = StorageSFTP_delete(storage,archiveName);
+      error = StorageSFTP_delete(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_WEBDAV:
-      error = StorageWebDAV_delete(storage,archiveName);
+      error = StorageWebDAV_delete(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      error = StorageOptical_delete(storage,archiveName);
+      error = StorageOptical_delete(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_DEVICE:
-      error = StorageDevice_delete(storage,archiveName);
+      error = StorageDevice_delete(storageInfo,archiveName);
       break;
     default:
       #ifndef NDEBUG
@@ -2614,7 +2614,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   return error;
 }
 
-Errors Storage_pruneDirectories(Storage *storage, ConstString archiveName)
+Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString archiveName)
 {
   String                     name;
   bool                       isEmpty;
@@ -2622,7 +2622,7 @@ Errors Storage_pruneDirectories(Storage *storage, ConstString archiveName)
   StorageDirectoryListHandle storageDirectoryListHandle;
 
   // get archive name
-  if (archiveName == NULL) archiveName = storage->storageSpecifier.archiveName;
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
   if (String_isEmpty(archiveName))
   {
     return ERROR_NO_ARCHIVE_FILE_NAME;
@@ -2634,7 +2634,7 @@ Errors Storage_pruneDirectories(Storage *storage, ConstString archiveName)
     // check if directory is empty
     isEmpty = FALSE;
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                      &storage->storageSpecifier,
+                                      &storageInfo->storageSpecifier,
                                       name,
                                       NULL,  // jobOptions
                                       SERVER_CONNECTION_PRIORITY_LOW
@@ -2647,15 +2647,15 @@ Errors Storage_pruneDirectories(Storage *storage, ConstString archiveName)
       // delete empty directory
       if (isEmpty)
       {
-        switch (storage->storageSpecifier.type)
+        switch (storageInfo->storageSpecifier.type)
         {
           case STORAGE_TYPE_NONE:
             break;
           case STORAGE_TYPE_FILESYSTEM:
-            error = StorageFile_delete(storage,name);
+            error = StorageFile_delete(storageInfo,name);
             break;
           case STORAGE_TYPE_FTP:
-            error = StorageFTP_delete(storage,name);
+            error = StorageFTP_delete(storageInfo,name);
             break;
           case STORAGE_TYPE_SSH:
             #ifdef HAVE_SSH2
@@ -2664,21 +2664,21 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             #endif /* HAVE_SSH2 */
             break;
           case STORAGE_TYPE_SCP:
-            error = StorageSCP_delete(storage,name);
+            error = StorageSCP_delete(storageInfo,name);
             break;
           case STORAGE_TYPE_SFTP:
-            error = StorageSFTP_delete(storage,name);
+            error = StorageSFTP_delete(storageInfo,name);
             break;
           case STORAGE_TYPE_WEBDAV:
-            error = StorageWebDAV_delete(storage,name);
+            error = StorageWebDAV_delete(storageInfo,name);
             break;
           case STORAGE_TYPE_CD:
           case STORAGE_TYPE_DVD:
           case STORAGE_TYPE_BD:
-            error = StorageOptical_delete(storage,name);
+            error = StorageOptical_delete(storageInfo,name);
             break;
           case STORAGE_TYPE_DEVICE:
-            error = StorageDevice_delete(storage,name);
+            error = StorageDevice_delete(storageInfo,name);
             break;
           default:
             #ifndef NDEBUG
@@ -2703,30 +2703,30 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
 #if 0
 still not complete
-Errors Storage_getFileInfo(Storage  *storage,
-                           FileInfo *fileInfo
+Errors Storage_getFileInfo(StorageInfo *storageInfo,
+                           FileInfo    *fileInfo
                           )
 {
   String infoFileName;
   Errors error;
 
-  assert(storage != NULL);
+  assert(storageInfo != NULL);
   assert(fileInfo != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
-  infoFileName = (fileName != NULL) ? fileName : storage->storageSpecifier.archiveName;
+  infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
   memset(fileInfo,0,sizeof(fileInfo));
 
   error = ERROR_UNKNOWN;
-  switch (storage->storageSpecifier.type)
+  switch (storageInfo->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      errors = StorageFile_getFileInfo(storage,fileName,fileInfo);
+      errors = StorageFile_getFileInfo(storageInfo,fileName,fileInfo);
       break;
     case STORAGE_TYPE_FTP:
-      errors = StorageFTP_getFileInfo(storage,fileName,fileInfo);
+      errors = StorageFTP_getFileInfo(storageInfo,fileName,fileInfo);
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -2735,21 +2735,21 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
-      errors = StorageSCP_getFileInfo(storage,fileName,fileInfo);
+      errors = StorageSCP_getFileInfo(storageInfo,fileName,fileInfo);
       break;
     case STORAGE_TYPE_SFTP:
-      errors = StorageSFTP_getFileInfo(storage,fileName,fileInfo);
+      errors = StorageSFTP_getFileInfo(storageInfo,fileName,fileInfo);
       break;
     case STORAGE_TYPE_WEBDAV:
-      errors = StorageWebDAV_getFileInfo(storage,fileName,fileInfo);
+      errors = StorageWebDAV_getFileInfo(storageInfo,fileName,fileInfo);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      errors = StorageOptical_getFileInfo(storage,fileName,fileInfo);
+      errors = StorageOptical_getFileInfo(storageInfo,fileName,fileInfo);
       break;
     case STORAGE_TYPE_DEVICE:
-      errors = StorageDevice_getFileInfo(storage,fileName,fileInfo);
+      errors = StorageDevice_getFileInfo(storageInfo,fileName,fileInfo);
       break;
     default:
       #ifndef NDEBUG
@@ -3008,7 +3008,7 @@ Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
   AutoFreeList  autoFreeList;
   void          *buffer;
   Errors        error;
-  Storage       storage;
+  StorageInfo   storageInfo;
   StorageHandle storageHandle;
   FileHandle    fileHandle;
   ulong         bytesRead;
@@ -3027,7 +3027,7 @@ Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
 
   // open storage
-  error = Storage_init(&storage,
+  error = Storage_init(&storageInfo,
                        storageSpecifier,
                        jobOptions,
                        maxBandWidthList,
@@ -3042,16 +3042,16 @@ Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
     return error;
   }
   error = Storage_open(&storageHandle,
-                       &storage,
+                       &storageInfo,
                        NULL  // archiveName
                       );
   if (error != ERROR_NONE)
   {
-    (void)Storage_done(&storage);
+    (void)Storage_done(&storageInfo);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,&storage,{ Storage_close(&storageHandle); (void)Storage_done(&storage); });
+  AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_close(&storageHandle); (void)Storage_done(&storageInfo); });
 
   // create local file
   error = File_open(&fileHandle,
@@ -3095,7 +3095,7 @@ Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
 
   // close archive
   Storage_close(&storageHandle);
-  (void)Storage_done(&storage);
+  (void)Storage_done(&storageInfo);
 
   // free resources
   AutoFree_done(&autoFreeList);

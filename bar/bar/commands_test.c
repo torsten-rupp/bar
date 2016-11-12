@@ -72,7 +72,7 @@ typedef struct
   bool                        *pauseTestFlag;                     // TRUE for pause creation
   bool                        *requestedAbortFlag;                // TRUE to abort create
 
-  Storage                     storage;                      // storage handle
+  StorageInfo                 storageInfo;                        // storage info
 
   MsgQueue                    entryMsgQueue;                      // queue with entries to store
 
@@ -1121,7 +1121,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 
   // open archive
   error = Archive_open(&archiveInfo,
-                       &testInfo->storage,
+                       &testInfo->storageInfo,
                        testInfo->storageSpecifier,
                        NULL,  // archiveName,
                        testInfo->deltaSourceList,
@@ -1136,7 +1136,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
                Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
                Error_getText(error)
               );
-//    (void)Storage_done(&storage);
+//    (void)Storage_done(&storageInfo);
     free(buffer);
     if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
     return;
@@ -1329,7 +1329,7 @@ NULL,  //               requestedAbortFlag,
 //  AUTOFREE_ADD(&autoFreeList,&createInfo,{ doneCreateInfo(&createInfo); });
 
   // init storage
-  error = Storage_init(&testInfo.storage,
+  error = Storage_init(&testInfo.storageInfo,
                        storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
@@ -1368,7 +1368,7 @@ NULL,  //               requestedAbortFlag,
 
   // open archive
   error = Archive_open(&archiveInfo,
-                       &testInfo.storage,
+                       &testInfo.storageInfo,
                        storageSpecifier,
                        archiveName,
                        deltaSourceList,
@@ -1383,7 +1383,7 @@ NULL,  //               requestedAbortFlag,
                Storage_getPrintableNameCString(storageSpecifier,NULL),
                Error_getText(error)
               );
-    (void)Storage_done(&testInfo.storage);
+    (void)Storage_done(&testInfo.storageInfo);
     free(buffer);
     return error;
   }
@@ -1523,7 +1523,7 @@ NULL,  //               requestedAbortFlag,
   Archive_close(&archiveInfo);
 
   // done storage
-  (void)Storage_done(&testInfo.storage);
+  (void)Storage_done(&testInfo.storageInfo);
 
   // free resources
   free(buffer);

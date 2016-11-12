@@ -167,7 +167,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
                         )
 {
   bool              restoredFlag;
-  Storage           storage;
+  StorageInfo       storageInfo;
   byte              *buffer;
 //  bool              abortFlag;
   Errors            error;
@@ -192,7 +192,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
   }
 
   // init storage
-  error = Storage_init(&storage,
+  error = Storage_init(&storageInfo,
                        storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
@@ -212,7 +212,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
 
   // open archive
   error = Archive_open(&archiveInfo,
-                       &storage,
+                       &storageInfo,
                        storageSpecifier,
                        NULL,  // archive name
                        deltaSourceList,
@@ -222,7 +222,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
                       );
   if (error != ERROR_NONE)
   {
-    (void)Storage_done(&storage);
+    (void)Storage_done(&storageInfo);
     return error;
   }
 
@@ -689,7 +689,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
   Archive_close(&archiveInfo);
 
   // done storage
-  (void)Storage_done(&storage);
+  (void)Storage_done(&storageInfo);
 
   // free resources
   free(buffer);

@@ -202,7 +202,7 @@ typedef struct
   uint64        measurementTime;                             // measurement sum of time for transmission [us]
 } StorageBandWidthLimiter;
 
-// storage handle
+// storage info
 typedef struct
 {
   StorageSpecifier                storageSpecifier;          // storage specifier data
@@ -372,12 +372,12 @@ typedef struct
   };
 
   StorageStatusInfo runningInfo;
-} Storage;
+} StorageInfo;
 
 // storage handle
 typedef struct
 {
-  Storage                      *storage;
+  StorageInfo                  *storageInfo;
   StorageModes                 mode;                         // storage mode: READ, WRITE
   String                       archiveName;                  // archive name
 
@@ -1074,13 +1074,13 @@ Errors Storage_prepare(const String     storageName,
 *          storageRequestVolumeFunction    - volume request call-back
 *          storageRequestVolumeUserData    - user data for volume
 *                                            request call-back
-* Output : storage - initialized storage
+* Output : storageInfo - initialized storage info
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Storage_init(Storage                         *storage,
+  Errors Storage_init(StorageInfo                     *storageInfo,
                       const StorageSpecifier          *storageSpecifier,
                       const JobOptions                *jobOptions,
                       BandWidthList                   *maxBandWidthList,
@@ -1095,7 +1095,7 @@ Errors Storage_prepare(const String     storageName,
 #else /* not NDEBUG */
   Errors __Storage_init(const char                      *__fileName__,
                         ulong                           __lineNb__,
-                        Storage                         *storage,
+                        StorageInfo                     *storageInfo,
                         const StorageSpecifier          *storageSpecifier,
                         const JobOptions                *jobOptions,
                         BandWidthList                   *maxBandWidthList,
@@ -1112,55 +1112,55 @@ Errors Storage_prepare(const String     storageName,
 /***********************************************************************\
 * Name   : Storage_done
 * Purpose: deinit storage
-* Input  : storage - storage
+* Input  : storageInfo - storage info
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Storage_done(Storage *storage);
+  Errors Storage_done(StorageInfo *storageInfo);
 #else /* not NDEBUG */
-  Errors __Storage_done(const char *__fileName__,
-                        ulong      __lineNb__,
-                        Storage    *storage
+  Errors __Storage_done(const char  *__fileName__,
+                        ulong       __lineNb__,
+                        StorageInfo *storage
                        );
 #endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Storage_isServerAllocationPending
 * Purpose: check if a server allocation with high priority is pending
-* Input  : storage - storage
+* Input  : storageInfo - storage info
 * Output : -
 * Return : TRUE if server allocation with high priority is pending,
 *          FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_isServerAllocationPending(Storage *storage);
+bool Storage_isServerAllocationPending(StorageInfo *storageInfo);
 
 /***********************************************************************\
 * Name   : Storage_getStorageSpecifier
 * Purpose: get storage specifier from from storage handle
-* Input  : storage - storage
+* Input  : storageInfo - storage info
 * Output : -
 * Return : storage specifier
 * Notes  : -
 \***********************************************************************/
 
-const StorageSpecifier *Storage_getStorageSpecifier(const Storage *storage);
+const StorageSpecifier *Storage_getStorageSpecifier(const StorageInfo *storageInfo);
 
 /***********************************************************************\
 * Name   : Storage_preProcess
 * Purpose: pre-process storage
-* Input  : storage - storage
+* Input  : storageInfo - storage info
 *          initialFlag   - TRUE iff initial call, FALSE otherwise
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_preProcess(Storage     *storage,
+Errors Storage_preProcess(StorageInfo *storageInfo,
                           ConstString archiveName,
                           time_t      time,
                           bool        initialFlag
@@ -1169,14 +1169,14 @@ Errors Storage_preProcess(Storage     *storage,
 /***********************************************************************\
 * Name   : Storage_postProcess
 * Purpose: post-process storage
-* Input  : storage - storage
+* Input  : storageInfo - storage info
 *          finalFlag     - TRUE iff final call, FALSE otherwise
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_postProcess(Storage     *storage,
+Errors Storage_postProcess(StorageInfo *storageInfo,
                            ConstString archiveName,
                            time_t      time,
                            bool        finalFlag
@@ -1185,13 +1185,13 @@ Errors Storage_postProcess(Storage     *storage,
 /***********************************************************************\
 * Name   : Storage_getVolumeNumber
 * Purpose: get current volume number
-* Input  : storage - storage
+* Input  : storageInfo - storage info
 * Output : -
 * Return : volume number
 * Notes  : -
 \***********************************************************************/
 
-uint Storage_getVolumeNumber(const Storage *storage);
+uint Storage_getVolumeNumber(const StorageInfo *storageInfo);
 
 /***********************************************************************\
 * Name   : Storage_setVolumeNumber
@@ -1203,20 +1203,20 @@ uint Storage_getVolumeNumber(const Storage *storage);
 * Notes  : -
 \***********************************************************************/
 
-void Storage_setVolumeNumber(Storage *storage,
-                             uint    volumeNumber
+void Storage_setVolumeNumber(StorageInfo *storageInfo,
+                             uint        volumeNumber
                             );
 
 /***********************************************************************\
 * Name   : Storage_unloadVolume
 * Purpose: unload volume
-* Input  : storage - storage
+* Input  : storageInfo - storage info
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_unloadVolume(Storage *storage);
+Errors Storage_unloadVolume(StorageInfo *storageInfo);
 
 /***********************************************************************\
 * Name   : Storage_exists
@@ -1228,7 +1228,7 @@ Errors Storage_unloadVolume(Storage *storage);
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_exists(Storage *storage, ConstString archiveName);
+bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName);
 
 /***********************************************************************\
 * Name   : Storage_create
@@ -1244,7 +1244,7 @@ bool Storage_exists(Storage *storage, ConstString archiveName);
 
 #ifdef NDEBUG
   Errors Storage_create(StorageHandle *storageHandle,
-                        Storage       *storage,
+                        StorageInfo   *storageInfo,
                         ConstString   archiveName,
                         uint64        archiveSize
                        );
@@ -1252,7 +1252,7 @@ bool Storage_exists(Storage *storage, ConstString archiveName);
   Errors __Storage_create(const char    *__fileName__,
                           ulong         __lineNb__,
                           StorageHandle *storageHandle,
-                          Storage       *storage,
+                          StorageInfo   *storageInfo,
                           ConstString   archiveName,
                           uint64        archiveSize
                          );
@@ -1271,14 +1271,14 @@ bool Storage_exists(Storage *storage, ConstString archiveName);
 
 #ifdef NDEBUG
   Errors Storage_open(StorageHandle *storageHandle,
-                      Storage       *storage,
+                      StorageInfo   *storageInfo,
                       ConstString   archiveName
                      );
 #else /* not NDEBUG */
   Errors __Storage_open(const char    *__fileName__,
                         ulong         __lineNb__,
                         StorageHandle *storageHandle,
-                        Storage       *storage,
+                        StorageInfo   *storageInfo,
                         ConstString   archiveName
                        );
 #endif /* NDEBUG */
@@ -1394,7 +1394,7 @@ uint64 Storage_getSize(StorageHandle *storageHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_delete(Storage *storage, ConstString archiveName);
+Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName);
 
 /***********************************************************************\
 * Name   : Storage_pruneDirectories
@@ -1406,7 +1406,7 @@ Errors Storage_delete(Storage *storage, ConstString archiveName);
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_pruneDirectories(Storage *storage, ConstString archiveName);
+Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString archiveName);
 
 #if 0
 still not complete
@@ -1421,8 +1421,8 @@ still not complete
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_getFileInfo(Storage  *storage,
-                           FileInfo *fileInfo
+Errors Storage_getFileInfo(StorageInfo *storageInfo,
+                           FileInfo    *fileInfo
                           );
 #endif /* 0 */
 

@@ -210,8 +210,8 @@ LOCAL CURLcode initFTPHandle(CURL *curlHandle, ConstString url, ConstString logi
            CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
            Instead install a signal handler to catch the not wanted
            signal.
-  (void)curl_easy_setopt(storage->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
-  (void)curl_easy_setopt(storage->ftp.curlHandle,CURLOPT_NOSIGNAL,1L);
+  (void)curl_easy_setopt(storageInfo->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
+  (void)curl_easy_setopt(storageInfo->ftp.curlHandle,CURLOPT_NOSIGNAL,1L);
   */
 
   // set URL
@@ -1060,7 +1060,7 @@ LOCAL void StorageFTP_getPrintableName(StorageSpecifier *storageSpecifier,
   }
 }
 
-LOCAL Errors StorageFTP_init(Storage                    *storage,
+LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
                              const StorageSpecifier     *storageSpecifier,
                              const JobOptions           *jobOptions,
                              BandWidthList              *maxBandWidthList,
@@ -1071,7 +1071,7 @@ LOCAL Errors StorageFTP_init(Storage                    *storage,
     Errors error;
   #endif /* defined(HAVE_CURL) || defined(HAVE_FTP) */
 
-  assert(storage != NULL);
+  assert(storageInfo != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FTP);
 
@@ -1086,100 +1086,100 @@ LOCAL Errors StorageFTP_init(Storage                    *storage,
       FTPServer ftpServer;
 
       // init variables
-      initBandWidthLimiter(&storage->ftp.bandWidthLimiter,maxBandWidthList);
+      initBandWidthLimiter(&storageInfo->ftp.bandWidthLimiter,maxBandWidthList);
 
       // get FTP server settings
-      storage->ftp.serverId = getFTPServerSettings(storage->storageSpecifier.hostName,jobOptions,&ftpServer);
-      if (String_isEmpty(storage->storageSpecifier.loginName)) String_set(storage->storageSpecifier.loginName,ftpServer.loginName);
-      if (String_isEmpty(storage->storageSpecifier.loginName)) String_setCString(storage->storageSpecifier.loginName,getenv("LOGNAME"));
-      if (String_isEmpty(storage->storageSpecifier.loginName)) String_setCString(storage->storageSpecifier.loginName,getenv("USER"));
-      if (String_isEmpty(storage->storageSpecifier.hostName))
+      storageInfo->ftp.serverId = getFTPServerSettings(storageInfo->storageSpecifier.hostName,jobOptions,&ftpServer);
+      if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,ftpServer.loginName);
+      if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
+      if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
+      if (String_isEmpty(storageInfo->storageSpecifier.hostName))
       {
-        doneBandWidthLimiter(&storage->ftp.bandWidthLimiter);
+        doneBandWidthLimiter(&storageInfo->ftp.bandWidthLimiter);
         return ERROR_NO_HOST_NAME;
       }
 
       // allocate FTP server
-      if (!allocateServer(storage->ftp.serverId,serverConnectionPriority,60*1000L))
+      if (!allocateServer(storageInfo->ftp.serverId,serverConnectionPriority,60*1000L))
       {
-        doneBandWidthLimiter(&storage->ftp.bandWidthLimiter);
+        doneBandWidthLimiter(&storageInfo->ftp.bandWidthLimiter);
         return ERROR_TOO_MANY_CONNECTIONS;
       }
 
       // check FTP login, get correct password
       error = ERROR_FTP_SESSION_FAIL;
-      if ((error != ERROR_NONE) && !Password_isEmpty(storage->storageSpecifier.loginPassword))
+      if ((error != ERROR_NONE) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
       {
-        error = checkFTPLogin(storage->storageSpecifier.hostName,
-                              storage->storageSpecifier.hostPort,
-                              storage->storageSpecifier.loginName,
-                              storage->storageSpecifier.loginPassword
+        error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
+                              storageInfo->storageSpecifier.hostPort,
+                              storageInfo->storageSpecifier.loginName,
+                              storageInfo->storageSpecifier.loginPassword
                              );
       }
       if ((error != ERROR_NONE) && !Password_isEmpty(ftpServer.password))
       {
-        error = checkFTPLogin(storage->storageSpecifier.hostName,
-                              storage->storageSpecifier.hostPort,
-                              storage->storageSpecifier.loginName,
+        error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
+                              storageInfo->storageSpecifier.hostPort,
+                              storageInfo->storageSpecifier.loginName,
                               ftpServer.password
                              );
         if (error == ERROR_NONE)
         {
-          Password_set(storage->storageSpecifier.loginPassword,ftpServer.password);
+          Password_set(storageInfo->storageSpecifier.loginPassword,ftpServer.password);
         }
       }
       if ((error != ERROR_NONE) && !Password_isEmpty(defaultFTPPassword))
       {
-        error = checkFTPLogin(storage->storageSpecifier.hostName,
-                              storage->storageSpecifier.hostPort,
-                              storage->storageSpecifier.loginName,
+        error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
+                              storageInfo->storageSpecifier.hostPort,
+                              storageInfo->storageSpecifier.loginName,
                               defaultFTPPassword
                              );
         if (error == ERROR_NONE)
         {
-          Password_set(storage->storageSpecifier.loginPassword,defaultFTPPassword);
+          Password_set(storageInfo->storageSpecifier.loginPassword,defaultFTPPassword);
         }
       }
       if (error != ERROR_NONE)
       {
         // initialize default password
         while (   (error != ERROR_NONE)
-               && initFTPLogin(storage->storageSpecifier.hostName,
-                               storage->storageSpecifier.loginName,
-                               storage->storageSpecifier.loginPassword,
+               && initFTPLogin(storageInfo->storageSpecifier.hostName,
+                               storageInfo->storageSpecifier.loginName,
+                               storageInfo->storageSpecifier.loginPassword,
                                jobOptions,
-                               CALLBACK(storage->getPasswordFunction,storage->getPasswordUserData)
+                               CALLBACK(storageInfo->getPasswordFunction,storageInfo->getPasswordUserData)
                               )
            )
         {
-          error = checkFTPLogin(storage->storageSpecifier.hostName,
-                                storage->storageSpecifier.hostPort,
-                                storage->storageSpecifier.loginName,
-                                storage->storageSpecifier.loginPassword
+          error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
+                                storageInfo->storageSpecifier.hostPort,
+                                storageInfo->storageSpecifier.loginName,
+                                storageInfo->storageSpecifier.loginPassword
                                );
           if (error == ERROR_NONE)
           {
-            Password_set(storage->storageSpecifier.loginPassword,defaultFTPPassword);
+            Password_set(storageInfo->storageSpecifier.loginPassword,defaultFTPPassword);
           }
         }
         if (error != ERROR_NONE)
         {
-          error = (!Password_isEmpty(storage->storageSpecifier.loginPassword) || !Password_isEmpty(ftpServer.password) || !Password_isEmpty(defaultFTPPassword))
-                    ? ERRORX_(INVALID_FTP_PASSWORD,0,"%s",String_cString(storage->storageSpecifier.hostName))
-                    : ERRORX_(NO_FTP_PASSWORD,0,"%s",String_cString(storage->storageSpecifier.hostName));
+          error = (!Password_isEmpty(storageInfo->storageSpecifier.loginPassword) || !Password_isEmpty(ftpServer.password) || !Password_isEmpty(defaultFTPPassword))
+                    ? ERRORX_(INVALID_FTP_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName))
+                    : ERRORX_(NO_FTP_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName));
         }
 
         // store passwrd as default FTP password
         if (error == ERROR_NONE)
         {
           if (defaultFTPPassword == NULL) defaultFTPPassword = Password_new();
-          Password_set(defaultFTPPassword,storage->storageSpecifier.loginPassword);
+          Password_set(defaultFTPPassword,storageInfo->storageSpecifier.loginPassword);
         }
       }
       if (error != ERROR_NONE)
       {
-        freeServer(storage->ftp.serverId);
-        doneBandWidthLimiter(&storage->ftp.bandWidthLimiter);
+        freeServer(storageInfo->ftp.serverId);
+        doneBandWidthLimiter(&storageInfo->ftp.bandWidthLimiter);
         return error;
       }
     }
@@ -1189,102 +1189,102 @@ LOCAL Errors StorageFTP_init(Storage                    *storage,
       FTPServer ftpServer;
 
       // init variables
-      initBandWidthLimiter(&storage->ftp.bandWidthLimiter,maxBandWidthList);
+      initBandWidthLimiter(&storageInfo->ftp.bandWidthLimiter,maxBandWidthList);
 
       // get FTP server settings
-      getFTPServerSettings(storage->storageSpecifier.hostName,jobOptions,&ftpServer);
-      if (String_isEmpty(storage->storageSpecifier.loginName)) String_set(storage->storageSpecifier.loginName,ftpServer.loginName);
-      if (String_isEmpty(storage->storageSpecifier.loginName)) String_setCString(storage->storageSpecifier.loginName,getenv("LOGNAME"));
-      if (String_isEmpty(storage->storageSpecifier.loginName)) String_setCString(storage->storageSpecifier.loginName,getenv("USER"));
-      if (String_isEmpty(storage->storageSpecifier.hostName))
+      getFTPServerSettings(storageInfo->storageSpecifier.hostName,jobOptions,&ftpServer);
+      if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,ftpServer.loginName);
+      if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
+      if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
+      if (String_isEmpty(storageInfo->storageSpecifier.hostName))
       {
-        doneBandWidthLimiter(&storage->ftp.bandWidthLimiter);
+        doneBandWidthLimiter(&storageInfo->ftp.bandWidthLimiter);
         return ERROR_NO_HOST_NAME;
       }
 
       // allocate FTP server
-      if (!allocateServer(storage->ftp.serverId,serverConnectionPriority,60*1000L))
+      if (!allocateServer(storageInfo->ftp.serverId,serverConnectionPriority,60*1000L))
       {
-        doneBandWidthLimiter(&storage->ftp.bandWidthLimiter);
+        doneBandWidthLimiter(&storageInfo->ftp.bandWidthLimiter);
         return ERROR_TOO_MANY_CONNECTIONS;
       }
 
       // check FTP login, get correct password
       error = ERROR_FTP_SESSION_FAIL;
-      if ((error != ERROR_NONE) && !Password_isEmpty(storage->storageSpecifier.loginPassword))
+      if ((error != ERROR_NONE) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
       {
-        error = checkFTPLogin(storage->storageSpecifier.hostName,
-                              storage->storageSpecifier.hostPort,
-                              storage->storageSpecifier.loginName,
-                              storage->storageSpecifier.loginPassword
+        error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
+                              storageInfo->storageSpecifier.hostPort,
+                              storageInfo->storageSpecifier.loginName,
+                              storageInfo->storageSpecifier.loginPassword
                              );
       }
       if ((error != ERROR_NONE) && !Password_isEmpty(ftpServer.password))
       {
-        error = checkFTPLogin(storage->storageSpecifier.hostName,
-                              storage->storageSpecifier.hostPort,
-                              storage->storageSpecifier.loginName,
+        error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
+                              storageInfo->storageSpecifier.hostPort,
+                              storageInfo->storageSpecifier.loginName,
                               ftpServer.password
                              );
         if (error == ERROR_NONE)
         {
-          Password_set(storage->storageSpecifier.loginPassword,ftpServer.password);
+          Password_set(storageInfo->storageSpecifier.loginPassword,ftpServer.password);
         }
       }
       if ((error != ERROR_NONE) && !Password_isEmpty(defaultFTPPassword))
       {
-        error = checkFTPLogin(storage->storageSpecifier.hostName,
-                              storage->storageSpecifier.hostPort,
-                              storage->storageSpecifier.loginName,
+        error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
+                              storageInfo->storageSpecifier.hostPort,
+                              storageInfo->storageSpecifier.loginName,
                               defaultFTPPassword
                              );
         if (error == ERROR_NONE)
         {
-          Password_set(storage->storageSpecifier.loginPassword,defaultFTPPassword);
+          Password_set(storageInfo->storageSpecifier.loginPassword,defaultFTPPassword);
         }
       }
       if (error != ERROR_NONE)
       {
         // initialize login password
         while (   (error != ERROR_NONE)
-               && initFTPLogin(storage->storageSpecifier.hostName,
-                               storage->storageSpecifier.loginName,
-                               storage->storageSpecifier.loginPassword,
+               && initFTPLogin(storageInfo->storageSpecifier.hostName,
+                               storageInfo->storageSpecifier.loginName,
+                               storageInfo->storageSpecifier.loginPassword,
                                jobOptions
-                               CALLBACK(storage->getPasswordFunction,storage->getPasswordUserData)
+                               CALLBACK(storageInfo->getPasswordFunction,storageInfo->getPasswordUserData)
                               )
               )
         {
-          error = checkFTPLogin(storage->storageSpecifier.hostName,
-                                storage->storageSpecifier.hostPort,
-                                storage->storageSpecifier.loginName,
-                                storage->storageSpecifier.loginPassword
+          error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
+                                storageInfo->storageSpecifier.hostPort,
+                                storageInfo->storageSpecifier.loginName,
+                                storageInfo->storageSpecifier.loginPassword
                                );
         }
         if (error != ERROR_NONE)
         {
           error = (!Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword) || !Password_isEmpty(ftpServer.password) || !Password_isEmpty(defaultFTPPassword))
-                    ? ERRORX_(ERROR_INVALID_FTP_PASSWORD,0,"%s",String_cString(storage->storageSpecifier.hostName))
-                    : ERRORX_(ERROR_NO_FTP_PASSWORD,0,"%s",String_cString(storage->storageSpecifier.hostName));
+                    ? ERRORX_(ERROR_INVALID_FTP_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName))
+                    : ERRORX_(ERROR_NO_FTP_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName));
         }
 
         // store passwrd as default FTP password
         if (error == ERROR_NONE)
         {
           if (defaultFTPPassword == NULL) defaultFTPPassword = Password_new();
-          Password_set(defaultFTPPassword,storage->storageSpecifier.loginPassword);
+          Password_set(defaultFTPPassword,storageInfo->storageSpecifier.loginPassword);
         }
       }
       if (error != ERROR_NONE)
       {
-        freeServer(storage->ftp.serverId);
-        doneBandWidthLimiter(&storage->ftp.bandWidthLimiter);
+        freeServer(storageInfo->ftp.serverId);
+        doneBandWidthLimiter(&storageInfo->ftp.bandWidthLimiter);
         return error;
       }
     }
     return ERROR_NONE;
   #else /* not HAVE_CURL || HAVE_FTP */
-    UNUSED_VARIABLE(storage);
+    UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(storageSpecifier);
     UNUSED_VARIABLE(jobOptions);
     UNUSED_VARIABLE(maxBandWidthList);
@@ -1294,35 +1294,35 @@ LOCAL Errors StorageFTP_init(Storage                    *storage,
   #endif /* HAVE_CURL || HAVE_FTP */
 }
 
-LOCAL Errors StorageFTP_done(Storage *storage)
+LOCAL Errors StorageFTP_done(StorageInfo *storageInfo)
 {
-  assert(storage != NULL);
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_FTP);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   #if   defined(HAVE_CURL)
-    freeServer(storage->ftp.serverId);
+    freeServer(storageInfo->ftp.serverId);
   #elif defined(HAVE_FTP)
-    freeServer(storage->ftp.serverId);
+    freeServer(storageInfo->ftp.serverId);
   #else /* not HAVE_CURL || HAVE_FTP */
-    UNUSED_VARIABLE(storage);
+    UNUSED_VARIABLE(storageInfo);
   #endif /* HAVE_CURL || HAVE_FTP */
 
   return ERROR_NONE;
 }
 
-LOCAL bool StorageFTP_isServerAllocationPending(Storage *storage)
+LOCAL bool StorageFTP_isServerAllocationPending(StorageInfo *storageInfo)
 {
   bool serverAllocationPending;
 
-  assert(storage != NULL);
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_FTP);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
-    serverAllocationPending = isServerAllocationPending(storage->ftp.serverId);
+    serverAllocationPending = isServerAllocationPending(storageInfo->ftp.serverId);
   #else /* not HAVE_CURL || HAVE_FTP */
-    UNUSED_VARIABLE(storage);
+    UNUSED_VARIABLE(storageInfo);
 
     serverAllocationPending = FALSE;
   #endif /* HAVE_CURL || HAVE_FTP */
@@ -1330,7 +1330,7 @@ LOCAL bool StorageFTP_isServerAllocationPending(Storage *storage)
   return serverAllocationPending;
 }
 
-LOCAL Errors StorageFTP_preProcess(Storage     *storage,
+LOCAL Errors StorageFTP_preProcess(StorageInfo *storageInfo,
                                    ConstString archiveName,
                                    time_t      time,
                                    bool        initialFlag
@@ -1342,20 +1342,20 @@ LOCAL Errors StorageFTP_preProcess(Storage     *storage,
     String    script;
   #endif /* HAVE_CURL || HAVE_FTP */
 
-  assert(storage != NULL);
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_FTP);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   error = ERROR_NONE;
 
   #if   defined(HAVE_CURL) || defined(HAVE_FTP)
-    if ((storage->jobOptions == NULL) || !storage->jobOptions->dryRunFlag)
+    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
     {
       if (!initialFlag)
       {
         // init macros
         TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
-        TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storage->volumeNumber,NULL);
+        TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
         // write pre-processing
         if (globalOptions.ftp.writePreProcessCommand != NULL)
@@ -1389,7 +1389,7 @@ LOCAL Errors StorageFTP_preProcess(Storage     *storage,
       }
     }
   #else /* not HAVE_CURL || HAVE_FTP */
-    UNUSED_VARIABLE(storage);
+    UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
     UNUSED_VARIABLE(time);
     UNUSED_VARIABLE(initialFlag);
@@ -1400,7 +1400,7 @@ LOCAL Errors StorageFTP_preProcess(Storage     *storage,
   return error;
 }
 
-LOCAL Errors StorageFTP_postProcess(Storage     *storage,
+LOCAL Errors StorageFTP_postProcess(StorageInfo *storageInfo,
                                     ConstString archiveName,
                                     time_t      time,
                                     bool        finalFlag
@@ -1412,20 +1412,20 @@ LOCAL Errors StorageFTP_postProcess(Storage     *storage,
     String    script;
   #endif /* HAVE_CURL || HAVE_FTP */
 
-  assert(storage != NULL);
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_FTP);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   error = ERROR_NONE;
 
   #if   defined(HAVE_CURL) || defined(HAVE_FTP)
-    if ((storage->jobOptions == NULL) || !storage->jobOptions->dryRunFlag)
+    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
     {
       if (!finalFlag)
       {
         // init macros
         TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
-        TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storage->volumeNumber,NULL);
+        TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
         // write post-process
         if (globalOptions.ftp.writePostProcessCommand != NULL)
@@ -1459,7 +1459,7 @@ LOCAL Errors StorageFTP_postProcess(Storage     *storage,
       }
     }
   #else /* not HAVE_CURL || HAVE_FTP */
-    UNUSED_VARIABLE(storage);
+    UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
     UNUSED_VARIABLE(time);
     UNUSED_VARIABLE(finalFlag);
@@ -1470,18 +1470,18 @@ LOCAL Errors StorageFTP_postProcess(Storage     *storage,
   return error;
 }
 
-LOCAL Errors StorageFTP_unloadVolume(Storage *storage)
+LOCAL Errors StorageFTP_unloadVolume(StorageInfo *storageInfo)
 {
-  assert(storage != NULL);
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_FTP);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
-  UNUSED_VARIABLE(storage);
+  UNUSED_VARIABLE(storageInfo);
 
   return ERROR_NONE;
 }
 
-LOCAL bool StorageFTP_exists(Storage *storage, ConstString archiveName)
+LOCAL bool StorageFTP_exists(StorageInfo *storageInfo, ConstString archiveName)
 {
   bool existsFlag;
   #if   defined(HAVE_CURL)
@@ -1502,8 +1502,8 @@ LOCAL bool StorageFTP_exists(Storage *storage, ConstString archiveName)
   #else /* not HAVE_CURL || HAVE_FTP */
   #endif /* HAVE_CURL || HAVE_FTP */
 
-  assert(storage != NULL);
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
   assert(!String_isEmpty(archiveName));
 
   existsFlag = FALSE;
@@ -1521,8 +1521,8 @@ LOCAL bool StorageFTP_exists(Storage *storage, ConstString archiveName)
     baseName = File_getFileBaseName(String_new(),archiveName);
 
     // get URL
-    url = String_format(String_new(),"ftp://%S",storage->storageSpecifier.hostName);
-    if (storage->storageSpecifier.hostPort != 0) String_format(url,":d",storage->storageSpecifier.hostPort);
+    url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
+    if (storageInfo->storageSpecifier.hostPort != 0) String_format(url,":d",storageInfo->storageSpecifier.hostPort);
     File_initSplitFileName(&nameTokenizer,pathName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
@@ -1535,8 +1535,8 @@ LOCAL bool StorageFTP_exists(Storage *storage, ConstString archiveName)
     // set FTP connect
     curlCode = initFTPHandle(curlHandle,
                              url,
-                             storage->storageSpecifier.loginName,
-                             storage->storageSpecifier.loginPassword,
+                             storageInfo->storageSpecifier.loginName,
+                             storageInfo->storageSpecifier.loginPassword,
                              FTP_TIMEOUT
                             );
     if (curlCode != CURLE_OK)
@@ -1567,28 +1567,28 @@ LOCAL bool StorageFTP_exists(Storage *storage, ConstString archiveName)
     // initialize variables
 
     // FTP connect
-    if (!Network_hostExists(storage->storageSpecifier.hostName))
+    if (!Network_hostExists(storageInfo->storageSpecifier.hostName))
     {
-      return ERRORX_(HOST_NOT_FOUND,0,"%s",String_cString(storage->storageSpecifier.hostName));
+      return ERRORX_(HOST_NOT_FOUND,0,"%s",String_cString(storageInfo->storageSpecifier.hostName));
     }
-    if (FtpConnect(String_cString(storage->storageSpecifier.hostName),&control) != 1)
+    if (FtpConnect(String_cString(storageInfo->storageSpecifier.hostName),&control) != 1)
     {
       return ERROR_FTP_SESSION_FAIL;
     }
 
     // FTP login
-    plainLoginPassword = Password_deploy(storage->storageSpecifier.loginPassword);
-    if (FtpLogin(String_cString(storage->storageSpecifier.loginName),
+    plainLoginPassword = Password_deploy(storageInfo->storageSpecifier.loginPassword);
+    if (FtpLogin(String_cString(storageInfo->storageSpecifier.loginName),
                  plainLoginPassword,
                  control
                 ) != 1
        )
     {
-      Password_undeploy(storage->storageSpecifier.loginPassword);
+      Password_undeploy(storageInfo->storageSpecifier.loginPassword);
       FtpClose(control);
       return ERROR_FTP_AUTHENTICATION;
     }
-    Password_undeploy(storage->storageSpecifier.loginPassword);
+    Password_undeploy(storageInfo->storageSpecifier.loginPassword);
 
     // check if file exists: first try non-passive, then passive mode
     tmpFileName = File_newFileName();
@@ -1666,7 +1666,7 @@ LOCAL bool StorageFTP_exists(Storage *storage, ConstString archiveName)
     // close FTP connection
     FtpClose(control);
   #else /* not HAVE_CURL || HAVE_FTP */
-    UNUSED_VARIABLE(storage);
+    UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
   #endif /* HAVE_CURL || HAVE_FTP */
 
@@ -1696,8 +1696,8 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageHandle != NULL);
-  assert(storageHandle->storage != NULL);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo != NULL);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
   assert(!String_isEmpty(archiveName));
 
   #if   defined(HAVE_CURL)
@@ -1730,8 +1730,8 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     baseName = File_getFileBaseName(String_new(),archiveName);
 
     // get URL
-    url = String_format(String_new(),"ftp://%S",storageHandle->storage->storageSpecifier.hostName);
-    if (storageHandle->storage->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storage->storageSpecifier.hostPort);
+    url = String_format(String_new(),"ftp://%S",storageHandle->storageInfo->storageSpecifier.hostName);
+    if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
     File_initSplitFileName(&nameTokenizer,pathName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
@@ -1741,13 +1741,13 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     File_doneSplitFileName(&nameTokenizer);
     String_append(url,baseName);
 
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       // create directories if necessary
       curlCode = initFTPHandle(storageHandle->ftp.curlHandle,
                                url,
-                               storageHandle->storage->storageSpecifier.loginName,
-                               storageHandle->storage->storageSpecifier.loginPassword,
+                               storageHandle->storageInfo->storageSpecifier.loginName,
+                               storageHandle->storageInfo->storageSpecifier.loginPassword,
                                FTP_TIMEOUT
                               );
       if (curlCode != CURLE_OK)
@@ -1837,20 +1837,20 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     }
 
     // login
-    plainPassword = Password_deploy(storage->storageSpecifier.loginPassword);
-    if (FtpLogin(String_cString(storage->storageSpecifier.loginName),
+    plainPassword = Password_deploy(storageInfo->storageSpecifier.loginPassword);
+    if (FtpLogin(String_cString(storageInfo->storageSpecifier.loginName),
                  plainPassword,
                  storageHandle->ftp.control
                 ) != 1
        )
     {
-      Password_undeploy(storage->storageSpecifier.loginPassword);
+      Password_undeploy(storageInfo->storageSpecifier.loginPassword);
       FtpClose(storageHandle->ftp.control);
       return ERROR_FTP_AUTHENTICATION;
     }
-    Password_undeploy(storage->storageSpecifier.loginPassword);
+    Password_undeploy(storageInfo->storageSpecifier.loginPassword);
 
-    if ((storage->jobOptions == NULL) || !storage->jobOptions->dryRunFlag)
+    if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
     {
       // create directory (try it and ignore errors)
       pathName      = File_getFilePathName(String_new(),archiveName);
@@ -1967,8 +1967,8 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageHandle != NULL);
-  assert(storageHandle->storage != NULL);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo != NULL);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
   assert(!String_isEmpty(archiveName));
 
   #if   defined(HAVE_CURL)
@@ -2009,8 +2009,8 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     baseName = File_getFileBaseName(String_new(),archiveName);
 
     // get URL
-    url = String_format(String_new(),"ftp://%S",storageHandle->storage->storageSpecifier.hostName);
-    if (storageHandle->storage->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storage->storageSpecifier.hostPort);
+    url = String_format(String_new(),"ftp://%S",storageHandle->storageInfo->storageSpecifier.hostName);
+    if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
     File_initSplitFileName(&nameTokenizer,pathName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
@@ -2023,8 +2023,8 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     // set FTP connect
     curlCode = initFTPHandle(storageHandle->ftp.curlHandle,
                              url,
-                             storageHandle->storage->storageSpecifier.loginName,
-                             storageHandle->storage->storageSpecifier.loginPassword,
+                             storageHandle->storageInfo->storageSpecifier.loginName,
+                             storageHandle->storageInfo->storageSpecifier.loginPassword,
                              FTP_TIMEOUT
                             );
     if (curlCode != CURLE_OK)
@@ -2148,31 +2148,31 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     }
 
     // FTP connect
-    if (!Network_hostExists(storage->storageSpecifier.hostName))
+    if (!Network_hostExists(storageInfo->storageSpecifier.hostName))
     {
       free(storageHandle->ftp.readAheadBuffer.data);
-      return ERRORX_(HOST_NOT_FOUND,0,"%s",String_cString(storage->storageSpecifier.hostName));
+      return ERRORX_(HOST_NOT_FOUND,0,"%s",String_cString(storageInfo->storageSpecifier.hostName));
     }
-    if (FtpConnect(String_cString(storage->storageSpecifier.hostName),&storageHandle->ftp.control) != 1)
+    if (FtpConnect(String_cString(storageInfo->storageSpecifier.hostName),&storageHandle->ftp.control) != 1)
     {
       free(storageHandle->ftp.readAheadBuffer.data);
       return ERROR_FTP_SESSION_FAIL;
     }
 
     // FTP login
-    plainLoginPassword = Password_deploy(storage->storageSpecifier.loginPassword);
-    if (FtpLogin(String_cString(storage->storageSpecifier.loginName),
+    plainLoginPassword = Password_deploy(storageInfo->storageSpecifier.loginPassword);
+    if (FtpLogin(String_cString(storageInfo->storageSpecifier.loginName),
                  plainLoginPassword,
                  storageHandle->ftp.control
                 ) != 1
        )
     {
-      Password_undeploy(storage->storageSpecifier.loginPassword);
+      Password_undeploy(storageInfo->storageSpecifier.loginPassword);
       FtpClose(storageHandle->ftp.control);
       free(storageHandle->ftp.readAheadBuffer.data);
       return ERROR_FTP_AUTHENTICATION;
     }
-    Password_undeploy(storage->storageSpecifier.loginPassword);
+    Password_undeploy(storageInfo->storageSpecifier.loginPassword);
 
     // check if file exists: first try non-passive, then passive mode
     tmpFileName = File_newFileName();
@@ -2305,8 +2305,8 @@ LOCAL void StorageFTP_close(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storage != NULL);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo != NULL);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
 
   #if   defined(HAVE_CURL)
     assert(storageHandle->ftp.curlHandle != NULL);
@@ -2328,7 +2328,7 @@ LOCAL void StorageFTP_close(StorageHandle *storageHandle)
         break;
       case STORAGE_MODE_WRITE:
         free(storageHandle->ftp.readAheadBuffer.data);
-        if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
         {
           assert(storageHandle->ftp.data != NULL);
           FtpClose(storageHandle->ftp.data);
@@ -2354,12 +2354,12 @@ LOCAL bool StorageFTP_eof(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storage != NULL);
+  assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
 
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       return storageHandle->ftp.index >= storageHandle->ftp.size;
     }
@@ -2398,14 +2398,14 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storage != NULL);
+  assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
   #if   defined(HAVE_CURL)
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->ftp.curlMultiHandle != NULL);
       assert(storageHandle->ftp.readAheadBuffer.data != NULL);
@@ -2733,14 +2733,14 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storage != NULL);
+  assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
   #if   defined(HAVE_CURL)
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->ftp.curlMultiHandle != NULL);
 
@@ -2897,15 +2897,15 @@ LOCAL Errors StorageFTP_tell(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storage != NULL);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo != NULL);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
   assert(offset != NULL);
 
   (*offset) = 0LL;
 
   error = ERROR_NONE;
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       (*offset) = storageHandle->ftp.index;
       error     = ERROR_NONE;
@@ -2940,8 +2940,8 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storage != NULL);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo != NULL);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
 
   error = ERROR_NONE;
   /* ftp protocol does not support a seek-function. Thus try to
@@ -2955,7 +2955,7 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
   */
   #if   defined(HAVE_CURL)
     {
-      if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
       {
         assert(storageHandle->ftp.readAheadBuffer.data != NULL);
 
@@ -3032,7 +3032,7 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
       }
     }
   #elif defined(HAVE_FTP)
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       assert(storageHandle->ftp.readAheadBuffer.data != NULL);
 
@@ -3104,13 +3104,13 @@ LOCAL uint64 StorageFTP_getSize(StorageHandle *storageHandle)
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storage != NULL);
-  assert(storageHandle->storage->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo != NULL);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
 
   size = 0LL;
 
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       size = storageHandle->ftp.size;
     }
@@ -3121,7 +3121,7 @@ LOCAL uint64 StorageFTP_getSize(StorageHandle *storageHandle)
   return size;
 }
 
-LOCAL Errors StorageFTP_delete(Storage      *storage,
+LOCAL Errors StorageFTP_delete(StorageInfo  *storageInfo,
                                 ConstString archiveName
                                )
 {
@@ -3139,9 +3139,9 @@ LOCAL Errors StorageFTP_delete(Storage      *storage,
   #else /* not HAVE_CURL || HAVE_FTP */
   #endif /* HAVE_CURL || HAVE_FTP */
 
-  assert(storage != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
   assert(!String_isEmpty(archiveName));
 
   error = ERROR_UNKNOWN;
@@ -3155,8 +3155,8 @@ LOCAL Errors StorageFTP_delete(Storage      *storage,
       baseName = File_getFileBaseName(String_new(),archiveName);
 
       // get URL
-      url = String_format(String_new(),"ftp://%S",storage->storageSpecifier.hostName);
-      if (storage->storageSpecifier.hostPort != 0) String_format(url,":d",storage->storageSpecifier.hostPort);
+      url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
+      if (storageInfo->storageSpecifier.hostPort != 0) String_format(url,":d",storageInfo->storageSpecifier.hostPort);
       File_initSplitFileName(&nameTokenizer,pathName);
       while (File_getNextSplitFileName(&nameTokenizer,&token))
       {
@@ -3166,13 +3166,13 @@ LOCAL Errors StorageFTP_delete(Storage      *storage,
       File_doneSplitFileName(&nameTokenizer);
       String_append(url,baseName);
 
-      if ((storage->jobOptions == NULL) || !storage->jobOptions->dryRunFlag)
+      if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
       {
         // delete file
         curlCode = initFTPHandle(curlHandle,
                                  url,
-                                 storage->storageSpecifier.loginName,
-                                 storage->storageSpecifier.loginPassword,
+                                 storageInfo->storageSpecifier.loginName,
+                                 storageInfo->storageSpecifier.loginPassword,
                                  FTP_TIMEOUT
                                 );
         if (curlCode == CURLE_OK)
@@ -3217,20 +3217,20 @@ LOCAL Errors StorageFTP_delete(Storage      *storage,
       error = ERROR_FTP_SESSION_FAIL;
     }
   #elif defined(HAVE_FTP)
-    assert(storage->ftp.data != NULL);
+    assert(storageInfo->ftp.data != NULL);
 
-    storageFileName = (archiveName != NULL) ? archiveName : storage->storageSpecifier.archiveName;
+    storageFileName = (archiveName != NULL) ? archiveName : storageInfo->storageSpecifier.archiveName;
 
-    if ((storageHandle->storage->jobOptions == NULL) || !storageHandle->storage->jobOptions->dryRunFlag)
+    if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
-      error = (FtpDelete(String_cString(storageFileName),storage->ftp.data) == 1) ? ERROR_NONE : ERROR_DELETE_FILE;
+      error = (FtpDelete(String_cString(storageFileName),storageInfo->ftp.data) == 1) ? ERROR_NONE : ERROR_DELETE_FILE;
     }
     else
     {
       error = ERROR_NONE;
     }
   #else /* not HAVE_CURL || HAVE_FTP */
-    UNUSED_VARIABLE(storage);
+    UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -3242,7 +3242,7 @@ LOCAL Errors StorageFTP_delete(Storage      *storage,
 
 #if 0
 still not complete
-LOCAL Errors StorageFTP_getFileInfo(Storage     *storage,
+LOCAL Errors StorageFTP_getFileInfo(StorageInfo *storageInfo,
                                     ConstString fileName,
                                     FileInfo    *fileInfo
                                    )
@@ -3263,22 +3263,22 @@ LOCAL Errors StorageFTP_getFileInfo(Storage     *storage,
   #elif defined(HAVE_FTP)
   #endif /* HAVE_CURL || HAVE_FTP */
 
-  assert(storage != NULL);
+  assert(storageInfo != NULL);
   assert(fileInfo != NULL);
-  assert(storage->storageSpecifier.type == STORAGE_TYPE_FTP);
-  DEBUG_CHECK_RESOURCE_TRACE(storage);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
-  infoFileName = (fileName != NULL) ? fileName : storage->storageSpecifier.archiveName;
+  infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
   memset(fileInfo,0,sizeof(fileInfo));
 
   error = ERROR_UNKNOWN;
   #if   defined(HAVE_CURL)
     // get FTP server settings
-    getFTPServerSettings(storage->storageSpecifier.hostName,storage->jobOptions,&server);
-    if (String_isEmpty(storage->storageSpecifier.loginName)) String_set(storage->storageSpecifier.loginName,ftpServer.loginName);
-    if (String_isEmpty(storage->storageSpecifier.loginName)) String_setCString(storage->storageSpecifier.loginName,getenv("LOGNAME"));
-    if (String_isEmpty(storage->storageSpecifier.loginName)) String_setCString(storage->storageSpecifier.loginName,getenv("USER"));
-    if (String_isEmpty(storage->storageSpecifier.hostName))
+    getFTPServerSettings(storageInfo->storageSpecifier.hostName,storageInfo->jobOptions,&server);
+    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,ftpServer.loginName);
+    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
+    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
+    if (String_isEmpty(storageInfo->storageSpecifier.hostName))
     {
       return ERROR_NO_HOST_NAME;
     }
@@ -3302,8 +3302,8 @@ LOCAL Errors StorageFTP_getFileInfo(Storage     *storage,
     baseName = File_getFileBaseName(String_new(),infoFileName);
 
     // get URL
-    url = String_format(String_new(),"ftp://%S",storage->storageSpecifier.hostName);
-    if (storage->storageSpecifier.hostPort != 0) String_format(url,":d",storage->storageSpecifier.hostPort);
+    url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
+    if (storageInfo->storageSpecifier.hostPort != 0) String_format(url,":d",storageInfo->storageSpecifier.hostPort);
     File_initSplitFileName(&nameTokenizer,pathName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
@@ -3318,8 +3318,8 @@ LOCAL Errors StorageFTP_getFileInfo(Storage     *storage,
     curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
     curlCode = initFTPHandle(curlHandle,
                              url,
-                             storage->storageSpecifier.loginName,
-                             storage->storageSpecifier.loginPassword,
+                             storageInfo->storageSpecifier.loginName,
+                             storageInfo->storageSpecifier.loginPassword,
                              FTP_TIMEOUT
                             );
     if (curlCode == CURLE_OK)
@@ -3472,7 +3472,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
                              storageDirectoryListHandle->storageSpecifier.loginPassword,
                              jobOptions,
 //TODO
-                             CALLBACK(NULL,NULL) // CALLBACK(storage->getPasswordFunction,storage->getPasswordUserData)
+                             CALLBACK(NULL,NULL) // CALLBACK(storageInfo->getPasswordFunction,storageInfo->getPasswordUserData)
                             )
             )
       {
@@ -3630,7 +3630,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
                              storageDirectoryListHandle->storageSpecifier.loginName,
                              jobOptions,
 //TODO
-                             CALLBACK(NULL,NULL)  // CALLBACK(storage->getPasswordFunction,storage->getPasswordUserData)
+                             CALLBACK(NULL,NULL)  // CALLBACK(storageInfo->getPasswordFunction,storageInfo->getPasswordUserData)
                             )
             )
       {
@@ -3647,15 +3647,15 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
       if (error != ERROR_NONE)
       {
         error = (!Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword) || !Password_isEmpty(ftpServer.password) || !Password_isEmpty(defaultFTPPassword))
-                  ? ERRORX_(ERROR_INVALID_FTP_PASSWORD,0,"%s",String_cString(storage->storageSpecifier.hostName))
-                  : ERRORX_(ERROR_NO_FTP_PASSWORD,0,"%s",String_cString(storage->storageSpecifier.hostName));
+                  ? ERRORX_(ERROR_INVALID_FTP_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName))
+                  : ERRORX_(ERROR_NO_FTP_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName));
       }
 
       // store passwrd as default FTP password
       if (error == ERROR_NONE)
       {
         if (defaultFTPPassword == NULL) defaultFTPPassword = Password_new();
-        Password_set(defaultFTPPassword,storage->storageSpecifier.loginPassword);
+        Password_set(defaultFTPPassword,storageInfo->storageSpecifier.loginPassword);
       }
     }
     if (error != ERROR_NONE)

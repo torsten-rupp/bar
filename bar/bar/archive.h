@@ -179,7 +179,7 @@ typedef struct
 {
   String                   jobUUID;
   String                   scheduleUUID;
-  const DeltaSourceList          *deltaSourceList;                           // list with delta sources
+  const DeltaSourceList    *deltaSourceList;                           // list with delta sources
   const JobOptions         *jobOptions;
   IndexHandle              *indexHandle;                               // index handle or NULL (owned by opener/creator of archive)
   IndexId                  uuidId;                                     // index UUID id
@@ -223,7 +223,7 @@ typedef struct
     {
       StorageSpecifier     storageSpecifier;                           // storage specifier structure
       String               storageFileName;                            // storage storage name
-      Storage              *storage;                                   // storage
+      StorageInfo          *storageInfo;                               // storage info
       StorageHandle        storageHandle;
     } storage;
   };
@@ -597,7 +597,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 * Name   : Archive_open
 * Purpose: open archive
 * Input  : archiveInfo         - archive info data
-*          storage             - storage
+*          storageInfo         - storage info
 *          storageSpecifier    - storage specifier structure
 *          fileName            - file name or NULL
 *          jobOptions          - option settings
@@ -611,7 +611,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 
 #ifdef NDEBUG
   Errors Archive_open(ArchiveInfo            *archiveInfo,
-                      Storage                *storage,
+                      StorageInfo            *storageInfo,
                       const StorageSpecifier *storageSpecifier,
                       ConstString            fileName,
                       DeltaSourceList        *deltaSourceList,
@@ -624,7 +624,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
   Errors __Archive_open(const char             *__fileName__,
                         ulong                  __lineNb__,
                         ArchiveInfo            *archiveInfo,
-                        Storage                *storage,
+                        StorageInfo            *storageInfo,
                         const StorageSpecifier *storageSpecifier,
                         ConstString            fileName,
                         DeltaSourceList        *deltaSourceList,
@@ -1367,7 +1367,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 * Name   : Archive_addToIndex
 * Purpose: add storage index
 * Input  : indexHandle - index handle
-*          storage     - storage
+*          storageInfo - storage info
 *          storageName - storage name
 *          indexMode   - index mode
 *          jobOptions  - job options
@@ -1381,7 +1381,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 \***********************************************************************/
 
 Errors Archive_addToIndex(IndexHandle      *indexHandle,
-                          Storage          *storage,
+                          StorageInfo      *storageInfo,
                           ConstString      storageName,
                           IndexModes       indexMode,
                           const JobOptions *jobOptions,
@@ -1396,7 +1396,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 * Purpose: update storage index
 * Input  : indexHandle           - index handle
 *          storageId             - database id of storage
-*          storage               - storage
+*          storageInfo           - storage info
 *          storageName           - storage name
 *          jobOptions            - job options
 *          pauseCallbackFunction - pause check callback (can be NULL)
@@ -1413,7 +1413,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 
 Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            IndexId                      storageId,
-                           Storage                      *storage,
+                           StorageInfo                  *storageInfo,
                            ConstString                  storageName,
                            const JobOptions             *jobOptions,
                            uint64                       *totalTimeLastChanged,
