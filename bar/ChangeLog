@@ -1,9 +1,19 @@
-2016-10-31 0.20a
+2016-12-xx 0.21
+  * BARControl: use keys from .pem files
+
+2016-11-09 0.20a
+  * fixed restore into original path
+  * fixed purge old storages by size: may have caused an
+    index database error if entity was deleted
+  * fixed continuous backup of single file
   * BARControl: fixed type error in archive name editor
   * BARControl: clear encryption password if type set to
     "default" or "ask"
   * BARControl: fixed default restore path
   * BARControl: fixed dead-lock when restore is aborted
+  * BARControl: fixed server settings dialog
+  * BARControl: fixed communication error when changing
+    archives (translation error)
 
 2016-10-13 0.20
   * added (semi-) continuous backup of changed files
