@@ -2385,7 +2385,7 @@ Errors Storage_write(StorageHandle *storageHandle,
 }
 
 Errors Storage_tell(StorageHandle *storageHandle,
-                    uint64               *offset
+                    uint64        *offset
                    )
 {
   Errors error;

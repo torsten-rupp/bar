@@ -1233,7 +1233,7 @@ bool Storage_exists(Storage *storage, ConstString archiveName);
 /***********************************************************************\
 * Name   : Storage_create
 * Purpose: create new/append to storage
-* Input  : StorageHandle - storage handle variable
+* Input  : storageHandle - storage handle variable
 *          storage       - storage
 *          archiveName   - archive file name
 *          archiveSize   - archive file size [bytes]
@@ -1243,7 +1243,7 @@ bool Storage_exists(Storage *storage, ConstString archiveName);
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Storage_create(StorageHandle *StorageHandle,
+  Errors Storage_create(StorageHandle *storageHandle,
                         Storage       *storage,
                         ConstString   archiveName,
                         uint64        archiveSize
@@ -1251,7 +1251,7 @@ bool Storage_exists(Storage *storage, ConstString archiveName);
 #else /* not NDEBUG */
   Errors __Storage_create(const char    *__fileName__,
                           ulong         __lineNb__,
-                          StorageHandle *StorageHandle,
+                          StorageHandle *storageHandle,
                           Storage       *storage,
                           ConstString   archiveName,
                           uint64        archiveSize
@@ -1303,14 +1303,14 @@ bool Storage_exists(Storage *storage, ConstString archiveName);
 
 /***********************************************************************\
 * Name   : Storage_eof
-* Purpose: check if end-of-file in storage file
-* Input  : storage - storage
+* Purpose: check if end-of-file in storage
+* Input  : storageHandle - storage handle
 * Output : -
 * Return : TRUE if end-of-file, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_eof(StorageHandle *storage);
+bool Storage_eof(StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_read
