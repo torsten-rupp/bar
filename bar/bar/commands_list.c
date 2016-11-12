@@ -2093,10 +2093,11 @@ remoteBarFlag=FALSE;
               )
         {
           // get next archive entry type
-          error = Archive_getNextArchiveEntryType(&archiveHandle,
-                                                  &archiveEntryType,
-                                                  TRUE
-                                                 );
+          error = Archive_getNextArchiveEntry(&archiveHandle,
+                                              &archiveEntryType,
+                                              NULL,  // offset
+                                              TRUE
+                                             );
           if (error != ERROR_NONE)
           {
             printError("Cannot read next entry from storage '%s' (error: %s)!\n",

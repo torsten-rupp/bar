@@ -5696,10 +5696,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   return ERROR_NONE;
 }
 
-Errors Archive_getNextArchiveEntryType(ArchiveHandle     *archiveHandle,
-                                       ArchiveEntryTypes *archiveEntryType,
-                                       bool              skipUnknownChunksFlag
-                                      )
+Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
+                                   ArchiveEntryTypes *archiveEntryType,
+                                   uint64            *offset,
+                                   bool              skipUnknownChunksFlag
+                                  )
 {
   Errors         error;
   bool           scanMode;
@@ -5710,7 +5711,6 @@ Errors Archive_getNextArchiveEntryType(ArchiveHandle     *archiveHandle,
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->jobOptions != NULL);
-  assert(archiveEntryType != NULL);
 
   // check for pending error
   if (archiveHandle->pendingError != ERROR_NONE)
@@ -5858,21 +5858,25 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
          && (chunkHeader.id != CHUNK_ID_SPECIAL)
         );
 
-  // get file type
-  switch (chunkHeader.id)
+  // get archive entry type, offset
+  if (archiveEntryType != NULL)
   {
-    case CHUNK_ID_FILE:      (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_FILE;      break;
-    case CHUNK_ID_IMAGE:     (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_IMAGE;     break;
-    case CHUNK_ID_DIRECTORY: (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_DIRECTORY; break;
-    case CHUNK_ID_LINK:      (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_LINK;      break;
-    case CHUNK_ID_HARDLINK:  (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_HARDLINK;  break;
-    case CHUNK_ID_SPECIAL:   (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_SPECIAL;   break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+    switch (chunkHeader.id)
+    {
+      case CHUNK_ID_FILE:      (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_FILE;      break;
+      case CHUNK_ID_IMAGE:     (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_IMAGE;     break;
+      case CHUNK_ID_DIRECTORY: (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_DIRECTORY; break;
+      case CHUNK_ID_LINK:      (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_LINK;      break;
+      case CHUNK_ID_HARDLINK:  (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_HARDLINK;  break;
+      case CHUNK_ID_SPECIAL:   (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_SPECIAL;   break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
+    }
   }
+  if (offset != NULL) (*offset) = chunkHeader.offset;
 
   // store chunk header for read
   ungetNextChunkHeader(archiveHandle,&chunkHeader);
@@ -10437,6 +10441,7 @@ Errors Archive_seek(ArchiveHandle *archiveHandle,
           break; /* not reached */
       #endif /* NDEBUG */
     }
+    archiveHandle->nextChunkHeaderReadFlag = FALSE;
   }
 
   return error;
@@ -10764,10 +10769,11 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 #endif
 
     // get next file type
-    error = Archive_getNextArchiveEntryType(&archiveHandle,
-                                            &archiveEntryType,
-                                            FALSE
-                                           );
+    error = Archive_getNextArchiveEntry(&archiveHandle,
+                                        &archiveEntryType,
+                                        NULL,  // offset
+                                        FALSE
+                                       );
     if (error != ERROR_NONE)
     {
       break;
@@ -11350,10 +11356,11 @@ archiveHandle->archiveInitUserData              = NULL;
 #endif /* 0 */
 
     // get next archive entry type
-    error = Archive_getNextArchiveEntryType(&archiveHandle,
-                                            &archiveEntryType,
-                                            TRUE
-                                           );
+    error = Archive_getNextArchiveEntry(&archiveHandle,
+                                        &archiveEntryType,
+                                        NULL,  // offset
+                                        TRUE
+                                       );
     if (error != ERROR_NONE)
     {
       if (failError == ERROR_NONE) failError = error;

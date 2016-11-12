@@ -241,10 +241,11 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
     }
 
     // get next archive entry type
-    error = Archive_getNextArchiveEntryType(&archiveHandle,
-                                            &archiveEntryType,
-                                            TRUE
-                                           );
+    error = Archive_getNextArchiveEntry(&archiveHandle,
+                                        &archiveEntryType,
+                                        NULL,  // offset
+                                        TRUE
+                                       );
     if (error != ERROR_NONE)
     {
       if (failError == ERROR_NONE) failError = error;

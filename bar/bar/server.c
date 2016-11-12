@@ -13593,10 +13593,11 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
         )
   {
     // get next file type
-    error = Archive_getNextArchiveEntryType(&archiveHandle,
-                                            &archiveEntryType,
-                                            TRUE
-                                           );
+    error = Archive_getNextArchiveEntry(&archiveHandle,
+                                        &archiveEntryType,
+                                        NULL,  // offset
+                                        TRUE
+                                       );
     if (error == ERROR_NONE)
     {
       // read entry

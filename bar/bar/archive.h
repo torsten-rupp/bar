@@ -926,19 +926,21 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : Archive_getNextArchiveEntryType
-* Purpose: get type of next entry in archive
+* Name   : Archive_getNextArchiveEntry
+* Purpose: get next entry in archive
 * Input  : archiveHandle         - archive handle
 *          skipUnknownChunksFlag - TRUE to skip unknown chunks
-* Output : archiveEntryType - archive entry type
+* Output : archiveEntryType - archive entry type (can be NULL)
+*          offset           - offset (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_getNextArchiveEntryType(ArchiveHandle     *archiveHandle,
-                                       ArchiveEntryTypes *archiveEntryType,
-                                       bool              skipUnknownChunksFlag
-                                      );
+Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
+                                   ArchiveEntryTypes *archiveEntryType,
+                                   uint64            *offset,
+                                   bool              skipUnknownChunksFlag
+                                  );
 
 /***********************************************************************\
 * Name   : Archive_skipNextEntry

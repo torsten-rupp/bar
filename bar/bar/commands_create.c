@@ -963,7 +963,7 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
-    freeEntryMsg(&entryMsg,NULL);
+    HALT_INTERNAL_ERROR("Send message to create threads!");
   }
 }
 
@@ -997,7 +997,7 @@ LOCAL void appendDirectoryToEntryList(MsgQueue    *entryMsgQueue,
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
-    freeEntryMsg(&entryMsg,NULL);
+    HALT_INTERNAL_ERROR("Send message to create threads!");
   }
 }
 
@@ -1032,7 +1032,7 @@ LOCAL void appendLinkToEntryList(MsgQueue    *entryMsgQueue,
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
-    freeEntryMsg(&entryMsg,NULL);
+    HALT_INTERNAL_ERROR("Send message to create threads!");
   }
 }
 
@@ -1066,7 +1066,7 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
-    freeEntryMsg(&entryMsg,NULL);
+    HALT_INTERNAL_ERROR("Send message to create threads!");
   }
 }
 
@@ -1100,7 +1100,7 @@ LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
-    freeEntryMsg(&entryMsg,NULL);
+    HALT_INTERNAL_ERROR("Send message to create threads!");
   }
 }
 
@@ -3361,8 +3361,7 @@ LOCAL Errors archiveStore(IndexHandle  *indexHandle,
   DEBUG_TESTCODE() { freeStorageMsg(&storageMsg,NULL); return DEBUG_TESTCODE_ERROR(); }
   if (!MsgQueue_put(&createInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg)))
   {
-    freeStorageMsg(&storageMsg,NULL);
-    return ERROR_NONE;
+    HALT_INTERNAL_ERROR("Send message to storage threads!");
   }
 
   // update status info
