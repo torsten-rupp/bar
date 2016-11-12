@@ -2051,7 +2051,7 @@ remoteBarFlag=FALSE;
     case STORAGE_TYPE_BD:
       {
         StorageInfo       storageInfo;
-        ArchiveInfo       archiveInfo;
+        ArchiveHandle     archiveHandle;
         ArchiveEntryInfo  archiveEntryInfo;
         ArchiveEntryTypes archiveEntryType;
 
@@ -2071,7 +2071,7 @@ remoteBarFlag=FALSE;
         }
 
         // open archive
-        error = Archive_open(&archiveInfo,
+        error = Archive_open(&archiveHandle,
                              &storageInfo,
                              storageSpecifier,
                              archiveName,
@@ -2088,12 +2088,12 @@ remoteBarFlag=FALSE;
         }
 
         // list contents
-        while (   !Archive_eof(&archiveInfo,TRUE)
+        while (   !Archive_eof(&archiveHandle,TRUE)
                && (error == ERROR_NONE)
               )
         {
           // get next archive entry type
-          error = Archive_getNextArchiveEntryType(&archiveInfo,
+          error = Archive_getNextArchiveEntryType(&archiveHandle,
                                                   &archiveEntryType,
                                                   TRUE
                                                  );
@@ -2124,7 +2124,7 @@ remoteBarFlag=FALSE;
                 fileName        = String_new();
                 deltaSourceName = String_new();
                 error = Archive_readFileEntry(&archiveEntryInfo,
-                                              &archiveInfo,
+                                              &archiveHandle,
                                               &deltaCompressAlgorithm,
                                               &byteCompressAlgorithm,
                                               &cryptAlgorithm,
@@ -2231,7 +2231,7 @@ remoteBarFlag=FALSE;
                 deviceName      = String_new();
                 deltaSourceName = String_new();
                 error = Archive_readImageEntry(&archiveEntryInfo,
-                                               &archiveInfo,
+                                               &archiveHandle,
                                                &deltaCompressAlgorithm,
                                                &byteCompressAlgorithm,
                                                &cryptAlgorithm,
@@ -2325,7 +2325,7 @@ remoteBarFlag=FALSE;
                 // read archive directory entry
                 directoryName = String_new();
                 error = Archive_readDirectoryEntry(&archiveEntryInfo,
-                                                   &archiveInfo,
+                                                   &archiveHandle,
                                                    &cryptAlgorithm,
                                                    &cryptType,
                                                    directoryName,
@@ -2403,7 +2403,7 @@ remoteBarFlag=FALSE;
                 linkName = String_new();
                 fileName = String_new();
                 error = Archive_readLinkEntry(&archiveEntryInfo,
-                                              &archiveInfo,
+                                              &archiveHandle,
                                               &cryptAlgorithm,
                                               &cryptType,
                                               linkName,
@@ -2492,7 +2492,7 @@ remoteBarFlag=FALSE;
                 StringList_init(&fileNameList);
                 deltaSourceName = String_new();
                 error = Archive_readHardLinkEntry(&archiveEntryInfo,
-                                                  &archiveInfo,
+                                                  &archiveHandle,
                                                   &deltaCompressAlgorithm,
                                                   &byteCompressAlgorithm,
                                                   &cryptAlgorithm,
@@ -2595,7 +2595,7 @@ remoteBarFlag=FALSE;
                 // open archive lin
                 fileName = String_new();
                 error = Archive_readSpecialEntry(&archiveEntryInfo,
-                                                 &archiveInfo,
+                                                 &archiveHandle,
                                                  &cryptAlgorithm,
                                                  &cryptType,
                                                  fileName,
@@ -2674,7 +2674,7 @@ remoteBarFlag=FALSE;
         }
 
         // close archive
-        Archive_close(&archiveInfo);
+        Archive_close(&archiveHandle);
 
         // done storage
         (void)Storage_done(&storageInfo);

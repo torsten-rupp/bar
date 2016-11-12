@@ -76,7 +76,7 @@ typedef struct
 
   MsgQueue                    entryMsgQueue;                      // queue with entries to store
 
-  ArchiveInfo                 archiveInfo;
+  ArchiveHandle               archiveHandle;
 
   Errors                      failError;                          // failure error
 } TestInfo;
@@ -203,7 +203,7 @@ LOCAL void doneTestInfo(TestInfo *testInfo)
 /***********************************************************************\
 * Name   : testFileEntry
 * Purpose: test a file entry in archive
-* Input  : archiveInfo          - archive info structure
+* Input  : archiveHandle        - archive handle
 *          offset               - offset
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
@@ -217,7 +217,7 @@ LOCAL void doneTestInfo(TestInfo *testInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testFileEntry(ArchiveInfo       *archiveInfo,
+LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
                            uint64            offset,
                            const EntryList   *includeEntryList,
                            const PatternList *excludePatternList,
@@ -238,7 +238,7 @@ LOCAL Errors testFileEntry(ArchiveInfo       *archiveInfo,
   ulong            n;
 
   // seek to start of entry
-  error = Archive_seek(archiveInfo,offset);
+  error = Archive_seek(archiveHandle,offset);
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
@@ -251,7 +251,7 @@ LOCAL Errors testFileEntry(ArchiveInfo       *archiveInfo,
   // open archive entry
   fileName = String_new();
   error = Archive_readFileEntry(&archiveEntryInfo,
-                                archiveInfo,
+                                archiveHandle,
                                 NULL,  // deltaCompressAlgorithm
                                 NULL,  // byteCompressAlgorithm
                                 NULL,  // cryptAlgorithm
@@ -384,7 +384,7 @@ LOCAL Errors testFileEntry(ArchiveInfo       *archiveInfo,
 /***********************************************************************\
 * Name   : testImageEntry
 * Purpose: test a image entry in archive
-* Input  : archiveInfo          - archive info structure
+* Input  : archiveHandle        - archive handle
 *          offset               - offset
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
@@ -396,7 +396,7 @@ LOCAL Errors testFileEntry(ArchiveInfo       *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testImageEntry(ArchiveInfo       *archiveInfo,
+LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
                             uint64            offset,
                             const EntryList   *includeEntryList,
                             const PatternList *excludePatternList,
@@ -417,7 +417,7 @@ LOCAL Errors testImageEntry(ArchiveInfo       *archiveInfo,
   ulong            bufferBlockCount;
 
   // seek to start of entry
-  error = Archive_seek(archiveInfo,offset);
+  error = Archive_seek(archiveHandle,offset);
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
@@ -430,7 +430,7 @@ LOCAL Errors testImageEntry(ArchiveInfo       *archiveInfo,
   // open archive entry
   deviceName = String_new();
   error = Archive_readImageEntry(&archiveEntryInfo,
-                                 archiveInfo,
+                                 archiveHandle,
                                  NULL,  // deltaCompressAlgorithm
                                  NULL,  // byteCompressAlgorithm
                                  NULL,  // cryptAlgorithm
@@ -573,7 +573,7 @@ LOCAL Errors testImageEntry(ArchiveInfo       *archiveInfo,
 /***********************************************************************\
 * Name   : testDirectoryEntry
 * Purpose: test a directory entry in archive
-* Input  : archiveInfo          - archive info structure
+* Input  : archiveHandle        - archive handle
 *          offset               - offset
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
@@ -582,7 +582,7 @@ LOCAL Errors testImageEntry(ArchiveInfo       *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testDirectoryEntry(ArchiveInfo       *archiveInfo,
+LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
                                 uint64            offset,
                                 const EntryList   *includeEntryList,
                                 const PatternList *excludePatternList,
@@ -598,7 +598,7 @@ LOCAL Errors testDirectoryEntry(ArchiveInfo       *archiveInfo,
   UNUSED_VARIABLE(jobOptions);
 
   // seek to start of entry
-  error = Archive_seek(archiveInfo,offset);
+  error = Archive_seek(archiveHandle,offset);
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
@@ -611,7 +611,7 @@ LOCAL Errors testDirectoryEntry(ArchiveInfo       *archiveInfo,
   // open archive entry
   directoryName = String_new();
   error = Archive_readDirectoryEntry(&archiveEntryInfo,
-                                     archiveInfo,
+                                     archiveHandle,
                                      NULL,  // cryptAlgorithm
                                      NULL,  // cryptType
                                      directoryName,
@@ -674,7 +674,7 @@ LOCAL Errors testDirectoryEntry(ArchiveInfo       *archiveInfo,
 /***********************************************************************\
 * Name   : testLinkEntry
 * Purpose: test a link entry in archive
-* Input  : archiveInfo          - archive info structure
+* Input  : archiveHandle        - archive handle
 *          offset               - offset
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
@@ -683,7 +683,7 @@ LOCAL Errors testDirectoryEntry(ArchiveInfo       *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testLinkEntry(ArchiveInfo       *archiveInfo,
+LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
                            uint64            offset,
                            const EntryList   *includeEntryList,
                            const PatternList *excludePatternList,
@@ -700,7 +700,7 @@ LOCAL Errors testLinkEntry(ArchiveInfo       *archiveInfo,
   UNUSED_VARIABLE(jobOptions);
 
   // seek to start of entry
-  error = Archive_seek(archiveInfo,offset);
+  error = Archive_seek(archiveHandle,offset);
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
@@ -714,7 +714,7 @@ LOCAL Errors testLinkEntry(ArchiveInfo       *archiveInfo,
   linkName = String_new();
   fileName = String_new();
   error = Archive_readLinkEntry(&archiveEntryInfo,
-                                archiveInfo,
+                                archiveHandle,
                                 NULL,  // cryptAlgorithm
                                 NULL,  // cryptType
                                 linkName,
@@ -782,7 +782,7 @@ LOCAL Errors testLinkEntry(ArchiveInfo       *archiveInfo,
 /***********************************************************************\
 * Name   : testHardLinkEntry
 * Purpose: test a hardlink entry in archive
-* Input  : archiveInfo          - archive info structure
+* Input  : archiveHandle        - archive handle
 *          offset               - offset
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
@@ -794,7 +794,7 @@ LOCAL Errors testLinkEntry(ArchiveInfo       *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testHardLinkEntry(ArchiveInfo       *archiveInfo,
+LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
                                uint64            offset,
                                const EntryList   *includeEntryList,
                                const PatternList *excludePatternList,
@@ -818,7 +818,7 @@ LOCAL Errors testHardLinkEntry(ArchiveInfo       *archiveInfo,
   ulong            n;
 
   // seek to start of entry
-  error = Archive_seek(archiveInfo,offset);
+  error = Archive_seek(archiveHandle,offset);
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
@@ -831,7 +831,7 @@ LOCAL Errors testHardLinkEntry(ArchiveInfo       *archiveInfo,
   // open archive entry
   StringList_init(&fileNameList);
   error = Archive_readHardLinkEntry(&archiveEntryInfo,
-                                    archiveInfo,
+                                    archiveHandle,
                                     NULL,  // deltaCompressAlgorithm
                                     NULL,  // byteCompressAlgorithm
                                     NULL,  // cryptAlgorithm
@@ -987,7 +987,7 @@ LOCAL Errors testHardLinkEntry(ArchiveInfo       *archiveInfo,
 /***********************************************************************\
 * Name   : testSpecialEntry
 * Purpose: test a special entry in archive
-* Input  : archiveInfo          - archive info structure
+* Input  : archiveHandle        - archive handle
 *          offset               - offset
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
@@ -996,7 +996,7 @@ LOCAL Errors testHardLinkEntry(ArchiveInfo       *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testSpecialEntry(ArchiveInfo       *archiveInfo,
+LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
                               uint64            offset,
                               const EntryList   *includeEntryList,
                               const PatternList *excludePatternList,
@@ -1012,7 +1012,7 @@ LOCAL Errors testSpecialEntry(ArchiveInfo       *archiveInfo,
   UNUSED_VARIABLE(jobOptions);
 
   // seek to start of entry
-  error = Archive_seek(archiveInfo,offset);
+  error = Archive_seek(archiveHandle,offset);
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
@@ -1025,7 +1025,7 @@ LOCAL Errors testSpecialEntry(ArchiveInfo       *archiveInfo,
   // open archive entry
   fileName = String_new();
   error = Archive_readSpecialEntry(&archiveEntryInfo,
-                                   archiveInfo,
+                                   archiveHandle,
                                    NULL,  // cryptAlgorithm
                                    NULL,  // cryptType
                                    fileName,
@@ -1099,7 +1099,7 @@ LOCAL Errors testSpecialEntry(ArchiveInfo       *archiveInfo,
 LOCAL void testThreadCode(TestInfo *testInfo)
 {
   byte              *buffer;
-  ArchiveInfo       archiveInfo;
+  ArchiveHandle     archiveHandle;
   EntryMsg          entryMsg;
   Errors            error;
 //  ArchiveEntryInfo  archiveEntryInfo;
@@ -1120,7 +1120,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
   }
 
   // open archive
-  error = Archive_open(&archiveInfo,
+  error = Archive_open(&archiveHandle,
                        &testInfo->storageInfo,
                        testInfo->storageSpecifier,
                        NULL,  // archiveName,
@@ -1151,7 +1151,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     switch (archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
-        error = testFileEntry(&archiveInfo,
+        error = testFileEntry(&archiveHandle,
                               entryMsg.offset,
                               testInfo->includeEntryList,
                               testInfo->excludePatternList,
@@ -1168,7 +1168,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         }
         break;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
-        error = testImageEntry(&archiveInfo,
+        error = testImageEntry(&archiveHandle,
                                entryMsg.offset,
                                testInfo->includeEntryList,
                                testInfo->excludePatternList,
@@ -1185,7 +1185,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         }
         break;
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-        error = testDirectoryEntry(&archiveInfo,
+        error = testDirectoryEntry(&archiveHandle,
                                    entryMsg.offset,
                                    testInfo->includeEntryList,
                                    testInfo->excludePatternList,
@@ -1199,7 +1199,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         }
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
-        error = testLinkEntry(&archiveInfo,
+        error = testLinkEntry(&archiveHandle,
                               entryMsg.offset,
                               testInfo->includeEntryList,
                               testInfo->excludePatternList,
@@ -1213,7 +1213,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         }
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
-        error = testHardLinkEntry(&archiveInfo,
+        error = testHardLinkEntry(&archiveHandle,
                                   entryMsg.offset,
                                   testInfo->includeEntryList,
                                   testInfo->excludePatternList,
@@ -1230,7 +1230,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         }
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
-        error = testSpecialEntry(&archiveInfo,
+        error = testSpecialEntry(&archiveHandle,
                                  entryMsg.offset,
                                  testInfo->includeEntryList,
                                  testInfo->excludePatternList,
@@ -1253,7 +1253,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
   if (!isPrintInfo(1)) printInfo(0,"%s",(testInfo->failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // close archive
-  Archive_close(&archiveInfo);
+  Archive_close(&archiveHandle);
 
   // free resources
   free(buffer);
@@ -1298,7 +1298,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   uint              i;
   Errors            failError;
   Errors            error;
-  ArchiveInfo       archiveInfo;
+  ArchiveHandle     archiveHandle;
   ArchiveEntryTypes archiveEntryType;
   uint64            offset;
 
@@ -1367,7 +1367,7 @@ NULL,  //               requestedAbortFlag,
   }
 
   // open archive
-  error = Archive_open(&archiveInfo,
+  error = Archive_open(&archiveHandle,
                        &testInfo.storageInfo,
                        storageSpecifier,
                        archiveName,
@@ -1395,10 +1395,10 @@ NULL,  //               requestedAbortFlag,
             !isPrintInfo(1) ? "..." : ":\n"
            );
   failError = ERROR_NONE;
-  while (!Archive_eof(&archiveInfo,FALSE))
+  while (!Archive_eof(&archiveHandle,FALSE))
   {
     // get next archive entry type
-    error = Archive_getNextArchiveEntryType(&archiveInfo,
+    error = Archive_getNextArchiveEntryType(&archiveHandle,
                                             &archiveEntryType,
                                             FALSE
                                            );
@@ -1413,12 +1413,12 @@ NULL,  //               requestedAbortFlag,
     }
 
     // get offset
-    offset = Archive_tell(&archiveInfo);
+    offset = Archive_tell(&archiveHandle);
 
     switch (archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
-        error = testFileEntry(&archiveInfo,
+        error = testFileEntry(&archiveHandle,
                               offset,
                               includeEntryList,
                               excludePatternList,
@@ -1435,7 +1435,7 @@ NULL,  //               requestedAbortFlag,
         }
         break;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
-        error = testImageEntry(&archiveInfo,
+        error = testImageEntry(&archiveHandle,
                                offset,
                                includeEntryList,
                                excludePatternList,
@@ -1452,7 +1452,7 @@ NULL,  //               requestedAbortFlag,
         }
         break;
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-        error = testDirectoryEntry(&archiveInfo,
+        error = testDirectoryEntry(&archiveHandle,
                                    offset,
                                    includeEntryList,
                                    excludePatternList,
@@ -1466,7 +1466,7 @@ NULL,  //               requestedAbortFlag,
         }
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
-        error = testLinkEntry(&archiveInfo,
+        error = testLinkEntry(&archiveHandle,
                               offset,
                               includeEntryList,
                               excludePatternList,
@@ -1480,7 +1480,7 @@ NULL,  //               requestedAbortFlag,
         }
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
-        error = testHardLinkEntry(&archiveInfo,
+        error = testHardLinkEntry(&archiveHandle,
                                   offset,
                                   includeEntryList,
                                   excludePatternList,
@@ -1497,7 +1497,7 @@ NULL,  //               requestedAbortFlag,
         }
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
-        error = testSpecialEntry(&archiveInfo,
+        error = testSpecialEntry(&archiveHandle,
                                  offset,
                                  includeEntryList,
                                  excludePatternList,
@@ -1520,7 +1520,7 @@ NULL,  //               requestedAbortFlag,
   if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // close archive
-  Archive_close(&archiveInfo);
+  Archive_close(&archiveHandle);
 
   // done storage
   (void)Storage_done(&testInfo.storageInfo);

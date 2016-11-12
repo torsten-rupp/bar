@@ -174,7 +174,7 @@ typedef Errors(*ArchiveStoreFunction)(IndexHandle  *indexHandle,
                                       void         *userData
                                      );
 
-// archive info
+// archive handle
 typedef struct
 {
   String                   jobUUID;
@@ -247,14 +247,14 @@ typedef struct
     bool                   openFlag;                                   // TRUE iff archive is open
     uint64                 offset;                                     // interrupt offset
   } interrupt;
-} ArchiveInfo;
+} ArchiveHandle;
 
 // archive entry info
 typedef struct ArchiveEntryInfo
 {
   LIST_NODE_HEADER(struct ArchiveEntryInfo);
 
-  ArchiveInfo                         *archiveInfo;                    // archive info
+  ArchiveHandle                       *archiveHandle;                  // archive handle
   IndexHandle                         *indexHandle;                    // index handle or NULL  (owned by entry opener/creator)
 
   enum
@@ -522,7 +522,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 /***********************************************************************\
 * Name   : Archive_create
 * Purpose: create archive
-* Input  : archiveInfo          - archive info data
+* Input  : archiveHandle        - archive handle
 *          entityId             - index UUID id or INDEX_ID_NONE
 *          jobUUID              - unique job id or NULL
 *          scheduleUUID         - unique schedule id or NULL
@@ -546,7 +546,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Archive_create(ArchiveInfo            *archiveInfo,
+  Errors Archive_create(ArchiveHandle          *archiveHandle,
                         IndexId                uuidId,
                         ConstString            jobUUID,
                         ConstString            scheduleUUID,
@@ -570,7 +570,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 #else /* not NDEBUG */
   Errors __Archive_create(const char             *__fileName__,
                           ulong                  __lineNb__,
-                          ArchiveInfo            *archiveInfo,
+                          ArchiveHandle          *archiveHandle,
                           IndexId                uuidId,
                           ConstString            jobUUID,
                           ConstString            scheduleUUID,
@@ -596,7 +596,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 /***********************************************************************\
 * Name   : Archive_open
 * Purpose: open archive
-* Input  : archiveInfo         - archive info data
+* Input  : archiveHandle       - archive handle
 *          storageInfo         - storage info
 *          storageSpecifier    - storage specifier structure
 *          fileName            - file name or NULL
@@ -610,7 +610,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Archive_open(ArchiveInfo            *archiveInfo,
+  Errors Archive_open(ArchiveHandle          *archiveHandle,
                       StorageInfo            *storageInfo,
                       const StorageSpecifier *storageSpecifier,
                       ConstString            fileName,
@@ -623,7 +623,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 #else /* not NDEBUG */
   Errors __Archive_open(const char             *__fileName__,
                         ulong                  __lineNb__,
-                        ArchiveInfo            *archiveInfo,
+                        ArchiveHandle          *archiveHandle,
                         StorageInfo            *storageInfo,
                         const StorageSpecifier *storageSpecifier,
                         ConstString            fileName,
@@ -638,47 +638,47 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 /***********************************************************************\
 * Name   : Archive_close
 * Purpose: close archive
-* Input  : archiveInfo - archive info data
+* Input  : archiveHandle - archive handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Archive_close(ArchiveInfo *archiveInfo);
+  Errors Archive_close(ArchiveHandle *archiveHandle);
 #else /* not NDEBUG */
-  Errors __Archive_close(const char  *__fileName__,
-                         ulong       __lineNb__,
-                         ArchiveInfo *archiveInfo
+  Errors __Archive_close(const char    *__fileName__,
+                         ulong         __lineNb__,
+                         ArchiveHandle *archiveHandle
                         );
 #endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_storageInterrupt
 * Purpose: interrupt create archive and close storage
-* Input  : archiveInfo - archive info data
+* Input  : archiveHandle - archive handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_storageInterrupt(ArchiveInfo *archiveInfo);
+Errors Archive_storageInterrupt(ArchiveHandle *archiveHandle);
 
 /***********************************************************************\
 * Name   : Archive_storageContinue
 * Purpose: continue interrupted archive and reopen storage
-* Input  : archiveInfo - archive info data
+* Input  : archiveHandle - archive handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_storageContinue(ArchiveInfo *archiveInfo);
+Errors Archive_storageContinue(ArchiveHandle *archiveHandle);
 
 /***********************************************************************\
 * Name   : Archive_eof
 * Purpose: check if end-of-archive file
-* Input  : archiveInfo           - archive info data
+* Input  : archiveHandle         - archive handle
 *          skipUnknownChunksFlag - TRUE to skip unknown chunks
 * Output : -
 * Return : TRUE if end-of-archive, FALSE otherwise
@@ -686,14 +686,15 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo);
 *          operation
 \***********************************************************************/
 
-bool Archive_eof(ArchiveInfo *archiveInfo,
-                 bool        skipUnknownChunksFlag
+bool Archive_eof(ArchiveHandle *archiveHandle,
+                 bool          skipUnknownChunksFlag
                 );
 
 /***********************************************************************\
 * Name   : Archive_newFileEntry
 * Purpose: add new file to archive
-* Input  : archiveInfo               - archive info
+* Input  : archiveEntryInfo          - archive file entry info variable
+*          archiveHandle             - archive handle
 *          fileName                  - file name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -710,7 +711,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 
 #ifdef NDEBUG
   Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
-                              ArchiveInfo                     *archiveInfo,
+                              ArchiveHandle                   *archiveHandle,
                               IndexHandle                     *indexHandle,
                               ConstString                     fileName,
                               const FileInfo                  *fileInfo,
@@ -722,7 +723,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
   Errors __Archive_newFileEntry(const char                      *__fileName__,
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
-                                ArchiveInfo                     *archiveInfo,
+                                ArchiveHandle                   *archiveHandle,
                                 IndexHandle                     *indexHandle,
                                 ConstString                     fileName,
                                 const FileInfo                  *fileInfo,
@@ -735,7 +736,8 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_newImageEntry
 * Purpose: add new block device image to archive
-* Input  : archiveInfo       - archive info
+* Input  : archiveEntryInfo  - archive image entry info variable
+*          archiveHandle     - archive handle
 *          deviceName        - special device name
 *          deviceInfo        - device info
 *          deltaCompressFlag - TRUE for delta compression, FALSE
@@ -750,7 +752,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 
 #ifdef NDEBUG
   Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
-                               ArchiveInfo      *archiveInfo,
+                               ArchiveHandle    *archiveHandle,
                                IndexHandle      *indexHandle,
                                ConstString      deviceName,
                                const DeviceInfo *deviceInfo,
@@ -762,7 +764,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
   Errors __Archive_newImageEntry(const char       *__fileName__,
                                  ulong            __lineNb__,
                                  ArchiveEntryInfo *archiveEntryInfo,
-                                 ArchiveInfo      *archiveInfo,
+                                 ArchiveHandle    *archiveHandle,
                                  IndexHandle      *indexHandle,
                                  ConstString      deviceName,
                                  const DeviceInfo *deviceInfo,
@@ -775,7 +777,9 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_newDirectoryEntry
 * Purpose: add new directory to archive
-* Input  : archiveInfo               - archive info
+* Input  : archiveEntryInfo          - archive directory entry info
+*                                      variable
+*          archiveHandle             - archive handle
 *          name                      - directory name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -787,7 +791,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 
 #ifdef NDEBUG
   Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
-                                   ArchiveInfo                     *archiveInfo,
+                                   ArchiveHandle                   *archiveHandle,
                                    IndexHandle                     *indexHandle,
                                    ConstString                     directoryName,
                                    const FileInfo                  *fileInfo,
@@ -797,7 +801,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
   Errors __Archive_newDirectoryEntry(const char                      *__fileName__,
                                      ulong                           __lineNb__,
                                      ArchiveEntryInfo                *archiveEntryInfo,
-                                     ArchiveInfo                     *archiveInfo,
+                                     ArchiveHandle                   *archiveHandle,
                                      IndexHandle                     *indexHandle,
                                      ConstString                     directoryName,
                                      const FileInfo                  *fileInfo,
@@ -808,7 +812,8 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_newLinkEntry
 * Purpose: add new link to archive
-* Input  : archiveInfo               - archive info variable
+* Input  : archiveEntryInfo          - archive link entry variable
+*          archiveHandle             - archive handle
 *          fileName                  - link name
 *          destinationName           - name of referenced file
 *          fileInfo                  - file info
@@ -821,7 +826,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 
 #ifdef NDEBUG
   Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
-                              ArchiveInfo                     *archiveInfo,
+                              ArchiveHandle                   *archiveHandle,
                               IndexHandle                     *indexHandle,
                               ConstString                     linkName,
                               ConstString                     destinationName,
@@ -832,7 +837,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
   Errors __Archive_newLinkEntry(const char                      *__fileName__,
                                 ulong                           __lineNb__,
                                 ArchiveEntryInfo                *archiveEntryInfo,
-                                ArchiveInfo                     *archiveInfo,
+                                ArchiveHandle                   *archiveHandle,
                                 IndexHandle                     *indexHandle,
                                 ConstString                     linkName,
                                 ConstString                     destinationName,
@@ -844,7 +849,9 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_newHardLinkEntry
 * Purpose: add new hard link to archive
-* Input  : archiveInfo               - archive info
+* Input  : archiveEntryInfo          - archive hardlink entry info
+*                                      variable
+*          archiveHandle             - archive handle
 *          fileNameList              - list of file names
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -861,7 +868,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 
 #ifdef NDEBUG
   Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
-                                  ArchiveInfo                     *archiveInfo,
+                                  ArchiveHandle                   *archiveHandle,
                                   IndexHandle                     *indexHandle,
                                   const StringList                *fileNameList,
                                   const FileInfo                  *fileInfo,
@@ -873,7 +880,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
   Errors __Archive_newHardLinkEntry(const char                      *__fileName__,
                                     ulong                           __lineNb__,
                                     ArchiveEntryInfo                *archiveEntryInfo,
-                                    ArchiveInfo                     *archiveInfo,
+                                    ArchiveHandle                   *archiveHandle,
                                     IndexHandle                     *indexHandle,
                                     const StringList                *fileNameList,
                                     const FileInfo                  *fileInfo,
@@ -886,7 +893,9 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_newSpecialEntry
 * Purpose: add new special entry to archive
-* Input  : archiveInfo               - archive info
+* Input  : archiveEntryInfo          - archive special entry info
+*                                      variable
+*          archiveHandle             - archive handle
 *          specialName               - special name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -898,7 +907,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 
 #ifdef NDEBUG
   Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
-                                 ArchiveInfo                     *archiveInfo,
+                                 ArchiveHandle                   *archiveHandle,
                                  IndexHandle                     *indexHandle,
                                  ConstString                     specialName,
                                  const FileInfo                  *fileInfo,
@@ -908,7 +917,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
   Errors __Archive_newSpecialEntry(const char                      *__fileName__,
                                    ulong                           __lineNb__,
                                    ArchiveEntryInfo                *archiveEntryInfo,
-                                   ArchiveInfo                     *archiveInfo,
+                                   ArchiveHandle                   *archiveHandle,
                                    IndexHandle                     *indexHandle,
                                    ConstString                     specialName,
                                    const FileInfo                  *fileInfo,
@@ -919,14 +928,14 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_getNextArchiveEntryType
 * Purpose: get type of next entry in archive
-* Input  : archiveInfo           - archive info data
+* Input  : archiveHandle         - archive handle
 *          skipUnknownChunksFlag - TRUE to skip unknown chunks
 * Output : archiveEntryType - archive entry type
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
+Errors Archive_getNextArchiveEntryType(ArchiveHandle     *archiveHandle,
                                        ArchiveEntryTypes *archiveEntryType,
                                        bool              skipUnknownChunksFlag
                                       );
@@ -934,19 +943,19 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_skipNextEntry
 * Purpose: skip next entry in archive
-* Input  : archiveInfo - archive info data
+* Input  : archiveHandle - archive handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
+Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 
 /***********************************************************************\
 * Name   : Archive_readFileEntry
 * Purpose: read file info from archive
 * Input  : archiveEntryInfo - archive file entry info
-*          archiveInfo      - archive info
+*          archiveHandle    - archive handle
 * Output : deltaCompressAlgorithm    - used delta compression algorithm
 *                                      (can be NULL)
 *          byteCompressAlgorithm     - used byte compression algorithm
@@ -970,7 +979,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 
 #ifdef NDEBUG
   Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
-                               ArchiveInfo               *archiveInfo,
+                               ArchiveHandle             *archiveHandle,
                                CompressAlgorithms        *deltaCompressAlgorithm,
                                CompressAlgorithms        *byteCompressAlgorithm,
                                CryptAlgorithms           *cryptAlgorithm,
@@ -987,7 +996,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
   Errors __Archive_readFileEntry(const char                *__fileName__,
                                  ulong                     __lineNb__,
                                  ArchiveEntryInfo          *archiveEntryInfo,
-                                 ArchiveInfo               *archiveInfo,
+                                 ArchiveHandle             *archiveHandle,
                                  CompressAlgorithms        *deltaCompressAlgorithm,
                                  CompressAlgorithms        *byteCompressAlgorithm,
                                  CryptAlgorithms           *cryptAlgorithm,
@@ -1006,7 +1015,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 * Name   : Archive_readImageEntry
 * Purpose: read block device image info from archive
 * Input  : archiveEntryInfo - archive image entry info
-*          archiveInfo      - archive info
+*          archiveHandle    - archive handle
 * Output : deltaCompressAlgorithm - used delta compression algorithm
 *                                   (can be NULL)
 *          byteCompressAlgorithm  - used byte compression algorithm (can
@@ -1027,7 +1036,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 
 #ifdef NDEBUG
   Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
-                                ArchiveInfo        *archiveInfo,
+                                ArchiveHandle      *archiveHandle,
                                 CompressAlgorithms *deltaCompressAlgorithm,
                                 CompressAlgorithms *byteCompressAlgorithm,
                                 CryptAlgorithms    *cryptAlgorithm,
@@ -1044,7 +1053,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
   Errors __Archive_readImageEntry(const char         *__fileName__,
                                   ulong              __lineNb__,
                                   ArchiveEntryInfo   *archiveEntryInfo,
-                                  ArchiveInfo        *archiveInfo,
+                                  ArchiveHandle      *archiveHandle,
                                   CompressAlgorithms *deltaCompressAlgorithm,
                                   CompressAlgorithms *byteCompressAlgorithm,
                                   CryptAlgorithms    *cryptAlgorithm,
@@ -1063,7 +1072,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 * Name   : Archive_readDirectoryEntry
 * Purpose: read directory info from archive
 * Input  : archiveEntryInfo - archive directory info
-*          archiveInfo      - archive info
+*          archiveHandle    - archive handle
 * Output : cryptAlgorithm            - used crypt algorithm (can be NULL)
 *          cryptType                 - used crypt type (can be NULL)
 *          directoryName             - directory name
@@ -1076,7 +1085,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 
 #ifdef NDEBUG
   Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
-                                    ArchiveInfo               *archiveInfo,
+                                    ArchiveHandle             *archiveHandle,
                                     CryptAlgorithms           *cryptAlgorithm,
                                     CryptTypes                *cryptType,
                                     String                    directoryName,
@@ -1087,7 +1096,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
   Errors __Archive_readDirectoryEntry(const char                *__fileName__,
                                       ulong                     __lineNb__,
                                       ArchiveEntryInfo          *archiveEntryInfo,
-                                      ArchiveInfo               *archiveInfo,
+                                      ArchiveHandle             *archiveHandle,
                                       CryptAlgorithms           *cryptAlgorithm,
                                       CryptTypes                *cryptType,
                                       String                    directoryName,
@@ -1100,7 +1109,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 * Name   : Archive_readLinkEntry
 * Purpose: read link info from archive
 * Input  : archiveEntryInfo - archive link entry info
-*          archiveInfo      - archive info
+*          archiveHandle    - archive handle
 * Output : cryptAlgorithm            - used crypt algorithm (can be NULL)
 *          cryptType                 - used crypt type (can be NULL)
 *          linkName                  - link name
@@ -1114,7 +1123,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 
 #ifdef NDEBUG
   Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
-                               ArchiveInfo               *archiveInfo,
+                               ArchiveHandle             *archiveHandle,
                                CryptAlgorithms           *cryptAlgorithm,
                                CryptTypes                *cryptType,
                                String                    linkName,
@@ -1126,7 +1135,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
   Errors __Archive_readLinkEntry(const char                *__fileName__,
                                  ulong                     __lineNb__,
                                  ArchiveEntryInfo          *archiveEntryInfo,
-                                 ArchiveInfo               *archiveInfo,
+                                 ArchiveHandle             *archiveHandle,
                                  CryptAlgorithms           *cryptAlgorithm,
                                  CryptTypes                *cryptType,
                                  String                    linkName,
@@ -1140,7 +1149,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 * Name   : Archive_readHardLinkEntry
 * Purpose: read hard link info from archive
 * Input  : archiveEntryInfo - archive hard link entry info
-*          archiveInfo      - archive info
+*          archiveHandle    - archive handle
 * Output : deltaCompressAlgorithm    - used delta compression algorithm
 *                                      (can be NULL)
 *          byteCompressAlgorithm     - used byte compression algorithm
@@ -1163,7 +1172,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 
 #ifdef NDEBUG
   Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
-                                   ArchiveInfo               *archiveInfo,
+                                   ArchiveHandle             *archiveHandle,
                                    CompressAlgorithms        *deltaCompressAlgorithm,
                                    CompressAlgorithms        *byteCompressAlgorithm,
                                    CryptAlgorithms           *cryptAlgorithm,
@@ -1180,7 +1189,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
   Errors __Archive_readHardLinkEntry(const char                *__fileName__,
                                      ulong                     __lineNb__,
                                      ArchiveEntryInfo          *archiveEntryInfo,
-                                     ArchiveInfo               *archiveInfo,
+                                     ArchiveHandle             *archiveHandle,
                                      CompressAlgorithms        *deltaCompressAlgorithm,
                                      CompressAlgorithms        *byteCompressAlgorithm,
                                      CryptAlgorithms           *cryptAlgorithm,
@@ -1199,7 +1208,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 * Name   : Archive_readSpecialEntry
 * Purpose: read special device info from archive
 * Input  : archiveEntryInfo - archive special entry info
-*          archiveInfo      - archive info
+*          archiveHandle    - archive handle
 * Output : cryptAlgorithm            - used crypt algorithm (can be NULL)
 *          cryptType                 - used crypt type (can be NULL)
 *          name                      - link name
@@ -1212,7 +1221,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 
 #ifdef NDEBUG
   Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
-                                  ArchiveInfo               *archiveInfo,
+                                  ArchiveHandle             *archiveHandle,
                                   CryptAlgorithms           *cryptAlgorithm,
                                   CryptTypes                *cryptType,
                                   String                    specialName,
@@ -1223,7 +1232,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
   Errors __Archive_readSpecialEntry(const char                *__fileName__,
                                     ulong                     __lineNb__,
                                     ArchiveEntryInfo          *archiveEntryInfo,
-                                    ArchiveInfo               *archiveInfo,
+                                    ArchiveHandle             *archiveHandle,
                                     CryptAlgorithms           *cryptAlgorithm,
                                     CryptTypes                *cryptType,
                                     String                    specialName,
@@ -1311,57 +1320,57 @@ bool Archive_eofData(ArchiveEntryInfo *archiveEntryInfo);
 /***********************************************************************\
 * Name   : Archive_tell
 * Purpose: get current read/write position in archive file
-* Input  : archiveInfo - archive info data
+* Input  : archiveHandle - archive handle
 * Output : -
 * Return : current position in archive [bytes]
 * Notes  : -
 \***********************************************************************/
 
-uint64 Archive_tell(ArchiveInfo *archiveInfo);
+uint64 Archive_tell(ArchiveHandle *archiveHandle);
 
 /***********************************************************************\
 * Name   : Archive_seek
 * Purpose: seek to position in archive file
-* Input  : archiveInfo - archive info data
-*          offset      - offset in archive
+* Input  : archiveHandle - archive handle
+*          offset        - offset in archive
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_seek(ArchiveInfo *archiveInfo,
-                    uint64      offset
+Errors Archive_seek(ArchiveHandle *archiveHandle,
+                    uint64        offset
                    );
 
 /***********************************************************************\
 * Name   : Archive_getEntries
 * Purpose: get number of entries stored into archive file
-* Input  : archiveInfo - archive info data
+* Input  : archiveHandle - archive handle
 * Output : -
 * Return : number of entries
 * Notes  : -
 \***********************************************************************/
 
-INLINE uint64 Archive_getEntries(const ArchiveInfo *archiveInfo);
+INLINE uint64 Archive_getEntries(const ArchiveHandle *archiveHandle);
 #if defined(NDEBUG) || defined(__ARCHIVE_IMPLEMENATION__)
-INLINE uint64 Archive_getEntries(const ArchiveInfo *archiveInfo)
+INLINE uint64 Archive_getEntries(const ArchiveHandle *archiveHandle)
 {
-  assert(archiveInfo != NULL);
+  assert(archiveHandle != NULL);
 
-  return archiveInfo->entries;
+  return archiveHandle->entries;
 }
 #endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Archive_getSize
 * Purpose: get size of archive file
-* Input  : archiveInfo - archive info data
+* Input  : archiveHandle - archive handle
 * Output : -
 * Return : size of archive [bytes]
 * Notes  : -
 \***********************************************************************/
 
-uint64 Archive_getSize(ArchiveInfo *archiveInfo);
+uint64 Archive_getSize(ArchiveHandle *archiveHandle);
 
 /***********************************************************************\
 * Name   : Archive_addToIndex
@@ -1442,12 +1451,12 @@ Errors Archive_remIndex(IndexHandle *indexHandle,
 
 #if 0
 // NYI
-Errors Archive_copy(ArchiveInfo                     *archiveInfo,
-                    ConstString                     storageName,
-                    const JobOptions                *jobOptions,
-                    GetPasswordFunction             archiveGetCryptPassword,
-                    void                            *archiveGetCryptPasswordData,
-                    ConstString                     newStorageName
+Errors Archive_copy(ArchiveHandle       *archiveHandle,
+                    ConstString         storageName,
+                    const JobOptions    *jobOptions,
+                    GetPasswordFunction archiveGetCryptPassword,
+                    void                *archiveGetCryptPasswordData,
+                    ConstString         newStorageName
                    );
 #endif /* 0 */
 

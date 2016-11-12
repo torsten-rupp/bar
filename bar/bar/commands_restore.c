@@ -392,7 +392,7 @@ LOCAL Errors handleError(RestoreInfo *restoreInfo, Errors error)
 * Name   : restoreFileEntry
 * Purpose: restore file entry
 * Input  : restoreInfo      - restore info
-*          archiveInfo      - archive info
+*          archiveHandle    - archive handle
 *          storageSpecifier - storage specifier
 *          archiveName      - archive name
 *          buffer           - buffer for temporary data
@@ -403,7 +403,7 @@ LOCAL Errors handleError(RestoreInfo *restoreInfo, Errors error)
 \***********************************************************************/
 
 LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
-                              ArchiveInfo      *archiveInfo,
+                              ArchiveHandle    *archiveHandle,
                               StorageSpecifier *storageSpecifier,
                               ConstString      archiveName,
                               byte             *buffer,
@@ -427,7 +427,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
 
   assert(restoreInfo != NULL);
   assert(restoreInfo->jobOptions != NULL);
-  assert(archiveInfo != NULL);
+  assert(archiveHandle != NULL);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -438,7 +438,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
 
   // read file entry
   error = Archive_readFileEntry(&archiveEntryInfo,
-                                archiveInfo,
+                                archiveHandle,
                                 NULL,  // deltaCompressAlgorithm
                                 NULL,  // byteCompressAlgorithm
                                 NULL,  // cryptAlgorithm
@@ -783,7 +783,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
 * Name   : restoreImageEntry
 * Purpose: restore image entry
 * Input  : restoreInfo      - restore info
-*          archiveInfo      - archive info
+*          archiveHandle    - archive handle
 *          storageSpecifier - storage specifier
 *          archiveName      - archive name
 *          buffer           - buffer for temporary data
@@ -794,7 +794,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
 \***********************************************************************/
 
 LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
-                               ArchiveInfo      *archiveInfo,
+                               ArchiveHandle    *archiveHandle,
                                StorageSpecifier *storageSpecifier,
                                ConstString      archiveName,
                                byte             *buffer,
@@ -828,7 +828,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
 
   // read image
   error = Archive_readImageEntry(&archiveEntryInfo,
-                                 archiveInfo,
+                                 archiveHandle,
                                  NULL,  // deltaCompressAlgorithm
                                  NULL,  // byteCompressAlgorithm
                                  NULL,  // cryptAlgorithm
@@ -1218,7 +1218,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
 * Name   : restoreDirectoryEntry
 * Purpose: restore directory entry
 * Input  : restoreInfo      - restore info
-*          archiveInfo      - archive info
+*          archiveHandle    - archive handle
 *          storageSpecifier - storage specifier
 *          archiveName      - archive name
 *          buffer           - buffer for temporary data
@@ -1229,7 +1229,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
 \***********************************************************************/
 
 LOCAL Errors restoreDirectoryEntry(RestoreInfo      *restoreInfo,
-                                   ArchiveInfo      *archiveInfo,
+                                   ArchiveHandle    *archiveHandle,
                                    StorageSpecifier *storageSpecifier,
                                    ConstString      archiveName,
                                    byte             *buffer,
@@ -1257,7 +1257,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo      *restoreInfo,
 
   // read directory
   error = Archive_readDirectoryEntry(&archiveEntryInfo,
-                                     archiveInfo,
+                                     archiveHandle,
                                      NULL,  // cryptAlgorithm
                                      NULL,  // cryptType
                                      directoryName,
@@ -1397,7 +1397,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo      *restoreInfo,
 * Name   : restoreLinkEntry
 * Purpose: restore link entry
 * Input  : restoreInfo      - restore info
-*          archiveInfo      - archive info
+*          archiveHandle    - archive handle
 *          storageSpecifier - storage specifier
 *          archiveName      - archive name
 *          buffer           - buffer for temporary data
@@ -1408,7 +1408,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo      *restoreInfo,
 \***********************************************************************/
 
 LOCAL Errors restoreLinkEntry(RestoreInfo      *restoreInfo,
-                              ArchiveInfo      *archiveInfo,
+                              ArchiveHandle    *archiveHandle,
                               StorageSpecifier *storageSpecifier,
                               ConstString      archiveName,
                               byte             *buffer,
@@ -1440,7 +1440,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo      *restoreInfo,
 
   // read link
   error = Archive_readLinkEntry(&archiveEntryInfo,
-                                archiveInfo,
+                                archiveHandle,
                                 NULL,  // cryptAlgorithm
                                 NULL,  // cryptType
                                 linkName,
@@ -1637,7 +1637,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo      *restoreInfo,
 * Name   : restoreHardLinkEntry
 * Purpose: restore hardlink entry
 * Input  : restoreInfo      - restore info
-*          archiveInfo      - archive info
+*          archiveHandle    - archive handle
 *          storageSpecifier - storage specifier
 *          archiveName      - archive name
 *          buffer           - buffer for temporary data
@@ -1648,7 +1648,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo      *restoreInfo,
 \***********************************************************************/
 
 LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
-                                  ArchiveInfo      *archiveInfo,
+                                  ArchiveHandle    *archiveHandle,
                                   StorageSpecifier *storageSpecifier,
                                   ConstString      archiveName,
                                   byte             *buffer,
@@ -1684,7 +1684,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
 
   // read hard link
   error = Archive_readHardLinkEntry(&archiveEntryInfo,
-                                    archiveInfo,
+                                    archiveHandle,
                                     NULL,  // deltaCompressAlgorithm
                                     NULL,  // byteCompressAlgorithm
                                     NULL,  // cryptAlgorithm
@@ -2093,7 +2093,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
 * Name   : restoreSpecialEntry
 * Purpose: restore special entry
 * Input  : restoreInfo      - restore info
-*          archiveInfo      - archive info
+*          archiveHandle    - archive handle
 *          storageSpecifier - storage specifier
 *          archiveName      - archive name
 *          buffer           - buffer for temporary data
@@ -2104,7 +2104,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
 \***********************************************************************/
 
 LOCAL Errors restoreSpecialEntry(RestoreInfo      *restoreInfo,
-                                 ArchiveInfo      *archiveInfo,
+                                 ArchiveHandle    *archiveHandle,
                                  StorageSpecifier *storageSpecifier,
                                  ConstString      archiveName,
                                  byte             *buffer,
@@ -2133,7 +2133,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo      *restoreInfo,
 
   // read special device
   error = Archive_readSpecialEntry(&archiveEntryInfo,
-                                   archiveInfo,
+                                   archiveHandle,
                                    NULL,  // cryptAlgorithm
                                    NULL,  // cryptType
                                    fileName,
@@ -2347,7 +2347,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
   byte              *buffer;
   StorageInfo       storageInfo;
   Errors            error;
-  ArchiveInfo       archiveInfo;
+  ArchiveHandle     archiveHandle;
   Errors            failError;
   ArchiveEntryTypes archiveEntryType;
 
@@ -2394,7 +2394,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
   AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
 
   // open archive
-  error = Archive_open(&archiveInfo,
+  error = Archive_open(&archiveHandle,
                        &storageInfo,
                        storageSpecifier,
                        archiveName,
@@ -2413,10 +2413,10 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
     error = handleError(restoreInfo,error);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,&archiveInfo,{ Archive_close(&archiveInfo); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle,{ Archive_close(&archiveHandle); });
 
   // update status info
-  restoreInfo->statusInfo.storageTotalSize = Archive_getSize(&archiveInfo);
+  restoreInfo->statusInfo.storageTotalSize = Archive_getSize(&archiveHandle);
   updateStatusInfo(restoreInfo,TRUE);
 
   // read archive entries
@@ -2428,7 +2428,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
   failError = ERROR_NONE;
   while (   ((failError == ERROR_NONE) || restoreInfo->jobOptions->noStopOnErrorFlag)
          && ((restoreInfo->isAbortedFunction == NULL) || !restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
-         && !Archive_eof(&archiveInfo,TRUE)
+         && !Archive_eof(&archiveHandle,TRUE)
         )
   {
     // pause
@@ -2438,7 +2438,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
     }
 
     // get next archive entry type
-    error = Archive_getNextArchiveEntryType(&archiveInfo,
+    error = Archive_getNextArchiveEntryType(&archiveHandle,
                                             &archiveEntryType,
                                             TRUE
                                            );
@@ -2453,7 +2453,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
     }
 
     // update storage status
-    restoreInfo->statusInfo.storageDoneSize = Archive_tell(&archiveInfo);
+    restoreInfo->statusInfo.storageDoneSize = Archive_tell(&archiveHandle);
     updateStatusInfo(restoreInfo,TRUE);
 
     // restore entry
@@ -2461,7 +2461,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
         error = restoreFileEntry(restoreInfo,
-                                 &archiveInfo,
+                                 &archiveHandle,
                                  storageSpecifier,
                                  archiveName,
                                  buffer,
@@ -2470,7 +2470,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
         break;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
         error = restoreImageEntry(restoreInfo,
-                                  &archiveInfo,
+                                  &archiveHandle,
                                   storageSpecifier,
                                   archiveName,
                                   buffer,
@@ -2479,7 +2479,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
         break;
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
         error = restoreDirectoryEntry(restoreInfo,
-                                      &archiveInfo,
+                                      &archiveHandle,
                                       storageSpecifier,
                                       archiveName,
                                       buffer,
@@ -2488,7 +2488,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
         error = restoreLinkEntry(restoreInfo,
-                                 &archiveInfo,
+                                 &archiveHandle,
                                  storageSpecifier,
                                  archiveName,
                                  buffer,
@@ -2497,7 +2497,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
         error = restoreHardLinkEntry(restoreInfo,
-                                     &archiveInfo,
+                                     &archiveHandle,
                                      storageSpecifier,
                                      archiveName,
                                      buffer,
@@ -2506,7 +2506,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         error = restoreSpecialEntry(restoreInfo,
-                                    &archiveInfo,
+                                    &archiveHandle,
                                     storageSpecifier,
                                     archiveName,
                                     buffer,
@@ -2532,13 +2532,13 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
     }
 
     // update storage status
-    restoreInfo->statusInfo.storageDoneSize = Archive_tell(&archiveInfo);
+    restoreInfo->statusInfo.storageDoneSize = Archive_tell(&archiveHandle);
     updateStatusInfo(restoreInfo,TRUE);
   }
   if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // close archive
-  Archive_close(&archiveInfo);
+  Archive_close(&archiveHandle);
 
   // done storage
   (void)Storage_done(&storageInfo);

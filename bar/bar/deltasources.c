@@ -171,7 +171,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
   byte              *buffer;
 //  bool              abortFlag;
   Errors            error;
-  ArchiveInfo       archiveInfo;
+  ArchiveHandle     archiveHandle;
   Errors            failError;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
@@ -211,7 +211,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
   }
 
   // open archive
-  error = Archive_open(&archiveInfo,
+  error = Archive_open(&archiveHandle,
                        &storageInfo,
                        storageSpecifier,
                        NULL,  // archive name
@@ -230,7 +230,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
   failError = ERROR_NONE;
   while (   !restoredFlag
          && ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
-         && !Archive_eof(&archiveInfo,TRUE)
+         && !Archive_eof(&archiveHandle,TRUE)
          && (failError == ERROR_NONE)
         )
   {
@@ -241,7 +241,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
     }
 
     // get next archive entry type
-    error = Archive_getNextArchiveEntryType(&archiveInfo,
+    error = Archive_getNextArchiveEntryType(&archiveHandle,
                                             &archiveEntryType,
                                             TRUE
                                            );
@@ -264,7 +264,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
           // read file
           fileName = String_new();
           error = Archive_readFileEntry(&archiveEntryInfo,
-                                        &archiveInfo,
+                                        &archiveHandle,
                                         NULL,  // deltaCompressAlgorithm
                                         NULL,  // byteCompressAlgorithm
                                         NULL,  // cryptAlgorithm
@@ -404,7 +404,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
           // read image
           imageName = String_new();
           error = Archive_readImageEntry(&archiveEntryInfo,
-                                         &archiveInfo,
+                                         &archiveHandle,
                                          NULL,  // deltaCompressAlgorithm
                                          NULL,  // byteCompressAlgorithm
                                          NULL,  // cryptAlgorithm
@@ -538,7 +538,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
           // read hard link
           StringList_init(&fileNameList);
           error = Archive_readHardLinkEntry(&archiveEntryInfo,
-                                            &archiveInfo,
+                                            &archiveHandle,
                                             NULL,  // deltaCompressAlgorithm
                                             NULL,  // byteCompressAlgorithm
                                             NULL,  // cryptAlgorithm
@@ -671,7 +671,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
       case ARCHIVE_ENTRY_TYPE_LINK:
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
-        error = Archive_skipNextEntry(&archiveInfo);
+        error = Archive_skipNextEntry(&archiveHandle);
         if (error != ERROR_NONE)
         {
           if (failError == ERROR_NONE) failError = error;
@@ -686,7 +686,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
   }
 
   // close archive
-  Archive_close(&archiveInfo);
+  Archive_close(&archiveHandle);
 
   // done storage
   (void)Storage_done(&storageInfo);

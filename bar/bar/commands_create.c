@@ -113,7 +113,7 @@ typedef struct
 
   MsgQueue                    entryMsgQueue;                      // queue with entries to store
 
-  ArchiveInfo                 archiveInfo;
+  ArchiveHandle               archiveHandle;
 
   bool                        collectorSumThreadExitedFlag;       // TRUE iff collector sum thread exited
 
@@ -4829,7 +4829,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
     // create new archive file entry
     error = Archive_newFileEntry(&archiveEntryInfo,
-                                 &createInfo->archiveInfo,
+                                 &createInfo->archiveHandle,
                                  indexHandle,
                                  fileName,
                                  &fileInfo,
@@ -4870,7 +4870,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
           if (error == ERROR_NONE)
           {
             entryDoneSize += (uint64)bufferLength;
-            archiveSize   = Archive_getSize(&createInfo->archiveInfo);
+            archiveSize   = Archive_getSize(&createInfo->archiveHandle);
 
             // try to set status done entry info
             if (!statusEntryDoneLocked)
@@ -5178,7 +5178,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 
     // create new archive image entry
     error = Archive_newImageEntry(&archiveEntryInfo,
-                                  &createInfo->archiveInfo,
+                                  &createInfo->archiveHandle,
                                   indexHandle,
                                   deviceName,
                                   &deviceInfo,
@@ -5246,7 +5246,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
         if (error == ERROR_NONE)
         {
           entryDoneSize += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
-          archiveSize   = Archive_getSize(&createInfo->archiveInfo);
+          archiveSize   = Archive_getSize(&createInfo->archiveHandle);
 
           // try to set status done entry info
           if (!statusEntryDoneLocked)
@@ -5478,7 +5478,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
   {
     // new directory
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
-                                      &createInfo->archiveInfo,
+                                      &createInfo->archiveHandle,
                                       indexHandle,
                                       directoryName,
                                       &fileInfo,
@@ -5675,7 +5675,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 
     // new link
     error = Archive_newLinkEntry(&archiveEntryInfo,
-                                 &createInfo->archiveInfo,
+                                 &createInfo->archiveHandle,
                                  indexHandle,
                                  linkName,
                                  fileName,
@@ -5898,7 +5898,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
     // create new archive hard link entry
     error = Archive_newHardLinkEntry(&archiveEntryInfo,
-                                     &createInfo->archiveInfo,
+                                     &createInfo->archiveHandle,
                                      indexHandle,
                                      nameList,
                                      &fileInfo,
@@ -5938,7 +5938,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
           if (error == ERROR_NONE)
           {
             entryDoneSize += (uint64)StringList_count(nameList)*(uint64)bufferLength;
-            archiveSize = Archive_getSize(&createInfo->archiveInfo);
+            archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
             // try to set status done entry info
             if (!statusEntryDoneLocked)
@@ -6173,7 +6173,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
   {
     // new special
     error = Archive_newSpecialEntry(&archiveEntryInfo,
-                                    &createInfo->archiveInfo,
+                                    &createInfo->archiveHandle,
                                     indexHandle,
                                     fileName,
                                     &fileInfo,
@@ -6726,7 +6726,7 @@ Errors Command_create(ConstString                  jobUUID,
   }
 
   // create new archive
-  error = Archive_create(&createInfo.archiveInfo,
+  error = Archive_create(&createInfo.archiveHandle,
                          uuidId,
                          jobUUID,
                          scheduleUUID,
@@ -6751,8 +6751,8 @@ Errors Command_create(ConstString                  jobUUID,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_close(&createInfo.archiveInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&createInfo.archiveInfo,{ Archive_close(&createInfo.archiveInfo); });
+  DEBUG_TESTCODE() { Archive_close(&createInfo.archiveHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&createInfo.archiveHandle,{ Archive_close(&createInfo.archiveHandle); });
 
   // start collectors and storage thread
   if (!Thread_init(&collectorSumThread,"BAR collector sum",globalOptions.niceLevel,collectorSumThreadCode,&createInfo))
@@ -6802,8 +6802,8 @@ Errors Command_create(ConstString                  jobUUID,
   }
 
   // close archive
-  AUTOFREE_REMOVE(&autoFreeList,&createInfo.archiveInfo);
-  error = Archive_close(&createInfo.archiveInfo);
+  AUTOFREE_REMOVE(&autoFreeList,&createInfo.archiveHandle);
+  error = Archive_close(&createInfo.archiveHandle);
   if (error != ERROR_NONE)
   {
     printError("Cannot close archive '%s' (error: %s)\n",

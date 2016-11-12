@@ -126,7 +126,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
   StorageInfo       storageInfo;
   Errors            failError;
   Errors            error;
-  ArchiveInfo       archiveInfo;
+  ArchiveHandle     archiveHandle;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
 
@@ -171,7 +171,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
   }
 
   // open archive
-  error = Archive_open(&archiveInfo,
+  error = Archive_open(&archiveHandle,
                        &storageInfo,
                        storageSpecifier,
                        archiveName,
@@ -192,7 +192,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
     free(archiveBuffer);
     return error;
   }
-  DEBUG_TESTCODE() { (void)Archive_close(&archiveInfo); (void)Storage_done(&storageInfo); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { (void)Archive_close(&archiveHandle); (void)Storage_done(&storageInfo); return DEBUG_TESTCODE_ERROR(); }
 
   // read archive entries
   printInfo(0,
@@ -201,12 +201,12 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
             !isPrintInfo(1) ? "..." : ":\n"
            );
   failError = ERROR_NONE;
-  while (   !Archive_eof(&archiveInfo,TRUE)
+  while (   !Archive_eof(&archiveHandle,TRUE)
          && (failError == ERROR_NONE)
         )
   {
     // get next archive entry type
-    error = Archive_getNextArchiveEntryType(&archiveInfo,
+    error = Archive_getNextArchiveEntryType(&archiveHandle,
                                             &archiveEntryType,
                                             TRUE
                                            );
@@ -240,7 +240,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
           // read file
           fileName = String_new();
           error = Archive_readFileEntry(&archiveEntryInfo,
-                                        &archiveInfo,
+                                        &archiveHandle,
                                         &deltaCompressAlgorithm,
                                         &byteCompressAlgorithm,
                                         NULL,  // cryptAlgorithm
@@ -500,7 +500,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
           // read image
           deviceName = String_new();
           error = Archive_readImageEntry(&archiveEntryInfo,
-                                         &archiveInfo,
+                                         &archiveHandle,
                                          &deltaCompressAlgorithm,
                                          &byteCompressAlgorithm,
                                          NULL,  // cryptAlgorithm
@@ -827,7 +827,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
           // read directory
           directoryName = String_new();
           error = Archive_readDirectoryEntry(&archiveEntryInfo,
-                                             &archiveInfo,
+                                             &archiveHandle,
                                              NULL,  // cryptAlgorithm
                                              NULL,  // cryptType
                                              directoryName,
@@ -931,7 +931,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
           linkName = String_new();
           fileName = String_new();
           error = Archive_readLinkEntry(&archiveEntryInfo,
-                                        &archiveInfo,
+                                        &archiveHandle,
                                         NULL,  // cryptAlgorithm
                                         NULL,  // cryptType
                                         linkName,
@@ -1085,7 +1085,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
           // read hard link
           StringList_init(&fileNameList);
           error = Archive_readHardLinkEntry(&archiveEntryInfo,
-                                            &archiveInfo,
+                                            &archiveHandle,
                                             &deltaCompressAlgorithm,
                                             &byteCompressAlgorithm,
                                             NULL,  // cryptAlgorithm
@@ -1370,7 +1370,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
           // read special
           fileName = String_new();
           error = Archive_readSpecialEntry(&archiveEntryInfo,
-                                           &archiveInfo,
+                                           &archiveHandle,
                                            NULL,  // cryptAlgorithm
                                            NULL,  // cryptType
                                            fileName,
@@ -1511,7 +1511,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
   if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // close archive
-  Archive_close(&archiveInfo);
+  Archive_close(&archiveHandle);
 
   // done storage
   (void)Storage_done(&storageInfo);

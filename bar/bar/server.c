@@ -13520,7 +13520,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   StorageSpecifier  storageSpecifier;
   StorageInfo       storageInfo;
   Errors            error;
-  ArchiveInfo       archiveInfo;
+  ArchiveHandle     archiveHandle;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
 
@@ -13567,7 +13567,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   }
 
   // open archive
-  error = Archive_open(&archiveInfo,
+  error = Archive_open(&archiveHandle,
                        &storageInfo,
                        &storageSpecifier,
                        NULL,  // archive name
@@ -13587,13 +13587,13 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 
   // list contents
   error = ERROR_NONE;
-  while (   !Archive_eof(&archiveInfo,TRUE)
+  while (   !Archive_eof(&archiveHandle,TRUE)
          && (error == ERROR_NONE)
          && !isCommandAborted(clientInfo,id)
         )
   {
     // get next file type
-    error = Archive_getNextArchiveEntryType(&archiveInfo,
+    error = Archive_getNextArchiveEntryType(&archiveHandle,
                                             &archiveEntryType,
                                             TRUE
                                            );
@@ -13618,7 +13618,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
             fileName        = String_new();
             deltaSourceName = String_new();
             error = Archive_readFileEntry(&archiveEntryInfo,
-                                          &archiveInfo,
+                                          &archiveHandle,
                                           &deltaCompressAlgorithm,
                                           &byteCompressAlgorithm,
                                           &cryptAlgorithm,
@@ -13684,7 +13684,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
             imageName       = String_new();
             deltaSourceName = String_new();
             error = Archive_readImageEntry(&archiveEntryInfo,
-                                           &archiveInfo,
+                                           &archiveHandle,
                                            &deltaCompressAlgorithm,
                                            &byteCompressAlgorithm,
                                            &cryptAlgorithm,
@@ -13744,7 +13744,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
             // open archive directory
             directoryName = String_new();
             error = Archive_readDirectoryEntry(&archiveEntryInfo,
-                                               &archiveInfo,
+                                               &archiveHandle,
                                                &cryptAlgorithm,
                                                &cryptType,
                                                directoryName,
@@ -13788,7 +13788,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
             linkName = String_new();
             name     = String_new();
             error = Archive_readLinkEntry(&archiveEntryInfo,
-                                          &archiveInfo,
+                                          &archiveHandle,
                                           &cryptAlgorithm,
                                           &cryptType,
                                           linkName,
@@ -13840,7 +13840,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
             StringList_init(&fileNameList);
             deltaSourceName = String_new();
             error = Archive_readHardLinkEntry(&archiveEntryInfo,
-                                              &archiveInfo,
+                                              &archiveHandle,
                                               &deltaCompressAlgorithm,
                                               &byteCompressAlgorithm,
                                               &cryptAlgorithm,
@@ -13899,7 +13899,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
             // open archive link
             name = String_new();
             error = Archive_readSpecialEntry(&archiveEntryInfo,
-                                             &archiveInfo,
+                                             &archiveHandle,
                                              &cryptAlgorithm,
                                              &cryptType,
                                              name,
@@ -13951,7 +13951,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // close archive
-  Archive_close(&archiveInfo);
+  Archive_close(&archiveHandle);
 
   // done storage
   (void)Storage_done(&storageInfo);
