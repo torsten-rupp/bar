@@ -3401,7 +3401,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 #ifdef NDEBUG
   Errors Archive_open(ArchiveHandle          *archiveHandle,
                       StorageInfo            *storageInfo,
-                      const StorageSpecifier *storageSpecifier,
                       ConstString            fileName,
                       DeltaSourceList        *deltaSourceList,
                       const JobOptions       *jobOptions,
@@ -3414,7 +3413,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
                         ulong                  __lineNb__,
                         ArchiveHandle          *archiveHandle,
                         StorageInfo            *storageInfo,
-                        const StorageSpecifier *storageSpecifier,
                         ConstString            fileName,
                         DeltaSourceList        *deltaSourceList,
                         const JobOptions       *jobOptions,
@@ -3430,7 +3428,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   assert(archiveHandle != NULL);
   assert(storageInfo != NULL);
-  assert(storageSpecifier != NULL);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -3455,8 +3452,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   archiveHandle->cryptKeyDataLength      = 0;
 
   archiveHandle->ioType                  = ARCHIVE_IO_TYPE_STORAGE_FILE;
-  Storage_duplicateSpecifier(&archiveHandle->storage.storageSpecifier,storageSpecifier);
   archiveHandle->storage.storageInfo     = storageInfo;
+  Storage_duplicateSpecifier(&archiveHandle->storage.storageSpecifier,&storageInfo->storageSpecifier);
   archiveHandle->printableStorageName    = String_duplicate(Storage_getPrintableName(&archiveHandle->storage.storageSpecifier,fileName));
   Semaphore_init(&archiveHandle->chunkIOLock);
   archiveHandle->chunkIO                 = &CHUNK_IO_STORAGE_FILE;
@@ -10487,7 +10484,6 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle)
 
 Errors Archive_addToIndex(IndexHandle      *indexHandle,
                           StorageInfo      *storageInfo,
-                          ConstString      storageName,
                           IndexModes       indexMode,
                           const JobOptions *jobOptions,
                           uint64           *totalTimeLastChanged,
@@ -10501,12 +10497,11 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 
   assert(indexHandle != NULL);
   assert(storageInfo != NULL);
-  assert(storageName != NULL);
 
   // create new storage index
   error = Index_newStorage(indexHandle,
                            DATABASE_ID_NONE, // entityId
-                           storageName,
+                           Storage_getPrintableName(storageInfo,NULL),
                            INDEX_STATE_UPDATE,
                            indexMode,
                            &storageId
@@ -10520,7 +10515,6 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
   error = Archive_updateIndex(indexHandle,
                               storageId,
                               storageInfo,
-                              storageName,
                               jobOptions,
                               totalTimeLastChanged,
                               totalEntries,
@@ -10541,7 +10535,6 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            IndexId                      storageId,
                            StorageInfo                  *storageInfo,
-                           ConstString                  storageName,
                            const JobOptions             *jobOptions,
                            uint64                       *totalTimeLastChanged,
                            uint64                       *totalEntries,
@@ -10572,21 +10565,13 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
   assert(indexHandle != NULL);
   assert(storageInfo != NULL);
-  assert(storageName != NULL);
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   printableStorageName = String_new();
 
-  // get printable name (if possible)
-  if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
-  {
-    String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
-  }
-  else
-  {
-    String_set(printableStorageName,storageName);
-  }
+  // get printable name
+  String_set(printableStorageName,Storage_getPrintableName(&storageInfo->storageSpecifier,NULL));
 
   // open archive (Note optimization: try sftp for scp protocol, because sftp support seek()-operation)
   if (storageSpecifier.type == STORAGE_TYPE_SCP)
@@ -10595,7 +10580,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     storageSpecifier.type = STORAGE_TYPE_SFTP;
     error = Archive_open(&archiveHandle,
                          storageInfo,
-                         &storageSpecifier,
                          NULL,  // archive name
                          NULL,  // deltaSourceList
                          jobOptions,
@@ -10609,7 +10593,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       storageSpecifier.type = STORAGE_TYPE_SCP;
       error = Archive_open(&archiveHandle,
                            storageInfo,
-                           &storageSpecifier,
                            NULL,  // archive name
                            NULL,  // deltaSourceList
                            jobOptions,
@@ -10623,7 +10606,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     // open other storage types
     error = Archive_open(&archiveHandle,
                          storageInfo,
-                         &storageSpecifier,
                          NULL,  // archive name
                          NULL,  // deltaSourceList
                          jobOptions,
@@ -11236,7 +11218,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     {
       error = Index_storageUpdate(indexHandle,
                                   storageId,
-                                  storageName,
+                                  printableStorageName,
                                   Archive_getSize(&archiveHandle)
                                  );
     }

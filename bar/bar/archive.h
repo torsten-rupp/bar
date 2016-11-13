@@ -73,7 +73,7 @@ typedef enum
 *          scheduleUUID - schedule UUID or NULL
 *          entityId     - index entity id
 *          archiveType  - archive type
-*          storageId    - database id of storage
+*          storageId    - index id of storage
 *          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
 *                         single part
 *          userData     - user data
@@ -102,7 +102,7 @@ typedef Errors(*ArchiveInitFunction)(IndexHandle  *indexHandle,
 *          scheduleUUID - schedule UUID or NULL
 *          entityId     - index entity id
 *          archiveType  - archive type
-*          storageId    - database id of storage
+*          storageId    - index id of storage
 *          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
 *                         single part
 *          userData     - user data
@@ -126,7 +126,7 @@ typedef Errors(*ArchiveDoneFunction)(IndexHandle  *indexHandle,
 * Name   : ArchiveGetSizeFunction
 * Purpose: call back to get size of archive file
 * Input  : indexHandle - index handle or NULL if no index
-*          storageId   - database id of storage
+*          storageId   - index id of storage
 *          partNumber  - part number or ARCHIVE_PART_NUMBER_NONE for
 *                        single part
 *          userData    - user data
@@ -150,7 +150,7 @@ typedef uint64(*ArchiveGetSizeFunction)(IndexHandle *indexHandle,
 *          scheduleUUID         - schedule UUID or NULL
 *          entityId             - index entity id
 *          archiveType          - archive type
-*          storageId            - database id of storage
+*          storageId            - index id of storage
 *          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
 *                                 for single part
 *          intermediateFileName - intermediate archive file name
@@ -598,8 +598,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 * Purpose: open archive
 * Input  : archiveHandle       - archive handle
 *          storageInfo         - storage info
-*          storageSpecifier    - storage specifier structure
-*          fileName            - file name or NULL
+*          fileName            - file name (can be NULL)
 *          jobOptions          - option settings
 *          getPasswordFunction - get password call back (can be NULL)
 *          getPasswordUserData - user data for get password call back
@@ -612,7 +611,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 #ifdef NDEBUG
   Errors Archive_open(ArchiveHandle          *archiveHandle,
                       StorageInfo            *storageInfo,
-                      const StorageSpecifier *storageSpecifier,
                       ConstString            fileName,
                       DeltaSourceList        *deltaSourceList,
                       const JobOptions       *jobOptions,
@@ -625,7 +623,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         ulong                  __lineNb__,
                         ArchiveHandle          *archiveHandle,
                         StorageInfo            *storageInfo,
-                        const StorageSpecifier *storageSpecifier,
                         ConstString            fileName,
                         DeltaSourceList        *deltaSourceList,
                         const JobOptions       *jobOptions,
@@ -1379,7 +1376,6 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle);
 * Purpose: add storage index
 * Input  : indexHandle - index handle
 *          storageInfo - storage info
-*          storageName - storage name
 *          indexMode   - index mode
 *          jobOptions  - job options
 *          logHandle   - log handle (can be NULL)
@@ -1393,7 +1389,6 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle);
 
 Errors Archive_addToIndex(IndexHandle      *indexHandle,
                           StorageInfo      *storageInfo,
-                          ConstString      storageName,
                           IndexModes       indexMode,
                           const JobOptions *jobOptions,
                           uint64           *totalTimeLastChanged,
@@ -1406,9 +1401,8 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 * Name   : Archive_updateIndex
 * Purpose: update storage index
 * Input  : indexHandle           - index handle
-*          storageId             - database id of storage
+*          storageId             - index id of storage
 *          storageInfo           - storage info
-*          storageName           - storage name
 *          jobOptions            - job options
 *          pauseCallbackFunction - pause check callback (can be NULL)
 *          pauseCallbackUserData - pause user data
@@ -1425,7 +1419,6 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            IndexId                      storageId,
                            StorageInfo                  *storageInfo,
-                           ConstString                  storageName,
                            const JobOptions             *jobOptions,
                            uint64                       *totalTimeLastChanged,
                            uint64                       *totalEntries,
@@ -1441,7 +1434,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 * Name   : Archive_remIndex
 * Purpose: remove storage index
 * Input  : indexHandle - index handle
-*          storageId   - database id of storage
+*          storageId   - index id of storage
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
