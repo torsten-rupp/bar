@@ -4706,8 +4706,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
   FileHandle                fileHandle;
-  bool                      byteCompressFlag;
-  bool                      deltaCompressFlag;
+  bool                      tryByteCompressFlag,tryDeltaCompressFlag;
   ArchiveEntryInfo          archiveEntryInfo;
   SemaphoreLock             semaphoreLock;
   uint64                    entryDoneSize;
@@ -4819,12 +4818,12 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   if (!createInfo->jobOptions->noStorageFlag)
   {
     // check if file data should be byte compressed
-    byteCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
-                       && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT);
+    tryByteCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
+                          && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
-    deltaCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
-                        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta);
+    tryDeltaCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
+                           && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta);
 
     // create new archive file entry
     error = Archive_newFileEntry(&archiveEntryInfo,
@@ -4833,8 +4832,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
                                  fileName,
                                  &fileInfo,
                                  &fileExtendedAttributeList,
-                                 deltaCompressFlag,
-                                 byteCompressFlag
+                                 tryDeltaCompressFlag,
+                                 tryByteCompressFlag
                                 );
     if (error != ERROR_NONE)
     {
@@ -4987,8 +4986,23 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
     if (!createInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"OK (%llu bytes, ratio %.1f%%)\n",fileInfo.size,compressionRatio);
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(fileName));
+      if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
+          || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
+         )
+      {
+        printInfo(1,"OK (%llu bytes, ratio %.1f%%)\n",
+                  fileInfo.size,
+                  compressionRatio
+                 );
+        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(fileName));
+      }
+      else
+      {
+        printInfo(1,"OK (%llu bytes)\n",
+                  fileInfo.size
+                 );
+        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(fileName));
+      }
     }
     else
     {
@@ -5052,8 +5066,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   DeviceHandle     deviceHandle;
   bool             fileSystemFlag;
   FileSystemHandle fileSystemHandle;
-  bool             byteCompressFlag;
-  bool             deltaCompressFlag;
+  bool             tryByteCompressFlag,tryDeltaCompressFlag;
   SemaphoreLock    semaphoreLock;
   uint64           entryDoneSize;
   uint64           block;
@@ -5168,12 +5181,12 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   if (!createInfo->jobOptions->noStorageFlag)
   {
     // check if image data should be byte compressed
-    byteCompressFlag =    (deviceInfo.size > globalOptions.compressMinFileSize)
-                       && !PatternList_match(createInfo->compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT);
+    tryByteCompressFlag =    (deviceInfo.size > globalOptions.compressMinFileSize)
+                          && !PatternList_match(createInfo->compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
-    deltaCompressFlag =    (deviceInfo.size > globalOptions.compressMinFileSize)
-                        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta);
+    tryDeltaCompressFlag =    (deviceInfo.size > globalOptions.compressMinFileSize)
+                           && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta);
 
     // create new archive image entry
     error = Archive_newImageEntry(&archiveEntryInfo,
@@ -5182,8 +5195,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                                   deviceName,
                                   &deviceInfo,
                                   fileSystemHandle.type,
-                                  deltaCompressFlag,
-                                  byteCompressFlag
+                                  tryDeltaCompressFlag,
+                                  tryByteCompressFlag
                                  );
     if (error != ERROR_NONE)
     {
@@ -5344,12 +5357,25 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 
     if (!createInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"OK (%s, %llu bytes, ratio %.1f%%)\n",
-                fileSystemFlag ? FileSystem_getName(fileSystemHandle.type) : "raw",
-                deviceInfo.size,
-                compressionRatio
-               );
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(deviceName));
+      if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
+          || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
+         )
+      {
+        printInfo(1,"OK (%s, %llu bytes, ratio %.1f%%)\n",
+                  fileSystemFlag ? FileSystem_getName(fileSystemHandle.type) : "raw",
+                  deviceInfo.size,
+                  compressionRatio
+                 );
+        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(deviceName));
+      }
+      else
+      {
+        printInfo(1,"OK (%s, %llu bytes)\n",
+                  fileSystemFlag ? FileSystem_getName(fileSystemHandle.type) : "raw",
+                  deviceInfo.size
+                 );
+        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(deviceName));
+      }
     }
     else
     {
@@ -5773,8 +5799,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
   FileHandle                fileHandle;
-  bool                      byteCompressFlag;
-  bool                      deltaCompressFlag;
+  bool                      tryByteCompressFlag,tryDeltaCompressFlag;
   ArchiveEntryInfo          archiveEntryInfo;
   SemaphoreLock             semaphoreLock;
   uint64                    entryDoneSize;
@@ -5888,12 +5913,12 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   if (!createInfo->jobOptions->noStorageFlag)
   {
     // check if file data should be byte compressed
-    byteCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
-                       && !PatternList_matchStringList(createInfo->compressExcludePatternList,nameList,PATTERN_MATCH_MODE_EXACT);
+    tryByteCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
+                          && !PatternList_matchStringList(createInfo->compressExcludePatternList,nameList,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
-    deltaCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
-                        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta);
+    tryDeltaCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
+                           && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta);
 
     // create new archive hard link entry
     error = Archive_newHardLinkEntry(&archiveEntryInfo,
@@ -5902,8 +5927,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                      nameList,
                                      &fileInfo,
                                      &fileExtendedAttributeList,
-                                     deltaCompressFlag,
-                                     byteCompressFlag
+                                     tryDeltaCompressFlag,
+                                     tryByteCompressFlag
                                     );
     if (error != ERROR_NONE)
     {
@@ -6035,11 +6060,23 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
     if (!createInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"OK (%llu bytes, ratio %.1f%%)\n",
-                fileInfo.size,
-                compressionRatio
-               );
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(StringList_first(nameList,NULL)));
+      if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
+          || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
+         )
+      {
+        printInfo(1,"OK (%llu bytes, ratio %.1f%%)\n",
+                  fileInfo.size,
+                  compressionRatio
+                 );
+        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(StringList_first(nameList,NULL)));
+      }
+      else
+      {
+        printInfo(1,"OK (%llu bytes)\n",
+                  fileInfo.size
+                 );
+        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(StringList_first(nameList,NULL)));
+      }
     }
     else
     {
@@ -6552,15 +6589,6 @@ Errors Command_create(ConstString                  jobUUID,
                 );
   AUTOFREE_ADD(&autoFreeList,&createInfo,{ doneCreateInfo(&createInfo); });
 
-  // init threads
-  createThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-  createThreads = (Thread*)malloc(createThreadCount*sizeof(Thread));
-  if (createThreads == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  AUTOFREE_ADD(&autoFreeList,createThreads,{ free(createThreads); });
-
   // mount devices
   LIST_ITERATE(mountList,mountNode)
   {
@@ -6771,11 +6799,18 @@ Errors Command_create(ConstString                  jobUUID,
   AUTOFREE_ADD(&autoFreeList,&storageThread,{ MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue); Thread_join(&storageThread); Thread_done(&storageThread); });
 
   // start create threads
+  createThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  createThreads = (Thread*)malloc(createThreadCount*sizeof(Thread));
+  if (createThreads == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  AUTOFREE_ADD(&autoFreeList,createThreads,{ free(createThreads); });
   for (i = 0; i < createThreadCount; i++)
   {
     if (!Thread_init(&createThreads[i],"BAR create",globalOptions.niceLevel,createThreadCode,&createInfo))
     {
-      HALT_FATAL_ERROR("Cannot initialize create thread!");
+      HALT_FATAL_ERROR("Cannot initialize create thread #%d!",i);
     }
   }
 
@@ -6795,7 +6830,7 @@ Errors Command_create(ConstString                  jobUUID,
   {
     if (!Thread_join(&createThreads[i]))
     {
-      HALT_FATAL_ERROR("Cannot stop create thread!");
+      HALT_FATAL_ERROR("Cannot stop create thread #%d!",i);
     }
     Thread_done(&createThreads[i]);
   }

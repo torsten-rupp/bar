@@ -213,7 +213,6 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
   // open archive
   error = Archive_open(&archiveHandle,
                        &storageInfo,
-                       storageSpecifier,
                        NULL,  // archive name
                        deltaSourceList,
                        jobOptions,

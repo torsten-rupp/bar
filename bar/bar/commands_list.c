@@ -2073,7 +2073,6 @@ remoteBarFlag=FALSE;
         // open archive
         error = Archive_open(&archiveHandle,
                              &storageInfo,
-                             storageSpecifier,
                              archiveName,
                              NULL,  // deltaSourceList
                              jobOptions,

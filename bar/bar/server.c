@@ -5643,7 +5643,6 @@ LOCAL void indexThreadCode(void)
             error = Archive_updateIndex(indexHandle,
                                         storageId,
                                         &storageInfo,
-                                        storageName,
                                         &jobOptions,
                                         &totalTimeLastChanged,
                                         &totalEntryCount,
@@ -13569,7 +13568,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   // open archive
   error = Archive_open(&archiveHandle,
                        &storageInfo,
-                       &storageSpecifier,
                        NULL,  // archive name
                        NULL,  // deltaSourceList
                        &clientInfo->jobOptions,

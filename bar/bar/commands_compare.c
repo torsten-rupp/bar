@@ -173,7 +173,6 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
   // open archive
   error = Archive_open(&archiveHandle,
                        &storageInfo,
-                       storageSpecifier,
                        archiveName,
                        deltaSourceList,
                        jobOptions,

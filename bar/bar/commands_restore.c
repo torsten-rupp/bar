@@ -2396,7 +2396,6 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
   // open archive
   error = Archive_open(&archiveHandle,
                        &storageInfo,
-                       storageSpecifier,
                        archiveName,
                        restoreInfo->deltaSourceList,
                        restoreInfo->jobOptions,
