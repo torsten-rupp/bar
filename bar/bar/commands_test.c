@@ -54,16 +54,10 @@
 // test info
 typedef struct
 {
-//  ConstString                 *printableStorageName;               // printable storage name
-//  ConstString                 archiveName;
   StorageSpecifier            *storageSpecifier;                  // storage specifier structure
   FragmentList                *fragmentList;
-//TODO: needed?
-  ConstString                 jobUUID;                            // unique job id to store or NULL
-  ConstString                 scheduleUUID;                       // unique schedule id to store or NULL
   const EntryList             *includeEntryList;                  // list of included entries
   const PatternList           *excludePatternList;                // list of exclude patterns
-  const PatternList           *compressExcludePatternList;        // exclude compression pattern list
   DeltaSourceList             *deltaSourceList;                   // delta sources
   const JobOptions            *jobOptions;
   GetPasswordFunction         getPasswordFunction;
@@ -73,11 +67,7 @@ typedef struct
   bool                        *pauseTestFlag;                     // TRUE for pause creation
   bool                        *requestedAbortFlag;                // TRUE to abort create
 
-  StorageInfo                 storageInfo;                        // storage info
-
   MsgQueue                    entryMsgQueue;                      // queue with entries to store
-
-  ArchiveHandle               archiveHandle;
 
   Errors                      failError;                          // failure error
 } TestInfo;
@@ -85,11 +75,9 @@ typedef struct
 // entry message send to test threads
 typedef struct
 {
+  StorageInfo       *storageInfo;
   ArchiveEntryTypes archiveEntryType;
   uint64            offset;
-  FileTypes         fileType;
-  String            name;                                         // file/image/directory/link/special name
-  StringList        nameList;                                     // list of hard link names
 } EntryMsg;
 
 /***************************** Variables *******************************/
@@ -1031,18 +1019,12 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
 LOCAL void testThreadCode(TestInfo *testInfo)
 {
   byte              *buffer;
+
   ArchiveHandle     archiveHandle;
   EntryMsg          entryMsg;
   Errors            error;
-//  ArchiveEntryInfo  archiveEntryInfo;
-  ArchiveEntryTypes archiveEntryType;
 
   assert(testInfo != NULL);
-//  assert(storageSpecifier != NULL);
-//  assert(includeEntryList != NULL);
-//  assert(excludePatternList != NULL);
-//  assert(jobOptions != NULL);
-//  assert(fragmentList != NULL);
 
   // init variables
   buffer = (byte*)malloc(BUFFER_SIZE);
@@ -1053,6 +1035,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 
   // test entries
   while (   (testInfo->failError == ERROR_NONE)
+//TODO
 //         && !isAborted(testInfo)
          && MsgQueue_get(&testInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
         )
@@ -1060,8 +1043,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 //fprintf(stderr,"%s, %d: %p %d %llu\n",__FILE__,__LINE__,pthread_self(),entryMsg.archiveEntryType,entryMsg.offset);
     // open archive
     error = Archive_open(&archiveHandle,
-                         &testInfo->storageInfo,
-                         testInfo->storageSpecifier,
+                         entryMsg.storageInfo,
                          NULL,  // archiveName,
                          testInfo->deltaSourceList,
                          testInfo->jobOptions,
@@ -1075,7 +1057,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
                  Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
                  Error_getText(error)
                 );
-  //    (void)Storage_done(&storageInfo);
       free(buffer);
       if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
       break;
@@ -1086,16 +1067,16 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     if (error != ERROR_NONE)
     {
       printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-                 String_cString(Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL)),
+                 Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
                  Error_getText(error)
                 );
-      return error;
+      if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
+      break;
     }
 
     switch (entryMsg.archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
-#if 1
         error = testFileEntry(&archiveHandle,
                               testInfo->includeEntryList,
                               testInfo->excludePatternList,
@@ -1110,10 +1091,8 @@ LOCAL void testThreadCode(TestInfo *testInfo)
           if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
           break;
         }
-#endif
         break;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
-#if 0
         error = testImageEntry(&archiveHandle,
                                testInfo->includeEntryList,
                                testInfo->excludePatternList,
@@ -1128,10 +1107,8 @@ LOCAL void testThreadCode(TestInfo *testInfo)
           if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
           break;
         }
-#endif
         break;
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-#if 0
         error = testDirectoryEntry(&archiveHandle,
                                    testInfo->includeEntryList,
                                    testInfo->excludePatternList,
@@ -1143,10 +1120,8 @@ LOCAL void testThreadCode(TestInfo *testInfo)
           if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
           break;
         }
-#endif
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
-#if 0
         error = testLinkEntry(&archiveHandle,
                               testInfo->includeEntryList,
                               testInfo->excludePatternList,
@@ -1158,10 +1133,8 @@ LOCAL void testThreadCode(TestInfo *testInfo)
           if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
           break;
         }
-#endif
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
-#if 0
         error = testHardLinkEntry(&archiveHandle,
                                   testInfo->includeEntryList,
                                   testInfo->excludePatternList,
@@ -1176,10 +1149,8 @@ LOCAL void testThreadCode(TestInfo *testInfo)
           if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
           break;
         }
-#endif
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
-#if 0
         error = testSpecialEntry(&archiveHandle,
                                  testInfo->includeEntryList,
                                  testInfo->excludePatternList,
@@ -1191,7 +1162,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
           if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
           break;
         }
-#endif
         break;
       default:
         #ifndef NDEBUG
@@ -1216,7 +1186,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 * Name   : testArchiveContent
 * Purpose: test archive content
 * Input  : storageSpecifier    - storage specifier
-*          archiveName         - archive name
+*          fileName            - file name (can be NULL)
 *          includeEntryList    - include entry list
 *          excludePatternList  - exclude pattern list
 *          deltaSourceList     - delta source list
@@ -1231,7 +1201,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 \***********************************************************************/
 
 LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
-                                ConstString         archiveName,
+                                ConstString         fileName,
                                 const EntryList     *includeEntryList,
                                 const PatternList   *excludePatternList,
                                 DeltaSourceList     *deltaSourceList,
@@ -1244,9 +1214,9 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
 {
   byte              *buffer;
   TestInfo          testInfo;
-  Thread            *createThreads;
-  uint              createThreadCount;
-//  Storage     storage;
+  StorageInfo       storageInfo;
+  Thread            *testThreads;
+  uint              testThreadCount;
   uint              i;
   Errors            failError;
   Errors            error;
@@ -1269,7 +1239,6 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   }
 
   // init test info
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   initTestInfo(&testInfo,
                fragmentList,
                storageSpecifier,
@@ -1284,7 +1253,7 @@ NULL,  //               requestedAbortFlag,
 //  AUTOFREE_ADD(&autoFreeList,&createInfo,{ doneCreateInfo(&createInfo); });
 
   // init storage
-  error = Storage_init(&testInfo.storageInfo,
+  error = Storage_init(&storageInfo,
                        storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
@@ -1299,36 +1268,34 @@ NULL,  //               requestedAbortFlag,
                Storage_getPrintableNameCString(storageSpecifier,NULL),
                Error_getText(error)
               );
+    doneTestInfo(&testInfo);
     free(buffer);
     return error;
   }
 
-  // init threads
-  createThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-  createThreads = (Thread*)malloc(createThreadCount*sizeof(Thread));
-  if (createThreads == NULL)
+#ifdef BAR_PARALLEL
+  // start test threads
+  testThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+fprintf(stderr,"%s, %d: --------------------------- testThreadCount=%d\n",__FILE__,__LINE__,testThreadCount);
+  testThreads = (Thread*)malloc(testThreadCount*sizeof(Thread));
+  if (testThreads == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-//  AUTOFREE_ADD(&autoFreeList,createThreads,{ free(createThreads); });
-
-#ifdef BAR_PARALLEL
-  // start test threads
-fprintf(stderr,"%s, %d: --------------------------- createThreadCount=%d\n",__FILE__,__LINE__,createThreadCount);
-  for (i = 0; i < createThreadCount; i++)
+//  AUTOFREE_ADD(&autoFreeList,initThreads,{ free(initThreads); });
+  for (i = 0; i < testThreadCount; i++)
   {
-    if (!Thread_init(&createThreads[i],"BAR test",globalOptions.niceLevel,testThreadCode,&testInfo))
+    if (!Thread_init(&testThreads[i],"BAR test",globalOptions.niceLevel,testThreadCode,&testInfo))
     {
-      HALT_FATAL_ERROR("Cannot initialize create thread!");
+      HALT_FATAL_ERROR("Cannot initialize test thread #%d!",i);
     }
   }
 #endif
 
   // open archive
   error = Archive_open(&archiveHandle,
-                       &testInfo.storageInfo,
-                       storageSpecifier,
-                       archiveName,
+                       &storageInfo,
+                       fileName,
                        deltaSourceList,
                        jobOptions,
                        getPasswordFunction,
@@ -1341,7 +1308,9 @@ fprintf(stderr,"%s, %d: --------------------------- createThreadCount=%d\n",__FI
                Storage_getPrintableNameCString(storageSpecifier,NULL),
                Error_getText(error)
               );
-    (void)Storage_done(&testInfo.storageInfo);
+    free(fprintf);
+    (void)Storage_done(&storageInfo);
+    doneTestInfo(&testInfo);
     free(buffer);
     return error;
   }
@@ -1372,6 +1341,8 @@ fprintf(stderr,"%s, %d: --------------------------- createThreadCount=%d\n",__FI
     }
 
 #ifdef BAR_PARALLEL
+    // send entry to test threads
+    entryMsg.storageInfo      = &storageInfo;
     entryMsg.archiveEntryType = archiveEntryType;
     entryMsg.offset           = offset;
     if (!MsgQueue_put(&testInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
@@ -1379,6 +1350,7 @@ fprintf(stderr,"%s, %d: --------------------------- createThreadCount=%d\n",__FI
       HALT_INTERNAL_ERROR("Send message to test threads!");
     }
 
+    // next entry
     error = Archive_skipNextEntry(&archiveHandle);
     if (error != ERROR_NONE)
     {
@@ -1497,20 +1469,23 @@ fprintf(stderr,"%s, %d: --------------------------- createThreadCount=%d\n",__FI
 #ifdef BAR_PARALLEL
   // wait for test threads
   MsgQueue_setEndOfMsg(&testInfo.entryMsgQueue);
-  for (i = 0; i < createThreadCount; i++)
+  for (i = 0; i < testThreadCount; i++)
   {
-    if (!Thread_join(&createThreads[i]))
+    if (!Thread_join(&testThreads[i]))
     {
-      HALT_INTERNAL_ERROR("Cannot stop test thread!");
+      HALT_INTERNAL_ERROR("Cannot stop test thread #%d!",i);
     }
   }
+  free(testThreads);
 #endif
 
   // done storage
-  (void)Storage_done(&testInfo.storageInfo);
+  (void)Storage_done(&storageInfo);
+
+  // done test info
+  doneTestInfo(&testInfo);
 
   // free resources
-  doneTestInfo(&testInfo);
   free(buffer);
 
   return ERROR_NONE;
@@ -1571,7 +1546,7 @@ Errors Command_test(const StringList    *storageNameList,
       {
         // test archive content
         error = testArchiveContent(&storageSpecifier,
-                                   NULL,
+                                   NULL,  // fileName
                                    includeEntryList,
                                    excludePatternList,
                                    deltaSourceList,
@@ -1587,7 +1562,7 @@ Errors Command_test(const StringList    *storageNameList,
     {
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
-                                        NULL,  // archiveName
+                                        NULL,  // fileName
                                         jobOptions,
                                         SERVER_CONNECTION_PRIORITY_HIGH
                                        );
