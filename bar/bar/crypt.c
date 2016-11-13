@@ -202,7 +202,7 @@ void Crypt_randomize(byte *buffer, uint length)
   assert(buffer != NULL);
 
   #ifdef HAVE_GCRYPT
-    gcry_randomize((unsigned char*)buffer,length,GCRY_STRONG_RANDOM);
+    gcry_create_nonce((unsigned char*)buffer,(size_t)length);
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(buffer);
     UNUSED_VARIABLE(length);
