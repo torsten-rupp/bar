@@ -516,13 +516,16 @@ struct JobOptions
   String                       deviceName;                    // device name to use
   Device                       device;                        // job specific device settings
 
-  uint64                       maxStorageSize;                // max. number of storage bytes for jobs
+  uint64                       maxFragmentSize;               // max. fragment size [bytes]
+  uint64                       maxStorageSize;                // max. storage size [bytes]
 //TODO
 #if 0
   uint                         minKeep,maxKeep;               // min./max keep count
   uint                         maxAge;                        // max. age [days]
 #endif
   uint64                       volumeSize;                    // volume size or 0LL for default [bytes]
+
+  String                       comment;                       // comment
 
   bool                         skipUnreadableFlag;            // TRUE for skipping unreadable files
   bool                         forceDeltaCompressionFlag;     // TRUE to force delta compression of files
