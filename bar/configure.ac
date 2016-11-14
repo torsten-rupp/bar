@@ -3223,6 +3223,9 @@ AC_CHECK_FUNCTION(gethostbyaddr_r,AC_DEFINE(HAVE_GETHOSTBYADDR_R,1,[gethostbyadd
 AC_CHECK_FUNCTION(gethostbyname,  AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available])  ,,winsock2.h)
 AC_CHECK_FUNCTION(gethostbyname_r,AC_DEFINE(HAVE_GETHOSTBYNAME_R,1,[gethostbyname_r() available]),,winsock2.h)
 
+AC_CHECK_FUNCTION(getlogin,  AC_DEFINE(HAVE_GETLOGIN,  1,[getlogin() available]))
+AC_CHECK_FUNCTION(getlogin_r,AC_DEFINE(HAVE_GETLOGIN_R,1,[getlogin_r() available]))
+
 AC_CHECK_FUNCTION(chmod,        AC_DEFINE(HAVE_CHMOD,        1,[chmod() available]))
 AC_CHECK_FUNCTION(chown,        AC_DEFINE(HAVE_CHOWN,        1,[chown() available]))
 AC_CHECK_FUNCTION(lseek64,      AC_DEFINE(HAVE_LSEEK64,      1,[lseek64() available]))

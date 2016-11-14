@@ -251,7 +251,7 @@ typedef struct
 uint64 Misc_getRandom(uint64 min, uint64 max);
 
 /***********************************************************************\
-* Name   : getTimestamp
+* Name   : Misc_getTimestamp
 * Purpose: get timestamp
 * Input  : -
 * Output : -
@@ -378,6 +378,19 @@ const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dat
 \***********************************************************************/
 
 void Misc_udelay(uint64 time);
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : Misc_getCurrentUserName
+* Purpose: get current user name
+* Input  : string - string variable
+* Output : -
+* Return : string with current user name
+* Notes  : -
+\***********************************************************************/
+
+String Misc_getCurrentUserName(String string);
 
 /*---------------------------------------------------------------------*/
 

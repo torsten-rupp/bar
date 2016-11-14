@@ -913,6 +913,30 @@ void Misc_udelay(uint64 time)
 
 /*---------------------------------------------------------------------*/
 
+String Misc_getCurrentUserName(String string)
+{
+  #ifdef HAVE_GETLOGIN_R
+    char buffer[256];
+  #endif
+
+  #ifdef HAVE_GETLOGIN_R
+    if (getlogin_r(buffer,sizeof(buffer)) == 0)
+    {
+      String_setCString(string,buffer);
+    }
+    else
+    {
+      String_clear(string);
+    }
+  #else
+    String_setCString(string,getlogin();
+  #endif
+
+  return string;
+}
+
+/*---------------------------------------------------------------------*/
+
 uint Misc_getId(void)
 {
   static uint id = 0;

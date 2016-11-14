@@ -151,6 +151,12 @@
 /* gethostbyname_r() available */
 #undef HAVE_GETHOSTBYNAME_R
 
+/* getlogin() available */
+#undef HAVE_GETLOGIN
+
+/* getlogin_r() available */
+#undef HAVE_GETLOGIN_R
+
 /* getpwnam_r() available */
 #undef HAVE_GETPWNAM_R
 

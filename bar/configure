@@ -15598,6 +15598,107 @@ fi
 
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for getlogin" >&5
+$as_echo_n "checking for getlogin... " >&6; }
+if ${ac_cv_func_getlogin+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_getlogin="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void getlogin();"; fi`
+                                         #ifdef getlogin
+                                         #else
+                                           return (int)getlogin;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_getlogin=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_getlogin" >&5
+$as_echo "$ac_cv_func_getlogin" >&6; }
+  if test "$ac_cv_func_getlogin" != no; then :
+
+$as_echo "#define HAVE_GETLOGIN 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for getlogin_r" >&5
+$as_echo_n "checking for getlogin_r... " >&6; }
+if ${ac_cv_func_getlogin_r+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_getlogin_r="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void getlogin_r();"; fi`
+                                         #ifdef getlogin_r
+                                         #else
+                                           return (int)getlogin_r;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_getlogin_r=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_getlogin_r" >&5
+$as_echo "$ac_cv_func_getlogin_r" >&6; }
+  if test "$ac_cv_func_getlogin_r" != no; then :
+
+$as_echo "#define HAVE_GETLOGIN_R 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for chmod" >&5
 $as_echo_n "checking for chmod... " >&6; }
 if ${ac_cv_func_chmod+:} false; then :
