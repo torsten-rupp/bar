@@ -455,6 +455,7 @@ ERROR NO_ARCHIVE_FILE_NAME             "no archive file name given"
 ERROR NOT_AN_ARCHIVE_FILE              "not an archive file"
 ERROR ARCHIVE_NOT_FOUND                "archive not found"
 ERROR END_OF_ARCHIVE                   "end of archive"
+ERROR NO_META_ENTRY                    "no meta entry"
 ERROR NO_FILE_ENTRY                    "no file entry"
 ERROR NO_FILE_DATA
   stringCopy(errorText,"no file data entry",sizeof(errorText));
