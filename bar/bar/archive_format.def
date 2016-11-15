@@ -27,6 +27,8 @@
 #
 # BAR0
 # KEY0
+# MTA0
+#   MENT
 # FIL0
 #   FENT
 #   [FEAT]
@@ -200,8 +202,7 @@ const FILE_SYSTEM_TYPE_REISERFS4   = 9;
 
 # ---
 
-# Archive info header. Only used to identify file as a BAR
-# file.
+# info header. Only used to identify file as a BAR
 #
 # parent: none
 # never compress/encrypted
@@ -234,26 +235,33 @@ CHUNK KEY "KEY0" Key
 
 # ----------------------------------------------------------------------
 
-#TODO
-# optional info data
+# meta data (optional)
 #
 # parent: none
 # never compress, encrypted as specified
-CHUNK INFO_DATA "INF0" InfoData
-  uint16 cryptAlgorithm;
-  uint64 salt;
-  string name;
-  string host;
-  string jobUUID;
-  string scheduleUUID;
-  uint16 type;
-  uint64 created;
-  string comment;
-  crc32  crc
+CHUNK META "MTA0" Meta
+  uint16   cryptAlgorithm;
+  byte[64] salt;
+  crc32    crc
+
+# meta entry
+#
+# parent: MTA0
+# never compress, encrypted as specified in MTA0
+CHUNK META_ENTRY "MENT" MetaEntry
+  ENCRYPT
+  string   name;
+  string   host;
+  string   jobUUID;
+  string   scheduleUUID;
+  uint16   type;
+  uint64   created;
+  string   comment;
+  crc32    crc
 
 # ----------------------------------------------------------------------
 
-# file info header
+# file
 #
 # parent: none
 # never compress/encrypted
@@ -261,6 +269,11 @@ CHUNK FILE "FIL0" File
   uint16 compressAlgorithm;
   uint16 cryptAlgorithm;
   crc32  crc
+
+#CONVERT "FIL0" "FIL1"
+#  compressAlgorithm := compressAlgorithm
+#  cryptAlgorithm := cryptAlgorithm
+#  salt := 0
 
 # file entry
 #
@@ -311,7 +324,7 @@ CHUNK FILE_DATA "FDAT" FileData
 
 # ----------------------------------------------------------------------
 
-# image info header
+# image
 #
 # parent: none
 # never compress/encrypted
@@ -357,7 +370,7 @@ CHUNK IMAGE_DATA "IDAT" ImageData
 
 # ----------------------------------------------------------------------
 
-# directory info header
+# directory
 #
 # parent: none
 # never compress/encrypted
@@ -390,7 +403,7 @@ CHUNK DIRECTORY_EXTENDED_ATTRIBUTE "DEAT" DirectoryExtendedAttribute
 
 # ----------------------------------------------------------------------
 
-# (symbolic) link info header
+# (symbolic) link
 #
 # parent: none
 # never compress/encrypted
@@ -424,7 +437,7 @@ CHUNK LINK_EXTENDED_ATTRIBUTE "LEAT" LinkExtendedAttribute
 
 # ----------------------------------------------------------------------
 
-# hard link info header
+# hard link
 #
 # parent: none
 # never compress/encrypted
@@ -490,7 +503,7 @@ CHUNK HARDLINK_DATA "HDAT" HardLinkData
 
 # ----------------------------------------------------------------------
 
-# special info header
+# special
 #
 # parent: none
 # never compress/encrypted
