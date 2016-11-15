@@ -1037,7 +1037,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
          && MsgQueue_get(&testInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
         )
   {
-//fprintf(stderr,"%s, %d: %p %d %llu\n",__FILE__,__LINE__,pthread_self(),entryMsg.archiveEntryType,entryMsg.offset);
+//TODO: open only when changed
     // open archive
     error = Archive_open(&archiveHandle,
                          entryMsg.storageInfo,
@@ -1208,6 +1208,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                excludePatternList,
                deltaSourceList,
                jobOptions,
+//TODO
 NULL,  //               pauseTestFlag,
 NULL,  //               requestedAbortFlag,
                logHandle
