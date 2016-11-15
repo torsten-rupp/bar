@@ -207,10 +207,6 @@ const FILE_SYSTEM_TYPE_REISERFS4   = 9;
 # parent: none
 # never compress/encrypted
 CHUNK BAR "BAR0" Bar
-#TODO creator
-#TODO created
-#TODO host
-#TODO comment
   crc32  crc
 
 # ----------------------------------------------------------------------
@@ -250,12 +246,12 @@ CHUNK META "MTA0" Meta
 # never compress, encrypted as specified in MTA0
 CHUNK META_ENTRY "MENT" MetaEntry
   ENCRYPT
-  string   name;
-  string   host;
+  string   userName;
+  string   hostName;
   string   jobUUID;
   string   scheduleUUID;
-  uint16   type;
-  uint64   created;
+  uint16   archiveType;
+  uint64   createdDateTime;
   string   comment;
   crc32    crc
 
