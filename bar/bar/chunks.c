@@ -1851,8 +1851,6 @@ ulong Chunk_getSize(const ChunkInfo *chunkInfo,
         {
           uint length;
 
-          assert(chunkData != NULL);
-
           length = (uint)chunkInfo->definition[i+1];
           size += ALIGN(length*sizeof(uint8),sizeof(uint32));
 
@@ -1863,8 +1861,6 @@ ulong Chunk_getSize(const ChunkInfo *chunkInfo,
       case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
         {
           uint length;
-
-          assert(chunkData != NULL);
 
           length = (uint)chunkInfo->definition[i+1];
           size += ALIGN(length*sizeof(uint16),sizeof(uint32));
@@ -1877,8 +1873,6 @@ ulong Chunk_getSize(const ChunkInfo *chunkInfo,
         {
           uint length;
 
-          assert(chunkData != NULL);
-
           length = (uint)chunkInfo->definition[i+1];
           size += ALIGN(length*sizeof(uint32),sizeof(uint32));
 
@@ -1889,8 +1883,6 @@ ulong Chunk_getSize(const ChunkInfo *chunkInfo,
       case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
         {
           uint length;
-
-          assert(chunkData != NULL);
 
           length = (uint)chunkInfo->definition[i+1];
           size += ALIGN(length*sizeof(uint64),sizeof(uint32));
