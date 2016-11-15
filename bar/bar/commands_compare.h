@@ -3,7 +3,7 @@
 * $Revision$
 * $Date$
 * $Author$
-* Contents: Backup ARchiver archive test function
+* Contents: Backup ARchiver archive test functions
 * Systems: all
 *
 \***********************************************************************/
