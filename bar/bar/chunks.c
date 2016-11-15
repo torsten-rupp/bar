@@ -189,20 +189,34 @@ LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
             i += 2;
             break;
 
-          case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
-          case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
-          case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
-          case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
-          case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
-          case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
-          case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
-          case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
-          case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
+          case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
             n += 2L;
             doneFlag = TRUE;
             i += 3;
             break;
-          case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
+
+          case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+          case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+          case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+          case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+          case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+          case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+          case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+          case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+          case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+            n += 2L;
+            doneFlag = TRUE;
+            i += 3;
+            break;
+          case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
             n += 2L+2L;
             doneFlag = TRUE;
             i += 3;
@@ -599,20 +613,48 @@ LOCAL void initDefinition(const char *__fileName__,
             i += 2;
           }
           break;
-        case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          memset((byte*)chunkData+definition[i+2],0,definition[i+1]*sizeof(byte));
+          i += 3;
+          break;
+        case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          memset((byte*)chunkData+definition[i+2],0,definition[i+1]*sizeof(uint8));
+          i += 3;
+          break;
+        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          memset((byte*)chunkData+definition[i+2],0,definition[i+1]*sizeof(uint16));
+          i += 3;
+          break;
+        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          memset((byte*)chunkData+definition[i+2],0,definition[i+1]*sizeof(uint32));
+          i += 3;
+          break;
+        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          memset((byte*)chunkData+definition[i+2],0,definition[i+1]*sizeof(uint64));
+          i += 3;
+          break;
+        case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
           (*((uint* )((byte*)chunkData+definition[i+1]))) = 0;
           (*((void**)((byte*)chunkData+definition[i+2]))) = NULL;
           i += 3;
           break;
-        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          memset((byte*)chunkData+definition[i+2],0,definition[i+1]*sizeof(String*));
+          i += 3;
+          break;
+        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
           (*((uint*   )((byte*)chunkData+definition[i+1]))) = 0;
           (*((String**)((byte*)chunkData+definition[i+2]))) = NULL;
           i += 3;
@@ -700,18 +742,28 @@ LOCAL Errors doneDefinition(const char *__fileName__,
           String_delete(*((String*)((byte*)chunkData+definition[i+1])));
           i += 2;
           break;
-        case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
           i += 3;
           break;
-        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
           i += 3;
           break;
         case CHUNK_DATATYPE_CRC32:
@@ -787,17 +839,18 @@ LOCAL void resetDefinition(const int *definition,
           String_clear(*((String*)((byte*)chunkData+definition[i+1])));
           i += 2;
           break;
-        case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
           {
-#if 1
+//TODO
+#if 0
             uint arrayLength;
             void *arrayData;
 
@@ -809,14 +862,55 @@ LOCAL void resetDefinition(const int *definition,
               free(arrayData);
             }
 #endif
+//            (*((uint* )((byte*)chunkData+definition[i+1]))) = 0;
+//            (*((void**)((byte*)chunkData+definition[i+2]))) = NULL;
+            i += 3;
+          }
+          break;
+        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          {
+            uint   arrayLength;
+            String *strings;
+            uint   z;
+
+            arrayLength = (uint)definition[i+1];
+            strings     = (*((String**)((byte*)chunkData+definition[i+2])));
+            assert(strings != NULL);
+            for (z = 0; z < arrayLength; z++)
+            {
+              String_delete(strings[z]);
+              strings[z] = NULL;
+            }
+            i += 3;
+          }
+          break;
+        case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+          {
+            uint arrayLength;
+            void *arrayData;
+
+            arrayLength = (*((uint* )((byte*)chunkData+definition[i+1])));
+            arrayData   = (*((void**)((byte*)chunkData+definition[i+2])));
+            if (arrayLength > 0)
+            {
+              assert(arrayData != NULL);
+              free(arrayData);
+            }
             (*((uint* )((byte*)chunkData+definition[i+1]))) = 0;
             (*((void**)((byte*)chunkData+definition[i+2]))) = NULL;
             i += 3;
           }
           break;
-        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
           {
-#if 1
             uint   arrayLength;
             String *strings;
             uint   z;
@@ -832,7 +926,6 @@ LOCAL void resetDefinition(const int *definition,
               }
               free(strings);
             }
-#endif
             (*((uint* )((byte*)chunkData+definition[i+1]))) = 0;
             (*((void**)((byte*)chunkData+definition[i+2]))) = NULL;
             i += 3;
@@ -1024,16 +1117,103 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
           }
           break;
 
-        case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          {
+            uint arrayLength;
+            void *arrayData;
+
+            // get array length
+            arrayLength = (uint)definition[i+1];
+
+            switch (definition[i+0])
+            {
+              case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+                {
+                  ulong size;
+
+                  size = 0L;
+                  switch (definition[i+0])
+                  {
+                    case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+                    case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+                    case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED: size = 1L; break;
+                    case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+                    case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED: size = 2L; break;
+                    case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+                    case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED: size = 4L; break;
+                    case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+                    case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED: size = 8L; break;
+                  }
+
+                  // get array data
+                  error = getChunkBuffer(&chunkBuffer,&p,(ulong)arrayLength*size);
+                  if (error != ERROR_NONE) break;
+                  crc = crc32(crc,p,(ulong)arrayLength*size);
+
+                  arrayData = (void*)((byte*)chunkData+definition[i+2]);
+                  memcpy(arrayData,p,(ulong)arrayLength*size);
+                }
+                break;
+              case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+                {
+                  String *strings;
+                  uint   z;
+                  uint16 stringLength;
+
+                  // get array data
+                  strings = (String*)((byte*)chunkData+definition[i+2]);
+                  for (z = 0; z < arrayLength; z++)
+                  {
+                    // get string length (16bit value)
+                    error = getChunkBuffer(&chunkBuffer,&p,2L);
+                    if (error != ERROR_NONE) break;
+                    crc = crc32(crc,p,2);
+                    stringLength = ntohs(*((uint16*)p));
+
+                    // get string data
+                    error = getChunkBuffer(&chunkBuffer,&p,(ulong)stringLength);
+                    if (error != ERROR_NONE) break;
+                    crc = crc32(crc,p,stringLength);
+                    strings[z] = String_newBuffer(p,stringLength);
+                  }
+
+                  (*((void**)((byte*)chunkData+definition[i+2]))) = strings;
+                }
+                break;
+            }
+            if (error != ERROR_NONE) break;
+
+            i += 3;
+          }
+          break;
+
+        case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
           {
             uint16 arrayLength;
             void   *arrayData;
@@ -1046,30 +1226,30 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
 
             switch (definition[i+0])
             {
-              case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
+              case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
                 {
                   ulong size;
 
                   size = 0L;
                   switch (definition[i+0])
                   {
-                    case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY  :
-                    case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY :
-                    case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY  : size = 1L; break;
-                    case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
-                    case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY : size = 2L; break;
-                    case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
-                    case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY : size = 4L; break;
-                    case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
-                    case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY : size = 8L; break;
+                    case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+                    case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+                    case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC: size = 1L; break;
+                    case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+                    case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC: size = 2L; break;
+                    case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+                    case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC: size = 4L; break;
+                    case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+                    case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC: size = 8L; break;
                   }
 
                   // get array data
@@ -1091,7 +1271,7 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
                   (*((void**)((byte*)chunkData+definition[i+2]))) = arrayData;
                 }
                 break;
-              case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
+              case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
                 {
                   String *strings;
                   uint   z;
@@ -1359,16 +1539,101 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
           }
           break;
 
-        case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
-        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
+        case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          {
+            uint       arrayLength;
+            const void *arrayData;
+            const void *stringData;
+            uint16     stringLength;
+
+            arrayLength = (uint)definition[i+1];
+            arrayData   = (void*)((byte*)chunkData+definition[i+2]);
+
+            switch (definition[i+0])
+            {
+              case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+              case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+                {
+                  ulong size;
+
+                  size = 0L;
+                  switch (definition[i+0])
+                  {
+                    case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+                    case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+                    case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED: size = 1L; break;
+                    case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+                    case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED: size = 2L; break;
+                    case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+                    case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED: size = 4L; break;
+                    case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+                    case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED: size = 8L; break;
+                  }
+
+                  // put array data
+                  error = putChunkBuffer(&chunkBuffer,arrayData,(ulong)arrayLength*size);
+                  if (error != ERROR_NONE) break;
+                  crc = crc32(crc,arrayData,arrayLength*size);
+                }
+                break;
+              case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+                {
+                  String *strings;
+                  uint   z;
+
+                  // put string data
+                  strings = (String*)arrayData;
+                  for (z = 0; z < arrayLength; z++)
+                  {
+                    stringLength = (uint16)String_length(strings[z]);
+                    stringData   = String_cString(strings[z]);
+
+                    // put string length (16bit value)
+                    p.u16 = htons(stringLength);
+                    error = putChunkBuffer(&chunkBuffer,p.data,2L);
+                    if (error != ERROR_NONE) break;
+                    crc = crc32(crc,p.data,2);
+
+                    // put string data
+                    error = putChunkBuffer(&chunkBuffer,stringData,(ulong)stringLength);
+                    if (error != ERROR_NONE) break;
+                    crc = crc32(crc,stringData,stringLength);
+                  }
+                }
+                break;
+            }
+            if (error != ERROR_NONE) break;
+
+            i += 3;
+          }
+          break;
+
+        case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
           {
             uint16     arrayLength;
             const void *arrayData;
@@ -1386,30 +1651,30 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
 
             switch (definition[i+0])
             {
-              case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
-              case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
+              case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+              case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
                 {
                   ulong size;
 
                   size = 0L;
                   switch (definition[i+0])
                   {
-                    case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY  :
-                    case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY :
-                    case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY  : size = 1L; break;
-                    case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
-                    case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY : size = 2L; break;
-                    case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
-                    case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY : size = 4L; break;
-                    case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
-                    case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY : size = 8L; break;
+                    case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+                    case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+                    case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC: size = 1L; break;
+                    case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+                    case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC: size = 2L; break;
+                    case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+                    case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC: size = 4L; break;
+                    case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+                    case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC: size = 8L; break;
                   }
 
                   // put array data
@@ -1418,7 +1683,7 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
                   crc = crc32(crc,arrayData,arrayLength*size);
                 }
                 break;
-              case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
+              case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
                 {
                   String *strings;
                   uint   z;
@@ -1544,25 +1809,25 @@ ulong Chunk_getSize(const ChunkInfo *chunkInfo,
       case CHUNK_DATATYPE_BYTE:
       case CHUNK_DATATYPE_UINT8:
       case CHUNK_DATATYPE_INT8:
-        size += 1;
+        size += sizeof(uint8);
 
         i += 2;
         break;
       case CHUNK_DATATYPE_UINT16:
       case CHUNK_DATATYPE_INT16:
-        size += 2;
+        size += sizeof(uint16);
 
         i += 2;
         break;
       case CHUNK_DATATYPE_UINT32:
       case CHUNK_DATATYPE_INT32:
-        size += 4;
+        size += sizeof(uint32);
 
         i += 2;
         break;
       case CHUNK_DATATYPE_UINT64:
       case CHUNK_DATATYPE_INT64:
-        size += 8;
+        size += sizeof(uint64);
 
         i += 2;
         break;
@@ -1574,66 +1839,137 @@ ulong Chunk_getSize(const ChunkInfo *chunkInfo,
 
           s = (*((String*)((byte*)chunkData+chunkInfo->definition[i+1])));
           assert(s != NULL);
-          size += 2+String_length(s);
+          size += sizeof(uint16)+String_length(s);
 
           i += 2;
         }
         break;
 
-      case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
-      case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
-      case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
+      case CHUNK_DATATYPE_BYTE |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+      case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+      case CHUNK_DATATYPE_INT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        {
+          uint length;
+
+          assert(chunkData != NULL);
+
+          length = (uint)chunkInfo->definition[i+1];
+          size += ALIGN(length*sizeof(uint8),sizeof(uint32));
+
+          i += 3;
+        }
+        break;
+      case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+      case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        {
+          uint length;
+
+          assert(chunkData != NULL);
+
+          length = (uint)chunkInfo->definition[i+1];
+          size += ALIGN(length*sizeof(uint16),sizeof(uint32));
+
+          i += 3;
+        }
+        break;
+      case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+      case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        {
+          uint length;
+
+          assert(chunkData != NULL);
+
+          length = (uint)chunkInfo->definition[i+1];
+          size += ALIGN(length*sizeof(uint32),sizeof(uint32));
+
+          i += 3;
+        }
+        break;
+      case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+      case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        {
+          uint length;
+
+          assert(chunkData != NULL);
+
+          length = (uint)chunkInfo->definition[i+1];
+          size += ALIGN(length*sizeof(uint64),sizeof(uint32));
+
+          i += 3;
+        }
+        break;
+      case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        {
+          uint   length;
+          String s;
+
+          assert(chunkData != NULL);
+
+          length = (uint)chunkInfo->definition[i+1];
+          while (length > 0)
+          {
+            s = (*((String*)((byte*)chunkData+chunkInfo->definition[i+1])));
+            assert(s != NULL);
+            size += sizeof(uint16)+String_length(s);
+          }
+
+          i += 3;
+        }
+        break;
+      case CHUNK_DATATYPE_BYTE |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+      case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+      case CHUNK_DATATYPE_INT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
         {
           uint length;
 
           assert(chunkData != NULL);
 
           length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
-          size += 2+ALIGN(length*1,4);
+          size += sizeof(uint16)+ALIGN(length*sizeof(uint8),sizeof(uint32));
 
           i += 3;
         }
         break;
-      case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
-      case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
+      case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+      case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
         {
           uint length;
 
           assert(chunkData != NULL);
 
           length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
-          size += 2+ALIGN(length*2,4);
+          size += sizeof(uint16)+ALIGN(length*sizeof(uint16),sizeof(uint32));
 
           i += 3;
         }
         break;
-      case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
-      case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
+      case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+      case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
         {
           uint length;
 
           assert(chunkData != NULL);
 
           length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
-          size += 2+ALIGN(length*4,4);
+          size += sizeof(uint16)+ALIGN(length*sizeof(uint32),sizeof(uint32));
 
           i += 3;
         }
         break;
-      case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
-      case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
+      case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+      case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
         {
           uint length;
 
           assert(chunkData != NULL);
 
           length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
-          size += 2+ALIGN(length*8,4);
+          size += sizeof(uint16)+ALIGN(length*sizeof(uint64),sizeof(uint32));
 
           i += 3;
         }
         break;
-      case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
+      case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
         {
           uint   length;
           String s;
@@ -1641,11 +1977,12 @@ ulong Chunk_getSize(const ChunkInfo *chunkInfo,
           assert(chunkData != NULL);
 
           length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
+          size += sizeof(uint16);
           while (length > 0)
           {
             s = (*((String*)((byte*)chunkData+chunkInfo->definition[i+1])));
             assert(s != NULL);
-            size += 2+String_length(s);
+            size += sizeof(uint16)+String_length(s);
           }
 
           i += 3;
@@ -1653,7 +1990,7 @@ ulong Chunk_getSize(const ChunkInfo *chunkInfo,
         break;
 
       case CHUNK_DATATYPE_CRC32:
-        size += 4;
+        size += sizeof(uint32);
 
         i += 2;
         break;
