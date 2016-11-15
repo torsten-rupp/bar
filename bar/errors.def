@@ -466,8 +466,6 @@ ERROR NO_FILE_DATA
     stringConcat(errorText,"'",sizeof(errorText));
   }
 
-ERROR INCOMPLETE_ARCHIVE               "incomplete archive"
-
 ERROR NO_DIRECTORY_ENTRY               "no directory entry"
 ERROR NO_LINK_ENTRY                    "no link entry"
 ERROR NO_HARDLINK_ENTRY                "no hard link entry"
@@ -475,6 +473,7 @@ ERROR NO_SPECIAL_ENTRY                 "no special entry"
 ERROR NO_IMAGE_ENTRY                   "no image entry"
 ERROR NO_IMAGE_DATA                    "no image data entry"
 ERROR END_OF_DATA                      "end of data"
+ERROR INCOMPLETE_ARCHIVE               "incomplete archive"
 ERROR INSUFFICIENT_SPLIT_NUMBERS       "insufficient split number digits in name"
 
 // Note: because of name collisions with Windows include use CRC_ instead of CRC
@@ -533,6 +532,8 @@ ERROR CORRUPT_DATA
 
 ERROR INVALID_CHUNK_SIZE               "invalid chunk size"
 ERROR UNKNOWN_CHUNK                    "unknown chunk"
+
+ERROR INVALID_SIGNATURE                "invalid signature"
 
 // --- incremental files ------------------------------------------------
 ERROR NOT_AN_INCREMENTAL_FILE          "invalid incremental file"
