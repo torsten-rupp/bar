@@ -184,12 +184,28 @@ while ($line=<STDIN>)
           exit 1;
         }
       }
+      elsif ($line =~ /^\s*(byte|uint8|int8)\s*\[(\d+)\]\s+(\w+)/)
+      {
+        writeHFile("  $1 $3\[$2\];\n");
+        if ($2%4 > 0) { writeHFile("  uint8 pad".$n."[".($2%4)."];\n"); }
+        push(@parseDefinitions,$DEFINITION_TYPES->{$1}."|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED");
+        push(@parseDefinitions,"$2");
+        push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$3)");
+      }
       elsif ($line =~ /^\s*(byte|uint8|int8)\s+(\w+)/)
       {
         writeHFile("  $1 $2;\n");
         writeHFile("  uint8 pad".$n."[3];\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2)");
+      }
+      elsif ($line =~ /^\s*(uint16|int16)\s*\[(\d+)\]\s+(\w+)/)
+      {
+        writeHFile("  $1 $3\[$2\];\n");
+        if ($2%2 > 0) { writeHFile("  uint8 pad".$n."[".($2%2*2)."];\n"); }
+        push(@parseDefinitions,$DEFINITION_TYPES->{$1}."|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED");
+        push(@parseDefinitions,"$2");
+        push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$3)");
       }
       elsif ($line =~ /^\s*(uint16|int16)\s+(\w+)/)
       {
@@ -198,11 +214,25 @@ while ($line=<STDIN>)
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2)");
       }
+      elsif ($line =~ /^\s*(uint32|int32)\s*\[(\d+)\]\s+(\w+)/)
+      {
+        writeHFile("  $1 $3\[$2\];\n");
+        push(@parseDefinitions,$DEFINITION_TYPES->{$1}."|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED");
+        push(@parseDefinitions,"$2");
+        push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$3)");
+      }
       elsif ($line =~ /^\s*(uint32|int32)\s+(\w+)/)
       {
         writeHFile("  $1 $2;\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2)");
+      }
+      elsif ($line =~ /^\s*(uint64|int64)\s*\[(\d+)\]\s+(\w+)/)
+      {
+        writeHFile("  $1 $3\[$2\];\n");
+        push(@parseDefinitions,$DEFINITION_TYPES->{$1}."|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED");
+        push(@parseDefinitions,"$2");
+        push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$3)");
       }
       elsif ($line =~ /^\s*(uint64|int64)\s+(\w+)/)
       {
@@ -223,7 +253,7 @@ while ($line=<STDIN>)
         writeHFile("    uint length;\n");
         writeHFile("    $1 *data;\n");
         writeHFile("  } $2;\n");
-        push(@parseDefinitions,$DEFINITION_TYPES->{$1}."|CHUNK_DATATYPE_ARRAY");
+        push(@parseDefinitions,$DEFINITION_TYPES->{$1}."|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC");
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2.length)");
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2.data)");
       }
