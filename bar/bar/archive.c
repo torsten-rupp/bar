@@ -773,19 +773,22 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
 }
 
 /***********************************************************************\
-* Name   : writeFileInfo
-* Purpose: write archive file info chunk
+* Name   : writeHeader
+* Purpose: write archive header chunks
 * Input  : archiveHandle - archive handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeFileInfo(ArchiveHandle *archiveHandle)
+LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
 {
-  Errors    error;
-  ChunkInfo chunkInfoBar;
-  ChunkKey  chunkBar;
+  Errors         error;
+  ChunkInfo      chunkInfoBar;
+  ChunkKey       chunkBar;
+  ChunkMeta      chunkMeta;
+  ChunkMetaEntry chunkMetaEntry;
+  CryptInfo      cryptInfo;
 
   assert(archiveHandle != NULL);
 
@@ -805,21 +808,139 @@ LOCAL Errors writeFileInfo(ArchiveHandle *archiveHandle)
     return error;
   }
 
-  // write header
+  // init meta chunk
+  error = Chunk_init(&chunkMeta.info,
+                     NULL,  // parentChunkInfo
+                     archiveHandle->chunkIO,
+                     archiveHandle->chunkIOUserData,
+                     CHUNK_ID_META,
+                     CHUNK_DEFINITION_META,
+                     0,  // alignment,
+                     NULL,  // cryptInfo,
+                     &chunkMeta
+                    );
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkInfoBar);
+    return error;
+  }
+  chunkMeta.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithm);
+  memcpy(chunkMeta.salt,archiveHandle->cryptSalt,sizeof(chunkMeta.salt));
+
+  // init crypt
+  error = Crypt_init(&cryptInfo,
+                     archiveHandle->jobOptions->cryptAlgorithm,
+                     archiveHandle->cryptPassword
+                    );
+  if (error != ERROR_NONE)
+  {
+//    AutoFree_cleanup(&autoFreeList);
+    Chunk_done(&chunkInfoBar);
+    return error;
+  }
+//  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+//  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileEntry.cryptInfo,{ Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo); });
+
+  // init meta entry chunk
+  error = Chunk_init(&chunkMetaEntry.info,
+                     &chunkMeta.info,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
+                     CHUNK_ID_META_ENTRY,
+                     CHUNK_DEFINITION_META_ENTRY,
+                     archiveHandle->blockLength,
+                     &cryptInfo,
+                     &chunkMetaEntry
+                    );
+  if (error != ERROR_NONE)
+  {
+    Crypt_done(&cryptInfo);
+    Chunk_done(&chunkMeta.info);
+    Chunk_done(&chunkInfoBar);
+    return error;
+  }
+/*
+  uint16 cryptAlgorithm;
+  uint64 salt;
+  string name;
+  string host;
+  string jobUUID;
+  string scheduleUUID;
+  uint16 type;
+  uint64 created;
+  string comment;
+*/
+//TODO
+  Misc_getCurrentUserName(chunkMetaEntry.name);
+  Network_getHostName(chunkMetaEntry.host);
+  String_set(chunkMetaEntry.jobUUID,archiveHandle->jobUUID);
+  String_set(chunkMetaEntry.scheduleUUID,archiveHandle->scheduleUUID);
+  chunkMetaEntry.type           = archiveHandle->jobOptions->archiveType;
+  chunkMetaEntry.created        = Misc_getCurrentDateTime();//0LL;//archiveHandle->created;
+  String_set(chunkMetaEntry.comment,archiveHandle->jobOptions->comment);
+
+  // write header chunks
   error = Chunk_create(&chunkInfoBar);
   if (error != ERROR_NONE)
   {
+    Chunk_done(&chunkMetaEntry.info);
+    Crypt_done(&cryptInfo);
+    Chunk_done(&chunkMeta.info);
+    Chunk_done(&chunkInfoBar);
+    return error;
+  }
+  error = Chunk_create(&chunkMeta.info);
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkMetaEntry.info);
+    Crypt_done(&cryptInfo);
+    Chunk_done(&chunkMeta.info);
+    Chunk_done(&chunkInfoBar);
+    return error;
+  }
+  error = Chunk_create(&chunkMetaEntry.info);
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkMetaEntry.info);
+    Crypt_done(&cryptInfo);
+    Chunk_done(&chunkMeta.info);
+    Chunk_done(&chunkInfoBar);
+    return error;
+  }
+
+  // close chunks
+  error = Chunk_close(&chunkMetaEntry.info);
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkMetaEntry.info);
+    Crypt_done(&cryptInfo);
+    Chunk_done(&chunkMeta.info);
+    Chunk_done(&chunkInfoBar);
+    return error;
+  }
+  error = Chunk_close(&chunkMeta.info);
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkMetaEntry.info);
+    Crypt_done(&cryptInfo);
+    Chunk_done(&chunkMeta.info);
+    Chunk_done(&chunkInfoBar);
+    return error;
+  }
+  error = Chunk_close(&chunkInfoBar);
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkMetaEntry.info);
+    Crypt_done(&cryptInfo);
+    Chunk_done(&chunkMeta.info);
     Chunk_done(&chunkInfoBar);
     return error;
   }
 
   // free resources
-  error = Chunk_close(&chunkInfoBar);
-  if (error != ERROR_NONE)
-  {
-    Chunk_done(&chunkInfoBar);
-    return error;
-  }
+  Chunk_done(&chunkMetaEntry.info);
+  Crypt_done(&cryptInfo);
+  Chunk_done(&chunkMeta.info);
   Chunk_done(&chunkInfoBar);
 
   return ERROR_NONE;
@@ -876,13 +997,15 @@ LOCAL Errors writeEncryptionKey(ArchiveHandle *archiveHandle)
     return error;
   }
 
-  // free resources
+  // close chunk
   error = Chunk_close(&chunkInfoKey);
   if (error != ERROR_NONE)
   {
     Chunk_done(&chunkInfoKey);
     return error;
   }
+
+  // free resources
   Chunk_done(&chunkInfoKey);
 
   return ERROR_NONE;
@@ -939,8 +1062,8 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
       AUTOFREE_ADD(&autoFreeList,&archiveHandle->file.fileHandle,{ File_close(&archiveHandle->file.fileHandle); });
       DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
-      // write BAR file info header
-      error = writeFileInfo(archiveHandle);
+      // write BAR header
+      error = writeHeader(archiveHandle);
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
@@ -3282,6 +3405,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   archiveHandle->cryptPasswordReadFlag   = FALSE;
   archiveHandle->cryptKeyData            = NULL;
   archiveHandle->cryptKeyDataLength      = 0;
+  Crypt_randomize(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
 
   archiveHandle->ioType                  = ARCHIVE_IO_TYPE_FILE;
   archiveHandle->file.fileName           = String_new();
@@ -3445,11 +3569,12 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   archiveHandle->logHandle               = logHandle;
 
   Semaphore_init(&archiveHandle->passwordLock);
+  archiveHandle->cryptType               = CRYPT_TYPE_NONE;
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
-  archiveHandle->cryptType               = CRYPT_TYPE_NONE;
   archiveHandle->cryptKeyData            = NULL;
   archiveHandle->cryptKeyDataLength      = 0;
+  memset(archiveHandle->cryptSalt,0,sizeof(archiveHandle->cryptSalt));
 
   archiveHandle->ioType                  = ARCHIVE_IO_TYPE_STORAGE_FILE;
   archiveHandle->storage.storageInfo     = storageInfo;
@@ -3817,6 +3942,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
         scanFlag = FALSE;
         break;
+      case CHUNK_ID_META:
       case CHUNK_ID_FILE:
       case CHUNK_ID_IMAGE:
       case CHUNK_ID_DIRECTORY:
@@ -5806,6 +5932,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
         scanMode = FALSE;
         break;
+      case CHUNK_ID_META:
       case CHUNK_ID_FILE:
       case CHUNK_ID_IMAGE:
       case CHUNK_ID_DIRECTORY:
@@ -5911,6 +6038,292 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   }
 
   return ERROR_NONE;
+}
+
+Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
+                             String        name,
+                             String        hostName,
+                             String        jobUUID,
+                             String        scheduleUUID,
+                             ArchiveTypes  *archiveType,
+                             uint64        *createdDateTime,
+                             String        comment
+                            )
+{
+  AutoFreeList    autoFreeList1,autoFreeList2;
+  Errors          error;
+  ChunkInfo       chunkMetaInfo;
+  ChunkMeta       chunkMeta;
+  ChunkHeader     chunkHeader;
+  CryptAlgorithms cryptAlgorithm;
+  uint            blockLength;
+  PasswordHandle  passwordHandle;
+  const Password  *password;
+  bool            passwordFlag;
+  CryptInfo       cryptInfo;
+  ChunkMetaEntry  chunkMetaEntry;
+  uint64          index;
+  bool            decryptedFlag;
+  ChunkHeader     subChunkHeader;
+  bool            foundMetaEntryFlag;
+
+  assert(archiveHandle != NULL);
+  assert(archiveHandle->jobOptions != NULL);
+
+  // check for pending error
+  if (archiveHandle->pendingError != ERROR_NONE)
+  {
+    error = archiveHandle->pendingError;
+    archiveHandle->pendingError = ERROR_NONE;
+    return error;
+  }
+
+  // init variables
+  AutoFree_init(&autoFreeList1);
+
+  // init meta chunk
+  error = Chunk_init(&chunkMeta.info,
+                     NULL,  // parentChunkInfo
+                     archiveHandle->chunkIO,
+                     archiveHandle->chunkIOUserData,
+                     CHUNK_ID_FILE,
+                     CHUNK_DEFINITION_FILE,
+                     0,  // alignment
+                     NULL,  // cryptInfo
+                     &chunkMeta
+                    );
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList1,&chunkMeta.info,{ Chunk_done(&chunkMeta.info); });
+
+  // find next meta chunk
+  do
+  {
+    error = getNextChunkHeader(archiveHandle,&chunkHeader);
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList1);
+      return error;
+    }
+
+    if (chunkHeader.id != CHUNK_ID_FILE)
+    {
+      error = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+      if (error != ERROR_NONE)
+      {
+        AutoFree_cleanup(&autoFreeList1);
+        return error;
+      }
+      continue;
+    }
+  }
+  while (chunkHeader.id != CHUNK_ID_FILE);
+
+  // read meta chunk
+  error = Chunk_open(&chunkMeta.info,
+                     &chunkHeader,
+                     Chunk_getSize(&chunkMeta.info,NULL,0)
+                    );
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    (void)Chunk_close(&chunkMeta.info);
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList1,&chunkMeta.info,{ Chunk_close(&chunkMeta.info); });
+  if (!Crypt_isValidAlgorithm(chunkMeta.cryptAlgorithm))
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return ERROR_INVALID_CRYPT_ALGORITHM;
+  }
+  cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(chunkMeta.cryptAlgorithm);
+
+  // detect block length of used crypt algorithm
+  error = Crypt_getBlockLength(cryptAlgorithm,&blockLength);
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
+  assert(blockLength > 0);
+
+  // try to read meta entry with all passwords
+  AutoFree_init(&autoFreeList2);
+  Chunk_tell(&chunkMeta.info,&index);
+  if (Crypt_isEncrypted(cryptAlgorithm))
+  {
+    if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
+    {
+      assert(archiveHandle->cryptPassword != NULL);
+      password = archiveHandle->cryptPassword;
+    }
+    else
+    {
+      password = getFirstDecryptPassword(&passwordHandle,
+                                         archiveHandle,
+                                         archiveHandle->jobOptions,
+                                         archiveHandle->jobOptions->cryptPasswordMode,
+                                         archiveHandle->getPasswordFunction,
+                                         archiveHandle->getPasswordUserData
+                                        );
+    }
+    passwordFlag  = (password != NULL);
+    decryptedFlag = FALSE;
+  }
+  else
+  {
+    password      = NULL;
+    passwordFlag  = FALSE;
+    decryptedFlag = TRUE;
+  }
+  foundMetaEntryFlag = FALSE;
+  do
+  {
+    // reset
+    error = ERROR_NONE;
+    AutoFree_freeAll(&autoFreeList2);
+    // reset chunk read position
+    Chunk_seek(&chunkMeta.info,index);
+
+    // init meta entry crypt
+    if (error == ERROR_NONE)
+    {
+      error = Crypt_init(&cryptInfo,
+                         cryptAlgorithm,
+                         password
+                        );
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&cryptInfo,{ Crypt_done(&cryptInfo); });
+      }
+    }
+
+    // init meta entry chunk
+    if (error == ERROR_NONE)
+    {
+      error = Chunk_init(&chunkMetaEntry.info,
+                         &chunkMeta.info,
+                         CHUNK_USE_PARENT,
+                         CHUNK_USE_PARENT,
+                         CHUNK_ID_META_ENTRY,
+                         CHUNK_DEFINITION_META_ENTRY,
+                         blockLength,
+                         &cryptInfo,
+                         &chunkMetaEntry
+                        );
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&chunkMetaEntry.info,{ Chunk_done(&chunkMetaEntry.info); });
+      }
+    }
+
+    // try to read meta entry
+    if (error == ERROR_NONE)
+    {
+      while (   !Chunk_eofSub(&chunkMeta.info)
+             && !foundMetaEntryFlag
+             && (error == ERROR_NONE)
+            )
+      {
+        error = Chunk_nextSub(&chunkMeta.info,&subChunkHeader);
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
+
+        switch (subChunkHeader.id)
+        {
+          case CHUNK_ID_META_ENTRY:
+            // read meta entry chunk
+            error = Chunk_open(&chunkMetaEntry.info,
+                               &subChunkHeader,
+                               subChunkHeader.size
+                              );
+            if (error != ERROR_NONE)
+            {
+              break;
+            }
+            AUTOFREE_ADD(&autoFreeList2,&chunkMetaEntry.info,{ Chunk_close(&chunkMetaEntry.info); });
+
+            // get file meta data
+            if (name != NULL) String_set(name,chunkMetaEntry.name);
+//TODO
+
+            foundMetaEntryFlag = TRUE;
+            break;
+          default:
+            // unknown sub-chunk -> skip
+            if (isPrintInfo(3))
+            {
+              printWarning("Skipped unknown sub-chunk '%s' (offset %llu) in '%s'.\n",
+                           Chunk_idToString(subChunkHeader.id),
+                           subChunkHeader.offset,
+                           String_cString(archiveHandle->printableStorageName)
+                          );
+            }
+            error = Chunk_skipSub(&chunkMeta.info,&subChunkHeader);
+            if (error != ERROR_NONE)
+            {
+              break;
+            }
+            break;
+        }
+      }
+    }
+
+    if (error != ERROR_NONE)
+    {
+      if (Crypt_isEncrypted(cryptAlgorithm) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
+      {
+        // get next password
+        password = getNextDecryptPassword(&passwordHandle);
+
+        // reset error and try next password
+        if (password != NULL)
+        {
+          error = ERROR_NONE;
+        }
+      }
+      else
+      {
+        // no more passwords when no encryption or asymmetric encryption is used
+        password = NULL;
+      }
+    }
+  }
+  while ((error != ERROR_NONE) && (password != NULL));
+  AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
+
+  // check if mandatory meta entry chunk found
+  if (!foundMetaEntryFlag)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    if      (error != ERROR_NONE)                                return error;
+    else if (Crypt_isEncrypted(cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)                                     return ERROR_INVALID_CRYPT_PASSWORD;
+    else if (!foundMetaEntryFlag)                                return ERROR_NO_META_ENTRY;
+    HALT_INTERNAL_ERROR_UNREACHABLE();
+  }
+
+  // done resources
+  AutoFree_done(&autoFreeList2);
+  AutoFree_done(&autoFreeList1);
+
+  return ERROR_NONE;
+ 
 }
 
 #ifdef NDEBUG

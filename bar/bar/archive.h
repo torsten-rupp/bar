@@ -179,7 +179,7 @@ typedef struct
 {
   String                   jobUUID;
   String                   scheduleUUID;
-  const DeltaSourceList    *deltaSourceList;                           // list with delta sources
+  DeltaSourceList          *deltaSourceList;                           // list with delta sources
   const JobOptions         *jobOptions;
   IndexHandle              *indexHandle;                               // index handle or NULL (owned by opener/creator of archive)
   IndexId                  uuidId;                                     // index UUID id
@@ -199,6 +199,7 @@ typedef struct
 
   Semaphore                passwordLock;                               // input password lock
   CryptTypes               cryptType;                                  // crypt type (symmetric/asymmetric; see CryptTypes)
+  byte                     cryptSalt[64];                              // crypt salt
   Password                 *cryptPassword;                             // cryption password for encryption/decryption
   bool                     cryptPasswordReadFlag;                      // TRUE iff input callback for crypt password called
   CryptKey                 cryptKey;                                   // public/private key for encryption/decryption of random key used for asymmetric encryptio
@@ -513,7 +514,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 * Input  : password - new decrypt password
 *          timeout  - timeout [ms]
 * Output : -
-* Return : TRUE if new password in list
+* Return : TRUE iff new password in list
 * Notes  : -
 \***********************************************************************/
 
@@ -949,6 +950,31 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
 \***********************************************************************/
 
 Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
+
+/***********************************************************************\
+* Name   : Archive_readMetaEntry
+* Purpose: read meta info from archive
+* Input  : archiveHandle - archive handle
+* Output : name            - creator name (can be NULL)
+*          hostName        - host name (can be NULL)
+*          jobUUID         - job UUID (can be NULL)
+*          scheduleUUID    - schedule UUID (can be NULL)
+*          archiveType     - archive type (can be NULL)
+*          createdDateTime - create date/time [s]
+*          comment         - comment
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
+                             String        name,
+                             String        hostName,
+                             String        jobUUID,
+                             String        scheduleUUID,
+                             ArchiveTypes  *archiveType,
+                             uint64        *createdDateTime,
+                             String        comment
+                            );
 
 /***********************************************************************\
 * Name   : Archive_readFileEntry
