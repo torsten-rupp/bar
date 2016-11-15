@@ -177,6 +177,9 @@ typedef enum
   COMMAND_COMPARE,
   COMMAND_RESTORE,
 
+  COMMAND_INFO,
+  COMMAND_CHECK_SIGNATURE,
+
   COMMAND_GENERATE_KEYS,
   COMMAND_NEW_KEY_PASSWORD,
 
@@ -459,12 +462,14 @@ LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES[] = 
 
 LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_ENUM         ("create",                       'c',0,1,command,                                         COMMAND_CREATE_FILES,                                  "create new files archive"                                                 ),
-  CMD_OPTION_ENUM         ("image",                        'm',0,1,command,                                         COMMAND_CREATE_IMAGES,                                 "create new images archive"                                                ),
-  CMD_OPTION_ENUM         ("list",                         'l',0,1,command,                                         COMMAND_LIST,                                          "list contents of archive"                                                 ),
-  CMD_OPTION_ENUM         ("test",                         't',0,1,command,                                         COMMAND_TEST,                                          "test contents of archive"                                                 ),
-  CMD_OPTION_ENUM         ("compare",                      'd',0,1,command,                                         COMMAND_COMPARE,                                       "compare contents of archive with files and images"                        ),
-  CMD_OPTION_ENUM         ("extract",                      'x',0,1,command,                                         COMMAND_RESTORE,                                       "restore archive"                                                          ),
+  CMD_OPTION_ENUM         ("create",                       'c',0,1,command,                                         COMMAND_CREATE_FILES,                                  "create new files archives"                                                ),
+  CMD_OPTION_ENUM         ("image",                        'm',0,1,command,                                         COMMAND_CREATE_IMAGES,                                 "create new images archives"                                               ),
+  CMD_OPTION_ENUM         ("list",                         'l',0,1,command,                                         COMMAND_LIST,                                          "list contents of archives"                                                ),
+  CMD_OPTION_ENUM         ("test",                         't',0,1,command,                                         COMMAND_TEST,                                          "test contents of archives"                                                ),
+  CMD_OPTION_ENUM         ("compare",                      'd',0,1,command,                                         COMMAND_COMPARE,                                       "compare contents of archive swith files and images"                       ),
+  CMD_OPTION_ENUM         ("extract",                      'x',0,1,command,                                         COMMAND_RESTORE,                                       "restore archives"                                                         ),
+  CMD_OPTION_ENUM         ("info",                         0  ,0,1,command,                                         COMMAND_INFO,                                          "output archives info"                                                     ),
+  CMD_OPTION_ENUM         ("check-signature",              0  ,0,1,command,                                         COMMAND_CHECK_SIGNATURE,                               "check archives signature"                                                 ),
   CMD_OPTION_ENUM         ("generate-keys",                0,  0,1,command,                                         COMMAND_GENERATE_KEYS,                                 "generate new public/private key pair"                                     ),
 //  CMD_OPTION_ENUM         ("new-key-password",             0,  1,1,command,                                         COMMAND_NEW_KEY_PASSWORD,                             "set new private key password"                                             ),
   CMD_OPTION_INTEGER      ("generate-keys-bits",           0,  1,1,keyBits,                                         MIN_ASYMMETRIC_CRYPT_KEY_BITS,
@@ -674,6 +679,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,2,jobOptions.errorCorrectionCodesFlag,                                                                    "add error-correction codes with 'dvdisaster' tool"                        ),
   CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,2,jobOptions.alwaysCreateImageFlag,                                                                       "always create image for CD/DVD/BD/device"                                 ),
   CMD_OPTION_BOOLEAN      ("blank",                        0,  1,2,jobOptions.blankFlag,                                                                                   "blank medium before writing"                                              ),
+
+  CMD_OPTION_STRING       ("comment",                      0,  1,1,jobOptions.comment,                                                                                     "comment","text"                                                           ),
 
   CMD_OPTION_CSTRING      ("continuous-database",          0,  2,1,continuousDatabaseFileName,                                                                             "continuous database file name (default: in memory)","file name"           ),
   CMD_OPTION_INTEGER64    ("continuous-max-size",          0,  1,2,globalOptions.continuousMaxSize,                 0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                "max. continuous size","unlimited"                                         ),
@@ -964,6 +971,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_BOOLEAN           ("ecc",                          &jobOptions.errorCorrectionCodesFlag,-1                        ),
   CONFIG_VALUE_BOOLEAN           ("always-create-image",          &jobOptions.alwaysCreateImageFlag,-1                           ),
   CONFIG_VALUE_BOOLEAN           ("blank",                        &jobOptions.blankFlag,-1                                       ),
+
+  CONFIG_VALUE_STRING            ("comment",                      &jobOptions.comment,-1                                         ),
 
   CONFIG_VALUE_BOOLEAN           ("skip-unreadable",              &jobOptions.skipUnreadableFlag,-1                              ),
   CONFIG_VALUE_BOOLEAN           ("raw-images",                   &jobOptions.rawImagesFlag,-1                                   ),
@@ -2022,6 +2031,8 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
     case COMMAND_TEST:
     case COMMAND_COMPARE:
     case COMMAND_RESTORE:
+    case COMMAND_INFO:
+    case COMMAND_CHECK_SIGNATURE:
     case COMMAND_GENERATE_KEYS:
     case COMMAND_NEW_KEY_PASSWORD:
       entryType = ENTRY_TYPE_FILE;
@@ -2089,6 +2100,8 @@ LOCAL bool cmdOptionParseEntryPatternCommand(void *userData, void *variable, con
     case COMMAND_TEST:
     case COMMAND_COMPARE:
     case COMMAND_RESTORE:
+    case COMMAND_INFO:
+    case COMMAND_CHECK_SIGNATURE:
     case COMMAND_GENERATE_KEYS:
     case COMMAND_NEW_KEY_PASSWORD:
       entryType = ENTRY_TYPE_FILE;
@@ -4545,6 +4558,7 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->postProcessScript               = NULL;
   jobOptions->maxStorageSize                  = 0LL;
   jobOptions->volumeSize                      = 0LL;
+  jobOptions->comment                         = String_new();
   jobOptions->skipUnreadableFlag              = TRUE;
   jobOptions->forceDeltaCompressionFlag       = FALSE;
   jobOptions->ignoreNoDumpAttributeFlag       = FALSE;
@@ -4580,6 +4594,8 @@ void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOp
 
   jobOptions->preProcessScript                    = String_duplicate(fromJobOptions->preProcessScript);
   jobOptions->postProcessScript                   = String_duplicate(fromJobOptions->postProcessScript);
+
+  jobOptions->comment                             = String_duplicate(fromJobOptions->comment);
 
   jobOptions->ftpServer.loginName                 = String_duplicate(fromJobOptions->ftpServer.loginName);
   jobOptions->ftpServer.password                  = Password_duplicate(fromJobOptions->ftpServer.password);
@@ -4669,6 +4685,8 @@ void doneJobOptions(JobOptions *jobOptions)
 
   Password_delete(jobOptions->ftpServer.password);
   String_delete(jobOptions->ftpServer.loginName);
+
+  String_delete(jobOptions->comment);
 
   String_delete(jobOptions->postProcessScript);
   String_delete(jobOptions->preProcessScript);
@@ -7874,6 +7892,8 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     case COMMAND_TEST:
     case COMMAND_COMPARE:
     case COMMAND_RESTORE:
+    case COMMAND_INFO:
+    case COMMAND_CHECK_SIGNATURE:
       {
         StringList fileNameList;
         int        z;
@@ -7929,6 +7949,12 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     CALLBACK(NULL,NULL),  // isAborted callback
                                     NULL  // logHandle
                                    );
+            break;
+          case COMMAND_INFO:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+            break;
+          case COMMAND_CHECK_SIGNATURE:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);                                
             break;
           default:
             break;
