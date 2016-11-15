@@ -441,6 +441,8 @@ typedef struct
   BandWidthList          indexDatabaseMaxBandWidthList;       // list of max. band width to use for index updates [bits/s]
   uint                   indexDatabaseKeepTime;               // number of seconds to keep index data of not existing storage
 
+  bool                   metaInfoFlag;                        // TRUE iff meta info should be print
+  bool                   checkSignatureFlag;                  // TRUE iff signature should be checked
   bool                   groupFlag;                           // TRUE iff entries in list should be grouped
   bool                   allFlag;                             // TRUE iff all entries should be listed/restored
   bool                   longFormatFlag;                      // TRUE iff long format list

@@ -177,9 +177,6 @@ typedef enum
   COMMAND_COMPARE,
   COMMAND_RESTORE,
 
-  COMMAND_INFO,
-  COMMAND_CHECK_SIGNATURE,
-
   COMMAND_GENERATE_KEYS,
   COMMAND_NEW_KEY_PASSWORD,
 
@@ -468,8 +465,6 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM         ("test",                         't',0,1,command,                                         COMMAND_TEST,                                          "test contents of archives"                                                ),
   CMD_OPTION_ENUM         ("compare",                      'd',0,1,command,                                         COMMAND_COMPARE,                                       "compare contents of archive swith files and images"                       ),
   CMD_OPTION_ENUM         ("extract",                      'x',0,1,command,                                         COMMAND_RESTORE,                                       "restore archives"                                                         ),
-  CMD_OPTION_ENUM         ("info",                         0  ,0,1,command,                                         COMMAND_INFO,                                          "output archives info"                                                     ),
-  CMD_OPTION_ENUM         ("check-signature",              0  ,0,1,command,                                         COMMAND_CHECK_SIGNATURE,                               "check archives signature"                                                 ),
   CMD_OPTION_ENUM         ("generate-keys",                0,  0,1,command,                                         COMMAND_GENERATE_KEYS,                                 "generate new public/private key pair"                                     ),
 //  CMD_OPTION_ENUM         ("new-key-password",             0,  1,1,command,                                         COMMAND_NEW_KEY_PASSWORD,                             "set new private key password"                                             ),
   CMD_OPTION_INTEGER      ("generate-keys-bits",           0,  1,1,keyBits,                                         MIN_ASYMMETRIC_CRYPT_KEY_BITS,
@@ -697,13 +692,16 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_CSTRING      ("pid-file",                     0,  1,1,pidFileName,                                                                                            "process id file name","file name"                                         ),
 
+  CMD_OPTION_BOOLEAN      ("info",                         0  ,0,1,globalOptions.metaInfoFlag,                                                                             "show meta info"                                                           ),
+  CMD_OPTION_BOOLEAN      ("check-signature",              0  ,0,1,globalOptions.checkSignatureFlag,                                                                       "check signatures"                                                         ),
+
   CMD_OPTION_BOOLEAN      ("group",                        'g',0,1,globalOptions.groupFlag,                                                                                "group files in list"                                                      ),
   CMD_OPTION_BOOLEAN      ("all",                          0,  0,1,globalOptions.allFlag,                                                                                  "show all files"                                                           ),
   CMD_OPTION_BOOLEAN      ("long-format",                  'L',0,1,globalOptions.longFormatFlag,                                                                           "list in long format"                                                      ),
   CMD_OPTION_BOOLEAN      ("human-format",                 'H',0,1,globalOptions.humanFormatFlag,                                                                          "list in human readable format"                                            ),
   CMD_OPTION_BOOLEAN      ("numeric-uid-gid",              0,  0,1,globalOptions.numericUIDGIDFlag,                                                                        "print numeric user/group ids"                                             ),
   CMD_OPTION_BOOLEAN      ("numeric-permission",           0,  0,1,globalOptions.numericPermissionFlag,                                                                    "print numeric file/directory permissions"                                 ),
-  CMD_OPTION_BOOLEAN      ("no-header-footer",             0,  0,1,globalOptions.noHeaderFooterFlag,                                                                       "output no header/footer in list"                                          ),
+  CMD_OPTION_BOOLEAN      ("no-header-footer",             0,  0,1,globalOptions.noHeaderFooterFlag,                                                                       "no header/footer output in list"                                          ),
   CMD_OPTION_BOOLEAN      ("delete-old-archive-files",     0,  1,1,globalOptions.deleteOldArchiveFilesFlag,                                                                "delete old archive files after creating new files"                        ),
   CMD_OPTION_BOOLEAN      ("ignore-no-backup-file",        0,  1,2,globalOptions.ignoreNoBackupFileFlag,                                                                   "ignore .nobackup/.NOBACKUP file"                                          ),
   CMD_OPTION_BOOLEAN      ("ignore-no-dump",               0,  1,2,jobOptions.ignoreNoDumpAttributeFlag,                                                                   "ignore 'no dump' attribute of files"                                      ),
@@ -2031,8 +2029,6 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
     case COMMAND_TEST:
     case COMMAND_COMPARE:
     case COMMAND_RESTORE:
-    case COMMAND_INFO:
-    case COMMAND_CHECK_SIGNATURE:
     case COMMAND_GENERATE_KEYS:
     case COMMAND_NEW_KEY_PASSWORD:
       entryType = ENTRY_TYPE_FILE;
@@ -3280,7 +3276,7 @@ LOCAL Errors initAll(void)
   // initialize variables
   initGlobalOptions();
 
-  command                                = COMMAND_LIST;
+  command                                = COMMAND_NONE;
   jobName                                = NULL;
   uuid                                   = NULL;
   storageName                            = NULL;
@@ -7888,12 +7884,11 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         String_delete(storageName);
       }
       break;
+    case COMMAND_NONE:
     case COMMAND_LIST:
     case COMMAND_TEST:
     case COMMAND_COMPARE:
     case COMMAND_RESTORE:
-    case COMMAND_INFO:
-    case COMMAND_CHECK_SIGNATURE:
       {
         StringList fileNameList;
         int        z;
@@ -7907,10 +7902,38 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
 
         switch (command)
         {
+          case COMMAND_NONE:
+            if (globalOptions.metaInfoFlag)
+            {
+              // default: show meta-info only
+              error = Command_list(&fileNameList,
+                                   &includeEntryList,
+                                   &excludePatternList,
+                                      globalOptions.longFormatFlag  // showContentFlag
+                                   || globalOptions.humanFormatFlag,
+                                   &jobOptions,
+                                   CALLBACK(getPasswordConsole,NULL),
+                                   NULL  // logHandle
+                                  );
+            }
+            else
+            {
+              // default: list archives content
+              error = Command_list(&fileNameList,
+                                   &includeEntryList,
+                                   &excludePatternList,
+                                   TRUE,  // showContentFlag
+                                   &jobOptions,
+                                   CALLBACK(getPasswordConsole,NULL),
+                                   NULL  // logHandle
+                                  );
+            }
+            break;
           case COMMAND_LIST:
             error = Command_list(&fileNameList,
                                  &includeEntryList,
                                  &excludePatternList,
+                                 TRUE,  // showContentFlag
                                  &jobOptions,
                                  CALLBACK(getPasswordConsole,NULL),
                                  NULL  // logHandle
@@ -7949,12 +7972,6 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     CALLBACK(NULL,NULL),  // isAborted callback
                                     NULL  // logHandle
                                    );
-            break;
-          case COMMAND_INFO:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-            break;
-          case COMMAND_CHECK_SIGNATURE:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);                                
             break;
           default:
             break;
