@@ -1,5 +1,10 @@
 2016-12-xx 0.21
   * BARControl: use keys from .pem files
+  * added meta info chunk: store user name, host name,
+    job UUID, schedule UUID, type, created date/time,
+    comment into archives
+  * added option --comment
+  * added option --info
 
 2016-11-09 0.20a
   * fixed restore into original path
