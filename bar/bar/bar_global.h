@@ -442,7 +442,6 @@ typedef struct
   uint                   indexDatabaseKeepTime;               // number of seconds to keep index data of not existing storage
 
   bool                   metaInfoFlag;                        // TRUE iff meta info should be print
-  bool                   checkSignatureFlag;                  // TRUE iff signature should be checked
   bool                   groupFlag;                           // TRUE iff entries in list should be grouped
   bool                   allFlag;                             // TRUE iff all entries should be listed/restored
   bool                   longFormatFlag;                      // TRUE iff long format list
@@ -529,6 +528,7 @@ struct JobOptions
 
   String                       comment;                       // comment
 
+  bool                         checkSignatureFlag;            // TRUE iff signature should be checked
   bool                         skipUnreadableFlag;            // TRUE for skipping unreadable files
   bool                         forceDeltaCompressionFlag;     // TRUE to force delta compression of files
   bool                         ignoreNoDumpAttributeFlag;     // TRUE for ignoring no-dump attribute
