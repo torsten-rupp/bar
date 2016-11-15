@@ -61,6 +61,9 @@ typedef enum
   ARCHIVE_ENTRY_TYPE_HARDLINK,
   ARCHIVE_ENTRY_TYPE_SPECIAL,
 
+  ARCHIVE_ENTRY_TYPE_META,
+  ARCHIVE_ENTRY_TYPE_SIGNATURE,
+
   ARCHIVE_ENTRY_TYPE_UNKNOWN
 } ArchiveEntryTypes;
 
@@ -955,7 +958,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 * Name   : Archive_readMetaEntry
 * Purpose: read meta info from archive
 * Input  : archiveHandle - archive handle
-* Output : name            - creator name (can be NULL)
+* Output : userName        - user name (can be NULL)
 *          hostName        - host name (can be NULL)
 *          jobUUID         - job UUID (can be NULL)
 *          scheduleUUID    - schedule UUID (can be NULL)
@@ -967,7 +970,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 \***********************************************************************/
 
 Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
-                             String        name,
+                             String        userName,
                              String        hostName,
                              String        jobUUID,
                              String        scheduleUUID,

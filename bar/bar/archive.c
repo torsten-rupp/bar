@@ -859,24 +859,12 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
     Chunk_done(&chunkInfoBar);
     return error;
   }
-/*
-  uint16 cryptAlgorithm;
-  uint64 salt;
-  string name;
-  string host;
-  string jobUUID;
-  string scheduleUUID;
-  uint16 type;
-  uint64 created;
-  string comment;
-*/
-//TODO
-  Misc_getCurrentUserName(chunkMetaEntry.name);
-  Network_getHostName(chunkMetaEntry.host);
+  Misc_getCurrentUserName(chunkMetaEntry.userName);
+  Network_getHostName(chunkMetaEntry.hostName);
   String_set(chunkMetaEntry.jobUUID,archiveHandle->jobUUID);
   String_set(chunkMetaEntry.scheduleUUID,archiveHandle->scheduleUUID);
-  chunkMetaEntry.type           = archiveHandle->jobOptions->archiveType;
-  chunkMetaEntry.created        = Misc_getCurrentDateTime();//0LL;//archiveHandle->created;
+  chunkMetaEntry.archiveType     = archiveHandle->jobOptions->archiveType;
+  chunkMetaEntry.createdDateTime = Misc_getCurrentDateTime();
   String_set(chunkMetaEntry.comment,archiveHandle->jobOptions->comment);
 
   // write header chunks
@@ -5932,13 +5920,14 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
         scanMode = FALSE;
         break;
-      case CHUNK_ID_META:
       case CHUNK_ID_FILE:
       case CHUNK_ID_IMAGE:
       case CHUNK_ID_DIRECTORY:
       case CHUNK_ID_LINK:
       case CHUNK_ID_HARDLINK:
       case CHUNK_ID_SPECIAL:
+      case CHUNK_ID_META:
+      case CHUNK_ID_SIGNATURE:
         scanMode = FALSE;
         break;
       default:
@@ -5980,6 +5969,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
          && (chunkHeader.id != CHUNK_ID_LINK)
          && (chunkHeader.id != CHUNK_ID_HARDLINK)
          && (chunkHeader.id != CHUNK_ID_SPECIAL)
+         && (chunkHeader.id != CHUNK_ID_META)
+         && (chunkHeader.id != CHUNK_ID_SIGNATURE)
         );
 
   // get archive entry type, offset
@@ -5993,6 +5984,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
       case CHUNK_ID_LINK:      (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_LINK;      break;
       case CHUNK_ID_HARDLINK:  (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_HARDLINK;  break;
       case CHUNK_ID_SPECIAL:   (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_SPECIAL;   break;
+      case CHUNK_ID_META:      (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_META;      break;
+      case CHUNK_ID_SIGNATURE: (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_SIGNATURE; break;
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -6041,7 +6034,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
 }
 
 Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
-                             String        name,
+                             String        userName,
                              String        hostName,
                              String        jobUUID,
                              String        scheduleUUID,
@@ -6052,7 +6045,6 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
 {
   AutoFreeList    autoFreeList1,autoFreeList2;
   Errors          error;
-  ChunkInfo       chunkMetaInfo;
   ChunkMeta       chunkMeta;
   ChunkHeader     chunkHeader;
   CryptAlgorithms cryptAlgorithm;
@@ -6086,8 +6078,8 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                      NULL,  // parentChunkInfo
                      archiveHandle->chunkIO,
                      archiveHandle->chunkIOUserData,
-                     CHUNK_ID_FILE,
-                     CHUNK_DEFINITION_FILE,
+                     CHUNK_ID_META,
+                     CHUNK_DEFINITION_META,
                      0,  // alignment
                      NULL,  // cryptInfo
                      &chunkMeta
@@ -6109,7 +6101,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
       return error;
     }
 
-    if (chunkHeader.id != CHUNK_ID_FILE)
+    if (chunkHeader.id != CHUNK_ID_META)
     {
       error = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
       if (error != ERROR_NONE)
@@ -6120,7 +6112,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
       continue;
     }
   }
-  while (chunkHeader.id != CHUNK_ID_FILE);
+  while (chunkHeader.id != CHUNK_ID_META);
 
   // read meta chunk
   error = Chunk_open(&chunkMeta.info,
@@ -6188,7 +6180,6 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     // reset
     error = ERROR_NONE;
     AutoFree_freeAll(&autoFreeList2);
-    // reset chunk read position
     Chunk_seek(&chunkMeta.info,index);
 
     // init meta entry crypt
@@ -6249,11 +6240,18 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
             {
               break;
             }
-            AUTOFREE_ADD(&autoFreeList2,&chunkMetaEntry.info,{ Chunk_close(&chunkMetaEntry.info); });
 
-            // get file meta data
-            if (name != NULL) String_set(name,chunkMetaEntry.name);
-//TODO
+            // get meta data
+            if (userName        != NULL) String_set(userName,chunkMetaEntry.userName);
+            if (hostName        != NULL) String_set(hostName,chunkMetaEntry.hostName);
+            if (jobUUID         != NULL) String_set(jobUUID,chunkMetaEntry.jobUUID);
+            if (scheduleUUID    != NULL) String_set(scheduleUUID,chunkMetaEntry.scheduleUUID);
+            if (archiveType     != NULL) (*archiveType) = chunkMetaEntry.archiveType;
+            if (createdDateTime != NULL) (*createdDateTime) = chunkMetaEntry.createdDateTime;
+            if (comment         != NULL) String_set(comment,chunkMetaEntry.comment);
+
+            // close meta entry chunk
+            Chunk_close(&chunkMetaEntry.info);
 
             foundMetaEntryFlag = TRUE;
             break;
@@ -6277,6 +6275,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
       }
     }
 
+    // free resources
+    AutoFree_cleanup(&autoFreeList2);
+
     if (error != ERROR_NONE)
     {
       if (Crypt_isEncrypted(cryptAlgorithm) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
@@ -6298,13 +6299,13 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     }
   }
   while ((error != ERROR_NONE) && (password != NULL));
-  AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
+  AutoFree_done(&autoFreeList2);
 
   // check if mandatory meta entry chunk found
   if (!foundMetaEntryFlag)
@@ -6318,12 +6319,15 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
+  // close
+  Chunk_close(&chunkMeta.info);
+
   // done resources
-  AutoFree_done(&autoFreeList2);
+  Chunk_done(&chunkMeta.info);
   AutoFree_done(&autoFreeList1);
 
   return ERROR_NONE;
- 
+
 }
 
 #ifdef NDEBUG
@@ -10914,7 +10918,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
   // create new storage index
   error = Index_newStorage(indexHandle,
                            DATABASE_ID_NONE, // entityId
-                           Storage_getPrintableName(storageInfo,NULL),
+                           Storage_getPrintableName(&storageInfo->storageSpecifier,NULL),
                            INDEX_STATE_UPDATE,
                            indexMode,
                            &storageId
