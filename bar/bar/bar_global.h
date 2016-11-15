@@ -528,7 +528,7 @@ struct JobOptions
 
   String                       comment;                       // comment
 
-  bool                         checkSignatureFlag;            // TRUE iff signature should be checked
+  bool                         ignoreSignatureFlag;           // TRUE for ignoring signature check
   bool                         skipUnreadableFlag;            // TRUE for skipping unreadable files
   bool                         forceDeltaCompressionFlag;     // TRUE to force delta compression of files
   bool                         ignoreNoDumpAttributeFlag;     // TRUE for ignoring no-dump attribute

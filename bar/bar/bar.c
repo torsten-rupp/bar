@@ -705,7 +705,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("ignore-no-backup-file",        0,  1,2,globalOptions.ignoreNoBackupFileFlag,                                                                   "ignore .nobackup/.NOBACKUP file"                                          ),
   CMD_OPTION_BOOLEAN      ("ignore-no-dump",               0,  1,2,jobOptions.ignoreNoDumpAttributeFlag,                                                                   "ignore 'no dump' attribute of files"                                      ),
 
-  CMD_OPTION_BOOLEAN      ("check-signature",              0  ,0,1,jobOptions.checkSignatureFlag,                                                                          "check signatures"                                                         ),
+  CMD_OPTION_BOOLEAN      ("no-signature-check",           0  ,0,1,jobOptions.ignoreSignatureFlag,                                                                         "do not check signatures"                                                  ),
   CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,2,jobOptions.skipUnreadableFlag,                                                                          "skip unreadable files"                                                    ),
   CMD_OPTION_BOOLEAN      ("force-delta-compression",      0,  0,2,jobOptions.forceDeltaCompressionFlag,                                                                   "force delta compression of files. Stop on error"                          ),
   CMD_OPTION_BOOLEAN      ("raw-images",                   0,  1,2,jobOptions.rawImagesFlag,                                                                               "store raw images (store all image blocks)"                                ),
@@ -972,7 +972,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_STRING            ("comment",                      &jobOptions.comment,-1                                         ),
 
-  CONFIG_VALUE_BOOLEAN           ("check-signature",              &jobOptions.checkSignatureFlag,-1                              ),
+  CONFIG_VALUE_BOOLEAN           ("no-signature-check",           &jobOptions.ignoreSignatureFlag,-1                             ),
   CONFIG_VALUE_BOOLEAN           ("skip-unreadable",              &jobOptions.skipUnreadableFlag,-1                              ),
   CONFIG_VALUE_BOOLEAN           ("raw-images",                   &jobOptions.rawImagesFlag,-1                                   ),
   CONFIG_VALUE_BOOLEAN           ("no-fragments-check",           &jobOptions.noFragmentsCheckFlag,-1                            ),
@@ -4556,7 +4556,7 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->maxStorageSize                  = 0LL;
   jobOptions->volumeSize                      = 0LL;
   jobOptions->comment                         = String_new();
-  jobOptions->checkSignatureFlag              = TRUE;
+  jobOptions->ignoreSignatureFlag             = FALSE;
   jobOptions->skipUnreadableFlag              = TRUE;
   jobOptions->forceDeltaCompressionFlag       = FALSE;
   jobOptions->ignoreNoDumpAttributeFlag       = FALSE;
