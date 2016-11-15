@@ -3,7 +3,7 @@
 * $Revision$
 * $Date$
 * $Author$
-* Contents: Backup ARchiver archive list function
+* Contents: Backup ARchiver archive list functions
 * Systems: all
 *
 \***********************************************************************/
@@ -49,6 +49,7 @@
 * Input  : storageNameList     - list with storage names
 *          includeEntryList    - include entry list
 *          excludePatternList  - exclude pattern list
+*          showEntriesFlag     - show entries flag
 *          jobOptions          - job options
 *          getPasswordFunction - get password call back
 *          getPasswordUserData - user data for get password call back
@@ -60,6 +61,7 @@
 Errors Command_list(StringList          *storageNameList,
                     const EntryList     *includeEntryList,
                     const PatternList   *excludePatternList,
+                    bool                showEntriesFlag,
                     JobOptions          *jobOptions,
                     GetPasswordFunction getPasswordFunction,
                     void                *getPasswordUserData,

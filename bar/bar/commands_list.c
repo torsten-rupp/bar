@@ -270,16 +270,99 @@ LOCAL const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
 }
 
 /***********************************************************************\
-* Name   : printArchiveListHeader
-* Purpose: print archive list header
-* Input  : storageName - storage file name or NULL if archive should not
-*                        be printed
+* Name   : printArchiveName
+* Purpose: print archive name
+* Input  : printableStorageName - storage file name or NULL if archive
+*                                 name should not be printed
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printArchiveListHeader(ConstString storageName)
+LOCAL void printArchiveName(ConstString printableStorageName)
+{
+  if (!globalOptions.noHeaderFooterFlag)
+  {
+    if (printableStorageName != NULL)
+    {
+      printInfo(0,"List storage '%s':\n",String_cString(printableStorageName));
+      printInfo(0,"\n");
+    }
+  }
+}
+
+/***********************************************************************\
+* Name   : printMetaInfo
+* Purpose: print archive meta data
+* Input  : userName        - user name
+*          hostName        - host name
+*          jobUUID         - job UUID
+*          scheduleUUID    - schedule UUID
+*          archiveType     - archive type
+*          createdDateTime - create date/time [s]
+*          comment         - comment
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printMetaInfo(ConstString  userName,
+                         ConstString  hostName,
+                         ConstString  jobUUID,
+                         ConstString  scheduleUUID,
+                         ArchiveTypes archiveType,
+                         uint64       createdDateTime,
+                         ConstString  comment
+                        )
+{
+  String          dateTime;
+  StringTokenizer stringTokenizer;
+  ConstString     s;
+
+  assert(userName != NULL);
+  assert(hostName != NULL);
+  assert(jobUUID != NULL);
+  assert(scheduleUUID != NULL);
+  assert(comment != NULL);
+
+  // init variables
+  dateTime = String_new();
+
+  // print info
+  printf("User name    : %s\n",String_cString(userName));
+  printf("Host name    : %s\n",String_cString(hostName));
+  printf("Job UUID     : %s\n",!String_isEmpty(jobUUID) ? String_cString(jobUUID) : "-");
+  printf("Schedule UUID: %s\n",!String_isEmpty(scheduleUUID) ? String_cString(scheduleUUID) : "-");
+  printf("Type         : %s\n",getArchiveTypeName(archiveType));
+  printf("Created at   : %s\n",String_cString(Misc_formatDateTime(dateTime,createdDateTime,NULL)));
+  printf("Comment      :");
+  String_initTokenizer(&stringTokenizer,comment,STRING_BEGIN,"\n",STRING_QUOTES,FALSE);
+  if (String_getNextToken(&stringTokenizer,&s,NULL))
+  {
+    printf(" %s",String_cString(s));
+    while (String_getNextToken(&stringTokenizer,&s,NULL))
+    {
+      printf("\n");
+      printf("               %s",String_cString(s));
+    }
+  }
+  String_doneTokenizer(&stringTokenizer);
+  printf("\n");
+
+  // free resources
+  String_delete(dateTime);
+}
+
+/***********************************************************************\
+* Name   : printArchiveListHeader
+* Purpose: print archive list header
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printArchiveListHeader(void)
 {
   const TextMacro MACROS[] =
   {
@@ -304,14 +387,6 @@ LOCAL void printArchiveListHeader(ConstString storageName)
   {
     // init variables
     line = String_new();
-
-    // header
-    if (storageName != NULL)
-    {
-//TODO: printable storaeg name?
-      printInfo(0,"List storage '%s':\n",String_cString(storageName));
-      printInfo(0,"\n");
-    }
 
     // title line
     if (globalOptions.longFormatFlag)
@@ -2001,6 +2076,7 @@ LOCAL void printArchiveList(void)
 *          archiveName          - archive name
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
+*          showEntriesFlag      - TRUE to show entries
 *          jobOptions           - job options
 *          printableStorageName - printable storage name
 *          getPasswordFunction  - get password call back
@@ -2015,13 +2091,14 @@ LOCAL Errors listArchiveContent(StorageSpecifier    *storageSpecifier,
                                 ConstString         archiveName,
                                 const EntryList     *includeEntryList,
                                 const PatternList   *excludePatternList,
+                                bool                showEntriesFlag,
                                 JobOptions          *jobOptions,
                                 GetPasswordFunction getPasswordFunction,
                                 void                *getPasswordUserData,
                                 LogHandle           *logHandle
                                )
 {
-  bool         printedInfoFlag;
+  bool         printedNameFlag,printedInfoFlag;
   ulong        fileCount;
   Errors       error;
 bool         remoteBarFlag;
@@ -2037,6 +2114,7 @@ bool         remoteBarFlag;
 // NYI ???
 remoteBarFlag=FALSE;
 
+  printedNameFlag = FALSE;
   printedInfoFlag = FALSE;
   fileCount       = 0L;
   error           = ERROR_NONE;
@@ -2120,48 +2198,81 @@ remoteBarFlag=FALSE;
                 uint64             deltaSourceSize;
                 uint64             fragmentOffset,fragmentSize;
 
-                // read archive file
-                fileName        = String_new();
-                deltaSourceName = String_new();
-                error = Archive_readFileEntry(&archiveEntryInfo,
-                                              &archiveHandle,
-                                              &deltaCompressAlgorithm,
-                                              &byteCompressAlgorithm,
-                                              &cryptAlgorithm,
-                                              &cryptType,
-                                              fileName,
-                                              &fileInfo,
-                                              NULL,  // fileExtendedAttributeList
-                                              deltaSourceName,
-                                              &deltaSourceSize,
-                                              &fragmentOffset,
-                                              &fragmentSize
-                                             );
-                if (error != ERROR_NONE)
+                if (showEntriesFlag)
                 {
-                  printError("Cannot read 'file' content from storage '%s' (error: %s)!\n",
-                             Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                             Error_getText(error)
-                            );
-                  String_delete(deltaSourceName);
-                  String_delete(fileName);
-                  break;
-                }
-
-                if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                    && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-                   )
-                {
-                  if (globalOptions.groupFlag)
+                  // read archive file
+                  fileName        = String_new();
+                  deltaSourceName = String_new();
+                  error = Archive_readFileEntry(&archiveEntryInfo,
+                                                &archiveHandle,
+                                                &deltaCompressAlgorithm,
+                                                &byteCompressAlgorithm,
+                                                &cryptAlgorithm,
+                                                &cryptType,
+                                                fileName,
+                                                &fileInfo,
+                                                NULL,  // fileExtendedAttributeList
+                                                deltaSourceName,
+                                                &deltaSourceSize,
+                                                &fragmentOffset,
+                                                &fragmentSize
+                                               );
+                  if (error != ERROR_NONE)
                   {
-                    // add file info to list
-                    addListFileInfo(Storage_getName(storageSpecifier,NULL),
+                    printError("Cannot read 'file' content from storage '%s' (error: %s)!\n",
+                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Error_getText(error)
+                              );
+                    String_delete(deltaSourceName);
+                    String_delete(fileName);
+                    break;
+                  }
+
+                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                      && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                     )
+                  {
+                    if (globalOptions.groupFlag)
+                    {
+                      // add file info to list
+                      addListFileInfo(Storage_getName(storageSpecifier,NULL),
+                                      fileName,
+                                      fileInfo.size,
+                                      fileInfo.timeModified,
+                                      fileInfo.permission,
+                                      fileInfo.userId,
+                                      fileInfo.groupId,
+                                      archiveEntryInfo.file.chunkFileData.info.size,
+                                      deltaCompressAlgorithm,
+                                      byteCompressAlgorithm,
+                                      cryptAlgorithm,
+                                      cryptType,
+                                      deltaSourceName,
+                                      deltaSourceSize,
+                                      fragmentOffset,
+                                      fragmentSize
+                                     );
+                    }
+                    else
+                    {
+                      // output file info
+                      if (!printedNameFlag)
+                      {
+                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printedNameFlag = TRUE;
+                      }
+                      if (!printedInfoFlag)
+                      {
+                        printArchiveListHeader();
+                        printedInfoFlag = TRUE;
+                      }
+                      printFileInfo(NULL,
                                     fileName,
                                     fileInfo.size,
                                     fileInfo.timeModified,
-                                    fileInfo.permission,
                                     fileInfo.userId,
                                     fileInfo.groupId,
+                                    fileInfo.permission,
                                     archiveEntryInfo.file.chunkFileData.info.size,
                                     deltaCompressAlgorithm,
                                     byteCompressAlgorithm,
@@ -2172,46 +2283,25 @@ remoteBarFlag=FALSE;
                                     fragmentOffset,
                                     fragmentSize
                                    );
-                  }
-                  else
-                  {
-                    // output file info
-                    if (!printedInfoFlag)
-                    {
-                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
-                      printedInfoFlag = TRUE;
                     }
-                    printFileInfo(NULL,
-                                  fileName,
-                                  fileInfo.size,
-                                  fileInfo.timeModified,
-                                  fileInfo.userId,
-                                  fileInfo.groupId,
-                                  fileInfo.permission,
-                                  archiveEntryInfo.file.chunkFileData.info.size,
-                                  deltaCompressAlgorithm,
-                                  byteCompressAlgorithm,
-                                  cryptAlgorithm,
-                                  cryptType,
-                                  deltaSourceName,
-                                  deltaSourceSize,
-                                  fragmentOffset,
-                                  fragmentSize
-                                 );
+                    fileCount++;
                   }
-                  fileCount++;
-                }
 
-                // close archive file, free resources
-                error = Archive_closeEntry(&archiveEntryInfo);
-                if (error != ERROR_NONE)
+                  // close archive file, free resources
+                  error = Archive_closeEntry(&archiveEntryInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    printWarning("close 'file' entry fail (error: %s)\n",Error_getText(error));
+                  }
+
+                  // free resources
+                  String_delete(deltaSourceName);
+                  String_delete(fileName);
+                }
+                else
                 {
-                  printWarning("close 'file' entry fail (error: %s)\n",Error_getText(error));
+                  error = Archive_skipNextEntry(&archiveHandle);
                 }
-
-                // free resources
-                String_delete(deltaSourceName);
-                String_delete(fileName);
               }
               break;
             case ARCHIVE_ENTRY_TYPE_IMAGE:
@@ -2227,42 +2317,72 @@ remoteBarFlag=FALSE;
                 uint64             deltaSourceSize;
                 uint64             blockOffset,blockCount;
 
-                // read archive image
-                deviceName      = String_new();
-                deltaSourceName = String_new();
-                error = Archive_readImageEntry(&archiveEntryInfo,
-                                               &archiveHandle,
-                                               &deltaCompressAlgorithm,
-                                               &byteCompressAlgorithm,
-                                               &cryptAlgorithm,
-                                               &cryptType,
-                                               deviceName,
-                                               &deviceInfo,
-                                               &fileSystemType,
-                                               deltaSourceName,
-                                               &deltaSourceSize,
-                                               &blockOffset,
-                                               &blockCount
-                                              );
-                if (error != ERROR_NONE)
+                if (showEntriesFlag)
                 {
-                  printError("Cannot read 'image' content from storage '%s' (error: %s)!\n",
-                             Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                             Error_getText(error)
-                            );
-                  String_delete(deltaSourceName);
-                  String_delete(deviceName);
-                  break;
-                }
-
-                if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
-                    && !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
-                   )
-                {
-                  if (globalOptions.groupFlag)
+                  // read archive image
+                  deviceName      = String_new();
+                  deltaSourceName = String_new();
+                  error = Archive_readImageEntry(&archiveEntryInfo,
+                                                 &archiveHandle,
+                                                 &deltaCompressAlgorithm,
+                                                 &byteCompressAlgorithm,
+                                                 &cryptAlgorithm,
+                                                 &cryptType,
+                                                 deviceName,
+                                                 &deviceInfo,
+                                                 &fileSystemType,
+                                                 deltaSourceName,
+                                                 &deltaSourceSize,
+                                                 &blockOffset,
+                                                 &blockCount
+                                                );
+                  if (error != ERROR_NONE)
                   {
-                    // add image info to list
-                    addListImageInfo(Storage_getName(storageSpecifier,NULL),
+                    printError("Cannot read 'image' content from storage '%s' (error: %s)!\n",
+                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Error_getText(error)
+                              );
+                    String_delete(deltaSourceName);
+                    String_delete(deviceName);
+                    break;
+                  }
+
+                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
+                      && !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
+                     )
+                  {
+                    if (globalOptions.groupFlag)
+                    {
+                      // add image info to list
+                      addListImageInfo(Storage_getName(storageSpecifier,NULL),
+                                       deviceName,
+                                       deviceInfo.size,
+                                       archiveEntryInfo.image.chunkImageData.info.size,
+                                       deltaCompressAlgorithm,
+                                       byteCompressAlgorithm,
+                                       cryptAlgorithm,
+                                       cryptType,
+                                       deltaSourceName,
+                                       deltaSourceSize,
+                                       deviceInfo.blockSize,
+                                       blockOffset,
+                                       blockCount
+                                      );
+                    }
+                    else
+                    {
+                      // output file info
+                      if (!printedNameFlag)
+                      {
+                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printedNameFlag = TRUE;
+                      }
+                      if (!printedInfoFlag)
+                      {
+                        printArchiveListHeader();
+                        printedInfoFlag = TRUE;
+                      }
+                      printImageInfo(NULL,
                                      deviceName,
                                      deviceInfo.size,
                                      archiveEntryInfo.image.chunkImageData.info.size,
@@ -2276,43 +2396,25 @@ remoteBarFlag=FALSE;
                                      blockOffset,
                                      blockCount
                                     );
-                  }
-                  else
-                  {
-                    // output file info
-                    if (!printedInfoFlag)
-                    {
-                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
-                      printedInfoFlag = TRUE;
                     }
-                    printImageInfo(NULL,
-                                   deviceName,
-                                   deviceInfo.size,
-                                   archiveEntryInfo.image.chunkImageData.info.size,
-                                   deltaCompressAlgorithm,
-                                   byteCompressAlgorithm,
-                                   cryptAlgorithm,
-                                   cryptType,
-                                   deltaSourceName,
-                                   deltaSourceSize,
-                                   deviceInfo.blockSize,
-                                   blockOffset,
-                                   blockCount
-                                  );
+                    fileCount++;
                   }
-                  fileCount++;
-                }
 
-                // close archive file, free resources
-                error = Archive_closeEntry(&archiveEntryInfo);
-                if (error != ERROR_NONE)
+                  // close archive file, free resources
+                  error = Archive_closeEntry(&archiveEntryInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    printWarning("close 'image' entry fail (error: %s)\n",Error_getText(error));
+                  }
+
+                  // free resources
+                  String_delete(deltaSourceName);
+                  String_delete(deviceName);
+                }
+                else
                 {
-                  printWarning("close 'image' entry fail (error: %s)\n",Error_getText(error));
+                  error = Archive_skipNextEntry(&archiveHandle);
                 }
-
-                // free resources
-                String_delete(deltaSourceName);
-                String_delete(deviceName);
               }
               break;
             case ARCHIVE_ENTRY_TYPE_DIRECTORY:
@@ -2322,34 +2424,59 @@ remoteBarFlag=FALSE;
                 CryptTypes      cryptType;
                 FileInfo        fileInfo;
 
-                // read archive directory entry
-                directoryName = String_new();
-                error = Archive_readDirectoryEntry(&archiveEntryInfo,
-                                                   &archiveHandle,
-                                                   &cryptAlgorithm,
-                                                   &cryptType,
-                                                   directoryName,
-                                                   &fileInfo,
-                                                   NULL   // fileExtendedAttributeList
-                                                  );
-                if (error != ERROR_NONE)
+                if (showEntriesFlag)
                 {
-                  printError("Cannot read 'directory' content from storage '%s' (error: %s)!\n",
-                             Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                             Error_getText(error)
-                            );
-                  String_delete(directoryName);
-                  break;
-                }
-
-                if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
-                    && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
-                   )
-                {
-                  if (globalOptions.groupFlag)
+                  // read archive directory entry
+                  directoryName = String_new();
+                  error = Archive_readDirectoryEntry(&archiveEntryInfo,
+                                                     &archiveHandle,
+                                                     &cryptAlgorithm,
+                                                     &cryptType,
+                                                     directoryName,
+                                                     &fileInfo,
+                                                     NULL   // fileExtendedAttributeList
+                                                    );
+                  if (error != ERROR_NONE)
                   {
-                    // add directory info to list
-                    addListDirectoryInfo(Storage_getName(storageSpecifier,NULL),
+                    printError("Cannot read 'directory' content from storage '%s' (error: %s)!\n",
+                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Error_getText(error)
+                              );
+                    String_delete(directoryName);
+                    break;
+                  }
+
+                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                      && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+                     )
+                  {
+                    if (globalOptions.groupFlag)
+                    {
+                      // add directory info to list
+                      addListDirectoryInfo(Storage_getName(storageSpecifier,NULL),
+                                           directoryName,
+                                           fileInfo.timeModified,
+                                           fileInfo.userId,
+                                           fileInfo.groupId,
+                                           fileInfo.permission,
+                                           cryptAlgorithm,
+                                           cryptType
+                                          );
+                    }
+                    else
+                    {
+                      // output file info
+                      if (!printedNameFlag)
+                      {
+                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printedNameFlag = TRUE;
+                      }
+                      if (!printedInfoFlag)
+                      {
+                        printArchiveListHeader();
+                        printedInfoFlag = TRUE;
+                      }
+                      printDirectoryInfo(NULL,
                                          directoryName,
                                          fileInfo.timeModified,
                                          fileInfo.userId,
@@ -2358,37 +2485,24 @@ remoteBarFlag=FALSE;
                                          cryptAlgorithm,
                                          cryptType
                                         );
-                  }
-                  else
-                  {
-                    // output file info
-                    if (!printedInfoFlag)
-                    {
-                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
-                      printedInfoFlag = TRUE;
                     }
-                    printDirectoryInfo(NULL,
-                                       directoryName,
-                                       fileInfo.timeModified,
-                                       fileInfo.userId,
-                                       fileInfo.groupId,
-                                       fileInfo.permission,
-                                       cryptAlgorithm,
-                                       cryptType
-                                      );
+                    fileCount++;
                   }
-                  fileCount++;
-                }
 
-                // close archive file, free resources
-                error = Archive_closeEntry(&archiveEntryInfo);
-                if (error != ERROR_NONE)
+                  // close archive file, free resources
+                  error = Archive_closeEntry(&archiveEntryInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    printWarning("close 'directory' entry fail (error: %s)\n",Error_getText(error));
+                  }
+
+                  // free resources
+                  String_delete(directoryName);
+                }
+                else
                 {
-                  printWarning("close 'directory' entry fail (error: %s)\n",Error_getText(error));
+                  error = Archive_skipNextEntry(&archiveHandle);
                 }
-
-                // free resources
-                String_delete(directoryName);
               }
               break;
             case ARCHIVE_ENTRY_TYPE_LINK:
@@ -2399,37 +2513,63 @@ remoteBarFlag=FALSE;
                 String          fileName;
                 FileInfo        fileInfo;
 
-                // read archive link
-                linkName = String_new();
-                fileName = String_new();
-                error = Archive_readLinkEntry(&archiveEntryInfo,
-                                              &archiveHandle,
-                                              &cryptAlgorithm,
-                                              &cryptType,
-                                              linkName,
-                                              fileName,
-                                              &fileInfo,
-                                              NULL   // fileExtendedAttributeList
-                                             );
-                if (error != ERROR_NONE)
+                if (showEntriesFlag)
                 {
-                  printError("Cannot read 'link' content from storage '%s' (error: %s)!\n",
-                             Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                             Error_getText(error)
-                            );
-                  String_delete(fileName);
-                  String_delete(linkName);
-                  break;
-                }
-
-                if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
-                    && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
-                   )
-                {
-                  if (globalOptions.groupFlag)
+                  // read archive link
+                  linkName = String_new();
+                  fileName = String_new();
+                  error = Archive_readLinkEntry(&archiveEntryInfo,
+                                                &archiveHandle,
+                                                &cryptAlgorithm,
+                                                &cryptType,
+                                                linkName,
+                                                fileName,
+                                                &fileInfo,
+                                                NULL   // fileExtendedAttributeList
+                                               );
+                  if (error != ERROR_NONE)
                   {
-                    // add link info to list
-                    addListLinkInfo(Storage_getName(storageSpecifier,NULL),
+                    printError("Cannot read 'link' content from storage '%s' (error: %s)!\n",
+                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Error_getText(error)
+                              );
+                    String_delete(fileName);
+                    String_delete(linkName);
+                    break;
+                  }
+
+                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
+                      && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+                     )
+                  {
+                    if (globalOptions.groupFlag)
+                    {
+                      // add link info to list
+                      addListLinkInfo(Storage_getName(storageSpecifier,NULL),
+                                      linkName,
+                                      fileName,
+                                      fileInfo.timeModified,
+                                      fileInfo.userId,
+                                      fileInfo.groupId,
+                                      fileInfo.permission,
+                                      cryptAlgorithm,
+                                      cryptType
+                                     );
+                    }
+                    else
+                    {
+                      // output file info
+                      if (!printedNameFlag)
+                      {
+                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printedNameFlag = TRUE;
+                      }
+                      if (!printedInfoFlag)
+                      {
+                        printArchiveListHeader();
+                        printedInfoFlag = TRUE;
+                      }
+                      printLinkInfo(NULL,
                                     linkName,
                                     fileName,
                                     fileInfo.timeModified,
@@ -2439,39 +2579,25 @@ remoteBarFlag=FALSE;
                                     cryptAlgorithm,
                                     cryptType
                                    );
-                  }
-                  else
-                  {
-                    // output file info
-                    if (!printedInfoFlag)
-                    {
-                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
-                      printedInfoFlag = TRUE;
                     }
-                    printLinkInfo(NULL,
-                                  linkName,
-                                  fileName,
-                                  fileInfo.timeModified,
-                                  fileInfo.userId,
-                                  fileInfo.groupId,
-                                  fileInfo.permission,
-                                  cryptAlgorithm,
-                                  cryptType
-                                 );
+                    fileCount++;
                   }
-                  fileCount++;
-                }
 
-                // close archive file, free resources
-                error = Archive_closeEntry(&archiveEntryInfo);
-                if (error != ERROR_NONE)
+                  // close archive file, free resources
+                  error = Archive_closeEntry(&archiveEntryInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    printWarning("close 'link' entry fail (error: %s)\n",Error_getText(error));
+                  }
+
+                  // free resources
+                  String_delete(fileName);
+                  String_delete(linkName);
+                }
+                else
                 {
-                  printWarning("close 'link' entry fail (error: %s)\n",Error_getText(error));
+                  error = Archive_skipNextEntry(&archiveHandle);
                 }
-
-                // free resources
-                String_delete(fileName);
-                String_delete(linkName);
               }
               break;
             case ARCHIVE_ENTRY_TYPE_HARDLINK:
@@ -2488,44 +2614,77 @@ remoteBarFlag=FALSE;
                 StringNode         *stringNode;
                 String             fileName;
 
-                // read archive hard link
-                StringList_init(&fileNameList);
-                deltaSourceName = String_new();
-                error = Archive_readHardLinkEntry(&archiveEntryInfo,
-                                                  &archiveHandle,
-                                                  &deltaCompressAlgorithm,
-                                                  &byteCompressAlgorithm,
-                                                  &cryptAlgorithm,
-                                                  &cryptType,
-                                                  &fileNameList,
-                                                  &fileInfo,
-                                                  NULL,  // fileExtendedAttributeList
-                                                  deltaSourceName,
-                                                  &deltaSourceSize,
-                                                  &fragmentOffset,
-                                                  &fragmentSize
-                                                 );
-                if (error != ERROR_NONE)
+                if (showEntriesFlag)
                 {
-                  printError("Cannot read 'hard link' content from storage '%s' (error: %s)!\n",
-                             Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                             Error_getText(error)
-                            );
-                  String_delete(deltaSourceName);
-                  StringList_done(&fileNameList);
-                  break;
-                }
-
-                STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
-                {
-                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                      && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-                     )
+                  // read archive hard link
+                  StringList_init(&fileNameList);
+                  deltaSourceName = String_new();
+                  error = Archive_readHardLinkEntry(&archiveEntryInfo,
+                                                    &archiveHandle,
+                                                    &deltaCompressAlgorithm,
+                                                    &byteCompressAlgorithm,
+                                                    &cryptAlgorithm,
+                                                    &cryptType,
+                                                    &fileNameList,
+                                                    &fileInfo,
+                                                    NULL,  // fileExtendedAttributeList
+                                                    deltaSourceName,
+                                                    &deltaSourceSize,
+                                                    &fragmentOffset,
+                                                    &fragmentSize
+                                                   );
+                  if (error != ERROR_NONE)
                   {
-                    if (globalOptions.groupFlag)
+                    printError("Cannot read 'hard link' content from storage '%s' (error: %s)!\n",
+                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Error_getText(error)
+                              );
+                    String_delete(deltaSourceName);
+                    StringList_done(&fileNameList);
+                    break;
+                  }
+
+                  STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
+                  {
+                    if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                        && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                       )
                     {
-                      // add file info to list
-                      addListHardLinkInfo(Storage_getName(storageSpecifier,NULL),
+                      if (globalOptions.groupFlag)
+                      {
+                        // add file info to list
+                        addListHardLinkInfo(Storage_getName(storageSpecifier,NULL),
+                                            fileName,
+                                            fileInfo.size,
+                                            fileInfo.timeModified,
+                                            fileInfo.userId,
+                                            fileInfo.groupId,
+                                            fileInfo.permission,
+                                            archiveEntryInfo.hardLink.chunkHardLinkData.info.size,
+                                            deltaCompressAlgorithm,
+                                            byteCompressAlgorithm,
+                                            cryptAlgorithm,
+                                            cryptType,
+                                            deltaSourceName,
+                                            deltaSourceSize,
+                                            fragmentOffset,
+                                            fragmentSize
+                                           );
+                      }
+                      else
+                      {
+                        // output file info
+                        if (!printedNameFlag)
+                        {
+                          printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
+                          printedNameFlag = TRUE;
+                        }
+                        if (!printedInfoFlag)
+                        {
+                          printArchiveListHeader();
+                          printedInfoFlag = TRUE;
+                        }
+                        printHardLinkInfo(NULL,
                                           fileName,
                                           fileInfo.size,
                                           fileInfo.timeModified,
@@ -2542,47 +2701,26 @@ remoteBarFlag=FALSE;
                                           fragmentOffset,
                                           fragmentSize
                                          );
-                    }
-                    else
-                    {
-                      // output file info
-                      if (!printedInfoFlag)
-                      {
-                        printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
-                        printedInfoFlag = TRUE;
                       }
-                      printHardLinkInfo(NULL,
-                                        fileName,
-                                        fileInfo.size,
-                                        fileInfo.timeModified,
-                                        fileInfo.userId,
-                                        fileInfo.groupId,
-                                        fileInfo.permission,
-                                        archiveEntryInfo.hardLink.chunkHardLinkData.info.size,
-                                        deltaCompressAlgorithm,
-                                        byteCompressAlgorithm,
-                                        cryptAlgorithm,
-                                        cryptType,
-                                        deltaSourceName,
-                                        deltaSourceSize,
-                                        fragmentOffset,
-                                        fragmentSize
-                                       );
+                      fileCount++;
                     }
-                    fileCount++;
                   }
-                }
 
-                // close archive file, free resources
-                error = Archive_closeEntry(&archiveEntryInfo);
-                if (error != ERROR_NONE)
+                  // close archive file, free resources
+                  error = Archive_closeEntry(&archiveEntryInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    printWarning("close 'hard link' entry fail (error: %s)\n",Error_getText(error));
+                  }
+
+                  // free resources
+                  String_delete(deltaSourceName);
+                  StringList_done(&fileNameList);
+                }
+                else
                 {
-                  printWarning("close 'hard link' entry fail (error: %s)\n",Error_getText(error));
+                  error = Archive_skipNextEntry(&archiveHandle);
                 }
-
-                // free resources
-                String_delete(deltaSourceName);
-                StringList_done(&fileNameList);
               }
               break;
             case ARCHIVE_ENTRY_TYPE_SPECIAL:
@@ -2592,34 +2730,61 @@ remoteBarFlag=FALSE;
                 String          fileName;
                 FileInfo        fileInfo;
 
-                // open archive lin
-                fileName = String_new();
-                error = Archive_readSpecialEntry(&archiveEntryInfo,
-                                                 &archiveHandle,
-                                                 &cryptAlgorithm,
-                                                 &cryptType,
-                                                 fileName,
-                                                 &fileInfo,
-                                                 NULL   // fileExtendedAttributeList
-                                                );
-                if (error != ERROR_NONE)
+                if (showEntriesFlag)
                 {
-                  printError("Cannot read 'special' content from storage '%s' (error: %s)!\n",
-                             Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                             Error_getText(error)
-                            );
-                  String_delete(fileName);
-                  break;
-                }
-
-                if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                    && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
-                   )
-                {
-                  if (globalOptions.groupFlag)
+                  // open archive lin
+                  fileName = String_new();
+                  error = Archive_readSpecialEntry(&archiveEntryInfo,
+                                                   &archiveHandle,
+                                                   &cryptAlgorithm,
+                                                   &cryptType,
+                                                   fileName,
+                                                   &fileInfo,
+                                                   NULL   // fileExtendedAttributeList
+                                                  );
+                  if (error != ERROR_NONE)
                   {
-                    // add special info to list
-                    addListSpecialInfo(Storage_getName(storageSpecifier,NULL),
+                    printError("Cannot read 'special' content from storage '%s' (error: %s)!\n",
+                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Error_getText(error)
+                              );
+                    String_delete(fileName);
+                    break;
+                  }
+
+                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                      && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                     )
+                  {
+                    if (globalOptions.groupFlag)
+                    {
+                      // add special info to list
+                      addListSpecialInfo(Storage_getName(storageSpecifier,NULL),
+                                         fileName,
+                                         fileInfo.userId,
+                                         fileInfo.groupId,
+                                         fileInfo.permission,
+                                         cryptAlgorithm,
+                                         cryptType,
+                                         fileInfo.specialType,
+                                         fileInfo.major,
+                                         fileInfo.minor
+                                        );
+                    }
+                    else
+                    {
+                      // output file info
+                      if (!printedNameFlag)
+                      {
+                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printedNameFlag = TRUE;
+                      }
+                      if (!printedInfoFlag)
+                      {
+                        printArchiveListHeader();
+                        printedInfoFlag = TRUE;
+                      }
+                      printSpecialInfo(NULL,
                                        fileName,
                                        fileInfo.userId,
                                        fileInfo.groupId,
@@ -2630,40 +2795,100 @@ remoteBarFlag=FALSE;
                                        fileInfo.major,
                                        fileInfo.minor
                                       );
-                  }
-                  else
-                  {
-                    // output file info
-                    if (!printedInfoFlag)
-                    {
-                      printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
-                      printedInfoFlag = TRUE;
                     }
-                    printSpecialInfo(NULL,
-                                     fileName,
-                                     fileInfo.userId,
-                                     fileInfo.groupId,
-                                     fileInfo.permission,
-                                     cryptAlgorithm,
-                                     cryptType,
-                                     fileInfo.specialType,
-                                     fileInfo.major,
-                                     fileInfo.minor
-                                    );
+                    fileCount++;
                   }
-                  fileCount++;
-                }
 
-                // close archive file, free resources
-                error = Archive_closeEntry(&archiveEntryInfo);
-                if (error != ERROR_NONE)
+                  // close archive file, free resources
+                  error = Archive_closeEntry(&archiveEntryInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    printWarning("close 'special' entry fail (error: %s)\n",Error_getText(error));
+                  }
+
+                  // free resources
+                  String_delete(fileName);
+                }
+                else
                 {
-                  printWarning("close 'special' entry fail (error: %s)\n",Error_getText(error));
+                  error = Archive_skipNextEntry(&archiveHandle);
                 }
-
-                // free resources
-                String_delete(fileName);
               }
+              break;
+            case ARCHIVE_ENTRY_TYPE_META:
+              {
+                String       name;
+                String       hostName;
+                String       jobUUID;
+                String       scheduleUUID;
+                ArchiveTypes archiveType;
+                uint64       createdDateTime;
+                String       comment;
+
+                if (globalOptions.metaInfoFlag)
+                {
+                  // read archive file
+                  name         = String_new();
+                  hostName     = String_new();
+                  jobUUID      = String_new();
+                  scheduleUUID = String_new();
+                  comment      = String_new();
+                  error = Archive_readMetaEntry(&archiveHandle,
+                                                name,
+                                                hostName,
+                                                jobUUID,
+                                                scheduleUUID,
+                                                &archiveType,
+                                                &createdDateTime,
+                                                comment
+                                               );
+                  if (error != ERROR_NONE)
+                  {
+                    printError("Cannot read 'meta' content from storage '%s' (error: %s)!\n",
+                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Error_getText(error)
+                              );
+                    String_delete(comment);
+                    String_delete(scheduleUUID);
+                    String_delete(jobUUID);
+                    String_delete(hostName);
+                    String_delete(name);
+                    break;
+                  }
+
+                  // output meta data
+                  if (!printedNameFlag)
+                  {
+                    printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
+                    printedNameFlag = TRUE;
+                  }
+                  printMetaInfo(name,
+                                hostName,
+                                jobUUID,
+                                scheduleUUID,
+                                archiveType,
+                                createdDateTime,
+                                comment
+                               );
+                  printf("\n");
+
+                  // free resources
+                  String_delete(comment);
+                  String_delete(scheduleUUID);
+                  String_delete(jobUUID);
+                  String_delete(hostName);
+                  String_delete(name);
+                }
+                else
+                {
+                  error = Archive_skipNextEntry(&archiveHandle);
+                }
+              }
+              break;
+            case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+//TODO
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+              error = Archive_skipNextEntry(&archiveHandle);
               break;
             default:
               #ifndef NDEBUG
@@ -2959,9 +3184,14 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
+                      if (!printedNameFlag)
+                      {
+                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printedNameFlag = TRUE;
+                      }
                       if (!printedInfoFlag)
                       {
-                        printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printArchiveListHeader();
                         printedInfoFlag = TRUE;
                       }
 
@@ -3056,9 +3286,14 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
+                      if (!printedNameFlag)
+                      {
+                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printedNameFlag = TRUE;
+                      }
                       if (!printedInfoFlag)
                       {
-                        printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printArchiveListHeader();
                         printedInfoFlag = TRUE;
                       }
 
@@ -3134,9 +3369,14 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
+                      if (!printedNameFlag)
+                      {
+                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printedNameFlag = TRUE;
+                      }
                       if (!printedInfoFlag)
                       {
-                        printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printArchiveListHeader();
                         printedInfoFlag = TRUE;
                       }
 
@@ -3209,9 +3449,14 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
+                      if (!printedNameFlag)
+                      {
+                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printedNameFlag = TRUE;
+                      }
                       if (!printedInfoFlag)
                       {
-                        printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printArchiveListHeader();
                         printedInfoFlag = TRUE;
                       }
 
@@ -3307,9 +3552,14 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
+                      if (!printedNameFlag)
+                      {
+                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printedNameFlag = TRUE;
+                      }
                       if (!printedInfoFlag)
                       {
-                        printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printArchiveListHeader();
                         printedInfoFlag = TRUE;
                       }
 
@@ -3394,9 +3644,14 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
+                      if (!printedNameFlag)
+                      {
+                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printedNameFlag = TRUE;
+                      }
                       if (!printedInfoFlag)
                       {
-                        printArchiveListHeader(Storage_getPrintableName(storageSpecifier,archiveName));
+                        printArchiveListHeader();
                         printedInfoFlag = TRUE;
                       }
 
@@ -3473,7 +3728,8 @@ remoteBarFlag=FALSE;
   // output grouped list
   if (globalOptions.groupFlag)
   {
-    printArchiveListHeader(NULL);
+    printArchiveName(NULL);
+    printArchiveListHeader();
     printArchiveList();
     printArchiveListFooter(List_count(&archiveContentList));
   }
@@ -3715,6 +3971,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
 Errors Command_list(StringList          *storageNameList,
                     const EntryList     *includeEntryList,
                     const PatternList   *excludePatternList,
+                    bool                showEntriesFlag,
                     JobOptions          *jobOptions,
                     GetPasswordFunction getPasswordFunction,
                     void                *getPasswordUserData,
@@ -3768,6 +4025,7 @@ Errors Command_list(StringList          *storageNameList,
                                    NULL,  // archiveName
                                    includeEntryList,
                                    excludePatternList,
+                                   showEntriesFlag,
                                    jobOptions,
                                    getPasswordFunction,
                                    getPasswordUserData,
@@ -3826,6 +4084,7 @@ Errors Command_list(StringList          *storageNameList,
                                          fileName,
                                          includeEntryList,
                                          excludePatternList,
+                                         showEntriesFlag,
                                          jobOptions,
                                          getPasswordFunction,
                                          getPasswordUserData,
