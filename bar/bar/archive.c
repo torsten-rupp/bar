@@ -15,6 +15,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 
 #include "global.h"
@@ -830,7 +831,9 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   // init crypt
   error = Crypt_init(&cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     archiveHandle->cryptSalt,
+                     sizeof(chunkMeta.salt)
                     );
   if (error != ERROR_NONE)
   {
@@ -3432,7 +3435,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
     Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
     error = Crypt_readKeyFile(&archiveHandle->cryptKey,
                               jobOptions->cryptPublicKeyFileName,
-                              NULL
+                              NULL  // password
                              );
     if (error != ERROR_NONE)
     {
@@ -4142,7 +4145,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   // init crypt
   error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -4154,7 +4159,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -4166,7 +4173,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -4178,7 +4187,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -4190,7 +4201,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -4526,7 +4539,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   // init crypt
   error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -4538,7 +4553,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -4550,7 +4567,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -4562,7 +4581,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -4789,7 +4810,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   // init crypt
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -4800,7 +4823,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -5016,7 +5041,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   // init crypt
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -5027,7 +5054,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -5324,7 +5353,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   // init crypt
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -5335,7 +5366,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -5346,7 +5379,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -5357,7 +5392,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -5368,7 +5405,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -5379,7 +5418,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->hardLink.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -5653,7 +5694,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   // init crypt
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -5664,7 +5707,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
-                     archiveHandle->cryptPassword
+                     archiveHandle->cryptPassword,
+                     NULL,  // salt
+                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -6187,7 +6232,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&cryptInfo,
                          cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -6544,7 +6591,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -6555,7 +6604,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -6566,7 +6617,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -6577,7 +6630,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -6588,7 +6643,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -7124,7 +7181,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -7135,7 +7194,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -7146,7 +7207,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -7157,7 +7220,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -7584,7 +7649,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -7595,7 +7662,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -7966,7 +8035,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -7977,7 +8048,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -8393,7 +8466,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -8404,7 +8479,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -8415,7 +8492,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -8426,7 +8505,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -8437,7 +8518,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -8448,7 +8531,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -8973,7 +9058,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -8984,7 +9071,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
-                         password
+                         password,
+                         NULL,  // salt
+                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {

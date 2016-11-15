@@ -288,14 +288,18 @@ bool Crypt_isSymmetricSupported(void);
 #ifdef NDEBUG
 Errors Crypt_init(CryptInfo       *cryptInfo,
                   CryptAlgorithms cryptAlgorithm,
-                  const Password  *password
+                  const Password  *password,
+                  const byte      *salt,
+                  uint            saltLength
                  );
 #else /* not NDEBUG */
 Errors __Crypt_init(const char      *__fileName__,
                     ulong           __lineNb__,
                     CryptInfo       *cryptInfo,
                     CryptAlgorithms cryptAlgorithm,
-                    const Password  *password
+                    const Password  *password,
+                    const byte      *salt,
+                    uint            saltLength
                    );
 #endif /* NDEBUG */
 

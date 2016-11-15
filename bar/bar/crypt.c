@@ -406,14 +406,18 @@ bool Crypt_isValidAlgorithm(uint16 n)
 #ifdef NDEBUG
 Errors Crypt_init(CryptInfo       *cryptInfo,
                   CryptAlgorithms cryptAlgorithm,
-                  const Password  *password
+                  const Password  *password,
+                  const byte      *salt,
+                  uint            saltLength
                  )
 #else /* not NDEBUG */
-Errors __Crypt_init(const char    *__fileName__,
-                    ulong         __lineNb__,
+Errors __Crypt_init(const char      *__fileName__,
+                    ulong           __lineNb__,
                     CryptInfo       *cryptInfo,
                     CryptAlgorithms cryptAlgorithm,
-                    const Password  *password
+                    const Password  *password,
+                    const byte      *salt,
+                    uint            saltLength
                    )
 #endif /* NDEBUG */
 {
@@ -1146,7 +1150,13 @@ p++;
     if (password != NULL)
     {
       // initialize crypt
-      error = Crypt_init(&cryptInfo,SECRET_KEY_CRYPT_ALGORITHM,password);
+      error = Crypt_init(&cryptInfo,
+                         SECRET_KEY_CRYPT_ALGORITHM,
+                         password,
+//TODO
+                         NULL,  // salt
+                         0  // saltLength
+                        );
       if (error != ERROR_NONE)
       {
         Password_freeSecure(fileCryptKey);
@@ -1368,7 +1378,13 @@ p++;
     if (password != NULL)
     {
       // initialize crypt
-      error = Crypt_init(&cryptInfo,SECRET_KEY_CRYPT_ALGORITHM,password);
+      error = Crypt_init(&cryptInfo,
+                         SECRET_KEY_CRYPT_ALGORITHM,
+                         password,
+//TODO
+                         NULL,  // salt
+                         0  // saltLength
+                        );
       if (error != ERROR_NONE)
       {
         Password_freeSecure(fileCryptKey);
