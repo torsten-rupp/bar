@@ -194,9 +194,6 @@ typedef struct JobNode
   // schedule info
   uint64          lastCheckDateTime;                    // last check date/time (timestamp)
 
-  // comment
-  String          comment;                              // comment
-
   // job passwords
   Password        *ftpPassword;                         // FTP password if password mode is 'ask'
   Password        *sshPassword;                         // SSH password if password mode is 'ask'
@@ -568,7 +565,7 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                 ScheduleNode,enabled                            ),
   CONFIG_VALUE_END_SECTION(),
 
-  CONFIG_STRUCT_VALUE_STRING    ("comment",                 JobNode,comment                                 ),
+  CONFIG_STRUCT_VALUE_STRING    ("comment",                 JobNode,jobOptions.comment                      ),
 
   // deprecated
   CONFIG_STRUCT_VALUE_DEPRECATED("mount-device",            JobNode,mountList,                              configValueParseDeprecatedMountDevice,NULL,"mount"),
@@ -1804,7 +1801,6 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   String_delete(jobNode->master);
 
   doneJobOptions(&jobNode->jobOptions);
-  String_delete(jobNode->comment);
   List_done(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
   DeltaSourceList_done(&jobNode->deltaSourceList);
   PatternList_done(&jobNode->compressExcludePatternList);
@@ -1874,8 +1870,6 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
   jobNode->scheduleModifiedFlag           = FALSE;
 
   jobNode->lastCheckDateTime              = 0LL;
-
-  jobNode->comment                        = String_new();
 
   jobNode->ftpPassword                    = NULL;
   jobNode->sshPassword                    = NULL;
@@ -1984,8 +1978,6 @@ LOCAL JobNode *copyJob(JobNode     *jobNode,
   newJobNode->scheduleModifiedFlag           = TRUE;
 
   newJobNode->lastCheckDateTime              = 0LL;
-
-  newJobNode->comment                        = String_duplicate(jobNode->comment);
 
   newJobNode->ftpPassword                    = NULL;
   newJobNode->sshPassword                    = NULL;
