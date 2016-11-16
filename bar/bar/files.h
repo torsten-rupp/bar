@@ -711,7 +711,7 @@ bool File_eof(FileHandle *fileHandle);
 * Purpose: read data from file
 * Input  : fileHandle   - file handle
 *          buffer       - buffer for data to read
-*          bufferLength - length of data to read
+*          bufferSize   - max. length of data to read [bytes]
 * Output : bytesRead - bytes read (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : if bytesRead is not given (NULL) reading less than
@@ -720,7 +720,7 @@ bool File_eof(FileHandle *fileHandle);
 
 Errors File_read(FileHandle *fileHandle,
                  void       *buffer,
-                 ulong      bufferLength,
+                 ulong      bufferSize,
                  ulong      *bytesRead
                 );
 
@@ -729,7 +729,7 @@ Errors File_read(FileHandle *fileHandle,
 * Purpose: write data into file
 * Input  : fileHandle   - file handle
 *          buffer       - buffer for data to write
-*          bufferLength - length of data to write
+*          bufferLength - length of data to write [bytes]
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -

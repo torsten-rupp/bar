@@ -1978,7 +1978,7 @@ bool File_eof(FileHandle *fileHandle)
 
 Errors File_read(FileHandle *fileHandle,
                  void       *buffer,
-                 ulong      bufferLength,
+                 ulong      bufferSize,
                  ulong      *bytesRead
                 )
 {
@@ -1992,7 +1992,7 @@ Errors File_read(FileHandle *fileHandle,
     // read as much data as possible
 //TODO: not valid
 //    assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
-    n = fread(buffer,1,bufferLength,fileHandle->file);
+    n = fread(buffer,1,bufferSize,fileHandle->file);
     if ((n <= 0) && (ferror(fileHandle->file) != 0))
     {
       return ERRORX_(IO_ERROR,errno,"%s",String_cString(fileHandle->name));
@@ -2006,9 +2006,9 @@ Errors File_read(FileHandle *fileHandle,
   {
     // read all requested data
     errno=0;
-    while (bufferLength > 0L)
+    while (bufferSize > 0L)
     {
-      n = fread(buffer,1,bufferLength,fileHandle->file);
+      n = fread(buffer,1,bufferSize,fileHandle->file);
       if (n <= 0)
       {
         if (ferror(fileHandle->file) != 0)
@@ -2021,7 +2021,7 @@ Errors File_read(FileHandle *fileHandle,
         }
       }
       buffer = (byte*)buffer+n;
-      bufferLength -= (ulong)n;
+      bufferSize -= (ulong)n;
       fileHandle->index += (uint64)n;
 //TODO: not valid when file changed in the meantime
 //      assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
