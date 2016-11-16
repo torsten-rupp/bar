@@ -453,7 +453,7 @@ void Crypt_doneKey(CryptKey *cryptKey);
 * Purpose: get public/private key data as base64-encoded string
 * Input  : cryptKey   - crypt key
 *          data       - data variable
-*          dataLength - length of data variable
+*          dataSize   - size of data variable
 *          password   - password to encrypt key (can be NULL)
 *          salt       - salt (can be NULL)
 *          saltLength - salt length
@@ -464,7 +464,7 @@ void Crypt_doneKey(CryptKey *cryptKey);
 
 Errors Crypt_getKeyData(CryptKey       *cryptKey,
                         void           *data,
-                        uint           dataLength,
+                        uint           dataSize,
                         const Password *password,
                         const byte     *salt,
                         uint           saltLength
@@ -485,7 +485,7 @@ Errors Crypt_getKeyData(CryptKey       *cryptKey,
 \***********************************************************************/
 
 Errors Crypt_setKeyData(CryptKey       *cryptKey,
-                        const void     data,
+                        const void     *data,
                         uint           dataLength,
                         const Password *password,
                         const byte     *salt,
