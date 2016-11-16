@@ -98,6 +98,14 @@ typedef struct
   CryptPaddingTypes cryptPaddingType;
 } CryptKey;
 
+// crypt hash
+typedef struct
+{
+  #ifdef HAVE_GCRYPT
+    gcry_md_hd_t gcry_md_hd;
+  #endif /* HAVE_GCRYPT */
+} CryptHash;
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -280,6 +288,8 @@ bool Crypt_isSymmetricSupported(void);
 * Input  : cryptInfo      - crypt info block
 *          cryptAlgorithm - crypt algorithm to use
 *          password       - crypt password
+*          salt           - salt (can be NULL)
+*          saltLength     - salt length
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -440,35 +450,87 @@ void Crypt_doneKey(CryptKey *cryptKey);
 
 /***********************************************************************\
 * Name   : Crypt_getKeyData
-* Purpose: get public/private key data as string
-* Input  : cryptKey - crypt key
-*          string   - string variable
-*          password - password to encrypt key (can be NULL)
-* Output : string - string with key data
+* Purpose: get public/private key data as base64-encoded string
+* Input  : cryptKey   - crypt key
+*          data       - data variable
+*          dataLength - length of data variable
+*          password   - password to encrypt key (can be NULL)
+*          salt       - salt (can be NULL)
+*          saltLength - salt length
+* Output : data - data with encrypted key
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Crypt_getKeyData(CryptKey       *cryptKey,
-                        String         string,
-                        const Password *password
+                        void           *data,
+                        uint           dataLength,
+                        const Password *password,
+                        const byte     *salt,
+                        uint           saltLength
                        );
 
 /***********************************************************************\
 * Name   : Crypt_setKeyData
-* Purpose: set public/private key data from string
-* Input  : cryptKey - crypt key
-*          string   - string with key data
-*          password - password to decrypt key (can be NULL)
+* Purpose: set public/private key data from base64-encoded string
+* Input  : cryptKey   - crypt key
+*          data       - data with encrypted key
+*          dataLength - length of data
+*          password   - password to decrypt key (can be NULL)
+*          salt       - salt (can be NULL)
+*          saltLength - salt length
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Crypt_setKeyData(CryptKey       *cryptKey,
-                        const String   string,
-                        const Password *password
+                        const void     data,
+                        uint           dataLength,
+                        const Password *password,
+                        const byte     *salt,
+                        uint           saltLength
                        );
+
+/***********************************************************************\
+* Name   : Crypt_getKeyString
+* Purpose: get public/private key data as base64-encoded string
+* Input  : cryptKey   - crypt key
+*          string     - string variable
+*          password   - password to encrypt key (can be NULL)
+*          salt       - salt (can be NULL)
+*          saltLength - salt length
+* Output : string - string with encrypted key data
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_getKeyString(CryptKey       *cryptKey,
+                          String         string,
+                          const Password *password,
+                          const byte     *salt,
+                          uint           saltLength
+                         );
+
+/***********************************************************************\
+* Name   : Crypt_setKeyString
+* Purpose: set public/private key data from base64-encoded string
+* Input  : cryptKey   - crypt key
+*          string     - string with encrypted key data
+*          password   - password to decrypt key (can be NULL)
+*          salt       - salt (can be NULL)
+*          saltLength - salt length
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_setKeyString(CryptKey       *cryptKey,
+                          const String   string,
+                          const Password *password,
+                          const byte     *salt,
+                          uint           saltLength
+                         );
 
 /***********************************************************************\
 * Name   : Crypt_getKeyModulus, Crypt_getKeyExponent
@@ -486,8 +548,10 @@ String Crypt_getKeyExponent(CryptKey *cryptKey);
 /***********************************************************************\
 * Name   : Crypt_readKeyFile
 * Purpose: read key from file
-* Input  : fileName - file name
-*          password - password tor decrypt key (can be NULL)
+* Input  : fileName   - file name
+*          password   - password tor decrypt key (can be NULL)
+*          salt       - salt (can be NULL)
+*          saltLength - salt length
 * Output : cryptKey - crypt key
 * Return : ERROR_NONE or error code
 * Notes  : use own specific file format
@@ -495,15 +559,19 @@ String Crypt_getKeyExponent(CryptKey *cryptKey);
 
 Errors Crypt_readKeyFile(CryptKey       *cryptKey,
                          const String   fileName,
-                         const Password *password
+                         const Password *password,
+                         const byte     *salt,
+                         uint           saltLength
                         );
 
 /***********************************************************************\
 * Name   : Crypt_writeKeyFile
 * Purpose: write key to file
-* Input  : cryptKey - crypt key
-*          fileName - file name
-*          password - password to encrypt key (can be NULL)
+* Input  : cryptKey   - crypt key
+*          fileName   - file name
+*          password   - password to encrypt key (can be NULL)
+*          salt       - salt (can be NULL)
+*          saltLength - salt length
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : use own specific file format
@@ -511,15 +579,19 @@ Errors Crypt_readKeyFile(CryptKey       *cryptKey,
 
 Errors Crypt_writeKeyFile(CryptKey       *cryptKey,
                           const String   fileName,
-                          const Password *password
+                          const Password *password,
+                          const byte     *salt,
+                          uint           saltLength
                          );
 
 /***********************************************************************\
 * Name   : Crypt_createKeys
-* Purpose: create new public/private key pair
+* Purpose: create new public/private key pair encryption/decryption
 * Input  : bits - number of RSA key bits
-* Output : publicCryptKey  - public crypt key
-*          privateCryptKey - private crypt key
+* Output : publicCryptKey  - public crypt key (encryption or signature
+*                            check)
+*          privateCryptKey - private crypt key (decryption or signature
+*                            generation)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -629,6 +701,69 @@ Errors Crypt_getDecryptKey(CryptKey   *privateKey,
 void Crypt_dumpKey(const CryptKey *cryptKey);
 #endif /* NDEBUG */
 
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : Crypt_initHash
+* Purpose: init hash
+* Input  : cryptHash - crypt hash variable
+* Output : cryptHash - crypt hash
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_initHash(CryptHash *cryptHash);
+
+/***********************************************************************\
+* Name   : Crypt_doneHash
+* Purpose: done hash
+* Input  : cryptHash - crypt hash
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Crypt_doneHash(CryptHash *cryptHash);
+
+/***********************************************************************\
+* Name   : Crypt_updateHash
+* Purpose: update hash
+* Input  : cryptHash    - crypt hash
+*          buffer       - buffer with data
+*          bufferLength - buffer length
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Crypt_updateHash(CryptHash *cryptHash,
+                      void      *buffer,
+                      ulong     bufferLength
+                     );
+
+/***********************************************************************\
+* Name   : Crypt_getHashLength
+* Purpose: get hash length
+* Input  : cryptHash - crypt hash
+* Output : -
+* Return : hash length [bytes]
+* Notes  : -
+\***********************************************************************/
+
+uint Crypt_getHashLength(CryptHash *cryptHash);
+
+/***********************************************************************\
+* Name   : Crypt_getHash
+* Purpose: get hash
+* Input  : cryptHash  - crypt hash
+*          buffer     - buffer for hash
+*          bufferSize - buffer size
+* Output : -
+* Return : hash buffer
+* Notes  : -
+\***********************************************************************/
+
+void *Crypt_getHash(CryptHash *cryptHash, void *buffer, uint bufferSize);
 
 #ifdef __cplusplus
   }
