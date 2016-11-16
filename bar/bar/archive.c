@@ -3431,7 +3431,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
   {
     // check if public key available
-    if (jobOptions->cryptPublicKeyFileName == NULL)
+    if (jobOptions->cryptPublicKey.data == NULL)
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_NO_PUBLIC_KEY;
@@ -3439,12 +3439,13 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
 
     // read public key
     Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
-    error = Crypt_readKeyFile(&archiveHandle->cryptKey,
-                              jobOptions->cryptPublicKeyFileName,
-                              NULL,  // password
-                              NULL,  // salt
-                              0  // saltLength
-                             );
+    error = Crypt_setKeyData(&archiveHandle->cryptKey,
+                             jobOptions->cryptPublicKey.data,
+                             jobOptions->cryptPublicKey.length,
+                             NULL,  // password
+                             NULL,  // salt
+                             0  // saltLength
+                            );
     if (error != ERROR_NONE)
     {
       AutoFree_cleanup(&autoFreeList);
@@ -3987,12 +3988,13 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
         // read private key, try to read key with no password, all passwords
         Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
         decryptedFlag = FALSE;
-        archiveHandle->pendingError = Crypt_readKeyFile(&archiveHandle->cryptKey,
-                                                      archiveHandle->jobOptions->cryptPrivateKeyFileName,
-                                                      NULL,  // password
-                                                      NULL,  // salt
-                                                      0  // saltLength
-                                                     );
+        archiveHandle->pendingError = Crypt_setKeyData(&archiveHandle->cryptKey,
+                                                       archiveHandle->jobOptions->cryptPrivateKey.data,
+                                                       archiveHandle->jobOptions->cryptPrivateKey.length,
+                                                       NULL,  // password
+                                                       NULL,  // salt
+                                                       0  // saltLength
+                                                      );
         if (archiveHandle->pendingError == ERROR_NONE)
         {
           decryptedFlag = TRUE;
@@ -4008,12 +4010,13 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                && (password != NULL)
               )
         {
-          archiveHandle->pendingError = Crypt_readKeyFile(&archiveHandle->cryptKey,
-                                                        archiveHandle->jobOptions->cryptPrivateKeyFileName,
-                                                        password,
-                                                        NULL,  // salt
-                                                        0  // saltLength
-                                                       );
+          archiveHandle->pendingError = Crypt_setKeyData(&archiveHandle->cryptKey,
+                                                         archiveHandle->jobOptions->cryptPrivateKey.data,
+                                                         archiveHandle->jobOptions->cryptPrivateKey.length,
+                                                         password,
+                                                         NULL,  // salt
+                                                         0  // saltLength
+                                                        );
           if (archiveHandle->pendingError == ERROR_NONE)
           {
             decryptedFlag = TRUE;
@@ -6016,7 +6019,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
         break;
       case CHUNK_ID_KEY:
         // check if private key available
-        if (archiveHandle->jobOptions->cryptPrivateKeyFileName == NULL)
+        if (archiveHandle->jobOptions->cryptPrivateKey.data == NULL)
         {
           return ERROR_NO_PRIVATE_KEY;
         }
@@ -6024,12 +6027,13 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
         // read private key, try to read key with no password, all passwords
         Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
         decryptedFlag = FALSE;
-        error = Crypt_readKeyFile(&archiveHandle->cryptKey,
-                                  archiveHandle->jobOptions->cryptPrivateKeyFileName,
-                                  NULL,  // password
-                                  NULL,  // salt
-                                  0  // saltLength
-                                 );
+        error = Crypt_setKeyData(&archiveHandle->cryptKey,
+                                 archiveHandle->jobOptions->cryptPrivateKey.data,
+                                 archiveHandle->jobOptions->cryptPrivateKey.length,
+                                 NULL,  // password
+                                 NULL,  // salt
+                                 0  // saltLength
+                                );
         if (error == ERROR_NONE)
         {
           decryptedFlag = TRUE;
@@ -6045,12 +6049,13 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
                && (password != NULL)
               )
         {
-          error = Crypt_readKeyFile(&archiveHandle->cryptKey,
-                                    archiveHandle->jobOptions->cryptPrivateKeyFileName,
-                                    password,
-                                    NULL,  // salt
-                                    0  // saltLength
-                                   );
+          error = Crypt_setKeyData(&archiveHandle->cryptKey,
+                                   archiveHandle->jobOptions->cryptPrivateKey.data,
+                                   archiveHandle->jobOptions->cryptPrivateKey.length,
+                                   password,
+                                   NULL,  // salt
+                                   0  // saltLength
+                                  );
           if (error == ERROR_NONE)
           {
             decryptedFlag = TRUE;

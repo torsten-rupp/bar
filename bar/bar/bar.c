@@ -7807,12 +7807,12 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   }
   else
   {
-    error = Crypt_getKeyData(&publicKey,
-                             data,
-                             NULL,  // password,
-                             NULL,  // salt
-                             0  // saltLength
-                            );
+    error = Crypt_getKeyString(&publicKey,
+                               data,
+                               NULL,  // password,
+                               NULL,  // salt
+                               0  // saltLength
+                              );
     if (error != ERROR_NONE)
     {
       printError("Cannot get encryption public key!\n");
@@ -7824,12 +7824,12 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
       return error;
     }
     printf("crypt-public-key = base64:%s\n",String_cString(data));
-    error = Crypt_getKeyData(&privateKey,
-                             data,
-                             NULL,  // password,
-                             NULL,  // salt
-                             0  // saltLength
-                            );
+    error = Crypt_getKeyString(&privateKey,
+                               data,
+                               NULL,  // password,
+                               NULL,  // salt
+                               0  // saltLength
+                              );
     if (error != ERROR_NONE)
     {
       printError("Cannot get encryption private key!\n");
@@ -7955,12 +7955,12 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   }
   else
   {
-    error = Crypt_getKeyData(&publicKey,
-                             data,
-                             NULL,  // password,
-                             NULL,  // salt
-                             0  // saltLength
-                            );
+    error = Crypt_getKeyString(&publicKey,
+                               data,
+                               NULL,  // password,
+                               NULL,  // salt
+                               0  // saltLength
+                              );
     if (error != ERROR_NONE)
     {
       printError("Cannot get signature public key!\n");
@@ -7972,12 +7972,12 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       return error;
     }
     printf("signature-public-key = base64:%s\n",String_cString(data));
-    error = Crypt_getKeyData(&privateKey,
-                             data,
-                             NULL,  // password,
-                             NULL,  // salt
-                             0  // saltLength
-                            );
+    error = Crypt_getKeyString(&privateKey,
+                               data,
+                               NULL,  // password,
+                               NULL,  // salt
+                               0  // saltLength
+                              );
     if (error != ERROR_NONE)
     {
       printError("Cannot get signature private key!\n");

@@ -692,7 +692,9 @@ fprintf(stderr,"%s, %d: Remote_executeCommand\n",__FILE__,__LINE__);
                                                                 ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobOptions->cryptPasswordMode,NULL)
                                                                );
   if (error == ERROR_NONE) error = Remote_setJobOptionPassword (remoteHost,jobUUID,"crypt-password",         jobOptions->cryptPassword               );
-  if (error == ERROR_NONE) error = Remote_setJobOptionString   (remoteHost,jobUUID,"crypt-public-key",       jobOptions->cryptPublicKeyFileName      );
+//TODO
+#warning TODO
+//  if (error == ERROR_NONE) error = Remote_setJobOptionString   (remoteHost,jobUUID,"crypt-public-key",       jobOptions->cryptPublicKeyFileName      );
   if (error == ERROR_NONE) error = Remote_setJobOptionString   (remoteHost,jobUUID,"pre-command",            jobOptions->preProcessScript            );
   if (error == ERROR_NONE) error = Remote_setJobOptionString   (remoteHost,jobUUID,"post-command",           jobOptions->postProcessScript           );
   if (error == ERROR_NONE) error = Remote_setJobOptionString   (remoteHost,jobUUID,"ftp-login-name",         jobOptions->ftpServer.loginName         );

@@ -309,7 +309,7 @@ typedef struct IndexCryptPasswordNode
   LIST_NODE_HEADER(struct IndexCryptPasswordNode);
 
   Password *cryptPassword;
-  String   cryptPrivateKeyFileName;
+  Key      cryptPrivateKey;
 } IndexCryptPasswordNode;
 
 // list with index decrypt passwords
@@ -507,7 +507,7 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_SELECT    ("crypt-type",              JobNode,jobOptions.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_STRUCT_VALUE_SELECT    ("crypt-password-mode",     JobNode,jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
   CONFIG_STRUCT_VALUE_SPECIAL   ("crypt-password",          JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_STRING    ("crypt-public-key",        JobNode,jobOptions.cryptPublicKey,              configValueParseKey,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL   ("crypt-public-key",        JobNode,jobOptions.cryptPublicKey,              configValueParseKey,NULL,NULL,NULL,NULL),
 
   CONFIG_STRUCT_VALUE_STRING    ("pre-command",             JobNode,jobOptions.preProcessScript             ),
   CONFIG_STRUCT_VALUE_STRING    ("post-command",            JobNode,jobOptions.postProcessScript            ),
@@ -2865,7 +2865,8 @@ LOCAL bool readJob(JobNode *jobNode)
     jobNode->jobOptions.cryptType                  = CRYPT_TYPE_NONE;
   #endif /* HAVE_GCRYPT */
   jobNode->jobOptions.cryptPasswordMode            = PASSWORD_MODE_DEFAULT;
-  String_clear(jobNode->jobOptions.cryptPublicKeyFileName);
+  jobNode->jobOptions.cryptPublicKey.data          = NULL;
+  jobNode->jobOptions.cryptPublicKey.length        = 0;
   String_clear(jobNode->jobOptions.ftpServer.loginName);
   if (jobNode->jobOptions.ftpServer.password != NULL) Password_clear(jobNode->jobOptions.ftpServer.password);
   jobNode->jobOptions.sshServer.port               = 0;
@@ -5384,7 +5385,7 @@ LOCAL void purgeExpiredThreadCode(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addIndexCryptPasswordNode(IndexCryptPasswordList *indexCryptPasswordList, Password *cryptPassword, String cryptPrivateKeyFileName)
+LOCAL void addIndexCryptPasswordNode(IndexCryptPasswordList *indexCryptPasswordList, Password *cryptPassword, const Key *cryptPrivateKey)
 {
   IndexCryptPasswordNode *indexCryptPasswordNode;
 
@@ -5394,8 +5395,8 @@ LOCAL void addIndexCryptPasswordNode(IndexCryptPasswordList *indexCryptPasswordL
     return;
   }
 
-  indexCryptPasswordNode->cryptPassword           = Password_duplicate(cryptPassword);
-  indexCryptPasswordNode->cryptPrivateKeyFileName = String_duplicate(cryptPrivateKeyFileName);
+  indexCryptPasswordNode->cryptPassword = Password_duplicate(cryptPassword);
+  duplicateKey(&indexCryptPasswordNode->cryptPrivateKey,cryptPrivateKey);
 
   List_append(indexCryptPasswordList,indexCryptPasswordNode);
 }
@@ -5416,7 +5417,7 @@ LOCAL void freeIndexCryptPasswordNode(IndexCryptPasswordNode *indexCryptPassword
 
   UNUSED_VARIABLE(userData);
 
-  if (indexCryptPasswordNode->cryptPrivateKeyFileName != NULL) String_delete(indexCryptPasswordNode->cryptPrivateKeyFileName);
+  doneKey(&indexCryptPasswordNode->cryptPrivateKey);
   if (indexCryptPasswordNode->cryptPassword != NULL) Password_delete(indexCryptPasswordNode->cryptPassword);
 }
 
@@ -5565,7 +5566,7 @@ LOCAL void indexThreadCode(void)
         {
           if (jobNode->jobOptions.cryptPassword != NULL)
           {
-            addIndexCryptPasswordNode(&indexCryptPasswordList,jobNode->jobOptions.cryptPassword,jobNode->jobOptions.cryptPrivateKeyFileName);
+            addIndexCryptPasswordNode(&indexCryptPasswordList,jobNode->jobOptions.cryptPassword,&jobNode->jobOptions.cryptPrivateKey);
           }
         }
       }
@@ -5630,8 +5631,8 @@ LOCAL void indexThreadCode(void)
 #warning todo init?
 #endif
             startTimestamp = Misc_getTimestamp();
-            jobOptions.cryptPassword           = Password_duplicate(indexCryptPasswordNode->cryptPassword);
-            jobOptions.cryptPrivateKeyFileName = String_duplicate(indexCryptPasswordNode->cryptPrivateKeyFileName);
+            jobOptions.cryptPassword = Password_duplicate(indexCryptPasswordNode->cryptPassword);
+            duplicateKey(&jobOptions.cryptPrivateKey,&indexCryptPasswordNode->cryptPrivateKey);
             error = Archive_updateIndex(indexHandle,
                                         storageId,
                                         &storageInfo,
