@@ -1,4 +1,8 @@
 2016-12-xx 0.21
+  * parallel test, compare
+  * added meta-data chunk with host, name, UUID, created,
+    comment
+  * added option --comment
   * BARControl: use keys from .pem files
   * added meta info chunk: store user name, host name,
     job UUID, schedule UUID, type, created date/time,
