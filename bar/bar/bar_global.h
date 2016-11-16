@@ -502,9 +502,10 @@ struct JobOptions
   CryptAlgorithms              cryptAlgorithm;                // crypt algorithm to use
   PasswordModes                cryptPasswordMode;             // crypt password mode
   Password                     *cryptPassword;                // crypt password
-//TODO: key data instead of file anme
-  String                       cryptPublicKeyFileName;
-  String                       cryptPrivateKeyFileName;
+  Key                          cryptPublicKey;
+  Key                          cryptPrivateKey;
+  Key                          signaturePublicKey;
+  Key                          signaturePrivateKey;
 
   String                       preProcessScript;              // script to execute before start of job
   String                       postProcessScript;             // script to execute after after termination of job
@@ -528,7 +529,7 @@ struct JobOptions
 
   String                       comment;                       // comment
 
-  bool                         ignoreSignatureFlag;           // TRUE for ignoring signature check
+  bool                         noSignatureFlag;               // TRUE for not appending signature/ignoring signature
   bool                         skipUnreadableFlag;            // TRUE for skipping unreadable files
   bool                         forceDeltaCompressionFlag;     // TRUE to force delta compression of files
   bool                         ignoreNoDumpAttributeFlag;     // TRUE for ignoring no-dump attribute

@@ -177,7 +177,8 @@ typedef enum
   COMMAND_COMPARE,
   COMMAND_RESTORE,
 
-  COMMAND_GENERATE_KEYS,
+  COMMAND_GENERATE_ENCRYPTION_KEYS,
+  COMMAND_GENERATE_SIGNATURE_KEYS,
   COMMAND_NEW_KEY_PASSWORD,
 
   COMMAND_UNKNOWN,
@@ -276,7 +277,7 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
 LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 
 // deprecated
 LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
@@ -465,7 +466,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM         ("test",                         't',0,1,command,                                         COMMAND_TEST,                                          "test contents of archives"                                                ),
   CMD_OPTION_ENUM         ("compare",                      'd',0,1,command,                                         COMMAND_COMPARE,                                       "compare contents of archive swith files and images"                       ),
   CMD_OPTION_ENUM         ("extract",                      'x',0,1,command,                                         COMMAND_RESTORE,                                       "restore archives"                                                         ),
-  CMD_OPTION_ENUM         ("generate-keys",                0,  0,1,command,                                         COMMAND_GENERATE_KEYS,                                 "generate new public/private key pair"                                     ),
+  CMD_OPTION_ENUM         ("generate-keys",                0,  0,1,command,                                         COMMAND_GENERATE_ENCRYPTION_KEYS,                      "generate new public/private key pair for encryption"                      ),
+  CMD_OPTION_ENUM         ("generate-signature-keys",      0,  0,1,command,                                         COMMAND_GENERATE_SIGNATURE_KEYS,                       "generate new public/private key pair for signature"                       ),
 //  CMD_OPTION_ENUM         ("new-key-password",             0,  1,1,command,                                         COMMAND_NEW_KEY_PASSWORD,                             "set new private key password"                                             ),
   CMD_OPTION_INTEGER      ("generate-keys-bits",           0,  1,1,keyBits,                                         MIN_ASYMMETRIC_CRYPT_KEY_BITS,
                                                                                                                     MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS, "key bits",NULL                                                            ),
@@ -531,8 +533,10 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithm,                       COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                 "select crypt algorithm to use"                                            ),
   CMD_OPTION_SELECT       ("crypt-type",                   0,  0,2,jobOptions.cryptType,                            COMMAND_LINE_OPTIONS_CRYPT_TYPES,                      "select crypt type"                                                        ),
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,2,&globalOptions.cryptPassword,                    cmdOptionParsePassword,NULL,                           "crypt password (use with care!)","password"                               ),
-  CMD_OPTION_STRING       ("crypt-public-key",             0,  0,2,jobOptions.cryptPublicKeyFileName,                                                                      "public key for encryption","file name"                                    ),
-  CMD_OPTION_STRING       ("crypt-private-key",            0,  0,2,jobOptions.cryptPrivateKeyFileName,                                                                     "private key for decryption","file name"                                   ),
+  CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,2,&jobOptions.cryptPublicKey,                      cmdOptionParseKey,NULL,                                "public key for asymmetric encryption","file name|data"                    ),
+  CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,2,&jobOptions.cryptPrivateKey,                     cmdOptionParseKey,NULL,                                "private key for asymmetric decryption","file name|data"                   ),
+  CMD_OPTION_SPECIAL      ("signature-public-key",         0,  0,2,&jobOptions.signaturePublicKey,                  cmdOptionParseKey,NULL,                                "public key for signature check","file name|data"                          ),
+  CMD_OPTION_SPECIAL      ("signature-private-key",        0,  0,2,&jobOptions.signaturePrivateKey,                 cmdOptionParseKey,NULL,                                "private key for signature generation","file name|data"                    ),
 
 //TODO
 //  CMD_OPTION_INTEGER64    ("file-max-storage-size",         0,  0,2,defaultFileServer.maxStorageSize,                 0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on file server","unlimited"                  ),
@@ -546,8 +550,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,2,defaultSSHServer.ssh.port,                       0,65535,NULL,                                          "ssh port",NULL                                                            ),
   CMD_OPTION_STRING       ("ssh-login-name",               0,  0,2,defaultSSHServer.ssh.loginName,                                                                   "ssh login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,2,&defaultSSHServer.ssh.password,                  cmdOptionParsePassword,NULL,                           "ssh password (use with care!)","password"                                 ),
-  CMD_OPTION_SPECIAL      ("ssh-public-key",               0,  1,2,&defaultSSHServer.ssh.publicKey,                 cmdOptionReadKeyFile,NULL,                             "ssh public key file name","file name"                                     ),
-  CMD_OPTION_SPECIAL      ("ssh-private-key",              0,  1,2,&defaultSSHServer.ssh.privateKey,                cmdOptionReadKeyFile,NULL,                             "ssh private key file name","file name"                                    ),
+  CMD_OPTION_SPECIAL      ("ssh-public-key",               0,  1,2,&defaultSSHServer.ssh.publicKey,                 cmdOptionParseKey,NULL,                                "ssh public key file name","file name|data"                                ),
+  CMD_OPTION_SPECIAL      ("ssh-private-key",              0,  1,2,&defaultSSHServer.ssh.privateKey,                cmdOptionParseKey,NULL,                                "ssh private key file name","file name|data"                               ),
   CMD_OPTION_INTEGER      ("ssh-max-connections",          0,  0,2,defaultSSHServer.maxConnectionCount,             0,MAX_INT,NULL,                                        "max. number of concurrent ssh connections","unlimited"                    ),
 //TODO
 //  CMD_OPTION_INTEGER64    ("ssh-max-storage-size",         0,  0,2,defaultSSHServer.maxStorageSize,                 0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on ssh server","unlimited"                  ),
@@ -565,7 +569,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,1,serverTLSPort,                                   0,65535,NULL,                                          "TLS (SSL) server port",NULL                                               ),
   CMD_OPTION_SPECIAL      ("server-ca-file",               0,  1,1,&serverCA,                                       cmdOptionReadCertificateFile,NULL,                     "TLS (SSL) server certificate authority file (CA file)","file name"        ),
   CMD_OPTION_SPECIAL      ("server-cert-file",             0,  1,1,&serverCert,                                     cmdOptionReadCertificateFile,NULL,                     "TLS (SSL) server certificate file","file name"                            ),
-  CMD_OPTION_SPECIAL      ("server-key-file",              0,  1,1,&serverKey,                                      cmdOptionReadKeyFile,NULL,                             "TLS (SSL) server key file","file name"                                    ),
+  CMD_OPTION_SPECIAL      ("server-key-file",              0,  1,1,&serverKey,                                      cmdOptionParseKey,NULL,                                "TLS (SSL) server key file","file name|data"                               ),
   CMD_OPTION_SPECIAL      ("server-password",              0,  1,1,&serverPassword,                                 cmdOptionParsePassword,NULL,                           "server password (use with care!)","password"                              ),
   CMD_OPTION_INTEGER      ("server-max-connections",       0,  1,1,serverMaxConnections,                            0,65535,NULL,                                          "max. concurrent connections to server",NULL                               ),
   CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,1,serverJobsDirectory,                                                                                    "server job directory","path name"                                         ),
@@ -705,7 +709,6 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("ignore-no-backup-file",        0,  1,2,globalOptions.ignoreNoBackupFileFlag,                                                                   "ignore .nobackup/.NOBACKUP file"                                          ),
   CMD_OPTION_BOOLEAN      ("ignore-no-dump",               0,  1,2,jobOptions.ignoreNoDumpAttributeFlag,                                                                   "ignore 'no dump' attribute of files"                                      ),
 
-  CMD_OPTION_BOOLEAN      ("no-signature-check",           0  ,0,1,jobOptions.ignoreSignatureFlag,                                                                         "do not check signatures"                                                  ),
   CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,2,jobOptions.skipUnreadableFlag,                                                                          "skip unreadable files"                                                    ),
   CMD_OPTION_BOOLEAN      ("force-delta-compression",      0,  0,2,jobOptions.forceDeltaCompressionFlag,                                                                   "force delta compression of files. Stop on error"                          ),
   CMD_OPTION_BOOLEAN      ("raw-images",                   0,  1,2,jobOptions.rawImagesFlag,                                                                               "store raw images (store all image blocks)"                                ),
@@ -716,6 +719,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,2,jobOptions.overwriteEntriesFlag,                                                                        "overwrite existing entries"                                               ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,2,jobOptions.waitFirstVolumeFlag,                                                                         "wait for first volume"                                                    ),
   CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,2,jobOptions.dryRunFlag,                                                                                  "do dry-run (skip storage/restore, incremental data, index database)"      ),
+  CMD_OPTION_BOOLEAN      ("no-signature",                 0  ,0,1,jobOptions.noSignatureFlag,                                                                             "do not create or check signatures"                                        ),
   CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,2,jobOptions.noStorageFlag,                                                                               "do not store archives (skip storage, index database)"                     ),
   CMD_OPTION_BOOLEAN      ("no-bar-on-medium",             0,  1,2,jobOptions.noBAROnMediumFlag,                                                                           "do not store a copy of BAR on medium"                                     ),
   CMD_OPTION_BOOLEAN      ("no-stop-on-error",             0,  1,2,jobOptions.noStopOnErrorFlag,                                                                           "do not immediately stop on error"                                         ),
@@ -945,8 +949,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SELECT            ("crypt-type",                   &jobOptions.cryptType,-1,                                      CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_VALUE_SELECT            ("crypt-password-mode",          &jobOptions.cryptPasswordMode,-1,                              CONFIG_VALUE_PASSWORD_MODES),
   CONFIG_VALUE_SPECIAL           ("crypt-password",               &globalOptions.cryptPassword,-1,                               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_VALUE_STRING            ("crypt-public-key",             &jobOptions.cryptPublicKeyFileName,-1                          ),
-  CONFIG_VALUE_STRING            ("crypt-private-key",            &jobOptions.cryptPrivateKeyFileName,-1                         ),
+  CONFIG_VALUE_SPECIAL           ("crypt-public-key",             &jobOptions.cryptPublicKey,-1,                                 configValueParseKey,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("crypt-private-key",            &jobOptions.cryptPrivateKey,-1,                                configValueParseKey,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_SPECIAL           ("include-file",                 &includeEntryList,-1,                                          configValueParseFileEntryPattern,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_CSTRING           ("include-file-command",         &includeFileCommand,-1                                         ),
@@ -972,13 +976,13 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_STRING            ("comment",                      &jobOptions.comment,-1                                         ),
 
-  CONFIG_VALUE_BOOLEAN           ("no-signature-check",           &jobOptions.ignoreSignatureFlag,-1                             ),
   CONFIG_VALUE_BOOLEAN           ("skip-unreadable",              &jobOptions.skipUnreadableFlag,-1                              ),
   CONFIG_VALUE_BOOLEAN           ("raw-images",                   &jobOptions.rawImagesFlag,-1                                   ),
   CONFIG_VALUE_BOOLEAN           ("no-fragments-check",           &jobOptions.noFragmentsCheckFlag,-1                            ),
   CONFIG_VALUE_SELECT            ("archive-file-mode",            &jobOptions.archiveFileMode,-1,                                CONFIG_VALUE_ARCHIVE_FILE_MODES),
   CONFIG_VALUE_BOOLEAN           ("overwrite-files",              &jobOptions.overwriteEntriesFlag,-1                            ),
   CONFIG_VALUE_BOOLEAN           ("wait-first-volume",            &jobOptions.waitFirstVolumeFlag,-1                             ),
+  CONFIG_VALUE_BOOLEAN           ("no-signature",                 &jobOptions.noSignatureFlag,-1                             ),
   CONFIG_VALUE_BOOLEAN           ("no-bar-on-medium",             &jobOptions.noBAROnMediumFlag,-1                               ),
   CONFIG_VALUE_BOOLEAN           ("no-stop-on-error",             &jobOptions.noStopOnErrorFlag,-1                               ),
   CONFIG_VALUE_BOOLEAN           ("quiet",                        &globalOptions.quietFlag,-1                                    ),
@@ -2030,7 +2034,8 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
     case COMMAND_TEST:
     case COMMAND_COMPARE:
     case COMMAND_RESTORE:
-    case COMMAND_GENERATE_KEYS:
+    case COMMAND_GENERATE_ENCRYPTION_KEYS:
+    case COMMAND_GENERATE_SIGNATURE_KEYS:
     case COMMAND_NEW_KEY_PASSWORD:
       entryType = ENTRY_TYPE_FILE;
       break;
@@ -2099,7 +2104,8 @@ LOCAL bool cmdOptionParseEntryPatternCommand(void *userData, void *variable, con
     case COMMAND_RESTORE:
     case COMMAND_INFO:
     case COMMAND_CHECK_SIGNATURE:
-    case COMMAND_GENERATE_KEYS:
+    case COMMAND_GENERATE_ENCRYPTION_KEYS:
+    case COMMAND_GENERATE_SIGNATURE_KEYS
     case COMMAND_NEW_KEY_PASSWORD:
       entryType = ENTRY_TYPE_FILE;
       break;
@@ -2704,18 +2710,20 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
 }
 
 /***********************************************************************\
-* Name   : cmdOptionReadKeyFile
-* Purpose: command line option call back for reading key file
+* Name   : cmdOptionParseKey
+* Purpose: command line option call back for parse key
 * Input  : -
 * Output : -
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   Key    *key = (Key*)variable;
   Errors error;
+  uint   dataLength;
+  void   *data;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2724,11 +2732,73 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
 
-  error = readKeyFile(key,value);
-  if (error != ERROR_NONE)
+  if (File_existsCString(value))
   {
-    stringCopy(errorMessage,Error_getText(error),errorMessageSize);
-    return FALSE;
+    // read key file
+    error = readKeyFile(key,value);
+    if (error != ERROR_NONE)
+    {
+      stringCopy(errorMessage,Error_getText(error),errorMessageSize);
+      return FALSE;
+    }
+  }
+  else if (stringStartsWith(value,"base64:"))
+  {
+    // get key data length
+    dataLength = Misc_base64DecodeLengthCString(&value[7]);
+
+    if (dataLength > 0)
+    {
+      // allocate key memory
+      data = Password_allocSecure(dataLength);
+      if (data == NULL)
+      {
+        return FALSE;
+      }
+
+      // decode base64
+      if (Misc_base64DecodeCString((byte*)data,dataLength,&value[7]) == -1)
+      {
+        Password_freeSecure(data);
+        return FALSE;
+      }
+    }
+    else
+    {
+      data = NULL;
+    }
+
+    // set key data
+    if (key->data != NULL) Password_freeSecure(key->data);
+    key->data   = data;
+    key->length = dataLength;
+  }
+  else
+  {
+    // get key data length
+    dataLength = strlen(value);
+
+    if (dataLength > 0)
+    {
+      // allocate key memory
+      data = Password_allocSecure(dataLength);
+      if (data == NULL)
+      {
+        return FALSE;
+      }
+
+      // copy data
+      memcpy(data,value,dataLength);
+    }
+    else
+    {
+      data = NULL;
+    }
+
+    // set key data
+    if (key->data != NULL) Password_freeSecure(key->data);
+    key->data   = data;
+    key->length = dataLength;
   }
 
   return TRUE;
@@ -4549,14 +4619,15 @@ void initJobOptions(JobOptions *jobOptions)
     jobOptions->cryptType                     = CRYPT_TYPE_NONE;
   #endif /* HAVE_GCRYPT */
   jobOptions->cryptPasswordMode               = PASSWORD_MODE_DEFAULT;
-  jobOptions->cryptPublicKeyFileName          = NULL;
-  jobOptions->cryptPrivateKeyFileName         = NULL;
+  jobOptions->cryptPublicKey.data             = NULL;
+  jobOptions->cryptPublicKey.length           = 0;
+  jobOptions->cryptPrivateKey.data            = NULL;
+  jobOptions->cryptPrivateKey.length          = 0;
   jobOptions->preProcessScript                = NULL;
   jobOptions->postProcessScript               = NULL;
   jobOptions->maxStorageSize                  = 0LL;
   jobOptions->volumeSize                      = 0LL;
   jobOptions->comment                         = String_new();
-  jobOptions->ignoreSignatureFlag             = FALSE;
   jobOptions->skipUnreadableFlag              = TRUE;
   jobOptions->forceDeltaCompressionFlag       = FALSE;
   jobOptions->ignoreNoDumpAttributeFlag       = FALSE;
@@ -4570,6 +4641,7 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->noFragmentsCheckFlag            = FALSE;
   jobOptions->noIndexDatabaseFlag             = FALSE;
   jobOptions->dryRunFlag                      = FALSE;
+  jobOptions->noSignatureFlag                 = FALSE;
   jobOptions->noStorageFlag                   = FALSE;
   jobOptions->noBAROnMediumFlag               = FALSE;
   jobOptions->noStopOnErrorFlag               = FALSE;
@@ -4587,8 +4659,8 @@ void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOp
   jobOptions->destination                         = String_duplicate(fromJobOptions->destination);
 
   jobOptions->cryptPassword                       = Password_duplicate(fromJobOptions->cryptPassword);
-  jobOptions->cryptPublicKeyFileName              = String_duplicate(fromJobOptions->cryptPublicKeyFileName);
-  jobOptions->cryptPrivateKeyFileName             = String_duplicate(fromJobOptions->cryptPrivateKeyFileName);
+  duplicateKey(&jobOptions->cryptPublicKey,&fromJobOptions->cryptPublicKey);
+  duplicateKey(&jobOptions->cryptPrivateKey,&fromJobOptions->cryptPrivateKey);
 
   jobOptions->preProcessScript                    = String_duplicate(fromJobOptions->preProcessScript);
   jobOptions->postProcessScript                   = String_duplicate(fromJobOptions->postProcessScript);
@@ -4689,8 +4761,8 @@ void doneJobOptions(JobOptions *jobOptions)
   String_delete(jobOptions->postProcessScript);
   String_delete(jobOptions->preProcessScript);
 
-  String_delete(jobOptions->cryptPrivateKeyFileName);
-  String_delete(jobOptions->cryptPublicKeyFileName);
+  doneKey(&jobOptions->cryptPrivateKey);
+  doneKey(&jobOptions->cryptPublicKey);
   Password_delete(jobOptions->cryptPassword);
 
   String_delete(jobOptions->destination);
@@ -7604,6 +7676,332 @@ LOCAL int errorToExitcode(Errors error)
 }
 
 /***********************************************************************\
+* Name   : generateEncryptionKeys
+* Purpose: generate key pairs for encryption
+* Input  : keyFileBaseName - key base file name or NULL
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
+{
+  String   publicKeyFileName,privateKeyFileName;
+  String   data;
+  Errors   error;
+  Password cryptPassword;
+  CryptKey publicKey,privateKey;
+
+  // initialize variables
+  publicKeyFileName  = String_new();
+  privateKeyFileName = String_new();
+  data               = String_new();
+
+  if (keyFileBaseName != NULL)
+  {
+    // get file names of keys
+    File_setFileNameCString(publicKeyFileName,keyFileBaseName);
+    String_appendCString(publicKeyFileName,".public");
+    File_setFileNameCString(privateKeyFileName,keyFileBaseName);
+    String_appendCString(privateKeyFileName,".private");
+
+    // check if key files already exists
+    if (File_exists(publicKeyFileName))
+    {
+      printError("Public key file '%s' already exists!\n",String_cString(publicKeyFileName));
+      String_delete(data);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return ERROR_FILE_EXISTS_;
+    }
+    if (File_exists(privateKeyFileName))
+    {
+      printError("Private key file '%s' already exists!\n",String_cString(privateKeyFileName));
+      String_delete(data);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return ERROR_FILE_EXISTS_;
+    }
+  }
+
+  // get crypt password for private key encryption
+  Password_init(&cryptPassword);
+  if (Password_isEmpty(globalOptions.cryptPassword))
+  {
+    error = getPasswordConsole(NULL,  // name
+                               &cryptPassword,
+                               PASSWORD_TYPE_CRYPT,
+                               String_cString(privateKeyFileName),
+                               TRUE,  // validateFlag
+                               FALSE, // weakCheckFlag
+                               NULL  // userData
+                              );
+    if (error != ERROR_NONE)
+    {
+      printError("No password given for private key!\n");
+      Password_done(&cryptPassword);
+      String_delete(data);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return error;
+    }
+  }
+  else
+  {
+    Password_set(&cryptPassword,globalOptions.cryptPassword);
+  }
+
+  // generate new key pair for encryption
+  error = Crypt_createKeys(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot create encryption key pair (error: %s)!\n",Error_getText(error));
+    Crypt_doneKey(&privateKey);
+    Crypt_doneKey(&publicKey);
+    Password_done(&cryptPassword);
+    String_delete(data);
+    String_delete(privateKeyFileName);
+    String_delete(publicKeyFileName);
+    return error;
+  }
+
+  // output keys
+  if (keyFileBaseName != NULL)
+  {
+    error = Crypt_writeKeyFile(&publicKey,
+                               publicKeyFileName,
+                               NULL,  // password
+                               NULL,  // salt
+                               0  // saltLength
+                              );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot write encryption public key file!\n");
+      Crypt_doneKey(&privateKey);
+      Crypt_doneKey(&publicKey);
+      Password_done(&cryptPassword);
+      String_delete(data);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return error;
+    }
+    printf("Created public encryption key '%s'\n",String_cString(publicKeyFileName));
+    error = Crypt_writeKeyFile(&privateKey,
+                               privateKeyFileName,
+                               &cryptPassword,
+                               NULL,  // salt
+                               0  // saltLength
+                              );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot write encryption private key file!\n");
+      Crypt_doneKey(&privateKey);
+      Crypt_doneKey(&publicKey);
+      Password_done(&cryptPassword);
+      String_delete(data);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return error;
+    }
+    printf("Created private encryption key '%s'\n",String_cString(privateKeyFileName));
+  }
+  else
+  {
+    error = Crypt_getKeyData(&publicKey,
+                             data,
+                             NULL,  // password,
+                             NULL,  // salt
+                             0  // saltLength
+                            );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot get encryption public key!\n");
+      Crypt_doneKey(&privateKey);
+      Crypt_doneKey(&publicKey);
+      String_delete(data);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return error;
+    }
+    printf("crypt-public-key = base64:%s\n",String_cString(data));
+    error = Crypt_getKeyData(&privateKey,
+                             data,
+                             NULL,  // password,
+                             NULL,  // salt
+                             0  // saltLength
+                            );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot get encryption private key!\n");
+      Crypt_doneKey(&privateKey);
+      Crypt_doneKey(&publicKey);
+      String_delete(data);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return error;
+    }
+    printf("crypt-private-key = base64:%s\n",String_cString(data));
+  }
+  Crypt_doneKey(&privateKey);
+  Crypt_doneKey(&publicKey);
+
+  // free resources
+  Password_done(&cryptPassword);
+  String_delete(data);
+  String_delete(privateKeyFileName);
+  String_delete(publicKeyFileName);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : generateSignatureKeys
+* Purpose: generate key pairs for signature
+* Input  : keyFileBaseName - key base file name or NULL
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
+{
+  String   publicKeyFileName,privateKeyFileName;
+  String   data;
+  Errors   error;
+  CryptKey publicKey,privateKey;
+
+  // initialize variables
+  publicKeyFileName  = String_new();
+  privateKeyFileName = String_new();
+  data               = String_new();
+
+  if (keyFileBaseName != NULL)
+  {
+    // get file names of keys
+    File_setFileNameCString(publicKeyFileName,keyFileBaseName);
+    String_appendCString(publicKeyFileName,".public");
+    File_setFileNameCString(privateKeyFileName,keyFileBaseName);
+    String_appendCString(privateKeyFileName,".private");
+
+    // check if key files already exists
+    if (File_exists(publicKeyFileName))
+    {
+      printError("Public key file '%s' already exists!\n",String_cString(publicKeyFileName));
+      String_delete(data);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return ERROR_FILE_EXISTS_;
+    }
+    if (File_exists(privateKeyFileName))
+    {
+      printError("Private key file '%s' already exists!\n",String_cString(privateKeyFileName));
+      String_delete(data);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return ERROR_FILE_EXISTS_;
+    }
+  }
+
+  // generate new key pair for signature
+  error = Crypt_createKeys(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot create signature key pair (error: %s)!\n",Error_getText(error));
+    Crypt_doneKey(&privateKey);
+    Crypt_doneKey(&publicKey);
+    String_delete(data);
+    String_delete(privateKeyFileName);
+    String_delete(publicKeyFileName);
+    return error;
+  }
+
+  // output keys
+  if (keyFileBaseName != NULL)
+  {
+    error = Crypt_writeKeyFile(&publicKey,
+                               publicKeyFileName,
+                               NULL,  // password
+                               NULL,  // salt
+                               0  // saltLength
+                              );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot write signature public key file!\n");
+      Crypt_doneKey(&privateKey);
+      Crypt_doneKey(&publicKey);
+      String_delete(data);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return error;
+    }
+    printf("Created public signature key '%s'\n",String_cString(publicKeyFileName));
+    error = Crypt_writeKeyFile(&privateKey,
+                               privateKeyFileName,
+                               NULL,  // password,
+                               NULL,  // salt
+                               0  // saltLength
+                              );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot write signature private key file!\n");
+      Crypt_doneKey(&privateKey);
+      Crypt_doneKey(&publicKey);
+      String_delete(data);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return error;
+    }
+    printf("Created private signature key '%s'\n",String_cString(privateKeyFileName));
+  }
+  else
+  {
+    error = Crypt_getKeyData(&publicKey,
+                             data,
+                             NULL,  // password,
+                             NULL,  // salt
+                             0  // saltLength
+                            );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot get signature public key!\n");
+      Crypt_doneKey(&privateKey);
+      Crypt_doneKey(&publicKey);
+      String_delete(data);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return error;
+    }
+    printf("signature-public-key = base64:%s\n",String_cString(data));
+    error = Crypt_getKeyData(&privateKey,
+                             data,
+                             NULL,  // password,
+                             NULL,  // salt
+                             0  // saltLength
+                            );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot get signature private key!\n");
+      Crypt_doneKey(&privateKey);
+      Crypt_doneKey(&publicKey);
+      String_delete(data);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return error;
+    }
+    printf("signature-private-key = base64:%s\n",String_cString(data));
+  }
+  Crypt_doneKey(&privateKey);
+  Crypt_doneKey(&publicKey);
+
+  // free resources
+  String_delete(data);
+  String_delete(privateKeyFileName);
+  String_delete(publicKeyFileName);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : runDaemon
 * Purpose: run as daemon
 * Input  : -
@@ -7983,116 +8381,36 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         StringList_done(&fileNameList);
       }
       break;
-    case COMMAND_GENERATE_KEYS:
+    case COMMAND_GENERATE_ENCRYPTION_KEYS:
       {
-        // generate new key pair
+        // generate new key pair for asymmetric encryption
         const char *keyFileName;
-        Password   cryptPassword;
-        CryptKey   publicKey,privateKey;
-        String     publicKeyFileName,privateKeyFileName;
 
         // get key file name
-        if (argc <= 1)
-        {
-          printError("No key file name given!\n");
-          printUsage(argv[0],0);
-          error = ERROR_INVALID_ARGUMENT;
-          break;
-        }
-        keyFileName = argv[1];
+        keyFileName = (argc > 1) ? argv[1] : NULL;
 
-        // initialize variables
-        publicKeyFileName  = String_new();
-        privateKeyFileName = String_new();
-
-        // get file names of keys
-        File_setFileNameCString(publicKeyFileName,keyFileName);
-        String_appendCString(publicKeyFileName,".public");
-        File_setFileNameCString(privateKeyFileName,keyFileName);
-        String_appendCString(privateKeyFileName,".private");
-
-        // check if key files already exists
-        if (File_exists(publicKeyFileName))
-        {
-          printError("Public key file '%s' already exists!\n",String_cString(publicKeyFileName));
-          String_delete(privateKeyFileName);
-          String_delete(publicKeyFileName);
-          break;
-        }
-        if (File_exists(privateKeyFileName))
-        {
-          printError("Private key file '%s' already exists!\n",String_cString(privateKeyFileName));
-          String_delete(privateKeyFileName);
-          String_delete(publicKeyFileName);
-          break;
-        }
-
-        // get crypt password for private key encryption
-        Password_init(&cryptPassword);
-        if (Password_isEmpty(globalOptions.cryptPassword))
-        {
-          error = getPasswordConsole(NULL,  // name
-                                     &cryptPassword,
-                                     PASSWORD_TYPE_CRYPT,
-                                     String_cString(privateKeyFileName),
-                                     TRUE,  // validateFlag
-                                     FALSE, // weakCheckFlag
-                                     NULL  // userData
-                                    );
-          if (error != ERROR_NONE)
-          {
-            printError("No password given for private key!\n");
-            Password_done(&cryptPassword);
-            String_delete(privateKeyFileName);
-            String_delete(publicKeyFileName);
-            break;
-          }
-        }
-        else
-        {
-          Password_set(&cryptPassword,globalOptions.cryptPassword);
-        }
-
-        // generate new keys pair
-        error = Crypt_createKeys(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE);
+        // generate encrption keys
+        error = generateEncryptionKeys(keyFileName);
         if (error != ERROR_NONE)
         {
-          printError("Cannot create key pair (error: %s)!\n",Error_getText(error));
-          Crypt_doneKey(&privateKey);
-          Crypt_doneKey(&publicKey);
-          Password_done(&cryptPassword);
-          String_delete(privateKeyFileName);
-          String_delete(publicKeyFileName);
           break;
         }
-        error = Crypt_writeKeyFile(&publicKey,publicKeyFileName,NULL);
+      }
+      break;
+    case COMMAND_GENERATE_SIGNATURE_KEYS:
+      {
+        // generate new key pair for signature
+        const char *keyFileName;
+
+        // get key file name
+        keyFileName = (argc > 1) ? argv[1] : NULL;
+
+        // generate signature keys
+        error = generateSignatureKeys(keyFileName);
         if (error != ERROR_NONE)
         {
-          printError("Cannot write public key file!\n");
-          Crypt_doneKey(&privateKey);
-          Crypt_doneKey(&publicKey);
-          Password_done(&cryptPassword);
-          String_delete(privateKeyFileName);
-          String_delete(publicKeyFileName);
           break;
         }
-        error = Crypt_writeKeyFile(&privateKey,privateKeyFileName,&cryptPassword);
-        if (error != ERROR_NONE)
-        {
-          printError("Cannot write private key file!\n");
-          Crypt_doneKey(&privateKey);
-          Crypt_doneKey(&publicKey);
-          Password_done(&cryptPassword);
-          String_delete(privateKeyFileName);
-          String_delete(publicKeyFileName);
-          break;
-        }
-        // free resources
-        Crypt_doneKey(&privateKey);
-        Crypt_doneKey(&publicKey);
-        Password_done(&cryptPassword);
-        String_delete(privateKeyFileName);
-        String_delete(publicKeyFileName);
       }
       break;
     default:
