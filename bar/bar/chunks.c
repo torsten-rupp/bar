@@ -421,8 +421,6 @@ LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
 LOCAL Errors putChunkBuffer(ChunkBuffer *chunkBuffer, const void *p, ulong size)
 {
   assert(chunkBuffer != NULL);
-  assert(chunkBuffer->chunkIO != NULL);
-  assert(chunkBuffer->chunkIO->read != NULL);
 
   // increase buffer size if required
   if ((chunkBuffer->bufferLength+size) > chunkBuffer->bufferSize)
@@ -987,7 +985,6 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
   assert(chunkIO != NULL);
   assert(chunkIO->tell != NULL);
   assert(chunkIO->seek != NULL);
-  assert(chunkIO->read != NULL);
 
   // initialize variables
   if (bytesRead != NULL) (*bytesRead) = 0L;
@@ -1414,7 +1411,6 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
   Errors      error;
 
   assert(chunkIO != NULL);
-  assert(chunkIO->write != NULL);
   assert(definition != NULL);
 
   // initialize variables

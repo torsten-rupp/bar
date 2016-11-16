@@ -110,7 +110,7 @@ typedef struct ChunkInfo
   const ChunkIO    *io;               // i/o functions
   void             *ioUserData;       // user data for i/o
 
-  ChunkModes       mode;
+  ChunkModes       mode;              // mode read/write
   uint             alignment;         // alignment for chunk
   CryptInfo        *cryptInfo;        // encryption
 
