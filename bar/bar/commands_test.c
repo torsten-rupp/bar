@@ -1130,6 +1130,14 @@ LOCAL void testThreadCode(TestInfo *testInfo)
                                  testInfo->jobOptions
                                 );
         break;
+      case ARCHIVE_ENTRY_TYPE_META:
+        error = Archive_skipNextEntry(&archiveHandle);
+        break;
+      case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+//TODO
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+error = Archive_skipNextEntry(&archiveHandle);
+        break;
       default:
         #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
