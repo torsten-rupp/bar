@@ -960,7 +960,7 @@ LOCAL bool StorageSFTP_eof(StorageHandle *storageHandle)
 
 LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
                               void          *buffer,
-                              ulong         size,
+                              ulong         bufferSize,
                               ulong         *bytesRead
                              )
 {
@@ -975,7 +975,6 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
   assert(buffer != NULL);
 
-//fprintf(stderr,"%s,%d: size=%lu\n",__FILE__,__LINE__,size);
   error = ERROR_NONE;
   #ifdef HAVE_SSH2
     {
@@ -991,7 +990,7 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
         assert(storageHandle->sftp.sftpHandle != NULL);
         assert(storageHandle->sftp.readAheadBuffer.data != NULL);
 
-        while (   (size > 0)
+        while (   (bufferSize > 0)
                && (error == ERROR_NONE)
               )
         {
@@ -1002,29 +1001,29 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
           {
             // copy data from read-ahead buffer
             index      = (ulong)(storageHandle->sftp.index-storageHandle->sftp.readAheadBuffer.offset);
-            bytesAvail = MIN(size,storageHandle->sftp.readAheadBuffer.length-index);
+            bytesAvail = MIN(bufferSize,storageHandle->sftp.readAheadBuffer.length-index);
             memcpy(buffer,storageHandle->sftp.readAheadBuffer.data+index,bytesAvail);
 
-            // adjust buffer, size, bytes read, index
+            // adjust buffer, bufferSize, bytes read, index
             buffer = (byte*)buffer+bytesAvail;
-            size -= bytesAvail;
+            bufferSize -= bytesAvail;
             if (bytesRead != NULL) (*bytesRead) += bytesAvail;
             storageHandle->sftp.index += (uint64)bytesAvail;
           }
 
           // read rest of data
-          if (size > 0)
+          if (bufferSize > 0)
           {
             assert(storageHandle->sftp.index >= (storageHandle->sftp.readAheadBuffer.offset+storageHandle->sftp.readAheadBuffer.length));
 
             // get max. number of bytes to receive in one step
             if (storageHandle->storageInfo->sftp.bandWidthLimiter.maxBandWidthList != NULL)
             {
-              length = MIN(storageHandle->storageInfo->sftp.bandWidthLimiter.blockSize,size);
+              length = MIN(storageHandle->storageInfo->sftp.bandWidthLimiter.blockSize,bufferSize);
             }
             else
             {
-              length = size;
+              length = bufferSize;
             }
             assert(length > 0L);
 
@@ -1059,9 +1058,9 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
               bytesAvail = MIN(length,storageHandle->sftp.readAheadBuffer.length);
               memcpy(buffer,storageHandle->sftp.readAheadBuffer.data,bytesAvail);
 
-              // adjust buffer, size, bytes read, index
+              // adjust buffer, bufferSize, bytes read, index
               buffer = (byte*)buffer+bytesAvail;
-              size -= bytesAvail;
+              bufferSize -= bytesAvail;
               if (bytesRead != NULL) (*bytesRead) += bytesAvail;
               storageHandle->sftp.index += (uint64)bytesAvail;
             }
@@ -1079,9 +1078,9 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
               }
               bytesAvail = (ulong)n;
 
-              // adjust buffer, size, bytes read, index
+              // adjust buffer, bufferSize, bytes read, index
               buffer = (byte*)buffer+(ulong)bytesAvail;
-              size -= (ulong)bytesAvail;
+              bufferSize -= (ulong)bytesAvail;
               if (bytesRead != NULL) (*bytesRead) += (ulong)bytesAvail;
               storageHandle->sftp.index += (uint64)bytesAvail;
             }
@@ -1109,7 +1108,7 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
-    UNUSED_VARIABLE(size);
+    UNUSED_VARIABLE(bufferSize);
     UNUSED_VARIABLE(bytesRead);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1121,7 +1120,7 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
 
 LOCAL Errors StorageSFTP_write(StorageHandle *storageHandle,
                                const void    *buffer,
-                               ulong         size
+                               ulong         bufferLength
                               )
 {
   Errors error;
@@ -1149,16 +1148,16 @@ LOCAL Errors StorageSFTP_write(StorageHandle *storageHandle,
         assert(storageHandle->sftp.sftpHandle != NULL);
 
         writtenBytes = 0L;
-        while (writtenBytes < size)
+        while (writtenBytes < bufferLength)
         {
           // get max. number of bytes to send in one step
           if (storageHandle->storageInfo->sftp.bandWidthLimiter.maxBandWidthList != NULL)
           {
-            length = MIN(storageHandle->storageInfo->sftp.bandWidthLimiter.blockSize,size-writtenBytes);
+            length = MIN(storageHandle->storageInfo->sftp.bandWidthLimiter.blockSize,bufferLength-writtenBytes);
           }
           else
           {
-            length = size-writtenBytes;
+            length = bufferLength-writtenBytes;
           }
           assert(length > 0L);
 
@@ -1225,7 +1224,7 @@ LOCAL Errors StorageSFTP_write(StorageHandle *storageHandle,
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
-    UNUSED_VARIABLE(size);
+    UNUSED_VARIABLE(bufferLength);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */

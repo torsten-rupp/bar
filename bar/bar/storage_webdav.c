@@ -1500,7 +1500,7 @@ LOCAL bool StorageWebDAV_eof(StorageHandle *storageHandle)
 
 LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
                                 void          *buffer,
-                                ulong         size,
+                                ulong         bufferSize,
                                 ulong         *bytesRead
                                )
 {
@@ -1531,7 +1531,7 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
       assert(storageHandle->webdav.curlMultiHandle != NULL);
       assert(storageHandle->webdav.receiveBuffer.data != NULL);
 
-      while (   (size > 0L)
+      while (   (bufferSize > 0L)
              && (storageHandle->webdav.index < storageHandle->webdav.size)
              && (error == ERROR_NONE)
             )
@@ -1543,18 +1543,18 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
         {
           // copy data from receive buffer
           index      = (ulong)(storageHandle->webdav.index-storageHandle->webdav.receiveBuffer.offset);
-          bytesAvail = MIN(size,storageHandle->webdav.receiveBuffer.length-index);
+          bytesAvail = MIN(bufferSize,storageHandle->webdav.receiveBuffer.length-index);
           memcpy(buffer,storageHandle->webdav.receiveBuffer.data+index,bytesAvail);
 
-          // adjust buffer, size, bytes read, index
+          // adjust buffer, bufferSize, bytes read, index
           buffer = (byte*)buffer+bytesAvail;
-          size -= bytesAvail;
+          bufferSize -= bytesAvail;
           if (bytesRead != NULL) (*bytesRead) += bytesAvail;
           storageHandle->webdav.index += (uint64)bytesAvail;
         }
 
         // read rest of data
-        if (   (size > 0L)
+        if (   (bufferSize > 0L)
             && (storageHandle->webdav.index < storageHandle->webdav.size)
            )
         {
@@ -1563,11 +1563,11 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
           // get max. number of bytes to receive in one step
           if (storageHandle->storageInfo->webdav.bandWidthLimiter.maxBandWidthList != NULL)
           {
-            length = MIN(storageHandle->storageInfo->webdav.bandWidthLimiter.blockSize,size);
+            length = MIN(storageHandle->storageInfo->webdav.bandWidthLimiter.blockSize,bufferSize);
           }
           else
           {
-            length = size;
+            length = bufferSize;
           }
           assert(length > 0L);
 
@@ -1631,9 +1631,9 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
           bytesAvail = MIN(length,storageHandle->webdav.receiveBuffer.length);
           memcpy(buffer,storageHandle->webdav.receiveBuffer.data,bytesAvail);
 
-          // adjust buffer, size, bytes read, index
+          // adjust buffer, bufferSize, bytes read, index
           buffer = (byte*)buffer+bytesAvail;
-          size -= bytesAvail;
+          bufferSize -= bytesAvail;
           if (bytesRead != NULL) (*bytesRead) += bytesAvail;
           storageHandle->webdav.index += (uint64)bytesAvail;
 
@@ -1657,7 +1657,7 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
-    UNUSED_VARIABLE(size);
+    UNUSED_VARIABLE(bufferSize);
     UNUSED_VARIABLE(bytesRead);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1669,7 +1669,7 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
 
 LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
                                  const void    *buffer,
-                                 ulong         size
+                                 ulong         bufferLength
                                 )
 {
   Errors error;
@@ -1697,16 +1697,16 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
       assert(storageHandle->webdav.curlMultiHandle != NULL);
 
       writtenBytes = 0L;
-      while (writtenBytes < size)
+      while (writtenBytes < bufferLength)
       {
         // get max. number of bytes to send in one step
         if (storageHandle->storageInfo->webdav.bandWidthLimiter.maxBandWidthList != NULL)
         {
-          length = MIN(storageHandle->storageInfo->webdav.bandWidthLimiter.blockSize,size-writtenBytes);
+          length = MIN(storageHandle->storageInfo->webdav.bandWidthLimiter.blockSize,bufferLength-writtenBytes);
         }
         else
         {
-          length = size-writtenBytes;
+          length = bufferLength-writtenBytes;
         }
         assert(length > 0L);
 
@@ -1774,7 +1774,7 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
-    UNUSED_VARIABLE(size);
+    UNUSED_VARIABLE(bufferLength);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL */

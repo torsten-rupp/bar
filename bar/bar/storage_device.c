@@ -922,7 +922,7 @@ LOCAL bool StorageDevice_eof(StorageHandle *storageHandle)
 
 LOCAL Errors StorageDevice_read(StorageHandle *storageHandle,
                                 void          *buffer,
-                                ulong         size,
+                                ulong         bufferSize,
                                 ulong         *bytesRead
                                )
 {
@@ -935,12 +935,11 @@ LOCAL Errors StorageDevice_read(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(buffer != NULL);
 
-//fprintf(stderr,"%s,%d: size=%lu\n",__FILE__,__LINE__,size);
   if (bytesRead != NULL) (*bytesRead) = 0L;
   error = ERROR_NONE;
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
-    error = File_read(&storageHandle->device.fileHandle,buffer,size,bytesRead);
+    error = File_read(&storageHandle->device.fileHandle,buffer,bufferSize,bytesRead);
   }
   assert(error != ERROR_UNKNOWN);
 
@@ -949,7 +948,7 @@ LOCAL Errors StorageDevice_read(StorageHandle *storageHandle,
 
 LOCAL Errors StorageDevice_write(StorageHandle *storageHandle,
                                  const void    *buffer,
-                                 ulong         size
+                                 ulong         bufferLength
                                 )
 {
   Errors error;
@@ -964,7 +963,7 @@ LOCAL Errors StorageDevice_write(StorageHandle *storageHandle,
   error = ERROR_NONE;
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
-    error = File_write(&storageHandle->device.fileHandle,buffer,size);
+    error = File_write(&storageHandle->device.fileHandle,buffer,bufferLength);
   }
   assert(error != ERROR_UNKNOWN);
 

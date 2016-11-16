@@ -454,7 +454,7 @@ LOCAL bool StorageFile_eof(StorageHandle *storageHandle)
 
 LOCAL Errors StorageFile_read(StorageHandle *storageHandle,
                               void          *buffer,
-                              ulong         size,
+                              ulong         bufferSize,
                               ulong         *bytesRead
                              )
 {
@@ -470,7 +470,7 @@ LOCAL Errors StorageFile_read(StorageHandle *storageHandle,
   error = ERROR_NONE;
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
-    error = File_read(&storageHandle->fileSystem.fileHandle,buffer,size,bytesRead);
+    error = File_read(&storageHandle->fileSystem.fileHandle,buffer,bufferSize,bytesRead);
   }
 
   return error;
@@ -478,7 +478,7 @@ LOCAL Errors StorageFile_read(StorageHandle *storageHandle,
 
 LOCAL Errors StorageFile_write(StorageHandle *storageHandle,
                                const void    *buffer,
-                               ulong         size
+                               ulong         bufferLength
                               )
 {
   Errors error;
@@ -493,7 +493,7 @@ LOCAL Errors StorageFile_write(StorageHandle *storageHandle,
   error = ERROR_NONE;
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
-    error = File_write(&storageHandle->fileSystem.fileHandle,buffer,size);
+    error = File_write(&storageHandle->fileSystem.fileHandle,buffer,bufferLength);
   }
 
   return error;

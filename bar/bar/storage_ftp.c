@@ -2375,7 +2375,7 @@ LOCAL bool StorageFTP_eof(StorageHandle *storageHandle)
 
 LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
                              void          *buffer,
-                             ulong         size,
+                             ulong         bufferSize,
                              ulong         *bytesRead
                             )
 {
@@ -2417,18 +2417,18 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
       {
         // copy data from read-ahead buffer
         index      = (ulong)(storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset);
-        bytesAvail = MIN(size,storageHandle->ftp.readAheadBuffer.length-index);
+        bytesAvail = MIN(bufferSize,storageHandle->ftp.readAheadBuffer.length-index);
         memcpy(buffer,storageHandle->ftp.readAheadBuffer.data+index,bytesAvail);
 
-        // adjust buffer, size, bytes read, index
+        // adjust buffer, bufferSize, bytes read, index
         buffer = (byte*)buffer+bytesAvail;
-        size -= bytesAvail;
+        bufferSize -= bytesAvail;
         if (bytesRead != NULL) (*bytesRead) += bytesAvail;
         storageHandle->ftp.index += (uint64)bytesAvail;
       }
 
       // read rest of data
-      while (   (size > 0L)
+      while (   (bufferSize > 0L)
              && (storageHandle->ftp.index < storageHandle->ftp.size)
              && (error == ERROR_NONE)
             )
@@ -2438,11 +2438,11 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         // get max. number of bytes to receive in one step
         if (storageHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
         {
-          length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,size);
+          length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,bufferSize);
         }
         else
         {
-          length = size;
+          length = bufferSize;
         }
         assert(length > 0L);
 
@@ -2497,9 +2497,9 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
           bytesAvail = MIN(length,storageHandle->ftp.readAheadBuffer.length);
           memcpy(buffer,storageHandle->ftp.readAheadBuffer.data,bytesAvail);
 
-          // adjust buffer, size, bytes read, index
+          // adjust buffer, bufferSize, bytes read, index
           buffer = (byte*)buffer+bytesAvail;
-          size -= bytesAvail;
+          bufferSize -= bytesAvail;
           if (bytesRead != NULL) (*bytesRead) += bytesAvail;
           storageHandle->ftp.index += (uint64)bytesAvail;
         }
@@ -2545,9 +2545,9 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
           }
           bytesAvail = storageHandle->ftp.transferedBytes;
 
-          // adjust buffer, size, bytes read, index
+          // adjust buffer, bufferSize, bytes read, index
           buffer = (byte*)buffer+bytesAvail;
-          size -= bytesAvail;
+          bufferSize -= bytesAvail;
           if (bytesRead != NULL) (*bytesRead) += bytesAvail;
           storageHandle->ftp.index += (uint64)bytesAvail;
         }
@@ -2582,18 +2582,18 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
       {
         // copy data from read-ahead buffer
         index = (ulong)(storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset);
-        bytesAvail = MIN(size,storageHandle->ftp.readAheadBuffer.length-index);
+        bytesAvail = MIN(bufferSize,storageHandle->ftp.readAheadBuffer.length-index);
         memcpy(buffer,storageHandle->ftp.readAheadBuffer.data+index,bytesAvail);
 
-        // adjust buffer, size, bytes read, index
+        // adjust buffer, bufferSize, bytes read, index
         buffer = (byte*)buffer+bytesAvail;
-        size -= bytesAvail;
+        bufferSize -= bytesAvail;
         if (bytesRead != NULL) (*bytesRead) += bytesAvail;
         storageHandle->ftp.index += (uint64)bytesAvail;
       }
 
       // read rest of data
-      while (   (size > 0L)
+      while (   (bufferSize > 0L)
              && (storageHandle->ftp.index < storageHandle->ftp.size)
              && (error == ERROR_NONE)
             )
@@ -2603,11 +2603,11 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         // get max. number of bytes to receive in one step
         if (storageHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
         {
-          length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,size);
+          length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,bufferSize);
         }
         else
         {
-          length = size;
+          length = bufferSize;
         }
         assert(length > 0L);
 
@@ -2644,9 +2644,9 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
           bytesAvail = MIN(length,storageHandle->ftp.readAheadBuffer.length);
           memcpy(buffer,storageHandle->ftp.readAheadBuffer.data,bytesAvail);
 
-          // adjust buffer, size, bytes read, index
+          // adjust buffer, bufferSize, bytes read, index
           buffer = (byte*)buffer+bytesAvail;
-          size -= bytesAvail;
+          bufferSize -= bytesAvail;
           if (bytesRead != NULL) (*bytesRead) += bytesAvail;
           storageHandle->ftp.index += (uint64)bytesAvail;
         }
@@ -2664,7 +2664,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
 
             // read direct
             n = FtpRead(buffer,
-                        size,
+                        bufferSize,
                         storageHandle->ftp.data
                        );
           }
@@ -2675,9 +2675,9 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
           }
           bytesAvail = (ulong)n;
 
-          // adjust buffer, size, bytes read, index
+          // adjust buffer, bufferSize, bytes read, index
           buffer = (byte*)buffer+bytesAvail;
-          size -= bytesAvail;
+          bufferSize -= bytesAvail;
           if (bytesRead != NULL) (*bytesRead) += bytesAvail;
           storageHandle->ftp.index += (uint64)bytesAvail;
         }
@@ -2701,7 +2701,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
-    UNUSED_VARIABLE(size);
+    UNUSED_VARIABLE(bufferSize);
     UNUSED_VARIABLE(bytesRead);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -2713,7 +2713,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
 
 LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
                               const void    *buffer,
-                              ulong         size
+                              ulong         bufferLength
                              )
 {
   Errors error;
@@ -2745,16 +2745,16 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
       assert(storageHandle->ftp.curlMultiHandle != NULL);
 
       writtenBytes = 0L;
-      while (writtenBytes < size)
+      while (writtenBytes < bufferLength)
       {
         // get max. number of bytes to send in one step
         if (storageHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
         {
-          length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,size-writtenBytes);
+          length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,bufferLength-writtenBytes);
         }
         else
         {
-          length = size-writtenBytes;
+          length = bufferLength-writtenBytes;
         }
         assert(length > 0L);
 
@@ -2826,16 +2826,16 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
       assert(storageHandle->ftp.data != NULL);
 
       writtenBytes = 0L;
-      while (writtenBytes < size)
+      while (writtenBytes < bufferLength)
       {
         // get max. number of bytes to send in one step
         if (storageHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
         {
-          length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,size-writtenBytes);
+          length = MIN(storageHandle->ftp.bandWidthLimiter.blockSize,bufferLength-writtenBytes);
         }
         else
         {
-          length = size-writtenBytes;
+          length = bufferLength-writtenBytes;
         }
         assert(length > 0L);
 
@@ -2880,7 +2880,7 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
-    UNUSED_VARIABLE(size);
+    UNUSED_VARIABLE(bufferLength);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL || HAVE_FTP */

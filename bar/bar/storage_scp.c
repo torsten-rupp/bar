@@ -965,7 +965,7 @@ LOCAL bool StorageSCP_eof(StorageHandle *storageHandle)
 
 LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
                              void          *buffer,
-                             ulong         size,
+                             ulong         bufferSize,
                              ulong         *bytesRead
                             )
 {
@@ -988,7 +988,6 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   assert(buffer != NULL);
 
-//fprintf(stderr,"%s,%d: size=%lu\n",__FILE__,__LINE__,size);
   if (bytesRead != NULL) (*bytesRead) = 0L;
   #ifdef HAVE_SSH2
     error = ERROR_NONE;
@@ -997,7 +996,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
       assert(storageHandle->scp.channel != NULL);
       assert(storageHandle->scp.readAheadBuffer.data != NULL);
 
-      while (   (size > 0L)
+      while (   (bufferSize > 0L)
              && (error == ERROR_NONE)
             )
       {
@@ -1008,29 +1007,29 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
         {
           // copy data from read-ahead buffer
           index      = (ulong)(storageHandle->scp.index-storageHandle->scp.readAheadBuffer.offset);
-          bytesAvail = MIN(size,storageHandle->scp.readAheadBuffer.length-index);
+          bytesAvail = MIN(bufferSize,storageHandle->scp.readAheadBuffer.length-index);
           memcpy(buffer,storageHandle->scp.readAheadBuffer.data+index,bytesAvail);
 
-          // adjust buffer, size, bytes read, index
+          // adjust buffer, bufferSize, bytes read, index
           buffer = (byte*)buffer+bytesAvail;
-          size -= bytesAvail;
+          bufferSize -= bytesAvail;
           if (bytesRead != NULL) (*bytesRead) += bytesAvail;
           storageHandle->scp.index += (uint64)bytesAvail;
         }
 
         // read rest of data
-        if (size > 0)
+        if (bufferSize > 0)
         {
           assert(storageHandle->scp.index >= (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length));
 
           // get max. number of bytes to receive in one step
           if (storageHandle->storageInfo->scp.bandWidthLimiter.maxBandWidthList != NULL)
           {
-            length = MIN(storageHandle->storageInfo->scp.bandWidthLimiter.blockSize,size);
+            length = MIN(storageHandle->storageInfo->scp.bandWidthLimiter.blockSize,bufferSize);
           }
           else
           {
-            length = size;
+            length = bufferSize;
           }
           assert(length > 0L);
 
@@ -1064,9 +1063,9 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
             bytesAvail = MIN(length,storageHandle->scp.readAheadBuffer.length);
             memcpy(buffer,storageHandle->scp.readAheadBuffer.data,bytesAvail);
 
-            // adjust buffer, size, bytes read, index
+            // adjust buffer, bufferSize, bytes read, index
             buffer = (byte*)buffer+bytesAvail;
-            size -= bytesAvail;
+            bufferSize -= bytesAvail;
             if (bytesRead != NULL) (*bytesRead) += bytesAvail;
             storageHandle->scp.index += (uint64)bytesAvail;
           }
@@ -1088,9 +1087,9 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
               break;
             }
 
-            // adjust buffer, size, bytes read, index
+            // adjust buffer, bufferSize, bytes read, index
             buffer = (byte*)buffer+(ulong)n;
-            size -= (ulong)n;
+            bufferSize -= (ulong)n;
             if (bytesRead != NULL) (*bytesRead) += (ulong)n;
             storageHandle->scp.index += (uint64)n;
           }
@@ -1119,7 +1118,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
-    UNUSED_VARIABLE(size);
+    UNUSED_VARIABLE(bufferSize);
     UNUSED_VARIABLE(bytesRead);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1128,7 +1127,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
 
 LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
                               const void    *buffer,
-                              ulong         size
+                              ulong         bufferLength
                              )
 {
   #ifdef HAVE_SSH2
@@ -1156,16 +1155,16 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
       assert(storageHandle->scp.channel != NULL);
 
       writtenBytes = 0L;
-      while (writtenBytes < size)
+      while (writtenBytes < bufferLength)
       {
         // get max. number of bytes to send in one step
         if (storageHandle->storageInfo->scp.bandWidthLimiter.maxBandWidthList != NULL)
         {
-          length = MIN(storageHandle->storageInfo->scp.bandWidthLimiter.blockSize,size-writtenBytes);
+          length = MIN(storageHandle->storageInfo->scp.bandWidthLimiter.blockSize,bufferLength-writtenBytes);
         }
         else
         {
-          length = size-writtenBytes;
+          length = bufferLength-writtenBytes;
         }
         assert(length > 0L);
 
@@ -1238,7 +1237,7 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
-    UNUSED_VARIABLE(size);
+    UNUSED_VARIABLE(bufferLength);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */

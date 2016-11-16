@@ -2272,7 +2272,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
 Errors Storage_read(StorageHandle *storageHandle,
                     void          *buffer,
-                    ulong         size,
+                    ulong         bufferSize,
                     ulong         *bytesRead
                    )
 {
@@ -2292,30 +2292,30 @@ Errors Storage_read(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      error = StorageFile_read(storageHandle,buffer,size,bytesRead);
+      error = StorageFile_read(storageHandle,buffer,bufferSize,bytesRead);
       break;
     case STORAGE_TYPE_FTP:
-      error = StorageFTP_read(storageHandle,buffer,size,bytesRead);
+      error = StorageFTP_read(storageHandle,buffer,bufferSize,bytesRead);
       break;
     case STORAGE_TYPE_SSH:
       error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
-      error = StorageSCP_read(storageHandle,buffer,size,bytesRead);
+      error = StorageSCP_read(storageHandle,buffer,bufferSize,bytesRead);
       break;
     case STORAGE_TYPE_SFTP:
-      error = StorageSFTP_read(storageHandle,buffer,size,bytesRead);
+      error = StorageSFTP_read(storageHandle,buffer,bufferSize,bytesRead);
       break;
     case STORAGE_TYPE_WEBDAV:
-      error = StorageWebDAV_read(storageHandle,buffer,size,bytesRead);
+      error = StorageWebDAV_read(storageHandle,buffer,bufferSize,bytesRead);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      error = StorageOptical_read(storageHandle,buffer,size,bytesRead);
+      error = StorageOptical_read(storageHandle,buffer,bufferSize,bytesRead);
       break;
     case STORAGE_TYPE_DEVICE:
-      error = StorageDevice_read(storageHandle,buffer,size,bytesRead);
+      error = StorageDevice_read(storageHandle,buffer,bufferSize,bytesRead);
       break;
     default:
       #ifndef NDEBUG
@@ -2330,7 +2330,7 @@ Errors Storage_read(StorageHandle *storageHandle,
 
 Errors Storage_write(StorageHandle *storageHandle,
                      const void    *buffer,
-                     ulong         size
+                     ulong         bufferLength
                     )
 {
   Errors error;
@@ -2348,30 +2348,30 @@ Errors Storage_write(StorageHandle *storageHandle,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      error = StorageFile_write(storageHandle,buffer,size);
+      error = StorageFile_write(storageHandle,buffer,bufferLength);
       break;
     case STORAGE_TYPE_FTP:
-      error = StorageFTP_write(storageHandle,buffer,size);
+      error = StorageFTP_write(storageHandle,buffer,bufferLength);
       break;
     case STORAGE_TYPE_SSH:
       error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
-      error = StorageSCP_write(storageHandle,buffer,size);
+      error = StorageSCP_write(storageHandle,buffer,bufferLength);
       break;
     case STORAGE_TYPE_SFTP:
-      error = StorageSFTP_write(storageHandle,buffer,size);
+      error = StorageSFTP_write(storageHandle,buffer,bufferLength);
       break;
     case STORAGE_TYPE_WEBDAV:
-      error = StorageWebDAV_write(storageHandle,buffer,size);
+      error = StorageWebDAV_write(storageHandle,buffer,bufferLength);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      error = StorageOptical_write(storageHandle,buffer,size);
+      error = StorageOptical_write(storageHandle,buffer,bufferLength);
       break;
     case STORAGE_TYPE_DEVICE:
-      error = StorageDevice_write(storageHandle,buffer,size);
+      error = StorageDevice_write(storageHandle,buffer,bufferLength);
       break;
     default:
       #ifndef NDEBUG

@@ -1707,7 +1707,7 @@ LOCAL bool StorageOptical_eof(StorageHandle *storageHandle)
 
 LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
                                  void          *buffer,
-                                 ulong         size,
+                                 ulong         bufferSize,
                                  ulong         *bytesRead
                                 )
 {
@@ -1720,7 +1720,6 @@ LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
   assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(buffer != NULL);
 
-//fprintf(stderr,"%s,%d: size=%lu\n",__FILE__,__LINE__,size);
   if (bytesRead != NULL) (*bytesRead) = 0L;
   error = ERROR_NONE;
   #ifdef HAVE_ISO9660
@@ -1737,7 +1736,7 @@ LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
       {
         assert(storageHandle->opticalDisk.read.buffer.data != NULL);
 
-        while (   (size > 0L)
+        while (   (bufferSize > 0L)
                && (storageHandle->opticalDisk.read.index < (uint64)storageHandle->opticalDisk.read.iso9660Stat->size)
               )
         {
@@ -1767,12 +1766,12 @@ LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
           }
 
           // copy data
-          bytesAvail = MIN(size,storageHandle->opticalDisk.read.buffer.length-blockOffset);
+          bytesAvail = MIN(bufferSize,storageHandle->opticalDisk.read.buffer.length-blockOffset);
           memcpy(buffer,storageHandle->opticalDisk.read.buffer.data+blockOffset,bytesAvail);
 
-          // adjust buffer, size, bytes read, index
+          // adjust buffer, bufferSize, bytes read, index
           buffer = (byte*)buffer+bytesAvail;
-          size -= bytesAvail;
+          bufferSize -= bytesAvail;
           if (bytesRead != NULL) (*bytesRead) += bytesAvail;
           storageHandle->opticalDisk.read.index += (uint64)bytesAvail;
         }
@@ -1781,7 +1780,7 @@ LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
-    UNUSED_VARIABLE(size);
+    UNUSED_VARIABLE(bufferSize);
     UNUSED_VARIABLE(bytesRead);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1793,7 +1792,7 @@ LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
 
 LOCAL Errors StorageOptical_write(StorageHandle *storageHandle,
                                   const void    *buffer,
-                                  ulong         size
+                                  ulong         bufferLength
                                  )
 {
   Errors error;
@@ -1808,7 +1807,7 @@ LOCAL Errors StorageOptical_write(StorageHandle *storageHandle,
   error = ERROR_NONE;
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
-    error = File_write(&storageHandle->opticalDisk.write.fileHandle,buffer,size);
+    error = File_write(&storageHandle->opticalDisk.write.fileHandle,buffer,bufferLength);
   }
 
   return error;
