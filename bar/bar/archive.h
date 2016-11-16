@@ -211,6 +211,8 @@ typedef struct
 
   uint                     blockLength;                                // block length for file entry/file data (depend on used crypt algorithm)
 
+  CryptHash                signatureHash;                              // signature hash
+
   ArchiveIOTypes           ioType;                                     // i/o type
   union
   {

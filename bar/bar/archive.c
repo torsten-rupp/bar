@@ -80,7 +80,7 @@ const ChunkIO CHUNK_IO_FILE =
   (uint64(*)(void*))File_getSize
 };
 
-// i/o via storage file functions
+// i/o via storage functions
 const ChunkIO CHUNK_IO_STORAGE_FILE =
 {
   (bool(*)(void*))Storage_eof,
@@ -1267,7 +1267,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
     }
   }
 
-  // create new archive
+  // create archive (if not already exists and open)
   error = createArchiveFile(archiveHandle,indexHandle);
   if (error != ERROR_NONE)
   {
@@ -1279,7 +1279,8 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
 
 /***********************************************************************\
 * Name   : transferArchiveFileData
-* Purpose: transfer file data from temporary file to archive
+* Purpose: transfer file data from temporary file to archive, update
+*          signature hash
 * Input  : archiveHandle - archive handle
 *          fileHandle    - file handle of temporary file
 * Output : -
@@ -1325,6 +1326,7 @@ LOCAL Errors transferArchiveFileData(const ArchiveHandle *archiveHandle,
   {
     n = MIN(length,BUFFER_SIZE);
 
+    // read data
     error = File_read(fileHandle,buffer,n,NULL);
     if (error != ERROR_NONE)
     {
@@ -1332,6 +1334,10 @@ LOCAL Errors transferArchiveFileData(const ArchiveHandle *archiveHandle,
       return error;
     }
 
+    // update signature hash
+    Crypt_updateHash(&archiveHandle->signatureHash,buffer,n);
+
+    // transfer to archive
     error = archiveHandle->chunkIO->write(archiveHandle->chunkIOUserData,buffer,n);
     if (error != ERROR_NONE)
     {
@@ -1342,7 +1348,7 @@ LOCAL Errors transferArchiveFileData(const ArchiveHandle *archiveHandle,
     length -= (uint64)n;
   }
 
-  // truncate file
+  // truncate file for reusage
   File_truncate(fileHandle,0LL);
 
   // free resources
@@ -1750,7 +1756,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // reset header "written"
         archiveEntryInfo->file.headerWrittenFlag = FALSE;
 
-        // create archive file
+        // create archive file (if not already exists and open)
         error = createArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
         if (error != ERROR_NONE)
         {
@@ -2331,7 +2337,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // mark header "not written"
         archiveEntryInfo->image.headerWrittenFlag = FALSE;
 
-        // create archive file
+        // create archive file (if not already exists and open)
         error = createArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
         if (error != ERROR_NONE)
         {
@@ -2936,7 +2942,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // reset header "written"
         archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
 
-        // create archive file
+        // create archive file (if not already exists and open)
         error = createArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
         if (error != ERROR_NONE)
         {
@@ -3435,7 +3441,9 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
     Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
     error = Crypt_readKeyFile(&archiveHandle->cryptKey,
                               jobOptions->cryptPublicKeyFileName,
-                              NULL  // password
+                              NULL,  // password
+                              NULL,  // salt
+                              0  // saltLength
                              );
     if (error != ERROR_NONE)
     {
@@ -3484,6 +3492,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
     }
     while (!okFlag);
     AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptKeyData,{ free(archiveHandle->cryptKeyData); });
+    DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 #if 0
 Password_dump(archiveHandle->cryptPassword);
 {
@@ -3493,6 +3502,16 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 }
 #endif /* 0 */
   }
+
+  // init signature hash
+  error = Crypt_initHash(&archiveHandle->signatureHash);
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->signatureHash,{ Crypt_doneHash(&archiveHandle->signatureHash); });
+  DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // free resources
   AutoFree_done(&autoFreeList);
@@ -3595,6 +3614,17 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   AUTOFREE_ADD(&autoFreeList,archiveHandle->printableStorageName,{ String_delete(archiveHandle->printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
 
+  // init signature hash
+  error = Crypt_initHash(&archiveHandle->signatureHash);
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->signatureHash,{ Crypt_doneHash(&archiveHandle->signatureHash); });
+  DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+
+  // open storage
   error = Storage_open(&archiveHandle->storage.storageHandle,
                        archiveHandle->storage.storageInfo,
                        fileName
@@ -3652,6 +3682,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 #endif /* NDEBUG */
 {
   Errors error;
+  ChunkSignature chunkSignature;
 
   assert(archiveHandle != NULL);
 
@@ -3663,6 +3694,80 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   // init variables
   error = ERROR_UNKNOWN;
+
+  // add signature
+  if (!archiveHandle->jobOptions->noSignatureFlag)
+  {
+    void *hash;
+    uint hashLength;
+
+    // get hash
+    hashLength = Crypt_getHashLength(&archiveHandle->signatureHash);
+    hash = malloc(hashLength);
+    if (hash == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    Crypt_getHash(&archiveHandle->signatureHash,hash,hashLength);
+debugDumpMemory(hash,hashLength,0);
+
+    // encrypt signature
+
+#if 0
+    // init crypt
+    error = Crypt_init(&cryptInfo,
+                       archiveHandle->jobOptions->cryptAlgorithm,
+                       archiveHandle->cryptPassword,
+                       archiveHandle->cryptSalt,
+                       sizeof(chunkMeta.salt)
+                      );
+    if (error != ERROR_NONE)
+    {
+  //    AutoFree_cleanup(&autoFreeList);
+      Chunk_done(&chunkInfoBar);
+      return error;
+    }
+#endif
+
+    // init signature chunk
+    error = Chunk_init(&chunkSignature.info,
+                       NULL,  // parentChunkInfo
+                       archiveHandle->chunkIO,
+                       archiveHandle->chunkIOUserData,
+                       CHUNK_ID_SIGNATURE,
+                       CHUNK_DEFINITION_SIGNATURE,
+                       0,  // alignment
+                       NULL,  // cryptInfo
+                       &chunkSignature
+                      );
+    if (error != ERROR_NONE)
+    {
+      free(hash);
+      return error;
+    }
+    chunkSignature.value.data   = hash;
+    chunkSignature.value.length = hashLength;
+
+    // write signature chunk
+    error = Chunk_create(&chunkSignature.info);
+    if (error != ERROR_NONE)
+    {
+      Chunk_done(&chunkSignature.info);
+      free(hash);
+      return error;
+    }
+    error = Chunk_close(&chunkSignature.info);
+    if (error != ERROR_NONE)
+    {
+      Chunk_done(&chunkSignature.info);
+      free(hash);
+      return error;
+    }
+
+    // free resources
+    Chunk_done(&chunkSignature.info);
+    free(hash);
+  }
 
   // close file/storage
   switch (archiveHandle->ioType)
@@ -3680,8 +3785,14 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
         break; /* not reached */
     #endif /* NDEBUG */
   }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   // free resources
+  Crypt_doneHash(&archiveHandle->signatureHash);
+
   if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
   {
     assert(archiveHandle->cryptKeyData != NULL);
@@ -3867,7 +3978,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
         break;
       case CHUNK_ID_KEY:
         // check if private key available
-        if (archiveHandle->jobOptions->cryptPrivateKeyFileName == NULL)
+        if (archiveHandle->jobOptions->cryptPrivateKey.data == NULL)
         {
           archiveHandle->pendingError = ERROR_NO_PRIVATE_KEY;
           return FALSE;
@@ -3878,7 +3989,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
         decryptedFlag = FALSE;
         archiveHandle->pendingError = Crypt_readKeyFile(&archiveHandle->cryptKey,
                                                       archiveHandle->jobOptions->cryptPrivateKeyFileName,
-                                                      NULL
+                                                      NULL,  // password
+                                                      NULL,  // salt
+                                                      0  // saltLength
                                                      );
         if (archiveHandle->pendingError == ERROR_NONE)
         {
@@ -3897,7 +4010,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
         {
           archiveHandle->pendingError = Crypt_readKeyFile(&archiveHandle->cryptKey,
                                                         archiveHandle->jobOptions->cryptPrivateKeyFileName,
-                                                        password
+                                                        password,
+                                                        NULL,  // salt
+                                                        0  // saltLength
                                                        );
           if (archiveHandle->pendingError == ERROR_NONE)
           {
@@ -5911,7 +6026,9 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
         decryptedFlag = FALSE;
         error = Crypt_readKeyFile(&archiveHandle->cryptKey,
                                   archiveHandle->jobOptions->cryptPrivateKeyFileName,
-                                  NULL
+                                  NULL,  // password
+                                  NULL,  // salt
+                                  0  // saltLength
                                  );
         if (error == ERROR_NONE)
         {
@@ -5930,7 +6047,9 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
         {
           error = Crypt_readKeyFile(&archiveHandle->cryptKey,
                                     archiveHandle->jobOptions->cryptPrivateKeyFileName,
-                                    password
+                                    password,
+                                    NULL,  // salt
+                                    0  // saltLength
                                    );
           if (error == ERROR_NONE)
           {
@@ -9382,7 +9501,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
               // transfer to archive
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
-                // create archive file
+                // create archive file (if not already exists and open)
                 tmpError = createArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
                 if (tmpError != ERROR_NONE)
                 {
@@ -9533,7 +9652,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
               // transfer to archive
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
-                // create archive file if needed
+                // create archive file (if not already exists and open)
                 tmpError = createArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
                 if (tmpError != ERROR_NONE)
                 {
@@ -9768,7 +9887,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
               // transfer to archive
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
-                // create archive file if needed
+                // create archive file (if not already exists and open)
                 tmpError = createArchiveFile(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
                 if (tmpError != ERROR_NONE)
                 {
