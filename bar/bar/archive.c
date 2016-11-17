@@ -1028,7 +1028,9 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
       return ERROR_INSUFFICIENT_MEMORY;
     }
     Crypt_getHash(&archiveHandle->signatureHash,hash,hashLength);
+#if 0
 debugDumpMemory(hash,hashLength,0);
+#endif
 
     // encrypt signature
 
