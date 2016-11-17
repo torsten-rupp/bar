@@ -1003,6 +1003,95 @@ LOCAL Errors writeEncryptionKey(ArchiveHandle *archiveHandle)
 }
 
 /***********************************************************************\
+* Name   : writeSignature
+* Purpose: write new signature chunk
+* Input  : archiveHandle - archive handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
+{
+  void           *hash;
+  uint           hashLength;
+  Errors         error;
+  ChunkSignature chunkSignature;
+
+  if (!archiveHandle->jobOptions->noSignatureFlag)
+  {
+    // get hash
+    hashLength = Crypt_getHashLength(&archiveHandle->signatureHash);
+    hash = malloc(hashLength);
+    if (hash == NULL)
+    {
+      return ERROR_INSUFFICIENT_MEMORY;
+    }
+    Crypt_getHash(&archiveHandle->signatureHash,hash,hashLength);
+debugDumpMemory(hash,hashLength,0);
+
+    // encrypt signature
+
+#if 0
+    // init crypt
+    error = Crypt_init(&cryptInfo,
+                       archiveHandle->jobOptions->cryptAlgorithm,
+                       archiveHandle->cryptPassword,
+                       archiveHandle->cryptSalt,
+                       sizeof(chunkMeta.salt)
+                      );
+    if (error != ERROR_NONE)
+    {
+  //    AutoFree_cleanup(&autoFreeList);
+      Chunk_done(&chunkInfoBar);
+      return error;
+    }
+#endif
+
+    // init signature chunk
+    error = Chunk_init(&chunkSignature.info,
+                       NULL,  // parentChunkInfo
+                       archiveHandle->chunkIO,
+                       archiveHandle->chunkIOUserData,
+                       CHUNK_ID_SIGNATURE,
+                       CHUNK_DEFINITION_SIGNATURE,
+                       0,  // alignment
+                       NULL,  // cryptInfo
+                       &chunkSignature
+                      );
+    if (error != ERROR_NONE)
+    {
+      free(hash);
+      return error;
+    }
+    chunkSignature.value.data   = hash;
+    chunkSignature.value.length = hashLength;
+
+    // write signature chunk
+    error = Chunk_create(&chunkSignature.info);
+    if (error != ERROR_NONE)
+    {
+      Chunk_done(&chunkSignature.info);
+      free(hash);
+      return error;
+    }
+    error = Chunk_close(&chunkSignature.info);
+    if (error != ERROR_NONE)
+    {
+      Chunk_done(&chunkSignature.info);
+      free(hash);
+      return error;
+    }
+
+    // free resources
+    Chunk_done(&chunkSignature.info);
+    free(hash);
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : createArchiveFile
 * Purpose: create and open new archive file
 * Input  : archiveHandle - archive handle
@@ -1161,6 +1250,17 @@ if (!archiveHandle->file.openFlag) return ERROR_NONE;
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
+    // add signature
+    if (!archiveHandle->jobOptions->noSignatureFlag)
+    {
+      error = writeSignature(archiveHandle);
+      if (error != ERROR_NONE)
+      {
+        Semaphore_unlock(&archiveHandle->chunkIOLock);
+        return error;
+      }
+    }
+
     // close file
     (void)File_close(&archiveHandle->file.fileHandle);
 
@@ -3505,7 +3605,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   }
 
   // init signature hash
-  error = Crypt_initHash(&archiveHandle->signatureHash);
+  error = Crypt_initHash(&archiveHandle->signatureHash,CRYPT_HASH_ALGORITHM_SHA2_512);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -3616,7 +3716,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
 
   // init signature hash
-  error = Crypt_initHash(&archiveHandle->signatureHash);
+  error = Crypt_initHash(&archiveHandle->signatureHash,CRYPT_HASH_ALGORITHM_SHA2_512);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -3683,7 +3783,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 #endif /* NDEBUG */
 {
   Errors error;
-  ChunkSignature chunkSignature;
 
   assert(archiveHandle != NULL);
 
@@ -3695,80 +3794,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   // init variables
   error = ERROR_UNKNOWN;
-
-  // add signature
-  if (!archiveHandle->jobOptions->noSignatureFlag)
-  {
-    void *hash;
-    uint hashLength;
-
-    // get hash
-    hashLength = Crypt_getHashLength(&archiveHandle->signatureHash);
-    hash = malloc(hashLength);
-    if (hash == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    Crypt_getHash(&archiveHandle->signatureHash,hash,hashLength);
-debugDumpMemory(hash,hashLength,0);
-
-    // encrypt signature
-
-#if 0
-    // init crypt
-    error = Crypt_init(&cryptInfo,
-                       archiveHandle->jobOptions->cryptAlgorithm,
-                       archiveHandle->cryptPassword,
-                       archiveHandle->cryptSalt,
-                       sizeof(chunkMeta.salt)
-                      );
-    if (error != ERROR_NONE)
-    {
-  //    AutoFree_cleanup(&autoFreeList);
-      Chunk_done(&chunkInfoBar);
-      return error;
-    }
-#endif
-
-    // init signature chunk
-    error = Chunk_init(&chunkSignature.info,
-                       NULL,  // parentChunkInfo
-                       archiveHandle->chunkIO,
-                       archiveHandle->chunkIOUserData,
-                       CHUNK_ID_SIGNATURE,
-                       CHUNK_DEFINITION_SIGNATURE,
-                       0,  // alignment
-                       NULL,  // cryptInfo
-                       &chunkSignature
-                      );
-    if (error != ERROR_NONE)
-    {
-      free(hash);
-      return error;
-    }
-    chunkSignature.value.data   = hash;
-    chunkSignature.value.length = hashLength;
-
-    // write signature chunk
-    error = Chunk_create(&chunkSignature.info);
-    if (error != ERROR_NONE)
-    {
-      Chunk_done(&chunkSignature.info);
-      free(hash);
-      return error;
-    }
-    error = Chunk_close(&chunkSignature.info);
-    if (error != ERROR_NONE)
-    {
-      Chunk_done(&chunkSignature.info);
-      free(hash);
-      return error;
-    }
-
-    // free resources
-    Chunk_done(&chunkSignature.info);
-    free(hash);
-  }
 
   // close file/storage
   switch (archiveHandle->ioType)
@@ -4051,13 +4076,14 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
         scanFlag = FALSE;
         break;
-      case CHUNK_ID_META:
       case CHUNK_ID_FILE:
       case CHUNK_ID_IMAGE:
       case CHUNK_ID_DIRECTORY:
       case CHUNK_ID_LINK:
       case CHUNK_ID_HARDLINK:
       case CHUNK_ID_SPECIAL:
+      case CHUNK_ID_META:
+      case CHUNK_ID_SIGNATURE:
         chunkHeaderFoundFlag = TRUE;
 
         scanFlag = FALSE;
