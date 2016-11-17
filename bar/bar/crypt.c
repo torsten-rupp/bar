@@ -2439,6 +2439,15 @@ void __Crypt_doneHash(const char    *__fileName__,
   gcry_md_close(cryptHashInfo->gcry_md_hd);
 }
 
+void Crypt_resetHash(CryptHashInfo *cryptHashInfo)
+{
+  assert(cryptHashInfo != NULL);
+
+  #ifdef HAVE_GCRYPT
+    gcry_md_reset(cryptHashInfo->gcry_md_hd);
+  #endif /* HAVE_GCRYPT */
+}
+
 void Crypt_updateHash(CryptHashInfo *cryptHashInfo,
                       void          *buffer,
                       ulong         bufferLength
@@ -2446,7 +2455,9 @@ void Crypt_updateHash(CryptHashInfo *cryptHashInfo,
 {
   assert(cryptHashInfo != NULL);
 
-  gcry_md_write(cryptHashInfo->gcry_md_hd,buffer,bufferLength);
+  #ifdef HAVE_GCRYPT
+    gcry_md_write(cryptHashInfo->gcry_md_hd,buffer,bufferLength);
+  #endif /* HAVE_GCRYPT */
 }
 
 uint Crypt_getHashLength(CryptHashInfo *cryptHashInfo)

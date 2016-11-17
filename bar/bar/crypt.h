@@ -818,6 +818,17 @@ void __Crypt_doneHash(const char    *__fileName__,
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Crypt_resetHash
+* Purpose: reset hash
+* Input  : cryptHash    - crypt hash
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Crypt_resetHash(CryptHashInfo *cryptHashInfo);
+
+/***********************************************************************\
 * Name   : Crypt_updateHash
 * Purpose: update hash
 * Input  : cryptHash    - crypt hash
