@@ -292,6 +292,8 @@ ERROR INVALID_CRYPT_ALGORITHM          "invalid encryption algorithm"
 ERROR UNKNOWN_CRYPT_ALGORITHM          "unknown encryption algorithm"
 
 ERROR INIT_HASH                        "init hash fail"
+ERROR INVALID_HASH_ALGORITHM           "invalid hash algorithm"
+ERROR UNKNOWN_HASH_ALGORITHM           "unknown hash algorithm"
 
 // --- file i/o ---------------------------------------------------------
 ERROR NO_FILE_NAME                     "no file name given"
