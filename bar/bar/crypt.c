@@ -2451,17 +2451,52 @@ void Crypt_updateHash(CryptHashInfo *cryptHashInfo,
 
 uint Crypt_getHashLength(CryptHashInfo *cryptHashInfo)
 {
+  uint hashLength;
+
   assert(cryptHashInfo != NULL);
 
-  return gcry_md_get_algo_dlen(cryptHashInfo->cryptHashAlgorithm);
+  hashLength = 0;
+  switch (cryptHashInfo->cryptHashAlgorithm)
+  {
+    case CRYPT_HASH_ALGORITHM_SHA2_224:
+    case CRYPT_HASH_ALGORITHM_SHA2_256:
+    case CRYPT_HASH_ALGORITHM_SHA2_384:
+    case CRYPT_HASH_ALGORITHM_SHA2_512:
+      #ifdef HAVE_GCRYPT
+        {
+          int hashAlgorithm;
+
+          hashAlgorithm = GCRY_MD_NONE;
+          switch (cryptHashInfo->cryptHashAlgorithm)
+          {
+            case CRYPT_HASH_ALGORITHM_SHA2_224: hashAlgorithm = GCRY_MD_SHA224; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_256: hashAlgorithm = GCRY_MD_SHA256; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_384: hashAlgorithm = GCRY_MD_SHA384; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_512: hashAlgorithm = GCRY_MD_SHA512; break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break; /* not reached */
+          }
+
+          hashLength = gcry_md_get_algo_dlen(hashAlgorithm);
+        }
+      #endif /* HAVE_GCRYPT */
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+
+  return hashLength;
 }
 
 void *Crypt_getHash(CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize)
 {
   assert(cryptHashInfo != NULL);
-  #ifdef HAVE_GCRYPT
-    assert(gcry_md_get_algo_dlen(cryptHashInfo->cryptHashAlgorithm) == bufferSize);
-  #endif /* HAVE_GCRYPT */
 
   switch (cryptHashInfo->cryptHashAlgorithm)
   {
@@ -2486,6 +2521,7 @@ void *Crypt_getHash(CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize)
               #endif /* NDEBUG */
               break; /* not reached */
           }
+          assert(gcry_md_get_algo_dlen(hashAlgorithm) == bufferSize);
 
           memcpy(buffer,gcry_md_read(cryptHashInfo->gcry_md_hd,hashAlgorithm),bufferSize);
         }
