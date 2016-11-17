@@ -288,8 +288,8 @@ bool Crypt_isSymmetricSupported(void);
 * Input  : cryptInfo      - crypt info block
 *          cryptAlgorithm - crypt algorithm to use
 *          password       - crypt password
-*          salt           - salt (can be NULL)
-*          saltLength     - salt length
+*          salt           - encryption salt (can be NULL)
+*          saltLength     - encryption salt length
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -451,20 +451,21 @@ void Crypt_doneKey(CryptKey *cryptKey);
 /***********************************************************************\
 * Name   : Crypt_getKeyData
 * Purpose: get public/private key data as base64-encoded string
-* Input  : cryptKey   - crypt key
-*          data       - data variable
-*          dataSize   - size of data variable
-*          password   - password to encrypt key (can be NULL)
-*          salt       - salt (can be NULL)
-*          saltLength - salt length
-* Output : data - data with encrypted key
+* Input  : cryptKey      - crypt key
+*          keyData       - data variable
+*          keyDataLength - data length variable
+*          password      - password to encrypt key (can be NULL)
+*          salt          - encryption salt (can be NULL)
+*          saltLength    - encryption salt length
+* Output : keyData       - data with encrypted key
+*          keyDataLength - length of key data
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : keyData must be freed with Password_freeSecure()!
 \***********************************************************************/
 
 Errors Crypt_getKeyData(CryptKey       *cryptKey,
-                        void           *data,
-                        uint           dataSize,
+                        void           **keyData,
+                        uint           *keyDataLength,
                         const Password *password,
                         const byte     *salt,
                         uint           saltLength
@@ -473,20 +474,20 @@ Errors Crypt_getKeyData(CryptKey       *cryptKey,
 /***********************************************************************\
 * Name   : Crypt_setKeyData
 * Purpose: set public/private key data from base64-encoded string
-* Input  : cryptKey   - crypt key
-*          data       - data with encrypted key
-*          dataLength - length of data
-*          password   - password to decrypt key (can be NULL)
-*          salt       - salt (can be NULL)
-*          saltLength - salt length
+* Input  : cryptKey      - crypt key
+*          keyData       - data with encrypted key
+*          keyDataLength - length of key data
+*          password      - password to decrypt key (can be NULL)
+*          salt          - encryption salt (can be NULL)
+*          saltLength    - encryption salt length
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Crypt_setKeyData(CryptKey       *cryptKey,
-                        const void     *data,
-                        uint           dataLength,
+                        const void     *keyData,
+                        uint           keyDataLength,
                         const Password *password,
                         const byte     *salt,
                         uint           saltLength
@@ -498,8 +499,8 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
 * Input  : cryptKey   - crypt key
 *          string     - string variable
 *          password   - password to encrypt key (can be NULL)
-*          salt       - salt (can be NULL)
-*          saltLength - salt length
+*          salt       - encryption salt (can be NULL)
+*          saltLength - encryption salt length
 * Output : string - string with encrypted key data
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -518,8 +519,8 @@ Errors Crypt_getKeyString(CryptKey       *cryptKey,
 * Input  : cryptKey   - crypt key
 *          string     - string with encrypted key data
 *          password   - password to decrypt key (can be NULL)
-*          salt       - salt (can be NULL)
-*          saltLength - salt length
+*          salt       - encryption salt (can be NULL)
+*          saltLength - encryption salt length
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -550,8 +551,8 @@ String Crypt_getKeyExponent(CryptKey *cryptKey);
 * Purpose: read key from file
 * Input  : fileName   - file name
 *          password   - password tor decrypt key (can be NULL)
-*          salt       - salt (can be NULL)
-*          saltLength - salt length
+*          salt       - encryption salt (can be NULL)
+*          saltLength - encryption salt length
 * Output : cryptKey - crypt key
 * Return : ERROR_NONE or error code
 * Notes  : use own specific file format
@@ -570,8 +571,8 @@ Errors Crypt_readKeyFile(CryptKey       *cryptKey,
 * Input  : cryptKey   - crypt key
 *          fileName   - file name
 *          password   - password to encrypt key (can be NULL)
-*          salt       - salt (can be NULL)
-*          saltLength - salt length
+*          salt       - encryption salt (can be NULL)
+*          saltLength - encryption salt length
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : use own specific file format

@@ -1090,8 +1090,8 @@ void Crypt_doneKey(CryptKey *cryptKey)
 }
 
 Errors Crypt_getKeyData(CryptKey       *cryptKey,
-                        void           *data,
-                        uint           dataSize,
+                        void           **keyData,
+                        uint           *keyDataLength,
                         const Password *password,
                         const byte     *salt,
                         uint           saltLength
@@ -1108,7 +1108,8 @@ Errors Crypt_getKeyData(CryptKey       *cryptKey,
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
-  assert(data != NULL);
+  assert(keyData != NULL);
+  assert(keyDataLength != NULL);
 
   #ifdef HAVE_GCRYPT
     // get crypt algorithm block length
@@ -1185,12 +1186,10 @@ debugDumpMemory(fileCryptKey->data,dataLength,FALSE);
     // calculate CRC
     fileCryptKey->crc = htonl(crc32(crc32(0,Z_NULL,0),fileCryptKey->data,dataLength));
 
-    // encode base64
-//TODO
-//    Misc_base64Encode(string,(byte*)fileCryptKey,fileCryptKeyLength);
+    (*keyData      ) = fileCryptKey;
+    (*keyDataLength) = fileCryptKeyLength;
 
     // free resources
-    Password_freeSecure(fileCryptKey);
     gcry_sexp_release(sexpToken);
 
     return ERROR_NONE;
@@ -1204,15 +1203,15 @@ debugDumpMemory(fileCryptKey->data,dataLength,FALSE);
 }
 
 Errors Crypt_setKeyData(CryptKey       *cryptKey,
-                        const void     *data,
-                        uint           dataLength,
+                        const void     *keyData,
+                        uint           keyDataLength,
                         const Password *password,
                         const byte     *salt,
                         uint           saltLength
                        )
 {
   #ifdef HAVE_GCRYPT
-    void         *secureData;
+    void         *data;
     uint         blockLength;
     CryptInfo    cryptInfo;
     Errors       error;
@@ -1220,17 +1219,10 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
-  assert(data != NULL);
-  assert(dataLength >= sizeof(FileCryptKey));
+  assert(keyData != NULL);
+  assert(keyDataLength >= sizeof(FileCryptKey));
 
   #ifdef HAVE_GCRYPT
-    // allocate secure memory
-    secureData = Password_allocSecure(dataLength);
-    if (secureData == NULL)
-    {
-      return ERROR_INSUFFICIENT_MEMORY;
-    }
-
     // decrypt key
     if (password != NULL)
     {
@@ -1238,8 +1230,14 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
       error = Crypt_getBlockLength(SECRET_KEY_CRYPT_ALGORITHM,&blockLength);
       if (error != ERROR_NONE)
       {
-        Password_freeSecure(secureData);
         return ERROR_INVALID_BLOCK_LENGTH_;
+      }
+
+      // allocate secure memory
+      data = Password_allocSecure(keyDataLength);
+      if (data == NULL)
+      {
+        return ERROR_INSUFFICIENT_MEMORY;
       }
 
       // initialize crypt
@@ -1251,28 +1249,22 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
                         );
       if (error != ERROR_NONE)
       {
-        Password_freeSecure(secureData);
+        Password_freeSecure(data);
         return error;
       }
 
       // decrypt
-      memcpy(secureData,data,dataLength);
-      error = Crypt_decrypt(&cryptInfo,secureData,ALIGN(dataLength,blockLength));
+      memcpy(data,keyData,keyDataLength);
+      error = Crypt_decrypt(&cryptInfo,data,ALIGN(keyDataLength,blockLength));
       if (error != ERROR_NONE)
       {
         Crypt_done(&cryptInfo);
-        Password_freeSecure(secureData);
+        Password_freeSecure(data);
         return error;
       }
 
       // done crypt
       Crypt_done(&cryptInfo);
-
-      // free
-    }
-    else
-    {
-      memcpy(secureData,data,dataLength);
     }
 #if 0
 debugDumpMemory(secureData,dataLength,FALSE);
@@ -1284,15 +1276,25 @@ debugDumpMemory(secureData,dataLength,FALSE);
       gcry_sexp_release(cryptKey->key);
       cryptKey->key = NULL;
     }
-    gcryptError = gcry_sexp_new(&cryptKey->key,secureData,dataLength,1);
+    gcryptError = gcry_sexp_new(&cryptKey->key,
+                                (password != NULL) ? data : keyData,
+                                keyDataLength,
+                                1
+                               );
     if (gcryptError != 0)
     {
-      Password_freeSecure(secureData);
+      if (password != NULL)
+      {
+        Password_freeSecure(data);
+      }
       return ERROR_INVALID_KEY;
     }
 
     // free resources
-    Password_freeSecure(secureData);
+    if (password != NULL)
+    {
+      Password_freeSecure(data);
+    }
 
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
@@ -1311,9 +1313,44 @@ Errors Crypt_getKeyString(CryptKey       *cryptKey,
                           uint           saltLength
                          )
 {
+  #ifdef HAVE_GCRYPT
+    Errors error;
+    void   *keyData;
+    uint   keyDataLength;
+  #endif /* HAVE_GCRYPT */
+
+  assert(cryptKey != NULL);
+  assert(string != NULL);
+
+  #ifdef HAVE_GCRYPT
+    // get encrypted key
+    error = Crypt_getKeyData(cryptKey,
+                             &keyData,
+                             &keyDataLength,
+                             password,
+                             salt,
+                             saltLength
+                            );
+    if (error != ERROR_NONE)
+    {
+      Password_freeSecure(keyData);
+      return error;
+    }
 
     // encode base64
-//    Misc_base64Encode(string,(byte*)fileCryptKey,fileCryptKeyLength);
+    Misc_base64Encode(string,(byte*)keyData,keyDataLength);
+
+    // free resources
+    Password_freeSecure(keyData);
+
+    return ERROR_NONE;
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptKey);
+    UNUSED_VARIABLE(string);
+    UNUSED_VARIABLE(password);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_GCRYPT */
 }
 
 Errors Crypt_setKeyString(CryptKey       *cryptKey,
@@ -1349,14 +1386,17 @@ Errors Crypt_setKeyString(CryptKey       *cryptKey,
 
     // get crypt length
     fileCryptKeyLength = Misc_base64DecodeLength(string,STRING_BEGIN);
-    assert(fileCryptKeyLength >= sizeof(FileCryptKey));
+    if (fileCryptKeyLength < sizeof(FileCryptKey))
+    {
+      return ERROR_INVALID_KEY;
+    }
 
     // allocate file key
     fileCryptKeySize = offsetof(FileCryptKey,data)+ALIGN(fileCryptKeyLength-offsetof(FileCryptKey,data),blockLength);
     fileCryptKey = (FileCryptKey*)Password_allocSecure(fileCryptKeySize);
     if (fileCryptKey == NULL)
     {
-      HALT_INSUFFICIENT_MEMORY();
+      return ERROR_INSUFFICIENT_MEMORY;
     }
     memset(fileCryptKey,0,fileCryptKeySize);
 
