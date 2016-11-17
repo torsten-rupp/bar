@@ -2100,6 +2100,7 @@ LOCAL Errors listArchiveContent(StorageSpecifier    *storageSpecifier,
 {
   bool         printedNameFlag,printedInfoFlag;
   ulong        fileCount;
+  uint64       sigantureOffset;
   Errors       error;
 bool         remoteBarFlag;
 //  SSHSocketList sshSocketList;
@@ -2117,6 +2118,7 @@ remoteBarFlag=FALSE;
   printedNameFlag = FALSE;
   printedInfoFlag = FALSE;
   fileCount       = 0L;
+  sigantureOffset = 0LL;
   error           = ERROR_NONE;
   switch (storageSpecifier->type)
   {
@@ -2886,7 +2888,36 @@ remoteBarFlag=FALSE;
               }
               break;
             case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-              error = Archive_skipNextEntry(&archiveHandle);
+              {
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+                if (globalOptions.verifySignaturesFlag)
+                {
+                  // read archive file
+                  error = Archive_verifySignatureEntry(&archiveHandle,
+                                                       sigantureOffset
+                                                      );
+                  if (error == ERROR_NONE)
+                  {
+                    printf("Signature OK\n");
+                    printf("\n");
+                  }
+                  else
+                  {
+                    printError("Cannot verify signature of storage '%s' (error: %s)!\n",
+                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Error_getText(error)
+                              );
+                    break;
+                  }
+
+                  // free resources
+                }
+                else
+                {
+                  error = Archive_skipNextEntry(&archiveHandle);
+                }
+              }
               break;
             default:
               #ifndef NDEBUG
