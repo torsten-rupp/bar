@@ -177,6 +177,8 @@ typedef enum
   COMMAND_COMPARE,
   COMMAND_RESTORE,
 
+  COMMAND_VERIFY_SIGNATURES,
+
   COMMAND_GENERATE_ENCRYPTION_KEYS,
   COMMAND_GENERATE_SIGNATURE_KEYS,
   COMMAND_NEW_KEY_PASSWORD,
@@ -697,6 +699,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_CSTRING      ("pid-file",                     0,  1,1,pidFileName,                                                                                            "process id file name","file name"                                         ),
 
   CMD_OPTION_BOOLEAN      ("info",                         0  ,0,1,globalOptions.metaInfoFlag,                                                                             "show meta info"                                                           ),
+  CMD_OPTION_BOOLEAN      ("verify-signatures",            'r',0,1,globalOptions.verifySignaturesFlag,                                                                     "verify signatures of archives"                                            ),
 
   CMD_OPTION_BOOLEAN      ("group",                        'g',0,1,globalOptions.groupFlag,                                                                                "group files in list"                                                      ),
   CMD_OPTION_BOOLEAN      ("all",                          0,  0,1,globalOptions.allFlag,                                                                                  "show all files"                                                           ),
@@ -8303,7 +8306,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         switch (command)
         {
           case COMMAND_NONE:
-            if (globalOptions.metaInfoFlag)
+            if      (globalOptions.metaInfoFlag || globalOptions.verifySignaturesFlag)
             {
               // default: show meta-info only
               error = Command_list(&fileNameList,
