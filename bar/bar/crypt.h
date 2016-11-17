@@ -54,12 +54,23 @@ typedef enum
   CRYPT_ALGORITHM_CAMELLIA192 = CHUNK_CONST_CRYPT_ALGORITHM_CAMELLIA192,
   CRYPT_ALGORITHM_CAMELLIA256 = CHUNK_CONST_CRYPT_ALGORITHM_CAMELLIA256,
 
-  CRYPT_ALGORITHM_UNKNOWN = 0xFFFF,
+  CRYPT_ALGORITHM_UNKNOWN     = 0xFFFF
 } CryptAlgorithms;
 
 #define MIN_ASYMMETRIC_CRYPT_KEY_BITS 1024
 #define MAX_ASYMMETRIC_CRYPT_KEY_BITS 3072
 #define DEFAULT_ASYMMETRIC_CRYPT_KEY_BITS 2048
+
+// available hash algorithms
+typedef enum
+{
+  CRYPT_HASH_ALGORITHM_SHA2_224 = CHUNK_CONST_HASH_ALGORITHM_SHA2_224,
+  CRYPT_HASH_ALGORITHM_SHA2_256 = CHUNK_CONST_HASH_ALGORITHM_SHA2_256,
+  CRYPT_HASH_ALGORITHM_SHA2_384 = CHUNK_CONST_HASH_ALGORITHM_SHA2_384,
+  CRYPT_HASH_ALGORITHM_SHA2_512 = CHUNK_CONST_HASH_ALGORITHM_SHA2_512,
+
+  CRYPT_HASH_ALGORITHM_UNKNOW   = 0xFFFF
+} CryptHashAlgorithms;
 
 typedef enum
 {
@@ -98,13 +109,14 @@ typedef struct
   CryptPaddingTypes cryptPaddingType;
 } CryptKey;
 
-// crypt hash
+// crypt hash info block
 typedef struct
 {
+  CryptHashAlgorithms cryptHashAlgorithm;
   #ifdef HAVE_GCRYPT
     gcry_md_hd_t gcry_md_hd;
   #endif /* HAVE_GCRYPT */
-} CryptHash;
+} CryptHashInfo;
 
 /***************************** Variables *******************************/
 
@@ -134,9 +146,37 @@ typedef struct
 #define CRYPT_ALGORITHM_TO_CONSTANT(cryptAlgorithm) \
   ((uint16)(cryptAlgorithm))
 
+/***********************************************************************\
+* Name   : CRYPT_CONSTANT_TO_HASH_ALGORITHM
+* Purpose: convert archive definition constant to hash algorithm enum
+*          value
+* Input  : n - number
+* Output : -
+* Return : crypt hash algorithm
+* Notes  : -
+\***********************************************************************/
+
+#define CRYPT_CONSTANT_TO_HASH_ALGORITHM(n) \
+  ((CryptHashAlgorithms)(n))
+
+/***********************************************************************\
+* Name   : CRYPT_HASH_ALGORITHM_TO_CONSTANT
+* Purpose: convert hash algorithm enum value to archive definition
+*          constant
+* Input  : cryptHashAlgorithm - crypt ash algorithm
+* Output : -
+* Return : number
+* Notes  : -
+\***********************************************************************/
+
+#define CRYPT_HASH_ALGORITHM_TO_CONSTANT(cryptHashAlgorithm) \
+  ((uint16)(cryptHashAlgorithm))
+
 #ifndef NDEBUG
-  #define Crypt_init(...) __Crypt_init(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_done(...) __Crypt_done(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_init(...)     __Crypt_init(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_done(...)     __Crypt_done(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_initHash(...) __Crypt_initHash(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_doneHash(...) __Crypt_doneHash(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -146,17 +186,6 @@ typedef struct
 #ifdef __cplusplus
   extern "C" {
 #endif
-
-/***********************************************************************\
-* Name   : Crypt_isValidAlgorithm
-* Purpose: check if valid crypt algoritm
-* Input  : n - crypt algorithm constant
-* Output : -
-* Return : TRUE iff valid, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool Crypt_isValidAlgorithm(uint16 n);
 
 /***********************************************************************\
 * Name   : Crypt_initAll
@@ -181,6 +210,39 @@ Errors Crypt_initAll(void);
 void Crypt_doneAll(void);
 
 /***********************************************************************\
+* Name   : Crypt_isSymmetricSupported
+* Purpose: check if symmetric encryption is supported
+* Input  : -
+* Output : -
+* Return : TRUE iff symmetric encryption is supported
+* Notes  : -
+\***********************************************************************/
+
+bool Crypt_isSymmetricSupported(void);
+
+/***********************************************************************\
+* Name   : Crypt_isValidAlgorithm
+* Purpose: check if valid crypt algoritm
+* Input  : n - crypt algorithm constant
+* Output : -
+* Return : TRUE iff valid, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Crypt_isValidAlgorithm(uint16 n);
+
+/***********************************************************************\
+* Name   : Crypt_isValidHashAlgorithm
+* Purpose: check if valid crypt hash algoritm
+* Input  : n - crypt hash algorithm constant
+* Output : -
+* Return : TRUE iff valid, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Crypt_isValidHashAlgorithm(uint16 n);
+
+/***********************************************************************\
 * Name   : Crypt_algorithmToString
 * Purpose: get name of crypt algorithm
 * Input  : cryptAlgorithm - crypt algorithm
@@ -202,6 +264,29 @@ const char *Crypt_algorithmToString(CryptAlgorithms cryptAlgorithm, const char *
 \***********************************************************************/
 
 bool Crypt_parseAlgorithm(const char *name, CryptAlgorithms *cryptAlgorithm);
+
+/***********************************************************************\
+* Name   : Crypt_hashAlgorithmToString
+* Purpose: get name of crypt hash algorithm
+* Input  : cryptHashAlgorithm - crypt hash algorithm
+*          defaultValue       - default value
+* Output : -
+* Return : algorithm name
+* Notes  : -
+\***********************************************************************/
+
+const char *Crypt_hashAlgorithmToString(CryptHashAlgorithms cryptHashAlgorithm, const char *defaultValue);
+
+/***********************************************************************\
+* Name   : Crypt_parseHashAlgorithm
+* Purpose: parse crypt hash algorithm
+* Input  : name - name of crypt hash algorithm
+* Output : cryptHashAlgorithm - crypt hash algorithm
+* Return : TRUE if parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Crypt_parseHashAlgorithm(const char *name, CryptHashAlgorithms *cryptHashAlgorithm);
 
 /***********************************************************************\
 * Name   : Crypt_typeToString
@@ -270,17 +355,6 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
                            );
 
 /*---------------------------------------------------------------------*/
-
-/***********************************************************************\
-* Name   : Crypt_isSymmetricSupported
-* Purpose: check if symmetric encryption is supported
-* Input  : -
-* Output : -
-* Return : TRUE iff symmetric encryption is supported
-* Notes  : -
-\***********************************************************************/
-
-bool Crypt_isSymmetricSupported(void);
 
 /***********************************************************************\
 * Name   : Crypt_new
@@ -713,7 +787,17 @@ void Crypt_dumpKey(const CryptKey *cryptKey);
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_initHash(CryptHash *cryptHash);
+#ifdef NDEBUG
+Errors Crypt_initHash(CryptHashInfo       *cryptHashInfo,
+                      CryptHashAlgorithms cryptHashAlgorithm
+                     );
+#else /* not NDEBUG */
+Errors __Crypt_initHash(const char          *__fileName__,
+                        ulong               __lineNb__,
+                        CryptHashInfo       *cryptHashInfo,
+                        CryptHashAlgorithms cryptHashAlgorithm
+                       );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Crypt_doneHash
@@ -724,7 +808,14 @@ Errors Crypt_initHash(CryptHash *cryptHash);
 * Notes  : -
 \***********************************************************************/
 
-void Crypt_doneHash(CryptHash *cryptHash);
+#ifdef NDEBUG
+void Crypt_doneHash(CryptHashInfo *cryptHashInfo);
+#else /* not NDEBUG */
+void __Crypt_doneHash(const char    *__fileName__,
+                      ulong         __lineNb__,
+                      CryptHashInfo *cryptHashInfo
+                     );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Crypt_updateHash
@@ -737,9 +828,9 @@ void Crypt_doneHash(CryptHash *cryptHash);
 * Notes  : -
 \***********************************************************************/
 
-void Crypt_updateHash(CryptHash *cryptHash,
-                      void      *buffer,
-                      ulong     bufferLength
+void Crypt_updateHash(CryptHashInfo *cryptHashInfo,
+                      void          *buffer,
+                      ulong         bufferLength
                      );
 
 /***********************************************************************\
@@ -751,7 +842,7 @@ void Crypt_updateHash(CryptHash *cryptHash,
 * Notes  : -
 \***********************************************************************/
 
-uint Crypt_getHashLength(CryptHash *cryptHash);
+uint Crypt_getHashLength(CryptHashInfo *cryptHashInfo);
 
 /***********************************************************************\
 * Name   : Crypt_getHash
@@ -764,7 +855,7 @@ uint Crypt_getHashLength(CryptHash *cryptHash);
 * Notes  : -
 \***********************************************************************/
 
-void *Crypt_getHash(CryptHash *cryptHash, void *buffer, uint bufferSize);
+void *Crypt_getHash(CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize);
 
 #ifdef __cplusplus
   }

@@ -189,16 +189,21 @@ const COMPRESS_ALGORITHM_LZ4_14      = 64
 const COMPRESS_ALGORITHM_LZ4_15      = 65
 const COMPRESS_ALGORITHM_LZ4_16      = 66
 
-const FILE_SYSTEM_TYPE_NONE        = 0;
-const FILE_SYSTEM_TYPE_EXT2        = 1;
-const FILE_SYSTEM_TYPE_EXT3        = 2;
-const FILE_SYSTEM_TYPE_EXT4        = 3;
-const FILE_SYSTEM_TYPE_FAT12       = 4;
-const FILE_SYSTEM_TYPE_FAT16       = 5;
-const FILE_SYSTEM_TYPE_FAT32       = 6;
-const FILE_SYSTEM_TYPE_REISERFS1   = 7;
-const FILE_SYSTEM_TYPE_REISERFS3   = 8;
-const FILE_SYSTEM_TYPE_REISERFS4   = 9;
+const FILE_SYSTEM_TYPE_NONE          = 0
+const FILE_SYSTEM_TYPE_EXT2          = 1
+const FILE_SYSTEM_TYPE_EXT3          = 2
+const FILE_SYSTEM_TYPE_EXT4          = 3
+const FILE_SYSTEM_TYPE_FAT12         = 4
+const FILE_SYSTEM_TYPE_FAT16         = 5
+const FILE_SYSTEM_TYPE_FAT32         = 6
+const FILE_SYSTEM_TYPE_REISERFS1     = 7
+const FILE_SYSTEM_TYPE_REISERFS3     = 8
+const FILE_SYSTEM_TYPE_REISERFS4     = 9
+
+const HASH_ALGORITHM_SHA2_224        = 1
+const HASH_ALGORITHM_SHA2_256        = 2
+const HASH_ALGORITHM_SHA2_384        = 3
+const HASH_ALGORITHM_SHA2_512        = 4
 
 # ---
 
@@ -541,6 +546,7 @@ CHUNK SPECIAL_EXTENDED_ATTRIBUTE "SEAT" SpecialExtendedAttribute
 # parent: none
 # never compress/encrypted
 CHUNK SIGNATURE "SIG0" Signature
+  uint16 hashAlgorithm;
   uint64 salt;
   byte[] value;
   crc32  crc

@@ -71,6 +71,18 @@ LOCAL const struct
   { "CAMELLIA256",CRYPT_ALGORITHM_CAMELLIA256 },
 };
 
+LOCAL const struct
+{
+  const char          *name;
+  CryptHashAlgorithms cryptHashAlgorithm;
+} CRYPT_HASH_ALGORITHMS[] =
+{
+  { "SHA2-224",   CRYPT_HASH_ALGORITHM_SHA2_224 },
+  { "SHA2-256",   CRYPT_HASH_ALGORITHM_SHA2_256 },
+  { "SHA2-384",   CRYPT_HASH_ALGORITHM_SHA2_384 },
+  { "SHA2-512",   CRYPT_HASH_ALGORITHM_SHA2_512 },
+};
+
 // PKCS1 encoded message buffer for RSA encryption/decryption
 #define PKCS1_ENCODED_MESSAGE_LENGTH         (512/8)
 #define PKCS1_RANDOM_KEY_LENGTH              (PKCS1_ENCODED_MESSAGE_LENGTH*8-(1+1+8+1)*8)
@@ -78,9 +90,6 @@ LOCAL const struct
 
 // used symmetric encryption algorithm in RSA hybrid encryption
 #define SECRET_KEY_CRYPT_ALGORITHM CRYPT_ALGORITHM_AES256
-
-// hash algorithm do use
-#define HASH_ALGORITHM GCRY_MD_SHA512
 
 /***************************** Datatypes *******************************/
 
@@ -137,21 +146,60 @@ void Crypt_doneAll(void)
 {
 }
 
-const char *Crypt_algorithmToString(CryptAlgorithms cryptAlgorithm, const char *defaultValue)
+bool Crypt_isSymmetricSupported(void)
 {
-  uint       z;
-  const char *name;
+  #ifdef HAVE_GCRYPT
+    return TRUE;
+  #else /* not HAVE_GCRYPT */
+    return FALSE;
+  #endif /* HAVE_GCRYPT */
+}
+
+bool Crypt_isValidAlgorithm(uint16 n)
+{
+  uint z;
 
   z = 0;
   while (   (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
-         && (CRYPT_ALGORITHMS[z].cryptAlgorithm != cryptAlgorithm)
+         && (CRYPT_ALGORITHMS[z].cryptAlgorithm != CRYPT_CONSTANT_TO_ALGORITHM(n))
         )
   {
     z++;
   }
-  if (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
+
+  return (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS));
+}
+
+bool Crypt_isValidHashAlgorithm(uint16 n)
+{
+  uint z;
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(CRYPT_HASH_ALGORITHMS))
+         && (CRYPT_HASH_ALGORITHMS[z].cryptHashAlgorithm != CRYPT_CONSTANT_TO_HASH_ALGORITHM(n))
+        )
   {
-    name = CRYPT_ALGORITHMS[z].name;
+    z++;
+  }
+
+  return (z < SIZE_OF_ARRAY(CRYPT_HASH_ALGORITHMS));
+}
+
+const char *Crypt_algorithmToString(CryptAlgorithms cryptAlgorithm, const char *defaultValue)
+{
+  uint       i;
+  const char *name;
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
+         && (CRYPT_ALGORITHMS[i].cryptAlgorithm != cryptAlgorithm)
+        )
+  {
+    i++;
+  }
+  if (i < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
+  {
+    name = CRYPT_ALGORITHMS[i].name;
   }
   else
   {
@@ -163,21 +211,70 @@ const char *Crypt_algorithmToString(CryptAlgorithms cryptAlgorithm, const char *
 
 bool Crypt_parseAlgorithm(const char *name, CryptAlgorithms *cryptAlgorithm)
 {
-  uint z;
+  uint i;
 
   assert(name != NULL);
   assert(cryptAlgorithm != NULL);
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
-         && !stringEqualsIgnoreCase(CRYPT_ALGORITHMS[z].name,name)
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
+         && !stringEqualsIgnoreCase(CRYPT_ALGORITHMS[i].name,name)
         )
   {
-    z++;
+    i++;
   }
-  if (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
+  if (i < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
   {
-    (*cryptAlgorithm) = CRYPT_ALGORITHMS[z].cryptAlgorithm;
+    (*cryptAlgorithm) = CRYPT_ALGORITHMS[i].cryptAlgorithm;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+const char *Crypt_hashAlgorithmToString(CryptHashAlgorithms cryptHashAlgorithm, const char *defaultValue)
+{
+  uint       i;
+  const char *name;
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(CRYPT_HASH_ALGORITHMS))
+         && (CRYPT_HASH_ALGORITHMS[i].cryptHashAlgorithm != cryptHashAlgorithm)
+        )
+  {
+    i++;
+  }
+  if (i < SIZE_OF_ARRAY(CRYPT_HASH_ALGORITHMS))
+  {
+    name = CRYPT_HASH_ALGORITHMS[i].name;
+  }
+  else
+  {
+    name = defaultValue;
+  }
+
+  return name;
+}
+
+bool Crypt_parseHashAlgorithm(const char *name, CryptHashAlgorithms *cryptHashAlgorithm)
+{
+  uint i;
+
+  assert(name != NULL);
+  assert(cryptHashAlgorithm != NULL);
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(CRYPT_HASH_ALGORITHMS))
+         && !stringEqualsIgnoreCase(CRYPT_HASH_ALGORITHMS[i].name,name)
+        )
+  {
+    i++;
+  }
+  if (i < SIZE_OF_ARRAY(CRYPT_HASH_ALGORITHMS))
+  {
+    (*cryptHashAlgorithm) = CRYPT_HASH_ALGORITHMS[i].cryptHashAlgorithm;
     return TRUE;
   }
   else
@@ -381,30 +478,6 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 }
 
 /*---------------------------------------------------------------------*/
-
-bool Crypt_isSymmetricSupported(void)
-{
-  #ifdef HAVE_GCRYPT
-    return TRUE;
-  #else /* not HAVE_GCRYPT */
-    return FALSE;
-  #endif /* HAVE_GCRYPT */
-}
-
-bool Crypt_isValidAlgorithm(uint16 n)
-{
-  uint z;
-
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
-         && (CRYPT_ALGORITHMS[z].cryptAlgorithm != CRYPT_CONSTANT_TO_ALGORITHM(n))
-        )
-  {
-    z++;
-  }
-
-  return (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS));
-}
 
 #ifdef NDEBUG
 Errors Crypt_init(CryptInfo       *cryptInfo,
@@ -2288,51 +2361,144 @@ void Crypt_dumpKey(const CryptKey *cryptKey)
 }
 #endif /* NDEBUG */
 
-Errors Crypt_initHash(CryptHash *cryptHash)
+#ifdef NDEBUG
+Errors Crypt_initHash(CryptHashInfo       *cryptHashInfo,
+                      CryptHashAlgorithms cryptHashAlgorithm
+                     )
+#else /* not NDEBUG */
+Errors __Crypt_initHash(const char          *__fileName__,
+                        ulong               __lineNb__,
+                        CryptHashInfo       *cryptHashInfo,
+                        CryptHashAlgorithms cryptHashAlgorithm
+                       )
+#endif /* NDEBUG */
 {
   gcry_error_t gcryptError;
 
-  assert(cryptHash != NULL);
+  assert(cryptHashInfo != NULL);
 
-  gcryptError = gcry_md_open(&cryptHash->gcry_md_hd,HASH_ALGORITHM,GCRY_MD_FLAG_SECURE);
-  if (gcryptError != 0)
+  // init variables
+  cryptHashInfo->cryptHashAlgorithm = cryptHashAlgorithm;
+
+  // init crypt algorithm
+  switch (cryptHashAlgorithm)
   {
-    return ERROR_INIT_HASH;
+    case CRYPT_HASH_ALGORITHM_SHA2_224:
+    case CRYPT_HASH_ALGORITHM_SHA2_256:
+    case CRYPT_HASH_ALGORITHM_SHA2_384:
+    case CRYPT_HASH_ALGORITHM_SHA2_512:
+      #ifdef HAVE_GCRYPT
+        {
+          int          hashAlgorithm;
+
+          hashAlgorithm = GCRY_MD_NONE;
+          switch (cryptHashAlgorithm)
+          {
+            case CRYPT_HASH_ALGORITHM_SHA2_224: hashAlgorithm = GCRY_MD_SHA224; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_256: hashAlgorithm = GCRY_MD_SHA256; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_384: hashAlgorithm = GCRY_MD_SHA384; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_512: hashAlgorithm = GCRY_MD_SHA512; break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break; /* not reached */
+          }
+
+          gcryptError = gcry_md_open(&cryptHashInfo->gcry_md_hd,hashAlgorithm,GCRY_MD_FLAG_SECURE);
+          if (gcryptError != 0)
+          {
+            return ERROR_INIT_HASH;
+          }
+        }
+      #else /* not HAVE_GCRYPT */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_GCRYPT */
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
   }
 
   return ERROR_NONE;
 }
 
-void Crypt_doneHash(CryptHash *cryptHash)
+#ifdef NDEBUG
+void Crypt_doneHash(CryptHashInfo *cryptHashInfo)
+#else /* not NDEBUG */
+void __Crypt_doneHash(const char    *__fileName__,
+                      ulong         __lineNb__,
+                      CryptHashInfo *cryptHashInfo
+                     )
+#endif /* NDEBUG */
 {
-  assert(cryptHash != NULL);
+  assert(cryptHashInfo != NULL);
 
-  gcry_md_close(cryptHash->gcry_md_hd);
+  gcry_md_close(cryptHashInfo->gcry_md_hd);
 }
 
-void Crypt_updateHash(CryptHash *cryptHash,
-                      void      *buffer,
-                      ulong     bufferLength
+void Crypt_updateHash(CryptHashInfo *cryptHashInfo,
+                      void          *buffer,
+                      ulong         bufferLength
                      )
 {
-  assert(cryptHash != NULL);
+  assert(cryptHashInfo != NULL);
 
-  gcry_md_write(cryptHash->gcry_md_hd,buffer,bufferLength);
+  gcry_md_write(cryptHashInfo->gcry_md_hd,buffer,bufferLength);
 }
 
-uint Crypt_getHashLength(CryptHash *cryptHash)
+uint Crypt_getHashLength(CryptHashInfo *cryptHashInfo)
 {
-  assert(cryptHash != NULL);
+  assert(cryptHashInfo != NULL);
 
-  return gcry_md_get_algo_dlen(HASH_ALGORITHM);
+  return gcry_md_get_algo_dlen(cryptHashInfo->cryptHashAlgorithm);
 }
 
-void *Crypt_getHash(CryptHash *cryptHash, void *buffer, uint bufferSize)
+void *Crypt_getHash(CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize)
 {
-  assert(cryptHash != NULL);
-  assert(gcry_md_get_algo_dlen(HASH_ALGORITHM) == bufferSize);
+  assert(cryptHashInfo != NULL);
+  #ifdef HAVE_GCRYPT
+    assert(gcry_md_get_algo_dlen(cryptHashInfo->cryptHashAlgorithm) == bufferSize);
+  #endif /* HAVE_GCRYPT */
 
-  memcpy(buffer,gcry_md_read(cryptHash->gcry_md_hd,HASH_ALGORITHM),bufferSize);
+  switch (cryptHashInfo->cryptHashAlgorithm)
+  {
+    case CRYPT_HASH_ALGORITHM_SHA2_224:
+    case CRYPT_HASH_ALGORITHM_SHA2_256:
+    case CRYPT_HASH_ALGORITHM_SHA2_384:
+    case CRYPT_HASH_ALGORITHM_SHA2_512:
+      #ifdef HAVE_GCRYPT
+        {
+          int hashAlgorithm;
+
+          hashAlgorithm = GCRY_MD_NONE;
+          switch (cryptHashInfo->cryptHashAlgorithm)
+          {
+            case CRYPT_HASH_ALGORITHM_SHA2_224: hashAlgorithm = GCRY_MD_SHA224; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_256: hashAlgorithm = GCRY_MD_SHA256; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_384: hashAlgorithm = GCRY_MD_SHA384; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_512: hashAlgorithm = GCRY_MD_SHA512; break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break; /* not reached */
+          }
+
+          memcpy(buffer,gcry_md_read(cryptHashInfo->gcry_md_hd,hashAlgorithm),bufferSize);
+        }
+      #else /* not HAVE_GCRYPT */
+        return NULL;
+      #endif /* HAVE_GCRYPT */
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
 
   return buffer;
 }
