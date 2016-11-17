@@ -6835,6 +6835,8 @@ Errors Command_create(ConstString                  jobUUID,
     Thread_done(&createThreads[i]);
   }
 
+  // add signature
+
   // close archive
   AUTOFREE_REMOVE(&autoFreeList,&createInfo.archiveHandle);
   error = Archive_close(&createInfo.archiveHandle);

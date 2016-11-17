@@ -1134,9 +1134,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         error = Archive_skipNextEntry(&archiveHandle);
         break;
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-//TODO
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-error = Archive_skipNextEntry(&archiveHandle);
+        error = Archive_skipNextEntry(&archiveHandle);
         break;
       default:
         #ifndef NDEBUG
