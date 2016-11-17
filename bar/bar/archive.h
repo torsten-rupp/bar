@@ -1272,6 +1272,22 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Archive_verifySignatureEntry
+* Purpose: verify signatures of archive
+* Input  : storageInfo - storage info
+*          fileName    - file name (can be NULL)
+*          jobOptions  - option settings
+*          logHandle   - log handle (can be NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_verifySignatureEntry(ArchiveHandle *archiveHandle,
+                                    uint64        offset
+                                   );
+
+/***********************************************************************\
 * Name   : Archive_closeEntry
 * Purpose: clsoe file in archive
 * Input  : archiveEntryInfo - archive entry info
@@ -1401,6 +1417,24 @@ INLINE uint64 Archive_getEntries(const ArchiveHandle *archiveHandle)
 \***********************************************************************/
 
 uint64 Archive_getSize(ArchiveHandle *archiveHandle);
+
+/***********************************************************************\
+* Name   : Archive_verifySignature
+* Purpose: verify signatures of archive
+* Input  : storageInfo - storage info
+*          fileName    - file name (can be NULL)
+*          jobOptions  - option settings
+*          logHandle   - log handle (can be NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_verifySignatures(StorageInfo      *storageInfo,
+                                ConstString      fileName,
+                                const JobOptions *jobOptions,
+                                LogHandle        *logHandle
+                               );
 
 /***********************************************************************\
 * Name   : Archive_addToIndex
