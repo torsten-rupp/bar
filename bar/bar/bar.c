@@ -7866,14 +7866,14 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
 LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
 {
   String   publicKeyFileName,privateKeyFileName;
-  String   data;
+  String   keyString;
   Errors   error;
   CryptKey publicKey,privateKey;
 
   // initialize variables
   publicKeyFileName  = String_new();
   privateKeyFileName = String_new();
-  data               = String_new();
+  keyString          = String_new();
 
   if (keyFileBaseName != NULL)
   {
@@ -7887,7 +7887,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     if (File_exists(publicKeyFileName))
     {
       printError("Public key file '%s' already exists!\n",String_cString(publicKeyFileName));
-      String_delete(data);
+      String_delete(keyString);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
@@ -7895,7 +7895,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     if (File_exists(privateKeyFileName))
     {
       printError("Private key file '%s' already exists!\n",String_cString(privateKeyFileName));
-      String_delete(data);
+      String_delete(keyString);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
@@ -7909,7 +7909,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     printError("Cannot create signature key pair (error: %s)!\n",Error_getText(error));
     Crypt_doneKey(&privateKey);
     Crypt_doneKey(&publicKey);
-    String_delete(data);
+    String_delete(keyString);
     String_delete(privateKeyFileName);
     String_delete(publicKeyFileName);
     return error;
@@ -7929,7 +7929,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       printError("Cannot write signature public key file!\n");
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      String_delete(data);
+      String_delete(keyString);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -7946,7 +7946,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       printError("Cannot write signature private key file!\n");
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      String_delete(data);
+      String_delete(keyString);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -7956,7 +7956,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   else
   {
     error = Crypt_getKeyString(&publicKey,
-                               data,
+                               keyString,
                                NULL,  // password,
                                NULL,  // salt
                                0  // saltLength
@@ -7966,14 +7966,14 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       printError("Cannot get signature public key!\n");
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      String_delete(data);
+      String_delete(keyString);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
     }
-    printf("signature-public-key = base64:%s\n",String_cString(data));
+    printf("signature-public-key = base64:%s\n",String_cString(keyString));
     error = Crypt_getKeyString(&privateKey,
-                               data,
+                               keyString,
                                NULL,  // password,
                                NULL,  // salt
                                0  // saltLength
@@ -7983,18 +7983,18 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       printError("Cannot get signature private key!\n");
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      String_delete(data);
+      String_delete(keyString);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
     }
-    printf("signature-private-key = base64:%s\n",String_cString(data));
+    printf("signature-private-key = base64:%s\n",String_cString(keyString));
   }
   Crypt_doneKey(&privateKey);
   Crypt_doneKey(&publicKey);
 
   // free resources
-  String_delete(data);
+  String_delete(keyString);
   String_delete(privateKeyFileName);
   String_delete(publicKeyFileName);
 
