@@ -546,10 +546,10 @@ CHUNK SPECIAL_EXTENDED_ATTRIBUTE "SEAT" SpecialExtendedAttribute
 # parent: none
 # never compress/encrypted
 CHUNK SIGNATURE "SIG0" Signature
-  uint16 hashAlgorithm;
-  uint64 salt;
-  byte[] value;
-  crc32  crc
+  uint16   hashAlgorithm;
+  uint64   salt;
+  byte[64] value;
+  crc32    crc
 
 # ----------------------------------------------------------------------
 
