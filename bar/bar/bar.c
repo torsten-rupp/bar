@@ -5205,7 +5205,6 @@ Errors readKeyFile(Key *key, const char *fileName)
   uint64     dataLength;
   void       *data;
 
-fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,fileName);
   assert(key != NULL);
   assert(fileName != NULL);
 
