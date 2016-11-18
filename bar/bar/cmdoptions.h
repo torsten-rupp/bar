@@ -26,7 +26,7 @@
 /**************************** Constants *******************************/
 
 #define CMD_HELP_LEVEL_ALL -1
-#define CMD_PRIORITY_ANY   -1
+#define CMD_PRIORITY_ANY   MAX_UINT
 
 /***************************** Datatypes ******************************/
 typedef enum
@@ -865,15 +865,17 @@ extern "C" {
 /***********************************************************************
 * Name   : CmdOption_parse
 * Purpose: parse command line options
-* Input  : argv                   - command line arguments
-*          argc                   - number of command line arguments
-*          commandLineOptions     - array with command line options
-*                                   spezification
-*          commandLineOptionCount - size of command line options array
-*          outputHandle           - error/warning output handle or NULL
-*          commandPrioritySet     - priority set
-*          errorPrefix            - error prefix or NULL
-*          warningPrefix          - warning prefix or NULL
+* Input  : argv                    - command line arguments
+*          argc                    - number of command line arguments
+*          commandLineOptions      - array with command line options
+*                                    spezification
+*          commandLineOptionCount  - size of command line options array
+*          minPriority,maxPriority - min./max. command line option
+*                                    priority or
+*          outputHandle            - error/warning output handle or NULL
+*          commandPrioritySet      - priority setCMD_PRIORITY_ANY
+*          errorPrefix             - error prefix or NULL
+*          warningPrefix           - warning prefix or NULL
 * Output : arguments
 *          argumentsCount
 * Return : TRUE if command line parsed, FALSE on error
@@ -884,7 +886,8 @@ bool CmdOption_parse(const char              *argv[],
                      int                     *argc,
                      const CommandLineOption commandLineOptions[],
                      uint                    commandLineOptionCount,
-                     int                     commandPriority,
+                     uint                    minPriority,
+                     uint                    maxPriority,
                      FILE                    *outputHandle,
                      const char              *errorPrefix,
                      const char              *warningPrefix

@@ -537,8 +537,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,2,&globalOptions.cryptPassword,                    cmdOptionParsePassword,NULL,                           "crypt password (use with care!)","password"                               ),
   CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,2,&jobOptions.cryptPublicKey,                      cmdOptionParseKey,NULL,                                "public key for asymmetric encryption","file name|data"                    ),
   CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,2,&jobOptions.cryptPrivateKey,                     cmdOptionParseKey,NULL,                                "private key for asymmetric decryption","file name|data"                   ),
-  CMD_OPTION_SPECIAL      ("signature-public-key",         0,  0,2,&jobOptions.signaturePublicKey,                  cmdOptionParseKey,NULL,                                "public key for signature check","file name|data"                          ),
-  CMD_OPTION_SPECIAL      ("signature-private-key",        0,  0,2,&jobOptions.signaturePrivateKey,                 cmdOptionParseKey,NULL,                                "private key for signature generation","file name|data"                    ),
+  CMD_OPTION_SPECIAL      ("signature-public-key",         0,  0,1,&globalOptions.signaturePublicKey,               cmdOptionParseKey,NULL,                                "public key for signature check","file name|data"                          ),
+  CMD_OPTION_SPECIAL      ("signature-private-key",        0,  0,2,&globalOptions.signaturePrivateKey,              cmdOptionParseKey,NULL,                                "private key for signature generation","file name|data"                    ),
 
 //TODO
 //  CMD_OPTION_INTEGER64    ("file-max-storage-size",         0,  0,2,defaultFileServer.maxStorageSize,                 0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on file server","unlimited"                  ),
@@ -954,6 +954,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("crypt-password",               &globalOptions.cryptPassword,-1,                               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
   CONFIG_VALUE_SPECIAL           ("crypt-public-key",             &jobOptions.cryptPublicKey,-1,                                 configValueParseKey,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("crypt-private-key",            &jobOptions.cryptPrivateKey,-1,                                configValueParseKey,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("signature-public-key",         &globalOptions.signaturePublicKey,-1,                          configValueParseKey,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("signature-private-key",        &globalOptions.signaturePrivateKey,-1,                         configValueParseKey,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_SPECIAL           ("include-file",                 &includeEntryList,-1,                                          configValueParseFileEntryPattern,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_CSTRING           ("include-file-command",         &includeFileCommand,-1                                         ),
@@ -2975,6 +2977,8 @@ LOCAL void initGlobalOptions(void)
   globalOptions.maxBandWidthList.lastReadTimestamp              = 0LL;
   globalOptions.compressMinFileSize                             = DEFAULT_COMPRESS_MIN_FILE_SIZE;
   globalOptions.cryptPassword                                   = NULL;
+  initKey(&globalOptions.signaturePublicKey);
+  initKey(&globalOptions.signaturePrivateKey);
   globalOptions.fileServer                                      = &defaultFileServer;
   globalOptions.defaultFileServer                               = &defaultFileServer;
   globalOptions.ftpServer                                       = &defaultFTPServer;
@@ -3156,6 +3160,8 @@ LOCAL void doneGlobalOptions(void)
   Semaphore_done(&globalOptions.serverList.lock);
   List_done(&globalOptions.serverList,CALLBACK((ListNodeFreeFunction)freeServerNode,NULL));
 
+  doneKey(&globalOptions.signaturePrivateKey);
+  doneKey(&globalOptions.signaturePublicKey);
   if (globalOptions.cryptPassword != NULL) Password_done(globalOptions.cryptPassword);
   List_done(&globalOptions.maxBandWidthList,CALLBACK((ListNodeFreeFunction)freeBandWidthNode,NULL));
   String_delete(globalOptions.tmpDirectory);
@@ -4622,10 +4628,8 @@ void initJobOptions(JobOptions *jobOptions)
     jobOptions->cryptType                     = CRYPT_TYPE_NONE;
   #endif /* HAVE_GCRYPT */
   jobOptions->cryptPasswordMode               = PASSWORD_MODE_DEFAULT;
-  jobOptions->cryptPublicKey.data             = NULL;
-  jobOptions->cryptPublicKey.length           = 0;
-  jobOptions->cryptPrivateKey.data            = NULL;
-  jobOptions->cryptPrivateKey.length          = 0;
+  initKey(&jobOptions->cryptPublicKey);
+  initKey(&jobOptions->cryptPrivateKey);
   jobOptions->preProcessScript                = NULL;
   jobOptions->postProcessScript               = NULL;
   jobOptions->maxStorageSize                  = 0LL;
@@ -5201,11 +5205,9 @@ Errors readKeyFile(Key *key, const char *fileName)
   uint64     dataLength;
   void       *data;
 
+fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,fileName);
   assert(key != NULL);
   assert(fileName != NULL);
-
-  key->data   = NULL;
-  key->length = 0;
 
   error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
@@ -8478,7 +8480,7 @@ exit(1);
   // parse command line: pre-options
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                       1,
+                       1,1,
                        stderr,"ERROR: ","Warning: "
                       )
      )
@@ -8521,7 +8523,7 @@ exit(1);
   // parse command line: post-options
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                       2,
+                       2,2,
                        stderr,"ERROR: ","Warning: "
                       )
      )
@@ -8582,7 +8584,7 @@ exit(1);
   // parse command line: all
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                       CMD_PRIORITY_ANY,
+                       3,CMD_PRIORITY_ANY,
                        stderr,"ERROR: ","Warning: "
                       )
      )
@@ -8713,7 +8715,7 @@ int main(int argc, const char *argv[])
   // parse command line: pre-options
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                       0,
+                       0,0,
                        stderr,"ERROR: ","Warning: "
                       )
      )
