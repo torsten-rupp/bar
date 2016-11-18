@@ -13578,7 +13578,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 
   // list contents
   error = ERROR_NONE;
-  while (   !Archive_eof(&archiveHandle,TRUE)
+  while (   !Archive_eof(&archiveHandle,TRUE,FALSE)
          && (error == ERROR_NONE)
          && !isCommandAborted(clientInfo,id)
         )
@@ -13587,7 +13587,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
                                         NULL,  // offset
-                                        TRUE
+                                        TRUE,  // skinUnknownChunksFlag
+                                        FALSE  // printUnknownChunksFlag
                                        );
     if (error == ERROR_NONE)
     {

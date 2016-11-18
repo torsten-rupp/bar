@@ -49,7 +49,7 @@
 * Input  : storageNameList     - list with storage names
 *          includeEntryList    - include entry list
 *          excludePatternList  - exclude pattern list
-*          showEntriesFlag     - show entries flag
+*          showEntriesFlag     - TRUE to show entries
 *          jobOptions          - job options
 *          getPasswordFunction - get password call back
 *          getPasswordUserData - user data for get password call back

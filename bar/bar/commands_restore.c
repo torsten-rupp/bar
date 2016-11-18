@@ -2427,7 +2427,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
   failError = ERROR_NONE;
   while (   ((failError == ERROR_NONE) || restoreInfo->jobOptions->noStopOnErrorFlag)
          && ((restoreInfo->isAbortedFunction == NULL) || !restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
-         && !Archive_eof(&archiveHandle,TRUE)
+         && !Archive_eof(&archiveHandle,TRUE,isPrintInfo(3))
         )
   {
     // pause
@@ -2440,7 +2440,8 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
                                         NULL,  // offset
-                                        TRUE
+                                        TRUE,  // skipUnknownChunksFlag
+                                        FALSE  // printUnknownChunksFlag
                                        );
     if (error != ERROR_NONE)
     {

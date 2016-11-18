@@ -229,7 +229,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
   failError = ERROR_NONE;
   while (   !restoredFlag
          && ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
-         && !Archive_eof(&archiveHandle,TRUE)
+         && !Archive_eof(&archiveHandle,TRUE,isPrintInfo(3))
          && (failError == ERROR_NONE)
         )
   {
@@ -243,7 +243,8 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
                                         NULL,  // offset
-                                        TRUE
+                                        TRUE,  // skipUnknownChunksFlag
+                                        isPrintInfo(3)
                                        );
     if (error != ERROR_NONE)
     {

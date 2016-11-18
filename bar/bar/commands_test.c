@@ -1284,13 +1284,14 @@ NULL,  //               requestedAbortFlag,
             !isPrintInfo(1) ? "..." : ":\n"
            );
   failError = ERROR_NONE;
-  while (!Archive_eof(&archiveHandle,FALSE))
+  while (!Archive_eof(&archiveHandle,FALSE,isPrintInfo(3)))
   {
     // get next archive entry type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
                                         &offset,
-                                        FALSE
+                                        FALSE,
+                                        isPrintInfo(3)
                                        );
     if (error != ERROR_NONE)
     {
