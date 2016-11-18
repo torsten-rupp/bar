@@ -1034,7 +1034,7 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
   assert(archiveHandle->chunkIO != NULL);
   assert(archiveHandle->chunkIO->seek != NULL);
 
-  if (!archiveHandle->jobOptions->noSignatureFlag)
+  if ((globalOptions.signaturePrivateKey.data != NULL) && !archiveHandle->jobOptions->noSignatureFlag)
   {
     // init variables
     AutoFree_init(&autoFreeList);
@@ -1106,31 +1106,13 @@ debugDumpMemory(buffer,n,0);
     hash = malloc(hashLength);
     if (hash == NULL)
     {
+      AutoFree_cleanup(&autoFreeList);
       return ERROR_INSUFFICIENT_MEMORY;
     }
     Crypt_getHash(&signatureHash,hash,hashLength);
 #if 1
 fprintf(stderr,"%s, %d: write signature\n",__FILE__,__LINE__);
 debugDumpMemory(hash,hashLength,0);
-#endif
-
-    // encrypt signature
-
-#if 0
-    // init crypt
-    error = Crypt_init(&cryptInfo,
-//TODO
-                       archiveHandle->jobOptions->cryptAlgorithm,
-                       archiveHandle->cryptPassword,
-                       archiveHandle->cryptSalt,
-                       sizeof(chunkMeta.salt)
-                      );
-    if (error != ERROR_NONE)
-    {
-  //    AutoFree_cleanup(&autoFreeList);
-      Chunk_done(&chunkInfoBar);
-      return error;
-    }
 #endif
 
     // init signature chunk
@@ -1151,7 +1133,22 @@ debugDumpMemory(hash,hashLength,0);
     }
     assert(hashLength <= sizeof(chunkSignature.value));
     chunkSignature.hashAlgorithm = SIGNATURE_HASH_ALGORITHM;
-    memcpy(chunkSignature.value,hash,hashLength);
+//    memcpy(chunkSignature.value,hash,hashLength);
+
+    // encrypt signature hash
+uint n;
+    error = Crypt_keyEncrypt(&globalOptions.signaturePrivateKey,
+                             hash,
+                             hashLength,
+                             chunkSignature.value,
+                             &n,
+                             sizeof(chunkSignature.value)
+                            );
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
 
     // write signature chunk
     error = Chunk_create(&chunkSignature.info);
