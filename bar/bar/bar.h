@@ -277,7 +277,7 @@ void printConsole(FILE *file, const char *format, ...);
 
 /***********************************************************************\
 * Name   : printWarning
-* Purpose: output warning on console
+* Purpose: output warning on console and write to log file
 * Input  : text - format string (like printf)
 *          ...  - optional arguments (like printf)
 * Output : -
@@ -289,7 +289,7 @@ void printWarning(const char *text, ...);
 
 /***********************************************************************\
 * Name   : printError
-* Purpose: print error message on stderr
+* Purpose: print error message on stderr and write to log file
 *          text - format string (like printf)
 *          ...  - optional arguments (like printf)
 * Output : -

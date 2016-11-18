@@ -1295,7 +1295,7 @@ LOCAL void outputLineDone(void *variable, void *userData)
 LOCAL void outputConsole(FILE *file, ConstString string)
 {
   String outputLine;
-  ulong  z;
+  ulong  i;
   char   ch;
 
   assert(file != NULL);
@@ -1313,15 +1313,15 @@ LOCAL void outputConsole(FILE *file, ConstString string)
         // wipe-out last line
         if (lastOutputLine != NULL)
         {
-          for (z = 0; z < String_length(lastOutputLine); z++)
+          for (i = 0; i < String_length(lastOutputLine); i++)
           {
             (void)fwrite("\b",1,1,file);
           }
-          for (z = 0; z < String_length(lastOutputLine); z++)
+          for (i = 0; i < String_length(lastOutputLine); i++)
           {
             (void)fwrite(" ",1,1,file);
           }
-          for (z = 0; z < String_length(lastOutputLine); z++)
+          for (i = 0; i < String_length(lastOutputLine); i++)
           {
             (void)fwrite("\b",1,1,file);
           }
@@ -1336,7 +1336,7 @@ LOCAL void outputConsole(FILE *file, ConstString string)
       (void)fwrite(String_cString(string),1,String_length(string),file);
 
       // store output string
-      STRING_CHAR_ITERATE(string,z,ch)
+      STRING_CHAR_ITERATE(string,i,ch)
       {
         switch (ch)
         {
