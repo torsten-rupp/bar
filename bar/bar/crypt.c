@@ -2460,7 +2460,7 @@ void Crypt_updateHash(CryptHashInfo *cryptHashInfo,
   #endif /* HAVE_GCRYPT */
 }
 
-uint Crypt_getHashLength(CryptHashInfo *cryptHashInfo)
+uint Crypt_getHashLength(const CryptHashInfo *cryptHashInfo)
 {
   uint hashLength;
 
@@ -2505,7 +2505,7 @@ uint Crypt_getHashLength(CryptHashInfo *cryptHashInfo)
   return hashLength;
 }
 
-void *Crypt_getHash(CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize)
+void *Crypt_getHash(const CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize)
 {
   assert(cryptHashInfo != NULL);
 
@@ -2550,6 +2550,52 @@ void *Crypt_getHash(CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize)
   return buffer;
 }
 
+bool Crypt_equalsHash(const const CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize)
+{
+  bool equalsFlag;
+
+  assert(cryptHashInfo != NULL);
+
+  equalsFlag = FALSE;
+  switch (cryptHashInfo->cryptHashAlgorithm)
+  {
+    case CRYPT_HASH_ALGORITHM_SHA2_224:
+    case CRYPT_HASH_ALGORITHM_SHA2_256:
+    case CRYPT_HASH_ALGORITHM_SHA2_384:
+    case CRYPT_HASH_ALGORITHM_SHA2_512:
+      #ifdef HAVE_GCRYPT
+        {
+          int hashAlgorithm;
+
+          hashAlgorithm = GCRY_MD_NONE;
+          switch (cryptHashInfo->cryptHashAlgorithm)
+          {
+            case CRYPT_HASH_ALGORITHM_SHA2_224: hashAlgorithm = GCRY_MD_SHA224; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_256: hashAlgorithm = GCRY_MD_SHA256; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_384: hashAlgorithm = GCRY_MD_SHA384; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_512: hashAlgorithm = GCRY_MD_SHA512; break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break; /* not reached */
+          }
+
+          equalsFlag =    (gcry_md_get_algo_dlen(hashAlgorithm) == bufferSize)
+                       && (memcmp(buffer,gcry_md_read(cryptHashInfo->gcry_md_hd,hashAlgorithm),bufferSize) == 0);
+        }
+      #else /* not HAVE_GCRYPT */
+      #endif /* HAVE_GCRYPT */
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+  
+   return equalsFlag;
+}
 
 #ifdef __cplusplus
   }
