@@ -529,13 +529,19 @@ ERROR CORRUPT_DATA
   stringCopy(errorText,"corrupt data or invalid password",sizeof(errorText));
   if (!stringIsEmpty(ERROR_TEXT))
   {
-    stringConcat(errorText,"; '",sizeof(errorText));
+    stringConcat(errorText,": '",sizeof(errorText));
     stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
     stringConcat(errorText,"'",sizeof(errorText));
   }
 
 ERROR INVALID_CHUNK_SIZE               "invalid chunk size"
-ERROR UNKNOWN_CHUNK                    "unknown chunk"
+ERROR UNKNOWN_CHUNK
+  stringCopy(errorText,"unknown chunk",sizeof(errorText));
+  if (!stringIsEmpty(ERROR_TEXT))
+  {
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+  }
 
 ERROR INVALID_SIGNATURE                "invalid signature"
 
