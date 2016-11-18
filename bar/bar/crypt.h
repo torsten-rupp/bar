@@ -853,7 +853,7 @@ void Crypt_updateHash(CryptHashInfo *cryptHashInfo,
 * Notes  : -
 \***********************************************************************/
 
-uint Crypt_getHashLength(CryptHashInfo *cryptHashInfo);
+uint Crypt_getHashLength(const CryptHashInfo *cryptHashInfo);
 
 /***********************************************************************\
 * Name   : Crypt_getHash
@@ -866,7 +866,20 @@ uint Crypt_getHashLength(CryptHashInfo *cryptHashInfo);
 * Notes  : -
 \***********************************************************************/
 
-void *Crypt_getHash(CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize);
+void *Crypt_getHash(const CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize);
+
+/***********************************************************************\
+* Name   : Crypt_equalsHash
+* Purpose: compare with hash
+* Input  : cryptHash  - crypt hash
+*          buffer     - buffer with hash to compare with
+*          bufferSize - buffer size
+* Output : -
+* Return : TRUE iff hash equals
+* Notes  : -
+\***********************************************************************/
+
+bool Crypt_equalsHash(const const CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize);
 
 #ifdef __cplusplus
   }
