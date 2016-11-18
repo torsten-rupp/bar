@@ -9501,8 +9501,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   return ERROR_NONE;
 }
 
-Errors Archive_verifySignatureEntry(ArchiveHandle *archiveHandle,
-                                    uint64        offset
+Errors Archive_verifySignatureEntry(ArchiveHandle  *archiveHandle,
+                                    uint64         offset,
+                                    const CryptKey *signatureKey
                                    )
 {
   #define BUFFER_SIZE (1024*1024)
@@ -9514,6 +9515,8 @@ Errors Archive_verifySignatureEntry(ArchiveHandle *archiveHandle,
   ChunkHeader         chunkHeader;
   ChunkSignature      chunkSignature;
   CryptHashAlgorithms cryptHashAlgorithm;
+  byte                hash[1024];
+  uint                hashLength;
   CryptHashInfo       signatureHash;
   uint64              index;
 
@@ -9594,14 +9597,31 @@ Errors Archive_verifySignatureEntry(ArchiveHandle *archiveHandle,
   if (!Crypt_isValidHashAlgorithm(chunkSignature.hashAlgorithm))
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    Chunk_close(&chunkSignature.info);
     AutoFree_cleanup(&autoFreeList);
     return ERROR_INVALID_HASH_ALGORITHM;
   }
   cryptHashAlgorithm = CRYPT_CONSTANT_TO_HASH_ALGORITHM(chunkSignature.hashAlgorithm);
 
+  // decrypt signature hash
+  error = Crypt_keyDecrypt(signatureKey,
+                           chunkSignature.value,
+                           sizeof(chunkSignature.value),
+                           hash,
+                           &hashLength,
+                           sizeof(hash)
+                          );
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    Chunk_close(&chunkSignature.info);
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+
   // done chunk
-  AUTOFREE_REMOVE(&autoFreeList,&chunkSignature.info);
   Chunk_close(&chunkSignature.info);
+  AUTOFREE_REMOVE(&autoFreeList,&chunkSignature.info);
   Chunk_done(&chunkSignature.info);
 
   // init signature hash
@@ -9658,7 +9678,8 @@ Errors Archive_verifySignatureEntry(ArchiveHandle *archiveHandle,
   }
 
   // compare signatures
-  if (!Crypt_equalsHash(&signatureHash,chunkSignature.value,sizeof(chunkSignature.value)))
+//  if (!Crypt_equalsHash(&signatureHash,chunkSignature.value,sizeof(chunkSignature.value)))
+  if (!Crypt_equalsHash(&signatureHash,hash,hashLength))
   {
     AutoFree_cleanup(&autoFreeList);
     return ERROR_INVALID_SIGNATURE;

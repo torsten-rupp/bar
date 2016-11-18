@@ -1285,8 +1285,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_verifySignatureEntry(ArchiveHandle *archiveHandle,
-                                    uint64        offset
+Errors Archive_verifySignatureEntry(ArchiveHandle  *archiveHandle,
+                                    uint64         offset,
+                                    const CryptKey *signatureKey
                                    );
 
 /***********************************************************************\
