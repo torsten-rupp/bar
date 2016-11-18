@@ -2177,6 +2177,8 @@ remoteBarFlag=FALSE;
                                               NULL,  // offset
                                               TRUE
                                              );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
           if (error != ERROR_NONE)
           {
             printError("Cannot read next entry from storage '%s' (error: %s)!\n",
@@ -2889,26 +2891,36 @@ remoteBarFlag=FALSE;
               break;
             case ARCHIVE_ENTRY_TYPE_SIGNATURE:
               {
-
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 if (globalOptions.verifySignaturesFlag)
                 {
                   // read archive file
                   error = Archive_verifySignatureEntry(&archiveHandle,
                                                        sigantureOffset
                                                       );
-                  if (error == ERROR_NONE)
-                  {
-                    printf("Signature OK\n");
-                    printf("\n");
-                  }
-                  else
+                  if ((error != ERROR_NONE) && (error != ERROR_INVALID_SIGNATURE))
                   {
                     printError("Cannot verify signature of storage '%s' (error: %s)!\n",
                                Storage_getPrintableNameCString(storageSpecifier,archiveName),
                                Error_getText(error)
                               );
                     break;
+                  }
+
+                  // output result
+                  if (!printedNameFlag)
+                  {
+                    printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
+                    printedNameFlag = TRUE;
+                  }
+                  if (error == ERROR_NONE)
+                  {
+                    printf("Signature: OK\n");
+                    printf("\n");
+                  }
+                  else
+                  {
+                    printf("Signature: INVALID!\n");
+                    printf("\n");
                   }
 
                   // free resources
