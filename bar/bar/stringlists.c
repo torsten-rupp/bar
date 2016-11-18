@@ -20,7 +20,7 @@
 #elif defined(HAVE_REGEX_H)
   #include <regex.h>
 #else
-  #error No regular expression library available!
+  #warning No regular expression library available!
 #endif /* HAVE_PCRE || HAVE_REGEX_H */
 #include <assert.h>
 
@@ -448,29 +448,38 @@ StringNode *StringList_match(const StringList *stringList, const String pattern)
 
 StringNode *StringList_matchCString(const StringList *stringList, const char *pattern)
 {
-  regex_t    regex;
   StringNode *stringNode;
+  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
+    regex_t    regex;
+  #endif /* HAVE_PCRE || HAVE_REGEX_H */
 
   assert(stringList != NULL);
   assert(pattern != NULL);
 
-  /* compile pattern */
-  if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
-  {
-    return NULL;
-  }
+  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
+    /* compile pattern */
+    if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
+    {
+      return NULL;
+    }
 
-  /* search in list */
-  stringNode = stringList->head;
-  while (   (stringNode != NULL)
-         && (regexec(&regex,String_cString(stringNode->string),0,NULL,0) != 0)
-        )
-  {
-    stringNode = stringNode->next;
-  }
+    /* search in list */
+    stringNode = stringList->head;
+    while (   (stringNode != NULL)
+           && (regexec(&regex,String_cString(stringNode->string),0,NULL,0) != 0)
+          )
+    {
+      stringNode = stringNode->next;
+    }
 
-  /* free resources */
-  regfree(&regex);
+    /* free resources */
+    regfree(&regex);
+  #else /* not HAVE_PCRE || HAVE_REGEX_H */
+    UNUSED_VARIABLE(stringList);
+    UNUSED_VARIABLE(pattern);
+
+    stringNode = NULL;
+  #endif /* HAVE_PCRE || HAVE_REGEX_H */
 
   return stringNode;
 }
