@@ -442,14 +442,7 @@ LOCAL void printArchiveListHeader(void)
                                                  )
                                )
                 );
-    printConsole(stdout,
-                 "%s\n",
-                 String_cString(String_fillChar(line,
-                                                Misc_getConsoleColumns(),
-                                                '-'
-                                               )
-                               )
-                );
+    printSeparator('-');
 
     // free resources
     String_delete(line);
@@ -473,8 +466,7 @@ LOCAL void printArchiveListFooter(ulong fileCount)
   {
     line = String_new();
 
-    String_fillChar(line,Misc_getConsoleColumns(),'-');
-    printConsole(stdout,"%s\n",String_cString(line));
+    printSeparator('-');
     printConsole(stdout,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
     printConsole(stdout,"\n");
 
@@ -2894,40 +2886,64 @@ remoteBarFlag=FALSE;
               break;
             case ARCHIVE_ENTRY_TYPE_SIGNATURE:
               {
-                if (globalOptions.verifySignaturesFlag && !globalOptions.groupFlag)
+                if (   globalOptions.verifySignaturesFlag
+                    && !globalOptions.groupFlag
+                   )
                 {
-                  // verify archive signature
-                  error = Archive_verifySignatureEntry(&archiveHandle,
-                                                       sigantureOffset,
-                                                       &globalOptions.signaturePublicKey
-                                                      );
-                  if ((error != ERROR_NONE) && (error != ERROR_INVALID_SIGNATURE))
+                  if (globalOptions.signaturePublicKey.data != NULL)
                   {
-                    printError("Cannot verify signature of storage '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
-                               Error_getText(error)
-                              );
-                    break;
-                  }
-
-                  // output result
-                  if (error == ERROR_NONE)
-                  {
-                    if (showEntriesFlag)
+                    // verify archive signature
+                    error = Archive_verifySignatureEntry(&archiveHandle,
+                                                         sigantureOffset,
+                                                         &globalOptions.signaturePublicKey
+                                                        );
+                    if ((error != ERROR_NONE) && (error != ERROR_INVALID_SIGNATURE))
                     {
-                      // nothing to do
+                      printError("Cannot verify signature of storage '%s' (error: %s)!\n",
+                                 Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                                 Error_getText(error)
+                                );
+                      break;
                     }
-                    else
+
+                    // output result
+                    if (error == ERROR_NONE)
                     {
-                      if (!globalOptions.metaInfoFlag)
+                      if (showEntriesFlag)
                       {
-                        printConsole(stdout,"signature OK\n");
+                        // nothing to do
                       }
                       else
                       {
-                        printConsole(stdout,"Signature    : OK\n");
+                        if (!globalOptions.metaInfoFlag)
+                        {
+                          printConsole(stdout,"signature OK\n");
+                        }
+                        else
+                        {
+                          printConsole(stdout,"Signature    : OK\n");
+                        }
                       }
                     }
+                    else
+                    {
+                      if (showEntriesFlag)
+                      {
+                        // print invalid signature info
+                        printConsole(stdout,"\n");
+                        printSeparator('!');
+                        printConsole(stdout,"Warning: signature INVALID!\n");
+                        printSeparator('!');
+                        printConsole(stdout,"\n");
+                      }
+                      else
+                      {
+                        printConsole(stdout,"signature INVALID!\n");
+                      }
+                    }
+                    printSignatureFlag = TRUE;
+
+                    // free resources
                   }
                   else
                   {
@@ -2936,18 +2952,15 @@ remoteBarFlag=FALSE;
                       // print invalid signature info
                       printConsole(stdout,"\n");
                       printSeparator('!');
-                      printConsole(stdout,"Warning: signature INVALID!\n");
+                      printConsole(stdout,"Warning: cannot decrypt signature!\n");
                       printSeparator('!');
                       printConsole(stdout,"\n");
                     }
                     else
                     {
-                      printConsole(stdout,"signature INVALID!\n");
+                      printConsole(stdout,"decrypt signature FAIL!\n");
                     }
                   }
-                  printSignatureFlag = TRUE;
-
-                  // free resources
                 }
                 else
                 {
@@ -3832,14 +3845,7 @@ LOCAL void printDirectoryListHeader(ConstString storageName)
                                                  )
                                )
                 );
-    printConsole(stdout,
-                 "%s\n",
-                 String_cString(String_fillChar(line,
-                                                Misc_getConsoleColumns(),
-                                                '-'
-                                               )
-                               )
-                );
+    printSeparator('-');
 
     // free resources
     String_delete(line);
@@ -3863,8 +3869,7 @@ LOCAL void printDirectoryListFooter(ulong fileCount)
   {
     line = String_new();
 
-    String_fillChar(line,Misc_getConsoleColumns(),'-');
-    printConsole(stdout,"%s\n",String_cString(line));
+    printSeparator('-');
     printConsole(stdout,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
     printConsole(stdout,"\n");
 
