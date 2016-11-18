@@ -20,7 +20,7 @@
 #elif defined(HAVE_REGEX_H)
   #include <regex.h>
 #else
-  #error No regular expression library available!
+  #warning No regular expression library available!
 #endif /* HAVE_PCRE || HAVE_REGEX_H */
 #include <assert.h>
 
