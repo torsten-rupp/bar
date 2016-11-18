@@ -2898,7 +2898,8 @@ remoteBarFlag=FALSE;
                 {
                   // verify archive signature
                   error = Archive_verifySignatureEntry(&archiveHandle,
-                                                       sigantureOffset
+                                                       sigantureOffset,
+                                                       &globalOptions.signaturePublicKey
                                                       );
                   if ((error != ERROR_NONE) && (error != ERROR_INVALID_SIGNATURE))
                   {
