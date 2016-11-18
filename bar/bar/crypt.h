@@ -679,7 +679,7 @@ Errors Crypt_createKeys(CryptKey          *publicCryptKey,
 
 /***********************************************************************\
 * Name   : Crypt_keyEncrypt
-* Purpose: encrypt with public key
+* Purpose: encrypt data
 * Input  : cryptKey               - crypt key
 *          buffer                 - buffer with data
 *          bufferLength           - length of data
@@ -702,7 +702,7 @@ Errors Crypt_keyEncrypt(const CryptKey *cryptKey,
 
 /***********************************************************************\
 * Name   : Crypt_keyDecrypt
-* Purpose: decrypt with private key
+* Purpose: decrypt data
 * Input  : cryptKey            - crypt key
 *          encryptBuffer       - encrypted data
 *          encryptBufferLength - length of encrypted data
