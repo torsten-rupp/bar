@@ -4020,7 +4020,8 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle)
 }
 
 bool Archive_eof(ArchiveHandle *archiveHandle,
-                 bool          skipUnknownChunksFlag
+                 bool          skipUnknownChunksFlag,
+                 bool          printUnknownChunksFlag
                 )
 {
   bool           chunkHeaderFoundFlag;
@@ -4159,9 +4160,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
           // unknown chunk -> switch to scan mode
           if (!scanFlag)
           {
-            if (isPrintInfo(3))
+            if (printUnknownChunksFlag)
             {
-              printWarning("Skipped unknown chunk '%s' (offset %llu) in '%s'. Switch to scan mode.\n",
+              printWarning("Skipped unknown chunk '%s' at offset %llu in '%s'\n",
                            Chunk_idToString(chunkHeader.id),
                            chunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -4181,12 +4182,12 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
         else
         {
           // report unknown chunk
-          archiveHandle->pendingError = ERROR_UNKNOWN_CHUNK;
-          printWarning("Skipped unknown chunk '%s' (offset %llu) in '%s'. Switch to scan mode.\n",
-                       Chunk_idToString(chunkHeader.id),
-                       chunkHeader.offset,
-                       String_cString(archiveHandle->printableStorageName)
-                      );
+          archiveHandle->pendingError = ERRORX_(UNKNOWN_CHUNK,
+                                                0,
+                                                "'%s' at offset %llu",
+                                                Chunk_idToString(chunkHeader.id),
+                                                chunkHeader.offset
+                                               );
           return FALSE;
         }
         break;
@@ -6064,7 +6065,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
                                    ArchiveEntryTypes *archiveEntryType,
                                    uint64            *offset,
-                                   bool              skipUnknownChunksFlag
+                                   bool              skipUnknownChunksFlag,
+                                   bool              printUnknownChunksFlag
                                   )
 {
   Errors         error;
@@ -6196,9 +6198,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
           // unknown chunk -> switch to scan mode
           if (!scanMode)
           {
-            if (isPrintInfo(3))
+            if (printUnknownChunksFlag)
             {
-              printWarning("Skipped unknown chunk '%s' (offset %llu) in '%s'. Switch to scan mode.\n",
+              printWarning("Skipped unknown chunk '%s' at offset %llu in '%s'\n",
                            Chunk_idToString(chunkHeader.id),
                            chunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -6218,7 +6220,12 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
         else
         {
           // report unknown chunk
-          return ERROR_UNKNOWN_CHUNK;
+          return ERRORX_(UNKNOWN_CHUNK,
+                         0,
+                         "'%s' at offset %llu",
+                         Chunk_idToString(chunkHeader.id),
+                         chunkHeader.offset
+                        );
         }
         break;
     }
@@ -11675,7 +11682,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   directoryName   = String_new();
   linkName        = String_new();
   destinationName = String_new();
-  while (   !Archive_eof(&archiveHandle,FALSE)
+  while (   !Archive_eof(&archiveHandle,FALSE,FALSE)
          && (error == ERROR_NONE)
          && !abortedFlag
          && !serverAllocationPendingFlag
@@ -11736,7 +11743,8 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
                                         NULL,  // offset
-                                        FALSE
+                                        FALSE,  // skipUnknownChunksFlag
+                                        FALSE  // printUnknownChunksFlag
                                        );
     if (error != ERROR_NONE)
     {

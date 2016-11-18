@@ -679,8 +679,9 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle);
 /***********************************************************************\
 * Name   : Archive_eof
 * Purpose: check if end-of-archive file
-* Input  : archiveHandle         - archive handle
-*          skipUnknownChunksFlag - TRUE to skip unknown chunks
+* Input  : archiveHandle          - archive handle
+*          skipUnknownChunksFlag  - TRUE to skip unknown chunks
+*          printUnknownChunksFlag - TRUE to print unknown chunks
 * Output : -
 * Return : TRUE if end-of-archive, FALSE otherwise
 * Notes  : Note: on error store error and return error value in next
@@ -688,7 +689,8 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle);
 \***********************************************************************/
 
 bool Archive_eof(ArchiveHandle *archiveHandle,
-                 bool          skipUnknownChunksFlag
+                 bool          skipUnknownChunksFlag,
+                 bool          printUnknownChunksFlag
                 );
 
 /***********************************************************************\
@@ -929,8 +931,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 /***********************************************************************\
 * Name   : Archive_getNextArchiveEntry
 * Purpose: get next entry in archive
-* Input  : archiveHandle         - archive handle
-*          skipUnknownChunksFlag - TRUE to skip unknown chunks
+* Input  : archiveHandle          - archive handle
+*          skipUnknownChunksFlag  - TRUE to skip unknown chunks
+*          printUnknownChunksFlag - TRUE to print unknown chunks
 * Output : archiveEntryType - archive entry type (can be NULL)
 *          offset           - offset (can be NULL)
 * Return : ERROR_NONE or error code
@@ -940,7 +943,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
                                    ArchiveEntryTypes *archiveEntryType,
                                    uint64            *offset,
-                                   bool              skipUnknownChunksFlag
+                                   bool              skipUnknownChunksFlag,
+                                   bool              printUnknownChunksFlag
                                   );
 
 /***********************************************************************\
