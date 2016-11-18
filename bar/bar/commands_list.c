@@ -270,23 +270,57 @@ LOCAL const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
 }
 
 /***********************************************************************\
-* Name   : printArchiveName
-* Purpose: print archive name
-* Input  : printableStorageName - storage file name or NULL if archive
-*                                 name should not be printed
+* Name   : printSeparator
+* Purpose: print separator line
+* Input  : ch - character
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printArchiveName(ConstString printableStorageName)
+LOCAL void printSeparator(char ch)
 {
-  if (!globalOptions.noHeaderFooterFlag)
+  String line;
+
+  line = String_new();
+
+  printConsole(stdout,
+               "%s\n",
+               String_cString(String_fillChar(line,
+                                              Misc_getConsoleColumns(),
+                                              ch
+                                             )
+                             )
+              );
+
+  String_delete(line);
+}
+
+/***********************************************************************\
+* Name   : printArchiveName
+* Purpose: print archive name
+* Input  : showEntriesFlag - TRUE to show entries
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printArchiveName(ConstString printableStorageName, bool showEntriesFlag)
+{
+  assert(printableStorageName != NULL);
+
+  if (showEntriesFlag || globalOptions.metaInfoFlag)
   {
-    if (printableStorageName != NULL)
+    if (!globalOptions.groupFlag && !globalOptions.noHeaderFooterFlag)
     {
-      printInfo(0,"List storage '%s':\n",String_cString(printableStorageName));
-      printInfo(0,"\n");
+      printConsole(stdout,"List storage '%s':\n",String_cString(printableStorageName));
+    }
+  }
+  else
+  {
+    if (!globalOptions.groupFlag)
+    {
+      printConsole(stdout,"Storage '%s': ",String_cString(printableStorageName));
     }
   }
 }
@@ -329,25 +363,25 @@ LOCAL void printMetaInfo(ConstString  userName,
   dateTime = String_new();
 
   // print info
-  printf("User name    : %s\n",String_cString(userName));
-  printf("Host name    : %s\n",String_cString(hostName));
-  printf("Job UUID     : %s\n",!String_isEmpty(jobUUID) ? String_cString(jobUUID) : "-");
-  printf("Schedule UUID: %s\n",!String_isEmpty(scheduleUUID) ? String_cString(scheduleUUID) : "-");
-  printf("Type         : %s\n",getArchiveTypeName(archiveType));
-  printf("Created at   : %s\n",String_cString(Misc_formatDateTime(dateTime,createdDateTime,NULL)));
-  printf("Comment      :");
+  printConsole(stdout,"\n");
+  printConsole(stdout,"User name    : %s\n",String_cString(userName));
+  printConsole(stdout,"Host name    : %s\n",String_cString(hostName));
+  printConsole(stdout,"Job UUID     : %s\n",!String_isEmpty(jobUUID) ? String_cString(jobUUID) : "-");
+  printConsole(stdout,"Schedule UUID: %s\n",!String_isEmpty(scheduleUUID) ? String_cString(scheduleUUID) : "-");
+  printConsole(stdout,"Type         : %s\n",getArchiveTypeName(archiveType));
+  printConsole(stdout,"Created at   : %s\n",String_cString(Misc_formatDateTime(dateTime,createdDateTime,NULL)));
+  printConsole(stdout,"Comment      :");
   String_initTokenizer(&stringTokenizer,comment,STRING_BEGIN,"\n",STRING_QUOTES,FALSE);
   if (String_getNextToken(&stringTokenizer,&s,NULL))
   {
-    printf(" %s",String_cString(s));
+    printConsole(stdout," %s",String_cString(s));
     while (String_getNextToken(&stringTokenizer,&s,NULL))
     {
-      printf("\n");
-      printf("               %s",String_cString(s));
+      printConsole(stdout,"\n");
+      printConsole(stdout,"               %s",String_cString(s));
     }
   }
   String_doneTokenizer(&stringTokenizer);
-  printf("\n");
 
   // free resources
   String_delete(dateTime);
@@ -397,24 +431,25 @@ LOCAL void printArchiveListHeader(void)
     {
       template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP : DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL;
     }
-    printInfo(0,
-              "%s\n",
-              String_cString(Misc_expandMacros(line,
-                                               template,
-                                               EXPAND_MACRO_MODE_STRING,
-                                               MACROS,SIZE_OF_ARRAY(MACROS),
-                                               TRUE
-                                              )
-                            )
-             );
-    printInfo(0,
-              "%s\n",
-              String_cString(String_fillChar(line,
-                                             Misc_getConsoleColumns(),
-                                             '-'
-                                            )
-                            )
-             );
+    printConsole(stdout,"\n");
+    printConsole(stdout,
+                 "%s\n",
+                 String_cString(Misc_expandMacros(line,
+                                                  template,
+                                                  EXPAND_MACRO_MODE_STRING,
+                                                  MACROS,SIZE_OF_ARRAY(MACROS),
+                                                  TRUE
+                                                 )
+                               )
+                );
+    printConsole(stdout,
+                 "%s\n",
+                 String_cString(String_fillChar(line,
+                                                Misc_getConsoleColumns(),
+                                                '-'
+                                               )
+                               )
+                );
 
     // free resources
     String_delete(line);
@@ -439,9 +474,9 @@ LOCAL void printArchiveListFooter(ulong fileCount)
     line = String_new();
 
     String_fillChar(line,Misc_getConsoleColumns(),'-');
-    printInfo(0,"%s\n",String_cString(line));
-    printInfo(0,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
-    printInfo(0,"\n");
+    printConsole(stdout,"%s\n",String_cString(line));
+    printConsole(stdout,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
+    printConsole(stdout,"\n");
 
     String_delete(line);
   }
@@ -613,28 +648,28 @@ LOCAL void printFileInfo(ConstString        storageName,
   TEXT_MACRO_N_CSTRING  (textMacros[14],"%deltaSourceSize",deltaSourceSizeString,                                                NULL);
 
   // print
-  printInfo(0,
-            "%s\n",
-            String_cString(Misc_expandMacros(line,
-                                             template,
-                                             EXPAND_MACRO_MODE_STRING,
-                                             textMacros,SIZE_OF_ARRAY(textMacros),
-                                             TRUE
-                                            )
-                          )
-           );
+  printConsole(stdout,
+               "%s\n",
+               String_cString(Misc_expandMacros(line,
+                                                template,
+                                                EXPAND_MACRO_MODE_STRING,
+                                                textMacros,SIZE_OF_ARRAY(textMacros),
+                                                TRUE
+                                               )
+                             )
+              );
   if (Compress_isCompressed(deltaCompressAlgorithm) && isPrintInfo(2))
   {
-    printInfo(0,
-              "%s\n",
-              String_cString(Misc_expandMacros(line,
-                                               DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
-                                               EXPAND_MACRO_MODE_STRING,
-                                               textMacros,SIZE_OF_ARRAY(textMacros),
-                                               TRUE
-                                              )
-                            )
-             );
+    printConsole(stdout,
+                 "%s\n",
+                 String_cString(Misc_expandMacros(line,
+                                                  DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
+                                                  EXPAND_MACRO_MODE_STRING,
+                                                  textMacros,SIZE_OF_ARRAY(textMacros),
+                                                  TRUE
+                                                 )
+                               )
+                );
   }
 
   // free resources
@@ -775,28 +810,28 @@ LOCAL void printImageInfo(ConstString        storageName,
   TEXT_MACRO_N_STRING   (textMacros[10],"%deltaSourceSize",deltaSourceSizeString,                                                NULL);
 
   // print
-  printInfo(0,
-            "%s\n",
-            String_cString(Misc_expandMacros(line,
-                                             template,
-                                             EXPAND_MACRO_MODE_STRING,
-                                             textMacros,SIZE_OF_ARRAY(textMacros),
-                                             TRUE
-                                            )
-                          )
-           );
+  printConsole(stdout,
+               "%s\n",
+               String_cString(Misc_expandMacros(line,
+                                                template,
+                                                EXPAND_MACRO_MODE_STRING,
+                                                textMacros,SIZE_OF_ARRAY(textMacros),
+                                                TRUE
+                                               )
+                             )
+              );
   if (Compress_isCompressed(deltaCompressAlgorithm) && isPrintInfo(2))
   {
-    printInfo(0,
-              "%s\n",
-              String_cString(Misc_expandMacros(line,
-                                               DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
-                                               EXPAND_MACRO_MODE_STRING,
-                                               textMacros,SIZE_OF_ARRAY(textMacros),
-                                               TRUE
-                                              )
-                            )
-             );
+    printConsole(stdout,
+                 "%s\n",
+                 String_cString(Misc_expandMacros(line,
+                                                  DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
+                                                  EXPAND_MACRO_MODE_STRING,
+                                                  textMacros,SIZE_OF_ARRAY(textMacros),
+                                                  TRUE
+                                                 )
+                               )
+                );
   }
 
   // free resources
@@ -889,15 +924,16 @@ LOCAL void printDirectoryInfo(ConstString     storageName,
   TEXT_MACRO_N_STRING (textMacros[7],"%name",       directoryName,   NULL);
 
   // print
-  printInfo(0,"%s\n",
-            String_cString(Misc_expandMacros(String_clear(line),
-                                             template,
-                                             EXPAND_MACRO_MODE_STRING,
-                                             textMacros,SIZE_OF_ARRAY(textMacros),
-                                             TRUE
-                                            )
-                          )
-           );
+  printConsole(stdout,
+               "%s\n",
+               String_cString(Misc_expandMacros(String_clear(line),
+                                                template,
+                                                EXPAND_MACRO_MODE_STRING,
+                                                textMacros,SIZE_OF_ARRAY(textMacros),
+                                                TRUE
+                                               )
+                             )
+              );
 
   // free resources
   String_delete(line);
@@ -993,16 +1029,16 @@ LOCAL void printLinkInfo(ConstString     storageName,
   TEXT_MACRO_N_STRING   (textMacros[ 8],"%destinationName",destinationName, NULL);
 
   // print
-  printInfo(0,
-            "%s\n",
-            String_cString(Misc_expandMacros(line,
-                                             template,
-                                             EXPAND_MACRO_MODE_STRING,
-                                             textMacros,SIZE_OF_ARRAY(textMacros),
-                                             TRUE
-                                            )
-                          )
-           );
+  printConsole(stdout,
+               "%s\n",
+               String_cString(Misc_expandMacros(line,
+                                                template,
+                                                EXPAND_MACRO_MODE_STRING,
+                                                textMacros,SIZE_OF_ARRAY(textMacros),
+                                                TRUE
+                                               )
+                             )
+              );
 
   // free resources
   String_delete(line);
@@ -1176,27 +1212,28 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
   TEXT_MACRO_N_CSTRING  (textMacros[14],"%deltaSourceSize",deltaSourceSizeString,                                                NULL);
 
   // print
-  printInfo(0,"%s\n",
-            String_cString(Misc_expandMacros(String_clear(line),
-                                             template,
-                                             EXPAND_MACRO_MODE_STRING,
-                                             textMacros,SIZE_OF_ARRAY(textMacros),
-                                             TRUE
-                                            )
-                          )
-           );
+  printConsole(stdout,
+               "%s\n",
+               String_cString(Misc_expandMacros(String_clear(line),
+                                                template,
+                                                EXPAND_MACRO_MODE_STRING,
+                                                textMacros,SIZE_OF_ARRAY(textMacros),
+                                                TRUE
+                                               )
+                             )
+              );
   if (Compress_isCompressed(deltaCompressAlgorithm) && isPrintInfo(2))
   {
-    printInfo(0,
-              "%s\n",
-              String_cString(Misc_expandMacros(line,
-                                               DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
-                                               EXPAND_MACRO_MODE_STRING,
-                                               textMacros,SIZE_OF_ARRAY(textMacros),
-                                               TRUE
-                                              )
-                            )
-             );
+    printConsole(stdout,
+                 "%s\n",
+                 String_cString(Misc_expandMacros(line,
+                                                  DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
+                                                  EXPAND_MACRO_MODE_STRING,
+                                                  textMacros,SIZE_OF_ARRAY(textMacros),
+                                                  TRUE
+                                                 )
+                               )
+                );
   }
 
   // free resources
@@ -1340,15 +1377,16 @@ LOCAL void printSpecialInfo(ConstString      storageName,
   TEXT_MACRO_N_INTEGER(textMacros[ 8],"%minor",      minor,           NULL);
 
   // print
-  printInfo(0,"%s\n",
-            String_cString(Misc_expandMacros(String_clear(line),
-                                             template,
-                                             EXPAND_MACRO_MODE_STRING,
-                                             textMacros,SIZE_OF_ARRAY(textMacros),
-                                             TRUE
-                                            )
-                          )
-           );
+  printConsole(stdout,
+               "%s\n",
+               String_cString(Misc_expandMacros(String_clear(line),
+                                                template,
+                                                EXPAND_MACRO_MODE_STRING,
+                                                textMacros,SIZE_OF_ARRAY(textMacros),
+                                                TRUE
+                                               )
+                             )
+              );
 
   // free resources
   String_delete(line);
@@ -2098,7 +2136,7 @@ LOCAL Errors listArchiveContent(StorageSpecifier    *storageSpecifier,
                                 LogHandle           *logHandle
                                )
 {
-  bool         printedNameFlag,printedInfoFlag;
+  bool         printedInfoFlag,printSignatureFlag;
   ulong        fileCount;
   uint64       sigantureOffset;
   Errors       error;
@@ -2115,11 +2153,11 @@ bool         remoteBarFlag;
 // NYI ???
 remoteBarFlag=FALSE;
 
-  printedNameFlag = FALSE;
-  printedInfoFlag = FALSE;
-  fileCount       = 0L;
-  sigantureOffset = 0LL;
-  error           = ERROR_NONE;
+  printedInfoFlag    = FALSE;
+  printSignatureFlag = FALSE;
+  fileCount          = 0L;
+  sigantureOffset    = 0LL;
+  error              = ERROR_NONE;
   switch (storageSpecifier->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
@@ -2167,7 +2205,8 @@ remoteBarFlag=FALSE;
         }
 
         // list contents
-        while (   !Archive_eof(&archiveHandle,TRUE)
+        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName),showEntriesFlag);
+        while (   !Archive_eof(&archiveHandle,TRUE,TRUE)
                && (error == ERROR_NONE)
               )
         {
@@ -2175,13 +2214,12 @@ remoteBarFlag=FALSE;
           error = Archive_getNextArchiveEntry(&archiveHandle,
                                               &archiveEntryType,
                                               NULL,  // offset
+                                              TRUE,
                                               TRUE
                                              );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
           if (error != ERROR_NONE)
           {
-            printError("Cannot read next entry from storage '%s' (error: %s)!\n",
+            printWarning("Cannot read next entry from storage '%s' (error: %s)!\n",
                        Storage_getPrintableNameCString(storageSpecifier,archiveName),
                        Error_getText(error)
                       );
@@ -2260,11 +2298,6 @@ asm("int3");
                     else
                     {
                       // output file info
-                      if (!printedNameFlag)
-                      {
-                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
-                        printedNameFlag = TRUE;
-                      }
                       if (!printedInfoFlag)
                       {
                         printArchiveListHeader();
@@ -2376,11 +2409,6 @@ asm("int3");
                     else
                     {
                       // output file info
-                      if (!printedNameFlag)
-                      {
-                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
-                        printedNameFlag = TRUE;
-                      }
                       if (!printedInfoFlag)
                       {
                         printArchiveListHeader();
@@ -2470,11 +2498,6 @@ asm("int3");
                     else
                     {
                       // output file info
-                      if (!printedNameFlag)
-                      {
-                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
-                        printedNameFlag = TRUE;
-                      }
                       if (!printedInfoFlag)
                       {
                         printArchiveListHeader();
@@ -2563,11 +2586,6 @@ asm("int3");
                     else
                     {
                       // output file info
-                      if (!printedNameFlag)
-                      {
-                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
-                        printedNameFlag = TRUE;
-                      }
                       if (!printedInfoFlag)
                       {
                         printArchiveListHeader();
@@ -2678,11 +2696,6 @@ asm("int3");
                       else
                       {
                         // output file info
-                        if (!printedNameFlag)
-                        {
-                          printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
-                          printedNameFlag = TRUE;
-                        }
                         if (!printedInfoFlag)
                         {
                           printArchiveListHeader();
@@ -2778,11 +2791,6 @@ asm("int3");
                     else
                     {
                       // output file info
-                      if (!printedNameFlag)
-                      {
-                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
-                        printedNameFlag = TRUE;
-                      }
                       if (!printedInfoFlag)
                       {
                         printArchiveListHeader();
@@ -2829,7 +2837,7 @@ asm("int3");
                 uint64       createdDateTime;
                 String       comment;
 
-                if (globalOptions.metaInfoFlag)
+                if (globalOptions.metaInfoFlag && !globalOptions.groupFlag)
                 {
                   // read archive file
                   name         = String_new();
@@ -2861,11 +2869,6 @@ asm("int3");
                   }
 
                   // output meta data
-                  if (!printedNameFlag)
-                  {
-                    printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
-                    printedNameFlag = TRUE;
-                  }
                   printMetaInfo(name,
                                 hostName,
                                 jobUUID,
@@ -2891,9 +2894,9 @@ asm("int3");
               break;
             case ARCHIVE_ENTRY_TYPE_SIGNATURE:
               {
-                if (globalOptions.verifySignaturesFlag)
+                if (globalOptions.verifySignaturesFlag && !globalOptions.groupFlag)
                 {
-                  // read archive file
+                  // verify archive signature
                   error = Archive_verifySignatureEntry(&archiveHandle,
                                                        sigantureOffset
                                                       );
@@ -2907,21 +2910,41 @@ asm("int3");
                   }
 
                   // output result
-                  if (!printedNameFlag)
-                  {
-                    printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
-                    printedNameFlag = TRUE;
-                  }
                   if (error == ERROR_NONE)
                   {
-                    printf("Signature: OK\n");
-                    printf("\n");
+                    if (showEntriesFlag)
+                    {
+                      // nothing to do
+                    }
+                    else
+                    {
+                      if (!globalOptions.metaInfoFlag)
+                      {
+                        printConsole(stdout,"signature OK\n");
+                      }
+                      else
+                      {
+                        printConsole(stdout,"Signature    : OK\n");
+                      }
+                    }
                   }
                   else
                   {
-                    printf("Signature: INVALID!\n");
-                    printf("\n");
+                    if (showEntriesFlag)
+                    {
+                      // print invalid signature info
+                      printConsole(stdout,"\n");
+                      printSeparator('!');
+                      printConsole(stdout,"Warning: signature INVALID!\n");
+                      printSeparator('!');
+                      printConsole(stdout,"\n");
+                    }
+                    else
+                    {
+                      printConsole(stdout,"signature INVALID!\n");
+                    }
                   }
+                  printSignatureFlag = TRUE;
 
                   // free resources
                 }
@@ -3225,11 +3248,6 @@ asm("int3");
                     }
                     else
                     {
-                      if (!printedNameFlag)
-                      {
-                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
-                        printedNameFlag = TRUE;
-                      }
                       if (!printedInfoFlag)
                       {
                         printArchiveListHeader();
@@ -3327,11 +3345,6 @@ asm("int3");
                     }
                     else
                     {
-                      if (!printedNameFlag)
-                      {
-                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
-                        printedNameFlag = TRUE;
-                      }
                       if (!printedInfoFlag)
                       {
                         printArchiveListHeader();
@@ -3410,11 +3423,6 @@ asm("int3");
                     }
                     else
                     {
-                      if (!printedNameFlag)
-                      {
-                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
-                        printedNameFlag = TRUE;
-                      }
                       if (!printedInfoFlag)
                       {
                         printArchiveListHeader();
@@ -3490,11 +3498,6 @@ asm("int3");
                     }
                     else
                     {
-                      if (!printedNameFlag)
-                      {
-                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
-                        printedNameFlag = TRUE;
-                      }
                       if (!printedInfoFlag)
                       {
                         printArchiveListHeader();
@@ -3593,11 +3596,6 @@ asm("int3");
                     }
                     else
                     {
-                      if (!printedNameFlag)
-                      {
-                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
-                        printedNameFlag = TRUE;
-                      }
                       if (!printedInfoFlag)
                       {
                         printArchiveListHeader();
@@ -3685,11 +3683,6 @@ asm("int3");
                     }
                     else
                     {
-                      if (!printedNameFlag)
-                      {
-                        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName));
-                        printedNameFlag = TRUE;
-                      }
                       if (!printedInfoFlag)
                       {
                         printArchiveListHeader();
@@ -3719,6 +3712,16 @@ asm("int3");
 
                 // free resources
                 String_delete(fileName);
+              }
+              else if (String_equalsCString(type,"META"))
+              {
+//TODO
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+              }
+              else if (String_equalsCString(type,"SIGNATURE"))
+              {
+//TODO
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               }
               else
               {
@@ -3765,11 +3768,14 @@ asm("int3");
   {
     printArchiveListFooter(fileCount);
   }
+  if (!showEntriesFlag && !globalOptions.groupFlag && !printSignatureFlag)
+  {
+    printConsole(stdout,"no signature\n");
+  }
 
   // output grouped list
   if (globalOptions.groupFlag)
   {
-    printArchiveName(NULL);
     printArchiveListHeader();
     printArchiveList();
     printArchiveListFooter(List_count(&archiveContentList));
@@ -3810,29 +3816,29 @@ LOCAL void printDirectoryListHeader(ConstString storageName)
     // header
     if (storageName != NULL)
     {
-      printInfo(0,"List directory '%s':\n",String_cString(storageName));
-      printInfo(0,"\n");
+      printConsole(stdout,"List directory '%s':\n",String_cString(storageName));
+      printConsole(stdout,"\n");
     }
 
     // print title line
-    printInfo(0,
-              "%s\n",
-              String_cString(Misc_expandMacros(line,
-                                               DEFAULT_DIRECTORY_LIST_FORMAT_TITLE,
-                                               EXPAND_MACRO_MODE_STRING,
-                                               MACROS,SIZE_OF_ARRAY(MACROS),
-                                               TRUE
-                                              )
-                            )
-             );
-    printInfo(0,
-              "%s\n",
-              String_cString(String_fillChar(line,
-                                             Misc_getConsoleColumns(),
-                                             '-'
-                                            )
-                            )
-             );
+    printConsole(stdout,
+                 "%s\n",
+                 String_cString(Misc_expandMacros(line,
+                                                  DEFAULT_DIRECTORY_LIST_FORMAT_TITLE,
+                                                  EXPAND_MACRO_MODE_STRING,
+                                                  MACROS,SIZE_OF_ARRAY(MACROS),
+                                                  TRUE
+                                                 )
+                               )
+                );
+    printConsole(stdout,
+                 "%s\n",
+                 String_cString(String_fillChar(line,
+                                                Misc_getConsoleColumns(),
+                                                '-'
+                                               )
+                               )
+                );
 
     // free resources
     String_delete(line);
@@ -3857,9 +3863,9 @@ LOCAL void printDirectoryListFooter(ulong fileCount)
     line = String_new();
 
     String_fillChar(line,Misc_getConsoleColumns(),'-');
-    printInfo(0,"%s\n",String_cString(line));
-    printInfo(0,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
-    printInfo(0,"\n");
+    printConsole(stdout,"%s\n",String_cString(line));
+    printConsole(stdout,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
+    printConsole(stdout,"\n");
 
     String_delete(line);
   }
@@ -3984,15 +3990,16 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
       TEXT_MACRO_N_STRING (textMacros[6],"%name",      fileName,        NULL);
 
       // print
-      printInfo(0,"%s\n",
-                String_cString(Misc_expandMacros(String_clear(line),
-                                                 DEFAULT_DIRECTORY_LIST_FORMAT,
-                                                 EXPAND_MACRO_MODE_STRING,
-                                                 textMacros,SIZE_OF_ARRAY(textMacros),
-                                                 TRUE
-                                                )
-                              )
-               );
+      printConsole(stdout,
+                   "%s\n",
+                   String_cString(Misc_expandMacros(String_clear(line),
+                                                    DEFAULT_DIRECTORY_LIST_FORMAT,
+                                                    EXPAND_MACRO_MODE_STRING,
+                                                    textMacros,SIZE_OF_ARRAY(textMacros),
+                                                    TRUE
+                                                   )
+                                 )
+                  );
 
       // next
       fileCount++;
