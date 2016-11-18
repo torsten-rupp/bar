@@ -2139,9 +2139,11 @@ LOCAL bool matchString(ConstString  string,
                        long         *nextIndex
                       )
 {
-  regex_t    regex;
-  regmatch_t subMatches[1];
   bool       matchFlag;
+  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
+    regex_t    regex;
+    regmatch_t subMatches[1];
+  #endif /* HAVE_PCRE || HAVE_REGEX_H */
 
   assert(string != NULL);
   assert(string->data != NULL);
@@ -2149,33 +2151,40 @@ LOCAL bool matchString(ConstString  string,
 
   if (index < string->length)
   {
-    // compile pattern
-    if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
-    {
-      return FALSE;
-    }
-
-    // match
-    matchFlag = (regexec(&regex,
-                         &string->data[index],
-                         1,  // subMatchCount
-                         subMatches,
-                         0  // eflags
-                        ) == 0
-                );
-
-    // get next index
-    if (matchFlag)
-    {
-      if (nextIndex != NULL)
+    #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
+      // compile pattern
+      if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
       {
-        assert(subMatches[0].rm_eo >= subMatches[0].rm_so);
-        (*nextIndex) = index+subMatches[0].rm_eo-subMatches[0].rm_so;
+        return FALSE;
       }
-    }
 
-    // free resources
-    regfree(&regex);
+      // match
+      matchFlag = (regexec(&regex,
+                           &string->data[index],
+                           1,  // subMatchCount
+                           subMatches,
+                           0  // eflags
+                          ) == 0
+                  );
+
+      // get next index
+      if (matchFlag)
+      {
+        if (nextIndex != NULL)
+        {
+          assert(subMatches[0].rm_eo >= subMatches[0].rm_so);
+          (*nextIndex) = index+subMatches[0].rm_eo-subMatches[0].rm_so;
+        }
+      }
+
+      // free resources
+      regfree(&regex);
+    #else /* not HAVE_PCRE || HAVE_REGEX_H */
+      UNUSED_VARIABLE(pattern);
+      UNUSED_VARIABLE(nextIndex);
+
+      matchFlag = FALSE;
+    #endif /* HAVE_PCRE || HAVE_REGEX_H */
   }
   else
   {
@@ -2210,13 +2219,15 @@ LOCAL bool vmatchString(ConstString  string,
                         va_list      matchedSubStrings
                        )
 {
-  regex_t    regex;
-  va_list    arguments;
-  String     matchedSubString;
-  regmatch_t *subMatches;
-  uint       subMatchCount;
   bool       matchFlag;
-  uint       z;
+  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
+    regex_t    regex;
+    va_list    arguments;
+    String     matchedSubString;
+    regmatch_t *subMatches;
+    uint       subMatchCount;
+    uint       z;
+  #endif /* HAVE_PCRE || HAVE_REGEX_H */
 
   assert(string != NULL);
   assert(string->data != NULL);
@@ -2224,74 +2235,83 @@ LOCAL bool vmatchString(ConstString  string,
 
   if (index < string->length)
   {
-    // compile pattern
-    if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
-    {
-      return FALSE;
-    }
-
-    // count sub-patterns (=1 for total matched string + number of matched-sub-strings)
-    va_copy(arguments,matchedSubStrings);
-    subMatchCount = 1;
-    do
-    {
-      matchedSubString = (String)va_arg(arguments,void*);
-      if (matchedSubString != NULL) subMatchCount++;
-    }
-    while (matchedSubString != NULL);
-    va_end(arguments);
-
-    // allocate sub-patterns array
-    subMatches = (regmatch_t*)malloc(subMatchCount*sizeof(regmatch_t));
-    if (subMatches == NULL)
-    {
-      regfree(&regex);
-      return FALSE;
-    }
-
-    // match
-    matchFlag = (regexec(&regex,
-                         &string->data[index],
-                         subMatchCount,
-                         subMatches,
-                         0  // eflags
-                        ) == 0
-                );
-
-    // get next index, sub-matches
-    if (matchFlag)
-    {
-      if (nextIndex != NULL)
+    #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
+      // compile pattern
+      if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
       {
-        assert(subMatches[0].rm_eo >= subMatches[0].rm_so);
-        (*nextIndex) = index+subMatches[0].rm_eo-subMatches[0].rm_so;
+        return FALSE;
       }
 
-      if (matchedString != STRING_NO_ASSIGN)
-      {
-        String_setBuffer(matchedString,&string->data[subMatches[0].rm_so],subMatches[0].rm_eo-subMatches[0].rm_so);
-      }
-
+      // count sub-patterns (=1 for total matched string + number of matched-sub-strings)
       va_copy(arguments,matchedSubStrings);
-      for (z = 1; z < subMatchCount; z++)
+      subMatchCount = 1;
+      do
       {
         matchedSubString = (String)va_arg(arguments,void*);
-        assert(matchedSubString != NULL);
-        if (matchedSubString != STRING_NO_ASSIGN)
+        if (matchedSubString != NULL) subMatchCount++;
+      }
+      while (matchedSubString != NULL);
+      va_end(arguments);
+
+      // allocate sub-patterns array
+      subMatches = (regmatch_t*)malloc(subMatchCount*sizeof(regmatch_t));
+      if (subMatches == NULL)
+      {
+        regfree(&regex);
+        return FALSE;
+      }
+
+      // match
+      matchFlag = (regexec(&regex,
+                           &string->data[index],
+                           subMatchCount,
+                           subMatches,
+                           0  // eflags
+                          ) == 0
+                  );
+
+      // get next index, sub-matches
+      if (matchFlag)
+      {
+        if (nextIndex != NULL)
         {
-          if (subMatches[z].rm_so != -1)
+          assert(subMatches[0].rm_eo >= subMatches[0].rm_so);
+          (*nextIndex) = index+subMatches[0].rm_eo-subMatches[0].rm_so;
+        }
+
+        if (matchedString != STRING_NO_ASSIGN)
+        {
+          String_setBuffer(matchedString,&string->data[subMatches[0].rm_so],subMatches[0].rm_eo-subMatches[0].rm_so);
+        }
+
+        va_copy(arguments,matchedSubStrings);
+        for (z = 1; z < subMatchCount; z++)
+        {
+          matchedSubString = (String)va_arg(arguments,void*);
+          assert(matchedSubString != NULL);
+          if (matchedSubString != STRING_NO_ASSIGN)
           {
-            assert(subMatches[0].rm_eo >= subMatches[0].rm_so);
-            String_setBuffer(matchedSubString,&string->data[subMatches[z].rm_so],subMatches[z].rm_eo-subMatches[z].rm_so);
+            if (subMatches[z].rm_so != -1)
+            {
+              assert(subMatches[0].rm_eo >= subMatches[0].rm_so);
+              String_setBuffer(matchedSubString,&string->data[subMatches[z].rm_so],subMatches[z].rm_eo-subMatches[z].rm_so);
+            }
           }
         }
+        va_end(arguments);
       }
-      va_end(arguments);
-    }
 
-    // free resources
-    free(subMatches);
-    regfree(&regex);
+      // free resources
+      free(subMatches);
+      regfree(&regex);
+    #else /* not HAVE_PCRE || HAVE_REGEX_H */
+      UNUSED_VARIABLE(pattern);
+      UNUSED_VARIABLE(nextIndex);
+      UNUSED_VARIABLE(matchedString);
+      UNUSED_VARIABLE(matchedSubStrings);
+
+      matchFlag = FALSE;
+    #endif /* HAVE_PCRE || HAVE_REGEX_H */
   }
   else
   {
