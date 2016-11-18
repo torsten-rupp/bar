@@ -406,6 +406,9 @@ typedef struct
 
   Password               *cryptPassword;                      // default password for encryption/decryption
 
+  Key                    signaturePublicKey;
+  Key                    signaturePrivateKey;
+
   Server                 *fileServer;                         // current selected file server
   Server                 *defaultFileServer;                  // default file server
 
@@ -505,8 +508,6 @@ struct JobOptions
   Password                     *cryptPassword;                // crypt password
   Key                          cryptPublicKey;
   Key                          cryptPrivateKey;
-  Key                          signaturePublicKey;
-  Key                          signaturePrivateKey;
 
   String                       preProcessScript;              // script to execute before start of job
   String                       postProcessScript;             // script to execute after after termination of job
