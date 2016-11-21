@@ -4071,11 +4071,11 @@ Errors Command_list(StringList          *storageNameList,
 
     error = ERROR_UNKNOWN;
 
+    // try list archive content
     if (error != ERROR_NONE)
     {
       if (String_isEmpty(storageSpecifier.archivePatternString))
       {
-        // list archive content
         error = listArchiveContent(&storageSpecifier,
                                    NULL,  // archiveName
                                    includeEntryList,
@@ -4086,9 +4086,10 @@ Errors Command_list(StringList          *storageNameList,
                                    getPasswordUserData,
                                    logHandle
                                   );
-        if (failError == ERROR_NONE) failError = error;
       }
     }
+
+    // try list directory content
     if (error != ERROR_NONE)
     {
       // open directory list
@@ -4151,17 +4152,16 @@ Errors Command_list(StringList          *storageNameList,
           }
         }
         Storage_closeDirectoryList(&storageDirectoryListHandle);
-
-        if (error != ERROR_NONE)
-        {
-          printError("Cannot open storage '%s' (error: %s)!\n",
-                     String_cString(storageName),
-                     Error_getText(error)
-                    );
-          if (failError == ERROR_NONE) failError = error;
-          continue;
-        }
       }
+    }
+
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot open storage '%s' (error: %s)!\n",
+                 String_cString(storageName),
+                 Error_getText(error)
+                );
+      if (failError == ERROR_NONE) failError = error;
     }
   }
 
