@@ -353,7 +353,7 @@ void Password_random(Password *password, uint length)
 
   password->length = MIN(length,MAX_PASSWORD_LENGTH);
   #ifdef HAVE_GCRYPT
-    gcry_randomize((unsigned char*)password->data,password->length,GCRY_STRONG_RANDOM);
+    gcry_create_nonce((unsigned char*)password->data,password->length);
   #else /* not HAVE_GCRYPT */
     srandom((unsigned int)time(NULL));
     for (z = 0; z < password->length; z++)
