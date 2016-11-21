@@ -833,10 +833,10 @@ Errors Crypt_keyDecrypt(const CryptKey *cryptKey,
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_deriveEncryptKey(Password       *key,
-                              const Password *password,
-                              const byte     *salt,
-                              uint           saltLength
+Errors Crypt_deriveEncryptKey(Password   *key,
+                              Password   *password,
+                              const byte *salt,
+                              uint       saltLength
                              );
 
 /***********************************************************************\

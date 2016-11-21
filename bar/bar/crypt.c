@@ -1880,8 +1880,6 @@ Errors Crypt_keyEncrypt(const CryptKey *cryptKey,
 //    ulong        z;
     Errors       error;
     gcry_error_t gcryptError;
-    byte         *pkcs1EncodedMessage;
-    const char   *p;
     gcry_sexp_t  sexpData;
     gcry_sexp_t  sexpEncryptData;
     gcry_sexp_t  sexpToken;
@@ -2090,16 +2088,16 @@ Errors Crypt_keyDecrypt(const CryptKey *cryptKey,
   }
 }
 
-Errors Crypt_deriveEncryptKey(Password       *key,
-                              const Password *password,
-                              const byte     *salt,
-                              uint           saltLength
+Errors Crypt_deriveEncryptKey(Password   *key,
+                              Password   *password,
+                              const byte *salt,
+                              uint       saltLength
                              )
 {
   #ifdef HAVE_GCRYPT
     void         *data;
     gcry_error_t gcryptError;
-    void         *p;
+    const void   *p;
   #endif /* HAVE_GCRYPT */
 
   assert(key != NULL);
@@ -2115,7 +2113,7 @@ Errors Crypt_deriveEncryptKey(Password       *key,
     // derive key
     p = Password_deploy(password);
     gcryptError = gcry_kdf_derive(p,
-                                  Password_length(password),
+                                  (size_t)Password_length(password),
                                   KEY_DERIVE_ALGORITHM,
                                   KEY_DERIVE_HASH_ALGORITHM,
                                   salt,
@@ -2399,15 +2397,12 @@ Errors Crypt_getSignature(CryptKey *privateKey,
                          )
 {
   #ifdef HAVE_GCRYPT
+    gcry_error_t gcryptError;
     gcry_sexp_t  sexpToken;
-    uint         keyLength;
-    byte         *pkcs1EncodedMessage;
-    const char   *p;
     gcry_sexp_t  sexpData;
     gcry_sexp_t  sexpSignatureData;
     const char   *signatureData;
     size_t       signatureDataLength;
-    gcry_error_t gcryptError;
   #endif /* HAVE_GCRYPT */
 
   assert(privateKey != NULL);
@@ -2415,7 +2410,6 @@ Errors Crypt_getSignature(CryptKey *privateKey,
   assert(signature != NULL);
   assert(signatureLength != NULL);
 
-fprintf(stderr,"%s, %d: --- sign\n",__FILE__,__LINE__);
   #ifdef HAVE_GCRYPT
     // check if private key is available
     sexpToken = gcry_sexp_find_token(privateKey->key,"private-key",0);
@@ -2425,39 +2419,26 @@ fprintf(stderr,"%s, %d: --- sign\n",__FILE__,__LINE__);
     }
     gcry_sexp_release(sexpToken);
 
-    // create padded encoded message block: format 0x00 0x02 <PS random data> 0x00 <data>; size 512bit
-    pkcs1EncodedMessage = Password_allocSecure(PKCS1_ENCODED_MESSAGE_LENGTH);
-    if (pkcs1EncodedMessage == NULL)
-    {
-      return ERROR_KEY_ENCRYPT_FAIL;
-    }
-    pkcs1EncodedMessage[0] = 0x00;
-    pkcs1EncodedMessage[1] = 0x02;
-    gcry_randomize((unsigned char*)&pkcs1EncodedMessage[1+1],PKCS1_ENCODED_MESSAGE_PADDING_LENGTH,GCRY_STRONG_RANDOM);
-    pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH] = 0x00;
-    memcpy(&pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH+1],buffer,(PKCS1_RANDOM_KEY_LENGTH+7)/8);
-
     // create S-expression with data
-    gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %b))",PKCS1_ENCODED_MESSAGE_LENGTH,(char*)pkcs1EncodedMessage);
+    gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %b))",bufferLength,(char*)buffer);
+//TODO: does not work?
+//    gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (hash sha512 %b))",bufferLength,(char*)buffer);
     if (gcryptError != 0)
     {
-      Password_freeSecure(pkcs1EncodedMessage);
-      return ERROR_KEY_ENCRYPT_FAIL;
+      return ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
     }
-fprintf(stderr,"%s, %d: data \n",__FILE__,__LINE__);
-gcry_sexp_dump(sexpData);
+//fprintf(stderr,"%s, %d: data \n",__FILE__,__LINE__);
+//gcry_sexp_dump(sexpData);
 
     // sign
     gcryptError = gcry_pk_sign(&sexpSignatureData,sexpData,privateKey->key);
     if (gcryptError != 0)
     {
-//fprintf(stderr,"%s,%d: %x %s %d\n",__FILE__,__LINE__,gcryptError,gcry_strerror(gcryptError),bufferLength);
       gcry_sexp_release(sexpData);
-      Password_freeSecure(pkcs1EncodedMessage);
-      return ERROR_KEY_ENCRYPT_FAIL;
+      return ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
     }
-fprintf(stderr,"%s, %d: signature data\n",__FILE__,__LINE__);
-gcry_sexp_dump(sexpSignatureData);
+//fprintf(stderr,"%s, %d: signature data\n",__FILE__,__LINE__);
+//gcry_sexp_dump(sexpSignatureData);
 
     // get signature data
     sexpToken = gcry_sexp_find_token(sexpSignatureData,"s",0);
@@ -2465,44 +2446,33 @@ gcry_sexp_dump(sexpSignatureData);
     {
       gcry_sexp_release(sexpSignatureData);
       gcry_sexp_release(sexpData);
-      Password_freeSecure(pkcs1EncodedMessage);
-      return ERROR_KEY_ENCRYPT_FAIL;
+      return ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //gcry_sexp_dump(sexpToken);
     signatureData = gcry_sexp_nth_data(sexpToken,1,&signatureDataLength);
     if (signatureData == NULL)
     {
       gcry_sexp_release(sexpSignatureData);
       gcry_sexp_release(sexpData);
-      Password_freeSecure(pkcs1EncodedMessage);
-      return ERROR_KEY_ENCRYPT_FAIL;
+      return ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
     }
     (*signatureLength) = MIN(signatureDataLength,maxSignatureLength);
     memcpy(signature,signatureData,(*signatureLength));
     gcry_sexp_release(sexpToken);
-#if 0
-{
-  int z;
-  byte *p=encryptBuffer;
-  printf("encryptData: "); for (z=0;z<(*encryptBufferLength);z++,p++) printf("%02x",*p); printf("\n");
-  p++;
-}
-#endif /* 0 */
 
     // free resources
     gcry_sexp_release(sexpSignatureData);
     gcry_sexp_release(sexpData);
-    Password_freeSecure(pkcs1EncodedMessage);
 
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
-    UNUSED_VARIABLE(publicKey);
-    UNUSED_VARIABLE(cryptAlgorithm);
-    UNUSED_VARIABLE(password);
-    UNUSED_VARIABLE(maxEncryptBufferLength);
-    UNUSED_VARIABLE(encryptBuffer);
-    UNUSED_VARIABLE(encryptBufferLength);
+    UNUSED_VARIABLE(privateKey);
+    UNUSED_VARIABLE(buffer);
+    UNUSED_VARIABLE(bufferLength);
+    UNUSED_VARIABLE(signature);
+    UNUSED_VARIABLE(maxSignatureLength);
+    UNUSED_VARIABLE(signatureLength);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
@@ -2515,29 +2485,17 @@ Errors Crypt_verifySignature(CryptKey   *publicKey,
                              uint       signatureLength
                             )
 {
-  assert(publicKey != NULL);
-  assert(buffer != NULL);
-  assert(signature != NULL);
-  assert(signatureLength != NULL);
-
   #ifdef HAVE_GCRYPT
     gcry_sexp_t  sexpToken;
-    uint         keyLength;
-    byte         *pkcs1EncodedMessage;
-    const char   *p;
     gcry_sexp_t  sexpData;
     gcry_sexp_t  sexpSignatureData;
-    const char   *encryptData;
-    size_t       encryptDataLength;
     gcry_error_t gcryptError;
   #endif /* HAVE_GCRYPT */
 
   assert(publicKey != NULL);
   assert(buffer != NULL);
   assert(signature != NULL);
-  assert(signatureLength != NULL);
 
-fprintf(stderr,"%s, %d: --- verify\n",__FILE__,__LINE__);
   #ifdef HAVE_GCRYPT
     // check if public key is available
     sexpToken = gcry_sexp_find_token(publicKey->key,"public-key",0);
@@ -2547,37 +2505,26 @@ fprintf(stderr,"%s, %d: --- verify\n",__FILE__,__LINE__);
     }
     gcry_sexp_release(sexpToken);
 
-    // create padded encoded message block: format 0x00 0x02 <PS random data> 0x00 <data>; size 512bit
-    pkcs1EncodedMessage = Password_allocSecure(PKCS1_ENCODED_MESSAGE_LENGTH);
-    if (pkcs1EncodedMessage == NULL)
-    {
-      return ERROR_KEY_ENCRYPT_FAIL;
-    }
-    pkcs1EncodedMessage[0] = 0x00;
-    pkcs1EncodedMessage[1] = 0x02;
-    gcry_randomize((unsigned char*)&pkcs1EncodedMessage[1+1],PKCS1_ENCODED_MESSAGE_PADDING_LENGTH,GCRY_STRONG_RANDOM);
-    pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH] = 0x00;
-    memcpy(&pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH+1],buffer,(PKCS1_RANDOM_KEY_LENGTH+7)/8);
-
     // create S-expression with signature
     gcryptError = gcry_sexp_build(&sexpSignatureData,NULL,"(sig-val (rsa (s %b)))",signatureLength,(char*)signature);
     if (gcryptError != 0)
     {
-      return ERROR_INVALID_SIGNATURE;
+      return ERRORX_(INVALID_SIGNATURE,gcryptError,"%s",gcry_strerror(gcryptError));
     }
-fprintf(stderr,"%s, %d: signature \n",__FILE__,__LINE__);
-gcry_sexp_dump(sexpSignatureData);
+//fprintf(stderr,"%s, %d: signature\n",__FILE__,__LINE__);
+//gcry_sexp_dump(sexpSignatureData);
 
     // create S-expression with data
-    gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %b))",PKCS1_ENCODED_MESSAGE_LENGTH,(char*)pkcs1EncodedMessage);
+    gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %b))",bufferLength,(char*)buffer);
+//TODO: does not work?
+//    gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (hash sha512 %b))",bufferLength,(char*)buffer);
     if (gcryptError != 0)
     {
       gcry_sexp_release(sexpSignatureData);
-      Password_freeSecure(pkcs1EncodedMessage);
       return ERROR_INVALID_SIGNATURE;
     }
-fprintf(stderr,"%s, %d: data \n",__FILE__,__LINE__);
-gcry_sexp_dump(sexpData);
+//fprintf(stderr,"%s, %d: data \n",__FILE__,__LINE__);
+//gcry_sexp_dump(sexpData);
 
     // verify
     gcryptError = gcry_pk_verify(sexpSignatureData,sexpData,publicKey->key);
@@ -2586,23 +2533,20 @@ gcry_sexp_dump(sexpData);
 //fprintf(stderr,"%s,%d: %x %s %d\n",__FILE__,__LINE__,gcryptError,gcry_strerror(gcryptError),bufferLength);
       gcry_sexp_release(sexpData);
       gcry_sexp_release(sexpSignatureData);
-      Password_freeSecure(pkcs1EncodedMessage);
-      return ERROR_INVALID_SIGNATURE;
+      return ERRORX_(INVALID_SIGNATURE,gcryptError,"%s",gcry_strerror(gcryptError));
     }
 
     // free resources
     gcry_sexp_release(sexpData);
     gcry_sexp_release(sexpSignatureData);
-    Password_freeSecure(pkcs1EncodedMessage);
 
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(publicKey);
-    UNUSED_VARIABLE(cryptAlgorithm);
-    UNUSED_VARIABLE(password);
-    UNUSED_VARIABLE(maxEncryptKeyBufferLength);
-    UNUSED_VARIABLE(encryptBuffer);
-    UNUSED_VARIABLE(encryptBufferLength);
+    UNUSED_VARIABLE(buffer);
+    UNUSED_VARIABLE(bufferLength);
+    UNUSED_VARIABLE(signature);
+    UNUSED_VARIABLE(signatureLength);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
@@ -2790,6 +2734,12 @@ Errors __Crypt_initHash(const char          *__fileName__,
       break; /* not reached */
   }
 
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(cryptHashInfo,sizeof(CryptHashInfo));
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptHashInfo,sizeof(CryptHashInfo));
+  #endif /* NDEBUG */
+
   return ERROR_NONE;
 }
 
@@ -2803,6 +2753,12 @@ void __Crypt_doneHash(const char    *__fileName__,
 #endif /* NDEBUG */
 {
   assert(cryptHashInfo != NULL);
+
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(cryptHashInfo,sizeof(CryptHashInfo));
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptHashInfo,sizeof(CryptHashInfo));
+  #endif /* NDEBUG */
 
   #ifdef HAVE_GCRYPT
     gcry_md_close(cryptHashInfo->gcry_md_hd);
@@ -3032,8 +2988,8 @@ Errors __Crypt_initMAC(const char         *__fileName__,
           {
             return ERROR_INIT_MAC;
           }
-          
-          gcryptError = gcry_mac_setkey(&cryptMACInfo->gcry_mac_hd,keyData,keyDataLength);
+
+          gcryptError = gcry_mac_setkey(cryptMACInfo->gcry_mac_hd,keyData,keyDataLength);
           if (gcryptError != 0)
           {
             gcry_mac_close(cryptMACInfo->gcry_mac_hd);
@@ -3051,11 +3007,17 @@ Errors __Crypt_initMAC(const char         *__fileName__,
       break; /* not reached */
   }
 
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(cryptMACInfo,sizeof(CryptMACInfo));
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptMACInfo,sizeof(CryptMACInfo));
+  #endif /* NDEBUG */
+
   return ERROR_NONE;
 }
 
 #ifdef NDEBUG
-void Crypt_doneMAC(CryptCryptMACInfo *cryptCryptMACInfo)
+void Crypt_doneMAC(CryptMACInfo *cryptMACInfo)
 #else /* not NDEBUG */
 void __Crypt_doneMAC(const char   *__fileName__,
                      ulong        __lineNb__,
@@ -3064,6 +3026,12 @@ void __Crypt_doneMAC(const char   *__fileName__,
 #endif /* NDEBUG */
 {
   assert(cryptMACInfo != NULL);
+
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(cryptMACInfo,sizeof(CryptMACInfo));
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptMACInfo,sizeof(CryptMACInfo));
+  #endif /* NDEBUG */
 
   #ifdef HAVE_GCRYPT
     gcry_mac_close(cryptMACInfo->gcry_mac_hd);
