@@ -360,7 +360,7 @@ int main(int argc, const char *argv[])
   CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                       CMD_PRIORITY_ANY,
+                       CMD_PRIORITY_ANY,CMD_PRIORITY_ANY,
                        stderr,NULL,NULL
                       )
      )
