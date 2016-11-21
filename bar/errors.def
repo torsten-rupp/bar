@@ -237,7 +237,14 @@ ERROR NO_CRYPT_PASSWORD                "no password given for cipher"
 ERROR INVALID_CRYPT_PASSWORD           "invalid encryption password"
 ERROR CRYPT_PASSWORDS_MISMATCH         "encryption passwords mismatch"
 ERROR INIT_CIPHER                      "init cipher fail"
-ERROR ENCRYPT_FAIL                     "encrypt fail"
+ERROR ENCRYPT_FAIL
+  stringCopy(errorText,"encrypt fail",sizeof(errorText));
+  if (!stringIsEmpty(ERROR_TEXT))
+  {
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+  }
+
 ERROR DECRYPT_FAIL
   stringCopy(errorText,"decrypt fail",sizeof(errorText));
   if (!stringIsEmpty(ERROR_TEXT))
@@ -256,6 +263,7 @@ ERROR CREATE_KEY_FAIL
     stringCopy(errorText,"create public/private key fail",sizeof(errorText));
   }
 
+ERROR INIT_KEY                         "init key fail"
 ERROR KEY_NOT_FOUND
   if (!stringIsEmpty(ERROR_TEXT))
   {
@@ -284,8 +292,22 @@ ERROR NO_PUBLIC_KEY                    "no public encryption key"
 ERROR NO_PRIVATE_KEY                   "no private decryption key"
 ERROR NOT_A_PUBLIC_KEY                 "key is not a public encryption key"
 ERROR NOT_A_PRIVATE_KEY                "key is not a private decryption key"
-ERROR KEY_ENCRYPT_FAIL                 "key encryption fail"
-ERROR KEY_DECRYPT_FAIL                 "key decryption fail"
+ERROR KEY_ENCRYPT_FAIL
+  stringCopy(errorText,"key encryption fail",sizeof(errorText));
+  if (!stringIsEmpty(ERROR_TEXT))
+  {
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+  }
+
+ERROR KEY_DECRYPT_FAIL
+  stringCopy(errorText,"key decryption fail",sizeof(errorText));
+  if (!stringIsEmpty(ERROR_TEXT))
+  {
+    stringConcat(errorText,": ",sizeof(errorText));
+    stringConcat(errorText,ERROR_TEXT,sizeof(errorText));
+  }
+
 ERROR WRONG_PRIVATE_KEY                "wrong private decryption key"
 
 ERROR INVALID_CRYPT_ALGORITHM          "invalid encryption algorithm"
@@ -294,6 +316,10 @@ ERROR UNKNOWN_CRYPT_ALGORITHM          "unknown encryption algorithm"
 ERROR INIT_HASH                        "init hash fail"
 ERROR INVALID_HASH_ALGORITHM           "invalid hash algorithm"
 ERROR UNKNOWN_HASH_ALGORITHM           "unknown hash algorithm"
+
+ERROR INIT_MAC                         "init message authentication code fail"
+ERROR INVALID_MAC_ALGORITHM            "invalid message authentication code algorithm"
+ERROR UNKNOWN_MAC_ALGORITHM            "unknown message authentication code algorithm"
 
 // --- file i/o ---------------------------------------------------------
 ERROR NO_FILE_NAME                     "no file name given"
