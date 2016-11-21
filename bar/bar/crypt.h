@@ -72,6 +72,17 @@ typedef enum
   CRYPT_HASH_ALGORITHM_UNKNOW   = 0xFFFF
 } CryptHashAlgorithms;
 
+// available message authentication code (MAC) algorithms
+typedef enum
+{
+  CRYPT_MAC_ALGORITHM_SHA2_224 = CHUNK_CONST_MAC_ALGORITHM_SHA2_224,
+  CRYPT_MAC_ALGORITHM_SHA2_256 = CHUNK_CONST_MAC_ALGORITHM_SHA2_256,
+  CRYPT_MAC_ALGORITHM_SHA2_384 = CHUNK_CONST_MAC_ALGORITHM_SHA2_384,
+  CRYPT_MAC_ALGORITHM_SHA2_512 = CHUNK_CONST_MAC_ALGORITHM_SHA2_512,
+
+  CRYPT_MAC_ALGORITHM_UNKNOW   = 0xFFFF
+} CryptMACAlgorithms;
+
 typedef enum
 {
   CRYPT_TYPE_NONE,
@@ -118,6 +129,15 @@ typedef struct
   #endif /* HAVE_GCRYPT */
 } CryptHashInfo;
 
+// crypt message authentication code info block
+typedef struct
+{
+  CryptMACAlgorithms cryptMACAlgorithm;
+  #ifdef HAVE_GCRYPT
+    gcry_mac_hd_t gcry_mac_hd;
+  #endif /* HAVE_GCRYPT */
+} CryptMACInfo;
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -163,7 +183,7 @@ typedef struct
 * Name   : CRYPT_HASH_ALGORITHM_TO_CONSTANT
 * Purpose: convert hash algorithm enum value to archive definition
 *          constant
-* Input  : cryptHashAlgorithm - crypt ash algorithm
+* Input  : cryptHashAlgorithm - crypt hash algorithm
 * Output : -
 * Return : number
 * Notes  : -
@@ -172,11 +192,39 @@ typedef struct
 #define CRYPT_HASH_ALGORITHM_TO_CONSTANT(cryptHashAlgorithm) \
   ((uint16)(cryptHashAlgorithm))
 
+/***********************************************************************\
+* Name   : CRYPT_CONSTANT_TO_MAC_ALGORITHM
+* Purpose: convert archive definition constant to MAC algorithm enum
+*          value
+* Input  : n - number
+* Output : -
+* Return : crypt MAC algorithm
+* Notes  : -
+\***********************************************************************/
+
+#define CRYPT_CONSTANT_TO_MAC_ALGORITHM(n) \
+  ((CryptMACAlgorithms)(n))
+
+/***********************************************************************\
+* Name   : CRYPT_MAC_ALGORITHM_TO_CONSTANT
+* Purpose: convert MAC algorithm enum value to archive definition
+*          constant
+* Input  : cryptMACAlgorithm - crypt MAC algorithm
+* Output : -
+* Return : number
+* Notes  : -
+\***********************************************************************/
+
+#define CRYPT_MAC_ALGORITHM_TO_CONSTANT(cryptMACAlgorithm) \
+  ((uint16)(cryptMACAlgorithm))
+
 #ifndef NDEBUG
   #define Crypt_init(...)     __Crypt_init(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Crypt_done(...)     __Crypt_done(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Crypt_initHash(...) __Crypt_initHash(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Crypt_doneHash(...) __Crypt_doneHash(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_initMAC(...)  __Crypt_initMAC(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_doneMAC(...)  __Crypt_doneMAC(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -243,6 +291,17 @@ bool Crypt_isValidAlgorithm(uint16 n);
 bool Crypt_isValidHashAlgorithm(uint16 n);
 
 /***********************************************************************\
+* Name   : Crypt_isValidMACAlgorithm
+* Purpose: check if valid crypt MAC algoritm
+* Input  : n - crypt MAC algorithm constant
+* Output : -
+* Return : TRUE iff valid, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Crypt_isValidMACAlgorithm(uint16 n);
+
+/***********************************************************************\
 * Name   : Crypt_algorithmToString
 * Purpose: get name of crypt algorithm
 * Input  : cryptAlgorithm - crypt algorithm
@@ -287,6 +346,29 @@ const char *Crypt_hashAlgorithmToString(CryptHashAlgorithms cryptHashAlgorithm, 
 \***********************************************************************/
 
 bool Crypt_parseHashAlgorithm(const char *name, CryptHashAlgorithms *cryptHashAlgorithm);
+
+/***********************************************************************\
+* Name   : Crypt_macAlgorithmToString
+* Purpose: get name of crypt MAC algorithm
+* Input  : cryptMACAlgorithm - crypt MAC algorithm
+*          defaultValue      - default value
+* Output : -
+* Return : algorithm name
+* Notes  : -
+\***********************************************************************/
+
+const char *Crypt_macAlgorithmToString(CryptMACAlgorithms cryptMACAlgorithm, const char *defaultValue);
+
+/***********************************************************************\
+* Name   : Crypt_parseMACAlgorithm
+* Purpose: parse crypt MAC algorithm
+* Input  : name - name of crypt MAC algorithm
+* Output : cryptMACAlgorithm - crypt MAC algorithm
+* Return : TRUE if parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Crypt_parseMACAlgorithm(const char *name, CryptMACAlgorithms *cryptMACAlgorithm);
 
 /***********************************************************************\
 * Name   : Crypt_typeToString
@@ -512,7 +594,7 @@ void Crypt_initKey(CryptKey          *cryptKey,
                   );
 
 /***********************************************************************\
-* Name   : public/private
+* Name   : Crypt_doneKey
 * Purpose: deinitialize public/private key
 * Input  : cryptKey - crypt key
 * Output : -
@@ -521,6 +603,23 @@ void Crypt_initKey(CryptKey          *cryptKey,
 \***********************************************************************/
 
 void Crypt_doneKey(CryptKey *cryptKey);
+
+/***********************************************************************\
+* Name   : Crypt_isKey
+* Purpose: check if key available
+* Input  : cryptKey - crypt key
+* Output : -
+* Return : TRUE iff key available
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Crypt_isKey(const CryptKey *cryptKey);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE bool Crypt_isKey(const CryptKey *cryptKey)
+{
+  return cryptKey->key != NULL;
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_getKeyData
@@ -594,7 +693,7 @@ Errors Crypt_getKeyString(CryptKey       *cryptKey,
 *          string     - string with encrypted key data
 *          password   - password to decrypt key (can be NULL)
 *          salt       - encryption salt (can be NULL)
-*          saltLength - encryption salt length
+*          saltLength - encryption salt length (can be 0)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -622,7 +721,7 @@ String Crypt_getKeyExponent(CryptKey *cryptKey);
 
 /***********************************************************************\
 * Name   : Crypt_readKeyFile
-* Purpose: read key from file
+* Purpose: read key from file (base64-encoded)
 * Input  : fileName   - file name
 *          password   - password tor decrypt key (can be NULL)
 *          salt       - encryption salt (can be NULL)
@@ -641,7 +740,7 @@ Errors Crypt_readKeyFile(CryptKey       *cryptKey,
 
 /***********************************************************************\
 * Name   : Crypt_writeKeyFile
-* Purpose: write key to file
+* Purpose: write key to file (base64-encoded)
 * Input  : cryptKey   - crypt key
 *          fileName   - file name
 *          password   - password to encrypt key (can be NULL)
@@ -660,7 +759,7 @@ Errors Crypt_writeKeyFile(CryptKey       *cryptKey,
                          );
 
 /***********************************************************************\
-* Name   : Crypt_createKeys
+* Name   : Crypt_createKeyPair
 * Purpose: create new public/private key pair encryption/decryption
 * Input  : bits - number of RSA key bits
 * Output : publicCryptKey  - public crypt key (encryption or signature
@@ -671,11 +770,11 @@ Errors Crypt_writeKeyFile(CryptKey       *cryptKey,
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_createKeys(CryptKey          *publicCryptKey,
-                        CryptKey          *privateCryptKey,
-                        uint              bits,
-                        CryptPaddingTypes cryptPaddingType
-                       );
+Errors Crypt_createKeyPair(CryptKey          *publicCryptKey,
+                           CryptKey          *privateCryptKey,
+                           uint              bits,
+                           CryptPaddingTypes cryptPaddingType
+                          );
 
 /***********************************************************************\
 * Name   : Crypt_keyEncrypt
@@ -723,29 +822,50 @@ Errors Crypt_keyDecrypt(const CryptKey *cryptKey,
                        );
 
 /***********************************************************************\
+* Name   : Crypt_deriveKey
+* Purpose: derive and generate a encryption crypt key from a password
+* Input  : cryptKey      - crypt key
+*          password      - password
+*          salt          - encryption salt (can be NULL)
+*          saltLength    - encryption salt length
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_deriveEncryptKey(Password       *key,
+                              const Password *password,
+                              const byte     *salt,
+                              uint           saltLength
+                             );
+
+/***********************************************************************\
 * Name   : Crypt_getRandomEncryptKey
 * Purpose: get random encryption key
-* Input  : publicKey              - public key for encryption of random
-*                                   key
-*          cryptAlgorithm         - used symmetric crypt algorithm
-*          encryptBuffer          - buffer for encrypted random key
-*          maxEncryptBufferLength - max. length of encryption buffer
-* Output : password            - created random password
-*          encryptBuffer       - encrypted random key
-*          encryptBufferLength - length of encrypted random key
+* Input  : key                         - random key variable
+*          publicKey                   - public key for encryption of
+*                                        random key
+*          cryptAlgorithm              - used symmetric crypt algorithm
+*          encryptedKeyBuffer          - buffer for encrypted random key
+*          maxEncryptedKeyBufferLength - max. length of encryption
+*                                        buffer
+* Output : key                      - created random key
+*          encryptedKeyBuffer       - encrypted random key
+*          encryptedKeyBufferLength - length of encrypted random key
 * Return : ERROR_NONE or error code
 * Notes  : if encryptBufferLength==maxEncryptBufferLength buffer was to
 *          small!
 \***********************************************************************/
 
-Errors Crypt_getRandomEncryptKey(CryptKey        *publicKey,
+Errors Crypt_getRandomEncryptKey(Password        *key,
+                                 CryptKey        *publicKey,
                                  CryptAlgorithms cryptAlgorithm,
-                                 Password        *password,
-                                 uint            maxEncryptBufferLength,
-                                 void            *encryptBuffer,
-                                 uint            *encryptBufferLength
+                                 uint            maxEncryptedKeyBufferLength,
+                                 void            *encryptedKeyBuffer,
+                                 uint            *encryptedKeyBufferLength
                                 );
 
+// TODO: remove
 /***********************************************************************\
 * Name   : Crypt_getDecryptKey
 * Purpose: get decryption key
@@ -779,10 +899,55 @@ void Crypt_dumpKey(const CryptKey *cryptKey);
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : Crypt_getSignature
+* Purpose: get signature for data
+* Input  : privateKey         - private crypt key
+*          buffer             - data to sign
+*          bufferLength       - length of data
+*          signature          - signature data buffer
+*          maxSignatureLength - size of signature data buffer
+* Output : signature          - signagure data
+*          signatureLength - signature data length
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_getSignature(CryptKey *privateKey,
+                          void     *buffer,
+                          uint     bufferLength,
+                          void     *signature,
+                          uint     maxSignatureLength,
+                          uint     *signatureLength
+                         );
+
+/***********************************************************************\
+* Name   : Crypt_verifySignature
+* Purpose: decrypt data block
+* Input  : publicKey       - public crypt key
+*          buffer          - data to verify
+*          bufferLength    - length of data
+*          signature       - signature data
+*          signatureLength - signature data length
+* Output : buffer - data
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_verifySignature(CryptKey   *publicKey,
+                             const void *buffer,
+                             uint       bufferLength,
+                             const void *signature,
+                             uint       signatureLength
+                            );
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
 * Name   : Crypt_initHash
 * Purpose: init hash
-* Input  : cryptHash - crypt hash variable
-* Output : cryptHash - crypt hash
+* Input  : cryptHash          - crypt hash info variable
+*          cryptHashAlgorithm - hash algorithm; see CryptHashAlgorithms
+* Output : cryptHash - crypt hash info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -802,7 +967,7 @@ Errors __Crypt_initHash(const char          *__fileName__,
 /***********************************************************************\
 * Name   : Crypt_doneHash
 * Purpose: done hash
-* Input  : cryptHash - crypt hash
+* Input  : cryptHash - crypt hash info
 * Output : -
 * Return : -
 * Notes  : -
@@ -820,7 +985,7 @@ void __Crypt_doneHash(const char    *__fileName__,
 /***********************************************************************\
 * Name   : Crypt_resetHash
 * Purpose: reset hash
-* Input  : cryptHash    - crypt hash
+* Input  : cryptHash - crypt hash info
 * Output : -
 * Return : -
 * Notes  : -
@@ -831,7 +996,7 @@ void Crypt_resetHash(CryptHashInfo *cryptHashInfo);
 /***********************************************************************\
 * Name   : Crypt_updateHash
 * Purpose: update hash
-* Input  : cryptHash    - crypt hash
+* Input  : cryptHash    - crypt hash info
 *          buffer       - buffer with data
 *          bufferLength - buffer length
 * Output : -
@@ -847,7 +1012,7 @@ void Crypt_updateHash(CryptHashInfo *cryptHashInfo,
 /***********************************************************************\
 * Name   : Crypt_getHashLength
 * Purpose: get hash length
-* Input  : cryptHash - crypt hash
+* Input  : cryptHash - crypt hash info
 * Output : -
 * Return : hash length [bytes]
 * Notes  : -
@@ -858,28 +1023,138 @@ uint Crypt_getHashLength(const CryptHashInfo *cryptHashInfo);
 /***********************************************************************\
 * Name   : Crypt_getHash
 * Purpose: get hash
-* Input  : cryptHash  - crypt hash
+* Input  : cryptHash  - crypt hash info
 *          buffer     - buffer for hash
 *          bufferSize - buffer size
-* Output : -
-* Return : hash buffer
+* Output : hashLength - hash length (can be NULL)
+* Return : hash buffer or NULL
 * Notes  : -
 \***********************************************************************/
 
-void *Crypt_getHash(const CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize);
+void *Crypt_getHash(const CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize, uint *hashLength);
 
 /***********************************************************************\
 * Name   : Crypt_equalsHash
 * Purpose: compare with hash
-* Input  : cryptHash  - crypt hash
-*          buffer     - buffer with hash to compare with
-*          bufferSize - buffer size
+* Input  : cryptHash  - crypt hash info
+*          hash       - buffer with hash to compare with
+*          hashLength - hash length
 * Output : -
 * Return : TRUE iff hash equals
 * Notes  : -
 \***********************************************************************/
 
-bool Crypt_equalsHash(const const CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize);
+bool Crypt_equalsHash(const const CryptHashInfo *cryptHashInfo, void *hash, uint hashLength);
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : Crypt_initMAC
+* Purpose: init message authentication code
+* Input  : cryptMACInfo      - crypt MAC info variable
+*          cryptMACAlgorithm - MAC algorithm; see CryptMACAlgorithms
+* Output : cryptMACInfo - crypt MAC info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+Errors Crypt_initMAC(CryptMACInfo       *cryptMACInfo,
+                     CryptMACAlgorithms cryptMACAlgorithm,
+                     const void         *keyData,
+                     uint               keyDataLength
+                    );
+#else /* not NDEBUG */
+Errors __Crypt_initMAC(const char         *__fileName__,
+                       ulong              __lineNb__,
+                       CryptMACInfo       *cryptMACInfo,
+                       CryptMACAlgorithms cryptMACAlgorithm,
+                       const void         *keyData,
+                       uint               keyDataLength
+                      );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Crypt_doneMAC
+* Purpose: done message authentication code
+* Input  : cryptMACInfo - crypt MAC info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+void Crypt_doneMAC(CryptCryptMACInfo *cryptMACInfo);
+#else /* not NDEBUG */
+void __Crypt_doneMAC(const char   *__fileName__,
+                     ulong        __lineNb__,
+                     CryptMACInfo *cryptMACInfo
+                    );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Crypt_resetMAC
+* Purpose: reset message authentication code
+* Input  : cryptMACInfo - crypt MAC info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Crypt_resetMAC(CryptMACInfo *cryptMACInfo);
+
+/***********************************************************************\
+* Name   : Crypt_updateMAC
+* Purpose: update message authentication code
+* Input  : cryptMACInfo - crypt MAC info
+*          buffer       - buffer with data
+*          bufferLength - buffer length
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Crypt_updateMAC(CryptMACInfo *cryptMACInfo,
+                     void         *buffer,
+                     ulong        bufferLength
+                    );
+
+/***********************************************************************\
+* Name   : Crypt_getMACLength
+* Purpose: get message authentication code length
+* Input  : cryptMACInfo - crypt MAC info
+* Output : -
+* Return : MAC length [bytes]
+* Notes  : -
+\***********************************************************************/
+
+uint Crypt_getMACLength(const CryptMACInfo *cryptMACInfo);
+
+/***********************************************************************\
+* Name   : Crypt_getMAC
+* Purpose: get message authentication code
+* Input  : cryptMACInfo - crypt MAC info
+*          mac          - buffer for MAC
+*          maxMACSize  - buffer size
+* Output : macLength - MAC length (can be NULL)
+* Return : buffer or NULL
+* Notes  : -
+\***********************************************************************/
+
+void *Crypt_getMAC(const CryptMACInfo *cryptMACInfo, void *buffer, uint bufferSize, uint *macLength);
+
+/***********************************************************************\
+* Name   : Crypt_equalsMAC
+* Purpose: compare with message authentication code
+* Input  : cryptMACInfo - crypt MAC info
+*          mac          - buffer with MAC to compare with
+*          macLength    - MAC length
+* Output : -
+* Return : TRUE iff MAC equals
+* Notes  : -
+\***********************************************************************/
+
+bool Crypt_equalsMAC(const const CryptMACInfo *cryptMACInfo, void *mac, uint macLength);
 
 #ifdef __cplusplus
   }
