@@ -2130,7 +2130,7 @@ LOCAL Errors listArchiveContent(StorageSpecifier    *storageSpecifier,
 {
   bool         printedInfoFlag,printSignatureFlag;
   ulong        fileCount;
-  uint64       sigantureOffset;
+  uint64       signatureOffset;
   Errors       error;
 bool         remoteBarFlag;
 //  SSHSocketList sshSocketList;
@@ -2148,7 +2148,7 @@ remoteBarFlag=FALSE;
   printedInfoFlag    = FALSE;
   printSignatureFlag = FALSE;
   fileCount          = 0L;
-  sigantureOffset    = 0LL;
+  signatureOffset    = 0LL;
   error              = ERROR_NONE;
   switch (storageSpecifier->type)
   {
@@ -2890,11 +2890,11 @@ remoteBarFlag=FALSE;
                     && !globalOptions.groupFlag
                    )
                 {
-                  if (globalOptions.signaturePublicKey.data != NULL)
+                  if (Crypt_isKey(&globalOptions.signaturePublicKey))
                   {
                     // verify archive signature
                     error = Archive_verifySignatureEntry(&archiveHandle,
-                                                         sigantureOffset,
+                                                         signatureOffset,
                                                          &globalOptions.signaturePublicKey
                                                         );
                     if ((error != ERROR_NONE) && (error != ERROR_INVALID_SIGNATURE))
@@ -2952,14 +2952,15 @@ remoteBarFlag=FALSE;
                       // print invalid signature info
                       printConsole(stdout,"\n");
                       printSeparator('!');
-                      printConsole(stdout,"Warning: cannot decrypt signature!\n");
+                      printConsole(stdout,"Warning: signature verify FAIL (public key not available)!\n");
                       printSeparator('!');
                       printConsole(stdout,"\n");
                     }
                     else
                     {
-                      printConsole(stdout,"decrypt signature FAIL!\n");
+                      printConsole(stdout,"signature verify FAIL (public key not available)!\n");
                     }
+                    error = Archive_skipNextEntry(&archiveHandle);
                   }
                 }
                 else
