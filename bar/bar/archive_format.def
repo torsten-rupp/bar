@@ -545,8 +545,7 @@ CHUNK SPECIAL_EXTENDED_ATTRIBUTE "SEAT" SpecialExtendedAttribute
 
 # ----------------------------------------------------------------------
 
-#TODO
-# signature with SHA-256
+# signature
 #
 # parent: none
 # never compress/encrypted

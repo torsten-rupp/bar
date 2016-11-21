@@ -2752,7 +2752,6 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
   {
     // get key data length
     dataLength = Misc_base64DecodeLengthCString(&value[7]);
-
     if (dataLength > 0)
     {
       // allocate key memory
@@ -2768,22 +2767,17 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
         Password_freeSecure(data);
         return FALSE;
       }
-    }
-    else
-    {
-      data = NULL;
-    }
 
-    // set key data
-    if (key->data != NULL) Password_freeSecure(key->data);
-    key->data   = data;
-    key->length = dataLength;
+      // set key data
+      if (key->data != NULL) Password_freeSecure(key->data);
+      key->data   = data;
+      key->length = dataLength;
+    }
   }
   else
   {
     // get key data length
     dataLength = strlen(value);
-
     if (dataLength > 0)
     {
       // allocate key memory
@@ -2795,16 +2789,12 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
 
       // copy data
       memcpy(data,value,dataLength);
-    }
-    else
-    {
-      data = NULL;
-    }
 
-    // set key data
-    if (key->data != NULL) Password_freeSecure(key->data);
-    key->data   = data;
-    key->length = dataLength;
+      // set key data
+      if (key->data != NULL) Password_freeSecure(key->data);
+      key->data   = data;
+      key->length = dataLength;
+    }
   }
 
   return TRUE;
@@ -2822,12 +2812,11 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
 
 LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
-  CryptKey   *cryptKey = (CryptKey*)variable;
-  Errors     error;
-  String     fileName;
-  FileHandle fileHandle;
-  uint       dataLength;
-  void       *data;
+  CryptKey *cryptKey = (CryptKey*)variable;
+  Errors   error;
+  String   fileName;
+  uint     dataLength;
+  void     *data;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2850,6 +2839,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
                              );
     if (error != ERROR_NONE)
     {
+      stringCopy(errorMessage,Error_getText(error),errorMessageSize);
       String_delete(fileName);
       return FALSE;
     }
@@ -2861,40 +2851,39 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
 
     // get key data length
     dataLength = Misc_base64DecodeLengthCString(&value[7]);
-    if (dataLength <= 0)
+    if (dataLength > 0)
     {
-      return TRUE;
-    }
+      // allocate key memory
+      data = Password_allocSecure(dataLength);
+      if (data == NULL)
+      {
+        return FALSE;
+      }
 
-    // allocate key memory
-    data = Password_allocSecure(dataLength);
-    if (data == NULL)
-    {
-      return FALSE;
-    }
+      // decode base64
+      if (Misc_base64DecodeCString((byte*)data,dataLength,&value[7]) == -1)
+      {
+        Password_freeSecure(data);
+        return FALSE;
+      }
 
-    // decode base64
-    if (Misc_base64DecodeCString((byte*)data,dataLength,&value[7]) == -1)
-    {
+      // set crypt key data
+      error = Crypt_setKeyData(cryptKey,
+                               data,
+                               dataLength,
+                               NULL,  // password
+                               NULL,  // salt
+                               0  // saltLength
+                              );
+      if (error != ERROR_NONE)
+      {
+        stringCopy(errorMessage,Error_getText(error),errorMessageSize);
+        return FALSE;
+      }
+
+      // free resources
       Password_freeSecure(data);
-      return FALSE;
     }
-
-    // set crypt key data
-    error = Crypt_setKeyData(cryptKey,
-                             data,
-                             dataLength,
-                             NULL,  // password
-                             NULL,  // salt
-                             0  // saltLength
-                            );
-    if (error != ERROR_NONE)
-    {
-      return FALSE;
-    }
-
-    // free resources
-    Password_freeSecure(data);
   }
   else
   {
@@ -2910,6 +2899,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
                             );
     if (error != ERROR_NONE)
     {
+      stringCopy(errorMessage,Error_getText(error),errorMessageSize);
       return FALSE;
     }
   }
@@ -3085,8 +3075,8 @@ LOCAL void initGlobalOptions(void)
   globalOptions.maxBandWidthList.lastReadTimestamp              = 0LL;
   globalOptions.compressMinFileSize                             = DEFAULT_COMPRESS_MIN_FILE_SIZE;
   globalOptions.cryptPassword                                   = NULL;
-  initKey(&globalOptions.signaturePublicKey);
-  initKey(&globalOptions.signaturePrivateKey);
+  Crypt_initKey(&globalOptions.signaturePublicKey,CRYPT_PADDING_TYPE_NONE);
+  Crypt_initKey(&globalOptions.signaturePrivateKey,CRYPT_PADDING_TYPE_NONE);
   globalOptions.fileServer                                      = &defaultFileServer;
   globalOptions.defaultFileServer                               = &defaultFileServer;
   globalOptions.ftpServer                                       = &defaultFTPServer;

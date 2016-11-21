@@ -127,7 +127,7 @@ typedef struct
   #ifdef HAVE_GCRYPT
     gcry_md_hd_t gcry_md_hd;
   #endif /* HAVE_GCRYPT */
-} CryptHashInfo;
+} CryptHash;
 
 // crypt message authentication code info block
 typedef struct
@@ -136,7 +136,7 @@ typedef struct
   #ifdef HAVE_GCRYPT
     gcry_mac_hd_t gcry_mac_hd;
   #endif /* HAVE_GCRYPT */
-} CryptMACInfo;
+} CryptMAC;
 
 /***************************** Variables *******************************/
 
@@ -865,7 +865,7 @@ Errors Crypt_getRandomEncryptKey(Password        *key,
                                  uint            *encryptedKeyBufferLength
                                 );
 
-// TODO: remove
+// TODO: remove?
 /***********************************************************************\
 * Name   : Crypt_getDecryptKey
 * Purpose: get decryption key
@@ -945,7 +945,7 @@ Errors Crypt_verifySignature(CryptKey   *publicKey,
 /***********************************************************************\
 * Name   : Crypt_initHash
 * Purpose: init hash
-* Input  : cryptHash          - crypt hash info variable
+* Input  : cryptHash          - crypt hash variable
 *          cryptHashAlgorithm - hash algorithm; see CryptHashAlgorithms
 * Output : cryptHash - crypt hash info
 * Return : ERROR_NONE or error code
@@ -953,13 +953,13 @@ Errors Crypt_verifySignature(CryptKey   *publicKey,
 \***********************************************************************/
 
 #ifdef NDEBUG
-Errors Crypt_initHash(CryptHashInfo       *cryptHashInfo,
+Errors Crypt_initHash(CryptHash           *cryptHash,
                       CryptHashAlgorithms cryptHashAlgorithm
                      );
 #else /* not NDEBUG */
 Errors __Crypt_initHash(const char          *__fileName__,
                         ulong               __lineNb__,
-                        CryptHashInfo       *cryptHashInfo,
+                        CryptHash           *cryptHash,
                         CryptHashAlgorithms cryptHashAlgorithm
                        );
 #endif /* NDEBUG */
@@ -967,36 +967,36 @@ Errors __Crypt_initHash(const char          *__fileName__,
 /***********************************************************************\
 * Name   : Crypt_doneHash
 * Purpose: done hash
-* Input  : cryptHash - crypt hash info
+* Input  : cryptHash - crypt hash
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-void Crypt_doneHash(CryptHashInfo *cryptHashInfo);
+void Crypt_doneHash(CryptHash *cryptHash);
 #else /* not NDEBUG */
-void __Crypt_doneHash(const char    *__fileName__,
-                      ulong         __lineNb__,
-                      CryptHashInfo *cryptHashInfo
+void __Crypt_doneHash(const char *__fileName__,
+                      ulong      __lineNb__,
+                      CryptHash  *cryptHash
                      );
 #endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Crypt_resetHash
 * Purpose: reset hash
-* Input  : cryptHash - crypt hash info
+* Input  : cryptHash - crypt hash
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Crypt_resetHash(CryptHashInfo *cryptHashInfo);
+void Crypt_resetHash(CryptHash *cryptHash);
 
 /***********************************************************************\
 * Name   : Crypt_updateHash
 * Purpose: update hash
-* Input  : cryptHash    - crypt hash info
+* Input  : cryptHash    - crypt hash
 *          buffer       - buffer with data
 *          bufferLength - buffer length
 * Output : -
@@ -1004,26 +1004,26 @@ void Crypt_resetHash(CryptHashInfo *cryptHashInfo);
 * Notes  : -
 \***********************************************************************/
 
-void Crypt_updateHash(CryptHashInfo *cryptHashInfo,
-                      void          *buffer,
-                      ulong         bufferLength
+void Crypt_updateHash(CryptHash *cryptHash,
+                      void      *buffer,
+                      ulong     bufferLength
                      );
 
 /***********************************************************************\
 * Name   : Crypt_getHashLength
 * Purpose: get hash length
-* Input  : cryptHash - crypt hash info
+* Input  : cryptHash - crypt hash
 * Output : -
 * Return : hash length [bytes]
 * Notes  : -
 \***********************************************************************/
 
-uint Crypt_getHashLength(const CryptHashInfo *cryptHashInfo);
+uint Crypt_getHashLength(const CryptHash *cryptHash);
 
 /***********************************************************************\
 * Name   : Crypt_getHash
 * Purpose: get hash
-* Input  : cryptHash  - crypt hash info
+* Input  : cryptHash  - crypt hash
 *          buffer     - buffer for hash
 *          bufferSize - buffer size
 * Output : hashLength - hash length (can be NULL)
@@ -1031,12 +1031,16 @@ uint Crypt_getHashLength(const CryptHashInfo *cryptHashInfo);
 * Notes  : -
 \***********************************************************************/
 
-void *Crypt_getHash(const CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize, uint *hashLength);
+void *Crypt_getHash(const CryptHash *cryptHash,
+                    void            *buffer,
+                    uint            bufferSize,
+                    uint            *hashLength
+                   );
 
 /***********************************************************************\
 * Name   : Crypt_equalsHash
 * Purpose: compare with hash
-* Input  : cryptHash  - crypt hash info
+* Input  : cryptHash  - crypt hash
 *          hash       - buffer with hash to compare with
 *          hashLength - hash length
 * Output : -
@@ -1044,22 +1048,25 @@ void *Crypt_getHash(const CryptHashInfo *cryptHashInfo, void *buffer, uint buffe
 * Notes  : -
 \***********************************************************************/
 
-bool Crypt_equalsHash(const const CryptHashInfo *cryptHashInfo, void *hash, uint hashLength);
+bool Crypt_equalsHash(const CryptHash *cryptHash,
+                      const void      *hash,
+                      uint            hashLength
+                     );
 
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
 * Name   : Crypt_initMAC
 * Purpose: init message authentication code
-* Input  : cryptMACInfo      - crypt MAC info variable
+* Input  : cryptMAC          - crypt MAC info variable
 *          cryptMACAlgorithm - MAC algorithm; see CryptMACAlgorithms
-* Output : cryptMACInfo - crypt MAC info
+* Output : cryptMAC - crypt MAC
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-Errors Crypt_initMAC(CryptMACInfo       *cryptMACInfo,
+Errors Crypt_initMAC(CryptMAC           *cryptMAC,
                      CryptMACAlgorithms cryptMACAlgorithm,
                      const void         *keyData,
                      uint               keyDataLength
@@ -1067,7 +1074,7 @@ Errors Crypt_initMAC(CryptMACInfo       *cryptMACInfo,
 #else /* not NDEBUG */
 Errors __Crypt_initMAC(const char         *__fileName__,
                        ulong              __lineNb__,
-                       CryptMACInfo       *cryptMACInfo,
+                       CryptMAC           *cryptMAC,
                        CryptMACAlgorithms cryptMACAlgorithm,
                        const void         *keyData,
                        uint               keyDataLength
@@ -1077,36 +1084,36 @@ Errors __Crypt_initMAC(const char         *__fileName__,
 /***********************************************************************\
 * Name   : Crypt_doneMAC
 * Purpose: done message authentication code
-* Input  : cryptMACInfo - crypt MAC info
+* Input  : cryptMAC - crypt MAC
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-void Crypt_doneMAC(CryptCryptMACInfo *cryptMACInfo);
+void Crypt_doneMAC(CryptCryptMAC *cryptMAC);
 #else /* not NDEBUG */
-void __Crypt_doneMAC(const char   *__fileName__,
-                     ulong        __lineNb__,
-                     CryptMACInfo *cryptMACInfo
+void __Crypt_doneMAC(const char *__fileName__,
+                     ulong      __lineNb__,
+                     CryptMAC   *cryptMAC
                     );
 #endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Crypt_resetMAC
 * Purpose: reset message authentication code
-* Input  : cryptMACInfo - crypt MAC info
+* Input  : cryptMAC - crypt MAC
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Crypt_resetMAC(CryptMACInfo *cryptMACInfo);
+void Crypt_resetMAC(CryptMAC *cryptMAC);
 
 /***********************************************************************\
 * Name   : Crypt_updateMAC
 * Purpose: update message authentication code
-* Input  : cryptMACInfo - crypt MAC info
+* Input  : cryptMAC     - crypt MAC
 *          buffer       - buffer with data
 *          bufferLength - buffer length
 * Output : -
@@ -1114,47 +1121,54 @@ void Crypt_resetMAC(CryptMACInfo *cryptMACInfo);
 * Notes  : -
 \***********************************************************************/
 
-void Crypt_updateMAC(CryptMACInfo *cryptMACInfo,
-                     void         *buffer,
-                     ulong        bufferLength
+void Crypt_updateMAC(CryptMAC *cryptMAC,
+                     void     *buffer,
+                     ulong    bufferLength
                     );
 
 /***********************************************************************\
 * Name   : Crypt_getMACLength
 * Purpose: get message authentication code length
-* Input  : cryptMACInfo - crypt MAC info
+* Input  : cryptMAC - crypt MAC
 * Output : -
 * Return : MAC length [bytes]
 * Notes  : -
 \***********************************************************************/
 
-uint Crypt_getMACLength(const CryptMACInfo *cryptMACInfo);
+uint Crypt_getMACLength(const CryptMAC *cryptMAC);
 
 /***********************************************************************\
 * Name   : Crypt_getMAC
 * Purpose: get message authentication code
-* Input  : cryptMACInfo - crypt MAC info
-*          mac          - buffer for MAC
-*          maxMACSize  - buffer size
+* Input  : cryptMAC   - crypt MAC
+*          mac        - buffer for MAC
+*          maxMACSize - buffer size
 * Output : macLength - MAC length (can be NULL)
 * Return : buffer or NULL
 * Notes  : -
 \***********************************************************************/
 
-void *Crypt_getMAC(const CryptMACInfo *cryptMACInfo, void *buffer, uint bufferSize, uint *macLength);
+void *Crypt_getMAC(const CryptMAC *cryptMAC,
+                   void           *buffer,
+                   uint           bufferSize,
+                   uint           *macLength
+                  );
 
 /***********************************************************************\
-* Name   : Crypt_equalsMAC
-* Purpose: compare with message authentication code
-* Input  : cryptMACInfo - crypt MAC info
-*          mac          - buffer with MAC to compare with
-*          macLength    - MAC length
+* Name   : Crypt_verifyMAC
+* Purpose: verify message authentication code
+* Input  : cryptMAC  - crypt MAC
+*          mac       - buffer with MAC to compare with
+*          macLength - MAC length
 * Output : -
 * Return : TRUE iff MAC equals
 * Notes  : -
 \***********************************************************************/
 
-bool Crypt_equalsMAC(const const CryptMACInfo *cryptMACInfo, void *mac, uint macLength);
+bool Crypt_equalsMAC(const CryptMAC *cryptMAC,
+                     void           *mac,
+                     uint           macLength
+                    );
 
 #ifdef __cplusplus
   }

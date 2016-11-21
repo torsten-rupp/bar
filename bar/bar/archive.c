@@ -676,7 +676,7 @@ LOCAL void findNextArchivePart(ArchiveHandle *archiveHandle, IndexHandle *indexH
 \***********************************************************************/
 
 LOCAL Errors calcuateHash(ArchiveHandle *archiveHandle,
-                          CryptHashInfo *cryptHash,
+                          CryptHash     *cryptHash,
                           uint64        startOffset,
                           uint64        endOffset
                          )
@@ -1115,7 +1115,7 @@ LOCAL Errors writeEncryptionKey(ArchiveHandle *archiveHandle)
 LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
 {
   AutoFreeList   autoFreeList;
-  CryptHashInfo  signatureHash;
+  CryptHash      signatureHash;
   uint64         index;
   Errors         error;
   uint64         offset;
@@ -9591,7 +9591,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle  *archiveHandle,
   CryptHashAlgorithms cryptHashAlgorithm;
   byte                hash[1024];
   uint                hashLength;
-  CryptHashInfo       signatureHash;
+  CryptHash           signatureHash;
   uint64              index;
 
   assert(archiveHandle != NULL);
@@ -11450,7 +11450,7 @@ Errors Archive_verifySignatures(StorageInfo      *storageInfo,
                                )
 {
   AutoFreeList  autoFreeList;
-  CryptHashInfo signatureHash;
+  CryptHash     signatureHash;
   Errors        error;
   StorageHandle storageHandle;
   ChunkHeader   chunkHeader;

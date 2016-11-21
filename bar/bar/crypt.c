@@ -2672,13 +2672,13 @@ void Crypt_dumpKey(const CryptKey *cryptKey)
 /*---------------------------------------------------------------------*/
 
 #ifdef NDEBUG
-Errors Crypt_initHash(CryptHashInfo       *cryptHashInfo,
+Errors Crypt_initHash(CryptHash           *cryptHash,
                       CryptHashAlgorithms cryptHashAlgorithm
                      )
 #else /* not NDEBUG */
 Errors __Crypt_initHash(const char          *__fileName__,
                         ulong               __lineNb__,
-                        CryptHashInfo       *cryptHashInfo,
+                        CryptHash           *cryptHash,
                         CryptHashAlgorithms cryptHashAlgorithm
                        )
 #endif /* NDEBUG */
@@ -2687,10 +2687,10 @@ Errors __Crypt_initHash(const char          *__fileName__,
     gcry_error_t gcryptError;
   #endif /* HAVE_GCRYPT */
 
-  assert(cryptHashInfo != NULL);
+  assert(cryptHash != NULL);
 
   // init variables
-  cryptHashInfo->cryptHashAlgorithm = cryptHashAlgorithm;
+  cryptHash->cryptHashAlgorithm = cryptHashAlgorithm;
 
   // init crypt algorithm
   switch (cryptHashAlgorithm)
@@ -2717,7 +2717,7 @@ Errors __Crypt_initHash(const char          *__fileName__,
               break; /* not reached */
           }
 
-          gcryptError = gcry_md_open(&cryptHashInfo->gcry_md_hd,hashAlgorithm,GCRY_MD_FLAG_SECURE);
+          gcryptError = gcry_md_open(&cryptHash->gcry_md_hd,hashAlgorithm,GCRY_MD_FLAG_SECURE);
           if (gcryptError != 0)
           {
             return ERROR_INIT_HASH;
@@ -2735,65 +2735,65 @@ Errors __Crypt_initHash(const char          *__fileName__,
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(cryptHashInfo,sizeof(CryptHashInfo));
+    DEBUG_ADD_RESOURCE_TRACE(cryptHash,sizeof(CryptHash));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptHashInfo,sizeof(CryptHashInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptHash,sizeof(CryptHash));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
 }
 
 #ifdef NDEBUG
-void Crypt_doneHash(CryptHashInfo *cryptHashInfo)
+void Crypt_doneHash(CryptHash *cryptHash)
 #else /* not NDEBUG */
-void __Crypt_doneHash(const char    *__fileName__,
-                      ulong         __lineNb__,
-                      CryptHashInfo *cryptHashInfo
+void __Crypt_doneHash(const char *__fileName__,
+                      ulong      __lineNb__,
+                      CryptHash  *cryptHash
                      )
 #endif /* NDEBUG */
 {
-  assert(cryptHashInfo != NULL);
+  assert(cryptHash != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(cryptHashInfo,sizeof(CryptHashInfo));
+    DEBUG_REMOVE_RESOURCE_TRACE(cryptHash,sizeof(CryptHash));
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptHashInfo,sizeof(CryptHashInfo));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptHash,sizeof(CryptHash));
   #endif /* NDEBUG */
 
   #ifdef HAVE_GCRYPT
-    gcry_md_close(cryptHashInfo->gcry_md_hd);
+    gcry_md_close(cryptHash->gcry_md_hd);
   #endif /* HAVE_GCRYPT */
 }
 
-void Crypt_resetHash(CryptHashInfo *cryptHashInfo)
+void Crypt_resetHash(CryptHash *cryptHash)
 {
-  assert(cryptHashInfo != NULL);
+  assert(cryptHash != NULL);
 
   #ifdef HAVE_GCRYPT
-    gcry_md_reset(cryptHashInfo->gcry_md_hd);
+    gcry_md_reset(cryptHash->gcry_md_hd);
   #endif /* HAVE_GCRYPT */
 }
 
-void Crypt_updateHash(CryptHashInfo *cryptHashInfo,
-                      void          *buffer,
-                      ulong         bufferLength
+void Crypt_updateHash(CryptHash *cryptHash,
+                      void      *buffer,
+                      ulong     bufferLength
                      )
 {
-  assert(cryptHashInfo != NULL);
+  assert(cryptHash != NULL);
 
   #ifdef HAVE_GCRYPT
-    gcry_md_write(cryptHashInfo->gcry_md_hd,buffer,bufferLength);
+    gcry_md_write(cryptHash->gcry_md_hd,buffer,bufferLength);
   #endif /* HAVE_GCRYPT */
 }
 
-uint Crypt_getHashLength(const CryptHashInfo *cryptHashInfo)
+uint Crypt_getHashLength(const CryptHash *cryptHash)
 {
   uint hashLength;
 
-  assert(cryptHashInfo != NULL);
+  assert(cryptHash != NULL);
 
   hashLength = 0;
-  switch (cryptHashInfo->cryptHashAlgorithm)
+  switch (cryptHash->cryptHashAlgorithm)
   {
     case CRYPT_HASH_ALGORITHM_SHA2_224:
     case CRYPT_HASH_ALGORITHM_SHA2_256:
@@ -2804,7 +2804,7 @@ uint Crypt_getHashLength(const CryptHashInfo *cryptHashInfo)
           int hashAlgorithm;
 
           hashAlgorithm = GCRY_MD_NONE;
-          switch (cryptHashInfo->cryptHashAlgorithm)
+          switch (cryptHash->cryptHashAlgorithm)
           {
             case CRYPT_HASH_ALGORITHM_SHA2_224: hashAlgorithm = GCRY_MD_SHA224; break;
             case CRYPT_HASH_ALGORITHM_SHA2_256: hashAlgorithm = GCRY_MD_SHA256; break;
@@ -2831,12 +2831,16 @@ uint Crypt_getHashLength(const CryptHashInfo *cryptHashInfo)
   return hashLength;
 }
 
-void *Crypt_getHash(const CryptHashInfo *cryptHashInfo, void *buffer, uint bufferSize, uint *hashLength)
+void *Crypt_getHash(const CryptHash *cryptHash,
+                    void            *buffer,
+                    uint            bufferSize,
+                    uint            *hashLength
+                   )
 {
-  assert(cryptHashInfo != NULL);
+  assert(cryptHash != NULL);
   assert(buffer != NULL);
 
-  switch (cryptHashInfo->cryptHashAlgorithm)
+  switch (cryptHash->cryptHashAlgorithm)
   {
     case CRYPT_HASH_ALGORITHM_SHA2_224:
     case CRYPT_HASH_ALGORITHM_SHA2_256:
@@ -2848,7 +2852,7 @@ void *Crypt_getHash(const CryptHashInfo *cryptHashInfo, void *buffer, uint buffe
           uint n;
 
           hashAlgorithm = GCRY_MD_NONE;
-          switch (cryptHashInfo->cryptHashAlgorithm)
+          switch (cryptHash->cryptHashAlgorithm)
           {
             case CRYPT_HASH_ALGORITHM_SHA2_224: hashAlgorithm = GCRY_MD_SHA224; break;
             case CRYPT_HASH_ALGORITHM_SHA2_256: hashAlgorithm = GCRY_MD_SHA256; break;
@@ -2868,7 +2872,7 @@ void *Crypt_getHash(const CryptHashInfo *cryptHashInfo, void *buffer, uint buffe
           }
 
           if (hashLength != NULL) (*hashLength) = n;
-          memcpy(buffer,gcry_md_read(cryptHashInfo->gcry_md_hd,hashAlgorithm),n);
+          memcpy(buffer,gcry_md_read(cryptHash->gcry_md_hd,hashAlgorithm),n);
         }
       #else /* not HAVE_GCRYPT */
         return NULL;
@@ -2884,14 +2888,17 @@ void *Crypt_getHash(const CryptHashInfo *cryptHashInfo, void *buffer, uint buffe
   return buffer;
 }
 
-bool Crypt_equalsHash(const const CryptHashInfo *cryptHashInfo, void *hash, uint hashLength)
+bool Crypt_equalsHash(const CryptHash *cryptHash,
+                      const void      *hash,
+                      uint            hashLength
+                     )
 {
   bool equalsFlag;
 
-  assert(cryptHashInfo != NULL);
+  assert(cryptHash != NULL);
 
   equalsFlag = FALSE;
-  switch (cryptHashInfo->cryptHashAlgorithm)
+  switch (cryptHash->cryptHashAlgorithm)
   {
     case CRYPT_HASH_ALGORITHM_SHA2_224:
     case CRYPT_HASH_ALGORITHM_SHA2_256:
@@ -2902,7 +2909,7 @@ bool Crypt_equalsHash(const const CryptHashInfo *cryptHashInfo, void *hash, uint
           int hashAlgorithm;
 
           hashAlgorithm = GCRY_MD_NONE;
-          switch (cryptHashInfo->cryptHashAlgorithm)
+          switch (cryptHash->cryptHashAlgorithm)
           {
             case CRYPT_HASH_ALGORITHM_SHA2_224: hashAlgorithm = GCRY_MD_SHA224; break;
             case CRYPT_HASH_ALGORITHM_SHA2_256: hashAlgorithm = GCRY_MD_SHA256; break;
@@ -2916,7 +2923,7 @@ bool Crypt_equalsHash(const const CryptHashInfo *cryptHashInfo, void *hash, uint
           }
 
           equalsFlag =    (gcry_md_get_algo_dlen(hashAlgorithm) == hashLength)
-                       && (memcmp(hash,gcry_md_read(cryptHashInfo->gcry_md_hd,hashAlgorithm),hashLength) == 0);
+                       && (memcmp(hash,gcry_md_read(cryptHash->gcry_md_hd,hashAlgorithm),hashLength) == 0);
         }
       #else /* not HAVE_GCRYPT */
       #endif /* HAVE_GCRYPT */
@@ -2934,7 +2941,7 @@ bool Crypt_equalsHash(const const CryptHashInfo *cryptHashInfo, void *hash, uint
 /*---------------------------------------------------------------------*/
 
 #ifdef NDEBUG
-Errors Crypt_initMAC(CryptMACInfo       *cryptMACInfo,
+Errors Crypt_initMAC(CryptMAC           *cryptMAC,
                      CryptMACAlgorithms cryptMACAlgorithm,
                      const void         *keyData,
                      uint               keyDataLength
@@ -2942,7 +2949,7 @@ Errors Crypt_initMAC(CryptMACInfo       *cryptMACInfo,
 #else /* not NDEBUG */
 Errors __Crypt_initMAC(const char         *__fileName__,
                        ulong              __lineNb__,
-                       CryptMACInfo       *cryptMACInfo,
+                       CryptMAC           *cryptMAC,
                        CryptMACAlgorithms cryptMACAlgorithm,
                        const void         *keyData,
                        uint               keyDataLength
@@ -2953,10 +2960,10 @@ Errors __Crypt_initMAC(const char         *__fileName__,
     gcry_error_t gcryptError;
   #endif /* HAVE_GCRYPT */
 
-  assert(cryptMACInfo != NULL);
+  assert(cryptMAC != NULL);
 
   // init variables
-  cryptMACInfo->cryptMACAlgorithm = cryptMACAlgorithm;
+  cryptMAC->cryptMACAlgorithm = cryptMACAlgorithm;
 
   // init crypt algorithm
   switch (cryptMACAlgorithm)
@@ -2983,16 +2990,16 @@ Errors __Crypt_initMAC(const char         *__fileName__,
               break; /* not reached */
           }
 
-          gcryptError = gcry_mac_open(&cryptMACInfo->gcry_mac_hd,macAlgorithm,GCRY_MAC_FLAG_SECURE,NULL);
+          gcryptError = gcry_mac_open(&cryptMAC->gcry_mac_hd,macAlgorithm,GCRY_MAC_FLAG_SECURE,NULL);
           if (gcryptError != 0)
           {
             return ERROR_INIT_MAC;
           }
 
-          gcryptError = gcry_mac_setkey(cryptMACInfo->gcry_mac_hd,keyData,keyDataLength);
+          gcryptError = gcry_mac_setkey(cryptMAC->gcry_mac_hd,keyData,keyDataLength);
           if (gcryptError != 0)
           {
-            gcry_mac_close(cryptMACInfo->gcry_mac_hd);
+            gcry_mac_close(cryptMAC->gcry_mac_hd);
             return ERROR_INIT_MAC;
           }
         }
@@ -3008,65 +3015,65 @@ Errors __Crypt_initMAC(const char         *__fileName__,
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(cryptMACInfo,sizeof(CryptMACInfo));
+    DEBUG_ADD_RESOURCE_TRACE(cryptMAC,sizeof(CryptMAC));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptMACInfo,sizeof(CryptMACInfo));
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptMAC,sizeof(CryptMAC));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
 }
 
 #ifdef NDEBUG
-void Crypt_doneMAC(CryptMACInfo *cryptMACInfo)
+void Crypt_doneMAC(CryptMAC *cryptMAC)
 #else /* not NDEBUG */
-void __Crypt_doneMAC(const char   *__fileName__,
-                     ulong        __lineNb__,
-                     CryptMACInfo *cryptMACInfo
+void __Crypt_doneMAC(const char *__fileName__,
+                     ulong      __lineNb__,
+                     CryptMAC   *cryptMAC
                     )
 #endif /* NDEBUG */
 {
-  assert(cryptMACInfo != NULL);
+  assert(cryptMAC != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(cryptMACInfo,sizeof(CryptMACInfo));
+    DEBUG_REMOVE_RESOURCE_TRACE(cryptMAC,sizeof(CryptMAC));
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptMACInfo,sizeof(CryptMACInfo));
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptMAC,sizeof(CryptMAC));
   #endif /* NDEBUG */
 
   #ifdef HAVE_GCRYPT
-    gcry_mac_close(cryptMACInfo->gcry_mac_hd);
+    gcry_mac_close(cryptMAC->gcry_mac_hd);
   #endif /* HAVE_GCRYPT */
 }
 
-void Crypt_resetMAC(CryptMACInfo *cryptMACInfo)
+void Crypt_resetMAC(CryptMAC *cryptMAC)
 {
-  assert(cryptMACInfo != NULL);
+  assert(cryptMAC != NULL);
 
   #ifdef HAVE_GCRYPT
-    gcry_mac_reset(cryptMACInfo->gcry_mac_hd);
+    gcry_mac_reset(cryptMAC->gcry_mac_hd);
   #endif /* HAVE_GCRYPT */
 }
 
-void Crypt_updateMAC(CryptMACInfo *cryptMACInfo,
-                     void         *buffer,
-                     ulong        bufferLength
+void Crypt_updateMAC(CryptMAC *cryptMAC,
+                     void     *buffer,
+                     ulong    bufferLength
                     )
 {
-  assert(cryptMACInfo != NULL);
+  assert(cryptMAC != NULL);
 
   #ifdef HAVE_GCRYPT
-    gcry_mac_write(cryptMACInfo->gcry_mac_hd,buffer,bufferLength);
+    gcry_mac_write(cryptMAC->gcry_mac_hd,buffer,bufferLength);
   #endif /* HAVE_GCRYPT */
 }
 
-uint Crypt_getMACLength(const CryptMACInfo *cryptMACInfo)
+uint Crypt_getMACLength(const CryptMAC *cryptMAC)
 {
   uint macLength;
 
-  assert(cryptMACInfo != NULL);
+  assert(cryptMAC != NULL);
 
   macLength = 0;
-  switch (cryptMACInfo->cryptMACAlgorithm)
+  switch (cryptMAC->cryptMACAlgorithm)
   {
     case CRYPT_MAC_ALGORITHM_SHA2_224:
     case CRYPT_MAC_ALGORITHM_SHA2_256:
@@ -3077,7 +3084,7 @@ uint Crypt_getMACLength(const CryptMACInfo *cryptMACInfo)
           int macAlgorithm;
 
           macAlgorithm = GCRY_MAC_NONE;
-          switch (cryptMACInfo->cryptMACAlgorithm)
+          switch (cryptMAC->cryptMACAlgorithm)
           {
             case CRYPT_MAC_ALGORITHM_SHA2_224: macAlgorithm = GCRY_MAC_HMAC_SHA224; break;
             case CRYPT_MAC_ALGORITHM_SHA2_256: macAlgorithm = GCRY_MAC_HMAC_SHA256; break;
@@ -3104,12 +3111,16 @@ uint Crypt_getMACLength(const CryptMACInfo *cryptMACInfo)
   return macLength;
 }
 
-void *Crypt_getMAC(const CryptMACInfo *cryptMACInfo, void *buffer, uint bufferSize, uint *macLength)
+void *Crypt_getMAC(const CryptMAC *cryptMAC,
+                   void           *buffer,
+                   uint           bufferSize,
+                   uint           *macLength
+                  )
 {
-  assert(cryptMACInfo != NULL);
+  assert(cryptMAC != NULL);
   assert(buffer != NULL);
 
-  switch (cryptMACInfo->cryptMACAlgorithm)
+  switch (cryptMAC->cryptMACAlgorithm)
   {
     case CRYPT_MAC_ALGORITHM_SHA2_224:
     case CRYPT_MAC_ALGORITHM_SHA2_256:
@@ -3121,7 +3132,7 @@ void *Crypt_getMAC(const CryptMACInfo *cryptMACInfo, void *buffer, uint bufferSi
           size_t n;
 
           macAlgorithm = GCRY_MAC_NONE;
-          switch (cryptMACInfo->cryptMACAlgorithm)
+          switch (cryptMAC->cryptMACAlgorithm)
           {
             case CRYPT_MAC_ALGORITHM_SHA2_224: macAlgorithm = GCRY_MAC_HMAC_SHA224; break;
             case CRYPT_MAC_ALGORITHM_SHA2_256: macAlgorithm = GCRY_MAC_HMAC_SHA256; break;
@@ -3141,7 +3152,7 @@ void *Crypt_getMAC(const CryptMACInfo *cryptMACInfo, void *buffer, uint bufferSi
           }
 
           if (macLength != NULL) (*macLength) = n;
-          gcry_mac_read(cryptMACInfo->gcry_mac_hd,buffer,&n);
+          gcry_mac_read(cryptMAC->gcry_mac_hd,buffer,&n);
         }
       #else /* not HAVE_GCRYPT */
         return NULL;
@@ -3157,14 +3168,17 @@ void *Crypt_getMAC(const CryptMACInfo *cryptMACInfo, void *buffer, uint bufferSi
   return buffer;
 }
 
-bool Crypt_equalsMAC(const const CryptMACInfo *cryptMACInfo, void *mac, uint macLength)
+bool Crypt_verifyMAC(const CryptMAC *cryptMAC,
+                     void           *mac,
+                     uint           macLength
+                    )
 {
   bool equalsFlag;
 
-  assert(cryptMACInfo != NULL);
+  assert(cryptMAC != NULL);
 
   equalsFlag = FALSE;
-  switch (cryptMACInfo->cryptMACAlgorithm)
+  switch (cryptMAC->cryptMACAlgorithm)
   {
     case CRYPT_MAC_ALGORITHM_SHA2_224:
     case CRYPT_MAC_ALGORITHM_SHA2_256:
@@ -3172,7 +3186,7 @@ bool Crypt_equalsMAC(const const CryptMACInfo *cryptMACInfo, void *mac, uint mac
     case CRYPT_MAC_ALGORITHM_SHA2_512:
       #ifdef HAVE_GCRYPT
         {
-          equalsFlag = (gcry_mac_verify(cryptMACInfo->gcry_mac_hd,mac,macLength) == 0);
+          equalsFlag = (gcry_mac_verify(cryptMAC->gcry_mac_hd,mac,macLength) == 0);
         }
       #else /* not HAVE_GCRYPT */
       #endif /* HAVE_GCRYPT */
