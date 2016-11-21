@@ -69,8 +69,8 @@ LOCAL const struct
 // default alignment
 #define DEFAULT_ALIGNMENT 4
 
-// used hash algorithm for signatures (currently fixed)
-#define SIGNATURE_HASH_ALGORITHM CRYPT_HASH_ALGORITHM_SHA2_512
+// used message authentication code algorithm for signatures (currently fixed)
+#define SIGNATURE_MAC_ALGORITHM CRYPT_MAC_ALGORITHM_SHA2_512
 
 // i/o via file functions
 const ChunkIO CHUNK_IO_FILE =
@@ -1019,22 +1019,28 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
 {
   #define BUFFER_SIZE (1024*1024)
 
-  AutoFreeList        autoFreeList;
-  void                *buffer;
-  CryptHashInfo  signatureHash;
+  AutoFreeList   autoFreeList;
+  void           *buffer;
+  CryptMACInfo   signatureMAC;
   uint64         index;
   Errors         error;
   uint64         offset;
   ulong          n;
-  void           *hash;
+  byte           hash[1024];
   uint           hashLength;
+  byte           signature[1024];
+  uint           signatureLength;
+  void           *mac;
+  uint           macLength;
   ChunkSignature chunkSignature;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->chunkIO != NULL);
   assert(archiveHandle->chunkIO->seek != NULL);
 
-  if ((globalOptions.signaturePrivateKey.data != NULL) && !archiveHandle->jobOptions->noSignatureFlag)
+  if (   (Crypt_isKey(&globalOptions.signaturePrivateKey))
+      && !archiveHandle->jobOptions->noSignatureFlag
+     )
   {
     // init variables
     AutoFree_init(&autoFreeList);
@@ -1045,14 +1051,22 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
     }
     AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
 
-    // init signature hash
-    error = Crypt_initHash(&signatureHash,SIGNATURE_HASH_ALGORITHM);
+    // init signature MAC
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+#if 0
+    error = Crypt_initMAC(&signatureMAC,
+                          SIGNATURE_MAC_ALGORITHM,
+                          globalOptions.signaturePrivateKey.data,
+                          globalOptions.signaturePrivateKey.length
+                         );
     if (error != ERROR_NONE)
     {
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    AUTOFREE_ADD(&autoFreeList,&signatureHash,{ Crypt_doneHash(&signatureHash); });
+    AUTOFREE_ADD(&autoFreeList,&signatureMAC,{ Crypt_doneMAC(&signatureMAC); });
+globalOptions.signaturePrivateKey
+#endif
 
     // save index, set signature offset to beginning of archive
     error = archiveHandle->chunkIO->tell(archiveHandle->chunkIOUserData,&index);
@@ -1082,7 +1096,8 @@ fprintf(stderr,"%s, %d: index=%llu\n",__FILE__,__LINE__,index);
       {
 fprintf(stderr,"%s, %d: n=%lu\n",__FILE__,__LINE__,n);
 debugDumpMemory(buffer,n,0);
-        Crypt_updateHash(&signatureHash,buffer,n);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//        Crypt_updateMAC(&signatureMAC,buffer,n);
 
         offset += n;
       }
@@ -1101,19 +1116,42 @@ debugDumpMemory(buffer,n,0);
       return error;
     }
 
-    // get hash
-    hashLength = Crypt_getHashLength(&signatureHash);
-    hash = malloc(hashLength);
-    if (hash == NULL)
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//asm("int3");
+    error = Crypt_getSignature(&globalOptions.signaturePrivateKey,
+                               hash,
+                               hashLength,
+                               signature,
+                               sizeof(signature),
+                               &signatureLength
+                              );
+    error = Crypt_verifySignature(&globalOptions.signaturePublicKey,
+                               hash,
+                               hashLength,
+                               signature,
+                               signatureLength
+                              );
+if (error != ERROR_NONE)
+{
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+exit(1);
+}
+#if 0
+    // get MAC
+    macLength = Crypt_getMACLength(&signatureMAC);
+    mac = malloc(macLength);
+    if (mac == NULL)
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_INSUFFICIENT_MEMORY;
     }
-    Crypt_getHash(&signatureHash,hash,hashLength);
+    (void)Crypt_getMAC(&signatureMAC,mac,macLength,NULL);
+#endif
 #if 1
 fprintf(stderr,"%s, %d: write signature\n",__FILE__,__LINE__);
-debugDumpMemory(hash,hashLength,0);
+debugDumpMemory(mac,macLength,0);
 #endif
+    AUTOFREE_ADD(&autoFreeList,mac,{ free(mac); });
 
     // init signature chunk
     error = Chunk_init(&chunkSignature.info,
@@ -1128,47 +1166,33 @@ debugDumpMemory(hash,hashLength,0);
                       );
     if (error != ERROR_NONE)
     {
-      free(hash);
+      AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    assert(hashLength <= sizeof(chunkSignature.value));
-    chunkSignature.hashAlgorithm = SIGNATURE_HASH_ALGORITHM;
-//    memcpy(chunkSignature.value,hash,hashLength);
+    chunkSignature.macAlgorithm = SIGNATURE_MAC_ALGORITHM;
+//    chunkSignature.value.data   = mac;
+//    chunkSignature.value.length = macLength;
+    chunkSignature.value.data   = signature;
+    chunkSignature.value.length = signatureLength;
+    AUTOFREE_ADD(&autoFreeList,&chunkSignature.info,{ Chunk_done(&chunkSignature.info); });
 
-    // encrypt signature hash
-uint n;
-    error = Crypt_keyEncrypt(&globalOptions.signaturePrivateKey,
-                             hash,
-                             hashLength,
-                             chunkSignature.value,
-                             &n,
-                             sizeof(chunkSignature.value)
-                            );
+    // write signature chunk
+    error = Chunk_create(&chunkSignature.info);
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    error = Chunk_close(&chunkSignature.info);
     if (error != ERROR_NONE)
     {
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
 
-    // write signature chunk
-    error = Chunk_create(&chunkSignature.info);
-    if (error != ERROR_NONE)
-    {
-      Chunk_done(&chunkSignature.info);
-      free(hash);
-      return error;
-    }
-    error = Chunk_close(&chunkSignature.info);
-    if (error != ERROR_NONE)
-    {
-      Chunk_done(&chunkSignature.info);
-      free(hash);
-      return error;
-    }
-
-    // free resources
+    // free resources    
     Chunk_done(&chunkSignature.info);
-    free(hash);
+//    free(mac);
     free(buffer);
     AutoFree_done(&autoFreeList);
   }
@@ -1343,6 +1367,8 @@ if (!archiveHandle->file.openFlag) return ERROR_NONE;
       error = writeSignature(archiveHandle);
       if (error != ERROR_NONE)
       {
+        (void)File_close(&archiveHandle->file.fileHandle);
+        archiveHandle->file.openFlag = FALSE;
         Semaphore_unlock(&archiveHandle->chunkIOLock);
         return error;
       }
@@ -1467,7 +1493,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
 /***********************************************************************\
 * Name   : transferArchiveFileData
 * Purpose: transfer file data from temporary file to archive, update
-*          signature hash
+*          signature MAC
 * Input  : archiveHandle - archive handle
 *          fileHandle    - file handle of temporary file
 * Output : -
@@ -3580,13 +3606,16 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   archiveHandle->getPasswordUserData     = getPasswordUserData;
   archiveHandle->logHandle               = logHandle;
 
+  Crypt_randomize(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
+
   Semaphore_init(&archiveHandle->passwordLock);
   archiveHandle->cryptType               = Crypt_isEncrypted(jobOptions->cryptAlgorithm) ? jobOptions->cryptType : CRYPT_TYPE_NONE;
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
   archiveHandle->cryptKeyData            = NULL;
   archiveHandle->cryptKeyDataLength      = 0;
-  Crypt_randomize(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
+  Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
+//  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
 
   archiveHandle->ioType                  = ARCHIVE_IO_TYPE_FILE;
   archiveHandle->file.fileName           = String_new();
@@ -3608,10 +3637,12 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   archiveHandle->interrupt.openFlag      = FALSE;
   archiveHandle->interrupt.offset        = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->passwordLock,{ Semaphore_done(&archiveHandle->passwordLock); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptKey,{ Crypt_doneKey(&archiveHandle->cryptKey); });
+//  AUTOFREE_ADD(&autoFreeList,&archiveHandle->signatureCryptKey,{ Crypt_doneKey(&archiveHandle->signatureCryptKey); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->file.fileName,{ String_delete(archiveHandle->file.fileName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
 
-  // init key (if asymmetric encryption used)
+  // init encryption key (if asymmetric encryption used)
   if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
   {
     // check if public key available
@@ -3621,7 +3652,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
       return ERROR_NO_PUBLIC_KEY;
     }
 
-    // read public key
+    // init public key
     Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
     error = Crypt_setKeyData(&archiveHandle->cryptKey,
                              jobOptions->cryptPublicKey.data,
@@ -3636,7 +3667,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
       return error;
     }
 
-    // create new random key for encryption
+    // create new random key (password) for encryption
     archiveHandle->cryptPassword = Password_new();
     if (archiveHandle->cryptPassword == NULL)
     {
@@ -3652,9 +3683,9 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      error = Crypt_getRandomEncryptKey(&archiveHandle->cryptKey,
+      error = Crypt_getRandomEncryptKey(archiveHandle->cryptPassword,
+                                        &archiveHandle->cryptKey,
                                         jobOptions->cryptAlgorithm,
-                                        archiveHandle->cryptPassword,
                                         maxCryptKeyDataLength,
                                         archiveHandle->cryptKeyData,
                                         &archiveHandle->cryptKeyDataLength
@@ -3753,13 +3784,16 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   archiveHandle->getPasswordUserData     = getPasswordUserData;
   archiveHandle->logHandle               = logHandle;
 
+  memset(archiveHandle->cryptSalt,0,sizeof(archiveHandle->cryptSalt));
+
   Semaphore_init(&archiveHandle->passwordLock);
   archiveHandle->cryptType               = CRYPT_TYPE_NONE;
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
+  Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->cryptKeyData            = NULL;
   archiveHandle->cryptKeyDataLength      = 0;
-  memset(archiveHandle->cryptSalt,0,sizeof(archiveHandle->cryptSalt));
+//  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
 
   archiveHandle->ioType                  = ARCHIVE_IO_TYPE_STORAGE_FILE;
   archiveHandle->storage.storageInfo     = storageInfo;
@@ -3785,6 +3819,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   archiveHandle->interrupt.openFlag      = FALSE;
   archiveHandle->interrupt.offset        = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->passwordLock,{ Semaphore_done(&archiveHandle->passwordLock); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptKey,{ Crypt_doneKey(&archiveHandle->cryptKey); });
+//  AUTOFREE_ADD(&autoFreeList,&archiveHandle->signatureCryptKey,{ Crypt_doneKey(&archiveHandle->signatureCryptKey); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->storage.storageSpecifier,{ Storage_doneSpecifier(&archiveHandle->storage.storageSpecifier); });
   AUTOFREE_ADD(&autoFreeList,archiveHandle->printableStorageName,{ String_delete(archiveHandle->printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
@@ -3875,10 +3911,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
         break; /* not reached */
     #endif /* NDEBUG */
   }
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
 
   // free resources
   if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -3886,8 +3918,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
     assert(archiveHandle->cryptKeyData != NULL);
 
     free(archiveHandle->cryptKeyData);
-    Crypt_doneKey(&archiveHandle->cryptKey);
   }
+//  Crypt_doneKey(&archiveHandle->signatureCryptKey);
+  Crypt_doneKey(&archiveHandle->cryptKey);
 
   if (archiveHandle->jobUUID != NULL) String_delete(archiveHandle->jobUUID);
   if (archiveHandle->scheduleUUID != NULL) String_delete(archiveHandle->scheduleUUID);
@@ -4073,7 +4106,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
           return FALSE;
         }
 
-        // read private key, try to read key with no password, all passwords
+        // init private key: try with no password, all passwords
         Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
         decryptedFlag = FALSE;
         archiveHandle->pendingError = Crypt_setKeyData(&archiveHandle->cryptKey,
@@ -9505,17 +9538,17 @@ Errors Archive_verifySignatureEntry(ArchiveHandle  *archiveHandle,
 {
   #define BUFFER_SIZE (1024*1024)
 
-  AutoFreeList        autoFreeList;
-  void                *buffer;
-  ulong               n;
-  Errors              error;
-  ChunkHeader         chunkHeader;
-  ChunkSignature      chunkSignature;
-  CryptHashAlgorithms cryptHashAlgorithm;
-  byte                hash[1024];
-  uint                hashLength;
-  CryptHashInfo       signatureHash;
-  uint64              index;
+  AutoFreeList       autoFreeList;
+  void               *buffer;
+  ulong              n;
+  Errors             error;
+  ChunkHeader        chunkHeader;
+  ChunkSignature     chunkSignature;
+  CryptMACAlgorithms cryptMACAlgorithm;
+  byte               mac[1024];
+  uint               macLength;
+  CryptMACInfo       signatureMAC;
+  uint64             index;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->jobOptions != NULL);
@@ -9590,17 +9623,20 @@ Errors Archive_verifySignatureEntry(ArchiveHandle  *archiveHandle,
     return error;
   }
 
-  // get and check hash algorithms
-  if (!Crypt_isValidHashAlgorithm(chunkSignature.hashAlgorithm))
+  // get and check MAC algorithms
+  if (!Crypt_isValidMACAlgorithm(chunkSignature.macAlgorithm))
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     Chunk_close(&chunkSignature.info);
     AutoFree_cleanup(&autoFreeList);
-    return ERROR_INVALID_HASH_ALGORITHM;
+    return ERROR_INVALID_MAC_ALGORITHM;
   }
-  cryptHashAlgorithm = CRYPT_CONSTANT_TO_HASH_ALGORITHM(chunkSignature.hashAlgorithm);
+  cryptMACAlgorithm = CRYPT_CONSTANT_TO_MAC_ALGORITHM(chunkSignature.macAlgorithm);
 
-  // decrypt signature hash
+  // decrypt signature mac
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+#if 0
+//asm("int3");
   error = Crypt_keyDecrypt(signatureKey,
                            chunkSignature.value,
                            sizeof(chunkSignature.value),
@@ -9615,20 +9651,24 @@ Errors Archive_verifySignatureEntry(ArchiveHandle  *archiveHandle,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+#endif
 
   // done chunk
   Chunk_close(&chunkSignature.info);
   AUTOFREE_REMOVE(&autoFreeList,&chunkSignature.info);
   Chunk_done(&chunkSignature.info);
 
-  // init signature hash
-  error = Crypt_initHash(&signatureHash,SIGNATURE_HASH_ALGORITHM);
+  // init signature MAC
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+#if 0
+  error = Crypt_initMAC(&signatureMAC,SIGNATURE_MAC_ALGORITHM);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,&signatureHash,{ Crypt_doneHash(&signatureHash); });
+  AUTOFREE_ADD(&autoFreeList,&signatureMAC,{ Crypt_doneMAC(&signatureMAC); });
+#endif
 
   // save index, set signature offset
   Chunk_tell(&chunkSignature.info,&index);
@@ -9653,7 +9693,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle  *archiveHandle,
     if (error == ERROR_NONE)
     {
 //fprintf(stderr,"%s, %d: n=%lu\n",__FILE__,__LINE__,n); debugDumpMemory(buffer,n,0);
-      Crypt_updateHash(&signatureHash,buffer,n);
+      Crypt_updateMAC(&signatureMAC,buffer,n);
 
       offset += n;
     }
@@ -9675,15 +9715,17 @@ Errors Archive_verifySignatureEntry(ArchiveHandle  *archiveHandle,
   }
 
   // compare signatures
-//  if (!Crypt_equalsHash(&signatureHash,chunkSignature.value,sizeof(chunkSignature.value)))
-  if (!Crypt_equalsHash(&signatureHash,hash,hashLength))
+//  if (!Crypt_equalsMAC(&signatureMAC,chunkSignature.value.,sizeof(chunkSignature.value)))
+  if (!Crypt_equalsMAC(&signatureMAC,chunkSignature.value.data,chunkSignature.value.length))
+//TODO
+//  if (!Crypt_equalsMAC(&signatureMAC,mac,macLength))
   {
     AutoFree_cleanup(&autoFreeList);
     return ERROR_INVALID_SIGNATURE;
   }
 
-  // done signature hash
-  Crypt_doneHash(&signatureHash);
+  // done signature MAC
+  Crypt_doneMAC(&signatureMAC);
 
   // free resources
   free(buffer);
@@ -11412,23 +11454,13 @@ Errors Archive_verifySignatures(StorageInfo      *storageInfo,
                                )
 {
   AutoFreeList  autoFreeList;
-  CryptHashInfo signatureHash;
+  CryptMACInfo  signatureMAC;
   Errors        error;
   StorageHandle storageHandle;
   ChunkHeader   chunkHeader;
 
   // init variables
   AutoFree_init(&autoFreeList);
-
-  // init signature hash
-  error = Crypt_initHash(&signatureHash,SIGNATURE_HASH_ALGORITHM);
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  AUTOFREE_ADD(&autoFreeList,&signatureHash,{ Crypt_doneHash(&signatureHash); });
-  DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // open storage
   error = Storage_open(&storageHandle,
@@ -11469,6 +11501,23 @@ Errors Archive_verifySignatures(StorageInfo      *storageInfo,
       break;
     }
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+#if 0
+  // init signature MAC
+  error = Crypt_initMAC(&signatureMAC,
+                        SIGNATURE_MAC_ALGORITHM,
+                        signatureKeyData,
+                        signatureKeyDataLength
+                       );
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,&signatureMAC,{ Crypt_doneMAC(&signatureMAC); });
+  DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+#endif
+
     // check if signature
     if (chunkHeader.id == CHUNK_ID_SIGNATURE)
     {
@@ -11485,7 +11534,7 @@ fprintf(stderr,"%s, %d: CHUNK_ID_SIGNATURE\n",__FILE__,__LINE__);
   Storage_close(&storageHandle);
 
   // free resources
-  Crypt_doneHash(&signatureHash);
+  Crypt_doneMAC(&signatureMAC);
   AutoFree_done(&autoFreeList);
 }
 

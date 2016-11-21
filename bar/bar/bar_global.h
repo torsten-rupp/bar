@@ -406,8 +406,8 @@ typedef struct
 
   Password               *cryptPassword;                      // default password for encryption/decryption
 
-  Key                    signaturePublicKey;
-  Key                    signaturePrivateKey;
+  CryptKey               signaturePublicKey;
+  CryptKey               signaturePrivateKey;
 
   Server                 *fileServer;                         // current selected file server
   Server                 *defaultFileServer;                  // default file server

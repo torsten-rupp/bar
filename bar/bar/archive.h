@@ -200,14 +200,19 @@ typedef struct
   void                     *getPasswordUserData;                       // user data for call back to get crypt password
   LogHandle                *logHandle;                                 // log handle
 
+  byte                     cryptSalt[64];                              // crypt salt
+
   Semaphore                passwordLock;                               // input password lock
   CryptTypes               cryptType;                                  // crypt type (symmetric/asymmetric; see CryptTypes)
-  byte                     cryptSalt[64];                              // crypt salt
   Password                 *cryptPassword;                             // cryption password for encryption/decryption
   bool                     cryptPasswordReadFlag;                      // TRUE iff input callback for crypt password called
   CryptKey                 cryptKey;                                   // public/private key for encryption/decryption of random key used for asymmetric encryptio
+//TODO: use Key
   void                     *cryptKeyData;                              // encrypted random key used for asymmetric encryption
   uint                     cryptKeyDataLength;                         // length of encrypted random key
+
+  void                     *signatureKeyData;                          // signature random key
+  uint                     signatureKeyDataLength;                     // length of signature random key
 
   uint                     blockLength;                                // block length for file entry/file data (depend on used crypt algorithm)
 

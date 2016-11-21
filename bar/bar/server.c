@@ -18034,7 +18034,7 @@ LOCAL void initSession(ClientInfo *clientInfo)
   #else /* not NO_SESSION_ID */
     memset(clientInfo->sessionId,0,sizeof(SessionId));
   #endif /* NO_SESSION_ID */
-  (void)Crypt_createKeys(&clientInfo->publicKey,&clientInfo->secretKey,SESSION_KEY_SIZE,CRYPT_PADDING_TYPE_PKCS1);
+  (void)Crypt_createKeyPair(&clientInfo->publicKey,&clientInfo->secretKey,SESSION_KEY_SIZE,CRYPT_PADDING_TYPE_PKCS1);
 }
 
 /***********************************************************************\
