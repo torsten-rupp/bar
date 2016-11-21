@@ -1091,7 +1091,7 @@ Errors __Crypt_initMAC(const char         *__fileName__,
 \***********************************************************************/
 
 #ifdef NDEBUG
-void Crypt_doneMAC(CryptCryptMAC *cryptMAC);
+void Crypt_doneMAC(CryptMAC *cryptMAC);
 #else /* not NDEBUG */
 void __Crypt_doneMAC(const char *__fileName__,
                      ulong      __lineNb__,
