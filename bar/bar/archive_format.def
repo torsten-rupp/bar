@@ -104,106 +104,111 @@
 # ----------------------------------------------------------------------
 
 # encryption algorithms
-const CRYPT_ALGORITHM_NONE           = 0
+const CRYPT_ALGORITHM_NONE           = 0      
 
-const CRYPT_ALGORITHM_3DES           = 1
-const CRYPT_ALGORITHM_CAST5          = 2
-const CRYPT_ALGORITHM_BLOWFISH       = 3
-const CRYPT_ALGORITHM_AES128         = 4
-const CRYPT_ALGORITHM_AES192         = 5
-const CRYPT_ALGORITHM_AES256         = 6
-const CRYPT_ALGORITHM_TWOFISH128     = 7
-const CRYPT_ALGORITHM_TWOFISH256     = 8
-const CRYPT_ALGORITHM_SERPENT128     = 9
-const CRYPT_ALGORITHM_SERPENT192     = 10
-const CRYPT_ALGORITHM_SERPENT256     = 11
-const CRYPT_ALGORITHM_CAMELLIA128    = 12
-const CRYPT_ALGORITHM_CAMELLIA192    = 13
-const CRYPT_ALGORITHM_CAMELLIA256    = 14
+const CRYPT_ALGORITHM_3DES           = 1      
+const CRYPT_ALGORITHM_CAST5          = 2      
+const CRYPT_ALGORITHM_BLOWFISH       = 3      
+const CRYPT_ALGORITHM_AES128         = 4      
+const CRYPT_ALGORITHM_AES192         = 5      
+const CRYPT_ALGORITHM_AES256         = 6      
+const CRYPT_ALGORITHM_TWOFISH128     = 7      
+const CRYPT_ALGORITHM_TWOFISH256     = 8      
+const CRYPT_ALGORITHM_SERPENT128     = 9      
+const CRYPT_ALGORITHM_SERPENT192     = 10     
+const CRYPT_ALGORITHM_SERPENT256     = 11     
+const CRYPT_ALGORITHM_CAMELLIA128    = 12     
+const CRYPT_ALGORITHM_CAMELLIA192    = 13     
+const CRYPT_ALGORITHM_CAMELLIA256    = 14     
 
 # compress algorithms
-const COMPRESS_ALGORITHM_NONE        = 0
+const COMPRESS_ALGORITHM_NONE        = 0      
 
-const COMPRESS_ALGORITHM_ZIP_0       = 1
-const COMPRESS_ALGORITHM_ZIP_1       = 2
-const COMPRESS_ALGORITHM_ZIP_2       = 3
-const COMPRESS_ALGORITHM_ZIP_3       = 4
-const COMPRESS_ALGORITHM_ZIP_4       = 5
-const COMPRESS_ALGORITHM_ZIP_5       = 6
-const COMPRESS_ALGORITHM_ZIP_6       = 7
-const COMPRESS_ALGORITHM_ZIP_7       = 8
-const COMPRESS_ALGORITHM_ZIP_8       = 9
-const COMPRESS_ALGORITHM_ZIP_9       = 10
+const COMPRESS_ALGORITHM_ZIP_0       = 1      
+const COMPRESS_ALGORITHM_ZIP_1       = 2      
+const COMPRESS_ALGORITHM_ZIP_2       = 3      
+const COMPRESS_ALGORITHM_ZIP_3       = 4      
+const COMPRESS_ALGORITHM_ZIP_4       = 5      
+const COMPRESS_ALGORITHM_ZIP_5       = 6      
+const COMPRESS_ALGORITHM_ZIP_6       = 7      
+const COMPRESS_ALGORITHM_ZIP_7       = 8      
+const COMPRESS_ALGORITHM_ZIP_8       = 9      
+const COMPRESS_ALGORITHM_ZIP_9       = 10     
 
-const COMPRESS_ALGORITHM_BZIP2_1     = 11
-const COMPRESS_ALGORITHM_BZIP2_2     = 12
-const COMPRESS_ALGORITHM_BZIP2_3     = 13
-const COMPRESS_ALGORITHM_BZIP2_4     = 14
-const COMPRESS_ALGORITHM_BZIP2_5     = 15
-const COMPRESS_ALGORITHM_BZIP2_6     = 16
-const COMPRESS_ALGORITHM_BZIP2_7     = 18
-const COMPRESS_ALGORITHM_BZIP2_8     = 19
-const COMPRESS_ALGORITHM_BZIP2_9     = 20
+const COMPRESS_ALGORITHM_BZIP2_1     = 11     
+const COMPRESS_ALGORITHM_BZIP2_2     = 12     
+const COMPRESS_ALGORITHM_BZIP2_3     = 13     
+const COMPRESS_ALGORITHM_BZIP2_4     = 14     
+const COMPRESS_ALGORITHM_BZIP2_5     = 15     
+const COMPRESS_ALGORITHM_BZIP2_6     = 16     
+const COMPRESS_ALGORITHM_BZIP2_7     = 18     
+const COMPRESS_ALGORITHM_BZIP2_8     = 19     
+const COMPRESS_ALGORITHM_BZIP2_9     = 20     
 
-const COMPRESS_ALGORITHM_LZMA_1      = 21
-const COMPRESS_ALGORITHM_LZMA_2      = 22
-const COMPRESS_ALGORITHM_LZMA_3      = 23
-const COMPRESS_ALGORITHM_LZMA_4      = 24
-const COMPRESS_ALGORITHM_LZMA_5      = 25
-const COMPRESS_ALGORITHM_LZMA_6      = 26
-const COMPRESS_ALGORITHM_LZMA_7      = 27
-const COMPRESS_ALGORITHM_LZMA_8      = 28
-const COMPRESS_ALGORITHM_LZMA_9      = 29
+const COMPRESS_ALGORITHM_LZMA_1      = 21     
+const COMPRESS_ALGORITHM_LZMA_2      = 22     
+const COMPRESS_ALGORITHM_LZMA_3      = 23     
+const COMPRESS_ALGORITHM_LZMA_4      = 24     
+const COMPRESS_ALGORITHM_LZMA_5      = 25     
+const COMPRESS_ALGORITHM_LZMA_6      = 26     
+const COMPRESS_ALGORITHM_LZMA_7      = 27     
+const COMPRESS_ALGORITHM_LZMA_8      = 28     
+const COMPRESS_ALGORITHM_LZMA_9      = 29     
 
-const COMPRESS_ALGORITHM_XDELTA_1    = 30
-const COMPRESS_ALGORITHM_XDELTA_2    = 31
-const COMPRESS_ALGORITHM_XDELTA_3    = 32
-const COMPRESS_ALGORITHM_XDELTA_4    = 33
-const COMPRESS_ALGORITHM_XDELTA_5    = 34
-const COMPRESS_ALGORITHM_XDELTA_6    = 35
-const COMPRESS_ALGORITHM_XDELTA_7    = 36
-const COMPRESS_ALGORITHM_XDELTA_8    = 37
-const COMPRESS_ALGORITHM_XDELTA_9    = 38
+const COMPRESS_ALGORITHM_XDELTA_1    = 30     
+const COMPRESS_ALGORITHM_XDELTA_2    = 31     
+const COMPRESS_ALGORITHM_XDELTA_3    = 32     
+const COMPRESS_ALGORITHM_XDELTA_4    = 33     
+const COMPRESS_ALGORITHM_XDELTA_5    = 34     
+const COMPRESS_ALGORITHM_XDELTA_6    = 35     
+const COMPRESS_ALGORITHM_XDELTA_7    = 36     
+const COMPRESS_ALGORITHM_XDELTA_8    = 37     
+const COMPRESS_ALGORITHM_XDELTA_9    = 38     
 
-const COMPRESS_ALGORITHM_LZO1X_1_11  = 40
-const COMPRESS_ALGORITHM_LZO1X_1_12  = 41
-const COMPRESS_ALGORITHM_LZO1X_1_15  = 42
-const COMPRESS_ALGORITHM_LZO1X_1     = 43
-const COMPRESS_ALGORITHM_LZO1X_1_999 = 44
+const COMPRESS_ALGORITHM_LZO1X_1_11  = 40     
+const COMPRESS_ALGORITHM_LZO1X_1_12  = 41     
+const COMPRESS_ALGORITHM_LZO1X_1_15  = 42     
+const COMPRESS_ALGORITHM_LZO1X_1     = 43     
+const COMPRESS_ALGORITHM_LZO1X_1_999 = 44     
 
-const COMPRESS_ALGORITHM_LZ4_0       = 50
-const COMPRESS_ALGORITHM_LZ4_1       = 51
-const COMPRESS_ALGORITHM_LZ4_2       = 52
-const COMPRESS_ALGORITHM_LZ4_3       = 53
-const COMPRESS_ALGORITHM_LZ4_4       = 54
-const COMPRESS_ALGORITHM_LZ4_5       = 55
-const COMPRESS_ALGORITHM_LZ4_6       = 56
-const COMPRESS_ALGORITHM_LZ4_7       = 57
-const COMPRESS_ALGORITHM_LZ4_8       = 58
-const COMPRESS_ALGORITHM_LZ4_9       = 59
-const COMPRESS_ALGORITHM_LZ4_10      = 60
-const COMPRESS_ALGORITHM_LZ4_11      = 61
-const COMPRESS_ALGORITHM_LZ4_12      = 62
-const COMPRESS_ALGORITHM_LZ4_13      = 63
-const COMPRESS_ALGORITHM_LZ4_14      = 64
-const COMPRESS_ALGORITHM_LZ4_15      = 65
-const COMPRESS_ALGORITHM_LZ4_16      = 66
+const COMPRESS_ALGORITHM_LZ4_0       = 50     
+const COMPRESS_ALGORITHM_LZ4_1       = 51     
+const COMPRESS_ALGORITHM_LZ4_2       = 52     
+const COMPRESS_ALGORITHM_LZ4_3       = 53     
+const COMPRESS_ALGORITHM_LZ4_4       = 54     
+const COMPRESS_ALGORITHM_LZ4_5       = 55     
+const COMPRESS_ALGORITHM_LZ4_6       = 56     
+const COMPRESS_ALGORITHM_LZ4_7       = 57     
+const COMPRESS_ALGORITHM_LZ4_8       = 58     
+const COMPRESS_ALGORITHM_LZ4_9       = 59     
+const COMPRESS_ALGORITHM_LZ4_10      = 60     
+const COMPRESS_ALGORITHM_LZ4_11      = 61     
+const COMPRESS_ALGORITHM_LZ4_12      = 62     
+const COMPRESS_ALGORITHM_LZ4_13      = 63     
+const COMPRESS_ALGORITHM_LZ4_14      = 64     
+const COMPRESS_ALGORITHM_LZ4_15      = 65     
+const COMPRESS_ALGORITHM_LZ4_16      = 66     
 
-const FILE_SYSTEM_TYPE_NONE          = 0
-const FILE_SYSTEM_TYPE_EXT2          = 1
-const FILE_SYSTEM_TYPE_EXT3          = 2
-const FILE_SYSTEM_TYPE_EXT4          = 3
-const FILE_SYSTEM_TYPE_FAT12         = 4
-const FILE_SYSTEM_TYPE_FAT16         = 5
-const FILE_SYSTEM_TYPE_FAT32         = 6
-const FILE_SYSTEM_TYPE_REISERFS1     = 7
-const FILE_SYSTEM_TYPE_REISERFS3     = 8
-const FILE_SYSTEM_TYPE_REISERFS4     = 9
+const FILE_SYSTEM_TYPE_NONE          = 0      
+const FILE_SYSTEM_TYPE_EXT2          = 1      
+const FILE_SYSTEM_TYPE_EXT3          = 2      
+const FILE_SYSTEM_TYPE_EXT4          = 3      
+const FILE_SYSTEM_TYPE_FAT12         = 4      
+const FILE_SYSTEM_TYPE_FAT16         = 5      
+const FILE_SYSTEM_TYPE_FAT32         = 6      
+const FILE_SYSTEM_TYPE_REISERFS1     = 7      
+const FILE_SYSTEM_TYPE_REISERFS3     = 8      
+const FILE_SYSTEM_TYPE_REISERFS4     = 9      
 
-const HASH_ALGORITHM_SHA2_224        = 1
-const HASH_ALGORITHM_SHA2_256        = 2
-const HASH_ALGORITHM_SHA2_384        = 3
-const HASH_ALGORITHM_SHA2_512        = 4
+const HASH_ALGORITHM_SHA2_224        = 1      
+const HASH_ALGORITHM_SHA2_256        = 2      
+const HASH_ALGORITHM_SHA2_384        = 3      
+const HASH_ALGORITHM_SHA2_512        = 4      
+
+const MAC_ALGORITHM_SHA2_224         = 1      
+const MAC_ALGORITHM_SHA2_256         = 2      
+const MAC_ALGORITHM_SHA2_384         = 3      
+const MAC_ALGORITHM_SHA2_512         = 4      
 
 # ---
 
@@ -546,10 +551,9 @@ CHUNK SPECIAL_EXTENDED_ATTRIBUTE "SEAT" SpecialExtendedAttribute
 # parent: none
 # never compress/encrypted
 CHUNK SIGNATURE "SIG0" Signature
-  uint16   hashAlgorithm;
-  uint64   salt;
-  byte[64] value;
-  crc32    crc
+  uint16 macAlgorithm;
+  byte[] value;
+  crc32  crc
 
 # ----------------------------------------------------------------------
 
