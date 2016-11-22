@@ -1758,8 +1758,12 @@ test_file_operations: \
   test_file_operations_differential \
   test_file_operations_destroyed
 
-test/key.public test/key.private test/signature-key.public test/signature-key.private: $(TEST_BAR)
+test/key.public test/key.private : $(TEST_BAR)
+	$(RMF) test/key.public test/key.private
 	$(TEST_BAR) --generate-keys --crypt-password="$(TEST_PASSWORD_CRYPT)" test/key
+
+test/signature-key.public test/signature-key.private: $(TEST_BAR)
+	$(RMF) test/signature-key.public test/signature-key.private
 	$(TEST_BAR) --generate-signature-keys test/signature-key
 
 $(TEST_DATA_DIR)/data/zero128.dat:
