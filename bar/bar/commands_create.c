@@ -6598,6 +6598,10 @@ Errors Command_create(ConstString                  jobUUID,
       error = Device_mount(mountNode->name);
       if (error != ERROR_NONE)
       {
+        printError("Cannot mount device '%s' (error: %s)\n",
+                   String_cString(mountNode->name),
+                   Error_getText(error)
+                  );
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
