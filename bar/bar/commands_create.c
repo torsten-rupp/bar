@@ -963,7 +963,7 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
-    HALT_INTERNAL_ERROR("Send message to create threads!");
+    freeEntryMsg(&entryMsg,NULL);
   }
 }
 
@@ -997,7 +997,7 @@ LOCAL void appendDirectoryToEntryList(MsgQueue    *entryMsgQueue,
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
-    HALT_INTERNAL_ERROR("Send message to create threads!");
+    freeEntryMsg(&entryMsg,NULL);
   }
 }
 
@@ -1032,7 +1032,7 @@ LOCAL void appendLinkToEntryList(MsgQueue    *entryMsgQueue,
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
-    HALT_INTERNAL_ERROR("Send message to create threads!");
+    freeEntryMsg(&entryMsg,NULL);
   }
 }
 
@@ -1066,7 +1066,7 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
-    HALT_INTERNAL_ERROR("Send message to create threads!");
+    freeEntryMsg(&entryMsg,NULL);
   }
 }
 
@@ -1100,7 +1100,7 @@ LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
-    HALT_INTERNAL_ERROR("Send message to create threads!");
+    freeEntryMsg(&entryMsg,NULL);
   }
 }
 
@@ -1572,9 +1572,9 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
     // process include entries
     includeEntryNode = createInfo->includeEntryList->head;
-    while (   (includeEntryNode != NULL)
-           && (createInfo->failError == ERROR_NONE)
+    while (   (createInfo->failError == ERROR_NONE)
            && !isAborted(createInfo)
+           && (includeEntryNode != NULL)
           )
     {
       // pause
@@ -2080,7 +2080,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   if (createInfo->archiveType == ARCHIVE_TYPE_CONTINUOUS)
   {
     // process entries from continous database
-    while (Continuous_removeNext(createInfo->jobUUID,createInfo->scheduleUUID,name))
+    while (   (createInfo->failError == ERROR_NONE)
+           && !isAborted(createInfo)
+           && Continuous_removeNext(createInfo->jobUUID,createInfo->scheduleUUID,name)
+          )
     {
       // pause
       pauseCreate(createInfo);
@@ -2367,9 +2370,9 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
     // process include entries
     includeEntryNode = createInfo->includeEntryList->head;
-    while (   (includeEntryNode != NULL)
-           && (createInfo->failError == ERROR_NONE)
+    while (   (createInfo->failError == ERROR_NONE)
            && !isAborted(createInfo)
+           && (includeEntryNode != NULL)
           )
     {
       // pause
@@ -2397,9 +2400,9 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       // find files
       n = 0;
       StringList_append(&nameList,basePath);
-      while (   !StringList_isEmpty(&nameList)
-             && (createInfo->failError == ERROR_NONE)
+      while (   (createInfo->failError == ERROR_NONE)
              && !isAborted(createInfo)
+             && !StringList_isEmpty(&nameList)
             )
       {
         // pause
@@ -3358,7 +3361,7 @@ LOCAL Errors archiveStore(IndexHandle  *indexHandle,
   DEBUG_TESTCODE() { freeStorageMsg(&storageMsg,NULL); return DEBUG_TESTCODE_ERROR(); }
   if (!MsgQueue_put(&createInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg)))
   {
-    HALT_INTERNAL_ERROR("Send message to storage threads!");
+    freeStorageMsg(&storageMsg,NULL);
   }
 
   // update status info
@@ -4199,9 +4202,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           updateStatusInfo(createInfo,FALSE);
         }
       }
-      while (   !File_eof(&fileHandle)
-             && (createInfo->failError == ERROR_NONE)
+      while (   (createInfo->failError == ERROR_NONE)
              && !isAborted(createInfo)
+             && !File_eof(&fileHandle)
             );
 
 //TODO: on error restore to original size/delete
@@ -4212,10 +4215,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       // close storage
       Storage_close(&storageHandle);
     }
-    while (   ((error != ERROR_NONE) && (Error_getCode(error) != ENOSPC))      // some error amd not "no space left"
-           && (retryCount <= MAX_RETRIES)                                      // still some retry left
-           && (createInfo->failError == ERROR_NONE)                            // no eror
+    while (   (createInfo->failError == ERROR_NONE)                            // no eror
            && !isAborted(createInfo)                                           // not aborted
+           && ((error != ERROR_NONE) && (Error_getCode(error) != ENOSPC))      // some error amd not "no space left"
+           && (retryCount <= MAX_RETRIES)                                      // still some retry left
           );
     if (error != ERROR_NONE)
     {
@@ -4909,10 +4912,10 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
         }
       }
     }
-    while (   (bufferLength > 0L)
-           && (createInfo->failError == ERROR_NONE)
+    while (   (createInfo->failError == ERROR_NONE)
            && !isAborted(createInfo)
            && (error == ERROR_NONE)
+           && (bufferLength > 0L)
           );
     if (isAborted(createInfo))
     {
@@ -5213,10 +5216,10 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     blockCount    = deviceInfo.size/(uint64)deviceInfo.blockSize;
     error         = ERROR_NONE;
     entryDoneSize = 0LL;
-    while (   (block < blockCount)
-           && (error == ERROR_NONE)
-           && (createInfo->failError == ERROR_NONE)
+    while (   (createInfo->failError == ERROR_NONE)
            && !isAborted(createInfo)
+           && (error == ERROR_NONE)
+           && (block < blockCount)
           )
     {
       // pause
@@ -6003,10 +6006,10 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
         }
       }
     }
-    while (   (bufferLength > 0L)
-           && (error == ERROR_NONE)
-           && (createInfo->failError == ERROR_NONE)
+    while (   (createInfo->failError == ERROR_NONE)
            && !isAborted(createInfo)
+           && (error == ERROR_NONE)
+           && (bufferLength > 0L)
           );
     if (isAborted(createInfo))
     {
@@ -6836,8 +6839,6 @@ Errors Command_create(ConstString                  jobUUID,
     Thread_done(&createThreads[i]);
   }
 
-  // add signature
-
   // close archive
   AUTOFREE_REMOVE(&autoFreeList,&createInfo.archiveHandle);
   error = Archive_close(&createInfo.archiveHandle);
@@ -6897,9 +6898,9 @@ Errors Command_create(ConstString                  jobUUID,
   }
 
   // write incremental list
-  if (   createInfo.storeIncrementalFileInfoFlag
-      && (createInfo.failError == ERROR_NONE)
+  if (   (createInfo.failError == ERROR_NONE)
       && !isAborted(&createInfo)
+      && createInfo.storeIncrementalFileInfoFlag
       && !jobOptions->dryRunFlag
      )
   {

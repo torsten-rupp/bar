@@ -311,6 +311,46 @@ INLINE bool Chunk_eof(const ChunkIO *chunkIO,
 #endif /* NDEBUG || __CHUNKS_IMPLEMENATION__ */
 
 /***********************************************************************\
+* Name   : Chunk_startOffset
+* Purpose: get absolute chunk start offset
+* Input  : chunkInfo - chunk info block
+* Output : -
+* Return : start offset
+* Notes  : -
+\***********************************************************************/
+
+INLINE uint64 Chunk_startOffset(const ChunkInfo *chunkInfo);
+#if defined(NDEBUG) || defined(__CHUNKS_IMPLEMENATION__)
+INLINE uint64 Chunk_startOffset(const ChunkInfo *chunkInfo)
+{
+  assert(chunkInfo != NULL);
+  assert(chunkInfo->offset >= CHUNK_HEADER_SIZE);
+
+  return chunkInfo->offset-CHUNK_HEADER_SIZE;
+}
+#endif /* NDEBUG || __CHUNKS_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : Chunk_endOffset
+* Purpose: get absolute chunk end offset
+* Input  : chunkInfo - chunk info block
+* Output : -
+* Return : start offset
+* Notes  : -
+\***********************************************************************/
+
+INLINE uint64 Chunk_endOffset(const ChunkInfo *chunkInfo);
+#if defined(NDEBUG) || defined(__CHUNKS_IMPLEMENATION__)
+INLINE uint64 Chunk_endOffset(const ChunkInfo *chunkInfo)
+{
+  assert(chunkInfo != NULL);
+  assert(chunkInfo->offset >= CHUNK_HEADER_SIZE);
+
+  return CHUNK_HEADER_SIZE+chunkInfo->offset+chunkInfo->size;
+}
+#endif /* NDEBUG || __CHUNKS_IMPLEMENATION__ */
+
+/***********************************************************************\
 * Name   : Chunk_tell
 * Purpose: get current index position in chunk
 * Input  : chunkInfo - chunk info block
@@ -448,9 +488,9 @@ Errors Chunk_update(ChunkInfo *chunkInfo);
 /***********************************************************************\
 * Name   : Chunk_readData
 * Purpose: read data from chunk
-* Input  : chunkInfo   - chunk info block
-*          data        - buffer for data
-*          size        - max. number of bytes to read
+* Input  : chunkInfo - chunk info block
+*          data      - buffer for data
+*          size      - max. number of bytes to read
 * Output : bytesRead - number of bytes read (can be NULL)
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -465,9 +505,9 @@ Errors Chunk_readData(ChunkInfo *chunkInfo,
 /***********************************************************************\
 * Name   : Chunk_writeData
 * Purpose: write data into chunk
-* Input  : chunkInfo   - chunk info block
-*          data        - buffer with data
-*          size        - number of bytes to write
+* Input  : chunkInfo - chunk info block
+*          data      - buffer with data
+*          size      - number of bytes to write
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -

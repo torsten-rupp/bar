@@ -47,6 +47,16 @@ typedef enum
   ARCHIVE_IO_TYPE_STORAGE_FILE,
 } ArchiveIOTypes;
 
+typedef enum
+{
+  ARCHIVE_SIGNATURES_STATE_NONE,
+  ARCHIVE_SIGNATURES_STATE_OK,
+  ARCHIVE_SIGNATURES_STATE_INVALID,
+  ARCHIVE_SIGNATURES_STATE_NO_SIGNATURE_KEY,
+
+  ARCHIVE_SIGNATURES_STATE_UNKNOWN
+} ArchiveSignaturesStates;
+
 /***************************** Datatypes *******************************/
 
 // archive entry types
@@ -1285,7 +1295,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
 *          fileName    - file name (can be NULL)
 *          jobOptions  - option settings
 *          logHandle   - log handle (can be NULL)
-* Output : -
+* Output :
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -1427,21 +1437,23 @@ INLINE uint64 Archive_getEntries(const ArchiveHandle *archiveHandle)
 uint64 Archive_getSize(ArchiveHandle *archiveHandle);
 
 /***********************************************************************\
-* Name   : Archive_verifySignature
+* Name   : Archive_verifySignatures
 * Purpose: verify signatures of archive
 * Input  : storageInfo - storage info
 *          fileName    - file name (can be NULL)
 *          jobOptions  - option settings
 *          logHandle   - log handle (can be NULL)
-* Output : -
+* Output : archiveSignaturesState - signatures state; see
+*          ArchiveSignaturesStates
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_verifySignatures(StorageInfo      *storageInfo,
-                                ConstString      fileName,
-                                const JobOptions *jobOptions,
-                                LogHandle        *logHandle
+Errors Archive_verifySignatures(ArchiveSignaturesStates *archiveSignaturesState,
+                                StorageInfo             *storageInfo,
+                                ConstString             fileName,
+                                const JobOptions        *jobOptions,
+                                LogHandle               *logHandle
                                );
 
 /***********************************************************************\

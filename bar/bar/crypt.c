@@ -2521,7 +2521,7 @@ Errors Crypt_verifySignature(CryptKey   *publicKey,
     if (gcryptError != 0)
     {
       gcry_sexp_release(sexpSignatureData);
-      return ERROR_INVALID_SIGNATURE;
+      return ERRORX_(INVALID_SIGNATURE,gcryptError,"%s",gcry_strerror(gcryptError));
     }
 //fprintf(stderr,"%s, %d: data \n",__FILE__,__LINE__);
 //gcry_sexp_dump(sexpData);
