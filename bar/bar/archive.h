@@ -41,12 +41,14 @@
 /***************************** Constants *******************************/
 #define ARCHIVE_PART_NUMBER_NONE -1
 
+// archive I/O types
 typedef enum
 {
   ARCHIVE_IO_TYPE_FILE,
-  ARCHIVE_IO_TYPE_STORAGE_FILE,
+  ARCHIVE_IO_TYPE_STORAGE,
 } ArchiveIOTypes;
 
+// archive signatures states
 typedef enum
 {
   ARCHIVE_SIGNATURES_STATE_NONE,

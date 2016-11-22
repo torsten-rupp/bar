@@ -221,7 +221,7 @@ LOCAL Errors getCryptPassword(Password            *password,
           error = getPasswordFunction(NULL,  // loginName
                                       password,
                                       PASSWORD_TYPE_CRYPT,
-                                      (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
+                                      (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
                                         ? String_cString(Storage_getPrintableName(&archiveHandle->storage.storageSpecifier,NULL))
                                         : NULL,
                                       TRUE,
@@ -249,7 +249,7 @@ LOCAL Errors getCryptPassword(Password            *password,
           error = getPasswordFunction(NULL,  // loginName
                                       password,
                                       PASSWORD_TYPE_CRYPT,
-                                      (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
+                                      (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
                                         ? String_cString(Storage_getPrintableName(&archiveHandle->storage.storageSpecifier,NULL))
                                         : NULL,
                                       TRUE,
@@ -282,7 +282,7 @@ LOCAL Errors getCryptPassword(Password            *password,
           error = getPasswordFunction(NULL,  // loginName
                                       password,
                                       PASSWORD_TYPE_CRYPT,
-                                      (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
+                                      (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
                                         ? String_cString(Storage_getPrintableName(&archiveHandle->storage.storageSpecifier,NULL))
                                         : NULL,
                                       TRUE,
@@ -371,7 +371,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
                error = passwordHandle->getPasswordFunction(NULL,  // loginName
                                                            &newPassword,
                                                            PASSWORD_TYPE_CRYPT,
-                                                           (passwordHandle->archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE_FILE)
+                                                           (passwordHandle->archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
                                                              ? String_cString(Storage_getPrintableName(&passwordHandle->archiveHandle->storage.storageSpecifier,NULL))
                                                              : NULL,
                                                            FALSE,
@@ -3846,7 +3846,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   archiveHandle->cryptKeyDataLength      = 0;
 //  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
 
-  archiveHandle->ioType                  = ARCHIVE_IO_TYPE_STORAGE_FILE;
+  archiveHandle->ioType                  = ARCHIVE_IO_TYPE_STORAGE;
   archiveHandle->storage.storageInfo     = storageInfo;
   Storage_duplicateSpecifier(&archiveHandle->storage.storageSpecifier,&storageInfo->storageSpecifier);
   archiveHandle->printableStorageName    = String_duplicate(Storage_getPrintableName(&archiveHandle->storage.storageSpecifier,fileName));
@@ -3952,7 +3952,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
     case ARCHIVE_IO_TYPE_FILE:
       error = closeArchiveFile(archiveHandle,archiveHandle->indexHandle);
       break;
-    case ARCHIVE_IO_TYPE_STORAGE_FILE:
+    case ARCHIVE_IO_TYPE_STORAGE:
       Storage_close(&archiveHandle->storage.storageHandle);
       error = ERROR_NONE;
       break;
@@ -3984,7 +3984,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
     case ARCHIVE_IO_TYPE_FILE:
       if (archiveHandle->file.fileName != NULL) String_delete(archiveHandle->file.fileName);
       break;
-    case ARCHIVE_IO_TYPE_STORAGE_FILE:
+    case ARCHIVE_IO_TYPE_STORAGE:
       Storage_doneSpecifier(&archiveHandle->storage.storageSpecifier);
       break;
     #ifndef NDEBUG
@@ -4023,7 +4023,7 @@ Errors Archive_storageInterrupt(ArchiveHandle *archiveHandle)
         }
       }
       break;
-    case ARCHIVE_IO_TYPE_STORAGE_FILE:
+    case ARCHIVE_IO_TYPE_STORAGE:
       error = Storage_tell(&archiveHandle->storage.storageHandle,&archiveHandle->interrupt.offset);
       if (error != ERROR_NONE)
       {
@@ -4072,7 +4072,7 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle)
         archiveHandle->file.openFlag = archiveHandle->interrupt.openFlag;
       }
       break;
-    case ARCHIVE_IO_TYPE_STORAGE_FILE:
+    case ARCHIVE_IO_TYPE_STORAGE:
       error = Storage_open(&archiveHandle->storage.storageHandle,
                            archiveHandle->storage.storageInfo,
                            NULL  // archiveName
@@ -11356,7 +11356,7 @@ uint64 Archive_tell(ArchiveHandle *archiveHandle)
           }
         }
         break;
-      case ARCHIVE_IO_TYPE_STORAGE_FILE:
+      case ARCHIVE_IO_TYPE_STORAGE:
         archiveHandle->chunkIO->tell(archiveHandle->chunkIOUserData,&offset);
         break;
       #ifndef NDEBUG
@@ -11397,7 +11397,7 @@ Errors Archive_seek(ArchiveHandle *archiveHandle,
           }
         }
         break;
-      case ARCHIVE_IO_TYPE_STORAGE_FILE:
+      case ARCHIVE_IO_TYPE_STORAGE:
         error = archiveHandle->chunkIO->seek(archiveHandle->chunkIOUserData,offset);
         break;
       #ifndef NDEBUG
@@ -11435,7 +11435,7 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle)
                    : 0LL;
         }
         break;
-      case ARCHIVE_IO_TYPE_STORAGE_FILE:
+      case ARCHIVE_IO_TYPE_STORAGE:
         size = archiveHandle->chunkIO->getSize(archiveHandle->chunkIOUserData);
         break;
       #ifndef NDEBUG
