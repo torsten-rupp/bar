@@ -1206,6 +1206,14 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   assert(jobOptions != NULL);
   assert(fragmentList != NULL);
 
+  // init variables
+  testThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  testThreads = (Thread*)malloc(testThreadCount*sizeof(Thread));
+  if (testThreads == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
   // init test info
   initTestInfo(&testInfo,
                fragmentList,
@@ -1237,16 +1245,11 @@ NULL,  //               requestedAbortFlag,
                Error_getText(error)
               );
     doneTestInfo(&testInfo);
+    free(testThreads);
     return error;
   }
 
   // start test threads
-  testThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-  testThreads = (Thread*)malloc(testThreadCount*sizeof(Thread));
-  if (testThreads == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
   for (i = 0; i < testThreadCount; i++)
   {
     if (!Thread_init(&testThreads[i],"BAR test",globalOptions.niceLevel,testThreadCode,&testInfo))
@@ -1271,9 +1274,9 @@ NULL,  //               requestedAbortFlag,
                Storage_getPrintableNameCString(storageSpecifier,NULL),
                Error_getText(error)
               );
-    free(fprintf);
     (void)Storage_done(&storageInfo);
     doneTestInfo(&testInfo);
+    free(testThreads);
     return error;
   }
 
@@ -1334,7 +1337,6 @@ NULL,  //               requestedAbortFlag,
       HALT_INTERNAL_ERROR("Cannot stop test thread #%d!",i);
     }
   }
-  free(testThreads);
 
   // done storage
   (void)Storage_done(&storageInfo);
@@ -1343,6 +1345,7 @@ NULL,  //               requestedAbortFlag,
   doneTestInfo(&testInfo);
 
   // free resources
+  free(testThreads);
 
   return ERROR_NONE;
 }
