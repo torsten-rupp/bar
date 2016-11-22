@@ -3149,9 +3149,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   }
   Dictionary_doneIterator(&dictionaryIterator);
 
-  // done
-  MsgQueue_setEndOfMsg(&createInfo->entryMsgQueue);
-
   // free resoures
   Dictionary_done(&hardLinksDictionary);
   String_delete(name);
