@@ -368,12 +368,12 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
 
   MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
   {
-    // check if end of message (this is not an error)
+    // check if end of message
     if (msgQueue->endOfMsgFlag)
     {
       free(msgNode);
       unlock(msgQueue);
-      return TRUE;
+      return FALSE;
     }
 
     // check number of messages
