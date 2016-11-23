@@ -2142,7 +2142,7 @@ LOCAL Errors listArchiveContent(StorageSpecifier    *storageSpecifier,
                                )
 {
   CryptSignatureStates allCryptSignatureState;
-  bool                 printedInfoFlag;
+  bool                 printedHeaderFlag,printedMetaInfoFlag;
   ulong                fileCount;
   uint64               signatureOffset;
   Errors               error;
@@ -2160,7 +2160,8 @@ bool         remoteBarFlag;
 remoteBarFlag=FALSE;
 
   allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
-  printedInfoFlag        = FALSE;
+  printedHeaderFlag      = FALSE;
+  printedMetaInfoFlag    = FALSE;
   fileCount              = 0L;
   signatureOffset        = 0LL;
   error                  = ERROR_NONE;
@@ -2318,11 +2319,11 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
-                      // output file info
-                      if (!printedInfoFlag)
+                      // output info
+                      if (!printedHeaderFlag)
                       {
                         printArchiveListHeader();
-                        printedInfoFlag = TRUE;
+                        printedHeaderFlag = TRUE;
                       }
                       printFileInfo(NULL,
                                     fileName,
@@ -2431,11 +2432,11 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
-                      // output file info
-                      if (!printedInfoFlag)
+                      // output info
+                      if (!printedHeaderFlag)
                       {
                         printArchiveListHeader();
-                        printedInfoFlag = TRUE;
+                        printedHeaderFlag = TRUE;
                       }
                       printImageInfo(NULL,
                                      deviceName,
@@ -2522,11 +2523,11 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
-                      // output file info
-                      if (!printedInfoFlag)
+                      // output info
+                      if (!printedHeaderFlag)
                       {
                         printArchiveListHeader();
-                        printedInfoFlag = TRUE;
+                        printedHeaderFlag = TRUE;
                       }
                       printDirectoryInfo(NULL,
                                          directoryName,
@@ -2612,11 +2613,11 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
-                      // output file info
-                      if (!printedInfoFlag)
+                      // output info
+                      if (!printedHeaderFlag)
                       {
                         printArchiveListHeader();
-                        printedInfoFlag = TRUE;
+                        printedHeaderFlag = TRUE;
                       }
                       printLinkInfo(NULL,
                                     linkName,
@@ -2724,11 +2725,11 @@ remoteBarFlag=FALSE;
                       }
                       else
                       {
-                        // output file info
-                        if (!printedInfoFlag)
+                        // output info
+                        if (!printedHeaderFlag)
                         {
                           printArchiveListHeader();
-                          printedInfoFlag = TRUE;
+                          printedHeaderFlag = TRUE;
                         }
                         printHardLinkInfo(NULL,
                                           fileName,
@@ -2821,11 +2822,11 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
-                      // output file info
-                      if (!printedInfoFlag)
+                      // output info
+                      if (!printedHeaderFlag)
                       {
                         printArchiveListHeader();
-                        printedInfoFlag = TRUE;
+                        printedHeaderFlag = TRUE;
                       }
                       printSpecialInfo(NULL,
                                        fileName,
@@ -2902,16 +2903,20 @@ remoteBarFlag=FALSE;
                   }
 
                   // output meta data
-                  printMetaInfo(name,
-                                hostName,
-                                jobUUID,
-                                scheduleUUID,
-                                archiveType,
-                                createdDateTime,
-                                allCryptSignatureState,
-                                comment
-                               );
-                  printf("\n");
+                  if (!printedMetaInfoFlag)
+                  {
+                    printMetaInfo(name,
+                                  hostName,
+                                  jobUUID,
+                                  scheduleUUID,
+                                  archiveType,
+                                  createdDateTime,
+                                  allCryptSignatureState,
+                                  comment
+                                 );
+                    printf("\n");
+                    printedMetaInfoFlag = TRUE;
+                  }
 
                   // free resources
                   String_delete(comment);
@@ -3242,13 +3247,12 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
-                      if (!printedInfoFlag)
+                      // output info
+                      if (!printedHeaderFlag)
                       {
                         printArchiveListHeader();
-                        printedInfoFlag = TRUE;
+                        printedHeaderFlag = TRUE;
                       }
-
-                      // output file info
                       printFileInfo(NULL,
                                     fileName,
                                     fileSize,
@@ -3339,13 +3343,12 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
-                      if (!printedInfoFlag)
+                      // output info
+                      if (!printedHeaderFlag)
                       {
                         printArchiveListHeader();
-                        printedInfoFlag = TRUE;
+                        printedHeaderFlag = TRUE;
                       }
-
-                      // output file info
                       printImageInfo(NULL,
                                      imageName,
                                      imageSize,
@@ -3417,13 +3420,12 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
-                      if (!printedInfoFlag)
+                      // output info
+                      if (!printedHeaderFlag)
                       {
                         printArchiveListHeader();
-                        printedInfoFlag = TRUE;
+                        printedHeaderFlag = TRUE;
                       }
-
-                      // output file info
                       printDirectoryInfo(NULL,
                                          directoryName,
                                          dateTime,
@@ -3492,13 +3494,12 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
-                      if (!printedInfoFlag)
+                      // output info
+                      if (!printedHeaderFlag)
                       {
                         printArchiveListHeader();
-                        printedInfoFlag = TRUE;
+                        printedHeaderFlag = TRUE;
                       }
-
-                      // output file info
                       printLinkInfo(NULL,
                                     linkName,
                                     fileName,
@@ -3590,13 +3591,12 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
-                      if (!printedInfoFlag)
+                      // output info
+                      if (!printedHeaderFlag)
                       {
                         printArchiveListHeader();
-                        printedInfoFlag = TRUE;
+                        printedHeaderFlag = TRUE;
                       }
-
-                      // output file info
                       printHardLinkInfo(NULL,
                                         fileName,
                                         fileSize,
@@ -3677,13 +3677,12 @@ remoteBarFlag=FALSE;
                     }
                     else
                     {
-                      if (!printedInfoFlag)
+                      // output info
+                      if (!printedHeaderFlag)
                       {
                         printArchiveListHeader();
-                        printedInfoFlag = TRUE;
+                        printedHeaderFlag = TRUE;
                       }
-
-                      // output file info
                       printSpecialInfo(NULL,
                                        fileName,
                                        userId,
@@ -3760,7 +3759,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       #endif /* NDEBUG */
       break; /* not reached */
   }
-  if (printedInfoFlag)
+  if (printedHeaderFlag)
   {
     printArchiveListFooter(fileCount);
   }
@@ -3768,6 +3767,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     return error;
   }
+
+  // output signature state
   if (!showEntriesFlag && !globalOptions.groupFlag && !globalOptions.metaInfoFlag)
   {
     switch (allCryptSignatureState)
@@ -3791,7 +3792,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     printArchiveListFooter(List_count(&archiveContentList));
   }
 
-  return ERROR_NONE;
+  return (!globalOptions.noVerifySignaturesFlag && (allCryptSignatureState == CRYPT_SIGNATURE_STATE_INVALID))
+           ? ERROR_INVALID_SIGNATURE
+           : ERROR_NONE;
 }
 
 /***********************************************************************\

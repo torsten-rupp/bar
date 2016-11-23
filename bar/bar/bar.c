@@ -177,7 +177,7 @@ typedef enum
   COMMAND_COMPARE,
   COMMAND_RESTORE,
 
-  COMMAND_VERIFY_SIGNATURES,
+//  COMMAND_VERIFY_SIGNATURES,
 
   COMMAND_GENERATE_ENCRYPTION_KEYS,
   COMMAND_GENERATE_SIGNATURE_KEYS,
@@ -700,7 +700,6 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_CSTRING      ("pid-file",                     0,  1,1,pidFileName,                                                                                            "process id file name","file name"                                         ),
 
   CMD_OPTION_BOOLEAN      ("info",                         0  ,0,1,globalOptions.metaInfoFlag,                                                                             "show meta info"                                                           ),
-  CMD_OPTION_BOOLEAN      ("verify-signatures",            'r',0,1,globalOptions.verifySignaturesFlag,                                                                     "verify signatures of archives"                                            ),
 
   CMD_OPTION_BOOLEAN      ("group",                        'g',0,1,globalOptions.groupFlag,                                                                                "group files in list"                                                      ),
   CMD_OPTION_BOOLEAN      ("all",                          0,  0,1,globalOptions.allFlag,                                                                                  "show all files"                                                           ),
@@ -713,6 +712,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("ignore-no-backup-file",        0,  1,2,globalOptions.ignoreNoBackupFileFlag,                                                                   "ignore .nobackup/.NOBACKUP file"                                          ),
   CMD_OPTION_BOOLEAN      ("ignore-no-dump",               0,  1,2,jobOptions.ignoreNoDumpAttributeFlag,                                                                   "ignore 'no dump' attribute of files"                                      ),
 
+  CMD_OPTION_BOOLEAN      ("no-verify-signatures",         0,  0,1,globalOptions.noVerifySignaturesFlag,                                                                   "do not verify signatures of archives"                                     ),
   CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,2,jobOptions.skipUnreadableFlag,                                                                          "skip unreadable files"                                                    ),
   CMD_OPTION_BOOLEAN      ("force-delta-compression",      0,  0,2,jobOptions.forceDeltaCompressionFlag,                                                                   "force delta compression of files. Stop on error"                          ),
   CMD_OPTION_BOOLEAN      ("raw-images",                   0,  1,2,jobOptions.rawImagesFlag,                                                                               "store raw images (store all image blocks)"                                ),
@@ -8396,7 +8396,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         switch (command)
         {
           case COMMAND_NONE:
-            if      (globalOptions.metaInfoFlag || globalOptions.verifySignaturesFlag)
+            if      (globalOptions.metaInfoFlag)
             {
               // default: show meta-info only
               error = Command_list(&fileNameList,

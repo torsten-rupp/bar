@@ -445,7 +445,7 @@ typedef struct
   uint                   indexDatabaseKeepTime;               // number of seconds to keep index data of not existing storage
 
   bool                   metaInfoFlag;                        // TRUE iff meta info should be print
-  bool                   verifySignaturesFlag;                // TRUE to verify signatures of archives
+  bool                   noVerifySignaturesFlag;              // TRUE to not verify signatures of archives
   bool                   groupFlag;                           // TRUE iff entries in list should be grouped
   bool                   allFlag;                             // TRUE iff all entries should be listed/restored
   bool                   longFormatFlag;                      // TRUE iff long format list
