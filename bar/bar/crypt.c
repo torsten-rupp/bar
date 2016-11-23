@@ -2478,11 +2478,12 @@ Errors Crypt_getSignature(CryptKey *privateKey,
   #endif /* HAVE_GCRYPT */
 }
 
-Errors Crypt_verifySignature(CryptKey   *publicKey,
-                             const void *buffer,
-                             uint       bufferLength,
-                             const void *signature,
-                             uint       signatureLength
+Errors Crypt_verifySignature(CryptKey             *publicKey,
+                             const void           *buffer,
+                             uint                 bufferLength,
+                             const void           *signature,
+                             uint                 signatureLength,
+                             CryptSignatureStates *cryptSignatureState
                             )
 {
   #ifdef HAVE_GCRYPT
@@ -2495,6 +2496,8 @@ Errors Crypt_verifySignature(CryptKey   *publicKey,
   assert(publicKey != NULL);
   assert(buffer != NULL);
   assert(signature != NULL);
+
+  if (cryptSignatureState != NULL) (*cryptSignatureState) = CRYPT_SIGNATURE_STATE_NONE;
 
   #ifdef HAVE_GCRYPT
     // check if public key is available
@@ -2528,12 +2531,11 @@ Errors Crypt_verifySignature(CryptKey   *publicKey,
 
     // verify
     gcryptError = gcry_pk_verify(sexpSignatureData,sexpData,publicKey->key);
-    if (gcryptError != 0)
+    if (cryptSignatureState != NULL)
     {
-//fprintf(stderr,"%s,%d: %x %s %d\n",__FILE__,__LINE__,gcryptError,gcry_strerror(gcryptError),bufferLength);
-      gcry_sexp_release(sexpData);
-      gcry_sexp_release(sexpSignatureData);
-      return ERRORX_(INVALID_SIGNATURE,gcryptError,"%s",gcry_strerror(gcryptError));
+      (*cryptSignatureState) = (gcryptError == 0)
+                                 ? CRYPT_SIGNATURE_STATE_OK
+                                 : CRYPT_SIGNATURE_STATE_INVALID;
     }
 
     // free resources

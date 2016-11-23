@@ -48,17 +48,6 @@ typedef enum
   ARCHIVE_IO_TYPE_STORAGE,
 } ArchiveIOTypes;
 
-// archive signatures states
-typedef enum
-{
-  ARCHIVE_SIGNATURES_STATE_NONE,
-  ARCHIVE_SIGNATURES_STATE_OK,
-  ARCHIVE_SIGNATURES_STATE_INVALID,
-  ARCHIVE_SIGNATURES_STATE_NO_SIGNATURE_KEY,
-
-  ARCHIVE_SIGNATURES_STATE_UNKNOWN
-} ArchiveSignaturesStates;
-
 /***************************** Datatypes *******************************/
 
 // archive entry types
@@ -1293,18 +1282,19 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
 /***********************************************************************\
 * Name   : Archive_verifySignatureEntry
 * Purpose: verify signatures of archive
-* Input  : storageInfo - storage info
-*          fileName    - file name (can be NULL)
-*          jobOptions  - option settings
-*          logHandle   - log handle (can be NULL)
-* Output :
+* Input  : archiveHandle - archive handle
+*          offset        - offset
+*          cryptSignatureState - signature state; see
+*                                CryptSignatureStates (can be NULL)
+* Output : cryptSignatureState - signature state; see
+*                                CryptSignatureStates
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_verifySignatureEntry(ArchiveHandle  *archiveHandle,
-                                    uint64         offset,
-                                    const CryptKey *signatureKey
+Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
+                                    uint64               offset,
+                                    CryptSignatureStates *cryptSignatureState
                                    );
 
 /***********************************************************************\
@@ -1441,21 +1431,23 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle);
 /***********************************************************************\
 * Name   : Archive_verifySignatures
 * Purpose: verify signatures of archive
-* Input  : storageInfo - storage info
-*          fileName    - file name (can be NULL)
-*          jobOptions  - option settings
-*          logHandle   - log handle (can be NULL)
-* Output : archiveSignaturesState - signatures state; see
-*          ArchiveSignaturesStates
+* Input  : storageInfo             - storage info
+*          fileName                - file name (can be NULL)
+*          jobOptions              - option settings
+*          logHandle               - log handle (can be NULL)
+*          allCryptSignaturesState - state of all signatures; see
+*                                    CryptSignatureStates (can be NULL)
+* Output : allCryptSignaturesState - state of all signatures; see
+*                                    CryptSignatureStates
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_verifySignatures(ArchiveSignaturesStates *archiveSignaturesState,
-                                StorageInfo             *storageInfo,
-                                ConstString             fileName,
-                                const JobOptions        *jobOptions,
-                                LogHandle               *logHandle
+Errors Archive_verifySignatures(StorageInfo          *storageInfo,
+                                ConstString          fileName,
+                                const JobOptions     *jobOptions,
+                                LogHandle            *logHandle,
+                                CryptSignatureStates *allCryptSignaturesState
                                );
 
 /***********************************************************************\

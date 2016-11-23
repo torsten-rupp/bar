@@ -1195,11 +1195,13 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
     }
     assert(signatureLength < sizeof(signature));
 #if 0
+// test only
     error = Crypt_verifySignature(&globalOptions.signaturePublicKey,
                                hash,
                                hashLength,
                                signature,
-                               signatureLength
+                               signatureLength,
+                               NULL
                               );
 if (error != ERROR_NONE)
 {
@@ -9582,9 +9584,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   return ERROR_NONE;
 }
 
-Errors Archive_verifySignatureEntry(ArchiveHandle  *archiveHandle,
-                                    uint64         offset,
-                                    const CryptKey *signatureKey
+Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
+                                    uint64               offset,
+                                    CryptSignatureStates *cryptSignatureState
                                    )
 {
   AutoFreeList        autoFreeList;
@@ -9592,13 +9594,15 @@ Errors Archive_verifySignatureEntry(ArchiveHandle  *archiveHandle,
   ChunkHeader         chunkHeader;
   ChunkSignature      chunkSignature;
   CryptHashAlgorithms cryptHashAlgorithm;
-//  ulong               n;
   byte                hash[MAX_HASH_SIZE];
   uint                hashLength;
   CryptHash           signatureHash;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->jobOptions != NULL);
+
+  // init variables
+  if (cryptSignatureState != NULL) (*cryptSignatureState) = CRYPT_SIGNATURE_STATE_NONE;
 
   // check for pending error
   if (archiveHandle->pendingError != ERROR_NONE)
@@ -9712,14 +9716,15 @@ Errors Archive_verifySignatureEntry(ArchiveHandle  *archiveHandle,
   // done signature hash
   Crypt_doneHash(&signatureHash);
 
-  // compare signatures
+  // verify signature
 //fprintf(stderr,"%s, %d: hash %d\n",__FILE__,__LINE__,hashLength); debugDumpMemory(hash,hashLength,0);
 //fprintf(stderr,"%s, %d: signature %d\n",__FILE__,__LINE__,chunkSignature.value.length); debugDumpMemory(chunkSignature.value.data,chunkSignature.value.length,0);
   error = Crypt_verifySignature(&globalOptions.signaturePublicKey,
                                 hash,
                                 hashLength,
                                 chunkSignature.value.data,
-                                chunkSignature.value.length
+                                chunkSignature.value.length,
+                                cryptSignatureState
                                );
   if (error != ERROR_NONE)
   {
@@ -11450,31 +11455,32 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle)
   return size;
 }
 
-Errors Archive_verifySignatures(ArchiveSignaturesStates *archiveSignaturesState,
-                                StorageInfo             *storageInfo,
-                                ConstString             fileName,
-                                const JobOptions        *jobOptions,
-                                LogHandle               *logHandle
+Errors Archive_verifySignatures(StorageInfo          *storageInfo,
+                                ConstString          fileName,
+                                const JobOptions     *jobOptions,
+                                LogHandle            *logHandle,
+                                CryptSignatureStates *cryptSignaturesState
                                )
 {
-  AutoFreeList        autoFreeList;
-  Errors              error;
-  StorageHandle       storageHandle;
-  ChunkSignature      chunkSignature;
-  ChunkHeader         chunkHeader;
-  uint64              lastSignatureOffset;
-  CryptHashAlgorithms cryptHashAlgorithm;
-  CryptHash           signatureHash;
-  byte                hash[MAX_HASH_SIZE];
-  uint                hashLength;
-  Errors              signatureError;
+  AutoFreeList         autoFreeList;
+  Errors               error;
+  StorageHandle        storageHandle;
+  ChunkSignature       chunkSignature;
+  ChunkHeader          chunkHeader;
+  uint64               lastSignatureOffset;
+  CryptHashAlgorithms  cryptHashAlgorithm;
+  CryptHash            signatureHash;
+  byte                 hash[MAX_HASH_SIZE];
+  uint                 hashLength;
+  CryptSignatureStates cryptSignatureState;
 
-  assert(archiveSignaturesState != NULL);
+  assert(cryptSignaturesState != NULL);
   assert(storageInfo != NULL);
   assert(jobOptions != NULL);
 
   // init variables
   AutoFree_init(&autoFreeList);
+  if (cryptSignaturesState != NULL) (*cryptSignaturesState) = CRYPT_SIGNATURE_STATE_NONE;
 
   // check if signature public key is available
   if (!Crypt_isKey(&globalOptions.signaturePublicKey))
@@ -11534,10 +11540,12 @@ Errors Archive_verifySignatures(ArchiveSignaturesStates *archiveSignaturesState,
   }
 
   // check all signatures
-  if (archiveSignaturesState != NULL) (*archiveSignaturesState) = ARCHIVE_SIGNATURES_STATE_OK;
   lastSignatureOffset = 0LL;
   while (   (error == ERROR_NONE)
-         && ((archiveSignaturesState == NULL) || ((*archiveSignaturesState) == ARCHIVE_SIGNATURES_STATE_OK))
+         && (   (cryptSignaturesState == NULL)
+             || ((*cryptSignaturesState) == CRYPT_SIGNATURE_STATE_NONE)
+             || ((*cryptSignaturesState) == CRYPT_SIGNATURE_STATE_OK  )
+            )
          && !Chunk_eof(&CHUNK_IO_STORAGE,&storageHandle)
         )
   {
@@ -11610,35 +11618,50 @@ Errors Archive_verifySignatures(ArchiveSignaturesStates *archiveSignaturesState,
       // compare signatures
 //fprintf(stderr,"%s, %d: hash %d\n",__FILE__,__LINE__,hashLength); debugDumpMemory(hash,hashLength,0);
 //fprintf(stderr,"%s, %d: signature %d\n",__FILE__,__LINE__,chunkSignature.value.length); debugDumpMemory(chunkSignature.value.data,chunkSignature.value.length,0);
-      signatureError = Crypt_verifySignature(&globalOptions.signaturePublicKey,
-                                             hash,
-                                             hashLength,
-                                             chunkSignature.value.data,
-                                             chunkSignature.value.length
-                                            );
-      switch (Error_getCode(signatureError))
+      error = Crypt_verifySignature(&globalOptions.signaturePublicKey,
+                                    hash,
+                                    hashLength,
+                                    chunkSignature.value.data,
+                                    chunkSignature.value.length,
+                                    &cryptSignatureState
+                                   );
+      if (error != ERROR_NONE)
       {
-        case ERROR_NONE:
-          // nothing to do
-          break;
-        case ERROR_INVALID_SIGNATURE:
-          // signature invalid
-          if (archiveSignaturesState != NULL)
-          {
-            (*archiveSignaturesState) = ARCHIVE_SIGNATURES_STATE_INVALID;
-          }
-          break;
-        default:
-          // error verify signature
-          error = signatureError;
-          Chunk_close(&chunkSignature.info);
-          AutoFree_cleanup(&autoFreeList);
-          return error;
-          break;  // not reached
+        Chunk_close(&chunkSignature.info);
+        AutoFree_cleanup(&autoFreeList);
+        return error;
       }
 
       // close chunk
       Chunk_close(&chunkSignature.info);
+
+      // get all signatures state
+      switch (cryptSignatureState)
+      {
+        case CRYPT_SIGNATURE_STATE_NONE:
+          // nothing to do
+          break;
+        case CRYPT_SIGNATURE_STATE_OK:
+          if (cryptSignaturesState != NULL)
+          {
+            if ((*cryptSignaturesState) == CRYPT_SIGNATURE_STATE_NONE)
+            {
+              (*cryptSignaturesState) = CRYPT_SIGNATURE_STATE_OK;
+            }
+          }
+          break;
+        case CRYPT_SIGNATURE_STATE_INVALID:
+          if (cryptSignaturesState != NULL)
+          {
+            (*cryptSignaturesState) = CRYPT_SIGNATURE_STATE_INVALID;
+          }
+          break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* NDEBUG */
+          break; /* not reached */
+      }
 
       // get next signature offset
       lastSignatureOffset = Chunk_endOffset(&chunkSignature.info);

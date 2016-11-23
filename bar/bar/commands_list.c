@@ -340,14 +340,14 @@ LOCAL void printArchiveName(ConstString printableStorageName, bool showEntriesFl
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printMetaInfo(ConstString             userName,
-                         ConstString             hostName,
-                         ConstString             jobUUID,
-                         ConstString             scheduleUUID,
-                         ArchiveTypes            archiveType,
-                         uint64                  createdDateTime,
-                         ArchiveSignaturesStates archiveSignaturesState,
-                         ConstString             comment
+LOCAL void printMetaInfo(ConstString          userName,
+                         ConstString          hostName,
+                         ConstString          jobUUID,
+                         ConstString          scheduleUUID,
+                         ArchiveTypes         archiveType,
+                         uint64               createdDateTime,
+                         CryptSignatureStates allCryptSignatureState,
+                         ConstString          comment
                         )
 {
   String          dateTime;
@@ -372,11 +372,11 @@ LOCAL void printMetaInfo(ConstString             userName,
   printConsole(stdout,"Type         : %s\n",getArchiveTypeName(archiveType));
   printConsole(stdout,"Created at   : %s\n",String_cString(Misc_formatDateTime(dateTime,createdDateTime,NULL)));
   printConsole(stdout,"Signatures   : ");
-  switch (archiveSignaturesState)
+  switch (allCryptSignatureState)
   {
-    case ARCHIVE_SIGNATURES_STATE_NONE   : printConsole(stdout,"not available\n"); break;
-    case ARCHIVE_SIGNATURES_STATE_OK     : printConsole(stdout,"OK\n");            break;
-    case ARCHIVE_SIGNATURES_STATE_INVALID: printConsole(stdout,"INVALID!\n");      break;
+    case CRYPT_SIGNATURE_STATE_NONE   : printConsole(stdout,"none available\n"); break;
+    case CRYPT_SIGNATURE_STATE_OK     : printConsole(stdout,"OK\n");            break;
+    case CRYPT_SIGNATURE_STATE_INVALID: printConsole(stdout,"INVALID!\n");      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -2141,11 +2141,11 @@ LOCAL Errors listArchiveContent(StorageSpecifier    *storageSpecifier,
                                 LogHandle           *logHandle
                                )
 {
-  ArchiveSignaturesStates archiveSignaturesState;
-  bool                    printedInfoFlag;
-  ulong                   fileCount;
-  uint64                  signatureOffset;
-  Errors                  error;
+  CryptSignatureStates allCryptSignatureState;
+  bool                 printedInfoFlag;
+  ulong                fileCount;
+  uint64               signatureOffset;
+  Errors               error;
 bool         remoteBarFlag;
 //  SSHSocketList sshSocketList;
 //  SSHSocketNode *sshSocketNode;
@@ -2159,11 +2159,11 @@ bool         remoteBarFlag;
 // NYI ???
 remoteBarFlag=FALSE;
 
-  archiveSignaturesState = ARCHIVE_SIGNATURES_STATE_NONE;
+  allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
   printedInfoFlag        = FALSE;
   fileCount              = 0L;
   signatureOffset        = 0LL;
-  error              = ERROR_NONE;
+  error                  = ERROR_NONE;
   switch (storageSpecifier->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
@@ -2195,11 +2195,11 @@ remoteBarFlag=FALSE;
         }
 
         // check signatures
-        error = Archive_verifySignatures(&archiveSignaturesState,
-                                         &storageInfo,
+        error = Archive_verifySignatures(&storageInfo,
                                          archiveName,
                                          jobOptions,
-                                         logHandle
+                                         logHandle,
+                                         &allCryptSignatureState
                                         );
         if (error != ERROR_NONE)
         {
@@ -2908,7 +2908,7 @@ remoteBarFlag=FALSE;
                                 scheduleUUID,
                                 archiveType,
                                 createdDateTime,
-                                archiveSignaturesState,
+                                allCryptSignatureState,
                                 comment
                                );
                   printf("\n");
@@ -3770,11 +3770,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
   if (!showEntriesFlag && !globalOptions.groupFlag && !globalOptions.metaInfoFlag)
   {
-    switch (archiveSignaturesState)
+    switch (allCryptSignatureState)
     {
-      case ARCHIVE_SIGNATURES_STATE_NONE   : printConsole(stdout,"signature not available\n"); break;
-      case ARCHIVE_SIGNATURES_STATE_OK     : printConsole(stdout,"signature OK\n");            break;
-      case ARCHIVE_SIGNATURES_STATE_INVALID: printConsole(stdout,"signature INVALID!\n");      break;
+      case CRYPT_SIGNATURE_STATE_NONE   : printConsole(stdout,"no signatures available\n"); break;
+      case CRYPT_SIGNATURE_STATE_OK     : printConsole(stdout,"signatures OK\n");           break;
+      case CRYPT_SIGNATURE_STATE_INVALID: printConsole(stdout,"signature INVALID!\n");      break;
       default:
         #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();

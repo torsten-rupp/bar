@@ -83,6 +83,7 @@ typedef enum
   CRYPT_MAC_ALGORITHM_UNKNOW   = 0xFFFF
 } CryptMACAlgorithms;
 
+// crypt types
 typedef enum
 {
   CRYPT_TYPE_NONE,
@@ -91,6 +92,7 @@ typedef enum
   CRYPT_TYPE_ASYMMETRIC,
 } CryptTypes;
 
+// crypt key padding types
 typedef enum
 {
   CRYPT_PADDING_TYPE_NONE,
@@ -98,6 +100,17 @@ typedef enum
   CRYPT_PADDING_TYPE_PKCS1,
   CRYPT_PADDING_TYPE_OAEP
 } CryptPaddingTypes;
+
+// signatures states
+typedef enum
+{
+  CRYPT_SIGNATURE_STATE_NONE,
+
+  CRYPT_SIGNATURE_STATE_OK,
+  CRYPT_SIGNATURE_STATE_INVALID,
+
+  CRYPT_SIGNATURE_STATE_UNKNOWN
+} CryptSignatureStates;
 
 /***************************** Datatypes *******************************/
 
@@ -923,21 +936,23 @@ Errors Crypt_getSignature(CryptKey *privateKey,
 /***********************************************************************\
 * Name   : Crypt_verifySignature
 * Purpose: decrypt data block
-* Input  : publicKey       - public crypt key
-*          buffer          - data to verify
-*          bufferLength    - length of data
-*          signature       - signature data
-*          signatureLength - signature data length
-* Output : buffer - data
+* Input  : publicKey           - public crypt key
+*          buffer              - data to verify
+*          bufferLength        - length of data
+*          signature           - signature data
+*          signatureLength     - signature data length
+*          cryptSignatureState - signate state variable (can be NULL)
+* Output : cryptSignatureState - signature state
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_verifySignature(CryptKey   *publicKey,
-                             const void *buffer,
-                             uint       bufferLength,
-                             const void *signature,
-                             uint       signatureLength
+Errors Crypt_verifySignature(CryptKey             *publicKey,
+                             const void           *buffer,
+                             uint                 bufferLength,
+                             const void           *signature,
+                             uint                 signatureLength,
+                             CryptSignatureStates *cryptSignatureState
                             );
 
 /*---------------------------------------------------------------------*/
