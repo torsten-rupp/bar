@@ -938,9 +938,11 @@ LOCAL void updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
 /***********************************************************************\
 * Name   : appendFileToEntryList
 * Purpose: append file to entry list
-* Input  : entryMsgQueue - entry message queue
-*          entryType     - entry type
-*          name          - name (will be copied!)
+* Input  : entryMsgQueue  - entry message queue
+*          entryType      - entry type
+*          name           - name (will be copied!)
+*          fragmentOffset - fragment offset
+*          fragmentSize   - fragment size
 * Output : -
 * Return : -
 * Notes  : -
@@ -1049,9 +1051,11 @@ LOCAL void appendLinkToEntryList(MsgQueue    *entryMsgQueue,
 /***********************************************************************\
 * Name   : appendHardLinkToEntryList
 * Purpose: append hard link to entry list
-* Input  : entryMsgQueue - entry message queue
-*          entryType     - entry type
-*          nameList      - name list
+* Input  : entryMsgQueue  - entry message queue
+*          entryType      - entry type
+*          nameList       - name list
+*          fragmentOffset - fragment offset
+*          fragmentSize   - fragment size
 * Output : -
 * Return : -
 * Notes  : -
@@ -4786,11 +4790,13 @@ LOCAL void clearStatusEntryDoneInfo(CreateInfo *createInfo, bool locked)
 /***********************************************************************\
 * Name   : storeFileEntry
 * Purpose: store a file entry into archive
-* Input  : createInfo  - create info structure
-*          indexHandle - index handle or NULL if no index
-*          fileName    - file name to store
-*          buffer      - buffer for temporary data
-*          bufferSize  - size of data buffer
+* Input  : createInfo     - create info structure
+*          indexHandle    - index handle or NULL if no index
+*          fileName       - file name to store
+*          fragmentOffset - fragment offset
+*          fragmentSize   - fragment size
+*          buffer         - buffer for temporary data
+*          bufferSize     - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -4799,6 +4805,8 @@ LOCAL void clearStatusEntryDoneInfo(CreateInfo *createInfo, bool locked)
 LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
                             IndexHandle *indexHandle,
                             ConstString fileName,
+                            uint64      fragmentOffset,
+                            uint64      fragmentSize,
                             byte        *buffer,
                             uint        bufferSize
                            )
@@ -4812,6 +4820,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   ArchiveEntryInfo          archiveEntryInfo;
   SemaphoreLock             semaphoreLock;
   uint64                    entryDoneSize;
+  uint64                    size;
   ulong                     bufferLength;
   uint64                    archiveSize;
   uint64                    doneSize;
@@ -4885,8 +4894,12 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     }
   }
 
-  // open file
+  // open file and seek to start offset
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
+  if (error == ERROR_NONE)
+  {
+    error = File_seek(&fileHandle,fragmentOffset);
+  }
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
@@ -4951,6 +4964,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     }
 
     // write file content to archive
+    size          = fragmentSize;
     bufferLength  = 0L;
     error         = ERROR_NONE;
     entryDoneSize = 0LL;
@@ -4975,6 +4989,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
             // try to set status done entry info
             if (!statusEntryDoneLocked)
             {
+//TODO: fileInfo.size?
               statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,fileName,fileInfo.size);
             }
 
@@ -4991,6 +5006,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
               {
                 String_set(createInfo->statusInfo.entryName,fileName);
                 createInfo->statusInfo.entryDoneSize  = entryDoneSize;
+//TODO: fileInfo.size?
                 createInfo->statusInfo.entryTotalSize = fileInfo.size;
               }
               createInfo->statusInfo.doneSize         = doneSize;
@@ -5037,9 +5053,9 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
         SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           createInfo->statusInfo.doneCount++;
-          createInfo->statusInfo.doneSize += (uint64)fileInfo.size;
+          createInfo->statusInfo.doneSize += fragmentSize;
           createInfo->statusInfo.errorEntryCount++;
-          createInfo->statusInfo.errorEntrySize += (uint64)fileInfo.size;
+          createInfo->statusInfo.errorEntrySize += fragmentSize;
         }
         (void)Archive_closeEntry(&archiveEntryInfo);
         (void)File_close(&fileHandle);
@@ -5092,28 +5108,32 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
           || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
          )
       {
+//TODO: output fragmentsize
         printInfo(1,"OK (%llu bytes, ratio %.1f%%)\n",
-                  fileInfo.size,
+                  fragmentSize,
                   compressionRatio
                  );
         logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(fileName));
       }
       else
       {
+//TODO: output fragmentsize
         printInfo(1,"OK (%llu bytes)\n",
-                  fileInfo.size
+                  fragmentSize
                  );
         logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(fileName));
       }
     }
     else
     {
-      printInfo(1,"OK (%llu bytes, dry-run)\n",fileInfo.size);
+//TODO: output fragmentsize
+      printInfo(1,"OK (%llu bytes, dry-run)\n",fragmentSize);
     }
   }
   else
   {
-    printInfo(1,"OK (%llu bytes, not stored)\n",fileInfo.size);
+//TODO: output fragmentsize
+    printInfo(1,"OK (%llu bytes, not stored)\n",fragmentSize);
   }
 
   // update done entries
@@ -5144,11 +5164,13 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 /***********************************************************************\
 * Name   : storeImageEntry
 * Purpose: store an image entry into archive
-* Input  : createInfo  - create info structure
-*          indexHandle - index handle or NULL if no index
-*          deviceName  - device name
-*          buffer      - buffer for temporary data
-*          bufferSize  - size of data buffer
+* Input  : createInfo     - create info structure
+*          indexHandle    - index handle or NULL if no index
+*          deviceName     - device name
+*          fragmentOffset - fragment offset
+*          fragmentSize   - fragment size
+*          buffer         - buffer for temporary data
+*          bufferSize     - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -5157,6 +5179,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                              IndexHandle *indexHandle,
                              ConstString deviceName,
+                             uint64      fragmentOffset,
+                             uint64      fragmentSize,
                              byte        *buffer,
                              uint        bufferSize
                             )
@@ -5879,11 +5903,13 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 /***********************************************************************\
 * Name   : storeHardLinkEntry
 * Purpose: store a hard link entry into archive
-* Input  : createInfo  - create info structure
-*          indexHandle - index handle or NULL if no index
-*          nameList    - hard link name list to store
-*          buffer      - buffer for temporary data
-*          bufferSize  - size of data buffer
+* Input  : createInfo     - create info structure
+*          indexHandle    - index handle or NULL if no index
+*          nameList       - hard link name list to store
+*          fragmentOffset - fragment offset
+*          fragmentSize   - fragment size
+*          buffer         - buffer for temporary data
+*          bufferSize     - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -5892,6 +5918,8 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                 IndexHandle      *indexHandle,
                                 const StringList *nameList,
+                                uint64           fragmentOffset,
+                                uint64           fragmentSize,
                                 byte             *buffer,
                                 uint             bufferSize
                                )
@@ -6439,6 +6467,8 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
               error = storeFileEntry(createInfo,
                                      createInfo->indexHandle,
                                      entryMsg.name,
+                                     entryMsg.fragmentOffset,
+                                     entryMsg.fragmentSize,
                                      buffer,
                                      BUFFER_SIZE
                                     );
@@ -6498,6 +6528,8 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
               error = storeHardLinkEntry(createInfo,
                                          createInfo->indexHandle,
                                          &entryMsg.nameList,
+                                         entryMsg.fragmentOffset,
+                                         entryMsg.fragmentSize,
                                          buffer,
                                          BUFFER_SIZE
                                         );
@@ -6526,6 +6558,8 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
               error = storeImageEntry(createInfo,
                                       createInfo->indexHandle,
                                       entryMsg.name,
+                                      entryMsg.fragmentOffset,
+                                      entryMsg.fragmentSize,
                                       buffer,
                                       BUFFER_SIZE
                                      );
