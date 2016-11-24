@@ -8648,6 +8648,7 @@ Dprintf.dprintf("");
       long    totalEntrySize,totalEntryContentSize;
       String  restoreToDirectory;
       boolean directoryContent;
+      boolean skipVerifySignatures;
       boolean overwriteEntries;
 
       Data()
@@ -8657,6 +8658,7 @@ Dprintf.dprintf("");
         this.totalEntryContentSize = 0L;
         this.restoreToDirectory    = null;
         this.directoryContent      = false;
+        this.skipVerifySignatures  = false;
         this.overwriteEntries      = false;
       }
     };
@@ -8684,6 +8686,7 @@ Dprintf.dprintf("");
     final Button widgetRestoreTo;
     final Text   widgetRestoreToDirectory;
     final Button widgetDirectoryContent;
+    final Button widgetSkipVerifySignatures;
     final Button widgetOverwriteEntries;
     final Button widgetRestore;
     composite = Widgets.newComposite(dialog);
@@ -8834,9 +8837,13 @@ Dprintf.dprintf("");
         }
       });
 
+      widgetSkipVerifySignatures = Widgets.newCheckbox(composite,BARControl.tr("Skip verify signatures"));
+      widgetSkipVerifySignatures.setToolTipText(BARControl.tr("Enable this checkbox when verification of signatures should be skipped."));
+      Widgets.layout(widgetSkipVerifySignatures,5,0,TableLayoutData.W,0,2);
+
       widgetOverwriteEntries = Widgets.newCheckbox(composite,BARControl.tr("Overwrite existing entries"));
       widgetOverwriteEntries.setToolTipText(BARControl.tr("Enable this checkbox when existing entries in destination should be overwritten."));
-      Widgets.layout(widgetOverwriteEntries,5,0,TableLayoutData.W,0,2);
+      Widgets.layout(widgetOverwriteEntries,6,0,TableLayoutData.W,0,2);
     }
 
     // buttons
@@ -8858,9 +8865,10 @@ Dprintf.dprintf("");
         {
           Button widget = (Button)selectionEvent.widget;
 
-          data.restoreToDirectory = widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : null;
-          data.directoryContent   = widgetDirectoryContent.getSelection();
-          data.overwriteEntries   = widgetOverwriteEntries.getSelection();
+          data.restoreToDirectory   = widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : null;
+          data.directoryContent     = widgetDirectoryContent.getSelection();
+          data.skipVerifySignatures = widgetSkipVerifySignatures.getSelection();
+          data.overwriteEntries     = widgetOverwriteEntries.getSelection();
 
           Dialogs.close(dialog,true);
         }
@@ -9121,15 +9129,16 @@ Dprintf.dprintf("");
                                                   );
       busyDialog.updateText(2,"%s",BARControl.tr("Failed entries")+":");
 
-      new BackgroundTask(busyDialog,new Object[]{indexIdSet,data.restoreToDirectory,data.directoryContent,data.overwriteEntries})
+      new BackgroundTask(busyDialog,new Object[]{indexIdSet,data.restoreToDirectory,data.directoryContent,data.skipVerifySignatures,data.overwriteEntries})
       {
         @Override
         public void run(final BusyDialog busyDialog, Object userData)
         {
-          final IndexIdSet indexIdSet         = (IndexIdSet)((Object[])userData)[0];
-          final String     restoreToDirectory = (String    )((Object[])userData)[1];
-          final boolean    directoryContent   = (Boolean   )((Object[])userData)[2];
-          final boolean    overwriteEntries   = (Boolean   )((Object[])userData)[3];
+          final IndexIdSet indexIdSet           = (IndexIdSet)((Object[])userData)[0];
+          final String     restoreToDirectory   = (String    )((Object[])userData)[1];
+          final boolean    directoryContent     = (Boolean   )((Object[])userData)[2];
+          final boolean    skipVerifySignatures = (Boolean   )((Object[])userData)[3];
+          final boolean    overwriteEntries     = (Boolean   )((Object[])userData)[4];
 
           int errorCode;
 
@@ -9166,15 +9175,17 @@ Dprintf.dprintf("");
             switch (restoreType)
             {
               case ARCHIVES:
-                command = StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteEntries=%y",
+                command = StringParser.format("RESTORE type=ARCHIVES destination=%'S skipVerifySignatures=%y overwriteEntries=%y",
                                               (restoreToDirectory != null) ? restoreToDirectory : "",
+                                              skipVerifySignatures,
                                               overwriteEntries
                                              );
                 break;
               case ENTRIES:
-                command = StringParser.format("RESTORE type=ENTRIES destination=%'S directoryContent=%y overwriteEntries=%y",
+                command = StringParser.format("RESTORE type=ENTRIES destination=%'S directoryContent=%y skipVerifySignatures=%y overwriteEntries=%y",
                                               (restoreToDirectory != null) ? restoreToDirectory : "",
                                               directoryContent,
+                                              skipVerifySignatures,
                                               overwriteEntries
                                              );
                 break;
