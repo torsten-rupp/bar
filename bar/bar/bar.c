@@ -499,6 +499,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER64    ("max-tmp-size",                 0,  1,1,globalOptions.maxTmpSize,                        0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,              "max. size of temporary files","unlimited"                                 ),
 
   CMD_OPTION_INTEGER64    ("archive-part-size",            's',0,2,jobOptions.archivePartSize,                      0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,              "approximated archive part size","unlimited"                               ),
+  CMD_OPTION_INTEGER64    ("fragment-size",                0,  0,3,globalOptions.fragmentSize,                      0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,              "fragment size","unlimited"                                                ),
 
   CMD_OPTION_INTEGER      ("directory-strip",              'p',1,2,jobOptions.directoryStripCount,                  -1,MAX_INT,NULL,                                       "number of directories to strip on extract",NULL                           ),
   CMD_OPTION_STRING       ("destination",                  0,  0,2,jobOptions.destination,                                                                                 "destination to restore entries","path"                                    ),

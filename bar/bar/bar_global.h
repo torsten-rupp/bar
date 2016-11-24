@@ -402,6 +402,7 @@ typedef struct
 
   BandWidthList          maxBandWidthList;                    // list of max. send/receive bandwidth to use [bits/s]
 
+  uint64                 fragmentSize;                        // fragment size huge files [bytes]
   ulong                  compressMinFileSize;                 // min. size of file for using compression
 
   Password               *cryptPassword;                      // default password for encryption/decryption
