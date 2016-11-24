@@ -1041,7 +1041,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     // open archive
     error = Archive_open(&archiveHandle,
                          entryMsg.storageInfo,
-                         NULL,  // archiveName,
+                         NULL,  // fileName,
                          testInfo->deltaSourceList,
                          testInfo->jobOptions,
                          testInfo->getPasswordFunction,
@@ -1063,7 +1063,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     error = Archive_seek(&archiveHandle,entryMsg.offset);
     if (error != ERROR_NONE)
     {
-      printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
+      printError("Cannot read storage '%s' (error: %s)!\n",
                  Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
                  Error_getText(error)
                 );
@@ -1190,12 +1190,12 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
 {
   TestInfo             testInfo;
   StorageInfo          storageInfo;
+  Errors               error;
   CryptSignatureStates allCryptSignatureState;
   Thread               *testThreads;
   uint                 testThreadCount;
   uint                 i;
   Errors               failError;
-  Errors               error;
   ArchiveHandle        archiveHandle;
   ArchiveEntryTypes    archiveEntryType;
   uint64               offset;

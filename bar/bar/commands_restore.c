@@ -2343,13 +2343,14 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
                                    ConstString      archiveName
                                   )
 {
-  AutoFreeList      autoFreeList;
-  byte              *buffer;
-  StorageInfo       storageInfo;
-  Errors            error;
-  ArchiveHandle     archiveHandle;
-  Errors            failError;
-  ArchiveEntryTypes archiveEntryType;
+  AutoFreeList         autoFreeList;
+  byte                 *buffer;
+  StorageInfo          storageInfo;
+  Errors               error;
+  CryptSignatureStates allCryptSignatureState;
+  ArchiveHandle        archiveHandle;
+  Errors               failError;
+  ArchiveEntryTypes    archiveEntryType;
 
   assert(restoreInfo != NULL);
   assert(restoreInfo->includeEntryList != NULL);
@@ -2392,6 +2393,34 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
     return error;
   }
   AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
+
+  // check signatures
+  if (!restoreInfo->jobOptions->skipVerifySignaturesFlag)
+  {
+    error = Archive_verifySignatures(&storageInfo,
+                                     archiveName,
+                                     restoreInfo->jobOptions,
+                                     restoreInfo->logHandle,
+                                     &allCryptSignatureState
+                                    );
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      error = handleError(restoreInfo,error);
+      return error;
+    }
+    if (   (allCryptSignatureState != CRYPT_SIGNATURE_STATE_NONE)
+        && (allCryptSignatureState != CRYPT_SIGNATURE_STATE_OK)
+       )
+    {
+      printError("Invalid signature in '%s'!\n",
+                 Storage_getPrintableNameCString(storageSpecifier,archiveName)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      error = handleError(restoreInfo,error);
+      return ERROR_INVALID_SIGNATURE;
+    }
+  }
 
   // open archive
   error = Archive_open(&archiveHandle,

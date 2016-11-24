@@ -1665,7 +1665,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
     error = Archive_seek(&archiveHandle,entryMsg.offset);
     if (error != ERROR_NONE)
     {
-      printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
+      printError("Cannot read storage '%s' (error: %s)!\n",
                  Storage_getPrintableNameCString(compareInfo->storageSpecifier,NULL),
                  Error_getText(error)
                 );
@@ -1799,12 +1799,12 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
 {
   CompareInfo          compareInfo;
   StorageInfo          storageInfo;
+  Errors               error;
   CryptSignatureStates allCryptSignatureState;
   Thread               *compareThreads;
   uint                 compareThreadCount;
   uint                 i;
   Errors               failError;
-  Errors               error;
   ArchiveHandle        archiveHandle;
   ArchiveEntryTypes    archiveEntryType;
   uint64               offset;
