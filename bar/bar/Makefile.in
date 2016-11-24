@@ -196,13 +196,13 @@ ifeq ($(COMPRESS_NAMES),)
   endif
 endif
 
-ifeq ($(COMPRESS_NAMES_LARGE),)
-  COMPRESS_NAMES_LARGE = none zip0
+ifeq ($(COMPRESS_NAMES_HUGE),)
+  COMPRESS_NAMES_HUGE = none zip0
   ifeq (@HAVE_LZO@,1)
-    COMPRESS_NAMES_LARGE += lzo1
+    COMPRESS_NAMES_HUGE += lzo1
   endif
   ifeq (@HAVE_LZ4@,1)
-    COMPRESS_NAMES_LARGE += lz4-0
+    COMPRESS_NAMES_HUGE += lz4-0
   endif
 endif
 
@@ -571,13 +571,13 @@ help:
 	@$(ECHO) "  test2[-debug|-valgrind], test_compress[-debug], test_delta_compress[-debug|-valgrind]"
 	@$(ECHO) "  test3[-debug|-valgrind], test_crypt[-debug|-valgrind]"
 	@$(ECHO) "  test4[-debug|-valgrind], test_asymmetric_crypt[-debug|-valgrind]"
-	@$(ECHO) "  test5[-debug|-valgrind], test_split[-debug|-valgrind]"
-	@$(ECHO) "  test6[-debug|-valgrind], test_image[-debug|-valgrind]"
-	@$(ECHO) "  test7[-debug|-valgrind], test_storage[-debug|-valgrind]"
+	@$(ECHO) "  test6[-debug|-valgrind], test_split[-debug|-valgrind]"
+	@$(ECHO) "  test7[-debug|-valgrind], test_image[-debug|-valgrind]"
+	@$(ECHO) "  test8[-debug|-valgrind], test_storage[-debug|-valgrind]"
 	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav)[-debug|-valgrind]"
-	@$(ECHO) "  test8[-debug|-valgrind], test_largefiles[-debug|-valgrind]"
-	@$(ECHO) "  test9[-debug|-valgrind], test_dvd[-debug|-valgrind]"
-	@$(ECHO) "  test10[-debug|-valgrind], test_server[-debug|-valgrind]"
+	@$(ECHO) "  test9[-debug|-valgrind], test_hugefiles[-debug|-valgrind]"
+	@$(ECHO) "  test10[-debug|-valgrind], test_dvd[-debug|-valgrind]"
+	@$(ECHO) "  test11[-debug|-valgrind], test_server[-debug|-valgrind]"
 	@$(ECHO) "  test_combined[-debug|-valgrind]"
 	@$(ECHO) "  test_parameters[-debug|-valgrind]"
 	@$(ECHO) "  test_misc[-debug|-valgrind]"
@@ -1035,7 +1035,6 @@ TEST_FILE_NAMES = \
   readonly512k.dat \
   unreadable.dat \
   smallfile.dat \
-  hugefile.dat \
   sub_dir \
   sub_ignore_dir \
   linkdata.dat \
@@ -1068,11 +1067,11 @@ endif
 
 TEST_FILES = $(foreach z,$(TEST_FILE_NAMES),$(TEST_DATA_DIR)/data/$z)
 
-TEST_LARGEFILE_NAMES = \
+TEST_HUGEFILE_NAMES = \
   zero5G.dat \
   random5G.dat \
 
-TEST_LARGEFILES = $(foreach z,$(TEST_LARGEFILE_NAMES),$(TEST_DATA_DIR)/data_large/$z)
+TEST_HUGEFILES = $(foreach z,$(TEST_HUGEFILE_NAMES),$(TEST_DATA_DIR)/data_huge/$z)
 
 # temporary test files
 TEST_FILES_CLEAN = \
@@ -1099,13 +1098,13 @@ TEST_KEYS = test/key.public \
             test/signature-key.private
 
 # default test options
-TEST_OPTIONS = --no-default-config --config=$(CURDIR)/$(TEST_CONFIG) --signature-public-key=$(CURDIR)/$(TEST_SIGNATURE_KEY_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_SIGNATURE_KEY_PRIVATE)
+TEST_OPTIONS = --no-default-config --config=$(CURDIR)/$(TEST_CONFIG)
 
 .PHONY: test test_win
 .PHONY: test-debug test_win-debug
-.PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test9 test10
-.PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug test10-debug
-.PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind test10-valgrind
+.PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11
+.PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug test10-debug test11-debug
+.PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind test10-valgrind test11-valgrind
 .PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_storage test_dvd test_combined test_parameters test_misc
 .PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_split-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_parameters-debug test_misc-debug
 .PHONY: test_basic-valgrind test_compress-valgrind test_crypt-valgrind test_asymmetric_crypt-valgrind test_split-valgrind test_image-valgrind test_storage-valgrind test_dvd-valgrind test_combined-valgrind test_parameters-valgrind test_misc-valgrind
@@ -1294,7 +1293,7 @@ test4 test_asymmetric_crypt: $(TEST_BAR) $(TEST_KEYS)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.public --max-threads=1" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --max-threads=1" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1304,7 +1303,7 @@ test4 test_asymmetric_crypt: $(TEST_BAR) $(TEST_KEYS)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-public-key=$(CURDIR)/test/signature-key.public" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1314,7 +1313,7 @@ test4 test_asymmetric_crypt: $(TEST_BAR) $(TEST_KEYS)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.public" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private" \
             test_file_operations_dryrun \
             ; \
           rc=$$?; \
@@ -1330,7 +1329,35 @@ test4-debug test_asymmetric_crypt-debug: $(TEST_BAR_DEBUG)
 test4-valgrind test_asymmetric-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_asymmetric_crypt
 
-test5 test_split: $(TEST_BAR)
+test5 test_signatures: $(TEST_BAR) $(TEST_KEYS)
+	@$(ECHO_NO_LF) "Test 4: signatures..."
+	$(MAKE) \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.public --max-threads=1" \
+          test_file_operations \
+          ;
+	$(MAKE) \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-public-key=$(CURDIR)/test/signature-key.public" \
+          test_file_operations \
+          ;
+	$(MAKE) \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.public" \
+          test_file_operations_dryrun \
+          ;
+	@$(ECHO) "ok"
+
+test5-debug test_signatures-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_signatures
+
+test5-valgrind signatures-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_signatures
+
+test6 test_split: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 5: split..."
 	$(MAKE) \
           BAR_FILE="test-###" \
@@ -1352,13 +1379,13 @@ test5 test_split: $(TEST_BAR)
           ;
 	@$(ECHO) "ok"
 
-test5-debug test_split-debug: $(TEST_BAR_DEBUG)
+test6-debug test_split-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_split
 
-test5-valgrind test_split-valgrind: $(TEST_BAR_VALGRIND)
+test6-valgrind test_split-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_split
 
-test6 test_image: $(TEST_BAR)
+test7 test_image: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 6: image..."
 	for compress in none zip9; do \
           $(MAKE) \
@@ -1384,13 +1411,13 @@ test6 test_image: $(TEST_BAR)
         done
 	@$(ECHO) "ok"
 
-test6-debug test_image-debug: $(TEST_BAR_DEBUG)
+test7-debug test_image-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_image
 
-test6-valgrind test_image-valgrind: $(TEST_BAR_VALGRIND)
+test7-valgrind test_image-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_image
 
-test7 test_storage: $(TEST_BAR)
+test8 test_storage: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 7: storage..."
 	@$(MAKE) test_storage_file \
 	         test_storage_ftp \
@@ -1398,10 +1425,10 @@ test7 test_storage: $(TEST_BAR)
 	         test_storage_sftp \
 	         test_storage_webdav
 
-test7-debug test_storage-debug: $(TEST_BAR_DEBUG)
+test8-debug test_storage-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage
 
-test7-valgrind test_storage-valgrind: $(TEST_BAR_VALGRIND)
+test8-valgrind test_storage-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage
 
 test_storage_file: $(TEST_BAR)
@@ -1524,14 +1551,14 @@ test_storage_webdav-debug: $(TEST_BAR_DEBUG)
 test_storage_webdav-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_webdav
 
-test8 test_largefiles: $(TEST_BAR)
-	@$(ECHO_NO_LF) "Test 8: large files..."
-	for compress in $(COMPRESS_NAMES_LARGE); do \
+test9 test_hugefiles: $(TEST_BAR)
+	@$(ECHO_NO_LF) "Test 8: huge files..."
+	for compress in $(COMPRESS_NAMES_HUGE); do \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none" \
-            test_largefiles_operations \
+            test_hugefiles_operations \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -1540,13 +1567,13 @@ test8 test_largefiles: $(TEST_BAR)
         done
 	@$(ECHO) "ok"
 
-test8-debug test_largefiles-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_largefiles
+test9-debug test_hugefiles-debug: $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_hugefiles
 
-test8-valgrind test_largefiles-valgrind: $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_largefiles
+test9-valgrind test_hugefiles-valgrind: $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_hugefiles
 
-test9 test_dvd: $(TEST_BAR)
+test10 test_dvd: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 9: dvd..."
 	$(MAKE) \
           BAR_FILE="test" \
@@ -1556,13 +1583,13 @@ test9 test_dvd: $(TEST_BAR)
           ;
 	@$(ECHO) "ok"
 
-test9-debug test_dvd-debug: $(TEST_BAR_DEBUG)
+test10-debug test_dvd-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_dvd
 
-test9-valgrind test_dvd-valgrind: $(TEST_BAR_VALGRIND)
+test10-valgrind test_dvd-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_dvd
 
-test10 test_server: $(TEST_BAR)
+test11 test_server: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 10: server..."
 	$(MAKE) \
           BAR_FILE="test" \
@@ -1572,10 +1599,10 @@ test10 test_server: $(TEST_BAR)
           ;
 	@$(ECHO) "ok"
 
-test10-debug test_serverd-debug: $(TEST_BAR_DEBUG)
+test11-debug test_serverd-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_server
 
-test10-valgrind test_server-valgrind: $(TEST_BAR_VALGRIND)
+test11-valgrind test_server-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_server
 
 test_combined: $(TEST_BAR)
@@ -1626,7 +1653,7 @@ test_all:
           test_split \
           test_image \
           test_storage \
-          test_largefiles \
+          test_hugefiles \
           test_dvd \
           test_combined \
           test_parameters \
@@ -1812,9 +1839,6 @@ $(TEST_DATA_DIR)/data/unreadable.dat:
 $(TEST_DATA_DIR)/data/smallfile.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1 count=128 2>/dev/null
-$(TEST_DATA_DIR)/data/hugefile.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1M count=256 2>/dev/null
 $(TEST_DATA_DIR)/data/sub_dir:
 	$(INSTALL) -d $(@D)
 	$(RMRF) $@; $(INSTALL) -d $@; $(ECHO) Hello World >$@/test.dat
@@ -1914,10 +1938,10 @@ $(TEST_DATA_DIR)/data/delta2/test.dat: $(TEST_DATA_DIR)/data/delta1/test.dat
           $(DD) if=$(TEST_DATA_DIR)/data/delta1/test.dat skip=256 bs=1k count=256 2>/dev/null; \
         ) >$@
 
-$(TEST_DATA_DIR)/data_large/zero5G.dat:
+$(TEST_DATA_DIR)/data_huge/zero5G.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1M count=5120 2>/dev/null
-$(TEST_DATA_DIR)/data_large/random5G.dat:
+$(TEST_DATA_DIR)/data_huge/random5G.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1M count=5120 2>/dev/null
 
@@ -3321,18 +3345,18 @@ test_image_operations_dryrun: \
 	$(RMF) test/dev0.dat
 
 
-.PHONY: test_largefiles_operations
-test_largefiles_operations: \
+.PHONY: test_hugefiles_operations
+test_hugefiles_operations: \
   $(TEST_BAR) \
   $(TEST_CONFIG) \
-  $(TEST_LARGEFILES)
+  $(TEST_HUGEFILES)
 	# normal tests
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(INSTALL) -d $(TEST_DATA_DIR)/tmp
-	for z in $(TEST_LARGEFILES); do \
+	for z in $(TEST_HUGEFILES); do \
           DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $$z $(BAR_OPTIONS) --overwrite-archive-files --tmp-directory=$(TEST_DATA_DIR)/tmp --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null); \
           DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null); \
           DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null); \
