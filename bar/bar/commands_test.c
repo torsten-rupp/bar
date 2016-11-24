@@ -226,6 +226,7 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
   FragmentNode     *fragmentNode;
   uint64           length;
   ulong            n;
+  char             s[256];
 
   // open archive entry
   fileName = String_new();
@@ -335,7 +336,18 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
       return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
     }
 
-    printInfo(1,"OK\n");
+    // get fragment info
+    if (fragmentSize < fileInfo.size)
+    {
+      stringFormat(s,sizeof(s),", fragment %12llu..%12llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+    }
+    else
+    {
+      stringClear(s);
+    }
+
+    // output
+    printInfo(1,"OK (%llu bytes%s)\n",fragmentSize,s);
   }
   else
   {

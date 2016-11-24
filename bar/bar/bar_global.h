@@ -404,6 +404,7 @@ typedef struct
 
   uint64                 fragmentSize;                        // fragment size huge files [bytes]
   ulong                  compressMinFileSize;                 // min. size of file for using compression
+  uint64                 continuousMaxSize;                   // max. entry size for continuous backup
 
   Password               *cryptPassword;                      // default password for encryption/decryption
 
@@ -438,8 +439,6 @@ typedef struct
 
   Device                 *defaultDevice;                      // default device
   Device                 *device;                             // current selected device
-
-  uint64                 continuousMaxSize;                   // max. entry size for continuous backup
 
   bool                   indexDatabaseAutoUpdateFlag;         // TRUE for automatic update of index datbase
   BandWidthList          indexDatabaseMaxBandWidthList;       // list of max. band width to use for index updates [bits/s]

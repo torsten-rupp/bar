@@ -4293,6 +4293,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
                               ConstString                     fileName,
                               const FileInfo                  *fileInfo,
                               const FileExtendedAttributeList *fileExtendedAttributeList,
+                              uint64                          fragmentOffset,
+                              uint64                          fragmentSize,
                               const bool                      deltaCompressFlag,
                               const bool                      byteCompressFlag
                              )
@@ -4305,6 +4307,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
                                 ConstString                     fileName,
                                 const FileInfo                  *fileInfo,
                                 const FileExtendedAttributeList *fileExtendedAttributeList,
+                                uint64                          fragmentOffset,
+                                uint64                          fragmentSize,
                                 const bool                      deltaCompressFlag,
                                 const bool                      byteCompressFlag
                                )
@@ -4332,7 +4336,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   }
 
   // init archive entry info
-  archiveEntryInfo->archiveHandle                    = archiveHandle;
+  archiveEntryInfo->archiveHandle                  = archiveHandle;
   archiveEntryInfo->indexHandle                    = indexHandle;
   archiveEntryInfo->mode                           = ARCHIVE_MODE_WRITE;
 
@@ -4341,12 +4345,12 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   archiveEntryInfo->archiveEntryType               = ARCHIVE_ENTRY_TYPE_FILE;
 
+  archiveEntryInfo->file.fileExtendedAttributeList = fileExtendedAttributeList;
+
   archiveEntryInfo->file.deltaCompressAlgorithm    = COMPRESS_ALGORITHM_NONE;
   archiveEntryInfo->file.byteCompressAlgorithm     = byteCompressFlag ? archiveHandle->jobOptions->compressAlgorithms.byte : COMPRESS_ALGORITHM_NONE;
 
-  archiveEntryInfo->file.fileExtendedAttributeList = fileExtendedAttributeList;
-
-  archiveEntryInfo->file.deltaSourceHandleInitFlag      = FALSE;
+  archiveEntryInfo->file.deltaSourceHandleInitFlag = FALSE;
 
   archiveEntryInfo->file.headerLength              = 0;
   archiveEntryInfo->file.headerWrittenFlag         = FALSE;
@@ -4394,7 +4398,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
                                  );
     if      (error == ERROR_NONE)
     {
-      archiveEntryInfo->file.deltaSourceHandleInitFlag   = TRUE;
+      archiveEntryInfo->file.deltaSourceHandleInitFlag = TRUE;
       archiveEntryInfo->file.deltaCompressAlgorithm = archiveHandle->jobOptions->compressAlgorithms.delta;
       AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.deltaSourceHandle,{ DeltaSource_closeEntry(&archiveEntryInfo->file.deltaSourceHandle); });
     }
@@ -4593,7 +4597,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
     return error;
   }
   DEBUG_TESTCODE() { Chunk_done(&archiveEntryInfo->file.chunkFileData.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  archiveEntryInfo->file.chunkFileData.fragmentOffset = 0LL;
+  archiveEntryInfo->file.chunkFileData.fragmentOffset = fragmentOffset;
   archiveEntryInfo->file.chunkFileData.fragmentSize   = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileData.info,{ Chunk_done(&archiveEntryInfo->file.chunkFileData.info); });
 
@@ -4685,6 +4689,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
                                ConstString      deviceName,
                                const DeviceInfo *deviceInfo,
                                FileSystemTypes  fileSystemType,
+                               uint64           blockOffset,
+                               uint64           blockCount,
                                const bool       deltaCompressFlag,
                                const bool       byteCompressFlag
                               )
@@ -4697,6 +4703,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
                                  ConstString      deviceName,
                                  const DeviceInfo *deviceInfo,
                                  FileSystemTypes  fileSystemType,
+                                 uint64           blockOffset,
+                                 uint64           blockCount,
                                  const bool       deltaCompressFlag,
                                  const bool       byteCompressFlag
                                 )
@@ -4724,29 +4732,29 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   }
 
   // init archive entry info
-  archiveEntryInfo->archiveHandle                  = archiveHandle;
-  archiveEntryInfo->indexHandle                    = indexHandle;
-  archiveEntryInfo->mode                         = ARCHIVE_MODE_WRITE;
+  archiveEntryInfo->archiveHandle                   = archiveHandle;
+  archiveEntryInfo->indexHandle                     = indexHandle;
+  archiveEntryInfo->mode                            = ARCHIVE_MODE_WRITE;
 
-  archiveEntryInfo->cryptAlgorithm               = archiveHandle->jobOptions->cryptAlgorithm;
-  archiveEntryInfo->blockLength                  = archiveHandle->blockLength;
+  archiveEntryInfo->cryptAlgorithm                  = archiveHandle->jobOptions->cryptAlgorithm;
+  archiveEntryInfo->blockLength                     = archiveHandle->blockLength;
 
-  archiveEntryInfo->archiveEntryType             = ARCHIVE_ENTRY_TYPE_IMAGE;
+  archiveEntryInfo->archiveEntryType                = ARCHIVE_ENTRY_TYPE_IMAGE;
 
-  archiveEntryInfo->image.blockSize              = deviceInfo->blockSize;
+  archiveEntryInfo->image.deltaSourceHandleInitFlag = FALSE;
 
-  archiveEntryInfo->image.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
-  archiveEntryInfo->image.byteCompressAlgorithm  = byteCompressFlag ?archiveHandle->jobOptions->compressAlgorithms.byte :COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->image.blockSize                 = deviceInfo->blockSize;
 
-  archiveEntryInfo->image.deltaSourceHandleInitFlag   = FALSE;
+  archiveEntryInfo->image.deltaCompressAlgorithm    = COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->image.byteCompressAlgorithm     = byteCompressFlag ?archiveHandle->jobOptions->compressAlgorithms.byte :COMPRESS_ALGORITHM_NONE;
 
-  archiveEntryInfo->image.headerLength           = 0;
-  archiveEntryInfo->image.headerWrittenFlag      = FALSE;
+  archiveEntryInfo->image.headerLength              = 0;
+  archiveEntryInfo->image.headerWrittenFlag         = FALSE;
 
-  archiveEntryInfo->image.byteBuffer             = NULL;
-  archiveEntryInfo->image.byteBufferSize         = 0L;
-  archiveEntryInfo->image.deltaBuffer            = NULL;
-  archiveEntryInfo->image.deltaBufferSize        = 0L;
+  archiveEntryInfo->image.byteBuffer                = NULL;
+  archiveEntryInfo->image.byteBufferSize            = 0L;
+  archiveEntryInfo->image.deltaBuffer               = NULL;
+  archiveEntryInfo->image.deltaBufferSize           = 0L;
 
   // get intermediate output file
   error = File_getTmpFile(&archiveEntryInfo->image.intermediateFileHandle,NULL,tmpDirectory);
@@ -4786,7 +4794,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
                                  );
     if (error == ERROR_NONE)
     {
-      archiveEntryInfo->image.deltaSourceHandleInitFlag   = TRUE;
+      archiveEntryInfo->image.deltaSourceHandleInitFlag = TRUE;
       archiveEntryInfo->image.deltaCompressAlgorithm = archiveHandle->jobOptions->compressAlgorithms.delta;
       AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.deltaSourceHandle,{ DeltaSource_closeEntry(&archiveEntryInfo->image.deltaSourceHandle); });
     }
@@ -4951,7 +4959,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
     return error;
   }
   DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  archiveEntryInfo->image.chunkImageData.blockOffset = 0LL;
+  archiveEntryInfo->image.chunkImageData.blockOffset = blockOffset;
   archiveEntryInfo->image.chunkImageData.blockCount  = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageData.info,{ Chunk_done(&archiveEntryInfo->image.chunkImageData.info); });
 
@@ -5495,6 +5503,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
                                   const StringList                *fileNameList,
                                   const FileInfo                  *fileInfo,
                                   const FileExtendedAttributeList *fileExtendedAttributeList,
+                                  uint64                          fragmentOffset,
+                                  uint64                          fragmentSize,
                                   const bool                      deltaCompressFlag,
                                   const bool                      byteCompressFlag
                                  )
@@ -5507,6 +5517,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
                                     const StringList                *fileNameList,
                                     const FileInfo                  *fileInfo,
                                     const FileExtendedAttributeList *fileExtendedAttributeList,
+                                    uint64                          fragmentOffset,
+                                    uint64                          fragmentSize,
                                     const bool                      deltaCompressFlag,
                                     const bool                      byteCompressFlag
                                    )
@@ -5536,7 +5548,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   }
 
   // init archive entry info
-  archiveEntryInfo->archiveHandle                        = archiveHandle;
+  archiveEntryInfo->archiveHandle                      = archiveHandle;
   archiveEntryInfo->indexHandle                        = indexHandle;
   archiveEntryInfo->mode                               = ARCHIVE_MODE_WRITE;
 
@@ -5545,13 +5557,13 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   archiveEntryInfo->archiveEntryType                   = ARCHIVE_ENTRY_TYPE_HARDLINK;
 
-  archiveEntryInfo->hardLink.deltaCompressAlgorithm    = COMPRESS_ALGORITHM_NONE;
-  archiveEntryInfo->hardLink.byteCompressAlgorithm     = byteCompressFlag ?archiveHandle->jobOptions->compressAlgorithms.byte :COMPRESS_ALGORITHM_NONE;
-
   archiveEntryInfo->hardLink.fileNameList              = fileNameList;
   archiveEntryInfo->hardLink.fileExtendedAttributeList = fileExtendedAttributeList;
 
-  archiveEntryInfo->hardLink.deltaSourceHandleInitFlag      = FALSE;
+  archiveEntryInfo->hardLink.deltaCompressAlgorithm    = COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->hardLink.byteCompressAlgorithm     = byteCompressFlag ?archiveHandle->jobOptions->compressAlgorithms.byte :COMPRESS_ALGORITHM_NONE;
+
+  archiveEntryInfo->hardLink.deltaSourceHandleInitFlag = FALSE;
 
   archiveEntryInfo->hardLink.headerLength              = 0;
   archiveEntryInfo->hardLink.headerWrittenFlag         = FALSE;
@@ -5604,7 +5616,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
     }
     if      (error == ERROR_NONE)
     {
-      archiveEntryInfo->hardLink.deltaSourceHandleInitFlag   = TRUE;
+      archiveEntryInfo->hardLink.deltaSourceHandleInitFlag = TRUE;
       archiveEntryInfo->hardLink.deltaCompressAlgorithm = archiveHandle->jobOptions->compressAlgorithms.delta;
       AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.deltaSourceHandle,{ DeltaSource_closeEntry(&archiveEntryInfo->hardLink.deltaSourceHandle); });
     }
@@ -5821,7 +5833,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset = 0LL;
+  archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset = fragmentOffset;
   archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkData.info,{ Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info); });
 
@@ -6744,16 +6756,16 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
 
   if (deltaSourceSize != NULL) (*deltaSourceSize) = 0LL;
 
-  archiveEntryInfo->archiveHandle               = archiveHandle;
-  archiveEntryInfo->mode                      = ARCHIVE_MODE_READ;
-  archiveEntryInfo->archiveEntryType          = ARCHIVE_ENTRY_TYPE_FILE;
+  archiveEntryInfo->archiveHandle                  = archiveHandle;
+  archiveEntryInfo->mode                           = ARCHIVE_MODE_READ;
+  archiveEntryInfo->archiveEntryType               = ARCHIVE_ENTRY_TYPE_FILE;
 
   archiveEntryInfo->file.deltaSourceHandleInitFlag = FALSE;
 
-  archiveEntryInfo->file.byteBuffer           = NULL;
-  archiveEntryInfo->file.byteBufferSize       = 0L;
-  archiveEntryInfo->file.deltaBuffer          = NULL;
-  archiveEntryInfo->file.deltaBufferSize      = 0L;
+  archiveEntryInfo->file.byteBuffer                = NULL;
+  archiveEntryInfo->file.byteBufferSize            = 0L;
+  archiveEntryInfo->file.deltaBuffer               = NULL;
+  archiveEntryInfo->file.deltaBufferSize           = 0L;
 
   // init file chunk
   error = Chunk_init(&archiveEntryInfo->file.chunkFile.info,
@@ -7336,16 +7348,16 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
 
   if (deltaSourceSize != NULL) (*deltaSourceSize) = 0LL;
 
-  archiveEntryInfo->archiveHandle                = archiveHandle;
-  archiveEntryInfo->mode                       = ARCHIVE_MODE_READ;
-  archiveEntryInfo->archiveEntryType           = ARCHIVE_ENTRY_TYPE_IMAGE;
+  archiveEntryInfo->archiveHandle                   = archiveHandle;
+  archiveEntryInfo->mode                            = ARCHIVE_MODE_READ;
+  archiveEntryInfo->archiveEntryType                = ARCHIVE_ENTRY_TYPE_IMAGE;
 
   archiveEntryInfo->image.deltaSourceHandleInitFlag = FALSE;
 
-  archiveEntryInfo->image.byteBuffer           = NULL;
-  archiveEntryInfo->image.byteBufferSize       = 0L;
-  archiveEntryInfo->image.deltaBuffer          = NULL;
-  archiveEntryInfo->image.deltaBufferSize      = 0L;
+  archiveEntryInfo->image.byteBuffer                = NULL;
+  archiveEntryInfo->image.byteBufferSize            = 0L;
+  archiveEntryInfo->image.deltaBuffer               = NULL;
+  archiveEntryInfo->image.deltaBufferSize           = 0L;
 
   // init image chunk
   error = Chunk_init(&archiveEntryInfo->image.chunkImage.info,
@@ -8620,16 +8632,16 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
 
   if (deltaSourceSize != NULL) (*deltaSourceSize) = 0LL;
 
-  archiveEntryInfo->archiveHandle                   = archiveHandle;
-  archiveEntryInfo->mode                          = ARCHIVE_MODE_READ;
-  archiveEntryInfo->archiveEntryType              = ARCHIVE_ENTRY_TYPE_HARDLINK;
+  archiveEntryInfo->archiveHandle                      = archiveHandle;
+  archiveEntryInfo->mode                               = ARCHIVE_MODE_READ;
+  archiveEntryInfo->archiveEntryType                   = ARCHIVE_ENTRY_TYPE_HARDLINK;
 
   archiveEntryInfo->hardLink.deltaSourceHandleInitFlag = FALSE;
 
-  archiveEntryInfo->hardLink.byteBuffer           = NULL;
-  archiveEntryInfo->hardLink.byteBufferSize       = 0L;
-  archiveEntryInfo->hardLink.deltaBuffer          = NULL;
-  archiveEntryInfo->hardLink.deltaBufferSize      = 0L;
+  archiveEntryInfo->hardLink.byteBuffer                = NULL;
+  archiveEntryInfo->hardLink.byteBufferSize            = 0L;
+  archiveEntryInfo->hardLink.deltaBuffer               = NULL;
+  archiveEntryInfo->hardLink.deltaBufferSize           = 0L;
 
   // init hard link chunk
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLink.info,

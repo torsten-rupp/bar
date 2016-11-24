@@ -941,8 +941,8 @@ LOCAL void updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
 * Input  : entryMsgQueue  - entry message queue
 *          entryType      - entry type
 *          name           - name (will be copied!)
-*          fragmentOffset - fragment offset
-*          fragmentSize   - fragment size
+*          fragmentOffset - fragment offset [bytes]
+*          fragmentSize   - fragment size [bytes]
 * Output : -
 * Return : -
 * Notes  : -
@@ -973,6 +973,28 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
   {
     freeEntryMsg(&entryMsg,NULL);
   }
+
+#if 0
+                        fragmentOffset = 0LL;
+                        size           = fileInfo.size;
+                        do
+                        {
+                          fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
+                                           ? globalOptions.fragmentSize
+                                           : size-fragmentOffset;
+                          appendFileToEntryList(&createInfo->entryMsgQueue,
+                                                ENTRY_TYPE_FILE,
+                                                name,
+                                                fragmentOffset,
+                                                fragmentSize
+                                               );
+                          fragmentOffset += fragmentSize;
+                        }
+                        while (   (createInfo->failError == ERROR_NONE)
+                               && !isAborted(createInfo)
+                               && (fragmentOffset < fileInfo.size);
+                              );
+#endif
 }
 
 /***********************************************************************\
@@ -1054,8 +1076,8 @@ LOCAL void appendLinkToEntryList(MsgQueue    *entryMsgQueue,
 * Input  : entryMsgQueue  - entry message queue
 *          entryType      - entry type
 *          nameList       - name list
-*          fragmentOffset - fragment offset
-*          fragmentSize   - fragment size
+*          fragmentOffset - fragment offset [bytes]
+*          fragmentSize   - fragment size [bytes]
 * Output : -
 * Return : -
 * Notes  : -
@@ -2153,6 +2175,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                   {
                     printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                   }
+fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                   fragmentOffset = 0LL;
                   size           = fileInfo.size;
                   do
@@ -2168,7 +2191,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                          );
                     fragmentOffset += fragmentSize;
                   }
-                  while (fragmentOffset < fileInfo.size);
+                  while (   (createInfo->failError == ERROR_NONE)
+                         && !isAborted(createInfo)
+                         && (fragmentOffset < fileInfo.size)
+                        );
                 }
                 else
                 {
@@ -2286,7 +2312,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                  );
                         fragmentOffset += fragmentSize;
                       }
-                      while (fragmentOffset < fileInfo.size);
+                      while (   (createInfo->failError == ERROR_NONE)
+                             && !isAborted(createInfo)
+                             && (fragmentOffset < fileInfo.size)
+                            );
 
                       // clear entry
                       Dictionary_remove(&hardLinksDictionary,
@@ -2514,7 +2543,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                );
                           fragmentOffset += fragmentSize;
                         }
-                        while (fragmentOffset < fileInfo.size);
+                        while (   (createInfo->failError == ERROR_NONE)
+                               && !isAborted(createInfo)
+                               && (fragmentOffset < fileInfo.size)
+                              );
                       }
                       break;
                     case ENTRY_TYPE_IMAGE:
@@ -2661,6 +2693,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                     {
                                       printIncrementalInfo(&createInfo->namesDictionary,fileName,&fileInfo.cast);
                                     }
+fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                                     fragmentOffset = 0LL;
                                     size           = fileInfo.size;
                                     do
@@ -4793,8 +4826,8 @@ LOCAL void clearStatusEntryDoneInfo(CreateInfo *createInfo, bool locked)
 * Input  : createInfo     - create info structure
 *          indexHandle    - index handle or NULL if no index
 *          fileName       - file name to store
-*          fragmentOffset - fragment offset
-*          fragmentSize   - fragment size
+*          fragmentOffset - fragment offset [bytes]
+*          fragmentSize   - fragment size [bytes]
 *          buffer         - buffer for temporary data
 *          bufferSize     - size of data buffer
 * Output : -
@@ -4824,12 +4857,14 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   ulong                     bufferLength;
   uint64                    archiveSize;
   uint64                    doneSize;
-  double                    compressionRatio;
   uint                      percentageDone;
+  double                    compressionRatio;
+  char                      s1[256],s2[256];
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
   assert(fileName != NULL);
+  assert(fragmentSize > 0LL);
   assert(buffer != NULL);
 
   printInfo(1,"Add '%s'...",String_cString(fileName));
@@ -4947,6 +4982,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
                                  fileName,
                                  &fileInfo,
                                  &fileExtendedAttributeList,
+                                 fragmentOffset,
+                                 fragmentSize,
                                  tryDeltaCompressFlag,
                                  tryByteCompressFlag
                                 );
@@ -4974,7 +5011,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       pauseCreate(createInfo);
 
       // read file data
-      error = File_read(&fileHandle,buffer,bufferSize,&bufferLength);
+      error = File_read(&fileHandle,buffer,MIN(size,bufferSize),&bufferLength);
       if (error == ERROR_NONE)
       {
         // write data to archive
@@ -5028,6 +5065,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
             printInfo(2,"%3d%%\b\b\b\b",percentageDone);
           }
         }
+
+        size -= bufferLength;
       }
     }
     while (   (createInfo->failError == ERROR_NONE)
@@ -5102,32 +5141,51 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       compressionRatio = 0.0;
     }
 
-    if (!createInfo->jobOptions->dryRunFlag)
+    // get fragment info
+    if (fragmentSize < fileInfo.size)
     {
-      if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
-          || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
-         )
-      {
-//TODO: output fragmentsize
-        printInfo(1,"OK (%llu bytes, ratio %.1f%%)\n",
-                  fragmentSize,
-                  compressionRatio
-                 );
-        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(fileName));
-      }
-      else
-      {
-//TODO: output fragmentsize
-        printInfo(1,"OK (%llu bytes)\n",
-                  fragmentSize
-                 );
-        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(fileName));
-      }
+      stringFormat(s1,sizeof(s1),", fragment %12llu..%12llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
     }
     else
     {
-//TODO: output fragmentsize
-      printInfo(1,"OK (%llu bytes, dry-run)\n",fragmentSize);
+      stringClear(s1);
+    }
+
+    // ratio info
+    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
+        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
+       )
+    {
+      stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
+    }
+    else
+    {
+      stringClear(s2);
+    }
+
+    if (!createInfo->jobOptions->dryRunFlag)
+    {
+      printInfo(1,"OK (%llu bytes%s%s)\n",
+                fragmentSize,
+                s1,
+                s2
+               );
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_OK,
+                 "Added '%s'(%%llu bytes%s%s)\n",
+                 String_cString(fileName),
+                 fragmentSize,
+                 s1,
+                 s2
+                );
+    }
+    else
+    {
+      printInfo(1,"OK (%llu bytes%s%s, dry-run)\n",
+                fragmentSize,
+                s1,
+                s2
+               );
     }
   }
   else
@@ -5167,8 +5225,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 * Input  : createInfo     - create info structure
 *          indexHandle    - index handle or NULL if no index
 *          deviceName     - device name
-*          fragmentOffset - fragment offset
-*          fragmentSize   - fragment size
+*          fragmentOffset - fragment offset [blocks]
+*          fragmentSize   - fragment count [blocks]
 *          buffer         - buffer for temporary data
 *          bufferSize     - size of data buffer
 * Output : -
@@ -5196,7 +5254,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   SemaphoreLock    semaphoreLock;
   uint64           entryDoneSize;
   uint64           block;
-  uint64           blockCount;
+//  uint64           blockCount;
   uint             bufferBlockCount;
   uint64           archiveSize;
   uint64           doneSize;
@@ -5321,6 +5379,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                                   deviceName,
                                   &deviceInfo,
                                   fileSystemHandle.type,
+                                  fragmentOffset,
+                                  fragmentSize,
                                   tryDeltaCompressFlag,
                                   tryByteCompressFlag
                                  );
@@ -5339,13 +5399,14 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 
     // write device content to archive
     block         = 0LL;
-    blockCount    = deviceInfo.size/(uint64)deviceInfo.blockSize;
+//    blockCount    = deviceInfo.size/(uint64)deviceInfo.blockSize;
     error         = ERROR_NONE;
     entryDoneSize = 0LL;
     while (   (createInfo->failError == ERROR_NONE)
            && !isAborted(createInfo)
            && (error == ERROR_NONE)
-           && (block < blockCount)
+//TODO
+           && (block < fragmentSize)//blockCount)
           )
     {
       // pause
@@ -5353,7 +5414,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 
       // read blocks from device
       bufferBlockCount = 0;
-      while (   (block < blockCount)
+//TODO
+      while (   (block < fragmentSize)//blockCount)
              && (bufferBlockCount < maxBufferBlockCount)
             )
       {
@@ -5906,8 +5968,8 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 * Input  : createInfo     - create info structure
 *          indexHandle    - index handle or NULL if no index
 *          nameList       - hard link name list to store
-*          fragmentOffset - fragment offset
-*          fragmentSize   - fragment size
+*          fragmentOffset - fragment offset [bytes]
+*          fragmentSize   - fragment size [bytes]
 *          buffer         - buffer for temporary data
 *          bufferSize     - size of data buffer
 * Output : -
@@ -6057,6 +6119,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                      nameList,
                                      &fileInfo,
                                      &fileExtendedAttributeList,
+                                     fragmentOffset,
+                                     fragmentSize,
                                      tryDeltaCompressFlag,
                                      tryByteCompressFlag
                                     );

@@ -220,7 +220,8 @@ typedef struct
   ArchiveIOTypes           ioType;                                     // i/o type
   union
   {
-    // local file
+    // local file         // delta compress info
+      CompressInfo                    byteCompressInfo;
     struct
     {
       String               appendFileName;
@@ -708,11 +709,13 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
 *                                      NULL
-*          deltaCompressFlag - TRUE for delta compression, FALSE
-*                              otherwise
-*          byteCompressFlag  - TRUE for byte compression, FALSE
-*                              otherwise (e. g. file is to small
-*                              or already compressed)
+*          fragmentOffset            - fragment offset [bytes]
+*          fragmentSize              - fragment size [bytes]
+*          deltaCompressFlag         - TRUE for delta compression, FALSE
+*                                      otherwise
+*          byteCompressFlag          - TRUE for byte compression, FALSE
+*                                      otherwise (e. g. file is to small
+*                                      or already compressed)
 * Output : archiveEntryInfo - archive file entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -725,6 +728,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                               ConstString                     fileName,
                               const FileInfo                  *fileInfo,
                               const FileExtendedAttributeList *fileExtendedAttributeList,
+                              uint64                          fragmentOffset,
+                              uint64                          fragmentSize,
                               const bool                      deltaCompressFlag,
                               const bool                      byteCompressFlag
                              );
@@ -737,6 +742,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                 ConstString                     fileName,
                                 const FileInfo                  *fileInfo,
                                 const FileExtendedAttributeList *fileExtendedAttributeList,
+                                uint64                          fragmentOffset,
+                                uint64                          fragmentSize,
                                 const bool                      deltaCompressFlag,
                                 const bool                      byteCompressFlag
                                );
@@ -749,6 +756,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 *          archiveHandle     - archive handle
 *          deviceName        - special device name
 *          deviceInfo        - device info
+*          fragmentOffset    - fragment offset [blocks]
+*          fragmentSize      - fragment size [blocks]
 *          deltaCompressFlag - TRUE for delta compression, FALSE
 *                              otherwise
 *          byteCompressFlag  - TRUE for byte compression, FALSE
@@ -766,6 +775,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                ConstString      deviceName,
                                const DeviceInfo *deviceInfo,
                                FileSystemTypes  fileSystemType,
+                               uint64           fragmentOffset,
+                               uint64           fragmentSize,
                                const bool       deltaCompressFlag,
                                const bool       byteCompressFlag
                               );
@@ -778,6 +789,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                  ConstString      deviceName,
                                  const DeviceInfo *deviceInfo,
                                  FileSystemTypes  fileSystemType,
+                                 uint64           fragmentOffset,
+                                 uint64           fragmentSize,
                                  const bool       deltaCompressFlag,
                                  const bool       byteCompressFlag
                                 );
@@ -865,6 +878,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
 *                                      NULL
+*          fragmentOffset            - fragment offset [bytes]
+*          fragmentSize              - fragment size [bytes]
 *          deltaCompressFlag         - TRUE for delta compression, FALSE
 *                                      otherwise
 *          byteCompressFlag          - TRUE for byte compression, FALSE
@@ -882,6 +897,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                   const StringList                *fileNameList,
                                   const FileInfo                  *fileInfo,
                                   const FileExtendedAttributeList *fileExtendedAttributeList,
+                                  uint64                          fragmentOffset,
+                                  uint64                          fragmentSize,
                                   const bool                      deltaCompressFlag,
                                   const bool                      byteCompressFlag
                                  );
@@ -894,6 +911,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                     const StringList                *fileNameList,
                                     const FileInfo                  *fileInfo,
                                     const FileExtendedAttributeList *fileExtendedAttributeList,
+                                    uint64                          fragmentOffset,
+                                    uint64                          fragmentSize,
                                     const bool                      deltaCompressFlag,
                                     const bool                      byteCompressFlag
                                    );

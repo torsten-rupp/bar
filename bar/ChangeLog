@@ -1,8 +1,14 @@
 2016-12-xx 0.21
   * parallel test, compare
+  * fragmented create of huge files (size > 128M by default;
+    see option --fragment-size). Speed-up store huge files!
   * added meta-data chunk with host, name, UUID, created,
     comment
   * added option --comment
+  * added signature chunk with public-key signature SHA512
+    (see options --generate-signature-keys,
+    --signature-prive-key, --signature-public-key,
+    --no-signatures, --skip-verify-signatures)
   * BARControl: use keys from .pem files
   * added meta info chunk: store user name, host name,
     job UUID, schedule UUID, type, created date/time,
