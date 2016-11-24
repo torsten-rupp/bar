@@ -1328,19 +1328,19 @@ LOCAL String formatIncrementalFileName(String                 fileName,
   // remove all macros and leading and tailing separator characters
   String_clear(fileName);
   i = 0L;
-  while (i < String_length(storageSpecifier->archiveName))
+  while (i < String_length(storageSpecifier->fileName))
   {
-    ch = String_index(storageSpecifier->archiveName,i);
+    ch = String_index(storageSpecifier->fileName,i);
     switch (ch)
     {
       case '%':
         i += 1L;
-        if (i < String_length(storageSpecifier->archiveName))
+        if (i < String_length(storageSpecifier->fileName))
         {
           // removed previous separator characters
           String_trimRight(fileName,SEPARATOR_CHARS);
 
-          ch = String_index(storageSpecifier->archiveName,i);
+          ch = String_index(storageSpecifier->fileName,i);
           switch (ch)
           {
             case '%':
@@ -1357,24 +1357,24 @@ LOCAL String formatIncrementalFileName(String                 fileName,
               // discard %xyz
               if (isalpha(ch))
               {
-                while (   (i < String_length(storageSpecifier->archiveName))
+                while (   (i < String_length(storageSpecifier->fileName))
                        && isalpha(ch)
                       )
                 {
                   i += 1L;
-                  ch = String_index(storageSpecifier->archiveName,i);
+                  ch = String_index(storageSpecifier->fileName,i);
                 }
               }
 
               // discard following separator characters
               if (strchr(SEPARATOR_CHARS,ch) != NULL)
               {
-                while (   (i < String_length(storageSpecifier->archiveName))
+                while (   (i < String_length(storageSpecifier->fileName))
                        && (strchr(SEPARATOR_CHARS,ch) != NULL)
                       )
                 {
                   i += 1L;
-                  ch = String_index(storageSpecifier->archiveName,i);
+                  ch = String_index(storageSpecifier->fileName,i);
                 }
               }
               break;
@@ -3351,7 +3351,7 @@ LOCAL uint64 archiveGetSize(IndexHandle *indexHandle,
   // get archive file name
   archiveName = String_new();
   error = formatArchiveFileName(archiveName,
-                                createInfo->storageSpecifier->archiveName,
+                                createInfo->storageSpecifier->fileName,
                                 EXPAND_MACRO_MODE_STRING,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
@@ -3440,7 +3440,7 @@ LOCAL Errors archiveStore(IndexHandle  *indexHandle,
   // get archive file name
   archiveName = String_new();
   error = formatArchiveFileName(archiveName,
-                                createInfo->storageSpecifier->archiveName,
+                                createInfo->storageSpecifier->fileName,
                                 EXPAND_MACRO_MODE_STRING,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
@@ -4682,7 +4682,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       // get archive name pattern
       pattern = String_new();
       error = formatArchiveFileName(pattern,
-                                    createInfo->storageSpecifier->archiveName,
+                                    createInfo->storageSpecifier->fileName,
                                     EXPAND_MACRO_MODE_PATTERN,
                                     createInfo->archiveType,
                                     createInfo->scheduleTitle,
@@ -4709,7 +4709,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                if (error == ERROR_NONE)
                                {
                                  // find in storage list
-                                 if (StringList_find(&createInfo->storageFileList,storageSpecifier.archiveName) == NULL)
+                                 if (StringList_find(&createInfo->storageFileList,storageSpecifier.fileName) == NULL)
                                  {
                                    Storage_delete(&createInfo->storageInfo,storageName);
                                  }

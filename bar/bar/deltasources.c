@@ -75,7 +75,7 @@ LOCAL Errors createLocalStorageArchive(StorageSpecifier       *localStorageSpeci
   localStorageSpecifier->type = STORAGE_TYPE_FILESYSTEM;
 
   // create temporary file
-  error = File_getTmpFileName(localStorageSpecifier->archiveName,NULL,tmpDirectory);
+  error = File_getTmpFileName(localStorageSpecifier->fileName,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
     return error;
@@ -89,11 +89,11 @@ LOCAL Errors createLocalStorageArchive(StorageSpecifier       *localStorageSpeci
                        NULL,//void                         *storageRequestVolumeUserData,
                        NULL,//StorageStatusInfoFunction    storageStatusInfoFunction,
                        NULL,//void                         *storageStatusInfoUserData,
-                       localStorageSpecifier->archiveName
+                       localStorageSpecifier->fileName
                       );
   if (error != ERROR_NONE)
   {
-    File_delete(localStorageSpecifier->archiveName,FALSE);
+    File_delete(localStorageSpecifier->fileName,FALSE);
     return error;
   }
 
@@ -113,7 +113,7 @@ LOCAL void doneLocalStorageArchive(StorageSpecifier *localStorageSpecifier)
 {
   assert(localStorageSpecifier != NULL);
 
-  File_delete(localStorageSpecifier->archiveName,FALSE);
+  File_delete(localStorageSpecifier->fileName,FALSE);
 }
 
 #if 0
@@ -765,15 +765,15 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
         {
 //fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(deltaSourceNode->storageName));
 //Errors b =Storage_parseName(&storageSpecifier,deltaSourceNode->storageName);
-//fprintf(stderr,"%s, %d: %d %d %d: %s\n",__FILE__,__LINE__,b,Storage_isLocalArchive(&storageSpecifier),Archive_isArchiveFile(storageSpecifier.archiveName),String_cString(storageSpecifier.archiveName));
+//fprintf(stderr,"%s, %d: %d %d %d: %s\n",__FILE__,__LINE__,b,Storage_isLocalArchive(&storageSpecifier),Archive_isArchiveFile(storageSpecifier.fileName),String_cString(storageSpecifier.fileName));
           // check if available in file system, but not an archive file
           if (   (Storage_parseName(&storageSpecifier,deltaSourceNode->storageName) == ERROR_NONE)
               && Storage_isInFileSystem(&storageSpecifier)
-              && !Archive_isArchiveFile(storageSpecifier.archiveName)
+              && !Archive_isArchiveFile(storageSpecifier.fileName)
              )
           {
             // open local file as source
-            error = File_open(&deltaSourceHandle->tmpFileHandle,storageSpecifier.archiveName,FILE_OPEN_READ);
+            error = File_open(&deltaSourceHandle->tmpFileHandle,storageSpecifier.fileName,FILE_OPEN_READ);
             if (error == ERROR_NONE)
             {
               deltaSourceHandle->name = deltaSourceNode->storageName;
@@ -811,7 +811,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
               // check if available in file system and an archive file
               if (   (Storage_parseName(&storageSpecifier,deltaSourceNode->storageName) == ERROR_NONE)
                   && Storage_isInFileSystem(&storageSpecifier)
-                  && Archive_isArchiveFile(storageSpecifier.archiveName)
+                  && Archive_isArchiveFile(storageSpecifier.fileName)
                  )
               {
                 // set restore flag for source node and restore to temporary file
@@ -984,7 +984,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
         && Storage_isInFileSystem(&storageSpecifier)
        )
     {
-      if (Archive_isArchiveFile(storageSpecifier.archiveName))
+      if (Archive_isArchiveFile(storageSpecifier.fileName))
       {
         // create temporary file as delta source
         tmpFileName = String_new();
@@ -1030,7 +1030,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
       else
       {
         // open local file as delta source
-        error = File_open(&deltaSourceHandle->tmpFileHandle,storageSpecifier.archiveName,FILE_OPEN_READ);
+        error = File_open(&deltaSourceHandle->tmpFileHandle,storageSpecifier.fileName,FILE_OPEN_READ);
         if (error == ERROR_NONE)
         {
           deltaSourceHandle->name = sourceStorageName;

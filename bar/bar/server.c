@@ -3711,8 +3711,8 @@ LOCAL void jobThreadCode(void)
         TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
         TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
         TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeName(archiveType),NULL);
-        TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
-        TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
+        TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getFilePathName(directory,storageSpecifier.fileName),NULL);
+        TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.fileName,NULL);
         script = expandTemplate(String_cString(jobNode->jobOptions.preProcessScript),
                                 EXPAND_MACRO_MODE_STRING,
                                 startDateTime,
@@ -3987,8 +3987,8 @@ NULL,//                                                        scheduleTitle,
         TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
         TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
         TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeName(archiveType),NULL);
-        TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
-        TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
+        TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getFilePathName(directory,storageSpecifier.fileName),NULL);
+        TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.fileName,NULL);
         script = expandTemplate(String_cString(jobNode->jobOptions.postProcessScript),
                                 EXPAND_MACRO_MODE_STRING,
                                 startDateTime,
@@ -5865,7 +5865,7 @@ LOCAL void autoIndexThreadCode(void)
              )
           {
             // get base directory
-            File_setFileName(baseName,storageSpecifier.archiveName);
+            File_setFileName(baseName,storageSpecifier.fileName);
             do
             {
               error = Storage_openDirectoryList(&storageDirectoryListHandle,
@@ -16296,7 +16296,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                              error = Storage_parseName(&storageSpecifier,storageName);
                              if (error == ERROR_NONE)
                              {
-                               if (String_endsWithCString(storageSpecifier.archiveName,FILE_NAME_EXTENSION_ARCHIVE_FILE))
+                               if (String_endsWithCString(storageSpecifier.fileName,FILE_NAME_EXTENSION_ARCHIVE_FILE))
                                {
 //fprintf(stderr,"%s, %d: storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
                                  if (Index_findStorageByName(indexHandle,

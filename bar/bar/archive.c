@@ -1134,7 +1134,7 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
   assert(archiveHandle->chunkIO->seek != NULL);
 
   if (   (Crypt_isKey(&globalOptions.signaturePrivateKey))
-      && !archiveHandle->jobOptions->noSignatureFlag
+      && !globalOptions.noSignatureFlag
      )
   {
     // init variables
@@ -1415,7 +1415,7 @@ if (!archiveHandle->file.openFlag) return ERROR_NONE;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // add signature
-    if (!archiveHandle->jobOptions->noSignatureFlag)
+    if (!globalOptions.noSignatureFlag)
     {
       error = writeSignature(archiveHandle);
       if (error != ERROR_NONE)
