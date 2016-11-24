@@ -1933,7 +1933,7 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
 }
 
 /***********************************************************************\
-* Name   : printrchiveList
+* Name   : printArchiveList
 * Purpose: sort, group and print list with archive entries
 * Input  : -
 * Output : -
@@ -2116,7 +2116,7 @@ LOCAL void printArchiveList(void)
 * Name   : listArchiveContent
 * Purpose: list archive content
 * Input  : storageSpecifier     - storage specifier
-*          archiveName          - archive name
+*          fileName             - file name
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
 *          showEntriesFlag      - TRUE to show entries
@@ -2131,7 +2131,7 @@ LOCAL void printArchiveList(void)
 \***********************************************************************/
 
 LOCAL Errors listArchiveContent(StorageSpecifier    *storageSpecifier,
-                                ConstString         archiveName,
+                                ConstString         fileName,
                                 const EntryList     *includeEntryList,
                                 const PatternList   *excludePatternList,
                                 bool                showEntriesFlag,
@@ -2196,22 +2196,29 @@ remoteBarFlag=FALSE;
         }
 
         // check signatures
-        error = Archive_verifySignatures(&storageInfo,
-                                         archiveName,
-                                         jobOptions,
-                                         logHandle,
-                                         &allCryptSignatureState
-                                        );
-        if (error != ERROR_NONE)
+        if (!jobOptions->noVerifySignaturesFlag)
         {
-          (void)Storage_done(&storageInfo);
-          break;
+          error = Archive_verifySignatures(&storageInfo,
+                                           fileName,
+                                           jobOptions,
+                                           logHandle,
+                                           &allCryptSignatureState
+                                          );
+          if (error != ERROR_NONE)
+          {
+            (void)Storage_done(&storageInfo);
+            break;
+          }
+        }
+        else
+        {
+          allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
         }
 
         // open archive
         error = Archive_open(&archiveHandle,
                              &storageInfo,
-                             archiveName,
+                             fileName,
                              NULL,  // deltaSourceList
                              jobOptions,
                              getPasswordFunction,
@@ -2225,7 +2232,7 @@ remoteBarFlag=FALSE;
         }
 
         // list contents
-        printArchiveName(Storage_getPrintableName(storageSpecifier,archiveName),showEntriesFlag);
+        printArchiveName(Storage_getPrintableName(storageSpecifier,fileName),showEntriesFlag);
         while (   !Archive_eof(&archiveHandle,TRUE,TRUE)
                && (error == ERROR_NONE)
               )
@@ -2240,7 +2247,7 @@ remoteBarFlag=FALSE;
           if (error != ERROR_NONE)
           {
             printWarning("Cannot read next entry from storage '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                       Storage_getPrintableNameCString(storageSpecifier,fileName),
                        Error_getText(error)
                       );
             break;
@@ -2281,9 +2288,10 @@ remoteBarFlag=FALSE;
                                                );
                   if (error != ERROR_NONE)
                   {
+//TODO: remove
 #if 0
                     printError("Cannot read 'file' content from storage '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Storage_getPrintableNameCString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
 #endif
@@ -2397,9 +2405,10 @@ remoteBarFlag=FALSE;
                                                 );
                   if (error != ERROR_NONE)
                   {
+//TODO: remove
 #if 0
                     printError("Cannot read 'image' content from storage '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Storage_getPrintableNameCString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
 #endif
@@ -2494,9 +2503,10 @@ remoteBarFlag=FALSE;
                                                     );
                   if (error != ERROR_NONE)
                   {
+//TODO: remove
 #if 0
                     printError("Cannot read 'directory' content from storage '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Storage_getPrintableNameCString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
 #endif
@@ -2582,9 +2592,10 @@ remoteBarFlag=FALSE;
                                                );
                   if (error != ERROR_NONE)
                   {
+//TODO: remove
 #if 0
                     printError("Cannot read 'link' content from storage '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Storage_getPrintableNameCString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
 #endif
@@ -2685,9 +2696,10 @@ remoteBarFlag=FALSE;
                                                    );
                   if (error != ERROR_NONE)
                   {
+//TODO: remove
 #if 0
                     printError("Cannot read 'hard link' content from storage '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Storage_getPrintableNameCString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
 #endif
@@ -2791,9 +2803,10 @@ remoteBarFlag=FALSE;
                                                   );
                   if (error != ERROR_NONE)
                   {
+//TODO: remove
 #if 0
                     printError("Cannot read 'special' content from storage '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Storage_getPrintableNameCString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
 #endif
@@ -2888,9 +2901,10 @@ remoteBarFlag=FALSE;
                                                );
                   if (error != ERROR_NONE)
                   {
+//TODO: remove
 #if 0
                     printError("Cannot read 'meta' content from storage '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                               Storage_getPrintableNameCString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
 #endif
@@ -2982,6 +2996,7 @@ remoteBarFlag=FALSE;
           if (storageSpecifier->hostPort == 0) storageSpecifier->hostPort = sshServer.port;
           if (String_isEmpty(storageSpecifier->hostName))
           {
+//TODO: remove
 #if 0
             printError("No host name given!\n");
 #endif
@@ -2990,6 +3005,7 @@ remoteBarFlag=FALSE;
           }
           if (sshServer.publicKey.data == NULL)
           {
+//TODO: remove
 #if 0
             printError("Cannot SSH public key given!\n");
 #endif
@@ -2998,6 +3014,7 @@ remoteBarFlag=FALSE;
           }
           if (sshServer.privateKey.data == NULL)
           {
+//TODO: remove
 #if 0
             printError("Cannot SSH private key given!\n");
 #endif
@@ -3045,6 +3062,7 @@ remoteBarFlag=FALSE;
           }
           if (error != ERROR_NONE)
           {
+//TODO: remove
 #if 0
             printError("Cannot connect to '%s:%d' (error: %s)!\n",
                        String_cString(storageSpecifier->hostName),
@@ -3067,6 +3085,7 @@ remoteBarFlag=FALSE;
                                );
         if (error != ERROR_NONE)
         {
+//TODO: remove
 #if 0
           printError("Cannot execute remote BAR program '%s' (error: %s)!\n",
                      String_cString(line),
@@ -3080,6 +3099,7 @@ remoteBarFlag=FALSE;
         {
           Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,0);
           exitcode = Network_terminate(&networkExecuteHandle);
+//TODO: remove
 #if 0
           printError("No response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
 #endif
@@ -3091,6 +3111,7 @@ remoteBarFlag=FALSE;
         {
           Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,TIMEOUT);
           exitcode = Network_terminate(&networkExecuteHandle);
+//TODO: remove
 #if 0
           printError("Invalid response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
 #endif
@@ -3100,6 +3121,7 @@ remoteBarFlag=FALSE;
         if (protocolVersionMajor != SERVER_PROTOCOL_VERSION_MAJOR)
         {
           (void)Network_terminate(&networkExecuteHandle);
+//TODO: remove
 #if 0
           printError("Invalid BAR major protocol version (expected: %d, got %d)!\n",SERVER_PROTOCOL_VERSION_MAJOR,protocolVersionMajor);
 #endif
@@ -3136,7 +3158,7 @@ remoteBarFlag=FALSE;
 //TODO
 
           // send list archive command
-          String_format(String_clear(line),"2 ARCHIVE_LIST name=%S",storageSpecifier->archiveName);
+          String_format(String_clear(line),"2 ARCHIVE_LIST name=%S",storageSpecifier->fileName);
           Network_executeWriteLine(&networkExecuteHandle,line);
           Network_executeSendEOF(&networkExecuteHandle);
 
@@ -3748,6 +3770,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
       break;
     case STORAGE_TYPE_DEVICE:
+//TODO: remove
 #if 0
       printError("List archives on device is not supported!\n");
 #endif
@@ -3792,7 +3815,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     printArchiveListFooter(List_count(&archiveContentList));
   }
 
-  return (!globalOptions.noVerifySignaturesFlag && (allCryptSignatureState == CRYPT_SIGNATURE_STATE_INVALID))
+  return (!jobOptions->noVerifySignaturesFlag && (allCryptSignatureState == CRYPT_SIGNATURE_STATE_INVALID))
            ? ERROR_INVALID_SIGNATURE
            : ERROR_NONE;
 }
@@ -4075,7 +4098,7 @@ Errors Command_list(StringList          *storageNameList,
       // open directory list
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
-                                        NULL,  // archiveName
+                                        NULL,  // fileName
                                         jobOptions,
                                         SERVER_CONNECTION_PRIORITY_HIGH
                                        );
@@ -4141,7 +4164,7 @@ Errors Command_list(StringList          *storageNameList,
       if (String_isEmpty(storageSpecifier.archivePatternString))
       {
         error = listArchiveContent(&storageSpecifier,
-                                   NULL,  // archiveName
+                                   NULL,  // fileName
                                    includeEntryList,
                                    excludePatternList,
                                    showEntriesFlag,
