@@ -223,45 +223,47 @@ XDELTA3_FLAGS =
 TEST_IMAGE_OPERATIONS = test_image_operations
 
 # test settings
-TEST_CONFIG           = test/bar.cfg
+TEST_CONFIG                = test/bar.cfg
+TEST_SIGNATURE_KEY_PUBLIC  = test/signature-key.public
+TEST_SIGNATURE_KEY_PRIVATE = test/signature-key.private
 
-TEST_SERVER_CONFIG    = test/bar.cfg
-TEST_SERVER_PORT      = 39909
-TEST_SERVER_SSL_PORT  = 39910
-TEST_SERVER_PID_FILE  = test/barserver.pid
-TEST_SERVER_JOBS      = test/jobs
-TEST_SERVER_DATABASE  = test/index.db
-TEST_SERVER_LOG_FILE  = test/bar.log
+TEST_SERVER_CONFIG         = test/bar.cfg
+TEST_SERVER_PORT           = 39909
+TEST_SERVER_SSL_PORT       = 39910
+TEST_SERVER_PID_FILE       = test/barserver.pid
+TEST_SERVER_JOBS           = test/jobs
+TEST_SERVER_DATABASE       = test/index.db
+TEST_SERVER_LOG_FILE       = test/bar.log
 
 # hosts, ports, passwords, keys for tests
-TEST_HOST             ?= localhost
-TEST_PASSWORD         ?=
+TEST_HOST                  ?= localhost
+TEST_PASSWORD              ?=
 
-TEST_HOST_FTP         ?= $(TEST_HOST)
-TEST_PASSWORD_FTP     ?= $(TEST_PASSWORD)
+TEST_HOST_FTP              ?= $(TEST_HOST)
+TEST_PASSWORD_FTP          ?= $(TEST_PASSWORD)
 
-TEST_HOST_SSH         ?= $(TEST_HOST)
-TEST_PORT_SSH         ?= 22
-TEST_PASSWORD_SSH     ?= $(TEST_PASSWORD)
-TEST_PUBLIC_KEY_SSH   =  $(HOME)/.ssh/id_rsa.pub
-TEST_PRIVATE_KEY_SSH  =  $(HOME)/.ssh/id_rsa
+TEST_HOST_SSH              ?= $(TEST_HOST)
+TEST_PORT_SSH              ?= 22
+TEST_PASSWORD_SSH          ?= $(TEST_PASSWORD)
+TEST_PUBLIC_KEY_SSH        =  $(HOME)/.ssh/id_rsa.pub
+TEST_PRIVATE_KEY_SSH       =  $(HOME)/.ssh/id_rsa
 
-TEST_HOST_SCP         ?= $(TEST_HOST)
-TEST_PORT_SCP         ?= 22
-TEST_PASSWORD_SCP     ?= $(TEST_PASSWORD_SSH)
-TEST_PUBLIC_KEY_SCP   =  $(TEST_PUBLIC_KEY_SSH)
-TEST_PRIVATE_KEY_SCP  =  $(TEST_PRIVATE_KEY_SSH)
+TEST_HOST_SCP              ?= $(TEST_HOST)
+TEST_PORT_SCP              ?= 22
+TEST_PASSWORD_SCP          ?= $(TEST_PASSWORD_SSH)
+TEST_PUBLIC_KEY_SCP        =  $(TEST_PUBLIC_KEY_SSH)
+TEST_PRIVATE_KEY_SCP       =  $(TEST_PRIVATE_KEY_SSH)
 
-TEST_HOST_SFTP        ?= $(TEST_HOST)
-TEST_PORT_SFTP        ?= 22
-TEST_PASSWORD_SFTP    ?= $(TEST_PASSWORD_SSH)
-TEST_PUBLIC_KEY_SFTP  =  $(TEST_PUBLIC_KEY_SSH)
-TEST_PRIVATE_KEY_SFTP =  $(TEST_PRIVATE_KEY_SSH)
+TEST_HOST_SFTP             ?= $(TEST_HOST)
+TEST_PORT_SFTP             ?= 22
+TEST_PASSWORD_SFTP         ?= $(TEST_PASSWORD_SSH)
+TEST_PUBLIC_KEY_SFTP       =  $(TEST_PUBLIC_KEY_SSH)
+TEST_PRIVATE_KEY_SFTP      =  $(TEST_PRIVATE_KEY_SSH)
 
-TEST_HOST_WEBDAV      ?= localhost/webdav
-TEST_PASSWORD_WEBDAV  ?= $(TEST_PASSWORD)
+TEST_HOST_WEBDAV           ?= localhost/webdav
+TEST_PASSWORD_WEBDAV       ?= $(TEST_PASSWORD)
 
-TEST_PASSWORD_CRYPT   =  Franz_Kafka:Die_Verwandlung
+TEST_PASSWORD_CRYPT        =  Franz_Kafka:Die_Verwandlung
 
 # crypt/compress used for all-test (do not select all available compress and
 # crypt algorithms, because this would take a long time)
@@ -1033,6 +1035,7 @@ TEST_FILE_NAMES = \
   readonly512k.dat \
   unreadable.dat \
   smallfile.dat \
+  hugefile.dat \
   sub_dir \
   sub_ignore_dir \
   linkdata.dat \
@@ -1096,7 +1099,7 @@ TEST_KEYS = test/key.public \
             test/signature-key.private
 
 # default test options
-TEST_OPTIONS = --no-default-config --config=$(CURDIR)/$(TEST_CONFIG)
+TEST_OPTIONS = --no-default-config --config=$(CURDIR)/$(TEST_CONFIG) --signature-public-key=$(CURDIR)/$(TEST_SIGNATURE_KEY_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_SIGNATURE_KEY_PRIVATE)
 
 .PHONY: test test_win
 .PHONY: test-debug test_win-debug
@@ -1650,7 +1653,7 @@ test_parameters: \
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --overwrite-archive-files --comment 'Hello World!' $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar -z zip0 $(TEST_FILES) /dev/ram0 /dev/zero --overwrite-archive-files --comment 'Hello World!' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar -r --info $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar --info $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar -g $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar -H $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar -L $(if $(QUIET),</dev/null 1>/dev/null))
@@ -1809,6 +1812,9 @@ $(TEST_DATA_DIR)/data/unreadable.dat:
 $(TEST_DATA_DIR)/data/smallfile.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1 count=128 2>/dev/null
+$(TEST_DATA_DIR)/data/hugefile.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1M count=256 2>/dev/null
 $(TEST_DATA_DIR)/data/sub_dir:
 	$(INSTALL) -d $(@D)
 	$(RMRF) $@; $(INSTALL) -d $@; $(ECHO) Hello World >$@/test.dat
@@ -1954,11 +1960,11 @@ test_file_operations_base: \
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -r $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l -r $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t -r $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d -r $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x -r $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination $(TEST_DATA_DIR)/restore $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -l $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -t $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -d $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) -x $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination $(TEST_DATA_DIR)/restore $(if $(QUIET),</dev/null 1>/dev/null))
 	$(DIFF) -r \
           -x unreadable.dat \
           -x link_not_existing_file.dat \
