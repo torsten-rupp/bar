@@ -288,9 +288,9 @@ LOCAL bool StorageDevice_parseSpecifier(ConstString deviceSpecifier,
 }
 
 LOCAL bool StorageDevice_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
-                                         ConstString            archiveName1,
+                                         ConstString            fileName1,
                                          const StorageSpecifier *storageSpecifier2,
-                                         ConstString            archiveName2
+                                         ConstString            fileName2
                                         )
 {
   assert(storageSpecifier1 != NULL);
@@ -298,15 +298,15 @@ LOCAL bool StorageDevice_equalSpecifiers(const StorageSpecifier *storageSpecifie
   assert(storageSpecifier2 != NULL);
   assert(storageSpecifier2->type == STORAGE_TYPE_DEVICE);
 
-  if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
-  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
+  if (fileName1 == NULL) fileName1 = storageSpecifier1->fileName;
+  if (fileName2 == NULL) fileName2 = storageSpecifier2->fileName;
 
   return    String_equals(storageSpecifier1->deviceName,storageSpecifier2->deviceName)
-         && String_equals(archiveName1,archiveName2);
+         && String_equals(fileName1,fileName2);
 }
 
 LOCAL String StorageDevice_getName(StorageSpecifier *storageSpecifier,
-                                   ConstString      archiveName
+                                   ConstString      fileName
                                   )
 {
   ConstString storageFileName;
@@ -314,9 +314,9 @@ LOCAL String StorageDevice_getName(StorageSpecifier *storageSpecifier,
   assert(storageSpecifier != NULL);
 
   // get file to use
-  if      (archiveName != NULL)
+  if      (!String_isEmpty(fileName))
   {
-    storageFileName = archiveName;
+    storageFileName = fileName;
   }
   else if (storageSpecifier->archivePatternString != NULL)
   {
@@ -324,7 +324,7 @@ LOCAL String StorageDevice_getName(StorageSpecifier *storageSpecifier,
   }
   else
   {
-    storageFileName = storageSpecifier->archiveName;
+    storageFileName = storageSpecifier->fileName;
   }
 
   String_appendCString(storageSpecifier->storageName,"device://");
@@ -343,7 +343,7 @@ LOCAL String StorageDevice_getName(StorageSpecifier *storageSpecifier,
 }
 
 LOCAL ConstString StorageDevice_getPrintableName(StorageSpecifier *storageSpecifier,
-                                                 ConstString      archiveName
+                                                 ConstString      fileName
                                                 )
 {
   ConstString storageFileName;
@@ -351,9 +351,9 @@ LOCAL ConstString StorageDevice_getPrintableName(StorageSpecifier *storageSpecif
   assert(storageSpecifier != NULL);
 
   // get file to use
-  if      (!String_isEmpty(archiveName))
+  if      (!String_isEmpty(fileName))
   {
-    storageFileName = archiveName;
+    storageFileName = fileName;
   }
   else if (!String_isEmpty(storageSpecifier->archivePatternString))
   {
@@ -361,7 +361,7 @@ LOCAL ConstString StorageDevice_getPrintableName(StorageSpecifier *storageSpecif
   }
   else
   {
-    storageFileName = storageSpecifier->archiveName;
+    storageFileName = storageSpecifier->fileName;
   }
 
   String_appendCString(storageSpecifier->storageName,"device://");
@@ -794,8 +794,8 @@ LOCAL bool StorageDevice_exists(StorageInfo *storageInfo, ConstString archiveNam
 }
 
 LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
-                                  ConstString   archiveName,
-                                  uint64        archiveSize
+                                  ConstString   fileName,
+                                  uint64        fileSize
                                  )
 {
   Errors error;
@@ -803,15 +803,15 @@ LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
-  assert(!String_isEmpty(archiveName));
+  assert(!String_isEmpty(fileName));
 
-  UNUSED_VARIABLE(archiveSize);
+  UNUSED_VARIABLE(fileSize);
 
   // create file name
   // init variables
   storageHandle->device.fileName = String_new();
   String_set(storageHandle->device.fileName,storageHandle->storageInfo->device.directory);
-  File_appendFileName(storageHandle->device.fileName,archiveName);
+  File_appendFileName(storageHandle->device.fileName,fileName);
 
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {

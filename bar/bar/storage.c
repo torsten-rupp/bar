@@ -683,7 +683,7 @@ void Storage_doneAll(void)
   storageSpecifier->loginName            = String_new();
   storageSpecifier->loginPassword        = Password_new();
   storageSpecifier->deviceName           = String_new();
-  storageSpecifier->archiveName          = String_new();
+  storageSpecifier->fileName             = String_new();
   storageSpecifier->archivePatternString = NULL;
   storageSpecifier->storageName          = String_new();
   storageSpecifier->printableStorageName = String_new();
@@ -717,7 +717,7 @@ void Storage_doneAll(void)
   destinationStorageSpecifier->loginName            = String_duplicate(sourceStorageSpecifier->loginName);
   destinationStorageSpecifier->loginPassword        = Password_duplicate(sourceStorageSpecifier->loginPassword);
   destinationStorageSpecifier->deviceName           = String_duplicate(sourceStorageSpecifier->deviceName);
-  destinationStorageSpecifier->archiveName          = String_duplicate(sourceStorageSpecifier->archiveName);
+  destinationStorageSpecifier->fileName             = String_duplicate(sourceStorageSpecifier->fileName);
   if (sourceStorageSpecifier->archivePatternString != NULL)
   {
     destinationStorageSpecifier->archivePatternString = String_duplicate(sourceStorageSpecifier->archivePatternString);
@@ -762,7 +762,7 @@ void Storage_doneAll(void)
     Pattern_done(&storageSpecifier->archivePattern);
     String_delete(storageSpecifier->archivePatternString);
   }
-  String_delete(storageSpecifier->archiveName);
+  String_delete(storageSpecifier->fileName);
   String_delete(storageSpecifier->deviceName);
   Password_delete(storageSpecifier->loginPassword);
   String_delete(storageSpecifier->loginName);
@@ -1276,7 +1276,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
 
   // get base file name
   hasPatternFlag = FALSE;
-  String_clear(storageSpecifier->archiveName);
+  String_clear(storageSpecifier->fileName);
   File_initSplitFileName(&archiveNameTokenizer,archiveName);
   {
     if (File_getNextSplitFileName(&archiveNameTokenizer,&token))
@@ -1285,17 +1285,17 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
       {
         if (!String_isEmpty(token))
         {
-          File_setFileName(storageSpecifier->archiveName,token);
+          File_setFileName(storageSpecifier->fileName,token);
         }
         else
         {
-          File_setFileNameChar(storageSpecifier->archiveName,FILE_SEPARATOR_CHAR);
+          File_setFileNameChar(storageSpecifier->fileName,FILE_SEPARATOR_CHAR);
         }
         while (File_getNextSplitFileName(&archiveNameTokenizer,&token) && !hasPatternFlag)
         {
           if (!Pattern_checkIsPattern(token))
           {
-            File_appendFileName(storageSpecifier->archiveName,token);
+            File_appendFileName(storageSpecifier->fileName,token);
           }
           else
           {
@@ -1400,7 +1400,7 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
     }
     else
     {
-      archiveName = storageSpecifier->archiveName;
+      archiveName = storageSpecifier->fileName;
     }
   }
 
@@ -1449,29 +1449,29 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
 }
 
 const char *Storage_getNameCString(StorageSpecifier *storageSpecifier,
-                                   ConstString      archiveName
+                                   ConstString      fileName
                                   )
 {
-  return String_cString(Storage_getName(storageSpecifier,archiveName));
+  return String_cString(Storage_getName(storageSpecifier,fileName));
 }
 
 ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
-                                     ConstString      archiveName
+                                     ConstString      fileName
                                     )
 {
   assert(storageSpecifier != NULL);
 
   // get file to use
-  if (archiveName == NULL)
+  if (fileName == NULL)
   {
 //TODO: impleemtn Storage_getPattern()
     if (storageSpecifier->archivePatternString != NULL)
     {
-      archiveName = storageSpecifier->archivePatternString;
+      fileName = storageSpecifier->archivePatternString;
     }
     else
     {
-      archiveName = storageSpecifier->archiveName;
+      fileName = storageSpecifier->fileName;
     }
   }
 
@@ -1481,33 +1481,33 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      StorageFile_getPrintableName(storageSpecifier,archiveName);
+      StorageFile_getPrintableName(storageSpecifier,fileName);
       break;
     case STORAGE_TYPE_FTP:
-      StorageFTP_getPrintableName(storageSpecifier,archiveName);
+      StorageFTP_getPrintableName(storageSpecifier,fileName);
       break;
     case STORAGE_TYPE_SSH:
-      if (!String_isEmpty(archiveName))
+      if (!String_isEmpty(fileName))
       {
-        String_append(storageSpecifier->storageName,archiveName);
+        String_append(storageSpecifier->storageName,fileName);
       }
       break;
     case STORAGE_TYPE_SCP:
-      StorageSCP_getPrintableName(storageSpecifier,archiveName);
+      StorageSCP_getPrintableName(storageSpecifier,fileName);
       break;
     case STORAGE_TYPE_SFTP:
-      StorageSFTP_getPrintableName(storageSpecifier,archiveName);
+      StorageSFTP_getPrintableName(storageSpecifier,fileName);
       break;
     case STORAGE_TYPE_WEBDAV:
-      StorageWebDAV_getPrintableName(storageSpecifier,archiveName);
+      StorageWebDAV_getPrintableName(storageSpecifier,fileName);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      StorageOptical_getPrintableName(storageSpecifier,archiveName);
+      StorageOptical_getPrintableName(storageSpecifier,fileName);
       break;
     case STORAGE_TYPE_DEVICE:
-      StorageDevice_getPrintableName(storageSpecifier,archiveName);
+      StorageDevice_getPrintableName(storageSpecifier,fileName);
       break;
     default:
       #ifndef NDEBUG
@@ -1520,10 +1520,10 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
 }
 
 const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
-                                            ConstString      archiveName
+                                            ConstString      fileName
                                            )
 {
-  return String_cString(Storage_getPrintableName(storageSpecifier,archiveName));
+  return String_cString(Storage_getPrintableName(storageSpecifier,fileName));
 }
 
 #ifdef NDEBUG
@@ -1950,7 +1950,7 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   // get archive name
-  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.fileName;
   if (String_isEmpty(archiveName))
   {
     return ERROR_NO_ARCHIVE_FILE_NAME;
@@ -2022,7 +2022,7 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
   storageHandle->mode        = STORAGE_MODE_WRITE;
 
   // get archive name
-  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.fileName;
   if (String_isEmpty(archiveName))
   {
     return ERROR_NO_ARCHIVE_FILE_NAME;
@@ -2102,7 +2102,7 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
   storageHandle->mode        = STORAGE_MODE_READ;
 
   // get archive name
-  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.fileName;
   if (String_isEmpty(archiveName))
   {
     return ERROR_NO_ARCHIVE_FILE_NAME;
@@ -2563,7 +2563,7 @@ Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName)
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   // get archive name
-  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.fileName;
   if (String_isEmpty(archiveName))
   {
     return ERROR_NO_ARCHIVE_FILE_NAME;
@@ -2622,7 +2622,7 @@ Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString archiveNam
   StorageDirectoryListHandle storageDirectoryListHandle;
 
   // get archive name
-  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.fileName;
   if (String_isEmpty(archiveName))
   {
     return ERROR_NO_ARCHIVE_FILE_NAME;
@@ -2714,7 +2714,7 @@ Errors Storage_getFileInfo(StorageInfo *storageInfo,
   assert(fileInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
-  infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
+  infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.fileName;
   memset(fileInfo,0,sizeof(fileInfo));
 
   error = ERROR_UNKNOWN;
@@ -2781,7 +2781,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   Storage_duplicateSpecifier(&storageDirectoryListHandle->storageSpecifier,storageSpecifier);
 
   // get archive name
-  if (archiveName == NULL) archiveName = storageDirectoryListHandle->storageSpecifier.archiveName;
+  if (archiveName == NULL) archiveName = storageDirectoryListHandle->storageSpecifier.fileName;
   if (String_isEmpty(archiveName))
   {
     Storage_doneSpecifier(&storageDirectoryListHandle->storageSpecifier);
@@ -3128,7 +3128,7 @@ Errors Storage_forAll(ConstString     storagePatternString,
   if (error == ERROR_NONE)
   {
     // read directory and scan all sub-directories
-    StringList_append(&directoryList,storageSpecifier.archiveName);
+    StringList_append(&directoryList,storageSpecifier.fileName);
     while (!StringList_isEmpty(&directoryList))
     {
       StringList_removeLast(&directoryList,fileName);
@@ -3162,7 +3162,7 @@ Errors Storage_forAll(ConstString     storagePatternString,
           }
 
           // match pattern and call callback
-          if (   ((storageSpecifier.archivePatternString == NULL) && String_equals(storageSpecifier.archiveName,fileName))
+          if (   ((storageSpecifier.archivePatternString == NULL) && String_equals(storageSpecifier.fileName,fileName))
               || ((storageSpecifier.archivePatternString != NULL) && Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT))
              )
           {

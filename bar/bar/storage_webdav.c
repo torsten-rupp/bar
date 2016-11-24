@@ -524,9 +524,9 @@ LOCAL bool StorageWebDAV_parseSpecifier(ConstString webdavSpecifier,
 }
 
 LOCAL bool StorageWebDAV_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
-                                         ConstString            archiveName1,
+                                         ConstString            fileName1,
                                          const StorageSpecifier *storageSpecifier2,
-                                         ConstString            archiveName2
+                                         ConstString            fileName2
                                         )
 {
   assert(storageSpecifier1 != NULL);
@@ -534,16 +534,16 @@ LOCAL bool StorageWebDAV_equalSpecifiers(const StorageSpecifier *storageSpecifie
   assert(storageSpecifier2 != NULL);
   assert(storageSpecifier2->type == STORAGE_TYPE_WEBDAV);
 
-  if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
-  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
+  if (fileName1 == NULL) fileName1 = storageSpecifier1->fileName;
+  if (fileName2 == NULL) fileName2 = storageSpecifier2->fileName;
 
   return    String_equals(storageSpecifier1->hostName,storageSpecifier2->hostName)
          && String_equals(storageSpecifier1->loginName,storageSpecifier2->loginName)
-         && String_equals(archiveName1,archiveName2);
+         && String_equals(fileName1,fileName2);
 }
 
 LOCAL String StorageWebDAV_getName(StorageSpecifier *storageSpecifier,
-                                   ConstString      archiveName
+                                   ConstString      fileName
                                   )
 {
   ConstString storageFileName;
@@ -553,9 +553,9 @@ LOCAL String StorageWebDAV_getName(StorageSpecifier *storageSpecifier,
   assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
 
   // get file to use
-  if      (archiveName != NULL)
+  if      (!String_isEmpty(fileName))
   {
-    storageFileName = archiveName;
+    storageFileName = fileName;
   }
   else if (storageSpecifier->archivePatternString != NULL)
   {
@@ -563,7 +563,7 @@ LOCAL String StorageWebDAV_getName(StorageSpecifier *storageSpecifier,
   }
   else
   {
-    storageFileName = storageSpecifier->archiveName;
+    storageFileName = storageSpecifier->fileName;
   }
 
   String_appendCString(storageSpecifier->storageName,"webdav://");
@@ -590,7 +590,7 @@ LOCAL String StorageWebDAV_getName(StorageSpecifier *storageSpecifier,
 }
 
 LOCAL ConstString StorageWebDAV_getPrintableName(StorageSpecifier *storageSpecifier,
-                                                 ConstString      archiveName
+                                                 ConstString      fileName
                                                 )
 {
   ConstString storageFileName;
@@ -599,9 +599,9 @@ LOCAL ConstString StorageWebDAV_getPrintableName(StorageSpecifier *storageSpecif
   assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
 
   // get file to use
-  if      (!String_isEmpty(archiveName))
+  if      (!String_isEmpty(fileName))
   {
-    storageFileName = archiveName;
+    storageFileName = fileName;
   }
   else if (!String_isEmpty(storageSpecifier->archivePatternString))
   {
@@ -609,7 +609,7 @@ LOCAL ConstString StorageWebDAV_getPrintableName(StorageSpecifier *storageSpecif
   }
   else
   {
-    storageFileName = storageSpecifier->archiveName;
+    storageFileName = storageSpecifier->fileName;
   }
 
       String_appendCString(storageSpecifier->storageName,"webdav://");
@@ -794,7 +794,7 @@ LOCAL bool StorageWebDAV_isServerAllocationPending(StorageInfo *storageInfo)
 }
 
 LOCAL Errors StorageWebDAV_preProcess(StorageInfo *storageInfo,
-                                      ConstString archiveName,
+                                      ConstString fileName,
                                       time_t      timestamp,
                                       bool        initialFlag
                                      )
@@ -816,7 +816,7 @@ LOCAL Errors StorageWebDAV_preProcess(StorageInfo *storageInfo,
       if (!initialFlag)
       {
         // init macros
-        TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+        TEXT_MACRO_N_STRING (textMacros[0],"%file",  fileName,                 NULL);
         TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
         // write pre-processing
@@ -944,8 +944,8 @@ LOCAL bool StorageWebDAV_exists(StorageInfo*storageInfo, ConstString archiveName
 }
 
 LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
-                                  ConstString   archiveName,
-                                  uint64        archiveSize
+                                  ConstString   fileName,
+                                  uint64        fileSize
                                  )
 {
   #ifdef HAVE_CURL
@@ -962,14 +962,14 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
-  assert(!String_isEmpty(archiveName));
+  assert(!String_isEmpty(fileName));
 
   #ifdef HAVE_CURL
     // initialize variables
     storageHandle->webdav.curlMultiHandle      = NULL;
     storageHandle->webdav.curlHandle           = NULL;
     storageHandle->webdav.index                = 0LL;
-    storageHandle->webdav.size                 = archiveSize;
+    storageHandle->webdav.size                 = fileSize;
     storageHandle->webdav.receiveBuffer.data   = NULL;
     storageHandle->webdav.receiveBuffer.size   = 0LL;
     storageHandle->webdav.receiveBuffer.offset = 0LL;
@@ -998,8 +998,8 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
     if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       // get pathname, basename
-      pathName = File_getFilePathName(String_new(),archiveName);
-      baseName = File_getFileBaseName(String_new(),archiveName);
+      pathName = File_getFilePathName(String_new(),fileName);
+      baseName = File_getFileBaseName(String_new(),fileName);
 
       // create directories if necessary
       if (!String_isEmpty(pathName))
@@ -1230,8 +1230,8 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
     return ERROR_NONE;
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageHandle);
-    UNUSED_VARIABLE(archiveName);
-    UNUSED_VARIABLE(archiveSize);
+    UNUSED_VARIABLE(fileName);
+    UNUSED_VARIABLE(fileSize);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL */

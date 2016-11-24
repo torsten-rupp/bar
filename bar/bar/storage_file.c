@@ -67,9 +67,9 @@ LOCAL void StorageFile_doneAll(void)
 }
 
 LOCAL bool StorageFile_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
-                                       ConstString            archiveName1,
+                                       ConstString            fileName1,
                                        const StorageSpecifier *storageSpecifier2,
-                                       ConstString            archiveName2
+                                       ConstString            fileName2
                                       )
 {
   assert(storageSpecifier1 != NULL);
@@ -77,14 +77,14 @@ LOCAL bool StorageFile_equalSpecifiers(const StorageSpecifier *storageSpecifier1
   assert(storageSpecifier2 != NULL);
   assert(storageSpecifier2->type == STORAGE_TYPE_FILESYSTEM);
 
-  if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
-  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
+  if (fileName1 == NULL) fileName1 = storageSpecifier1->fileName;
+  if (fileName2 == NULL) fileName2 = storageSpecifier2->fileName;
 
-  return String_equals(archiveName1,archiveName2);
+  return String_equals(fileName1,fileName2);
 }
 
 LOCAL String StorageFile_getName(StorageSpecifier *storageSpecifier,
-                                 ConstString      archiveName
+                                 ConstString      fileName
                                 )
 {
   ConstString storageFileName;
@@ -92,9 +92,9 @@ LOCAL String StorageFile_getName(StorageSpecifier *storageSpecifier,
   assert(storageSpecifier != NULL);
 
   // get file to use
-  if      (archiveName != NULL)
+  if      (!String_isEmpty(fileName))
   {
-    storageFileName = archiveName;
+    storageFileName = fileName;
   }
   else if (storageSpecifier->archivePatternString != NULL)
   {
@@ -102,7 +102,7 @@ LOCAL String StorageFile_getName(StorageSpecifier *storageSpecifier,
   }
   else
   {
-    storageFileName = storageSpecifier->archiveName;
+    storageFileName = storageSpecifier->fileName;
   }
 
   String_clear(storageSpecifier->storageName);
@@ -115,7 +115,7 @@ LOCAL String StorageFile_getName(StorageSpecifier *storageSpecifier,
 }
 
 LOCAL ConstString StorageFile_getPrintableName(StorageSpecifier *storageSpecifier,
-                                               ConstString      archiveName
+                                               ConstString      fileName
                                               )
 {
   ConstString storageFileName;
@@ -123,9 +123,9 @@ LOCAL ConstString StorageFile_getPrintableName(StorageSpecifier *storageSpecifie
   assert(storageSpecifier != NULL);
 
   // get file to use
-  if      (!String_isEmpty(archiveName))
+  if      (!String_isEmpty(fileName))
   {
-    storageFileName = archiveName;
+    storageFileName = fileName;
   }
   else if (!String_isEmpty(storageSpecifier->archivePatternString))
   {
@@ -133,7 +133,7 @@ LOCAL ConstString StorageFile_getPrintableName(StorageSpecifier *storageSpecifie
   }
   else
   {
-    storageFileName = storageSpecifier->archiveName;
+    storageFileName = storageSpecifier->fileName;
   }
 
   String_clear(storageSpecifier->storageName);
@@ -296,19 +296,19 @@ LOCAL Errors StorageFile_postProcess(StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL bool StorageFile_exists(StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageFile_exists(StorageInfo *storageInfo, ConstString fileName)
 {
   assert(storageInfo != NULL);
-  assert(!String_isEmpty(archiveName));
+  assert(!String_isEmpty(fileName));
 
   UNUSED_VARIABLE(storageInfo);
 
-  return File_exists(archiveName);
+  return File_exists(fileName);
 }
 
 LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
-                                ConstString   archiveName,
-                                uint64        archiveSize
+                                ConstString   fileName,
+                                uint64        fileSize
                                )
 {
   Errors error;
@@ -317,25 +317,25 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
-  assert(!String_isEmpty(archiveName));
+  assert(!String_isEmpty(fileName));
 
-  UNUSED_VARIABLE(archiveSize);
+  UNUSED_VARIABLE(fileSize);
 
   // check if archive file exists
   if (   (storageHandle->storageInfo->jobOptions != NULL)
       && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
       && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
       && !storageHandle->storageInfo->jobOptions->archiveFileModeOverwriteFlag
-      && File_exists(archiveName)
+      && File_exists(fileName)
      )
   {
-    return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(archiveName));
+    return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(fileName));
   }
 
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     // create directory if not existing
-    directoryName = File_getFilePathName(String_new(),archiveName);
+    directoryName = File_getFilePathName(String_new(),fileName);
     if (!String_isEmpty(directoryName) && !File_exists(directoryName))
     {
       error = File_makeDirectory(directoryName,
@@ -353,7 +353,7 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
 
     // create/append file
     error = File_open(&storageHandle->fileSystem.fileHandle,
-                      archiveName,
+                      fileName,
                       (   (storageHandle->storageInfo->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
                        && !storageHandle->storageInfo->jobOptions->archiveFileModeOverwriteFlag
                       )
@@ -372,7 +372,7 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
 }
 
 LOCAL Errors StorageFile_open(StorageHandle *storageHandle,
-                              ConstString  archiveName
+                              ConstString   fileName
                              )
 {
   Errors error;
@@ -380,20 +380,20 @@ LOCAL Errors StorageFile_open(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
-  assert(!String_isEmpty(archiveName));
+  assert(!String_isEmpty(fileName));
 
   // init variables
   storageHandle->mode = STORAGE_MODE_READ;
 
   // check if file exists
-  if (!File_exists(archiveName))
+  if (!File_exists(fileName))
   {
-    return ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(archiveName));
+    return ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(fileName));
   }
 
   // open file
   error = File_open(&storageHandle->fileSystem.fileHandle,
-                    archiveName,
+                    fileName,
                     FILE_OPEN_READ
                    );
   if (error != ERROR_NONE)
@@ -561,19 +561,19 @@ LOCAL uint64 StorageFile_getSize(StorageHandle *storageHandle)
 }
 
 LOCAL Errors StorageFile_delete(StorageInfo *storageInfo,
-                                ConstString archiveName
+                                ConstString fileName
                                )
 {
   Errors error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
-  assert(!String_isEmpty(archiveName));
+  assert(!String_isEmpty(fileName));
 
   error = ERROR_NONE;
   if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
   {
-    error = File_delete(archiveName,FALSE);
+    error = File_delete(fileName,FALSE);
   }
 
   return error;
@@ -603,7 +603,7 @@ LOCAL Errors StorageFile_getFileInfo(StorageInfo *storageInfo,
 
 LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                            const StorageSpecifier     *storageSpecifier,
-                                           ConstString                archiveName,
+                                           ConstString                pathName,
                                            const JobOptions           *jobOptions,
                                            ServerConnectionPriorities serverConnectionPriority
                                           )
@@ -613,7 +613,7 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FILESYSTEM);
-  assert(!String_isEmpty(archiveName));
+  assert(!String_isEmpty(pathName));
 
   UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(jobOptions);
@@ -624,7 +624,7 @@ LOCAL Errors StorageFile_openDirectoryList(StorageDirectoryListHandle *storageDi
 
   // open directory
   error = File_openDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,
-                                 archiveName
+                                 pathName
                                 );
   if (error != ERROR_NONE)
   {

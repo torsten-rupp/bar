@@ -226,9 +226,9 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sshSpecifier,
 }
 
 LOCAL bool StorageSFTP_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
-                                       ConstString            archiveName1,
+                                       ConstString            fileName1,
                                        const StorageSpecifier *storageSpecifier2,
-                                       ConstString            archiveName2
+                                       ConstString            fileName2
                                       )
 {
   assert(storageSpecifier1 != NULL);
@@ -236,16 +236,16 @@ LOCAL bool StorageSFTP_equalSpecifiers(const StorageSpecifier *storageSpecifier1
   assert(storageSpecifier2 != NULL);
   assert(storageSpecifier2->type == STORAGE_TYPE_SFTP);
 
-  if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
-  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
+  if (fileName1 == NULL) fileName1 = storageSpecifier1->fileName;
+  if (fileName2 == NULL) fileName2 = storageSpecifier2->fileName;
 
   return    String_equals(storageSpecifier1->hostName,storageSpecifier2->hostName)
          && String_equals(storageSpecifier1->loginName,storageSpecifier2->loginName)
-         && String_equals(archiveName1,archiveName2);
+         && String_equals(fileName1,fileName2);
 }
 
 LOCAL String StorageSFTP_getName(StorageSpecifier *storageSpecifier,
-                                 ConstString      archiveName
+                                 ConstString      fileName
                                 )
 {
   ConstString storageFileName;
@@ -254,9 +254,9 @@ LOCAL String StorageSFTP_getName(StorageSpecifier *storageSpecifier,
   assert(storageSpecifier != NULL);
 
   // get file to use
-  if      (archiveName != NULL)
+  if      (!String_isEmpty(fileName))
   {
-    storageFileName = archiveName;
+    storageFileName = fileName;
   }
   else if (storageSpecifier->archivePatternString != NULL)
   {
@@ -264,7 +264,7 @@ LOCAL String StorageSFTP_getName(StorageSpecifier *storageSpecifier,
   }
   else
   {
-    storageFileName = storageSpecifier->archiveName;
+    storageFileName = storageSpecifier->fileName;
   }
 
   String_appendCString(storageSpecifier->storageName,"sftp://");
@@ -291,7 +291,7 @@ LOCAL String StorageSFTP_getName(StorageSpecifier *storageSpecifier,
 }
 
 LOCAL ConstString StorageSFTP_getPrintableName(StorageSpecifier *storageSpecifier,
-                                               ConstString      archiveName
+                                               ConstString      fileName
                                               )
 {
   ConstString storageFileName;
@@ -299,9 +299,9 @@ LOCAL ConstString StorageSFTP_getPrintableName(StorageSpecifier *storageSpecifie
   assert(storageSpecifier != NULL);
 
   // get file to use
-  if      (!String_isEmpty(archiveName))
+  if      (!String_isEmpty(fileName))
   {
-    storageFileName = archiveName;
+    storageFileName = fileName;
   }
   else if (!String_isEmpty(storageSpecifier->archivePatternString))
   {
@@ -309,7 +309,7 @@ LOCAL ConstString StorageSFTP_getPrintableName(StorageSpecifier *storageSpecifie
   }
   else
   {
-    storageFileName = storageSpecifier->archiveName;
+    storageFileName = storageSpecifier->fileName;
   }
 
   String_appendCString(storageSpecifier->storageName,"sftp://");
@@ -655,8 +655,8 @@ LOCAL bool StorageSFTP_exists(StorageInfo*storageInfo, ConstString archiveName)
 }
 
 LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
-                                ConstString   archiveName,
-                                uint64        archiveSize
+                                ConstString   fileName,
+                                uint64        fileSize
                                )
 {
   #ifdef HAVE_SSH2
@@ -665,9 +665,9 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
-  assert(!String_isEmpty(archiveName));
+  assert(!String_isEmpty(fileName));
 
-  UNUSED_VARIABLE(archiveSize);
+  UNUSED_VARIABLE(fileSize);
 
   #ifdef HAVE_SSH2
     {
@@ -732,7 +732,7 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
       {
         // create file
         storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
-                                                               String_cString(archiveName),
+                                                               String_cString(fileName),
                                                                LIBSSH2_FXF_CREAT|LIBSSH2_FXF_WRITE|LIBSSH2_FXF_TRUNC,
 // ???
 LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR

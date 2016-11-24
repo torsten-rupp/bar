@@ -952,9 +952,9 @@ LOCAL bool StorageFTP_parseSpecifier(ConstString ftpSpecifier,
 }
 
 LOCAL bool StorageFTP_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
-                                      ConstString            archiveName1,
+                                      ConstString            fileName1,
                                       const StorageSpecifier *storageSpecifier2,
-                                      ConstString            archiveName2
+                                      ConstString            fileName2
                                      )
 {
   assert(storageSpecifier1 != NULL);
@@ -962,12 +962,12 @@ LOCAL bool StorageFTP_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
   assert(storageSpecifier2 != NULL);
   assert(storageSpecifier2->type == STORAGE_TYPE_FTP);
 
-  if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
-  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
+  if (fileName1 == NULL) fileName1 = storageSpecifier1->fileName;
+  if (fileName2 == NULL) fileName2 = storageSpecifier2->fileName;
 
   return    String_equals(storageSpecifier1->hostName,storageSpecifier2->hostName)
          && String_equals(storageSpecifier1->loginName,storageSpecifier2->loginName)
-         && String_equals(archiveName1,archiveName2);
+         && String_equals(fileName1,fileName2);
 }
 
 LOCAL void StorageFTP_getName(StorageSpecifier *storageSpecifier,
@@ -991,7 +991,7 @@ LOCAL void StorageFTP_getName(StorageSpecifier *storageSpecifier,
   }
   else
   {
-    storageFileName = storageSpecifier->archiveName;
+    storageFileName = storageSpecifier->fileName;
   }
 
   String_appendCString(storageSpecifier->storageName,"ftp://");
@@ -1020,7 +1020,7 @@ LOCAL void StorageFTP_getName(StorageSpecifier *storageSpecifier,
 }
 
 LOCAL void StorageFTP_getPrintableName(StorageSpecifier *storageSpecifier,
-                                       ConstString      archiveName
+                                       ConstString      fileName
                                       )
 {
   ConstString storageFileName;
@@ -1029,9 +1029,9 @@ LOCAL void StorageFTP_getPrintableName(StorageSpecifier *storageSpecifier,
   assert(storageSpecifier->type == STORAGE_TYPE_FTP);
 
   // get file to use
-  if      (!String_isEmpty(archiveName))
+  if      (!String_isEmpty(fileName))
   {
-    storageFileName = archiveName;
+    storageFileName = fileName;
   }
   else if (!String_isEmpty(storageSpecifier->archivePatternString))
   {
@@ -1039,7 +1039,7 @@ LOCAL void StorageFTP_getPrintableName(StorageSpecifier *storageSpecifier,
   }
   else
   {
-    storageFileName = storageSpecifier->archiveName;
+    storageFileName = storageSpecifier->fileName;
   }
 
   String_appendCString(storageSpecifier->storageName,"ftp://");
@@ -1674,8 +1674,8 @@ LOCAL bool StorageFTP_exists(StorageInfo *storageInfo, ConstString archiveName)
 }
 
 LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
-                               ConstString   archiveName,
-                               uint64        archiveSize
+                               ConstString   fileName,
+                               uint64        fileSize
                               )
 {
   #if   defined(HAVE_CURL)
@@ -1698,14 +1698,14 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
-  assert(!String_isEmpty(archiveName));
+  assert(!String_isEmpty(fileName));
 
   #if   defined(HAVE_CURL)
     // init variables
     storageHandle->ftp.curlMultiHandle        = NULL;
     storageHandle->ftp.curlHandle             = NULL;
     storageHandle->ftp.index                  = 0LL;
-    storageHandle->ftp.size                   = archiveSize;
+    storageHandle->ftp.size                   = fileSize;
     storageHandle->ftp.readAheadBuffer.data   = NULL;
     storageHandle->ftp.readAheadBuffer.offset = 0LL;
     storageHandle->ftp.readAheadBuffer.length = 0L;
@@ -1726,8 +1726,8 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     }
 
     // get pathname, basename
-    pathName = File_getFilePathName(String_new(),archiveName);
-    baseName = File_getFileBaseName(String_new(),archiveName);
+    pathName = File_getFilePathName(String_new(),fileName);
+    baseName = File_getFileBaseName(String_new(),fileName);
 
     // get URL
     url = String_format(String_new(),"ftp://%S",storageHandle->storageInfo->storageSpecifier.hostName);
@@ -1936,8 +1936,8 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     return ERROR_NONE;
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
-    UNUSED_VARIABLE(archiveName);
-    UNUSED_VARIABLE(archiveSize);
+    UNUSED_VARIABLE(fileName);
+    UNUSED_VARIABLE(fileSize);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL || HAVE_FTP */
