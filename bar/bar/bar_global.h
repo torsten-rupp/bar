@@ -445,8 +445,8 @@ typedef struct
   BandWidthList          indexDatabaseMaxBandWidthList;       // list of max. band width to use for index updates [bits/s]
   uint                   indexDatabaseKeepTime;               // number of seconds to keep index data of not existing storage
 
+  bool                   noSignatureFlag;                     // TRUE for not appending signatures
   bool                   metaInfoFlag;                        // TRUE iff meta info should be print
-  bool                   noVerifySignaturesFlag;              // TRUE to not verify signatures of archives
   bool                   groupFlag;                           // TRUE iff entries in list should be grouped
   bool                   allFlag;                             // TRUE iff all entries should be listed/restored
   bool                   longFormatFlag;                      // TRUE iff long format list
@@ -532,7 +532,6 @@ struct JobOptions
 
   String                       comment;                       // comment
 
-  bool                         noSignatureFlag;               // TRUE for not appending signature/ignoring signature
   bool                         skipUnreadableFlag;            // TRUE for skipping unreadable files
   bool                         forceDeltaCompressionFlag;     // TRUE to force delta compression of files
   bool                         ignoreNoDumpAttributeFlag;     // TRUE for ignoring no-dump attribute
@@ -546,6 +545,7 @@ struct JobOptions
   bool                         noFragmentsCheckFlag;          // TRUE to skip checking file fragments for completeness
   bool                         noIndexDatabaseFlag;           // TRUE for do not store index database for archives
   bool                         dryRunFlag;                    // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
+  bool                         skipVerifySignaturesFlag;      // TRUE to not verify signatures of archives
   bool                         noStorageFlag;                 // TRUE to skip storage, only create incremental data file
   bool                         noBAROnMediumFlag;             // TRUE for not storing BAR on medium
   bool                         noStopOnErrorFlag;             // TRUE for not stopping immediately on error

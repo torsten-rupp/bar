@@ -2196,7 +2196,7 @@ remoteBarFlag=FALSE;
         }
 
         // check signatures
-        if (!jobOptions->noVerifySignaturesFlag)
+        if (!jobOptions->skipVerifySignaturesFlag)
         {
           error = Archive_verifySignatures(&storageInfo,
                                            fileName,
@@ -3815,7 +3815,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     printArchiveListFooter(List_count(&archiveContentList));
   }
 
-  return (!jobOptions->noVerifySignaturesFlag && (allCryptSignatureState == CRYPT_SIGNATURE_STATE_INVALID))
+  return (   !jobOptions->skipVerifySignaturesFlag
+          && (allCryptSignatureState != CRYPT_SIGNATURE_STATE_NONE)
+          && (allCryptSignatureState != CRYPT_SIGNATURE_STATE_OK)
+         )
            ? ERROR_INVALID_SIGNATURE
            : ERROR_NONE;
 }

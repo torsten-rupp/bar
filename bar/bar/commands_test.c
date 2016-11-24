@@ -1188,17 +1188,18 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                                 LogHandle           *logHandle
                                )
 {
-  TestInfo          testInfo;
-  StorageInfo       storageInfo;
-  Thread            *testThreads;
-  uint              testThreadCount;
-  uint              i;
-  Errors            failError;
-  Errors            error;
-  ArchiveHandle     archiveHandle;
-  ArchiveEntryTypes archiveEntryType;
-  uint64            offset;
-  EntryMsg          entryMsg;
+  TestInfo             testInfo;
+  StorageInfo          storageInfo;
+  CryptSignatureStates allCryptSignatureState;
+  Thread               *testThreads;
+  uint                 testThreadCount;
+  uint                 i;
+  Errors               failError;
+  Errors               error;
+  ArchiveHandle        archiveHandle;
+  ArchiveEntryTypes    archiveEntryType;
+  uint64               offset;
+  EntryMsg             entryMsg;
 
   assert(storageSpecifier != NULL);
   assert(includeEntryList != NULL);
@@ -1247,6 +1248,36 @@ NULL,  //               requestedAbortFlag,
     doneTestInfo(&testInfo);
     free(testThreads);
     return error;
+  }
+
+  // check signatures
+  if (!jobOptions->skipVerifySignaturesFlag)
+  {
+    error = Archive_verifySignatures(&storageInfo,
+                                     fileName,
+                                     jobOptions,
+                                     logHandle,
+                                     &allCryptSignatureState
+                                    );
+    if (error != ERROR_NONE)
+    {
+      (void)Storage_done(&storageInfo);
+      doneTestInfo(&testInfo);
+      free(testThreads);
+      return error;
+    }
+    if (   (allCryptSignatureState != CRYPT_SIGNATURE_STATE_NONE)
+        && (allCryptSignatureState != CRYPT_SIGNATURE_STATE_OK)
+       )
+    {
+      printError("Invalid signature in '%s'!\n",
+                 Storage_getPrintableNameCString(storageSpecifier,fileName)
+                );
+      (void)Storage_done(&storageInfo);
+      doneTestInfo(&testInfo);
+      free(testThreads);
+      return ERROR_INVALID_SIGNATURE;
+    }
   }
 
   // start test threads

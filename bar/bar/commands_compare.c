@@ -1642,7 +1642,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
     // open archive
     error = Archive_open(&archiveHandle,
                          entryMsg.storageInfo,
-                         NULL,  // archiveName,
+                         NULL,  // fileName,
                          compareInfo->deltaSourceList,
                          compareInfo->jobOptions,
                          compareInfo->getPasswordFunction,
@@ -1771,7 +1771,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
 * Name   : compareArchiveContent
 * Purpose: compare archive content
 * Input  : storageSpecifier    - storage specifier
-*          archiveName         - archive name
+*          fileName            - file name
 *          includeEntryList    - include entry list
 *          excludePatternList  - exclude pattern list
 *          deltaSourceList     - delta source list
@@ -1786,7 +1786,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
 \***********************************************************************/
 
 LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
-                                   ConstString         archiveName,
+                                   ConstString         fileName,
                                    const EntryList     *includeEntryList,
                                    const PatternList   *excludePatternList,
                                    DeltaSourceList     *deltaSourceList,
@@ -1797,23 +1797,32 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                                    LogHandle           *logHandle
                                   )
 {
-  CompareInfo       compareInfo;
-  StorageInfo       storageInfo;
-  Thread            *compareThreads;
-  uint              compareThreadCount;
-  uint              i;
-  Errors            failError;
-  Errors            error;
-  ArchiveHandle     archiveHandle;
-  ArchiveEntryTypes archiveEntryType;
-  uint64            offset;
-  EntryMsg          entryMsg;
+  CompareInfo          compareInfo;
+  StorageInfo          storageInfo;
+  CryptSignatureStates allCryptSignatureState;
+  Thread               *compareThreads;
+  uint                 compareThreadCount;
+  uint                 i;
+  Errors               failError;
+  Errors               error;
+  ArchiveHandle        archiveHandle;
+  ArchiveEntryTypes    archiveEntryType;
+  uint64               offset;
+  EntryMsg             entryMsg;
 
   assert(storageSpecifier != NULL);
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
   assert(fragmentList != NULL);
+
+  // init variables
+  compareThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  compareThreads = (Thread*)malloc(compareThreadCount*sizeof(Thread));
+  if (compareThreads == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
 
   // init compare info
   initCompareInfo(&compareInfo,
@@ -1842,20 +1851,45 @@ NULL,  //               requestedAbortFlag,
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize storage '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               Storage_getPrintableNameCString(storageSpecifier,fileName),
                Error_getText(error)
               );
     doneCompareInfo(&compareInfo);
+    free(compareThreads);
     return error;
   }
 
-  // start compare threads
-  compareThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-  compareThreads = (Thread*)malloc(compareThreadCount*sizeof(Thread));
-  if (compareThreads == NULL)
+  // check signatures
+  if (!jobOptions->skipVerifySignaturesFlag)
   {
-    HALT_INSUFFICIENT_MEMORY();
+    error = Archive_verifySignatures(&storageInfo,
+                                     fileName,
+                                     jobOptions,
+                                     logHandle,
+                                     &allCryptSignatureState
+                                    );
+    if (error != ERROR_NONE)
+    {
+      (void)Storage_done(&storageInfo);
+      doneCompareInfo(&compareInfo);
+      free(compareThreads);
+      return error;
+    }
+    if (   (allCryptSignatureState != CRYPT_SIGNATURE_STATE_NONE)
+        && (allCryptSignatureState != CRYPT_SIGNATURE_STATE_OK)
+       )
+    {
+      printError("Invalid signature in '%s'!\n",
+                 Storage_getPrintableNameCString(storageSpecifier,fileName)
+                );
+      (void)Storage_done(&storageInfo);
+      doneCompareInfo(&compareInfo);
+      free(compareThreads);
+      return ERROR_INVALID_SIGNATURE;
+    }
   }
+
+  // start compare threads
   for (i = 0; i < compareThreadCount; i++)
   {
     if (!Thread_init(&compareThreads[i],"BAR compare",globalOptions.niceLevel,compareThreadCode,&compareInfo))
@@ -1867,7 +1901,7 @@ NULL,  //               requestedAbortFlag,
   // open archive
   error = Archive_open(&archiveHandle,
                        &storageInfo,
-                       archiveName,
+                       fileName,
                        deltaSourceList,
                        jobOptions,
                        getPasswordFunction,
@@ -1877,11 +1911,12 @@ NULL,  //               requestedAbortFlag,
   if (error != ERROR_NONE)
   {
     printError("Cannot open storage '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               Storage_getPrintableNameCString(storageSpecifier,fileName),
                Error_getText(error)
               );
     (void)Storage_done(&storageInfo);
     doneCompareInfo(&compareInfo);
+    free(compareThreads);
     return error;
   }
   DEBUG_TESTCODE() { (void)Archive_close(&archiveHandle); (void)Storage_done(&storageInfo); return DEBUG_TESTCODE_ERROR(); }
@@ -1889,7 +1924,7 @@ NULL,  //               requestedAbortFlag,
   // read archive entries
   printInfo(0,
             "Compare storage '%s'%s",
-            Storage_getPrintableNameCString(storageSpecifier,archiveName),
+            Storage_getPrintableNameCString(storageSpecifier,fileName),
             !isPrintInfo(1) ? "..." : ":\n"
            );
   failError = ERROR_NONE;
@@ -1907,7 +1942,7 @@ NULL,  //               requestedAbortFlag,
     if (error != ERROR_NONE)
     {
       printError("Cannot read next entry in archive '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                 Storage_getPrintableNameCString(storageSpecifier,fileName),
                  Error_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
@@ -1946,7 +1981,6 @@ NULL,  //               requestedAbortFlag,
       HALT_INTERNAL_ERROR("Cannot stop compare thread #%d!",i);
     }
   }
-  free(compareThreads);
 
   // done storage
   (void)Storage_done(&storageInfo);
@@ -1955,6 +1989,7 @@ NULL,  //               requestedAbortFlag,
   doneCompareInfo(&compareInfo);
 
   // free resources
+  free(compareThreads);
 
   return error;
 }
@@ -2026,7 +2061,7 @@ Errors Command_compare(const StringList    *storageNameList,
     {
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
-                                        NULL,  // archiveName
+                                        NULL,  // pathName
                                         jobOptions,
                                         SERVER_CONNECTION_PRIORITY_HIGH
                                        );

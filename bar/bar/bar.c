@@ -713,7 +713,6 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("ignore-no-backup-file",        0,  1,2,globalOptions.ignoreNoBackupFileFlag,                                                                   "ignore .nobackup/.NOBACKUP file"                                          ),
   CMD_OPTION_BOOLEAN      ("ignore-no-dump",               0,  1,2,jobOptions.ignoreNoDumpAttributeFlag,                                                                   "ignore 'no dump' attribute of files"                                      ),
 
-  CMD_OPTION_BOOLEAN      ("no-verify-signatures",         0,  0,1,globalOptions.noVerifySignaturesFlag,                                                                   "do not verify signatures of archives"                                     ),
   CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,2,jobOptions.skipUnreadableFlag,                                                                          "skip unreadable files"                                                    ),
   CMD_OPTION_BOOLEAN      ("force-delta-compression",      0,  0,2,jobOptions.forceDeltaCompressionFlag,                                                                   "force delta compression of files. Stop on error"                          ),
   CMD_OPTION_BOOLEAN      ("raw-images",                   0,  1,2,jobOptions.rawImagesFlag,                                                                               "store raw images (store all image blocks)"                                ),
@@ -724,7 +723,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,2,jobOptions.overwriteEntriesFlag,                                                                        "overwrite existing entries"                                               ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,2,jobOptions.waitFirstVolumeFlag,                                                                         "wait for first volume"                                                    ),
   CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,2,jobOptions.dryRunFlag,                                                                                  "do dry-run (skip storage/restore, incremental data, index database)"      ),
-  CMD_OPTION_BOOLEAN      ("no-signature",                 0  ,0,1,jobOptions.noSignatureFlag,                                                                             "do not create or check signatures"                                        ),
+  CMD_OPTION_BOOLEAN      ("no-signature",                 0  ,1,2,globalOptions.noSignatureFlag,                                                                          "do not create signatures"                                                 ),
+  CMD_OPTION_BOOLEAN      ("skip-verify-signatures",       0,  0,2,jobOptions.skipVerifySignaturesFlag,                                                                      "do not verify signatures of archives"                                     ),
   CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,2,jobOptions.noStorageFlag,                                                                               "do not store archives (skip storage, index database)"                     ),
   CMD_OPTION_BOOLEAN      ("no-bar-on-medium",             0,  1,2,jobOptions.noBAROnMediumFlag,                                                                           "do not store a copy of BAR on medium"                                     ),
   CMD_OPTION_BOOLEAN      ("no-stop-on-error",             0,  1,2,jobOptions.noStopOnErrorFlag,                                                                           "do not immediately stop on error"                                         ),
@@ -989,7 +989,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SELECT            ("archive-file-mode",            &jobOptions.archiveFileMode,-1,                                CONFIG_VALUE_ARCHIVE_FILE_MODES),
   CONFIG_VALUE_BOOLEAN           ("overwrite-files",              &jobOptions.overwriteEntriesFlag,-1                            ),
   CONFIG_VALUE_BOOLEAN           ("wait-first-volume",            &jobOptions.waitFirstVolumeFlag,-1                             ),
-  CONFIG_VALUE_BOOLEAN           ("no-signature",                 &jobOptions.noSignatureFlag,-1                             ),
+  CONFIG_VALUE_BOOLEAN           ("no-signature",                 &globalOptions.noSignatureFlag,-1                              ),
+  CONFIG_VALUE_BOOLEAN           ("skip-verify-signatures",       &jobOptions.skipVerifySignaturesFlag,-1                          ),
   CONFIG_VALUE_BOOLEAN           ("no-bar-on-medium",             &jobOptions.noBAROnMediumFlag,-1                               ),
   CONFIG_VALUE_BOOLEAN           ("no-stop-on-error",             &jobOptions.noStopOnErrorFlag,-1                               ),
   CONFIG_VALUE_BOOLEAN           ("quiet",                        &globalOptions.quietFlag,-1                                    ),
@@ -4746,7 +4747,7 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->noFragmentsCheckFlag            = FALSE;
   jobOptions->noIndexDatabaseFlag             = FALSE;
   jobOptions->dryRunFlag                      = FALSE;
-  jobOptions->noSignatureFlag                 = FALSE;
+  jobOptions->skipVerifySignaturesFlag        = FALSE;
   jobOptions->noStorageFlag                   = FALSE;
   jobOptions->noBAROnMediumFlag               = FALSE;
   jobOptions->noStopOnErrorFlag               = FALSE;
@@ -5511,7 +5512,7 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
         serverNode = LIST_FIND(&globalOptions.serverList,
                                serverNode,
                                   (serverNode->server.type == SERVER_TYPE_FILE)
-                               && String_startsWith(serverNode->server.name,storageSpecifier->archiveName)
+                               && String_startsWith(serverNode->server.name,storageSpecifier->fileName)
                               );
 
         if (serverNode != NULL)
