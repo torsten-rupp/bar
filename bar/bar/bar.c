@@ -1304,7 +1304,6 @@ LOCAL void outputConsole(FILE *file, ConstString string)
   assert(file != NULL);
   assert(Semaphore_isLocked(&consoleLock));
 
-//fprintf(stderr,"%s, %d: string=%s\n",__FILE__,__LINE__,String_cString(string));
   outputLine = (String)Thread_getLocalVariable(&outputLineHandle);
   if (outputLine != NULL)
   {
@@ -5227,20 +5226,29 @@ void initKey(Key *key)
 
 bool duplicateKey(Key *toKey, const Key *fromKey)
 {
+  uint length;
   void *data;
 
   assert(toKey != NULL);
-  assert(fromKey != NULL);
 
-  data = Password_allocSecure(fromKey->length);
-  if (data == NULL)
+  if (fromKey != NULL)
   {
-    return FALSE;
+    length = fromKey->length;
+    data = Password_allocSecure(length);
+    if (data == NULL)
+    {
+      return FALSE;
+    }
+    memcpy(data,fromKey->data,length);
   }
-  memcpy(data,fromKey->data,fromKey->length);
+  else
+  {
+    data   = NULL;
+    length = 0;
+  }
 
   toKey->data   = data;
-  toKey->length = fromKey->length;
+  toKey->length = length;
 
   return TRUE;
 }
@@ -7246,7 +7254,6 @@ bool configValueParseKey(void *userData, void *variable, const char *name, const
   if (File_existsCString(value))
   {
     // read key file
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = readKeyFile(key,value);
     if (error != ERROR_NONE)
     {
@@ -8568,7 +8575,7 @@ exit(1);
   // parse command line: pre-options
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                       1,1,
+                       0,1,
                        stderr,"ERROR: ","Warning: "
                       )
      )
@@ -8611,7 +8618,7 @@ exit(1);
   // parse command line: post-options
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                       2,2,
+                       0,2,
                        stderr,"ERROR: ","Warning: "
                       )
      )
@@ -8672,7 +8679,7 @@ exit(1);
   // parse command line: all
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                       3,CMD_PRIORITY_ANY,
+                       0,CMD_PRIORITY_ANY,
                        stderr,"ERROR: ","Warning: "
                       )
      )
