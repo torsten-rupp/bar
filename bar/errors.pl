@@ -294,7 +294,7 @@ const char *Error_getText(Errors error);
   }
 #endif
 
-#endif /* __ARCHIVE_FORMAT__ */
+#endif /* __ERRORS__ */
 ";
 }
 
