@@ -618,7 +618,7 @@ void Crypt_initKey(CryptKey          *cryptKey,
 void Crypt_doneKey(CryptKey *cryptKey);
 
 /***********************************************************************\
-* Name   : Crypt_isKey
+* Name   : Crypt_isKeyAvailable
 * Purpose: check if key available
 * Input  : cryptKey - crypt key
 * Output : -
@@ -626,9 +626,9 @@ void Crypt_doneKey(CryptKey *cryptKey);
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Crypt_isKey(const CryptKey *cryptKey);
+INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey);
 #if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
-INLINE bool Crypt_isKey(const CryptKey *cryptKey)
+INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey)
 {
   return cryptKey->key != NULL;
 }

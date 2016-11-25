@@ -2176,10 +2176,16 @@ Errors Crypt_getRandomEncryptKey(Password        *key,
 //gcry_sexp_dump(publicKey->key);
 
     // check if public key is available
+    if (!Crypt_isKeyAvailable(publicKey))
+    {
+//TODO: filename
+      return ERRORX_(NO_PUBLIC_CRYPT_KEY,0,"crypt-key");
+    }
     sexpToken = gcry_sexp_find_token(publicKey->key,"public-key",0);
     if (sexpToken == NULL)
     {
-      return ERROR_NOT_A_PUBLIC_KEY;
+//TODO: filename
+      return ERRORX_(NOT_A_PUBLIC_KEY,0,"crypt-key");
     }
     gcry_sexp_release(sexpToken);
 
@@ -2308,10 +2314,16 @@ Errors Crypt_getDecryptKey(CryptKey   *privateKey,
 //gcry_sexp_dump(privateKey->key);
 
     // check if private key available
+    if (!Crypt_isKeyAvailable(privateKey))
+    {
+//TODO: filename
+      return ERRORX_(NO_PRIVATE_CRYPT_KEY,0,"crypt-key");
+    }
     sexpToken = gcry_sexp_find_token(privateKey->key,"private-key",0);
     if (sexpToken == NULL)
     {
-      return ERROR_NOT_A_PRIVATE_KEY;
+//TODO: file name
+      return ERRORX_(NOT_A_PRIVATE_KEY,0,"crypt-key");
     }
     gcry_sexp_release(sexpToken);
 
@@ -2412,10 +2424,16 @@ Errors Crypt_getSignature(CryptKey *privateKey,
 
   #ifdef HAVE_GCRYPT
     // check if private key is available
+    if (!Crypt_isKeyAvailable(privateKey))
+    {
+//TODO: filename
+      return ERRORX_(NO_PRIVATE_SIGNATURE_KEY,0,"signature-key");
+    }
     sexpToken = gcry_sexp_find_token(privateKey->key,"private-key",0);
     if (sexpToken == NULL)
     {
-      return ERROR_NOT_A_PRIVATE_KEY;
+//TOOD: filename
+      return ERRORX_(NOT_A_PRIVATE_KEY,0,"signature-key");
     }
     gcry_sexp_release(sexpToken);
 
@@ -2501,10 +2519,16 @@ Errors Crypt_verifySignature(CryptKey             *publicKey,
 
   #ifdef HAVE_GCRYPT
     // check if public key is available
+    if (!Crypt_isKeyAvailable(publicKey))
+    {
+//TODO: filename
+      return ERRORX_(NO_PUBLIC_SIGNATURE_KEY,0,"signature-key");
+    }
     sexpToken = gcry_sexp_find_token(publicKey->key,"public-key",0);
     if (sexpToken == NULL)
     {
-      return ERROR_NOT_A_PUBLIC_KEY;
+//TODO: filename
+      return ERRORX_(NOT_A_PUBLIC_KEY,0,"signature-key");
     }
     gcry_sexp_release(sexpToken);
 

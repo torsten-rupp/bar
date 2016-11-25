@@ -778,7 +778,9 @@ bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
   bool result;
 
   assert(storageSpecifier1 != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier1);
   assert(storageSpecifier2 != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier2);
 
   result = FALSE;
 
@@ -994,6 +996,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   Errors          error;
 
   assert(storageSpecifier != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
   assert(storageName != NULL);
 
   // initialise variables
@@ -1390,6 +1393,7 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
                       )
 {
   assert(storageSpecifier != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
 
   // get file to use
   if (archiveName == NULL)
@@ -1460,6 +1464,7 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
                                     )
 {
   assert(storageSpecifier != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
 
   // get file to use
   if (fileName == NULL)
@@ -1561,6 +1566,7 @@ const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
 
   assert(storageInfo != NULL);
   assert(storageSpecifier != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
 
   #if !defined(HAVE_CURL) && !defined(HAVE_FTP) && !defined(HAVE_SSH2)
     UNUSED_VARIABLE(serverConnectionPriority);
@@ -2776,6 +2782,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
 
   // initialize variables
   Storage_duplicateSpecifier(&storageDirectoryListHandle->storageSpecifier,storageSpecifier);
@@ -3014,6 +3021,7 @@ Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
   ulong         bytesRead;
 
   assert(storageSpecifier != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
   assert(jobOptions != NULL);
   assert(localFileName != NULL);
 

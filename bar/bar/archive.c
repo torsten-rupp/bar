@@ -1133,7 +1133,7 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
   assert(archiveHandle->chunkIO != NULL);
   assert(archiveHandle->chunkIO->seek != NULL);
 
-  if (   (Crypt_isKey(&globalOptions.signaturePrivateKey))
+  if (   (Crypt_isKeyAvailable(&globalOptions.signaturePrivateKey))
       && !globalOptions.noSignatureFlag
      )
   {
@@ -3699,7 +3699,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
   {
     // check if public key available
-    if (jobOptions->cryptPublicKey.data == NULL)
+    if (!isKeyAvailable(&jobOptions->cryptPublicKey))
     {
       AutoFree_cleanup(&autoFreeList);
       return ERROR_NO_PUBLIC_CRYPT_KEY;
@@ -4153,7 +4153,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
         break;
       case CHUNK_ID_KEY:
         // check if private key available
-        if (archiveHandle->jobOptions->cryptPrivateKey.data == NULL)
+        if (!isKeyAvailable(&archiveHandle->jobOptions->cryptPrivateKey))
         {
           archiveHandle->pendingError = ERROR_NO_PRIVATE_CRYPT_KEY;
           return FALSE;
@@ -6207,7 +6207,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
         break;
       case CHUNK_ID_KEY:
         // check if private key available
-        if (archiveHandle->jobOptions->cryptPrivateKey.data == NULL)
+        if (!isKeyAvailable(&archiveHandle->jobOptions->cryptPrivateKey))
         {
           return ERROR_NO_PRIVATE_CRYPT_KEY;
         }
@@ -11565,7 +11565,7 @@ Errors Archive_verifySignatures(StorageInfo          *storageInfo,
     if (chunkHeader.id == CHUNK_ID_SIGNATURE)
     {
       // check if signature public key is available
-      if (!Crypt_isKey(&globalOptions.signaturePublicKey))
+      if (!Crypt_isKeyAvailable(&globalOptions.signaturePublicKey))
       {
         AutoFree_cleanup(&autoFreeList);
         return ERROR_NO_PUBLIC_SIGNATURE_KEY;
