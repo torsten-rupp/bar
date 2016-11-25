@@ -571,6 +571,7 @@ help:
 	@$(ECHO) "  test2[-debug|-valgrind], test_compress[-debug], test_delta_compress[-debug|-valgrind]"
 	@$(ECHO) "  test3[-debug|-valgrind], test_crypt[-debug|-valgrind]"
 	@$(ECHO) "  test4[-debug|-valgrind], test_asymmetric_crypt[-debug|-valgrind]"
+	@$(ECHO) "  test5[-debug|-valgrind], test_signatures[-debug|-valgrind]"
 	@$(ECHO) "  test6[-debug|-valgrind], test_split[-debug|-valgrind]"
 	@$(ECHO) "  test7[-debug|-valgrind], test_image[-debug|-valgrind]"
 	@$(ECHO) "  test8[-debug|-valgrind], test_storage[-debug|-valgrind]"
@@ -1105,9 +1106,9 @@ TEST_OPTIONS = --no-default-config --config=$(CURDIR)/$(TEST_CONFIG)
 .PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11
 .PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug test10-debug test11-debug
 .PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind test10-valgrind test11-valgrind
-.PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_storage test_dvd test_combined test_parameters test_misc
-.PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_split-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_parameters-debug test_misc-debug
-.PHONY: test_basic-valgrind test_compress-valgrind test_crypt-valgrind test_asymmetric_crypt-valgrind test_split-valgrind test_image-valgrind test_storage-valgrind test_dvd-valgrind test_combined-valgrind test_parameters-valgrind test_misc-valgrind
+.PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_signatures test_split test_image test_storage test_dvd test_combined test_parameters test_misc
+.PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_signatures-debug test_split-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_parameters-debug test_misc-debug
+.PHONY: test_basic-valgrind test_compress-valgrind test_crypt-valgrind test_asymmetric_crypt-valgrind test_signatures_crypt-valgrind test_split-valgrind test_image-valgrind test_storage-valgrind test_dvd-valgrind test_combined-valgrind test_parameters-valgrind test_misc-valgrind
 .PHONY: test_storage_file test_storage_ftp test_storage_scp test_storage_sftp test_storage_webdav
 .PHONY: test_storage_file-debug test_storage_ftp-debug test_storage_scp-debug test_storage_sftp-debug test_storage_webdav-debug
 .PHONY: test_storage_file-valgrind test_storage_ftp-valgrind test_storage_scp-valgrind test_storage_sftp-valgrind test_storage_webdav-valgrind
@@ -1119,6 +1120,7 @@ test:
           test_compress \
           test_crypt \
           test_asymmetric_crypt \
+          test_signatures \
           test_split \
           test_image \
           test_combined \
@@ -1334,19 +1336,19 @@ test5 test_signatures: $(TEST_BAR) $(TEST_KEYS)
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.public --max-threads=1" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private --max-threads=1" \
           test_file_operations \
           ;
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-public-key=$(CURDIR)/test/signature-key.public" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private" \
           test_file_operations \
           ;
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.public" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private" \
           test_file_operations_dryrun \
           ;
 	@$(ECHO) "ok"
@@ -1612,7 +1614,7 @@ test_combined: $(TEST_BAR)
             $(MAKE) \
               BAR_FILE=test-### \
               BAR_PATTERN="test-*" \
-              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.public --archive-part-size=100K" \
+              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private --archive-part-size=100K" \
               test_file_operations \
               ; \
             rc=$$?; \
@@ -1622,7 +1624,7 @@ test_combined: $(TEST_BAR)
             $(MAKE) \
               BAR_FILE=test-### \
               BAR_PATTERN="test-*" \
-              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.public --archive-part-size=10M" \
+              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private --archive-part-size=10M" \
               $(TEST_IMAGE_OPERATIONS) \
               ; \
             rc=$$?; \
@@ -3748,7 +3750,7 @@ memcheck2d: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.public --overwrite-archive-files >/dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private --overwrite-archive-files >/dev/null
 memcheck2e: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_CONFIG) \
