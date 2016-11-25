@@ -773,7 +773,7 @@ LOCAL void debugCheckForDeadLock(const char         *fileName,
 
   assert(semaphore != NULL);
 
-//  __SEMAPHORE_REQUEST_LOCK(semaphore);
+  pthread_mutex_lock(&debugSemaphoreLock);
   {
     // check all threads who currently own semaphore
     for (i = 0; i < semaphore->lockedByCount; i++)
@@ -833,6 +833,7 @@ HALT_INTERNAL_ERROR_AT(fileName,lineNb,"DEAD LOCK!");
       }
     }
   }
+  pthread_mutex_unlock(&debugSemaphoreLock);
 //  __SEMAPHORE_REQUEST_UNLOCK(semaphore);
 }
 
@@ -1431,23 +1432,27 @@ bool __Semaphore_init(const char *fileName,
   #ifndef NDEBUG
     pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit);
 
-    if (List_contains(&debugSemaphoreList,semaphore,CALLBACK(NULL,NULL)))
+    pthread_mutex_lock(&debugSemaphoreLock);
     {
-      HALT_INTERNAL_ERROR_AT(fileName,lineNb,"Semaphore '%s' was already initialized at %s, line %lu!",
-                             semaphore->name,
-                             semaphore->fileName,
-                             semaphore->lineNb
-                            );
+      if (List_contains(&debugSemaphoreList,semaphore,CALLBACK(NULL,NULL)))
+      {
+        HALT_INTERNAL_ERROR_AT(fileName,lineNb,"Semaphore '%s' was already initialized at %s, line %lu!",
+                               semaphore->name,
+                               semaphore->fileName,
+                               semaphore->lineNb
+                              );
+      }
+
+      semaphore->fileName       = fileName;
+      semaphore->lineNb         = lineNb;
+      semaphore->name           = name;
+  //    memset(semaphore->lockedBy,0,sizeof(semaphore->lockedBy));
+      semaphore->lockedByCount  = 0;
+      semaphore->pendingByCount = 0;
+
+      List_append(&debugSemaphoreList,semaphore);
     }
-
-    semaphore->fileName       = fileName;
-    semaphore->lineNb         = lineNb;
-    semaphore->name           = name;
-//    memset(semaphore->lockedBy,0,sizeof(semaphore->lockedBy));
-    semaphore->lockedByCount  = 0;
-    semaphore->pendingByCount = 0;
-
-    List_append(&debugSemaphoreList,semaphore);
+    pthread_mutex_unlock(&debugSemaphoreLock);
   #endif /* not NDEBUG */
 
   return TRUE;
