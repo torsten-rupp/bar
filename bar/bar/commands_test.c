@@ -223,9 +223,10 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
   String           fileName;
   FileInfo         fileInfo;
   uint64           fragmentOffset,fragmentSize;
-  FragmentNode     *fragmentNode;
   uint64           length;
   ulong            n;
+  SemaphoreLock    semaphoreLock;
+  FragmentNode     *fragmentNode;
   char             s[256];
 
   // open archive entry
@@ -260,22 +261,6 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
   {
     printInfo(1,"  Test file '%s'...",String_cString(fileName));
 
-    if (!jobOptions->noFragmentsCheckFlag)
-    {
-      // get file fragment list
-      fragmentNode = FragmentList_find(fragmentList,fileName);
-      if (fragmentNode == NULL)
-      {
-        fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
-      }
-      assert(fragmentNode != NULL);
-    }
-    else
-    {
-      fragmentNode = NULL;
-    }
-  //FragmentList_print(fragmentNode,String_cString(fileName));
-
     // read file content
     length = 0LL;
     while (length < fragmentSize)
@@ -306,15 +291,26 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
     }
     printInfo(2,"    \b\b\b\b");
 
-    if (fragmentNode != NULL)
+    if (!jobOptions->noFragmentsCheckFlag)
     {
-      // add fragment to file fragment list
-      FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-      // discard fragment list if file is complete
-      if (FragmentList_isEntryComplete(fragmentNode))
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        FragmentList_discard(fragmentList,fragmentNode);
+        // get file fragment node
+        fragmentNode = FragmentList_find(fragmentList,fileName);
+        if (fragmentNode == NULL)
+        {
+          fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
+        }
+        assert(fragmentNode != NULL);
+
+        // add fragment to file fragment list
+        FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+
+        // discard fragment list if file is complete
+        if (FragmentList_isEntryComplete(fragmentNode))
+        {
+          FragmentList_discard(fragmentList,fragmentNode);
+        }
       }
     }
 
@@ -402,9 +398,10 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
   String           deviceName;
   DeviceInfo       deviceInfo;
   uint64           blockOffset,blockCount;
-  FragmentNode     *fragmentNode;
   uint64           block;
   ulong            bufferBlockCount;
+  SemaphoreLock    semaphoreLock;
+  FragmentNode     *fragmentNode;
 
   // open archive entry
   deviceName = String_new();
@@ -449,22 +446,6 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
   {
     printInfo(1,"  Test image '%s'...",String_cString(deviceName));
 
-    if (!jobOptions->noFragmentsCheckFlag)
-    {
-      // get file fragment node
-      fragmentNode = FragmentList_find(fragmentList,deviceName);
-      if (fragmentNode == NULL)
-      {
-        fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0);
-      }
-//FragmentList_print(fragmentNode,String_cString(deviceName));
-      assert(fragmentNode != NULL);
-    }
-    else
-    {
-      fragmentNode = NULL;
-    }
-
     // read image content
     block = 0LL;
     while (block < blockCount)
@@ -495,15 +476,27 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
     }
     printInfo(2,"    \b\b\b\b");
 
-    if (fragmentNode != NULL)
+    if (!jobOptions->noFragmentsCheckFlag)
     {
-      // add fragment to file fragment list
-      FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
-
-      // discard fragment list if file is complete
-      if (FragmentList_isEntryComplete(fragmentNode))
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        FragmentList_discard(fragmentList,fragmentNode);
+        // get file fragment node
+        fragmentNode = FragmentList_find(fragmentList,deviceName);
+        if (fragmentNode == NULL)
+        {
+          fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0);
+        }
+  //FragmentList_print(fragmentNode,String_cString(deviceName));
+        assert(fragmentNode != NULL);
+
+        // add fragment to file fragment list
+        FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
+
+        // discard fragment list if file is complete
+        if (FragmentList_isEntryComplete(fragmentNode))
+        {
+          FragmentList_discard(fragmentList,fragmentNode);
+        }
       }
     }
 
@@ -767,9 +760,10 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
   bool             testedDataFlag;
   const StringNode *stringNode;
   String           fileName;
-  FragmentNode     *fragmentNode;
   uint64           length;
   ulong            n;
+  SemaphoreLock    semaphoreLock;
+  FragmentNode     *fragmentNode;
 
   // open archive entry
   StringList_init(&fileNameList);
@@ -810,22 +804,6 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
       {
         // read hard link data
 
-        if (!jobOptions->noFragmentsCheckFlag)
-        {
-          // get file fragment list
-          fragmentNode = FragmentList_find(fragmentList,fileName);
-          if (fragmentNode == NULL)
-          {
-            fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
-          }
-          assert(fragmentNode != NULL);
-//FragmentList_print(fragmentNode,String_cString(fileName));
-        }
-        else
-        {
-          fragmentNode = NULL;
-        }
-
         // read hard link content
         length = 0LL;
         while (length < fragmentSize)
@@ -854,15 +832,27 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
         }
         printInfo(2,"    \b\b\b\b");
 
-        if (fragmentNode != NULL)
+        if (!jobOptions->noFragmentsCheckFlag)
         {
-          // add fragment to file fragment list
-          FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-          // discard fragment list if file is complete
-          if (FragmentList_isEntryComplete(fragmentNode))
+          SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            FragmentList_discard(fragmentList,fragmentNode);
+            // get file fragment node
+            fragmentNode = FragmentList_find(fragmentList,fileName);
+            if (fragmentNode == NULL)
+            {
+              fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
+            }
+            assert(fragmentNode != NULL);
+//FragmentList_print(fragmentNode,String_cString(fileName));
+
+            // add fragment to file fragment list
+            FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+
+            // discard fragment list if file is complete
+            if (FragmentList_isEntryComplete(fragmentNode))
+            {
+              FragmentList_discard(fragmentList,fragmentNode);
+            }
           }
         }
 

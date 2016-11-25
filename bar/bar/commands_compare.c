@@ -258,13 +258,14 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
   String             fileName;
   FileInfo           fileInfo;
   uint64             fragmentOffset,fragmentSize;
-  FragmentNode       *fragmentNode;
 //            FileInfo         localFileInfo;
   FileHandle         fileHandle;
   bool               equalFlag;
   uint64             length;
   ulong              bufferLength;
   ulong              diffIndex;
+  SemaphoreLock      semaphoreLock;
+  FragmentNode       *fragmentNode;
 
   // read file
   fileName = String_new();
@@ -315,22 +316,6 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
       return ERROR_WRONG_ENTRY_TYPE;
-    }
-
-    if (!jobOptions->noFragmentsCheckFlag)
-    {
-      // get file fragment node
-      fragmentNode = FragmentList_find(fragmentList,fileName);
-      if (fragmentNode == NULL)
-      {
-        fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
-      }
-      assert(fragmentNode != NULL);
-//FragmentList_print(fragmentNode,String_cString(fileName));
-    }
-    else
-    {
-      fragmentNode = NULL;
     }
 
     // open file
@@ -446,15 +431,27 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
     // close file
     File_close(&fileHandle);
 
-    if (fragmentNode != NULL)
+    if (!jobOptions->noFragmentsCheckFlag)
     {
-      // add fragment to file fragment list
-      FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-      // discard fragment list if file is complete
-      if (FragmentList_isEntryComplete(fragmentNode))
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        FragmentList_discard(fragmentList,fragmentNode);
+        // get file fragment node
+        fragmentNode = FragmentList_find(fragmentList,fileName);
+        if (fragmentNode == NULL)
+        {
+          fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
+        }
+        assert(fragmentNode != NULL);
+//FragmentList_print(fragmentNode,String_cString(fileName));
+
+        // add fragment to file fragment list
+        FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+
+        // discard fragment list if file is complete
+        if (FragmentList_isEntryComplete(fragmentNode))
+        {
+          FragmentList_discard(fragmentList,fragmentNode);
+        }
       }
     }
 
@@ -530,13 +527,14 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
   String             deviceName;
   DeviceInfo         deviceInfo;
   uint64             blockOffset,blockCount;
-  FragmentNode       *fragmentNode;
   DeviceHandle       deviceHandle;
   bool               fileSystemFlag;
   FileSystemHandle   fileSystemHandle;
   bool               equalFlag;
   uint64             block;
   ulong              diffIndex;
+  SemaphoreLock      semaphoreLock;
+  FragmentNode       *fragmentNode;
 
   // read image
   deviceName = String_new();
@@ -591,21 +589,6 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(deviceName);
       return error;
-    }
-
-    if (!jobOptions->noFragmentsCheckFlag)
-    {
-      // get image fragment list
-      fragmentNode = FragmentList_find(fragmentList,deviceName);
-      if (fragmentNode == NULL)
-      {
-        fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0);
-      }
-      assert(fragmentNode != NULL);
-    }
-    else
-    {
-      fragmentNode = NULL;
     }
 
     // get device info
@@ -784,15 +767,26 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     DEBUG_TESTCODE() { if (fileSystemFlag) { FileSystem_done(&fileSystemHandle); } Device_close(&deviceHandle); Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
     printInfo(2,"    \b\b\b\b");
 
-    if (fragmentNode != NULL)
+    if (!jobOptions->noFragmentsCheckFlag)
     {
-      // add fragment to file fragment list
-      FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
-
-      // discard fragment list if file is complete
-      if (FragmentList_isEntryComplete(fragmentNode))
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        FragmentList_discard(fragmentList,fragmentNode);
+        // get image fragment node
+        fragmentNode = FragmentList_find(fragmentList,deviceName);
+        if (fragmentNode == NULL)
+        {
+          fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0);
+        }
+        assert(fragmentNode != NULL);
+
+        // add fragment to file fragment list
+        FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
+
+        // discard fragment list if file is complete
+        if (FragmentList_isEntryComplete(fragmentNode))
+        {
+          FragmentList_discard(fragmentList,fragmentNode);
+        }
       }
     }
 
@@ -1161,13 +1155,14 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
   bool               comparedDataFlag;
   const StringNode   *stringNode;
   String             fileName;
-  FragmentNode       *fragmentNode;
 //            FileInfo         localFileInfo;
   FileHandle         fileHandle;
   bool               equalFlag;
   uint64             length;
   ulong              bufferLength;
   ulong              diffIndex;
+  SemaphoreLock      semaphoreLock;
+  FragmentNode       *fragmentNode;
 
   // read hard link
   StringList_init(&fileNameList);
@@ -1238,21 +1233,6 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
       if (!comparedDataFlag && (error == ERROR_NONE))
       {
         // compare hard link data
-
-        if (!jobOptions->noFragmentsCheckFlag)
-        {
-          // get file fragment list
-          fragmentNode = FragmentList_find(fragmentList,fileName);
-          if (fragmentNode == NULL)
-          {
-            fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
-          }
-          assert(fragmentNode != NULL);
-        }
-        else
-        {
-          fragmentNode = NULL;
-        }
 
         // open file
         error = File_open(&fileHandle,fileName,FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
@@ -1379,15 +1359,26 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         // close file
         (void)File_close(&fileHandle);
 
-        if (fragmentNode != NULL)
+        if (!jobOptions->noFragmentsCheckFlag)
         {
-          // add fragment to file fragment list
-          FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-          // discard fragment list if file is complete
-          if (FragmentList_isEntryComplete(fragmentNode))
+          SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            FragmentList_discard(fragmentList,fragmentNode);
+            // get file fragment list
+            fragmentNode = FragmentList_find(fragmentList,fileName);
+            if (fragmentNode == NULL)
+            {
+              fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
+            }
+            assert(fragmentNode != NULL);
+
+            // add fragment to file fragment list
+            FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+
+            // discard fragment list if file is complete
+            if (FragmentList_isEntryComplete(fragmentNode))
+            {
+              FragmentList_discard(fragmentList,fragmentNode);
+            }
           }
         }
 #if 0
