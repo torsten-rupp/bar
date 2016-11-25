@@ -11494,12 +11494,6 @@ Errors Archive_verifySignatures(StorageInfo          *storageInfo,
   AutoFree_init(&autoFreeList);
   if (cryptSignaturesState != NULL) (*cryptSignaturesState) = CRYPT_SIGNATURE_STATE_NONE;
 
-  // check if signature public key is available
-  if (!Crypt_isKey(&globalOptions.signaturePublicKey))
-  {
-    return ERROR_NO_PUBLIC_SIGNATURE_KEY;
-  }
-
   // open storage
   error = Storage_open(&storageHandle,
                        storageInfo,
@@ -11572,6 +11566,13 @@ Errors Archive_verifySignatures(StorageInfo          *storageInfo,
     // check if signature
     if (chunkHeader.id == CHUNK_ID_SIGNATURE)
     {
+      // check if signature public key is available
+      if (!Crypt_isKey(&globalOptions.signaturePublicKey))
+      {
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_NO_PUBLIC_SIGNATURE_KEY;
+      }
+
       // read signature chunk
       error = Chunk_open(&chunkSignature.info,
                          &chunkHeader,
