@@ -141,6 +141,7 @@ typedef struct
 {
   uint       count;                                               // number of hard links
   StringList nameList;                                            // list of hard linked names
+  uint64     size;
 } HardLinkInfo;
 
 // entry message, send from collector thread -> main
@@ -150,6 +151,7 @@ typedef struct
   FileTypes  fileType;
   String     name;                                                // file/image/directory/link/special name
   StringList nameList;                                            // list of hard link names
+  uint       fragmentNumber;                                      // fragment number [0..n-1]
   uint64     fragmentOffset;
   uint64     fragmentSize;
 } EntryMsg;
@@ -938,11 +940,10 @@ LOCAL void updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
 /***********************************************************************\
 * Name   : appendFileToEntryList
 * Purpose: append file to entry list
-* Input  : entryMsgQueue  - entry message queue
-*          entryType      - entry type
-*          name           - name (will be copied!)
-*          fragmentOffset - fragment offset [bytes]
-*          fragmentSize   - fragment size [bytes]
+* Input  : entryMsgQueue - entry message queue
+*          entryType     - entry type
+*          name          - name (will be copied!)
+*          size          - file size [bytes]
 * Output : -
 * Return : -
 * Notes  : -
@@ -951,15 +952,16 @@ LOCAL void updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
 LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
                                  EntryTypes  entryType,
                                  ConstString name,
-                                 uint64      fragmentOffset,
-                                 uint64      fragmentSize
+                                 uint64      size
                                 )
 {
+  uint64   fragmentOffset,fragmentSize;
   EntryMsg entryMsg;
 
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
 
+#if 0
   // init
   entryMsg.entryType      = entryType;
   entryMsg.fileType       = FILE_TYPE_FILE;
@@ -973,27 +975,33 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
   {
     freeEntryMsg(&entryMsg,NULL);
   }
+#else
+  fragmentOffset = 0LL;
+  do
+  {
+    // calculate fragment size
+    fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
+                     ? globalOptions.fragmentSize
+                     : size-fragmentOffset;
 
-#if 0
-                        fragmentOffset = 0LL;
-                        size           = fileInfo.size;
-                        do
-                        {
-                          fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
-                                           ? globalOptions.fragmentSize
-                                           : size-fragmentOffset;
-                          appendFileToEntryList(&createInfo->entryMsgQueue,
-                                                ENTRY_TYPE_FILE,
-                                                name,
-                                                fragmentOffset,
-                                                fragmentSize
-                                               );
-                          fragmentOffset += fragmentSize;
-                        }
-                        while (   (createInfo->failError == ERROR_NONE)
-                               && !isAborted(createInfo)
-                               && (fragmentOffset < fileInfo.size);
-                              );
+    // init
+    entryMsg.entryType      = entryType;
+    entryMsg.fileType       = FILE_TYPE_FILE;
+    entryMsg.name           = String_duplicate(name);
+    StringList_init(&entryMsg.nameList);
+    entryMsg.fragmentOffset = fragmentOffset;
+    entryMsg.fragmentSize   = fragmentSize;
+
+    // put into message queue
+    if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+    {
+      freeEntryMsg(&entryMsg,NULL);
+    }
+
+    // next fragment offset
+    fragmentOffset += fragmentSize;
+  }
+  while (fragmentOffset < size);
 #endif
 }
 
@@ -1073,11 +1081,10 @@ LOCAL void appendLinkToEntryList(MsgQueue    *entryMsgQueue,
 /***********************************************************************\
 * Name   : appendHardLinkToEntryList
 * Purpose: append hard link to entry list
-* Input  : entryMsgQueue  - entry message queue
-*          entryType      - entry type
-*          nameList       - name list
-*          fragmentOffset - fragment offset [bytes]
-*          fragmentSize   - fragment size [bytes]
+* Input  : entryMsgQueue - entry message queue
+*          entryType     - entry type
+*          nameList      - name list
+*          size          - file size [bytes]
 * Output : -
 * Return : -
 * Notes  : -
@@ -1086,14 +1093,15 @@ LOCAL void appendLinkToEntryList(MsgQueue    *entryMsgQueue,
 LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
                                      EntryTypes entryType,
                                      StringList *nameList,
-                                     uint64     fragmentOffset,
-                                     uint64     fragmentSize
+                                     uint64     size
                                     )
 {
+  uint64   fragmentOffset,fragmentSize;
   EntryMsg entryMsg;
 
   assert(entryMsgQueue != NULL);
 
+#if 0
   // init
   entryMsg.entryType      = entryType;
   entryMsg.fileType       = FILE_TYPE_HARDLINK;
@@ -1108,6 +1116,35 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
   {
     freeEntryMsg(&entryMsg,NULL);
   }
+#else
+  fragmentOffset = 0LL;
+  do
+  {
+    // calculate fragment size
+    fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
+                     ? globalOptions.fragmentSize
+                     : size-fragmentOffset;
+
+    // init
+    entryMsg.entryType      = entryType;
+    entryMsg.fileType       = FILE_TYPE_HARDLINK;
+    entryMsg.name           = NULL;
+    StringList_init(&entryMsg.nameList);
+    StringList_move(nameList,&entryMsg.nameList);
+    entryMsg.fragmentOffset = fragmentOffset;
+    entryMsg.fragmentSize   = fragmentSize;
+
+    // put into message queue
+    if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+    {
+      freeEntryMsg(&entryMsg,NULL);
+    }
+
+    // next fragment offset
+    fragmentOffset += fragmentSize;
+  }
+  while (fragmentOffset < size);
+#endif
 }
 
 /***********************************************************************\
@@ -2176,25 +2213,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                   }
 fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
-                  fragmentOffset = 0LL;
-                  size           = fileInfo.size;
-                  do
-                  {
-                    fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
-                                     ? globalOptions.fragmentSize
-                                     : size-fragmentOffset;
-                    appendFileToEntryList(&createInfo->entryMsgQueue,
-                                          ENTRY_TYPE_FILE,
-                                          name,
-                                          fragmentOffset,
-                                          fragmentSize
-                                         );
-                    fragmentOffset += fragmentSize;
-                  }
-                  while (   (createInfo->failError == ERROR_NONE)
-                         && !isAborted(createInfo)
-                         && (fragmentOffset < fileInfo.size)
-                        );
+                  appendFileToEntryList(&createInfo->entryMsgQueue,
+                                        ENTRY_TYPE_FILE,
+                                        name,
+                                        fileInfo.size
+                                       );
                 }
                 else
                 {
@@ -2297,25 +2320,11 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                     if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
                     {
                       // found last hardlink -> add to entry list
-                      fragmentOffset = 0LL;
-                      size           = fileInfo.size;
-                      do
-                      {
-                        fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
-                                         ? globalOptions.fragmentSize
-                                         : size-fragmentOffset;
-                        appendHardLinkToEntryList(&createInfo->entryMsgQueue,
-                                                  ENTRY_TYPE_FILE,
-                                                  &data.hardLinkInfo->nameList,
-                                                  fragmentOffset,
-                                                  fragmentSize
-                                                 );
-                        fragmentOffset += fragmentSize;
-                      }
-                      while (   (createInfo->failError == ERROR_NONE)
-                             && !isAborted(createInfo)
-                             && (fragmentOffset < fileInfo.size)
-                            );
+                      appendHardLinkToEntryList(&createInfo->entryMsgQueue,
+                                                ENTRY_TYPE_FILE,
+                                                &data.hardLinkInfo->nameList,
+                                                data.hardLinkInfo->size
+                                               );
 
                       // clear entry
                       Dictionary_remove(&hardLinksDictionary,
@@ -2338,6 +2347,7 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                     hardLinkInfo.count = fileInfo.linkCount;
                     StringList_init(&hardLinkInfo.nameList);
                     StringList_append(&hardLinkInfo.nameList,name);
+                    hardLinkInfo.size  = fileInfo.size;
 
                     if (!Dictionary_add(&hardLinksDictionary,
                                         &fileInfo.id,
@@ -2528,25 +2538,11 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                         {
                           printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                         }
-                        fragmentOffset = 0LL;
-                        size           = fileInfo.size;
-                        do
-                        {
-                          fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
-                                           ? globalOptions.fragmentSize
-                                           : size-fragmentOffset;
-                          appendFileToEntryList(&createInfo->entryMsgQueue,
-                                                ENTRY_TYPE_FILE,
-                                                name,
-                                                fragmentOffset,
-                                                fragmentSize
-                                               );
-                          fragmentOffset += fragmentSize;
-                        }
-                        while (   (createInfo->failError == ERROR_NONE)
-                               && !isAborted(createInfo)
-                               && (fragmentOffset < fileInfo.size)
-                              );
+                        appendFileToEntryList(&createInfo->entryMsgQueue,
+                                              ENTRY_TYPE_FILE,
+                                              name,
+                                              fileInfo.size
+                                             );
                       }
                       break;
                     case ENTRY_TYPE_IMAGE:
@@ -2693,23 +2689,11 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                                     {
                                       printIncrementalInfo(&createInfo->namesDictionary,fileName,&fileInfo.cast);
                                     }
-fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
-                                    fragmentOffset = 0LL;
-                                    size           = fileInfo.size;
-                                    do
-                                    {
-                                      fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
-                                                       ? globalOptions.fragmentSize
-                                                       : size-fragmentOffset;
-                                      appendFileToEntryList(&createInfo->entryMsgQueue,
-                                                            ENTRY_TYPE_FILE,
-                                                            fileName,
-                                                            fragmentOffset,
-                                                            fragmentSize
-                                                           );
-                                      fragmentOffset += fragmentSize;
-                                    }
-                                    while (fragmentOffset < fileInfo.size);
+                                    appendFileToEntryList(&createInfo->entryMsgQueue,
+                                                          ENTRY_TYPE_FILE,
+                                                          fileName,
+                                                          fileInfo.size
+                                                         );
                                   }
                                   break;
                                 case ENTRY_TYPE_IMAGE:
@@ -2791,22 +2775,11 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                                         if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
                                         {
                                           // found last hardlink -> add to entry list
-                                          fragmentOffset = 0LL;
-                                          size           = fileInfo.size;
-                                          do
-                                          {
-                                            fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
-                                                             ? globalOptions.fragmentSize
-                                                             : size-fragmentOffset;
-                                            appendHardLinkToEntryList(&createInfo->entryMsgQueue,
-                                                                      ENTRY_TYPE_FILE,
-                                                                      &data.hardLinkInfo->nameList,
-                                                                      fragmentOffset,
-                                                                      fragmentSize
-                                                                     );
-                                            fragmentOffset += fragmentSize;
-                                          }
-                                          while (fragmentOffset < fileInfo.size);
+                                          appendHardLinkToEntryList(&createInfo->entryMsgQueue,
+                                                                    ENTRY_TYPE_FILE,
+                                                                    &data.hardLinkInfo->nameList,
+                                                                    data.hardLinkInfo->size
+                                                                   );
 
                                           // clear entry
                                           Dictionary_remove(&hardLinksDictionary,
@@ -2829,6 +2802,7 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                                         hardLinkInfo.count = fileInfo.linkCount;
                                         StringList_init(&hardLinkInfo.nameList);
                                         StringList_append(&hardLinkInfo.nameList,fileName);
+                                        hardLinkInfo.size  = fileInfo.size;
 
                                         if (!Dictionary_add(&hardLinksDictionary,
                                                             &fileInfo.id,
@@ -3045,22 +3019,11 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                             if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
                             {
                               // found last hardlink -> add to entry list
-                              fragmentOffset = 0LL;
-                              size           = fileInfo.size;
-                              do
-                              {
-                                fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
-                                                 ? globalOptions.fragmentSize
-                                                 : size-fragmentOffset;
-                                appendHardLinkToEntryList(&createInfo->entryMsgQueue,
-                                                          ENTRY_TYPE_FILE,
-                                                          &data.hardLinkInfo->nameList,
-                                                          fragmentOffset,
-                                                          fragmentSize
-                                                         );
-                                fragmentOffset += fragmentSize;
-                              }
-                              while (fragmentOffset < fileInfo.size);
+                              appendHardLinkToEntryList(&createInfo->entryMsgQueue,
+                                                        ENTRY_TYPE_FILE,
+                                                        &data.hardLinkInfo->nameList,
+                                                        data.hardLinkInfo->size
+                                                       );
 
                               // clear entry
                               Dictionary_remove(&hardLinksDictionary,
@@ -3083,6 +3046,7 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                             hardLinkInfo.count = fileInfo.linkCount;
                             StringList_init(&hardLinkInfo.nameList);
                             StringList_append(&hardLinkInfo.nameList,name);
+                            hardLinkInfo.size  = fileInfo.size;
 
                             if (!Dictionary_add(&hardLinksDictionary,
                                                 &fileInfo.id,
@@ -3272,22 +3236,11 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
                            )
         )
   {
-    fragmentOffset = 0LL;
-    size           = fileInfo.size;
-    do
-    {
-      fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
-                       ? globalOptions.fragmentSize
-                       : size-fragmentOffset;
-      appendHardLinkToEntryList(&createInfo->entryMsgQueue,
-                                ENTRY_TYPE_FILE,
-                                &data.hardLinkInfo->nameList,
-                                fragmentOffset,
-                                fragmentSize
-                               );
-      fragmentOffset += fragmentSize;
-    }
-    while (fragmentOffset < fileInfo.size);
+    appendHardLinkToEntryList(&createInfo->entryMsgQueue,
+                              ENTRY_TYPE_FILE,
+                              &data.hardLinkInfo->nameList,
+                              data.hardLinkInfo->size
+                             );
   }
   Dictionary_doneIterator(&dictionaryIterator);
 
@@ -4864,7 +4817,6 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
   assert(fileName != NULL);
-  assert(fragmentSize > 0LL);
   assert(buffer != NULL);
 
   printInfo(1,"Add '%s'...",String_cString(fileName));
@@ -5144,7 +5096,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     // get fragment info
     if (fragmentSize < fileInfo.size)
     {
-      stringFormat(s1,sizeof(s1),", fragment %12llu..%12llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+      stringFormat(s1,sizeof(s1),", fragment %12llu..%12llu",fragmentOffset,(fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1LL : fragmentOffset);
     }
     else
     {
