@@ -6484,7 +6484,6 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   if (error != ERROR_NONE)
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    (void)Chunk_close(&chunkMeta.info);
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
@@ -6816,7 +6815,6 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   if (error != ERROR_NONE)
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
-    (void)Chunk_close(&archiveEntryInfo->file.chunkFile.info);
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
