@@ -303,8 +303,9 @@ LOCAL_INLINE void listInsert(void *list,
   assert(list != NULL);
   assert(node != NULL);
 
-  assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
-         ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
+  assert(   ((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL))
+         || ((((List*)list)->count == 1) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL) && (((List*)list)->head == ((List*)list)->tail))
+         || ((((List*)list)->count > 1) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
         );
   assert(node != NULL);
 
@@ -340,8 +341,9 @@ LOCAL_INLINE void listInsert(void *list,
     ((List*)list)->count = 1;
   }
 
-  assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
-         ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
+  assert(   ((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL))
+         || ((((List*)list)->count == 1) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL) && (((List*)list)->head == ((List*)list)->tail))
+         || ((((List*)list)->count > 1) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
         );
 
   #ifndef NDEBUG
@@ -390,8 +392,9 @@ LOCAL_INLINE void listRemove(void *list,
   if ((Node*)node == ((List*)list)->tail) ((List*)list)->tail = ((Node*)node)->prev;
   ((List*)list)->count--;
 
-  assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
-         ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
+  assert(   ((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL))
+         || ((((List*)list)->count == 1) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL) && (((List*)list)->head == ((List*)list)->tail))
+         || ((((List*)list)->count > 1) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
         );
 
   #ifndef NDEBUG
