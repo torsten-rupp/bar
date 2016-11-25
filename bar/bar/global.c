@@ -67,7 +67,7 @@
       void const *deleteStackTrace[16];
       int        deleteStackTraceSize;
     #endif /* HAVE_BACKTRACE */
-    const char *typeName;
+    const char *variableName;
     const void *resource;
     uint       size;
   } DebugResourceNode;
@@ -564,7 +564,7 @@ void debugLocalResource(const char *__fileName__,
 
 void debugAddResourceTrace(const char *__fileName__,
                            ulong      __lineNb__,
-                           const char *typeName,
+                           const char *variableName,
                            const void *resource,
                            uint       size
                           )
@@ -584,7 +584,7 @@ void debugAddResourceTrace(const char *__fileName__,
     if (debugResourceNode != NULL)
     {
       fprintf(stderr,"DEBUG WARNING: multiple init of resource '%s' 0x%016"PRIuPTR" (%d bytes) at %s, %lu which was previously initialized at %s, %ld!\n",
-              typeName,
+              variableName,
               (uintptr_t)resource,
               size,
               __fileName__,
@@ -628,9 +628,9 @@ void debugAddResourceTrace(const char *__fileName__,
     #ifdef HAVE_BACKTRACE
       debugResourceNode->deleteStackTraceSize = 0;
     #endif /* HAVE_BACKTRACE */
-    debugResourceNode->typeName = typeName;
-    debugResourceNode->resource = resource;
-    debugResourceNode->size     = size;
+    debugResourceNode->variableName = variableName;
+    debugResourceNode->resource     = resource;
+    debugResourceNode->size         = size;
 
     // add resource to allocated-list
     List_append(&debugResourceAllocList,debugResourceNode);
@@ -659,7 +659,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
     if (debugResourceNode != NULL)
     {
       fprintf(stderr,"DEBUG ERROR: multiple free of resource '%s' 0x%016"PRIuPTR" (%d bytes) at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
-              debugResourceNode->typeName,
+              debugResourceNode->variableName,
               (uintptr_t)debugResourceNode->resource,
               debugResourceNode->size,
               __fileName__,
@@ -723,6 +723,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
 
 void debugCheckResourceTrace(const char *__fileName__,
                              ulong      __lineNb__,
+                             const char *variableName,
                              const void *resource
                             )
 {
@@ -749,7 +750,7 @@ void debugCheckResourceTrace(const char *__fileName__,
       if (debugResourceNode != NULL)
       {
         fprintf(stderr,"DEBUG ERROR: resource '%s' 0x%016"PRIuPTR" (%d bytes) invalid at %s, %lu which was allocated at %s, %lu and freed at %s, %lu!\n",
-                debugResourceNode->typeName,
+                debugResourceNode->variableName,
                 (uintptr_t)debugResourceNode->resource,
                 debugResourceNode->size,
                 __fileName__,
@@ -768,7 +769,8 @@ void debugCheckResourceTrace(const char *__fileName__,
       }
       else
       {
-        fprintf(stderr,"DEBUG ERROR: resource 0x%016"PRIuPTR" not found in debug list at %s, line %lu\n",
+        fprintf(stderr,"DEBUG ERROR: resource '%s' 0x%016"PRIuPTR" not found in debug list at %s, line %lu\n",
+                variableName,
                 (uintptr_t)resource,
                 __fileName__,
                 __lineNb__
@@ -808,7 +810,7 @@ void debugResourceDumpInfo(FILE *handle)
     LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
     {
       fprintf(handle,"DEBUG: resource '%s' 0x%016"PRIuPTR" (%d bytes) allocated at %s, line %lu\n",
-              debugResourceNode->typeName,
+              debugResourceNode->variableName,
               (uintptr_t)debugResourceNode->resource,
               debugResourceNode->size,
               debugResourceNode->allocFileName,
@@ -851,7 +853,7 @@ void debugResourceCheck(void)
       LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
       {
         fprintf(stderr,"DEBUG: lost resource '%s' 0x%016"PRIuPTR" (%d bytes) allocated at %s, line %lu\n",
-                debugResourceNode->typeName,
+                debugResourceNode->variableName,
                 (uintptr_t)debugResourceNode->resource,
                 debugResourceNode->size,
                 debugResourceNode->allocFileName,

@@ -1103,13 +1103,13 @@ typedef struct
 
 #ifndef NDEBUG
   // 2 macros necessary, because of "string"-construction
-  #define __DEBUG_ADD_RESOURCE_TRACE__STRING1(s) __DEBUG_ADD_RESOURCE_TRACE__STRING2(s)
-  #define __DEBUG_ADD_RESOURCE_TRACE__STRING2(s) #s
+  #define __DEBUG_RESOURCE_TRACE__STRING1(s) __DEBUG_RESOURCE_TRACE__STRING2(s)
+  #define __DEBUG_RESOURCE_TRACE__STRING2(s) #s
 
   #define DEBUG_ADD_RESOURCE_TRACE(resource,size) \
     do \
     { \
-      debugAddResourceTrace(__FILE__,__LINE__,__DEBUG_ADD_RESOURCE_TRACE__STRING1(resource),resource,size); \
+      debugAddResourceTrace(__FILE__,__LINE__,__DEBUG_RESOURCE_TRACE__STRING1(resource),resource,size); \
     } \
     while (0)
 
@@ -1123,7 +1123,7 @@ typedef struct
   #define DEBUG_ADD_RESOURCE_TRACEX(fileName,lineNb,resource,size) \
     do \
     { \
-      debugAddResourceTrace(fileName,lineNb,__DEBUG_ADD_RESOURCE_TRACE__STRING1(resource),resource,size); \
+      debugAddResourceTrace(fileName,lineNb,__DEBUG_RESOURCE_TRACE__STRING1(resource),resource,size); \
     } \
     while (0)
 
@@ -1137,14 +1137,14 @@ typedef struct
   #define DEBUG_CHECK_RESOURCE_TRACE(resource) \
     do \
     { \
-      debugCheckResourceTrace(__FILE__,__LINE__,resource); \
+      debugCheckResourceTrace(__FILE__,__LINE__,__DEBUG_RESOURCE_TRACE__STRING1(resource),resource); \
     } \
     while (0)
 
   #define DEBUG_CHECK_RESOURCE_TRACEX(fileName,lineNb,resource) \
     do \
     { \
-      debugCheckResourceTrace(fileName,lineNb,resource); \
+      debugCheckResourceTrace(fileName,lineNb,__DEBUG_RESOURCE_TRACE__STRING1(resource),resource); \
     } \
     while (0)
 
@@ -1805,7 +1805,7 @@ void debugLocalResource(const char *__fileName__,
 * Purpose: add resource to debug trace list
 * Input  : __fileName__ - file name
 *          __lineNb__   - line number
-*          typeName     - type name
+*          variableName - variable name
 *          resource     - resource
 * Output : -
 * Return : -
@@ -1814,7 +1814,7 @@ void debugLocalResource(const char *__fileName__,
 
 void debugAddResourceTrace(const char *__fileName__,
                            ulong      __lineNb__,
-                           const char *typeName,
+                           const char *variableName,
                            const void *resource,
                            uint       size
                           );
@@ -1841,6 +1841,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
 * Purpose: check if resource is in debug trace list
 * Input  : __fileName__ - file name
 *          __lineNb__   - line number
+*          variableName - variable name
 *          resource     - resource
 * Output : -
 * Return : -
@@ -1849,6 +1850,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
 
 void debugCheckResourceTrace(const char *__fileName__,
                              ulong      __lineNb__,
+                             const char *variableName,
                              const void *resource
                             );
 
