@@ -224,6 +224,8 @@ TEST_IMAGE_OPERATIONS = test_image_operations
 
 # test settings
 TEST_CONFIG                = test/bar.cfg
+TEST_KEY_PUBLIC            = test/key.public
+TEST_KEY_PRIVATE           = test/key.private
 TEST_SIGNATURE_KEY_PUBLIC  = test/signature-key.public
 TEST_SIGNATURE_KEY_PRIVATE = test/signature-key.private
 
@@ -1093,10 +1095,10 @@ TEST_BAR_SQLITE3  = ./bar-sqlite3
 TEST_DESTROYER    = ./destroyer@EXEEXT@
 
 # test keys
-TEST_KEYS = test/key.public \
-            test/key.private \
-            test/signature-key.public \
-            test/signature-key.private
+TEST_KEYS = $(TEST_KEY_PUBLIC) \
+            $(TEST_KEY_PRIVATE) \
+            $(TEST_SIGNATURE_KEY_PUBLIC) \
+            $(TEST_SIGNATURE_KEY_PRIVATE)
 
 # default test options
 TEST_OPTIONS = --no-default-config --config=$(CURDIR)/$(TEST_CONFIG)
@@ -1295,7 +1297,7 @@ test4 test_asymmetric_crypt: $(TEST_BAR) $(TEST_KEYS)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --max-threads=1" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE) --max-threads=1" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1305,7 +1307,7 @@ test4 test_asymmetric_crypt: $(TEST_BAR) $(TEST_KEYS)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1315,7 +1317,7 @@ test4 test_asymmetric_crypt: $(TEST_BAR) $(TEST_KEYS)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE)" \
             test_file_operations_dryrun \
             ; \
           rc=$$?; \
@@ -1336,19 +1338,19 @@ test5 test_signatures: $(TEST_BAR) $(TEST_KEYS)
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private --max-threads=1" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE) --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private --max-threads=1" \
           test_file_operations \
           ;
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE) --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private" \
           test_file_operations \
           ;
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE) --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private" \
           test_file_operations_dryrun \
           ;
 	@$(ECHO) "ok"
@@ -1614,7 +1616,7 @@ test_combined: $(TEST_BAR)
             $(MAKE) \
               BAR_FILE=test-### \
               BAR_PATTERN="test-*" \
-              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private --archive-part-size=100K" \
+              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE) --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private --archive-part-size=100K" \
               test_file_operations \
               ; \
             rc=$$?; \
@@ -1624,7 +1626,7 @@ test_combined: $(TEST_BAR)
             $(MAKE) \
               BAR_FILE=test-### \
               BAR_PATTERN="test-*" \
-              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private --archive-part-size=10M" \
+              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE) --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private --archive-part-size=10M" \
               $(TEST_IMAGE_OPERATIONS) \
               ; \
             rc=$$?; \
@@ -1790,8 +1792,8 @@ test_file_operations: \
   test_file_operations_differential \
   test_file_operations_destroyed
 
-test/key.public test/key.private : $(TEST_BAR)
-	$(RMF) test/key.public test/key.private
+$(TEST_KEY_PUBLIC) $(TEST_KEY_PRIVATE) : $(TEST_BAR)
+	$(RMF) $(TEST_KEY_PUBLIC) $(TEST_KEY_PRIVATE)
 	$(TEST_BAR) --generate-keys --crypt-password="$(TEST_PASSWORD_CRYPT)" test/key
 
 test/signature-key.public test/signature-key.private: $(TEST_BAR)
@@ -3750,7 +3752,7 @@ memcheck2d: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/test/key.public --crypt-private-key=$(CURDIR)/test/key.private --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private --overwrite-archive-files >/dev/null
+          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE) --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private --overwrite-archive-files >/dev/null
 memcheck2e: \
   $(TEST_BAR_VALGRIND) \
   $(TEST_CONFIG) \
@@ -4017,8 +4019,8 @@ TESTCODE_COMMAND1A=$(TEST_BAR_DEBUG) \
                      --crypt-algorithm=AES256 \
                      --crypt-password=$(TEST_PASSWORD_CRYPT) \
                      --crypt-type=asymmetric \
-                     --crypt-public-key=$(CURDIR)/test/key.public \
-                     --crypt-private-key=$(CURDIR)/test/key.private \
+                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) \
+                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE) \
                      --archive-part-size=100K \
                      --overwrite-archive-files \
                      --full \
@@ -4029,8 +4031,8 @@ TESTCODE_COMMAND1B=$(TEST_BAR_DEBUG) \
                      --crypt-algorithm=AES256 \
                      --crypt-password=$(TEST_PASSWORD_CRYPT) \
                      --crypt-type=asymmetric \
-                     --crypt-public-key=$(CURDIR)/test/key.public \
-                     --crypt-private-key=$(CURDIR)/test/key.private \
+                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) \
+                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE) \
                      --archive-part-size=100K \
                      --overwrite-archive-files \
                      --differential \
@@ -4042,8 +4044,8 @@ TESTCODE_COMMAND1C=$(TEST_BAR_DEBUG) \
                      --crypt-algorithm=AES256 \
                      --crypt-password=$(TEST_PASSWORD_CRYPT) \
                      --crypt-type=asymmetric \
-                     --crypt-public-key=$(CURDIR)/test/key.public \
-                     --crypt-private-key=$(CURDIR)/test/key.private \
+                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) \
+                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE) \
                      --signature-public-key=$(CURDIR)/test/signature-key.public \
                      --signature-private-key=$(CURDIR)/test/signature-key.private \
                      --archive-part-size=100K \
@@ -4054,22 +4056,22 @@ TESTCODE_COMMAND1C=$(TEST_BAR_DEBUG) \
                      -c test/test-\#\#\#.bar $(TEST_DATA_DIR)/data
 TESTCODE_COMMAND2=$(TEST_BAR_DEBUG) \
                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                    --crypt-public-key=$(CURDIR)/test/key.public \
-                    --crypt-private-key=$(CURDIR)/test/key.private \
+                    --crypt-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) \
+                    --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE) \
                     --signature-public-key=$(CURDIR)/test/signature-key.public \
                     --signature-private-key=$(CURDIR)/test/signature-key.private \
                     -l test/test-*.bar
 TESTCODE_COMMAND3=$(TEST_BAR_DEBUG) \
                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                    --crypt-public-key=$(CURDIR)/test/key.public \
-                    --crypt-private-key=$(CURDIR)/test/key.private \
+                    --crypt-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) \
+                    --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE) \
                     --signature-public-key=$(CURDIR)/test/signature-key.public \
                     --signature-private-key=$(CURDIR)/test/signature-key.private \
                     -d test/test-*.bar
 TESTCODE_COMMAND4=$(TEST_BAR_DEBUG) \
                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                    --crypt-public-key=$(CURDIR)/test/key.public \
-                    --crypt-private-key=$(CURDIR)/test/key.private \
+                    --crypt-public-key=$(CURDIR)/$(TEST_KEY_PUBLIC) \
+                    --crypt-private-key=$(CURDIR)/$(TEST_KEY_PRIVATE) \
                     --signature-public-key=$(CURDIR)/test/signature-key.public \
                     --signature-private-key=$(CURDIR)/test/signature-key.private \
                     --destination=test/restore \
