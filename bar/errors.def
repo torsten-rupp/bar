@@ -292,8 +292,26 @@ ERROR NO_PUBLIC_CRYPT_KEY              "no public encryption key"
 ERROR NO_PRIVATE_CRYPT_KEY             "no private encryption key"
 ERROR NO_PUBLIC_SIGNATURE_KEY          "no public signature key"
 ERROR NO_PRIVATE_SIGNATURE_KEY         "no private signature key"
-ERROR NOT_A_PUBLIC_KEY                 "key is not a public key"
-ERROR NOT_A_PRIVATE_KEY                "key is not a private key"
+ERROR NOT_A_PUBLIC_KEY
+  if (!stringIsEmpty(ERROR_TEXT))
+  {
+    stringFormat(errorText,sizeof(errorText),"key '%s' is not a public key",ERROR_TEXT);
+  }
+  else
+  {
+    stringCopy(errorText,"key is not a public key",sizeof(errorText));
+  }
+
+ERROR NOT_A_PRIVATE_KEY
+  if (!stringIsEmpty(ERROR_TEXT))
+  {
+    stringFormat(errorText,sizeof(errorText),"key '%s' is not a private key",ERROR_TEXT);
+  }
+  else
+  {
+    stringCopy(errorText,"key '%s' is not a private key",sizeof(errorText));
+  }
+
 ERROR KEY_ENCRYPT_FAIL
   stringCopy(errorText,"key encryption fail",sizeof(errorText));
   if (!stringIsEmpty(ERROR_TEXT))
