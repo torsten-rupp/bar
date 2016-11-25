@@ -152,6 +152,7 @@ typedef struct
   String     name;                                                // file/image/directory/link/special name
   StringList nameList;                                            // list of hard link names
   uint       fragmentNumber;                                      // fragment number [0..n-1]
+  uint       maxFragmentNumber;                                   // max. fragment number [0..n-1]
   uint64     fragmentOffset;
   uint64     fragmentSize;
 } EntryMsg;
@@ -955,28 +956,18 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
                                  uint64      size
                                 )
 {
+  uint     maxFragmentNumber;
+  uint     fragmentNumber;
   uint64   fragmentOffset,fragmentSize;
   EntryMsg entryMsg;
 
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
 
-#if 0
-  // init
-  entryMsg.entryType      = entryType;
-  entryMsg.fileType       = FILE_TYPE_FILE;
-  entryMsg.name           = String_duplicate(name);
-  StringList_init(&entryMsg.nameList);
-  entryMsg.fragmentOffset = fragmentOffset;
-  entryMsg.fragmentSize   = fragmentSize;
-
-  // put into message queue
-  if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
-  {
-    freeEntryMsg(&entryMsg,NULL);
-  }
-#else
-  fragmentOffset = 0LL;
+  maxFragmentNumber = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
+                        ? (size+globalOptions.fragmentSize-1)/globalOptions.fragmentSize
+                        : 0;
+  fragmentOffset    = 0LL;
   do
   {
     // calculate fragment size
@@ -985,12 +976,14 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
                      : size-fragmentOffset;
 
     // init
-    entryMsg.entryType      = entryType;
-    entryMsg.fileType       = FILE_TYPE_FILE;
-    entryMsg.name           = String_duplicate(name);
+    entryMsg.entryType         = entryType;
+    entryMsg.fileType          = FILE_TYPE_FILE;
+    entryMsg.name              = String_duplicate(name);
     StringList_init(&entryMsg.nameList);
-    entryMsg.fragmentOffset = fragmentOffset;
-    entryMsg.fragmentSize   = fragmentSize;
+    entryMsg.fragmentNumber    = fragmentNumber;
+    entryMsg.maxFragmentNumber = maxFragmentNumber;
+    entryMsg.fragmentOffset    = fragmentOffset;
+    entryMsg.fragmentSize      = fragmentSize;
 
     // put into message queue
     if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
@@ -999,10 +992,10 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
     }
 
     // next fragment offset
+    fragmentNumber++;
     fragmentOffset += fragmentSize;
   }
   while (fragmentOffset < size);
-#endif
 }
 
 /***********************************************************************\
@@ -1096,28 +1089,17 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
                                      uint64     size
                                     )
 {
+  uint     maxFragmentNumber;
+  uint     fragmentNumber;
   uint64   fragmentOffset,fragmentSize;
   EntryMsg entryMsg;
 
   assert(entryMsgQueue != NULL);
 
-#if 0
-  // init
-  entryMsg.entryType      = entryType;
-  entryMsg.fileType       = FILE_TYPE_HARDLINK;
-  entryMsg.name           = NULL;
-  StringList_init(&entryMsg.nameList);
-  StringList_move(nameList,&entryMsg.nameList);
-  entryMsg.fragmentOffset = fragmentOffset;
-  entryMsg.fragmentSize   = fragmentSize;
-
-  // put into message queue
-  if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
-  {
-    freeEntryMsg(&entryMsg,NULL);
-  }
-#else
-  fragmentOffset = 0LL;
+  maxFragmentNumber = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
+                        ? (size+globalOptions.fragmentSize-1)/globalOptions.fragmentSize
+                        : 0;
+  fragmentOffset    = 0LL;
   do
   {
     // calculate fragment size
@@ -1126,13 +1108,15 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
                      : size-fragmentOffset;
 
     // init
-    entryMsg.entryType      = entryType;
-    entryMsg.fileType       = FILE_TYPE_HARDLINK;
-    entryMsg.name           = NULL;
+    entryMsg.entryType         = entryType;
+    entryMsg.fileType          = FILE_TYPE_HARDLINK;
+    entryMsg.name              = NULL;
     StringList_init(&entryMsg.nameList);
     StringList_move(nameList,&entryMsg.nameList);
-    entryMsg.fragmentOffset = fragmentOffset;
-    entryMsg.fragmentSize   = fragmentSize;
+    entryMsg.fragmentNumber    = fragmentNumber;
+    entryMsg.maxFragmentNumber = maxFragmentNumber;
+    entryMsg.fragmentOffset    = fragmentOffset;
+    entryMsg.fragmentSize      = fragmentSize;
 
     // put into message queue
     if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
@@ -1141,10 +1125,10 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
     }
 
     // next fragment offset
+    fragmentNumber++;
     fragmentOffset += fragmentSize;
   }
   while (fragmentOffset < size);
-#endif
 }
 
 /***********************************************************************\
@@ -2129,8 +2113,6 @@ LOCAL void collectorThreadCode(CreateInfo *createInfo)
   FileInfo           fileInfo;
   SemaphoreLock      semaphoreLock;
   String             fileName;
-  uint64             fragmentOffset,fragmentSize;
-  uint64             size;
   Errors             error;
   DeviceInfo         deviceInfo;
   DictionaryIterator dictionaryIterator;
@@ -4776,13 +4758,15 @@ LOCAL void clearStatusEntryDoneInfo(CreateInfo *createInfo, bool locked)
 /***********************************************************************\
 * Name   : storeFileEntry
 * Purpose: store a file entry into archive
-* Input  : createInfo     - create info structure
-*          indexHandle    - index handle or NULL if no index
-*          fileName       - file name to store
-*          fragmentOffset - fragment offset [bytes]
-*          fragmentSize   - fragment size [bytes]
-*          buffer         - buffer for temporary data
-*          bufferSize     - size of data buffer
+* Input  : createInfo        - create info structure
+*          indexHandle       - index handle or NULL if no index
+*          fileName          - file name to store
+*          fragmentNumber    - fragment number [0..n-1]
+*          maxFragmentNumber - max. fragment number [0..n-1]
+*          fragmentOffset    - fragment offset [bytes]
+*          fragmentSize      - fragment size [bytes]
+*          buffer            - buffer for temporary data
+*          bufferSize        - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -4791,6 +4775,8 @@ LOCAL void clearStatusEntryDoneInfo(CreateInfo *createInfo, bool locked)
 LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
                             IndexHandle *indexHandle,
                             ConstString fileName,
+                            uint        fragmentNumber,
+                            uint        maxFragmentNumber,
                             uint64      fragmentOffset,
                             uint64      fragmentSize,
                             byte        *buffer,
@@ -5096,7 +5082,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     // get fragment info
     if (fragmentSize < fileInfo.size)
     {
-      stringFormat(s1,sizeof(s1),", fragment %12llu..%12llu",fragmentOffset,(fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1LL : fragmentOffset);
+      stringFormat(s1,sizeof(s1),", fragment #%4u/%4u",fragmentNumber+1,maxFragmentNumber);
     }
     else
     {
@@ -5124,7 +5110,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
                );
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
-                 "Added '%s'(%%llu bytes%s%s)\n",
+                 "Added '%s' (%%llu bytes%s%s)\n",
                  String_cString(fileName),
                  fragmentSize,
                  s1,
@@ -5142,8 +5128,9 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   }
   else
   {
-//TODO: output fragmentsize
-    printInfo(1,"OK (%llu bytes, not stored)\n",fragmentSize);
+    printInfo(1,"OK (%llu bytes, not stored)\n",
+              fragmentSize
+             );
   }
 
   // update done entries
@@ -5174,13 +5161,15 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 /***********************************************************************\
 * Name   : storeImageEntry
 * Purpose: store an image entry into archive
-* Input  : createInfo     - create info structure
-*          indexHandle    - index handle or NULL if no index
-*          deviceName     - device name
-*          fragmentOffset - fragment offset [blocks]
-*          fragmentSize   - fragment count [blocks]
-*          buffer         - buffer for temporary data
-*          bufferSize     - size of data buffer
+* Input  : createInfo        - create info structure
+*          indexHandle       - index handle or NULL if no index
+*          deviceName        - device name
+*          fragmentNumber    - fragment number [0..n-1]
+*          maxFragmentNumber - max. fragment number [0..n-1]
+*          fragmentOffset    - fragment offset [blocks]
+*          fragmentSize      - fragment count [blocks]
+*          buffer            - buffer for temporary data
+*          bufferSize        - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -5189,6 +5178,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                              IndexHandle *indexHandle,
                              ConstString deviceName,
+                             uint        fragmentNumber,
+                             uint        maxFragmentNumber,
                              uint64      fragmentOffset,
                              uint64      fragmentSize,
                              byte        *buffer,
@@ -5210,9 +5201,10 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   uint             bufferBlockCount;
   uint64           archiveSize;
   uint64           doneSize;
-  double           compressionRatio;
   uint             percentageDone;
+  double           compressionRatio;
   ArchiveEntryInfo archiveEntryInfo;
+  char             s1[256],s2[256];
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
@@ -5495,42 +5487,61 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       compressionRatio = 0.0;
     }
 
-    if (!createInfo->jobOptions->dryRunFlag)
+    // get fragment info
+    if (fragmentSize < deviceInfo.size)
     {
-      if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
-          || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
-         )
-      {
-        printInfo(1,"OK (%s, %llu bytes, ratio %.1f%%)\n",
-                  fileSystemFlag ? FileSystem_getName(fileSystemHandle.type) : "raw",
-                  deviceInfo.size,
-                  compressionRatio
-                 );
-        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(deviceName));
-      }
-      else
-      {
-        printInfo(1,"OK (%s, %llu bytes)\n",
-                  fileSystemFlag ? FileSystem_getName(fileSystemHandle.type) : "raw",
-                  deviceInfo.size
-                 );
-        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(deviceName));
-      }
+      stringFormat(s1,sizeof(s1),", fragment #%4u/%4u",fragmentNumber+1,maxFragmentNumber);
     }
     else
     {
-      printInfo(1,"OK (%s, %llu bytes, dry-run)\n",
-                fileSystemFlag ? FileSystem_getName(fileSystemHandle.type) : "raw",
-                deviceInfo.size
-               );
+      stringClear(s1);
     }
 
+    // ratio info
+    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
+        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
+       )
+    {
+      stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
+    }
+    else
+    {
+      stringClear(s2);
+    }
+
+    if (!createInfo->jobOptions->dryRunFlag)
+    {
+      printInfo(1,"OK (%s, %llu bytes%s%s)\n",
+                fileSystemFlag ? FileSystem_getName(fileSystemHandle.type) : "raw",
+                fragmentSize,
+                s1,
+                s2
+               );
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_OK,
+                 "Added '%s' (%s, %%llu bytes%s%s)\n",
+                 String_cString(deviceName),
+                 fileSystemFlag ? FileSystem_getName(fileSystemHandle.type) : "raw",
+                 fragmentSize,
+                 s1,
+                 s2
+                );
+    }
+    else
+    {
+      printInfo(1,"OK (%s, %llu bytes%s%s, dry-run)\n",
+                fileSystemFlag ? FileSystem_getName(fileSystemHandle.type) : "raw",
+                fragmentSize,
+                s1,
+                s2
+               );
+    }
   }
   else
   {
     printInfo(1,"OK (%s, %llu bytes, not stored)\n",
               fileSystemFlag ? FileSystem_getName(fileSystemHandle.type) : "raw",
-              deviceInfo.size
+              fragmentSize
              );
   }
 
@@ -5917,13 +5928,15 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 /***********************************************************************\
 * Name   : storeHardLinkEntry
 * Purpose: store a hard link entry into archive
-* Input  : createInfo     - create info structure
-*          indexHandle    - index handle or NULL if no index
-*          nameList       - hard link name list to store
-*          fragmentOffset - fragment offset [bytes]
-*          fragmentSize   - fragment size [bytes]
-*          buffer         - buffer for temporary data
-*          bufferSize     - size of data buffer
+* Input  : createInfo        - create info structure
+*          indexHandle       - index handle or NULL if no index
+*          nameList          - hard link name list to store
+*          fragmentNumber    - fragment number [0..n-1]
+*          maxFragmentNumber - max. fragment number [0..n-1]
+*          fragmentOffset    - fragment offset [bytes]
+*          fragmentSize      - fragment size [bytes]
+*          buffer            - buffer for temporary data
+*          bufferSize        - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -5932,6 +5945,8 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                 IndexHandle      *indexHandle,
                                 const StringList *nameList,
+                                uint             fragmentNumber,
+                                uint             maxFragmentNumber,
                                 uint64           fragmentOffset,
                                 uint64           fragmentSize,
                                 byte             *buffer,
@@ -5950,8 +5965,9 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   ulong                     bufferLength;
   uint64                    archiveSize;
   uint64                    doneSize;
-  double                    compressionRatio;
   uint                      percentageDone;
+  double                    compressionRatio;
+  char                      s1[256],s2[256];
   const StringNode          *stringNode;
   String                    name;
 
@@ -6204,34 +6220,58 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       compressionRatio = 0.0;
     }
 
-    if (!createInfo->jobOptions->dryRunFlag)
+    // get fragment info
+    if (fragmentSize < fileInfo.size)
     {
-      if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
-          || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
-         )
-      {
-        printInfo(1,"OK (%llu bytes, ratio %.1f%%)\n",
-                  fileInfo.size,
-                  compressionRatio
-                 );
-        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(StringList_first(nameList,NULL)));
-      }
-      else
-      {
-        printInfo(1,"OK (%llu bytes)\n",
-                  fileInfo.size
-                 );
-        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_OK,"Added '%s'\n",String_cString(StringList_first(nameList,NULL)));
-      }
+      stringFormat(s1,sizeof(s1),", fragment #%4u/%4u",fragmentNumber+1,maxFragmentNumber);
     }
     else
     {
-      printInfo(1,"OK (%llu bytes, dry-run)\n",fileInfo.size);
+      stringClear(s1);
+    }
+
+    // ratio info
+    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
+        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
+       )
+    {
+      stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
+    }
+    else
+    {
+      stringClear(s2);
+    }
+
+    if (!createInfo->jobOptions->dryRunFlag)
+    {
+      printInfo(1,"OK (%llu bytes%s%s)\n",
+                fragmentSize,
+                s1,
+                s2
+               );
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_OK,
+                 "Added '%s' (%%llu bytes%s%s)\n",
+                 String_cString(StringList_first(nameList,NULL)),
+                 fragmentSize,
+                 s1,
+                 s2
+                );
+    }
+    else
+    {
+      printInfo(1,"OK (%llu bytes%s%s, dry-run)\n",
+                fragmentSize,
+                s1,
+                s2
+               );
     }
   }
   else
   {
-    printInfo(1,"OK (%llu bytes, not stored)\n",fileInfo.size);
+    printInfo(1,"OK (%llu bytes, not stored)\n",
+              fragmentSize
+             );
   }
 
   // update done entries
@@ -6483,6 +6523,8 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
               error = storeFileEntry(createInfo,
                                      createInfo->indexHandle,
                                      entryMsg.name,
+                                     entryMsg.fragmentNumber,
+                                     entryMsg.maxFragmentNumber,
                                      entryMsg.fragmentOffset,
                                      entryMsg.fragmentSize,
                                      buffer,
@@ -6544,6 +6586,8 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
               error = storeHardLinkEntry(createInfo,
                                          createInfo->indexHandle,
                                          &entryMsg.nameList,
+                                         entryMsg.fragmentNumber,
+                                         entryMsg.maxFragmentNumber,
                                          entryMsg.fragmentOffset,
                                          entryMsg.fragmentSize,
                                          buffer,
@@ -6574,6 +6618,8 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
               error = storeImageEntry(createInfo,
                                       createInfo->indexHandle,
                                       entryMsg.name,
+                                      entryMsg.fragmentNumber,
+                                      entryMsg.maxFragmentNumber,
                                       entryMsg.fragmentOffset,
                                       entryMsg.fragmentSize,
                                       buffer,
