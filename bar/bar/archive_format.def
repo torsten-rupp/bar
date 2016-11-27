@@ -37,7 +37,7 @@
 # IMG0
 #   IENT
 #   [IDLT]
-#   IDATA
+#   IDAT
 # DIR0
 #   DENT
 #   [DEAT]
@@ -63,13 +63,19 @@
 # CHUNK <name> <id, 4 character string> <data type name>
 #   [ENCRYPT]
 #   [COMPRESS]
+#   [DEPRECATED]
 #   <data definition>
 #   ...
 # <empty line>
 #
 # ENCRYPT means chunk can be encrypted (without header).
 # COMPRESS means data in chunk can be compressed (data only).
+# DEPRECATED means chunk is deprecated and created anymore.
 #
+# TRANSFORM <old name> <new name>
+# {
+# ...
+# }
 #
 # Available data types:
 #   uint8  unsigned integer 8bit
@@ -102,6 +108,9 @@
 #     read/written _without_ cipher text stealing mode enabled!
 
 # ----------------------------------------------------------------------
+
+# salt length
+const SALT_LENGTH = 128
 
 # encryption algorithms
 const CRYPT_ALGORITHM_NONE           = 0
@@ -216,8 +225,29 @@ const MAC_ALGORITHM_SHA2_512         = 4
 #
 # parent: none
 # never compress/encrypted
-CHUNK BAR "BAR0" Bar
+CHUNK BAR "BAR1" BAR
+  byte[128] salt;
+#  string   userName;
+#  string   hostName;
+#  string   jobUUID;
+#  string   scheduleUUID;
+#  uint16   archiveType;
+#  uint64   createdDateTime;
+#  string   comment;
   crc32  crc
+
+CHUNK BAR "BAR0" BAR DEPRECATED
+  crc32  crc
+
+TRANSFORM "BAR0" "BAR1"
+{
+  UNUSED_VARIABLE(OLD);
+fprintf(stderr,"%s, %d: TRANSFORM\n",__FILE__,__LINE__);
+
+  memset(NEW->salt,0,sizeof(NEW->salt));
+
+  return ERROR_NONE;
+}
 
 # ----------------------------------------------------------------------
 
@@ -245,15 +275,14 @@ CHUNK KEY "KEY0" Key
 #
 # parent: none
 # never compress, encrypted as specified
-CHUNK META "MTA0" Meta
+CHUNK META "MTA1" Meta
   uint16   cryptAlgorithm;
-  byte[64] salt;
   crc32    crc
 
 # meta entry
 #
-# parent: MTA0
-# never compress, encrypted as specified in MTA0
+# parent: MTA1
+# never compress, encrypted as specified in MTA1
 CHUNK META_ENTRY "MENT" MetaEntry
   ENCRYPT
   string   userName;
@@ -271,10 +300,26 @@ CHUNK META_ENTRY "MENT" MetaEntry
 #
 # parent: none
 # never compress/encrypted
+#CHUNK FILE "FIL1" File
+#  uint16    compressAlgorithm;
+#  uint16[4] cryptAlgorithms;
+#  crc32  crc
+
 CHUNK FILE "FIL0" File
+#  DEPRECATED
   uint16 compressAlgorithm;
   uint16 cryptAlgorithm;
   crc32  crc
+
+#TRANSFORM "FIL0" FIL0 FIL
+#{
+#  NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
+#  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
+#  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
+#  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
+#
+#  return ERROR_NONE;
+#}
 
 #CONVERT "FIL0" "FIL1"
 #  compressAlgorithm := compressAlgorithm

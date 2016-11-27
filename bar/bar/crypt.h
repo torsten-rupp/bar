@@ -34,6 +34,9 @@
 
 /***************************** Constants *******************************/
 
+// salt length
+#define CRYPT_SALT_LENGTH CHUNK_CONST_SALT_LENGTH
+
 // available chipers
 typedef enum
 {

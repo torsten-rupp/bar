@@ -201,7 +201,7 @@ typedef struct
   void                     *getPasswordUserData;                       // user data for call back to get crypt password
   LogHandle                *logHandle;                                 // log handle
 
-  byte                     cryptSalt[64];                              // crypt salt
+  byte                     cryptSalt[CRYPT_SALT_LENGTH];               // crypt salt
 
   Semaphore                passwordLock;                               // input password lock
   CryptTypes               cryptType;                                  // crypt type (symmetric/asymmetric; see CryptTypes)

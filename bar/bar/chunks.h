@@ -26,6 +26,17 @@
 
 /***************************** Constants *******************************/
 
+/* chunk layout:
+
+   0        4        12                12+L1                   12+L1+L2
+   +-----------------------------------------------------------------+
+   |   id   |  size  | fixed data      | data or sub-chunks    | crc |
+   +-----------------------------------------------------------------+
+                      <-- chunkSize -->
+    <-- 12 bytes ---> <-- size ------------------------------------->
+
+*/
+
 // size of chunk header
 #define CHUNK_HEADER_SIZE (4L+8L)
 
@@ -91,16 +102,32 @@ typedef struct
 // chunk id: 4 characters
 typedef uint32 ChunkId;
 
+// chunk definition
+typedef const uint ChunkDefinition;
+
+// chunk transformation function
+typedef Errors(*ChunkTransformFunction)(void *oldChunk, void *newChunk);
+typedef struct
+{
+  ChunkId                oldId,newId;
+  const uint             *oldDefinition,*newDefintion;
+  ChunkTransformFunction transformFunction;
+} ChunkTransformInfo;
+
 // chunk header (Note: only id+size is stored in file!)
 typedef struct
 {
+  // header data
   union
   {
-    ChunkId id;
-    char    idChars[4];
+    ChunkId                id;
+    char                   idChars[4];
   };                                  // chunk id
-  uint64 size;                        // size of chunk (without chunk header)
-  uint64 offset;                      // start of chunk in file (offset of header)
+  uint64                   size;      // size of chunk (without chunk header) [bytes]
+
+  // additional data (not stored in file)
+  uint64                   offset;      // start of chunk in file (offset of header)
+  const ChunkTransformInfo *transformInfo;
 } ChunkHeader;
 
 // chunk information
@@ -119,9 +146,9 @@ typedef struct ChunkInfo
     ChunkId id;
     char    idChars[4];
   };                                  // chunk id
-  const int        *definition;       // chunk definition
-  ulong            chunkSize;         // size of fixed chunk data (without chunk header+data elements)
-  uint64           size;              // total size of chunk (without chunk header)
+  ChunkDefinition  *definition;       // chunk definition
+  ulong            chunkSize;         // size of chunk (without chunk header+data elements) [bytes]
+  uint64           size;              // size of chunk with sub-chunks (without chunk header) [bytes]
   uint64           offset;            // start of chunk in file (offset of header)
   uint64           index;             // current position inside chunk 0..size
 
@@ -216,7 +243,7 @@ Errors Chunk_init(ChunkInfo     *chunkInfo,
                   const ChunkIO *chunkIO,
                   void          *chunkIOUserData,
                   ChunkId       chunkId,
-                  const int     *definition,
+                  ChunkDefinition *definition,
                   uint          alignment,
                   CryptInfo     *cryptInfo,
                   void          *data
@@ -229,7 +256,7 @@ Errors __Chunk_init(const char    *__fileName__,
                     const ChunkIO *chunkIO,
                     void          *chunkIOUserData,
                     ChunkId       chunkId,
-                    const int     *definition,
+                    ChunkDefinition *definition,
                     uint          alignment,
                     CryptInfo     *cryptInfo,
                     void          *data
@@ -256,7 +283,7 @@ void __Chunk_done(const char *__fileName__,
 
 /***********************************************************************\
 * Name   : Chunk_next
-* Purpose: get next chunk
+* Purpose: get next chunk header
 * Input  : chunkIO         - i/o functions
 *          chunkIOUserData - user data for file i/o
 * Output : chunkHeader - chunk header

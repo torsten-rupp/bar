@@ -25,6 +25,7 @@ use Getopt::Long;
 my $PREFIX_CHUNK_ID         = "CHUNK_ID_";
 my $PREFIX_CHUNK_NAME       = "Chunk";
 my $PREFIX_CHUNK_DEFINITION = "CHUNK_DEFINITION_";
+my $PREFIX_CHUNK_FIXE_SIZE  = "CHUNK_FIXED_SIZE_";
 
 my $PREFIX_CONST_NAME       = "CHUNK_CONST_";
 
@@ -46,11 +47,23 @@ my $DEFINITION_TYPES =
    "data"   => "CHUNK_DATATYPE_DATA",
   };
 
+my $definitionFileName;
 my $cFileName,$hFileName;
+my $idNameMap;
+my %structNameMap;
+my @transformations;
 
 # --------------------------------- includes ---------------------------------
 
 # -------------------------------- functions ---------------------------------
+
+sub align($$)
+{
+  my $n        =shift(@_);
+  my $alignment=shift(@_);
+
+  return ($n+$alignment-1) & ~($alignment-1);
+}
 
 sub writeHFile($)
 {
@@ -90,6 +103,16 @@ GetOptions("c=s" => \$cFileName,
            "i=s" => \@includeFileNames,
           );
 
+$definitionFileName=$ARGV[0];
+if ($ARGV[0] ne "")
+{
+  open(STDIN,"< $definitionFileName");
+}
+else
+{
+  print STDERR "Warning: not definition file name given - read from stdin\n";
+}
+
 if ($cFileName ne "")
 {
   open(CFILE_HANDLE,"> $cFileName");
@@ -123,6 +146,7 @@ if (scalar(@includeFileNames) > 0)
     writeCFile("#include \"$includeFileName\"\n");
   }
 }
+writeCFile("\n");
 
 my $line;
 my $lineNb=0;
@@ -133,17 +157,45 @@ while ($line=<STDIN>)
   if ($line =~ /^\s*#/ || $line =~ /^\s*$/) { next; }
 #print "$line\n";
 
-  if    ($line =~ /^CHUNK\s+(\w+)\s+"(.*)"\s+(\w+)/)
+  if    ($line =~ /^CHUNK\s+(\w+)\s+"(.*)"\s+(\w+)(\s+(\w+)){0,1}/)
   {
     # chunk
-    my $n=0;
-    my $idName=$1;
-    my $id=$2;
-    my $structName=$3;
+    my $idName     = $1;
+    my $id         = $2;
+    my $structName = $3;
+    my @attributes = split(/,/,$5);
+
+    my $n         = 0;
     my @parseDefinitions;
+    my $fixedSize = 0;
+
+    # save id/struct name
+    $idNameMap{$id} = $idName;
+    $structNameMap{$id} = $structName;
+
+    # check attributes
+    for my $attribute (@attributes)
+    {
+#print STDERR "attribute=$attribute\n";
+      if    ($attribute eq "")
+      {
+        # nothing to do
+      }
+      elsif ($attribute eq "DEPRECATED")
+      {
+        $idNameMap{$id} = $idName.$n;
+        $structNameMap{$id} = $structName.$n;
+        $idName=$idName.$n;
+        $structName=$structName.$n;
+      }
+      else
+      {
+        print STDERR "Unknown attribute '$attribute' in '$line' in line $lineNb\n";
+        exit 1;
+      }
+    }
 
     # Note: use padding in C structures for access via pointer
-
     writeHFile("#define $PREFIX_CHUNK_ID$idName (('".substr($id,0,1)."' << 24) | ('".substr($id,1,1)."' << 16) | ('".substr($id,2,1)."' << 8) | '".substr($id,3,1)."')\n");
     writeHFile("typedef struct $PREFIX_CHUNK_NAME$structName\n");
     writeHFile("{\n");
@@ -191,6 +243,7 @@ while ($line=<STDIN>)
         push(@parseDefinitions,$DEFINITION_TYPES->{$1}."|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED");
         push(@parseDefinitions,"$2");
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$3)");
+        $fixedSize += $2*1;
       }
       elsif ($line =~ /^\s*(byte|uint8|int8)\s+(\w+)/)
       {
@@ -198,6 +251,7 @@ while ($line=<STDIN>)
         writeHFile("  uint8 pad".$n."[3];\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2)");
+        $fixedSize += 1;
       }
       elsif ($line =~ /^\s*(uint16|int16)\s*\[(\d+)\]\s+(\w+)/)
       {
@@ -206,6 +260,7 @@ while ($line=<STDIN>)
         push(@parseDefinitions,$DEFINITION_TYPES->{$1}."|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED");
         push(@parseDefinitions,"$2");
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$3)");
+        $fixedSize += $2*2;
       }
       elsif ($line =~ /^\s*(uint16|int16)\s+(\w+)/)
       {
@@ -213,6 +268,7 @@ while ($line=<STDIN>)
         writeHFile("  uint8 pad".$n."[2];\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2)");
+        $fixedSize += 2;
       }
       elsif ($line =~ /^\s*(uint32|int32)\s*\[(\d+)\]\s+(\w+)/)
       {
@@ -220,12 +276,14 @@ while ($line=<STDIN>)
         push(@parseDefinitions,$DEFINITION_TYPES->{$1}."|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED");
         push(@parseDefinitions,"$2");
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$3)");
+        $fixedSize += $2*4;
       }
       elsif ($line =~ /^\s*(uint32|int32)\s+(\w+)/)
       {
         writeHFile("  $1 $2;\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2)");
+        $fixedSize += 4;
       }
       elsif ($line =~ /^\s*(uint64|int64)\s*\[(\d+)\]\s+(\w+)/)
       {
@@ -233,12 +291,14 @@ while ($line=<STDIN>)
         push(@parseDefinitions,$DEFINITION_TYPES->{$1}."|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED");
         push(@parseDefinitions,"$2");
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$3)");
+        $fixedSize += $2*8;
       }
       elsif ($line =~ /^\s*(uint64|int64)\s+(\w+)/)
       {
         writeHFile("  $1 $2;\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2)");
+        $fixedSize += 8;
       }
       elsif ($line =~ /^\s*string\s+(\w+)/)
       {
@@ -261,6 +321,7 @@ while ($line=<STDIN>)
       {
         push(@parseDefinitions,$DEFINITION_TYPES->{crc32});
         push(@parseDefinitions,"0");
+        $fixedSize += 4;
       }
       elsif ($line =~ /^\s*data\s+(\w+)/)
       {
@@ -279,10 +340,60 @@ while ($line=<STDIN>)
     writeHFile("typedef struct { LIST_HEADER($PREFIX_CHUNK_NAME$structName); } $PREFIX_CHUNK_NAME$structName"."List".";\n");
 
     push(@parseDefinitions,"CHUNK_DATATYPE_NONE");
-    writeHFile("extern const int $PREFIX_CHUNK_DEFINITION$idName\[\];\n");
+    writeHFile("extern const ChunkDefinition $PREFIX_CHUNK_DEFINITION$idName\[\];\n");
+    writeHFile("#define $PREFIX_CHUNK_FIXE_SIZE$idName $fixedSize\n");
     writeHFile("\n");
-    writeCFile("const int $PREFIX_CHUNK_DEFINITION$idName\[\] = {".join(",",@parseDefinitions)."};\n");
+    writeCFile("const ChunkDefinition $PREFIX_CHUNK_DEFINITION$idName\[\] = {".join(",",@parseDefinitions)."};\n");
     writeCFile("\n");
+  }
+  elsif ($line =~ /^TRANSFORM\s+"(.*)"\s+"(.*)"\s*/)
+  {
+    # TRANSFORM
+    my $n=0;
+    my $oldId=$1;
+    my $newId=$2;
+
+    # check ids
+    if (!$structNameMap{$oldId})
+    {
+      print STDERR "Deprecated id '$oldId' not found!\n";
+      exit 1;
+    }
+    if (!$structNameMap{$newId})
+    {
+      print STDERR "Id '$newId' not found!\n";
+      exit 1;
+    }
+
+    # start of block
+    $line=<STDIN>;
+    chop $line;
+    $lineNb++;
+    if ($line !~ /^\s*{\s*$/)
+    {
+      print STDERR "Excpected '{' in line $lineNb\n";
+      exit 1;
+    }
+    writeCFile("LOCAL Errors transform_$structNameMap{$oldId}(Chunk$structNameMap{$oldId} *OLD, Chunk$structNameMap{$newId} *NEW)\n");
+    writeCFile("{\n");
+    writeCFile("#line ".($lineNb+1)." \"$definitionFileName\"\n");
+
+    # get code block
+    while ($line=<STDIN>)
+    {
+      # get line
+      chop $line;
+      $lineNb++;
+      if ($line =~ /^\s*#/) { next; }
+      writeCFile("$line\n");
+
+      # check end of block
+      if ($line =~ /^\s*}\s*$/) { last; }
+    }
+    writeCFile("\n");
+
+    my $transformation = { oldId => $oldId, newId => $newId };
+    push(@transformations,$transformation);
   }
   elsif ($line =~ /^const\s+(\w+)\s*=\s*(\S*)\s*/)
   {
@@ -298,6 +409,25 @@ while ($line=<STDIN>)
     exit 1;
   }
 }
+
+# ".($#transformations+1)."
+writeHFile("extern const ChunkTransformInfo CHUNK_TRANSFORM_INFOS[];\n");
+writeCFile("\n");
+
+writeCFile("const ChunkTransformInfo CHUNK_TRANSFORM_INFOS[] =\n");
+writeCFile("{\n");
+for my $transformation (@transformations)
+{
+  writeCFile("  { CHUNK_ID_$idNameMap{$transformation->{oldId}}, \n".
+             "    CHUNK_ID_$idNameMap{$transformation->{newId}}, \n".
+             "    CHUNK_DEFINITION_$idNameMap{$transformation->{oldId}}, \n".
+             "    CHUNK_DEFINITION_$idNameMap{$transformation->{newId}}, \n".
+             "    (ChunkTransformFunction)transform_$structNameMap{$transformation->{oldId}}\n".
+             "  },\n"
+            );
+}
+writeCFile("  { CHUNK_ID_NONE,CHUNK_ID_NONE,NULL,NULL,NULL }\n");
+writeCFile("};\n");
 
 if ($constFileName ne "")
 {

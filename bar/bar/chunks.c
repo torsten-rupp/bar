@@ -44,45 +44,39 @@
 /***************************** Constants *******************************/
 
 // chunk header definition
-LOCAL int CHUNK_HEADER_DEFINITION[] = {
-                                       CHUNK_DATATYPE_UINT32,offsetof(ChunkHeader,id),
-                                       CHUNK_DATATYPE_UINT64,offsetof(ChunkHeader,size),
-                                       0
-                                      };
+LOCAL ChunkDefinition CHUNK_HEADER_DEFINITION[] = {
+                                                   CHUNK_DATATYPE_UINT32,offsetof(ChunkHeader,id),
+                                                   CHUNK_DATATYPE_UINT64,offsetof(ChunkHeader,size),
+                                                   0
+                                                  };
 
 #define BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
 
-// chunk header
-typedef struct
-{
-  ChunkId id;
-  uint64  size;
-} Chunk;
-
 // chunk read/write buffer
 typedef struct
 {
-  ChunkModes    chunkMode;
-  const ChunkIO *chunkIO;
-  void          *chunkIOUserData;
+  ChunkModes      chunkMode;
+  const ChunkIO   *chunkIO;
+  void            *chunkIOUserData;
+  uint64          offset;
   union
   {
-    ulong       bytesRead;
-    ulong       bytesWritten;
+    ulong         bytesRead;
+    ulong         bytesWritten;
   };
 
-  const int     *definition;
-  ulong         chunkSize;
-  uint          definitionIndex;
-  uint          alignment;
-  CryptInfo     *cryptInfo;
+  ChunkDefinition *definition;
+  ulong           chunkSize;
+  uint            definitionIndex;
+  uint            alignment;
+  CryptInfo       *cryptInfo;
 
-  byte          *buffer;
-  ulong         bufferLength;
-  ulong         bufferSize;
-  ulong         bufferIndex;
+  byte            *buffer;
+  ulong           bufferLength;
+  ulong           bufferSize;
+  ulong           bufferIndex;
 } ChunkBuffer;
 
 /***************************** Variables *******************************/
@@ -111,14 +105,14 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
-                             ChunkModes    chunkMode,
-                             const ChunkIO *chunkIO,
-                             void          *chunkIOUserData,
-                             const int     *definition,
-                             ulong         chunkSize,
-                             uint          alignment,
-                             CryptInfo     *cryptInfo
+LOCAL Errors initChunkBuffer(ChunkBuffer     *chunkBuffer,
+                             ChunkModes      chunkMode,
+                             const ChunkIO   *chunkIO,
+                             void            *chunkIOUserData,
+                             ChunkDefinition *definition,
+                             ulong           chunkSize,
+                             uint            alignment,
+                             CryptInfo       *cryptInfo
                             )
 {
   ulong  n;
@@ -134,6 +128,7 @@ LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
   chunkBuffer->chunkMode       = chunkMode;
   chunkBuffer->chunkIO         = chunkIO;
   chunkBuffer->chunkIOUserData = chunkIOUserData;
+  chunkBuffer->offset          = 0LL;
   chunkBuffer->bytesRead       = 0L;
   chunkBuffer->bytesWritten    = 0L;
 
@@ -146,6 +141,14 @@ LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
   chunkBuffer->bufferLength    = 0L;
   chunkBuffer->bufferSize      = 0L;
   chunkBuffer->bufferIndex     = 0L;
+
+  error = chunkIO->tell(chunkIOUserData,
+                        chunkBuffer->offset
+                       );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   switch (chunkMode)
   {
@@ -313,15 +316,33 @@ LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
 * Purpose: done chunk buffer
 * Input  : chunkBuffer - chunk buffer handle
 * Output : -
-* Return : -
+* Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void doneChunkBuffer(ChunkBuffer *chunkBuffer)
+LOCAL Errors doneChunkBuffer(ChunkBuffer *chunkBuffer)
 {
+  Errors error;
+
   assert(chunkBuffer != NULL);
 
   DEBUG_REMOVE_RESOURCE_TRACE(chunkBuffer,sizeof(ChunkBuffer));
+
+  switch (chunkBuffer->chunkMode)
+  {
+    case CHUNK_MODE_READ:
+      error = chunkBuffer->chunkIO->seek(chunkBuffer->chunkIOUserData,
+                                         chunkBuffer->offset+chunkBuffer->bytesRead-chunkBuffer->bufferIndex
+                                        );
+      if (error != ERROR_NONE)
+      {
+        free(chunkBuffer->buffer);
+        return error;
+      }
+      break;
+    case CHUNK_MODE_WRITE:
+      break;
+  }
 
   free(chunkBuffer->buffer);
 }
@@ -339,6 +360,8 @@ LOCAL void doneChunkBuffer(ChunkBuffer *chunkBuffer)
 
 LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
 {
+  ulong  bufferSize;
+  void   *buffer;
   ulong  n;
   Errors error;
 
@@ -359,12 +382,17 @@ LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
     // increase buffer size if required
     if ((chunkBuffer->bufferLength+n) > chunkBuffer->bufferSize)
     {
-      chunkBuffer->bufferSize = ALIGN(chunkBuffer->bufferLength+n,1024);
-      chunkBuffer->buffer = realloc(chunkBuffer->buffer,chunkBuffer->bufferSize);
-      if (chunkBuffer->buffer == NULL)
+#warning remove
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+      bufferSize = ALIGN(chunkBuffer->bufferLength+n,1024);
+      buffer = realloc(chunkBuffer->buffer,bufferSize);
+      if (buffer == NULL)
       {
         return ERROR_INSUFFICIENT_MEMORY;
       }
+      chunkBuffer->buffer     = buffer;
+      chunkBuffer->bufferSize = bufferSize;
       memset(&chunkBuffer->buffer[chunkBuffer->bufferLength],0,chunkBuffer->bufferSize-chunkBuffer->bufferLength);
     }
 
@@ -376,10 +404,10 @@ LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
                                       );
     if (error != ERROR_NONE)
     {
-      free(chunkBuffer->buffer);
       return error;
     }
     chunkBuffer->bytesRead += n;
+
 //fprintf(stderr,"%s, %d: read:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,chunkBuffer->bufferLength+n);
 
     // decrypt data
@@ -391,7 +419,6 @@ LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
       error = Crypt_decrypt(chunkBuffer->cryptInfo,chunkBuffer->buffer,chunkBuffer->bufferLength+n);
       if (error != ERROR_NONE)
       {
-        free(chunkBuffer->buffer);
         return error;
       }
     }
@@ -550,14 +577,14 @@ LOCAL Errors flushChunkBuffer(ChunkBuffer *chunkBuffer)
 \***********************************************************************/
 
 #ifdef NDEBUG
-LOCAL void initDefinition(const int *definition,
-                          void      *chunkData
+LOCAL void initDefinition(ChunkDefinition *definition,
+                          void            *chunkData
                          )
 #else /* not NDEBUG */
-LOCAL void initDefinition(const char *__fileName__,
-                          ulong      __lineNb__,
-                          const int  *definition,
-                          void       *chunkData
+LOCAL void initDefinition(const char      *__fileName__,
+                          ulong           __lineNb__,
+                          ChunkDefinition *definition,
+                          void            *chunkData
                          )
 #endif /* NDEBUG */
 {
@@ -693,14 +720,14 @@ LOCAL void initDefinition(const char *__fileName__,
 \***********************************************************************/
 
 #ifdef NDEBUG
-LOCAL Errors doneDefinition(const int  *definition,
-                            const void *chunkData
+LOCAL Errors doneDefinition(ChunkDefinition *definition,
+                            const void      *chunkData
                            )
 #else /* not NDEBUG */
-LOCAL Errors doneDefinition(const char *__fileName__,
-                            ulong      __lineNb__,
-                            const int  *definition,
-                            const void *chunkData
+LOCAL Errors doneDefinition(const char      *__fileName__,
+                            ulong           __lineNb__,
+                            ChunkDefinition *definition,
+                            const void      *chunkData
                            )
 #endif /* NDEBUG */
 {
@@ -786,6 +813,253 @@ LOCAL Errors doneDefinition(const char *__fileName__,
 }
 
 /***********************************************************************\
+* Name   : getDefinitionSize
+* Purpose: get chunk size
+* Input  : definition - chunk definition
+*          alignment  - chunk alignment
+*          chunkData  - chunk data (can be NULL to get fixed size only)
+*          dataLength - length of data or 0
+* Output : -
+* Return : chunk size [bytes]
+* Notes  : -
+\***********************************************************************/
+
+ulong getDefinitionSize(ChunkDefinition *definition,
+                        uint            alignment,
+                        const void      *chunkData,
+                        ulong           dataLength
+                   )
+{
+  ulong size;
+  int   i;
+
+  assert(definition != NULL);
+
+  size = 0L;
+
+  if (definition != NULL)
+  {
+    i = 0;
+    while (definition[i+0] != CHUNK_DATATYPE_NONE)
+    {
+      switch (definition[i+0])
+      {
+        case CHUNK_DATATYPE_BYTE:
+        case CHUNK_DATATYPE_UINT8:
+        case CHUNK_DATATYPE_INT8:
+          size += sizeof(uint8);
+
+          i += 2;
+          break;
+        case CHUNK_DATATYPE_UINT16:
+        case CHUNK_DATATYPE_INT16:
+          size += sizeof(uint16);
+
+          i += 2;
+          break;
+        case CHUNK_DATATYPE_UINT32:
+        case CHUNK_DATATYPE_INT32:
+          size += sizeof(uint32);
+
+          i += 2;
+          break;
+        case CHUNK_DATATYPE_UINT64:
+        case CHUNK_DATATYPE_INT64:
+          size += sizeof(uint64);
+
+          i += 2;
+          break;
+        case CHUNK_DATATYPE_STRING:
+          {
+            String s;
+
+            assert(chunkData != NULL);
+
+            s = (*((String*)((byte*)chunkData+definition[i+1])));
+            assert(s != NULL);
+            size += sizeof(uint16)+String_length(s);
+
+            i += 2;
+          }
+          break;
+
+        case CHUNK_DATATYPE_BYTE |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          {
+            uint length;
+
+            length = (uint)definition[i+1];
+            size += ALIGN(length*sizeof(uint8),sizeof(uint32));
+
+            i += 3;
+          }
+          break;
+        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          {
+            uint length;
+
+            length = (uint)definition[i+1];
+            size += ALIGN(length*sizeof(uint16),sizeof(uint32));
+
+            i += 3;
+          }
+          break;
+        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          {
+            uint length;
+
+            length = (uint)definition[i+1];
+            size += ALIGN(length*sizeof(uint32),sizeof(uint32));
+
+            i += 3;
+          }
+          break;
+        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+        case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          {
+            uint length;
+
+            length = (uint)definition[i+1];
+            size += ALIGN(length*sizeof(uint64),sizeof(uint32));
+
+            i += 3;
+          }
+          break;
+        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
+          {
+            uint   length;
+            String s;
+
+            assert(chunkData != NULL);
+
+            length = (uint)definition[i+1];
+            while (length > 0)
+            {
+              s = (*((String*)((byte*)chunkData+definition[i+1])));
+              assert(s != NULL);
+              size += sizeof(uint16)+String_length(s);
+            }
+
+            i += 3;
+          }
+          break;
+        case CHUNK_DATATYPE_BYTE |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+          {
+            uint length;
+
+            assert(chunkData != NULL);
+
+            length = (*((uint*)((byte*)chunkData+definition[i+1])));
+            size += sizeof(uint16)+ALIGN(length*sizeof(uint8),sizeof(uint32));
+
+            i += 3;
+          }
+          break;
+        case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+          {
+            uint length;
+
+            assert(chunkData != NULL);
+
+            length = (*((uint*)((byte*)chunkData+definition[i+1])));
+            size += sizeof(uint16)+ALIGN(length*sizeof(uint16),sizeof(uint32));
+
+            i += 3;
+          }
+          break;
+        case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+          {
+            uint length;
+
+            assert(chunkData != NULL);
+
+            length = (*((uint*)((byte*)chunkData+definition[i+1])));
+            size += sizeof(uint16)+ALIGN(length*sizeof(uint32),sizeof(uint32));
+
+            i += 3;
+          }
+          break;
+        case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+        case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+          {
+            uint length;
+
+            assert(chunkData != NULL);
+
+            length = (*((uint*)((byte*)chunkData+definition[i+1])));
+            size += sizeof(uint16)+ALIGN(length*sizeof(uint64),sizeof(uint32));
+
+            i += 3;
+          }
+          break;
+        case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
+          {
+            uint   length;
+            String s;
+
+            assert(chunkData != NULL);
+
+            length = (*((uint*)((byte*)chunkData+definition[i+1])));
+            size += sizeof(uint16);
+            while (length > 0)
+            {
+              s = (*((String*)((byte*)chunkData+definition[i+1])));
+              assert(s != NULL);
+              size += sizeof(uint16)+String_length(s);
+            }
+
+            i += 3;
+          }
+          break;
+
+        case CHUNK_DATATYPE_CRC32:
+          size += sizeof(uint32);
+
+          i += 2;
+          break;
+
+        case CHUNK_DATATYPE_DATA:
+          size += dataLength;
+
+          i += 2;
+          break;
+
+        case CHUNK_ALIGN:
+          {
+            uint   alignment;
+
+            assert(chunkData != NULL);
+
+            alignment = (*((uint*)((byte*)chunkData+definition[i+1])));
+            size = ALIGN(size,alignment);
+
+            i += 2;
+          }
+          break;
+
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; /* not reached */
+        #endif /* NDEBUG */
+      }
+    }
+  }
+
+  // align size
+  size = ALIGN(size,alignment);
+
+  return size;
+}
+
+/***********************************************************************\
 * Name   : resetDefinition
 * Purpose: reset resources of chunk definition
 * Input  : definition - chunk definition
@@ -795,8 +1069,8 @@ LOCAL Errors doneDefinition(const char *__fileName__,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void resetDefinition(const int *definition,
-                           void      *chunkData
+LOCAL void resetDefinition(ChunkDefinition *definition,
+                           void            *chunkData
                           )
 {
   uint i;
@@ -958,20 +1232,21 @@ LOCAL void resetDefinition(const int *definition,
 *          chunkSize       - size of chunk (in bytes)
 *          alignment       - chunk alignment
 *          cryptInfo       - crypt info
+*          chunkData       - chunk data buffer
 * Output : chunkData - chunk data
 *          bytesRead - number of bytes read
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors readDefinition(const ChunkIO *chunkIO,
-                            void          *chunkIOUserData,
-                            const int     *definition,
-                            ulong         chunkSize,
-                            uint          alignment,
-                            CryptInfo     *cryptInfo,
-                            void          *chunkData,
-                            ulong         *bytesRead
+LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
+                            void            *chunkIOUserData,
+                            ChunkDefinition *definition,
+                            ulong           chunkSize,
+                            uint            alignment,
+                            CryptInfo       *cryptInfo,
+                            void            *chunkData,
+                            ulong           *bytesRead
                            )
 {
   Errors      error;
@@ -1387,14 +1662,14 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
-                             void          *chunkIOUserData,
-                             const int     *definition,
-                             uint          chunkSize,
-                             uint          alignment,
-                             CryptInfo     *cryptInfo,
-                             const void    *chunkData,
-                             ulong         *bytesWritten
+LOCAL Errors writeDefinition(const ChunkIO   *chunkIO,
+                             void            *chunkIOUserData,
+                             ChunkDefinition *definition,
+                             uint            chunkSize,
+                             uint            alignment,
+                             CryptInfo       *cryptInfo,
+                             const void      *chunkData,
+                             ulong           *bytesWritten
                             )
 {
   ChunkBuffer chunkBuffer;
@@ -1796,6 +2071,14 @@ ulong Chunk_getSize(const ChunkInfo *chunkInfo,
 
   assert(chunkInfo != NULL);
 
+  return getDefinitionSize(chunkInfo->definition,
+                           chunkInfo->alignment,
+                           chunkData,
+                           dataLength
+                          );
+
+#if 0
+obsolete
   size = 0;
   i    = 0;
   while (chunkInfo->definition[i+0] != CHUNK_DATATYPE_NONE)
@@ -2014,31 +2297,32 @@ ulong Chunk_getSize(const ChunkInfo *chunkInfo,
   size = ALIGN(size,chunkInfo->alignment);
 
   return size;
+#endif
 }
 
 #ifdef NDEBUG
-Errors Chunk_init(ChunkInfo     *chunkInfo,
-                  ChunkInfo     *parentChunkInfo,
-                  const ChunkIO *chunkIO,
-                  void          *chunkIOUserData,
-                  ChunkId       chunkId,
-                  const int     *definition,
-                  uint          alignment,
-                  CryptInfo     *cryptInfo,
-                  void          *data
+Errors Chunk_init(ChunkInfo       *chunkInfo,
+                  ChunkInfo       *parentChunkInfo,
+                  const ChunkIO   *chunkIO,
+                  void            *chunkIOUserData,
+                  ChunkId         chunkId,
+                  ChunkDefinition *definition,
+                  uint            alignment,
+                  CryptInfo       *cryptInfo,
+                  void            *data
                  )
 #else /* not NDEBUG */
-Errors __Chunk_init(const char    *__fileName__,
-                    ulong         __lineNb__,
-                    ChunkInfo     *chunkInfo,
-                    ChunkInfo     *parentChunkInfo,
-                    const ChunkIO *chunkIO,
-                    void          *chunkIOUserData,
-                    ChunkId       chunkId,
-                    const int     *definition,
-                    uint          alignment,
-                    CryptInfo     *cryptInfo,
-                    void          *data
+Errors __Chunk_init(const char      *__fileName__,
+                    ulong           __lineNb__,
+                    ChunkInfo       *chunkInfo,
+                    ChunkInfo       *parentChunkInfo,
+                    const ChunkIO   *chunkIO,
+                    void            *chunkIOUserData,
+                    ChunkId         chunkId,
+                    ChunkDefinition *definition,
+                    uint            alignment,
+                    CryptInfo       *cryptInfo,
+                    void            *data
                    )
 #endif /* NDEBUG */
 {
@@ -2111,7 +2395,8 @@ Errors Chunk_next(const ChunkIO *chunkIO,
 {
   Errors error;
   uint64 offset;
-  Chunk  chunk;
+  const ChunkTransformInfo *chunkTransformInfo;
+  uint   i;
 
   assert(chunkIO != NULL);
   assert(chunkIO->tell != NULL);
@@ -2132,15 +2417,28 @@ Errors Chunk_next(const ChunkIO *chunkIO,
                          CHUNK_HEADER_SIZE,
                          0,
                          NULL,
-                         &chunk,
+                         chunkHeader,
                          NULL
                         );
   if (error != ERROR_NONE)
   {
     return error;
   }
-  chunkHeader->id   = chunk.id;
-  chunkHeader->size = chunk.size;
+
+  // find transform chunk function (if any)
+  chunkHeader->transformInfo = NULL;
+  chunkTransformInfo = CHUNK_TRANSFORM_INFOS;
+  while (chunkTransformInfo->oldId != CHUNK_ID_NONE)
+  {
+    if (chunkTransformInfo->oldId == chunkHeader->id)
+    {
+      chunkHeader->id            = chunkTransformInfo->newId;
+      chunkHeader->transformInfo = chunkTransformInfo;
+fprintf(stderr,"%s, %d: --- transform function %x %x\n",__FILE__,__LINE__,chunkHeader->id,chunkHeader->transformInfo);
+      break;
+    }
+    chunkTransformInfo++;
+  }
 
   return ERROR_NONE;
 }
@@ -2162,6 +2460,9 @@ Errors Chunk_skip(const ChunkIO     *chunkIO,
   size = chunkIO->getSize(chunkIOUserData);
   if (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size > size)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
     return ERROR_INVALID_CHUNK_SIZE;
   }
 
@@ -2224,8 +2525,8 @@ Errors Chunk_open(ChunkInfo         *chunkInfo,
                   ulong             dataSize
                  )
 #else /* not NDEBUG */
-Errors __Chunk_open(const char *__fileName__,
-                    ulong      __lineNb__,
+Errors __Chunk_open(const char        *__fileName__,
+                    ulong             __lineNb__,
                     ChunkInfo         *chunkInfo,
                     const ChunkHeader *chunkHeader,
                     ulong             dataSize
@@ -2233,31 +2534,60 @@ Errors __Chunk_open(const char *__fileName__,
 #endif /* NDEBUG */
 {
   Errors error;
+void *oldData;
   ulong  bytesRead;
 
   assert(chunkInfo != NULL);
   assert(chunkInfo->io != NULL);
   assert(chunkInfo->id == chunkHeader->id);
   assert(chunkInfo->data != NULL);
+  assert(chunkHeader != NULL);
 
   // init
-  chunkInfo->chunkSize = dataSize;
+  chunkInfo->chunkSize = 0L;
   chunkInfo->size      = chunkHeader->size;
   chunkInfo->offset    = chunkHeader->offset;
   chunkInfo->mode      = CHUNK_MODE_READ;
   chunkInfo->index     = 0LL;
 
+chunkInfo->chunkSize = getDefinitionSize(chunkInfo->definition,chunkInfo->alignment,NULL,0);
+chunkInfo->chunkSize = chunkHeader->size;
+
+  if (chunkHeader->transformInfo != NULL)
+  {
+fprintf(stderr,"%s, %d: do transform!\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+    oldData = malloc(chunkInfo->chunkSize);
+
+    error = readDefinition(chunkInfo->io,
+                           chunkInfo->ioUserData,
+                           chunkHeader->transformInfo->oldDefinition,
+                           chunkInfo->chunkSize,
+                           chunkInfo->alignment,
+                           chunkInfo->cryptInfo,
+                           oldData,
+                           &bytesRead
+                          );
+    if (error == ERROR_NONE)
+    {
+      error = chunkHeader->transformInfo->transformFunction(oldData,chunkInfo->data);
+    }
+  }
+  else
+  {
   // read chunk
   resetDefinition(chunkInfo->definition,chunkInfo->data);
   error = readDefinition(chunkInfo->io,
                          chunkInfo->ioUserData,
                          chunkInfo->definition,
-                         chunkInfo->chunkSize,
+getDefinitionSize(chunkInfo->definition,chunkInfo->alignment,NULL,0),//                         chunkInfo->chunkSize,
                          chunkInfo->alignment,
                          chunkInfo->cryptInfo,
                          chunkInfo->data,
                          &bytesRead
                         );
+  }
   if (error != ERROR_NONE)
   {
     return error;
@@ -2267,6 +2597,10 @@ Errors __Chunk_open(const char *__fileName__,
   {
     chunkInfo->parentChunkInfo->index += (uint64)bytesRead;
   }
+
+  // transform
+
+
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(&chunkInfo->mode,sizeof(chunkInfo->mode));
@@ -2314,7 +2648,7 @@ Errors __Chunk_create(const char *__fileName__,
   }
   chunkInfo->offset = offset;
 
-  // write chunk header id
+  // write chunk header
   chunkHeader.id   = 0;
   chunkHeader.size = 0;
   error = writeDefinition(chunkInfo->io,
@@ -2468,7 +2802,6 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
 {
   Errors error;
   uint64 offset;
-  Chunk  chunk;
   ulong  bytesRead;
 
   assert(chunkInfo != NULL);
@@ -2496,7 +2829,7 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
                          CHUNK_HEADER_SIZE,
                          0,
                          NULL,
-                         &chunk,
+                         chunkHeader,
                          &bytesRead
                         );
   if (error != ERROR_NONE)
@@ -2508,11 +2841,9 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
   {
     chunkInfo->parentChunkInfo->index += (uint64)bytesRead;
   }
-  chunkHeader->id   = chunk.id;
-  chunkHeader->size = chunk.size;
 
   // validate chunk size
-  if ((chunkInfo->index+chunk.size) > chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size)
+  if ((chunkInfo->index+chunkHeader->size) > chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size)
   {
     return ERROR_END_OF_DATA;
   }
