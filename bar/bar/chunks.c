@@ -143,7 +143,7 @@ LOCAL Errors initChunkBuffer(ChunkBuffer     *chunkBuffer,
   chunkBuffer->bufferIndex     = 0L;
 
   error = chunkIO->tell(chunkIOUserData,
-                        chunkBuffer->offset
+                        &chunkBuffer->offset
                        );
   if (error != ERROR_NONE)
   {
@@ -277,13 +277,33 @@ LOCAL Errors initChunkBuffer(ChunkBuffer     *chunkBuffer,
       if (cryptInfo != NULL)
       {
 // NYI ???: seed value?
+uint b,x;
+byte *p;
+Crypt_getBlockLength(CRYPT_ALGORITHM_AES256,&b);
+fprintf(stderr,"%s, %d: Crypt_decrypt %d %d\n",__FILE__,__LINE__,n,b);
         Crypt_reset(cryptInfo,0);
+#if 0
         error = Crypt_decrypt(cryptInfo,chunkBuffer->buffer,n);
         if (error != ERROR_NONE)
         {
           free(chunkBuffer->buffer);
           return error;
         }
+#else
+        x = 0;
+        p = chunkBuffer->buffer;
+        while (x < n)
+        {
+          error = Crypt_decrypt(cryptInfo,p,b);
+          if (error != ERROR_NONE)
+          {
+            free(chunkBuffer->buffer);
+            return error;
+          }
+          x += b;
+          p += b;
+        }
+#endif
       }
       chunkBuffer->bufferLength += n;
 //fprintf(stderr,"%s, %d: read decrypted:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,n);
@@ -328,6 +348,8 @@ LOCAL Errors doneChunkBuffer(ChunkBuffer *chunkBuffer)
 
   DEBUG_REMOVE_RESOURCE_TRACE(chunkBuffer,sizeof(ChunkBuffer));
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+#if 0
   switch (chunkBuffer->chunkMode)
   {
     case CHUNK_MODE_READ:
@@ -343,6 +365,7 @@ LOCAL Errors doneChunkBuffer(ChunkBuffer *chunkBuffer)
     case CHUNK_MODE_WRITE:
       break;
   }
+#endif
 
   free(chunkBuffer->buffer);
 }
@@ -2461,7 +2484,6 @@ Errors Chunk_skip(const ChunkIO     *chunkIO,
   if (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size > size)
   {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 asm("int3");
     return ERROR_INVALID_CHUNK_SIZE;
   }
@@ -2550,12 +2572,13 @@ void *oldData;
   chunkInfo->mode      = CHUNK_MODE_READ;
   chunkInfo->index     = 0LL;
 
-chunkInfo->chunkSize = getDefinitionSize(chunkInfo->definition,chunkInfo->alignment,NULL,0);
-chunkInfo->chunkSize = chunkHeader->size;
+chunkInfo->chunkSize = dataSize;
+//chunkInfo->chunkSize = getDefinitionSize(chunkInfo->definition,chunkInfo->alignment,NULL,0);
+//chunkInfo->chunkSize = chunkHeader->size;
 
   if (chunkHeader->transformInfo != NULL)
   {
-fprintf(stderr,"%s, %d: do transform!\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: do transform %x -> %x!\n",__FILE__,__LINE__,chunkHeader->transformInfo->oldId,chunkHeader->transformInfo->newId);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 asm("int3");
     oldData = malloc(chunkInfo->chunkSize);
@@ -2581,7 +2604,8 @@ asm("int3");
   error = readDefinition(chunkInfo->io,
                          chunkInfo->ioUserData,
                          chunkInfo->definition,
-getDefinitionSize(chunkInfo->definition,chunkInfo->alignment,NULL,0),//                         chunkInfo->chunkSize,
+                         chunkInfo->chunkSize,
+//getDefinitionSize(chunkInfo->definition,chunkInfo->alignment,NULL,0),
                          chunkInfo->alignment,
                          chunkInfo->cryptInfo,
                          chunkInfo->data,
@@ -2803,6 +2827,7 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
   Errors error;
   uint64 offset;
   ulong  bytesRead;
+  const ChunkTransformInfo *chunkTransformInfo;
 
   assert(chunkInfo != NULL);
   assert(chunkInfo->io != NULL);
@@ -2846,6 +2871,21 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
   if ((chunkInfo->index+chunkHeader->size) > chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size)
   {
     return ERROR_END_OF_DATA;
+  }
+
+  // find transform chunk function (if any)
+  chunkHeader->transformInfo = NULL;
+  chunkTransformInfo = CHUNK_TRANSFORM_INFOS;
+  while (chunkTransformInfo->oldId != CHUNK_ID_NONE)
+  {
+    if (chunkTransformInfo->oldId == chunkHeader->id)
+    {
+      chunkHeader->id            = chunkTransformInfo->newId;
+      chunkHeader->transformInfo = chunkTransformInfo;
+fprintf(stderr,"%s, %d: --- transform function %x %x\n",__FILE__,__LINE__,chunkHeader->id,chunkHeader->transformInfo);
+      break;
+    }
+    chunkTransformInfo++;
   }
 
   return ERROR_NONE;
