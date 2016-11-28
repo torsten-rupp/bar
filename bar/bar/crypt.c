@@ -564,6 +564,9 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 
 /*---------------------------------------------------------------------*/
 
+#warning remove!
+#define CBS_ONCE
+
 #ifdef NDEBUG
 Errors Crypt_init(CryptInfo       *cryptInfo,
                   CryptAlgorithms cryptAlgorithm,
@@ -789,6 +792,16 @@ Errors __Crypt_init(const char      *__fileName__,
 
           gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
 #endif /* 0 */
+
+//TODO
+#warning remove
+#ifdef CBS_ONCE
+          gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
+          if (gcryptError != 0)
+          {
+            return ERROR_ENCRYPT_FAIL;
+          }
+#endif
         }
       #else /* not HAVE_GCRYPT */
         UNUSED_VARIABLE(password);
@@ -936,6 +949,16 @@ Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
                             );
             }
           }
+
+//TODO
+#warning remove
+#ifdef CBS_ONCE
+          gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
+          if (gcryptError != 0)
+          {
+            return ERROR_ENCRYPT_FAIL;
+          }
+#endif
         }
       #else /* not HAVE_GCRYPT */
         UNUSED_VARIABLE(seed);
@@ -987,7 +1010,7 @@ fprintf(stderr,"%s, %d: Crypt_encrypt\n",__FILE__,__LINE__);
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
-#if 0
+#ifndef CBS_ONCE
         gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
         if (gcryptError != 0)
         {
@@ -1056,7 +1079,7 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
-#if 0
+#ifndef CBS_ONCE
         gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
         if (gcryptError != 0)
         {
