@@ -190,6 +190,8 @@ CMD_OPTION_DOUBLE_RANGE   (<long name>,<short name>,<help level>,<priority>,<var
 CMD_OPTION_BOOLEAN        (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>                       )
 CMD_OPTION_BOOLEAN_YESNO  (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>                       )
 CMD_OPTION_ENUM           (<long name>,<short name>,<help level>,<priority>,<variable>,<value>,            <description>                       )
+CMD_OPTION_SELECT         (<long name>,<short name>,<help level>,<priority>,<variable>,<selects>,          <description>                       )
+CMD_OPTION_SET            (<long name>,<short name>,<help level>,<priority>,<variable>,<set>,              <description>                       )
 CMD_OPTION_CSTRING        (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>,<description argument>)
 CMD_OPTION_STRING         (<long name>,<short name>,<help level>,<priority>,<variable>,                    <description>,<description argument>)
 CMD_OPTION_SPECIAL        (<long name>,<short name>,<help level>,<priority>,<function>,<user data>         <description>,<description argument>)
