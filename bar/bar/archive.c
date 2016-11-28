@@ -999,6 +999,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   // init crypt
   error = Crypt_init(&cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      archiveHandle->cryptSalt,
                      sizeof(archiveHandle->cryptSalt)
@@ -4503,6 +4504,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   // init crypt
   error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -4517,6 +4519,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -4531,6 +4534,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -4545,6 +4549,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -4559,6 +4564,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -4901,6 +4907,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   // init crypt
   error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -4915,6 +4922,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -4929,6 +4937,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -4943,6 +4952,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -5172,6 +5182,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   // init crypt
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -5185,6 +5196,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -5403,6 +5415,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   // init crypt
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -5416,6 +5429,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -5719,6 +5733,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   // init crypt
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -5732,6 +5747,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -5745,6 +5761,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -5758,6 +5775,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -5771,6 +5789,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -5784,6 +5803,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->hardLink.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -6060,6 +6080,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   // init crypt
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -6073,6 +6094,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,
                      archiveHandle->jobOptions->cryptAlgorithm,
+                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
                      NULL,  // salt
                      0  // saltLength
@@ -6611,6 +6633,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&cryptInfo,
                          cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -6874,7 +6897,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   // read file chunk
   assert(Chunk_getSize(&archiveEntryInfo->file.chunkFile.info,NULL,0) == CHUNK_FIXED_SIZE_FILE);
 fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo->file.chunkFile.info,NULL,0));
-asm("int3");
+//asm("int3");
   error = Chunk_open(&archiveEntryInfo->file.chunkFile.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_FILE
@@ -6974,6 +6997,7 @@ asm("int3");
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -6987,6 +7011,7 @@ asm("int3");
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -7000,6 +7025,7 @@ asm("int3");
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -7013,6 +7039,7 @@ asm("int3");
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -7026,6 +7053,7 @@ asm("int3");
     {
       error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -7567,6 +7595,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -7580,6 +7609,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -7593,6 +7623,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -7606,6 +7637,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -8034,6 +8066,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -8047,6 +8080,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -8419,6 +8453,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -8432,6 +8467,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -8851,6 +8887,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -8864,6 +8901,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -8877,6 +8915,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -8890,6 +8929,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -8903,6 +8943,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -8916,6 +8957,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -9444,6 +9486,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength
@@ -9457,6 +9500,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       error = Crypt_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithm,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
                          0  // saltLength

@@ -567,6 +567,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 #ifdef NDEBUG
 Errors Crypt_init(CryptInfo       *cryptInfo,
                   CryptAlgorithms cryptAlgorithm,
+                  uint            cryptMode,
                   const Password  *password,
                   const byte      *salt,
                   uint            saltLength
@@ -576,6 +577,7 @@ Errors __Crypt_init(const char      *__fileName__,
                     ulong           __lineNb__,
                     CryptInfo       *cryptInfo,
                     CryptAlgorithms cryptAlgorithm,
+                    uint            cryptMode,
                     const Password  *password,
                     const byte      *salt,
                     uint            saltLength
@@ -610,6 +612,8 @@ Errors __Crypt_init(const char      *__fileName__,
         {
           uint         passwordLength;
           int          gcryptAlgorithm;
+          int          gcryptMode;
+          unsigned int gcryptFlags;
           gcry_error_t gcryptError;
           size_t       n;
           uint         maxKeyLength;
@@ -618,6 +622,7 @@ Errors __Crypt_init(const char      *__fileName__,
           uint         z;
           Errors       error;
 
+          // check password
           if (password == NULL)
           {
             return ERROR_NO_CRYPT_PASSWORD;
@@ -628,6 +633,7 @@ Errors __Crypt_init(const char      *__fileName__,
             return ERROR_NO_CRYPT_PASSWORD;
           }
 
+          // get gcrpyt algorithm, gcrypt mode, gcrypt flags
           gcryptAlgorithm = 0;
           switch (cryptAlgorithm)
           {
@@ -651,6 +657,10 @@ Errors __Crypt_init(const char      *__fileName__,
               #endif /* NDEBUG */
               break; /* not reached */
           }
+          gcryptMode = GCRY_CIPHER_MODE_NONE;
+          if ((cryptMode & CRYPT_MODE_CBC) == CRYPT_MODE_CBC) gcryptMode = GCRY_CIPHER_MODE_CBC;
+          gcryptFlags = 0;
+          if ((cryptMode & CRYPT_MODE_CTS) == CRYPT_MODE_CTS) gcryptFlags |= GCRY_CIPHER_CBC_CTS;
 
           // get max. key length, block length
           gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
@@ -721,8 +731,8 @@ Errors __Crypt_init(const char      *__fileName__,
           // init cipher
           gcryptError = gcry_cipher_open(&cryptInfo->gcry_cipher_hd,
                                          gcryptAlgorithm,
-                                         GCRY_CIPHER_MODE_CBC,
-                                         GCRY_CIPHER_CBC_CTS
+                                         gcryptMode,
+                                         gcryptFlags
                                         );
           if (gcryptError != 0)
           {
@@ -954,6 +964,7 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
   assert(cryptInfo != NULL);
   assert(buffer != NULL);
 
+fprintf(stderr,"%s, %d: Crypt_encrypt\n",__FILE__,__LINE__);
   switch (cryptInfo->cryptAlgorithm)
   {
     case CRYPT_ALGORITHM_NONE:
@@ -976,11 +987,13 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
+#if 0
         gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
         if (gcryptError != 0)
         {
           return ERROR_ENCRYPT_FAIL;
         }
+#endif
 
         gcryptError = gcry_cipher_encrypt(cryptInfo->gcry_cipher_hd,
                                           buffer,
@@ -1043,11 +1056,13 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
+#if 0
         gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
         if (gcryptError != 0)
         {
           return ERROR_ENCRYPT_FAIL;
         }
+#endif
 
         gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
                                           buffer,
@@ -1088,6 +1103,7 @@ Errors Crypt_encryptBytes(CryptInfo *cryptInfo,
   assert(cryptInfo != NULL);
   assert(buffer != NULL);
 
+fprintf(stderr,"%s, %d: Crypt_encryptBytes\n",__FILE__,__LINE__);
   switch (cryptInfo->cryptAlgorithm)
   {
     case CRYPT_ALGORITHM_NONE:
@@ -1110,11 +1126,13 @@ Errors Crypt_encryptBytes(CryptInfo *cryptInfo,
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
+#if 0
         gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,FALSE);
         if (gcryptError != 0)
         {
           return ERROR_ENCRYPT_FAIL;
         }
+#endif
 
         gcryptError = gcry_cipher_encrypt(cryptInfo->gcry_cipher_hd,
                                           buffer,
@@ -1145,7 +1163,7 @@ Errors Crypt_encryptBytes(CryptInfo *cryptInfo,
 
 Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
                           void      *buffer,
-                          ulong      bufferLength
+                          ulong     bufferLength
                          )
 {
   #ifdef HAVE_GCRYPT
@@ -1177,11 +1195,13 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
+#if 0
         gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,FALSE);
         if (gcryptError != 0)
         {
           return ERROR_ENCRYPT_FAIL;
         }
+#endif
 
         gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
                                           buffer,
@@ -1312,6 +1332,7 @@ debugDumpMemory(fileCryptKey->data,dataLength,FALSE);
       // initialize crypt
       error = Crypt_init(&cryptInfo,
                          SECRET_KEY_CRYPT_ALGORITHM,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
 //TODO
                          NULL,  // salt
@@ -1401,6 +1422,7 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
       // initialize crypt
       error = Crypt_init(&cryptInfo,
                          SECRET_KEY_CRYPT_ALGORITHM,
+                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          salt,
                          saltLength

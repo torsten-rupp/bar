@@ -282,7 +282,7 @@ byte *p;
 Crypt_getBlockLength(CRYPT_ALGORITHM_AES256,&b);
 fprintf(stderr,"%s, %d: Crypt_decrypt %d %d\n",__FILE__,__LINE__,n,b);
         Crypt_reset(cryptInfo,0);
-#if 0
+#if 1
         error = Crypt_decrypt(cryptInfo,chunkBuffer->buffer,n);
         if (error != ERROR_NONE)
         {

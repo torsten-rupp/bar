@@ -64,6 +64,10 @@ typedef enum
 #define MAX_ASYMMETRIC_CRYPT_KEY_BITS 3072
 #define DEFAULT_ASYMMETRIC_CRYPT_KEY_BITS 2048
 
+// crypt modes
+#define CRYPT_MODE_CBC (1 << 0)   // cipher block chaining
+#define CRYPT_MODE_CTS (1 << 1)   // cipher text stealing
+
 // available hash algorithms
 typedef enum
 {
@@ -459,6 +463,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 * Purpose: create new crypt handle
 * Input  : cryptInfo      - crypt info block
 *          cryptAlgorithm - crypt algorithm to use
+*          cryptMode      - crypt mode
 *          password       - crypt password
 *          salt           - encryption salt (can be NULL)
 *          saltLength     - encryption salt length
@@ -470,6 +475,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 #ifdef NDEBUG
 Errors Crypt_init(CryptInfo       *cryptInfo,
                   CryptAlgorithms cryptAlgorithm,
+                  uint            cryptMode,
                   const Password  *password,
                   const byte      *salt,
                   uint            saltLength
@@ -479,6 +485,7 @@ Errors __Crypt_init(const char      *__fileName__,
                     ulong           __lineNb__,
                     CryptInfo       *cryptInfo,
                     CryptAlgorithms cryptAlgorithm,
+                    uint            cryptMode,
                     const Password  *password,
                     const byte      *salt,
                     uint            saltLength
