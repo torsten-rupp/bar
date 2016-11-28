@@ -535,7 +535,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,2,globalOptions.compressMinFileSize,               0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                          "minimal size of file for compression",NULL                                ),
   CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,3,&compressExcludePatternList,                     cmdOptionParsePattern,NULL,                                  "exclude compression pattern","pattern"                                    ),
 
-  CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithm,                       COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                       "select crypt algorithm to use"                                            ),
+#warning TODO
+//TODO
+  CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms[0],                   COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                       "select crypt algorithm to use"                                            ),
   CMD_OPTION_SELECT       ("crypt-type",                   0,  0,2,jobOptions.cryptType,                            COMMAND_LINE_OPTIONS_CRYPT_TYPES,                            "select crypt type"                                                        ),
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,2,&globalOptions.cryptPassword,                    cmdOptionParsePassword,NULL,                                 "crypt password (use with care!)","password"                               ),
   CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,2,&jobOptions.cryptPublicKey,                      cmdOptionParseKeyData,NULL,                                  "public key for asymmetric encryption","file name|data"                    ),
@@ -951,7 +953,9 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SPECIAL           ("compress-algorithm",           &jobOptions.compressAlgorithms,-1,                             configValueParseCompressAlgorithms,NULL,NULL,NULL,&jobOptions),
 
-  CONFIG_VALUE_SELECT            ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                                 CONFIG_VALUE_CRYPT_ALGORITHMS),
+#warning TODO
+//TODO
+  CONFIG_VALUE_SELECT            ("crypt-algorithm",              &jobOptions.cryptAlgorithms[0],-1,                             CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_VALUE_SELECT            ("crypt-type",                   &jobOptions.cryptType,-1,                                      CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_VALUE_SELECT            ("crypt-password-mode",          &jobOptions.cryptPasswordMode,-1,                              CONFIG_VALUE_PASSWORD_MODES),
   CONFIG_VALUE_SPECIAL           ("crypt-password",               &globalOptions.cryptPassword,-1,                               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
@@ -4721,7 +4725,10 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->patternType                     = PATTERN_TYPE_GLOB;
   jobOptions->compressAlgorithms.delta        = COMPRESS_ALGORITHM_NONE;
   jobOptions->compressAlgorithms.byte         = COMPRESS_ALGORITHM_NONE;
-  jobOptions->cryptAlgorithm                  = CRYPT_ALGORITHM_NONE;
+  jobOptions->cryptAlgorithms[0]              = CRYPT_ALGORITHM_NONE;
+  jobOptions->cryptAlgorithms[1]              = CRYPT_ALGORITHM_NONE;
+  jobOptions->cryptAlgorithms[2]              = CRYPT_ALGORITHM_NONE;
+  jobOptions->cryptAlgorithms[3]              = CRYPT_ALGORITHM_NONE;
   #ifdef HAVE_GCRYPT
     jobOptions->cryptType                     = CRYPT_TYPE_SYMMETRIC;
   #else /* not HAVE_GCRYPT */

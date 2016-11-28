@@ -503,7 +503,7 @@ struct JobOptions
   JobOptionsCompressAlgorithms compressAlgorithms;            // compress algorithms
 
   CryptTypes                   cryptType;                     // crypt type (symmetric, asymmetric)
-  CryptAlgorithms              cryptAlgorithm;                // crypt algorithm to use
+  CryptAlgorithms              cryptAlgorithms[4];            // crypt algorithms to use
   PasswordModes                cryptPasswordMode;             // crypt password mode
   Password                     *cryptPassword;                // crypt password
   Key                          cryptPublicKey;

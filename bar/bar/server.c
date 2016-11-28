@@ -503,7 +503,9 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_SPECIAL   ("compress-algorithm",      JobNode,jobOptions.compressAlgorithms,          configValueParseCompressAlgorithms,configValueFormatInitCompressAlgorithms,configValueFormatDoneCompressAlgorithms,configValueFormatCompressAlgorithms,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL   ("compress-exclude",        JobNode,compressExcludePatternList,             configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
 
-  CONFIG_STRUCT_VALUE_SELECT    ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithm,              CONFIG_VALUE_CRYPT_ALGORITHMS),
+#warning TODO
+//TODO
+  CONFIG_STRUCT_VALUE_SELECT    ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithms[0],          CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_STRUCT_VALUE_SELECT    ("crypt-type",              JobNode,jobOptions.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_STRUCT_VALUE_SELECT    ("crypt-password-mode",     JobNode,jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
   CONFIG_STRUCT_VALUE_SPECIAL   ("crypt-password",          JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
@@ -2858,7 +2860,10 @@ LOCAL bool readJob(JobNode *jobNode)
   jobNode->jobOptions.patternType                  = PATTERN_TYPE_GLOB;
   jobNode->jobOptions.compressAlgorithms.delta     = COMPRESS_ALGORITHM_NONE;
   jobNode->jobOptions.compressAlgorithms.byte      = COMPRESS_ALGORITHM_NONE;
-  jobNode->jobOptions.cryptAlgorithm               = CRYPT_ALGORITHM_NONE;
+  jobNode->jobOptions.cryptAlgorithms[0]           = CRYPT_ALGORITHM_NONE;
+  jobNode->jobOptions.cryptAlgorithms[1]           = CRYPT_ALGORITHM_NONE;
+  jobNode->jobOptions.cryptAlgorithms[2]           = CRYPT_ALGORITHM_NONE;
+  jobNode->jobOptions.cryptAlgorithms[3]           = CRYPT_ALGORITHM_NONE;
   #ifdef HAVE_GCRYPT
     jobNode->jobOptions.cryptType                  = CRYPT_TYPE_SYMMETRIC;
   #else /* not HAVE_GCRYPT */
@@ -9588,8 +9593,9 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                        jobNode->jobOptions.archivePartSize,
                        Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.delta),
                        Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.byte),
-                       (jobNode->jobOptions.cryptAlgorithm != CRYPT_ALGORITHM_NONE) ? Crypt_algorithmToString(jobNode->jobOptions.cryptAlgorithm,"unknown") : "none",
-                       (jobNode->jobOptions.cryptAlgorithm != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->jobOptions.cryptType) : "none",
+//TODO
+                       (jobNode->jobOptions.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_algorithmToString(jobNode->jobOptions.cryptAlgorithms[0],"unknown") : "none",
+                       (jobNode->jobOptions.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->jobOptions.cryptType) : "none",
                        ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->jobOptions.cryptPasswordMode,NULL),
                        jobNode->lastExecutedDateTime,
                        jobNode->runningInfo.estimatedRestTime

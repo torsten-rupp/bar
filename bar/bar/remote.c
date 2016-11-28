@@ -678,9 +678,10 @@ fprintf(stderr,"%s, %d: Remote_executeCommand\n",__FILE__,__LINE__);
                                                                               ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.byte ,NULL)
                                                                              )
                                                                );
+//TODO
   if (error == ERROR_NONE) error = Remote_setJobOptionCString  (remoteHost,jobUUID,
                                                                 "crypt-algorithm",
-                                                                ConfigValue_selectToString(CONFIG_VALUE_CRYPT_ALGORITHMS,jobOptions->cryptAlgorithm,NULL)
+                                                                ConfigValue_selectToString(CONFIG_VALUE_CRYPT_ALGORITHMS,jobOptions->cryptAlgorithms[0],NULL)
                                                                );
   if (error == ERROR_NONE) error = Remote_setJobOptionCString  (remoteHost,jobUUID,
                                                                 "crypt-type",
