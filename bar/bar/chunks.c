@@ -154,7 +154,7 @@ LOCAL Errors initChunkBuffer(ChunkBuffer     *chunkBuffer,
   {
     case CHUNK_MODE_READ:
 #if 0
-// does not work: decryption in parts is not possible, thus data must be read and decrypted as a single block
+// does not work: decryption in parts is not possible because of CTS, thus data must be read and decrypted as a single block
       // get aligned max. data length which can be read initialy
       n        = 0;
       i        = 0;
@@ -277,10 +277,11 @@ LOCAL Errors initChunkBuffer(ChunkBuffer     *chunkBuffer,
       if (cryptInfo != NULL)
       {
 // NYI ???: seed value?
+//TODO
 uint b,x;
 byte *p;
 Crypt_getBlockLength(CRYPT_ALGORITHM_AES256,&b);
-fprintf(stderr,"%s, %d: Crypt_decrypt %d %d\n",__FILE__,__LINE__,n,b);
+//fprintf(stderr,"%s, %d: Crypt_decrypt %d %d\n",__FILE__,__LINE__,n,b);
         Crypt_reset(cryptInfo,0);
 #if 1
         error = Crypt_decrypt(cryptInfo,chunkBuffer->buffer,n);
@@ -348,7 +349,8 @@ LOCAL Errors doneChunkBuffer(ChunkBuffer *chunkBuffer)
 
   DEBUG_REMOVE_RESOURCE_TRACE(chunkBuffer,sizeof(ChunkBuffer));
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//TODO
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 #if 0
   switch (chunkBuffer->chunkMode)
   {
@@ -2451,11 +2453,11 @@ Errors Chunk_next(const ChunkIO *chunkIO,
   // find transform chunk function (if any)
   chunkHeader->transformInfo = NULL;
   chunkTransformInfo = CHUNK_TRANSFORM_INFOS;
-  while (chunkTransformInfo->oldId != CHUNK_ID_NONE)
+  while (chunkTransformInfo->old.id != CHUNK_ID_NONE)
   {
-    if (chunkTransformInfo->oldId == chunkHeader->id)
+    if (chunkTransformInfo->old.id == chunkHeader->id)
     {
-      chunkHeader->id            = chunkTransformInfo->newId;
+      chunkHeader->id            = chunkTransformInfo->new.id;
       chunkHeader->transformInfo = chunkTransformInfo;
 fprintf(stderr,"%s, %d: --- transform function %x %x\n",__FILE__,__LINE__,chunkHeader->id,chunkHeader->transformInfo);
       break;
@@ -2578,15 +2580,16 @@ chunkInfo->chunkSize = dataSize;
 
   if (chunkHeader->transformInfo != NULL)
   {
-fprintf(stderr,"%s, %d: do transform %x -> %x!\n",__FILE__,__LINE__,chunkHeader->transformInfo->oldId,chunkHeader->transformInfo->newId);
+fprintf(stderr,"%s, %d: do transform %x -> %x!\n",__FILE__,__LINE__,chunkHeader->transformInfo->old.id,chunkHeader->transformInfo->new.id);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+//asm("int3");
     oldData = malloc(chunkInfo->chunkSize);
 
     error = readDefinition(chunkInfo->io,
                            chunkInfo->ioUserData,
-                           chunkHeader->transformInfo->oldDefinition,
-                           chunkInfo->chunkSize,
+                           chunkHeader->transformInfo->old.definition,
+//                           chunkInfo->chunkSize,
+                           chunkHeader->transformInfo->old.fixedSize,
                            chunkInfo->alignment,
                            chunkInfo->cryptInfo,
                            oldData,
@@ -2876,11 +2879,11 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
   // find transform chunk function (if any)
   chunkHeader->transformInfo = NULL;
   chunkTransformInfo = CHUNK_TRANSFORM_INFOS;
-  while (chunkTransformInfo->oldId != CHUNK_ID_NONE)
+  while (chunkTransformInfo->old.id != CHUNK_ID_NONE)
   {
-    if (chunkTransformInfo->oldId == chunkHeader->id)
+    if (chunkTransformInfo->old.id == chunkHeader->id)
     {
-      chunkHeader->id            = chunkTransformInfo->newId;
+      chunkHeader->id            = chunkTransformInfo->new.id;
       chunkHeader->transformInfo = chunkTransformInfo;
 fprintf(stderr,"%s, %d: --- transform function %x %x\n",__FILE__,__LINE__,chunkHeader->id,chunkHeader->transformInfo);
       break;

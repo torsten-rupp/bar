@@ -365,7 +365,7 @@ while ($line=<STDIN>)
       exit 1;
     }
 
-    # start of block
+    # get code block
     $line=<STDIN>;
     chop $line;
     $lineNb++;
@@ -377,8 +377,6 @@ while ($line=<STDIN>)
     writeCFile("LOCAL Errors transform_$structNameMap{$oldId}(Chunk$structNameMap{$oldId} *OLD, Chunk$structNameMap{$newId} *NEW)\n");
     writeCFile("{\n");
     writeCFile("#line ".($lineNb+1)." \"$definitionFileName\"\n");
-
-    # get code block
     while ($line=<STDIN>)
     {
       # get line
@@ -418,10 +416,14 @@ writeCFile("const ChunkTransformInfo CHUNK_TRANSFORM_INFOS[] =\n");
 writeCFile("{\n");
 for my $transformation (@transformations)
 {
-  writeCFile("  { CHUNK_ID_$idNameMap{$transformation->{oldId}}, \n".
-             "    CHUNK_ID_$idNameMap{$transformation->{newId}}, \n".
-             "    CHUNK_DEFINITION_$idNameMap{$transformation->{oldId}}, \n".
-             "    CHUNK_DEFINITION_$idNameMap{$transformation->{newId}}, \n".
+  writeCFile("  { { CHUNK_ID_$idNameMap{$transformation->{oldId}}, \n".
+             "      $PREFIX_CHUNK_FIXE_SIZE$idNameMap{$transformation->{oldId}}, \n".
+             "      $PREFIX_CHUNK_DEFINITION$idNameMap{$transformation->{oldId}}, \n".
+             "    },\n".
+             "    {  CHUNK_ID_$idNameMap{$transformation->{newId}}, \n".
+             "       $PREFIX_CHUNK_FIXE_SIZE$idNameMap{$transformation->{newId}}, \n".
+             "       $PREFIX_CHUNK_DEFINITION$idNameMap{$transformation->{newId}}, \n".
+             "    },\n".
              "    (ChunkTransformFunction)transform_$structNameMap{$transformation->{oldId}}\n".
              "  },\n"
             );

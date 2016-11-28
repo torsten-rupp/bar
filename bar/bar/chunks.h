@@ -105,12 +105,16 @@ typedef uint32 ChunkId;
 // chunk definition
 typedef const uint ChunkDefinition;
 
-// chunk transformation function
+// chunk transformation info
 typedef Errors(*ChunkTransformFunction)(void *oldChunk, void *newChunk);
 typedef struct
 {
-  ChunkId                oldId,newId;
-  const uint             *oldDefinition,*newDefintion;
+  struct
+  {
+    ChunkId         id;
+    uint            fixedSize;
+    ChunkDefinition *definition;
+  } old,new;
   ChunkTransformFunction transformFunction;
 } ChunkTransformInfo;
 
