@@ -125,6 +125,31 @@ LOCAL void debugResourceInit(void)
 
 // ----------------------------------------------------------------------
 
+unsigned long gcd(unsigned long a, unsigned long b)
+{
+  unsigned long tmp;
+
+  while (a != 0L)
+  {
+    tmp = a;
+    a = b%a;
+    b = tmp;
+  }
+
+  return b;
+}
+
+unsigned long lcm(unsigned long a, unsigned long b)
+{
+  unsigned long n;
+
+  n = gcd(a,b);
+
+  return (n > 0) ? (b/n)*a : 0;
+}
+
+// ----------------------------------------------------------------------
+
 #ifndef NDEBUG
 void __dprintf__(const char *__fileName__,
                  ulong      __lineNb__,

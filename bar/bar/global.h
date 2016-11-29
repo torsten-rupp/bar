@@ -1217,6 +1217,30 @@ void __dprintf__(const char *__fileName__,
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : gcd
+* Purpose: calculate greatest common divisor
+* Input  : a,b - values
+* Output : -
+* Return : geatest common devisor or 0 if none
+* Notes  : -
+\***********************************************************************/
+
+unsigned long gcd(unsigned long a, unsigned long b);
+
+/***********************************************************************\
+* Name   : lcm
+* Purpose: calculate least common multiple
+* Input  : a,b - value
+* Output : -
+* Return : least common multiple or 0 if a=b=0
+* Notes  : -
+\***********************************************************************/
+
+unsigned long lcm(unsigned long a, unsigned long b);
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
 * Name   : atomicIncrement
 * Purpose: atomic increment value
 * Input  : n - value
