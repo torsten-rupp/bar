@@ -1113,8 +1113,8 @@ void configValueFormatInitPassord(void **formatUserData, void *userData, void *v
 void configValueFormatDonePassword(void **formatUserData, void *userData);
 
 /***********************************************************************\
-* Name   : configValueFormatPassword
-* Purpose: format password config statement
+* Name   : configValueFormatCryptAlgorithms
+* Purpose: format crypt algorithms config statement
 * Input  : formatUserData - format user data
 *          userData       - user data
 *          line           - line variable
@@ -1126,6 +1126,63 @@ void configValueFormatDonePassword(void **formatUserData, void *userData);
 \***********************************************************************/
 
 bool configValueFormatPassword(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : configValueParseCryptAlgorithms
+* Purpose: config value option call back for parsing crypt algorithms
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
+
+/***********************************************************************\
+* Name   : configValueFormatInitCryptAlgorithms
+* Purpose: init format config crypt algorithms
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitCryptAlgorithms(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneCryptAlgorithms
+* Purpose: done format of config crypt algorithms setting
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneCryptAlgorithms(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatCryptAlgorithms
+* Purpose: format crypt algorithms config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatCryptAlgorithms(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseBandWidth

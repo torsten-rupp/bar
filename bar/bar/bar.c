@@ -278,6 +278,7 @@ LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char 
 LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
@@ -535,9 +536,27 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,2,globalOptions.compressMinFileSize,               0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                          "minimal size of file for compression",NULL                                ),
   CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,3,&compressExcludePatternList,                     cmdOptionParsePattern,NULL,                                  "exclude compression pattern","pattern"                                    ),
 
-#warning TODO
-//TODO
-  CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms[0],                   COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                       "select crypt algorithm to use"                                            ),
+  CMD_OPTION_SPECIAL      ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms,                      cmdOptionParseCryptAlgorithms,NULL,                          "select crypt algorithms to use\n"
+                                                                                                                                                                                 "  none"
+                                                                                                                                                                                 #ifdef HAVE_GCRYPT
+                                                                                                                                                                                 "\n"
+                                                                                                                                                                                 "  3DES\n"
+                                                                                                                                                                                 "  CAST5\n"
+                                                                                                                                                                                 "  BLOWFISH\n"
+                                                                                                                                                                                 "  AES128\n"
+                                                                                                                                                                                 "  AES192\n"
+                                                                                                                                                                                 "  AES256\n"
+                                                                                                                                                                                 "  TWOFISH128\n"
+                                                                                                                                                                                 "  TWOFISH256\n"
+                                                                                                                                                                                 "  SERPENT128\n"
+                                                                                                                                                                                 "  SERPENT192\n"
+                                                                                                                                                                                 "  SERPENT256\n"
+                                                                                                                                                                                 "  CAMELLIA128\n"
+                                                                                                                                                                                 "  CAMELLIA192\n"
+                                                                                                                                                                                 "  CAMELLIA256"
+                                                                                                                                                                                 #endif
+                                                                                                                                                                                 ,
+                                                                                                                                                                                 "algorithm,..."                                                            ),
   CMD_OPTION_SELECT       ("crypt-type",                   0,  0,2,jobOptions.cryptType,                            COMMAND_LINE_OPTIONS_CRYPT_TYPES,                            "select crypt type"                                                        ),
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,2,&globalOptions.cryptPassword,                    cmdOptionParsePassword,NULL,                                 "crypt password (use with care!)","password"                               ),
   CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,2,&jobOptions.cryptPublicKey,                      cmdOptionParseKeyData,NULL,                                  "public key for asymmetric encryption","file name|data"                    ),
@@ -953,9 +972,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SPECIAL           ("compress-algorithm",           &jobOptions.compressAlgorithms,-1,                             configValueParseCompressAlgorithms,NULL,NULL,NULL,&jobOptions),
 
-#warning TODO
-//TODO
-  CONFIG_VALUE_SELECT            ("crypt-algorithm",              &jobOptions.cryptAlgorithms[0],-1,                             CONFIG_VALUE_CRYPT_ALGORITHMS),
+  CONFIG_VALUE_SPECIAL           ("crypt-algorithm",              jobOptions.cryptAlgorithms,-1,                                configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
   CONFIG_VALUE_SELECT            ("crypt-type",                   &jobOptions.cryptType,-1,                                      CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_VALUE_SELECT            ("crypt-password-mode",          &jobOptions.cryptPasswordMode,-1,                              CONFIG_VALUE_PASSWORD_MODES),
   CONFIG_VALUE_SPECIAL           ("crypt-password",               &globalOptions.cryptPassword,-1,                               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
@@ -2355,7 +2372,7 @@ LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, cons
     }
     if (!foundFlag)
     {
-      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm1);
+      stringFormat(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm1);
       return FALSE;
     }
 
@@ -2380,7 +2397,7 @@ LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, cons
     }
     if (!foundFlag)
     {
-      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm2);
+      stringFormat(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm2);
       return FALSE;
     }
   }
@@ -2407,7 +2424,7 @@ LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, cons
     }
     if (!foundFlag)
     {
-      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",value);
+      stringFormat(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",value);
       return FALSE;
     }
   }
@@ -2594,7 +2611,7 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
   bandWidthNode = parseBandWidth(s);
   if (bandWidthNode == NULL)
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse bandwidth value '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth value '%s'",value);
     String_delete(s);
     return FALSE;
   }
@@ -2650,13 +2667,72 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
   }
   else
   {
-    snprintf(errorMessage,errorMessageSize,"Unknown owner ship value '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Unknown owner ship value '%s'",value);
     return FALSE;
   }
 
   // store owner values
   ((JobOptionsOwner*)variable)->userId  = userId;
   ((JobOptionsOwner*)variable)->groupId = groupId;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseCryptAlgorithms
+* Purpose: command line option call back for parsing crypt algorithms
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  StringTokenizer stringTokenizer;
+  ConstString     token;
+  CryptAlgorithms cryptAlgorithms[4];
+  uint            cryptAlgorithmCount;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+
+  cryptAlgorithmCount = 0;
+  String_initTokenizerCString(&stringTokenizer,
+                              value,
+                              "+,",
+                              STRING_QUOTES,
+                              TRUE
+                             );
+  while (String_getNextToken(&stringTokenizer,&token,NULL))
+  {
+    if (cryptAlgorithmCount >= 4)
+    {
+      stringFormat(errorMessage,errorMessageSize,"Too many crypt algorithms (max. 4)");
+      String_doneTokenizer(&stringTokenizer);
+      return FALSE;
+    }
+    if (!Crypt_parseAlgorithm(String_cString(token),&((CryptAlgorithms*)variable)[cryptAlgorithmCount]))
+    {
+      stringFormat(errorMessage,errorMessageSize,"Unknown crypt algorithm '%s'",String_cString(token));
+      String_doneTokenizer(&stringTokenizer);
+      return FALSE;
+    }
+    if (((CryptAlgorithms*)variable)[cryptAlgorithmCount] != CRYPT_ALGORITHM_NONE)
+    {
+      cryptAlgorithmCount++;
+    }
+  }
+  String_doneTokenizer(&stringTokenizer);
+  while (cryptAlgorithmCount < 4)
+  {
+    ((CryptAlgorithms*)variable)[cryptAlgorithmCount] = CRYPT_ALGORITHM_NONE;
+    cryptAlgorithmCount++;
+  }
 
   return TRUE;
 }
@@ -6411,6 +6487,99 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
   }
 }
 
+//TODO
+bool configValueParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  StringTokenizer stringTokenizer;
+  ConstString     token;
+  CryptAlgorithms cryptAlgorithms[4];
+  uint            i;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+fprintf(stderr,"%s, %d: -----------*********\n",__FILE__,__LINE__);
+
+  i = 0;
+  String_initTokenizerCString(&stringTokenizer,
+                              value,
+                              "+,",
+                              STRING_QUOTES,
+                              TRUE
+                             );
+  while (String_getNextToken(&stringTokenizer,&token,NULL))
+  {
+    if (i >= 4)
+    {
+      stringFormat(errorMessage,errorMessageSize,"Too many crypt algorithms (max. 4)");
+      String_doneTokenizer(&stringTokenizer);
+      return FALSE;
+    }
+    if (!Crypt_parseAlgorithm(String_cString(token),&((CryptAlgorithms*)variable)[i]))
+    {
+      stringFormat(errorMessage,errorMessageSize,"Unknown crypt algorithm '%s'",String_cString(token));
+      String_doneTokenizer(&stringTokenizer);
+      return FALSE;
+    }
+    if (((CryptAlgorithms*)variable)[i] != CRYPT_ALGORITHM_NONE)
+    {
+      i++;
+    }
+  }
+  String_doneTokenizer(&stringTokenizer);
+  while (i < 4)
+  {
+    ((CryptAlgorithms*)variable)[i] = CRYPT_ALGORITHM_NONE;
+    i++;
+  }
+
+  return TRUE;
+}
+
+void configValueFormatInitCryptAlgorithms(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (CryptAlgorithms*)variable;
+}
+
+void configValueFormatDoneCryptAlgorithms(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+bool configValueFormatCryptAlgorithms(void **formatUserData, void *userData, String line)
+{
+  CryptAlgorithms *cryptAlgorithms;
+  uint            i;
+
+  assert(formatUserData != NULL);
+  assert(line != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  cryptAlgorithms = (CryptAlgorithms*)(*formatUserData);
+  assert(cryptAlgorithms != NULL);
+
+  i = 0;
+  while ((i < 4) && (cryptAlgorithms[i] != CRYPT_ALGORITHM_NONE))
+  {
+    if (!String_isEmpty(line)) String_appendChar(line,'+');
+    String_appendCString(line,Crypt_algorithmToString(cryptAlgorithms[i],NULL));
+    i++;
+  }
+
+  return TRUE;
+}
+
 bool configValueParseBandWidth(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   BandWidthNode *bandWidthNode;
@@ -6427,7 +6596,7 @@ bool configValueParseBandWidth(void *userData, void *variable, const char *name,
   bandWidthNode = parseBandWidth(s);
   if (bandWidthNode == NULL)
   {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse bandwidth value '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth value '%s'",value);
     String_delete(s);
     return FALSE;
   }
@@ -6509,7 +6678,7 @@ bool configValueParseOwner(void *userData, void *variable, const char *name, con
   }
   else
   {
-    snprintf(errorMessage,errorMessageSize,"Unknown owner ship value '%s'",value);
+    stringFormat(errorMessage,errorMessageSize,"Unknown owner ship value '%s'",value);
     return FALSE;
   }
 
@@ -7042,7 +7211,7 @@ bool configValueParseCompressAlgorithms(void *userData, void *variable, const ch
     }
     if (!foundFlag)
     {
-      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm1);
+      stringFormat(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm1);
       return FALSE;
     }
 
@@ -7073,7 +7242,7 @@ bool configValueParseCompressAlgorithms(void *userData, void *variable, const ch
     }
     if (!foundFlag)
     {
-      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm2);
+      stringFormat(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm2);
       return FALSE;
     }
   }
@@ -7106,7 +7275,7 @@ bool configValueParseCompressAlgorithms(void *userData, void *variable, const ch
     }
     if (!foundFlag)
     {
-      snprintf(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",value);
+      stringFormat(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",value);
       return FALSE;
     }
   }
