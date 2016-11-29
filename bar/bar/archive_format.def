@@ -242,7 +242,7 @@ TRANSFORM "BAR0" "BAR1"
 {
   UNUSED_VARIABLE(OLD);
 fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
-asm("int3");
+//asm("int3");
 
 //  NEW->ctsFlag = TRUE;
   memset(NEW->salt,0,sizeof(NEW->salt));
