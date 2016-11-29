@@ -952,7 +952,7 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
 LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
 {
   Errors         error;
-  ChunkBAR       chunkBarX;
+  ChunkBAR       chunkBar;
   ChunkKey       chunkKey;
   ChunkMeta      chunkMeta;
   ChunkMetaEntry chunkMetaEntry;
@@ -961,7 +961,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   assert(archiveHandle != NULL);
 
   // init BAR chunk
-  error = Chunk_init(&chunkBarX.info,
+  error = Chunk_init(&chunkBar.info,
                      NULL,  // parentChunkInfo
                      archiveHandle->chunkIO,
                      archiveHandle->chunkIOUserData,
@@ -969,13 +969,13 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
                      CHUNK_DEFINITION_BAR,
                      0,  // alignment
                      NULL,  // cryptInfo
-                     &chunkBarX
+                     &chunkBar
                     );
   if (error != ERROR_NONE)
   {
     return error;
   }
-  memcpy(chunkBarX.salt,archiveHandle->cryptSalt,sizeof(chunkBarX.salt));
+  memcpy(chunkBar.salt,archiveHandle->cryptSalt,sizeof(chunkBar.salt));
 
   // init meta chunk
   error = Chunk_init(&chunkMeta.info,
@@ -990,13 +990,13 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&chunkBarX.info);
+    Chunk_done(&chunkBar.info);
     return error;
   }
   chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
   chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
   chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
-  chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
+  chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
 
   // init crypt
   error = Crypt_init(&cryptInfo,
@@ -1009,7 +1009,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&chunkBarX.info);
+    Chunk_done(&chunkBar.info);
     return error;
   }
 //  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
@@ -1030,7 +1030,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   {
     Crypt_done(&cryptInfo);
     Chunk_done(&chunkMeta.info);
-    Chunk_done(&chunkBarX.info);
+    Chunk_done(&chunkBar.info);
     return error;
   }
   Misc_getCurrentUserName(chunkMetaEntry.userName);
@@ -1042,13 +1042,13 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   String_set(chunkMetaEntry.comment,archiveHandle->jobOptions->comment);
 
   // write header chunks
-  error = Chunk_create(&chunkBarX.info);
+  error = Chunk_create(&chunkBar.info);
   if (error != ERROR_NONE)
   {
     Chunk_done(&chunkMetaEntry.info);
     Crypt_done(&cryptInfo);
     Chunk_done(&chunkMeta.info);
-    Chunk_done(&chunkBarX.info);
+    Chunk_done(&chunkBar.info);
     return error;
   }
   error = Chunk_create(&chunkMeta.info);
@@ -1057,7 +1057,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
     Chunk_done(&chunkMetaEntry.info);
     Crypt_done(&cryptInfo);
     Chunk_done(&chunkMeta.info);
-    Chunk_done(&chunkBarX.info);
+    Chunk_done(&chunkBar.info);
     return error;
   }
   error = Chunk_create(&chunkMetaEntry.info);
@@ -1066,7 +1066,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
     Chunk_done(&chunkMetaEntry.info);
     Crypt_done(&cryptInfo);
     Chunk_done(&chunkMeta.info);
-    Chunk_done(&chunkBarX.info);
+    Chunk_done(&chunkBar.info);
     return error;
   }
 
@@ -1077,7 +1077,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
     Chunk_done(&chunkMetaEntry.info);
     Crypt_done(&cryptInfo);
     Chunk_done(&chunkMeta.info);
-    Chunk_done(&chunkBarX.info);
+    Chunk_done(&chunkBar.info);
     return error;
   }
   error = Chunk_close(&chunkMeta.info);
@@ -1086,16 +1086,16 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
     Chunk_done(&chunkMetaEntry.info);
     Crypt_done(&cryptInfo);
     Chunk_done(&chunkMeta.info);
-    Chunk_done(&chunkBarX.info);
+    Chunk_done(&chunkBar.info);
     return error;
   }
-  error = Chunk_close(&chunkBarX.info);
+  error = Chunk_close(&chunkBar.info);
   if (error != ERROR_NONE)
   {
     Chunk_done(&chunkMetaEntry.info);
     Crypt_done(&cryptInfo);
     Chunk_done(&chunkMeta.info);
-    Chunk_done(&chunkBarX.info);
+    Chunk_done(&chunkBar.info);
     return error;
   }
 
@@ -1103,7 +1103,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   Chunk_done(&chunkMetaEntry.info);
   Crypt_done(&cryptInfo);
   Chunk_done(&chunkMeta.info);
-  Chunk_done(&chunkBarX.info);
+  Chunk_done(&chunkBar.info);
 
   return ERROR_NONE;
 }
