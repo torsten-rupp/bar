@@ -4405,6 +4405,12 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   archiveEntryInfo->indexHandle                    = indexHandle;
   archiveEntryInfo->mode                           = ARCHIVE_MODE_WRITE;
 
+fprintf(stderr,"%s, %d: %d %d %d %d\n",__FILE__,__LINE__,
+archiveHandle->jobOptions->cryptAlgorithms[0],
+archiveHandle->jobOptions->cryptAlgorithms[1],
+archiveHandle->jobOptions->cryptAlgorithms[2],
+archiveHandle->jobOptions->cryptAlgorithms[3]
+);
   archiveEntryInfo->cryptAlgorithm                 = archiveHandle->jobOptions->cryptAlgorithms[0];
   archiveEntryInfo->blockLength                    = archiveHandle->blockLength;
 
@@ -6318,13 +6324,10 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
       return error;
     }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     switch (chunkHeader.id)
     {
       case CHUNK_ID_BAR:
         // BAR header
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
         error = readBARHeader(archiveHandle,&chunkHeader);
         if (error != ERROR_NONE)
         {
@@ -6607,7 +6610,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   // read meta chunk
   error = Chunk_open(&chunkMeta.info,
                      &chunkHeader,
-                     chunkHeader.size
+                     CHUNK_FIXED_SIZE_META
                     );
   if (error != ERROR_NONE)
   {
