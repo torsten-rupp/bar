@@ -1725,7 +1725,8 @@ test_parameters: \
 	# wrong options
 	$(call functionTestCheckExitcode,5,5,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --not-existing-option  $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,5,5,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --compress-algorithm=not-existing-compress  $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,5,5,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --crypt-algorithm=not-existing-compress $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,5,5,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --crypt-algorithm=not-existing-crypt $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,5,5,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --crypt-algorithm=3DES+CAST5+AES128+AES192+AES256 $(if $(QUIET),</dev/null 1>/dev/null))
 ifeq (@HAVE_XDELTA@,1)
 	$(call functionTestCheckExitcode,1,1,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --delta-source=does-not-exists --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files $(if $(QUIET),</dev/null 1>/dev/null))
 endif
