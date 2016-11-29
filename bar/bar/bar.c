@@ -6487,7 +6487,6 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
   }
 }
 
-//TODO
 bool configValueParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   StringTokenizer stringTokenizer;
@@ -6502,8 +6501,6 @@ bool configValueParseCryptAlgorithms(void *userData, void *variable, const char 
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
-
-fprintf(stderr,"%s, %d: -----------*********\n",__FILE__,__LINE__);
 
   i = 0;
   String_initTokenizerCString(&stringTokenizer,
@@ -6567,17 +6564,24 @@ bool configValueFormatCryptAlgorithms(void **formatUserData, void *userData, Str
   UNUSED_VARIABLE(userData);
 
   cryptAlgorithms = (CryptAlgorithms*)(*formatUserData);
-  assert(cryptAlgorithms != NULL);
-
-  i = 0;
-  while ((i < 4) && (cryptAlgorithms[i] != CRYPT_ALGORITHM_NONE))
+  if (cryptAlgorithms != NULL)
   {
-    if (!String_isEmpty(line)) String_appendChar(line,'+');
-    String_appendCString(line,Crypt_algorithmToString(cryptAlgorithms[i],NULL));
-    i++;
-  }
+    i = 0;
+    while ((i < 4) && (cryptAlgorithms[i] != CRYPT_ALGORITHM_NONE))
+    {
+      if (i > 0) String_appendChar(line,'+');
+      String_appendCString(line,Crypt_algorithmToString(cryptAlgorithms[i],NULL));
+      i++;
+    }
 
-  return TRUE;
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 
 bool configValueParseBandWidth(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
