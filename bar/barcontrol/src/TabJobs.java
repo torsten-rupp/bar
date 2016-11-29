@@ -1673,6 +1673,7 @@ public class TabJobs
   private Combo        widgetArchivePartSize;
   private List         widgetCompressExcludeList;
   private Button       widgetCompressExcludeListInsert,widgetCompressExcludeListEdit,widgetCompressExcludeListRemove;
+  private Combo[]      widgetCryptAlgorithms = new Combo[4];
   private Text         widgetCryptPassword1,widgetCryptPassword2;
   private Combo        widgetFTPMaxBandWidth;
   private Combo        widgetSCPSFTPMaxBandWidth;
@@ -4569,27 +4570,73 @@ widgetArchivePartSize.setListVisible(true);
         composite = Widgets.newComposite(tab);
         Widgets.layout(composite,4,1,TableLayoutData.WE);
         {
-          combo = Widgets.newOptionMenu(composite);
-          combo.setToolTipText(BARControl.tr("Encryption method to use."));
-          combo.setItems(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256","SERPENT128","SERPENT192","SERPENT256","CAMELLIA128","CAMELLIA192","CAMELLIA256"});
-          Widgets.layout(combo,0,0,TableLayoutData.W);
-          combo.addSelectionListener(new SelectionListener()
+          for (int i = 0; i < 4; i++)
           {
-            @Override
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            widgetCryptAlgorithms[i] = Widgets.newOptionMenu(composite);
+            widgetCryptAlgorithms[i].setToolTipText(BARControl.tr("Encryption methods to use."));
+            widgetCryptAlgorithms[i].setItems(new String[]{"none",
+                                                           "3DES",
+                                                           "CAST5",
+                                                           "BLOWFISH",
+                                                           "AES128",
+                                                           "AES192",
+                                                           "AES256",
+                                                           "TWOFISH128",
+                                                           "TWOFISH256",
+                                                           "SERPENT128",
+                                                           "SERPENT192",
+                                                           "SERPENT256",
+                                                           "CAMELLIA128",
+                                                           "CAMELLIA192",
+                                                           "CAMELLIA256"
+                                                          }
+                                             );
+            Widgets.layout(widgetCryptAlgorithms[i],0,i,TableLayoutData.W);
+            widgetCryptAlgorithms[i].addSelectionListener(new SelectionListener()
             {
-            }
-            @Override
-            public void widgetSelected(SelectionEvent selectionEvent)
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                StringBuilder buffer = new StringBuilder();
+                for (int i = 0; i < 4; i++)
+                {
+                  if (buffer.length() > 0) buffer.append('+');
+                  buffer.append(widgetCryptAlgorithms[i].getText());
+                }
+                cryptAlgorithm.set(buffer.toString());
+                BARServer.setJobOption(selectedJobData.uuid,cryptAlgorithm);
+              }
+            });
+          }
+          for (int i = 0; i < 4; i++)
+          {
+            Widgets.addModifyListener(new WidgetModifyListener(widgetCryptAlgorithms[i],cryptAlgorithm)
             {
-              Combo  widget = (Combo)selectionEvent.widget;
-              String string = widget.getText();
+              @Override
+              public void modified(Control control, WidgetVariable archivePartSizeFlag)
+              {
+                String[] s = StringUtils.split(cryptAlgorithm.getString(),"+");
 
-              cryptAlgorithm.set(string);
-              BARServer.setJobOption(selectedJobData.uuid,cryptAlgorithm);
-            }
-          });
-          Widgets.addModifyListener(new WidgetModifyListener(combo,cryptAlgorithm));
+                int i = 0;
+                while (i < 4)
+                {
+                  if (i < s.length)
+                  {
+                    widgetCryptAlgorithms[i].setText(s[i]);
+                  }
+                  else
+                  {
+                    widgetCryptAlgorithms[i].setText("none");
+                  }
+                  i++;
+                }
+              }
+            });
+          }
         }
 
         composite = Widgets.newComposite(tab);
