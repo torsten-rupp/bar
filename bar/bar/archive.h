@@ -274,7 +274,7 @@ typedef struct ArchiveEntryInfo
     ARCHIVE_MODE_WRITE,
   } mode;                                                              // read/write archive mode
 
-  CryptAlgorithms                     cryptAlgorithm;                  // crypt algorithm for entry
+  CryptAlgorithms                     cryptAlgorithms[4];              // crypt algorithms for entry
   uint                                blockLength;                     /* block length for file entry/file
                                                                           data (depend on used crypt
                                                                           algorithm)

@@ -4411,7 +4411,7 @@ archiveHandle->jobOptions->cryptAlgorithms[1],
 archiveHandle->jobOptions->cryptAlgorithms[2],
 archiveHandle->jobOptions->cryptAlgorithms[3]
 );
-  archiveEntryInfo->cryptAlgorithm                 = archiveHandle->jobOptions->cryptAlgorithms[0];
+  memcpy(archiveEntryInfo->cryptAlgorithms,archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms));
   archiveEntryInfo->blockLength                    = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType               = ARCHIVE_ENTRY_TYPE_FILE;
@@ -4820,7 +4820,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->indexHandle                     = indexHandle;
   archiveEntryInfo->mode                            = ARCHIVE_MODE_WRITE;
 
-  archiveEntryInfo->cryptAlgorithm                  = archiveHandle->jobOptions->cryptAlgorithms[0];
+  memcpy(archiveEntryInfo->cryptAlgorithms,archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms));
   archiveEntryInfo->blockLength                     = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType                = ARCHIVE_ENTRY_TYPE_IMAGE;
@@ -5175,11 +5175,11 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
 
   // init archive entry info
-  archiveEntryInfo->archiveHandle      = archiveHandle;
+  archiveEntryInfo->archiveHandle    = archiveHandle;
   archiveEntryInfo->indexHandle      = indexHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
-  archiveEntryInfo->cryptAlgorithm   = archiveHandle->jobOptions->cryptAlgorithms[0];
+  memcpy(archiveEntryInfo->cryptAlgorithms,archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
@@ -5413,11 +5413,11 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
 
   // init archive entry info
-  archiveEntryInfo->archiveHandle      = archiveHandle;
+  archiveEntryInfo->archiveHandle    = archiveHandle;
   archiveEntryInfo->indexHandle      = indexHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
-  archiveEntryInfo->cryptAlgorithm   = archiveHandle->jobOptions->cryptAlgorithms[0];
+  memcpy(archiveEntryInfo->cryptAlgorithms,archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
@@ -5661,7 +5661,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->indexHandle                        = indexHandle;
   archiveEntryInfo->mode                               = ARCHIVE_MODE_WRITE;
 
-  archiveEntryInfo->cryptAlgorithm                     = archiveHandle->jobOptions->cryptAlgorithms[0];
+  memcpy(archiveEntryInfo->cryptAlgorithms,archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms));
   archiveEntryInfo->blockLength                        = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType                   = ARCHIVE_ENTRY_TYPE_HARDLINK;
@@ -6092,11 +6092,11 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
 
   // init archive entry info
-  archiveEntryInfo->archiveHandle      = archiveHandle;
+  archiveEntryInfo->archiveHandle    = archiveHandle;
   archiveEntryInfo->indexHandle      = indexHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
-  archiveEntryInfo->cryptAlgorithm   = archiveHandle->jobOptions->cryptAlgorithms[0];
+  memcpy(archiveEntryInfo->cryptAlgorithms,archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
@@ -6973,10 +6973,13 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo-
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
-  archiveEntryInfo->cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithms[0]);
+  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithms[0]);
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithms[1]);
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithms[2]);
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithms[3]);
 
   // detect block length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
+  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
@@ -7004,7 +7007,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo-
   // try to read file entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->file.chunkFile.info,&index);
-  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm))
+  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
@@ -7042,7 +7045,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo-
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -7056,7 +7059,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo-
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -7070,7 +7073,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo-
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -7084,7 +7087,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo-
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -7098,7 +7101,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo-
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -7337,7 +7340,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     if (error != ERROR_NONE)
     {
-      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
+      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
         // get next password
         password = getNextDecryptPassword(&passwordHandle);
@@ -7369,11 +7372,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-    if      (error != ERROR_NONE)                                                  return error;
-    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
-    else if (!foundFileEntryFlag)                                                  return ERROR_NO_FILE_ENTRY;
-    else if (!foundFileDataFlag)                                                   return ERRORX_(NO_FILE_DATA,0,"%s",String_cString(fileName));
+    if      (error != ERROR_NONE)                                                      return error;
+    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)                                                           return ERROR_INVALID_CRYPT_PASSWORD;
+    else if (!foundFileEntryFlag)                                                      return ERROR_NO_FILE_ENTRY;
+    else if (!foundFileDataFlag)                                                       return ERRORX_(NO_FILE_DATA,0,"%s",String_cString(fileName));
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
@@ -7410,7 +7413,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // init variables
   if (deltaCompressAlgorithm != NULL) (*deltaCompressAlgorithm) = archiveEntryInfo->file.deltaCompressAlgorithm;
   if (byteCompressAlgorithm  != NULL) (*byteCompressAlgorithm)  = archiveEntryInfo->file.byteCompressAlgorithm;
-  if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
+  if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType              != NULL) (*cryptType)              = archiveHandle->cryptType;
 
   // done resources
@@ -7571,10 +7574,13 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
-  archiveEntryInfo->cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithms[0]);
+  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithms[0]);
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithms[1]);
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithms[2]);
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithms[3]);
 
   // detect block length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
+  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
@@ -7602,7 +7608,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // try to read image entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->image.chunkImage.info,&index);
-  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm))
+  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
@@ -7640,7 +7646,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -7654,7 +7660,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -7668,7 +7674,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -7682,7 +7688,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -7859,7 +7865,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     if (error != ERROR_NONE)
     {
-      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
+      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
         // get next password
         password = getNextDecryptPassword(&passwordHandle);
@@ -7890,11 +7896,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-    if      (error != ERROR_NONE)                                                  return error;
-    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
-    else if (!foundImageEntryFlag)                                                 return ERROR_NO_IMAGE_ENTRY;
-    else if (!foundImageDataFlag)                                                  return ERROR_NO_IMAGE_DATA;
+    if      (error != ERROR_NONE)                                                      return error;
+    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)                                                           return ERROR_INVALID_CRYPT_PASSWORD;
+    else if (!foundImageEntryFlag)                                                     return ERROR_NO_IMAGE_ENTRY;
+    else if (!foundImageDataFlag)                                                      return ERROR_NO_IMAGE_DATA;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
@@ -7931,7 +7937,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // init variables
   if (deltaCompressAlgorithm != NULL) (*deltaCompressAlgorithm) = archiveEntryInfo->image.deltaCompressAlgorithm;
   if (byteCompressAlgorithm  != NULL) (*byteCompressAlgorithm)  = archiveEntryInfo->image.byteCompressAlgorithm;
-  if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
+  if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType              != NULL) (*cryptType)              = archiveHandle->cryptType;
 
   // done resources
@@ -8060,10 +8066,13 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
-  archiveEntryInfo->cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[0]);
+  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[0]);
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[1]);
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[2]);
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[3]);
 
   // detect block length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
+  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
@@ -8075,7 +8084,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // try to read directory entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->directory.chunkDirectory.info,&index);
-  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm))
+  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
@@ -8111,7 +8120,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -8125,7 +8134,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -8276,7 +8285,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     if (error != ERROR_NONE)
     {
-      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
+      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
         // get next password
         password = getNextDecryptPassword(&passwordHandle);
@@ -8307,14 +8316,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-    if      (error != ERROR_NONE)                                                  return error;
-    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
-    else if (!foundDirectoryEntryFlag)                                             return ERROR_NO_DIRECTORY_ENTRY;
+    if      (error != ERROR_NONE)                                                      return error;
+    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)                                                           return ERROR_INVALID_CRYPT_PASSWORD;
+    else if (!foundDirectoryEntryFlag)                                                 return ERROR_NO_DIRECTORY_ENTRY;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
-  if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithm;
+  if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType      != NULL) (*cryptType)      = archiveHandle->cryptType;
 
   // done resources
@@ -8446,10 +8455,13 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
-  archiveEntryInfo->cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->link.chunkLink.cryptAlgorithms[0]);
+  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->link.chunkLink.cryptAlgorithms[0]);
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->link.chunkLink.cryptAlgorithms[1]);
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->link.chunkLink.cryptAlgorithms[2]);
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->link.chunkLink.cryptAlgorithms[3]);
 
   // detect block length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
+  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
@@ -8461,7 +8473,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // try to read link entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->link.chunkLink.info,&index);
-  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm))
+  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
@@ -8498,7 +8510,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -8512,7 +8524,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -8664,7 +8676,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     if (error != ERROR_NONE)
     {
-      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
+      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
         // get next password
         password = getNextDecryptPassword(&passwordHandle);
@@ -8695,14 +8707,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-    if      (error != ERROR_NONE)                                                  return error;
-    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
-    else if (!foundLinkEntryFlag)                                                  return ERROR_NO_LINK_ENTRY;
+    if      (error != ERROR_NONE)                                                      return error;
+    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)                                                           return ERROR_INVALID_CRYPT_PASSWORD;
+    else if (!foundLinkEntryFlag)                                                      return ERROR_NO_LINK_ENTRY;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
-  if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithm;
+  if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType      != NULL) (*cryptType)      = archiveHandle->cryptType;
 
   // done resources
@@ -8863,10 +8875,13 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
-  archiveEntryInfo->cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[0]);
+  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[0]);
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[1]);
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[2]);
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[3]);
 
   // detect block length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
+  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
@@ -8894,7 +8909,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // try to read hard link entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->hardLink.chunkHardLink.info,&index);
-  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm))
+  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
@@ -8932,7 +8947,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -8946,7 +8961,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -8960,7 +8975,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -8974,7 +8989,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -8988,7 +9003,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -9002,7 +9017,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -9275,7 +9290,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     if (error != ERROR_NONE)
     {
-      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
+      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
         // get next password
         password = getNextDecryptPassword(&passwordHandle);
@@ -9306,11 +9321,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-    if      (error != ERROR_NONE)                                                  return error;
-    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
-    else if (!foundHardLinkEntryFlag)                                              return ERROR_NO_FILE_ENTRY;
-    else if (!foundHardLinkDataFlag)                                               return ERRORX_(NO_FILE_DATA,0,"%s",String_cString(StringList_first(fileNameList,NULL)));
+    if      (error != ERROR_NONE)                                                      return error;
+    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)                                                           return ERROR_INVALID_CRYPT_PASSWORD;
+    else if (!foundHardLinkEntryFlag)                                                  return ERROR_NO_FILE_ENTRY;
+    else if (!foundHardLinkDataFlag)                                                   return ERRORX_(NO_FILE_DATA,0,"%s",String_cString(StringList_first(fileNameList,NULL)));
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
@@ -9346,7 +9361,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // init variables
   if (deltaCompressAlgorithm != NULL) (*deltaCompressAlgorithm) = archiveEntryInfo->hardLink.deltaCompressAlgorithm;
   if (byteCompressAlgorithm  != NULL) (*byteCompressAlgorithm)  = archiveEntryInfo->hardLink.byteCompressAlgorithm;
-  if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
+  if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType              != NULL) (*cryptType)              = archiveHandle->cryptType;
 
   // done resources
@@ -9476,10 +9491,13 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
-  archiveEntryInfo->cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[0]);
+  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[0]);
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[1]);
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[2]);
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[3]);
 
   // detect block length
-  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
+  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
@@ -9491,7 +9509,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // try to read special entry with all passwords
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->special.chunkSpecial.info,&index);
-  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm))
+  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
@@ -9531,7 +9549,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -9545,7 +9563,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
                          NULL,  // salt
@@ -9699,7 +9717,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     if (error != ERROR_NONE)
     {
-      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
+      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
         // get next password
         password = getNextDecryptPassword(&passwordHandle);
@@ -9730,14 +9748,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-    if      (error != ERROR_NONE)                                                  return error;
-    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)                                                       return ERROR_INVALID_CRYPT_PASSWORD;
-    else if (!foundSpecialEntryFlag)                                               return ERROR_NO_SPECIAL_ENTRY;
+    if      (error != ERROR_NONE)                                                      return error;
+    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)                                                           return ERROR_INVALID_CRYPT_PASSWORD;
+    else if (!foundSpecialEntryFlag)                                                   return ERROR_NO_SPECIAL_ENTRY;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
-  if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithm;
+  if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithms[0];
   if (cryptType      != NULL) (*cryptType)      = archiveHandle->cryptType;
 
   // done resources
@@ -12454,6 +12472,16 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
           // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
         }
+        break;
+      case ARCHIVE_ENTRY_TYPE_META:
+        {
+//TODO
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+error = Archive_skipNextEntry(&archiveHandle);
+        }
+        break;
+      case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+        error = Archive_skipNextEntry(&archiveHandle);
         break;
       default:
         #ifndef NDEBUG
