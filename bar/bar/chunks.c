@@ -2574,22 +2574,29 @@ void *oldData;
   chunkInfo->mode      = CHUNK_MODE_READ;
   chunkInfo->index     = 0LL;
 
-chunkInfo->chunkSize = dataSize;
+chunkInfo->chunkSize = ALIGN(dataSize,chunkInfo->alignment);
 //chunkInfo->chunkSize = getDefinitionSize(chunkInfo->definition,chunkInfo->alignment,NULL,0);
 //chunkInfo->chunkSize = chunkHeader->size;
 
   if (chunkHeader->transformInfo != NULL)
   {
-fprintf(stderr,"%s, %d: do transform %x -> %x!\n",__FILE__,__LINE__,chunkHeader->transformInfo->old.id,chunkHeader->transformInfo->new.id);
+//TODO
+fprintf(stderr,"%s, %d: do transform %x -> %x, size %d %d!\n",__FILE__,__LINE__,
+chunkHeader->transformInfo->old.id,chunkHeader->transformInfo->new.id,
+ALIGN(chunkHeader->transformInfo->old.fixedSize,chunkInfo->alignment),
+getDefinitionSize(chunkHeader->transformInfo->old.definition,chunkInfo->alignment,NULL,0),
+getDefinitionSize(chunkHeader->transformInfo->new.definition,chunkInfo->alignment,NULL,0)
+);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //asm("int3");
-    oldData = malloc(chunkInfo->chunkSize);
+    oldData = malloc(ALIGN(chunkHeader->transformInfo->old.fixedSize,chunkInfo->alignment)+32);
+//    oldData = malloc(1000);
 
     error = readDefinition(chunkInfo->io,
                            chunkInfo->ioUserData,
                            chunkHeader->transformInfo->old.definition,
 //                           chunkInfo->chunkSize,
-                           chunkHeader->transformInfo->old.fixedSize,
+                           ALIGN(chunkHeader->transformInfo->old.fixedSize,chunkInfo->alignment),
                            chunkInfo->alignment,
                            chunkInfo->cryptInfo,
                            oldData,
@@ -2597,8 +2604,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                           );
     if (error == ERROR_NONE)
     {
-      error = chunkHeader->transformInfo->transformFunction(oldData,chunkInfo->data);
+//      error = chunkHeader->transformInfo->transformFunction(oldData,chunkInfo->data);
     }
+
+    free(oldData);
   }
   else
   {
@@ -2627,12 +2636,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // transform
 
-
-
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(&chunkInfo->mode,sizeof(chunkInfo->mode));
+//    DEBUG_ADD_RESOURCE_TRACE(chunkInfo,sizeof(ChunkInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,&chunkInfo->mode,sizeof(chunkInfo->mode));
+//    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,chunkInfo,sizeof(ChunkInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -2725,9 +2732,9 @@ Errors __Chunk_create(const char *__fileName__,
   }
 
   #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(&chunkInfo->mode,sizeof(chunkInfo->mode));
+//    DEBUG_ADD_RESOURCE_TRACE(chunkInfo,sizeof(ChunkInfo));
   #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,&chunkInfo->mode,sizeof(chunkInfo->mode));
+//    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,chunkInfo,sizeof(ChunkInfo));
   #endif /* NDEBUG */
 
   return ERROR_NONE;
@@ -2751,7 +2758,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
     case CHUNK_MODE_UNKNOWN:
       break;
     case CHUNK_MODE_WRITE:
-      DEBUG_REMOVE_RESOURCE_TRACE(&chunkInfo->mode,sizeof(chunkInfo->mode));
+//      DEBUG_REMOVE_RESOURCE_TRACE(chunkInfo,sizeof(ChunkInfo));
 
       // save offset
       error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
@@ -2790,7 +2797,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
       }
       break;
     case CHUNK_MODE_READ:
-      DEBUG_REMOVE_RESOURCE_TRACE(&chunkInfo->mode,sizeof(chunkInfo->mode));
+//      DEBUG_REMOVE_RESOURCE_TRACE(chunkInfo,sizeof(ChunkInfo));
 
       // check chunk size value
       error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
