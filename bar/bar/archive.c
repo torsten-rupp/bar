@@ -6608,6 +6608,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   while (chunkHeader.id != CHUNK_ID_META);
 
   // read meta chunk
+  assert(Chunk_getSize(&chunkMeta.info,NULL,0) == CHUNK_FIXED_SIZE_META);
   error = Chunk_open(&chunkMeta.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_META
@@ -6942,8 +6943,6 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
 
   // read file chunk
   assert(Chunk_getSize(&archiveEntryInfo->file.chunkFile.info,NULL,0) == CHUNK_FIXED_SIZE_FILE);
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo->file.chunkFile.info,NULL,0));
-//asm("int3");
   error = Chunk_open(&archiveEntryInfo->file.chunkFile.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_FILE
@@ -7201,8 +7200,6 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo-
         {
           case CHUNK_ID_FILE_ENTRY:
             // read file entry chunk
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//asm("int3");
             error = Chunk_open(&archiveEntryInfo->file.chunkFileEntry.info,
                                &subChunkHeader,
                                subChunkHeader.size
@@ -7302,6 +7299,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             break;
           case CHUNK_ID_FILE_DATA:
             // read file data chunk
+            assert(Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info,NULL,0) == CHUNK_FIXED_SIZE_FILE_DATA);
             error = Chunk_open(&archiveEntryInfo->file.chunkFileData.info,
                                &subChunkHeader,
                                CHUNK_FIXED_SIZE_FILE_DATA//Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info,NULL,0)
@@ -7545,6 +7543,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   while (chunkHeader.id != CHUNK_ID_IMAGE);
 
   // read image chunk
+  assert(Chunk_getSize(&archiveEntryInfo->image.chunkImage.info,NULL,0) == CHUNK_FIXED_SIZE_IMAGE);
   error = Chunk_open(&archiveEntryInfo->image.chunkImage.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_IMAGE
@@ -7828,6 +7827,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             break;
           case CHUNK_ID_IMAGE_DATA:
             // read image data chunk
+            assert(Chunk_getSize(&archiveEntryInfo->image.chunkImageData.info,NULL,0) == CHUNK_FIXED_SIZE_IMAGE_DATA);
             error = Chunk_open(&archiveEntryInfo->image.chunkImageData.info,
                                &subChunkHeader,
                                CHUNK_FIXED_SIZE_IMAGE_DATA//Chunk_getSize(&archiveEntryInfo->image.chunkImageData.info,NULL,0)
@@ -8047,6 +8047,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   while (chunkHeader.id != CHUNK_ID_DIRECTORY);
 
   // read directory chunk
+  assert(Chunk_getSize(&archiveEntryInfo->directory.chunkDirectory.info,NULL,0) == CHUNK_FIXED_SIZE_DIRECTORY);
   error = Chunk_open(&archiveEntryInfo->directory.chunkDirectory.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_DIRECTORY
@@ -8436,6 +8437,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   while (chunkHeader.id != CHUNK_ID_LINK);
 
   // read link chunk
+  assert(Chunk_getSize(&archiveEntryInfo->link.chunkLink.info,NULL,0) == CHUNK_FIXED_SIZE_LINK);
   error = Chunk_open(&archiveEntryInfo->link.chunkLink.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_LINK
@@ -8846,6 +8848,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   while (chunkHeader.id != CHUNK_ID_HARDLINK);
 
   // read hard link chunk
+  assert(Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLink.info,NULL,0) == CHUNK_FIXED_SIZE_HARDLINK);
   error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLink.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_HARDLINK
@@ -9252,6 +9255,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             break;
           case CHUNK_ID_HARDLINK_DATA:
             // read hard link data chunk
+            assert(Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkData.info,NULL,0) == CHUNK_FIXED_SIZE_HARDLINK_DATA);
             error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                                &subChunkHeader,
                                CHUNK_FIXED_SIZE_HARDLINK_DATA
@@ -9472,6 +9476,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   while (chunkHeader.id != CHUNK_ID_SPECIAL);
 
   // read special chunk
+  assert(Chunk_getSize(&archiveEntryInfo->special.chunkSpecial.info,NULL,0) == CHUNK_FIXED_SIZE_SPECIAL);
   error = Chunk_open(&archiveEntryInfo->special.chunkSpecial.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_SPECIAL

@@ -49,7 +49,7 @@ my $DEFINITION_TYPES =
 
 my $definitionFileName;
 my $cFileName,$hFileName;
-my $idNameMap;
+my %idNameMap;
 my %structNameMap;
 my @transformations;
 
@@ -417,12 +417,14 @@ writeCFile("{\n");
 for my $transformation (@transformations)
 {
   writeCFile("  { { CHUNK_ID_$idNameMap{$transformation->{oldId}}, \n".
+             "      sizeof($PREFIX_CHUNK_NAME$structNameMap{$transformation->{oldId}}),\n".
              "      $PREFIX_CHUNK_FIXE_SIZE$idNameMap{$transformation->{oldId}}, \n".
              "      $PREFIX_CHUNK_DEFINITION$idNameMap{$transformation->{oldId}}, \n".
              "    },\n".
-             "    {  CHUNK_ID_$idNameMap{$transformation->{newId}}, \n".
-             "       $PREFIX_CHUNK_FIXE_SIZE$idNameMap{$transformation->{newId}}, \n".
-             "       $PREFIX_CHUNK_DEFINITION$idNameMap{$transformation->{newId}}, \n".
+             "    { CHUNK_ID_$idNameMap{$transformation->{newId}}, \n".
+             "      sizeof($PREFIX_CHUNK_NAME$structNameMap{$transformation->{newId}}),\n".
+             "      $PREFIX_CHUNK_FIXE_SIZE$idNameMap{$transformation->{newId}}, \n".
+             "      $PREFIX_CHUNK_DEFINITION$idNameMap{$transformation->{newId}}, \n".
              "    },\n".
              "    (ChunkTransformFunction)transform_$structNameMap{$transformation->{oldId}}\n".
              "  },\n"

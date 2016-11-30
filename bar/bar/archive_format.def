@@ -327,13 +327,11 @@ CHUNK FILE "FIL0" File DEPRECATED
 
 TRANSFORM "FIL0" "FIL1"
 {
-fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
   NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 
-fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
@@ -402,13 +400,11 @@ CHUNK IMAGE "IMG0" Image DEPRECATED
 
 TRANSFORM "IMG0" "IMG1"
 {
-fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
   NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
   NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
   NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 
-fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
@@ -463,13 +459,11 @@ CHUNK DIRECTORY "DIR0" Directory DEPRECATED
 
 TRANSFORM "DIR0" "DIR1"
 {
-fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
   NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
   NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
   NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 
-fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
@@ -512,13 +506,11 @@ CHUNK LINK "LNK0" Link0 DEPRECATED
 
 TRANSFORM "LNK0" "LNK1"
 {
-fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
   NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
   NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
   NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 
-fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
@@ -564,13 +556,11 @@ CHUNK HARDLINK "HLN0" HardLink DEPRECATED
 
 TRANSFORM "HLN0" "HLN1"
 {
-fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
   NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
   NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
   NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 
-fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
@@ -645,13 +635,11 @@ CHUNK SPECIAL "SPE0" Special DEPRECATED
 
 TRANSFORM "SPE0" "SPE1"
 {
-fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
   NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
   NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
   NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 
-fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 

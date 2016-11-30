@@ -2459,7 +2459,7 @@ Errors Chunk_next(const ChunkIO *chunkIO,
     {
       chunkHeader->id            = chunkTransformInfo->new.id;
       chunkHeader->transformInfo = chunkTransformInfo;
-fprintf(stderr,"%s, %d: --- transform function %x %x\n",__FILE__,__LINE__,chunkHeader->id,chunkHeader->transformInfo);
+//fprintf(stderr,"%s, %d: --- transform function %x %x\n",__FILE__,__LINE__,chunkHeader->id,chunkHeader->transformInfo);
       break;
     }
     chunkTransformInfo++;
@@ -2581,16 +2581,19 @@ chunkInfo->chunkSize = ALIGN(dataSize,chunkInfo->alignment);
   if (chunkHeader->transformInfo != NULL)
   {
 //TODO
+#if 0
 fprintf(stderr,"%s, %d: do transform %x -> %x, size %d %d!\n",__FILE__,__LINE__,
 chunkHeader->transformInfo->old.id,chunkHeader->transformInfo->new.id,
 ALIGN(chunkHeader->transformInfo->old.fixedSize,chunkInfo->alignment),
 getDefinitionSize(chunkHeader->transformInfo->old.definition,chunkInfo->alignment,NULL,0),
 getDefinitionSize(chunkHeader->transformInfo->new.definition,chunkInfo->alignment,NULL,0)
 );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//asm("int3");
-    oldData = malloc(ALIGN(chunkHeader->transformInfo->old.fixedSize,chunkInfo->alignment)+32);
-//    oldData = malloc(1000);
+#endif
+    oldData = malloc(chunkHeader->transformInfo->old.allocSize);
+    if (oldData == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
 
     error = readDefinition(chunkInfo->io,
                            chunkInfo->ioUserData,
@@ -2604,7 +2607,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                           );
     if (error == ERROR_NONE)
     {
-//      error = chunkHeader->transformInfo->transformFunction(oldData,chunkInfo->data);
+      error = chunkHeader->transformInfo->transformFunction(oldData,chunkInfo->data);
     }
 
     free(oldData);

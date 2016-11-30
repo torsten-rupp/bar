@@ -115,6 +115,7 @@ typedef struct
   struct
   {
     ChunkId         id;
+    uint            allocSize;
     uint            fixedSize;
     ChunkDefinition *definition;
   } old,new;
