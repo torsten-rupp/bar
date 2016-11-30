@@ -196,7 +196,7 @@ LOCAL const CommandLineOptionSelect *findSelect(const CommandLineOptionSelect *s
   {
     select = selects;
     while (   (select->name != NULL)
-           && !stringEquals(select->name,selectName)
+           && !stringEqualsIgnoreCase(select->name,selectName)
           )
     {
       select++;
@@ -261,7 +261,7 @@ LOCAL const CommandLineOptionSet *findSet(const CommandLineOptionSet *sets, cons
   {
     set = sets;
     while (   (set->name != NULL)
-           && !stringEquals(set->name,setName)
+           && !stringEqualsIgnoreCase(set->name,setName)
           )
     {
       set++;

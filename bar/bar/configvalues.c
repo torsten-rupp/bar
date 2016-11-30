@@ -203,7 +203,7 @@ LOCAL const ConfigValueSelect *findSelect(const ConfigValueSelect *selects, cons
   {
     select = selects;
     while (   (select->name != NULL)
-           && !stringEquals(select->name,selectName)
+           && !stringEqualsIgnoreCase(select->name,selectName)
           )
     {
       select++;
@@ -265,7 +265,7 @@ LOCAL const ConfigValueSet *findSet(const ConfigValueSet *sets, const char *setN
   {
     set = sets;
     while (   (set->name != NULL)
-           && !stringEquals(set->name,setName)
+           && !stringEqualsIgnoreCase(set->name,setName)
           )
     {
       set++;
