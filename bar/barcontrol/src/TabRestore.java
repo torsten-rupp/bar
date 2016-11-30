@@ -1906,7 +1906,10 @@ Dprintf.dprintf("cirrect?");
             {
               public void run()
               {
-                updateOffsets.add(widgetStorageTable.getTopIndex());
+                if (!widgetStorageTable.isDisposed())
+                {
+                  updateOffsets.add(widgetStorageTable.getTopIndex());
+                }
               }
             });
           }
@@ -3340,7 +3343,10 @@ Dprintf.dprintf("cirrect?");
             {
               public void run()
               {
-                updateOffsets.add(widgetEntryTable.getTopIndex());
+                if (!widgetEntryTable.isDisposed())
+                {
+                  updateOffsets.add(widgetEntryTable.getTopIndex());
+                }
               }
             });
           }
