@@ -5483,8 +5483,8 @@ void initServer(Server *server, ConstString name, ServerTypes serverType)
   }
   server->maxConnectionCount      = 0;
   server->maxStorageSize          = 0;
-  server->writePostProcessCommand = String_new();
   server->writePreProcessCommand  = String_new();
+  server->writePostProcessCommand = String_new();
 }
 
 void doneServer(Server *server)
