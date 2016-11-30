@@ -438,7 +438,7 @@ asm("int3");
     // decrypt data
     if (chunkBuffer->cryptInfo != NULL)
     {
-      // Note: we need to decrypt from start, because it is not possible to decrypt partial data blocks
+      // Note: we need to decrypt from start, because it is not possible to decrypt partial data blocks with CTS enabled
 // NYI ???: seed value?
       Crypt_reset(chunkBuffer->cryptInfo,0);
       error = Crypt_decrypt(chunkBuffer->cryptInfo,chunkBuffer->buffer,chunkBuffer->bufferLength+n);

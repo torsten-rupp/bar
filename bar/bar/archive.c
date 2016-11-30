@@ -487,6 +487,78 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle)
   return ERROR_NONE;
 }
 
+#define _MULTI_CRYPT
+
+#ifdef MULTI_CRYPT
+LOCAL Errors cryptInit(CryptInfo       *cryptInfo,
+                       CryptAlgorithms *cryptAlgorithms,
+                       uint            count,
+                       Password        *cryptPassword,
+                       const byte      cryptSalt,
+                       uint            cryptSaltLength
+                      )
+{
+  int    i;
+  Errors error;
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  for (i = 0; i < (int)count; i++)
+  {
+    error = Crypt_init(cryptInfo,
+                       cryptAlgorithms[i],
+                       CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                       cryptPassword,
+                       cryptSalt,
+                       cryptSaltLength
+                      );
+    if (error != ERROR_NONE)
+    {
+      while (i >= 0)
+      {
+        i--;
+      }
+      return error;
+    }
+  }
+
+  return ERROR_NONE;
+}
+
+LOCAL void cryptDone(CryptInfo       *cryptInfo,
+                     CryptAlgorithms *cryptAlgorithms,
+                     uint            cryptAlgorithmCount
+                    )
+{
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+}
+
+LOCAL Errors cryptGetBlockLength(CryptAlgorithms *cryptAlgorithms,
+                                 uint            cryptAlgorithmCount,
+                                 uint            *blockLength
+                                )
+{
+  uint   i;
+  Errors error;
+  uint   n;
+
+  assert(blockLength != NULL);
+
+  (*blockLength) = 1;
+  for (i = 0; i < cryptAlgorithmCount; i++)
+  {
+    error = Crypt_getBlockLength(cryptAlgorithms[0],&n);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    (*blockLength) = lcm((*blockLength),n);
+//fprintf(stderr,"%s, %d: n=%d %d\n",__FILE__,__LINE__,n,*blockLength);
+  }
+
+  return ERROR_NONE;
+}
+#endif
+
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
@@ -6875,6 +6947,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   assert(archiveHandle != NULL);
   assert(archiveHandle->jobOptions != NULL);
   assert(fileName != NULL);
+  assert(SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms) == 4);
 
   // check for pending error
   if (archiveHandle->pendingError != ERROR_NONE)
@@ -6978,6 +7051,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithms[3]);
 
   // detect block length
+#ifndef MULTI_CRYPT
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -6985,7 +7059,17 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
+#else
+  error = cryptGetBlockLength(archiveEntryInfo->cryptAlgorithms,SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms),&archiveEntryInfo->blockLength);
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
+#endif
   assert(archiveEntryInfo->blockLength > 0);
+fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,archiveEntryInfo->blockLength);
 
   // allocate buffers
   archiveEntryInfo->file.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -7043,6 +7127,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     // init file entry/extended attribute/delta/data/file crypt
     if (error == ERROR_NONE)
     {
+#ifndef MULTI_CRYPT
       error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -7050,6 +7135,15 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                          NULL,  // salt
                          0  // saltLength
                         );
+#else
+      error = cryptInit(&archiveEntryInfo->file.chunkFileEntry.cryptInfos,
+                        archiveEntryInfo->cryptAlgorithms,
+                        SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms),
+                        password,
+                        NULL,  // salt
+                        0  // saltLength
+                       );
+#endif
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileEntry.cryptInfo,{ Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo); });

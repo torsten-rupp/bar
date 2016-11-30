@@ -212,7 +212,11 @@ while ($line=<STDIN>)
       if ($line =~ /^\s*$/) { last; }
 
       # parse
-      if    ($line =~ /^\s*ENCRYPT\s*$/)
+      if    ($line =~ /^\s*ENCRYPT\s*\[(\d+)\]\s*$/)
+      {
+        writeHFile("  CryptInfo cryptInfos[$1];\n");
+      }
+      elsif ($line =~ /^\s*ENCRYPT\s*$/)
       {
         writeHFile("  CryptInfo cryptInfo;\n");
       }
