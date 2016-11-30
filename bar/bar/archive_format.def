@@ -25,38 +25,41 @@
 # The general structure of a BAR file is (sub-chunks are indented, chunk
 # ids in [...] are optional chunks):
 #
-# BAR0
-# KEY0
-# MTA0
+# BAR*
+# KEY*
+# MTA*
 #   MENT
-# FIL0
+# FIL*
 #   FENT
 #   [FEAT]
 #   [FDLT]
 #   FDAT
-# IMG0
+# IMG*
 #   IENT
 #   [IDLT]
 #   IDAT
-# DIR0
+# DIR*
 #   DENT
 #   [DEAT]
-# LNK0
+# LNK*
 #   LENT
 #   [LEAT]
-# HKN0
+# HKN*
 #   HENT
 #   HNAM
 #   [HEAT]
 #   [HDLT]
 #   HDAT
-# SPE0
+# SPE*
 #   SENT
 #   [SEAT]
 # SIG0
 #
-# The ordering of the chunks *0 is arbitrary. The sub-chunks should always
-# be ordered like shown above.
+# The ordering of the chunks BAR*, KEY*, MTA* and SIG* must as as listed above.
+# The ordering of the chunks FIL*, IMG*, DIR*, LNK*, HLN*, SPE* is arbitrary.
+# Sub-chunks should be ordered as listed above.
+#
+# Note: a archive file may contain multiple sequences of these chunks!
 #
 # The following syntax is used for specification in this file:
 #
@@ -69,40 +72,50 @@
 #
 # ENCRYPT means chunk can be encrypted (without header).
 # COMPRESS means data in chunk can be compressed (data only).
-# DEPRECATED means chunk is deprecated and created anymore.
+# DEPRECATED means chunk is deprecated and not created anymore, but still can
+# be read.
+#
+# For reading deprecated chunks a TRANSFORM statement is used to transform
+# the deprecated chunk data to the new chunk data.
 #
 # TRANSFORM <old name> <new name>
 # {
-# ...
+# <C code>...
 # }
 #
 # Available data types:
-#   uint8  unsigned integer 8bit
-#   uint16 unsigned integer 16bit
-#   uint32 unsigned integer 32bit
-#   uint64 unsigned integer 64bit
-#   int8   signed integer 8bit
-#   int16  signed integer 16bit
-#   int32  signed integer 32bit
-#   int64  signed integer 64bit
-#   string string
-#            uint16 length of string (characters)
-#            char   string data (UTF-8)
-#   <type>[] array of <type>
-#            uint16 length of array (number of elements)
-#            ...    array data of <type>
-#   data   data bytes
-#   crc32  32bit CRC of the previous data types
+#   uint8       unsigned integer 8bit
+#   uint16      unsigned integer 16bit
+#   uint32      unsigned integer 32bit
+#   uint64      unsigned integer 64bit
+#   int8        signed integer 8bit
+#   int16       signed integer 16bit
+#   int32       signed integer 32bit
+#   int64       signed integer 64bit
+#   string      string
+#               uint16 length of string (characters)
+#               char   string data (UTF-8)
+#   <type>[]    array of <type>
+#               uint16 length of array (number of elements)
+#               ...    array data of <type>
+#   <type>[<n>] fixed array of <type> with size <n>
+#               ... array data of <type>
+#   data        data bytes
+#   crc32       32bit CRC of the previous data
 #
 # Notes:
-#   - all data types except 'data' are stored in big-endian format,
-#   - encrypted data is padded with 0-bytes to a multiple of the
-#     size of the encryption block size.
+#   - all data types except array data and 'data' are stored in
+#     big-endian format,
+#   - fixed data in chunks (all except 'data') is padded to a
+#     multiple of the size of the encryption block size resp. 4 bytes,
+#     then the 'data' part follow a block size boundary
+#   - encrypted 'data' is padded with 0-bytes to a multiple of the
+#     size of the encryption block size resp. 4 bytes.
 #
 # Current version notes:
 #   - encrypted meta data is read/written with cipher block chaining
 #     mode enabled,
-#   - encrypted meta data (all except "data") is read/written with
+#   - encrypted meta data (all except 'data') is read/written with
 #     cipher text stealing (CTS) mode enabled. Encrypted data is
 #     read/written _without_ cipher text stealing mode enabled!
 
@@ -314,11 +327,13 @@ CHUNK FILE "FIL0" File DEPRECATED
 
 TRANSFORM "FIL0" "FIL1"
 {
+fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
   NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
   NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
   NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
   NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
 
+fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
@@ -387,11 +402,13 @@ CHUNK IMAGE "IMG0" Image DEPRECATED
 
 TRANSFORM "IMG0" "IMG1"
 {
+fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
   NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 
+fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
@@ -446,11 +463,13 @@ CHUNK DIRECTORY "DIR0" Directory DEPRECATED
 
 TRANSFORM "DIR0" "DIR1"
 {
+fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
   NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 
+fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
@@ -493,11 +512,13 @@ CHUNK LINK "LNK0" Link0 DEPRECATED
 
 TRANSFORM "LNK0" "LNK1"
 {
+fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
   NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 
+fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
@@ -543,11 +564,13 @@ CHUNK HARDLINK "HLN0" HardLink DEPRECATED
 
 TRANSFORM "HLN0" "HLN1"
 {
+fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
   NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 
+fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
@@ -622,11 +645,13 @@ CHUNK SPECIAL "SPE0" Special DEPRECATED
 
 TRANSFORM "SPE0" "SPE1"
 {
+fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
   NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[0] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 
+fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
