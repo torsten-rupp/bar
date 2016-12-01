@@ -3,7 +3,6 @@ ToDo
 - check if file date/permission/owner/group is correct
 - internal pipeling of commands for e. g. repacking, remove/add encryption
 - support ssh-agent (extend libssh2?)
-- improve logfile
 - ssl server: check common name?
 - improve password quality checker
 - novice/expert mode in barcontrol.tcl
@@ -22,24 +21,21 @@ ToDo
 - md5 file check sum?
 - support sparse file when restoring
 - compile-info (what is included, which version)
-- delete tempora ry image directory when writing dvd
+- delete temporary image directory when writing dvd
 - support for config reload with SIGHUP
 - support for rmt? (tape control tool)
-- support xdelta compression
 - barcontrol: file separator character
 - rename archive.? -> archives.?
 - remove "Function" in lists.h types
 - barcontrol: change *gif -> *png
 - option/command to clear cached pass phrases in bar server
 - storage on Samba server directly
-- sorrage on webdav server directly
 - general handling of strings containing LF, CR..
 - doc: min. password length for 3DES
 - progress bar when writing CDs
 - when writing a DVD do not write more ToDo
 data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - dvd: eject last disk
-- schedule: add tag text which can be used in the archive file name
 - add debug version to packages
 - support SMB without mounting
 - disable CTS in crypt and fill last block with random data: this avoid that the
@@ -54,7 +50,6 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - replace ftplib by curl
 - limit used bandwidth when creating index (all data is transmitted?)
 - add allocator of connection (ftp, scp, sftp) and limit number of connections
-- barcontrol: pre/post-script
 - valgrind-test for delta-compression
 - configure check for LIBSSH2_SEND_FUNC, LIBSSH2_RECV_FUNC
 - read corrupted archive files, e. g. scan for next valid entry
@@ -93,9 +88,7 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - doc: encrypt algorithms
 - barcontrol: create .bid only
 - create .bid from specific date
-- delete storage: delete index anyway even file cannot be deleted
 - option --tmp-min-free
-- inotify for time machine function
 - sqlite full text search for file names
 - FSE compressor https://github.com/Cyan4973/FiniteStateEntropy
 - delete job/schedule entry in barcontrol when file is deleted
@@ -105,15 +98,15 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - NDMP
 - Reed Solomo Codes for file protection and recovery
 - restore with stripping some/all directories
-- decrementelles backup
+- decrementell backup
 - store flag for changed files while storing
 - support for caching files standard
   http://www.brynosaurus.com/cachedir/
 - barcontrol: add shortcut DEL to delete entries
-- parallel compression of huge files
+- parallel compression of huge files,
+  multi-core compression of huge files in chunks
 - progress on console when storing archives
 - barcontrol: test and compare of archives
-- multi-core compression of large files in chunks
 - multi-threaded compare, test, restore
 - check if crypt password is correct, output error message
 - test archives: CRC? fragments?
@@ -140,9 +133,10 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - BARControl restore: filter storages by "will never expire"
 - if connect via SSL fail, show dialog and connect with non-SSL
 - info chunk/BAR header: create time, user, host, user comment
-- signature chunk
-- salt+pepper for encryption
+- pepper for encryption?
 - multi-encryption
+- key-derivation
+
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
 Mon 02 Feb 2015 05:47:11 PM CET> Start job 'shares'
