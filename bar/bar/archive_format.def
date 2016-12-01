@@ -83,6 +83,8 @@
 # <C code>...
 # }
 #
+# Signature: Errors transform(Chunk *old, Chunk *new, void *uiserData);
+#
 # Available data types:
 #   uint8       unsigned integer 8bit
 #   uint16      unsigned integer 16bit
@@ -246,11 +248,14 @@ CHUNK BAR "BAR0" BAR DEPRECATED
 
 TRANSFORM "BAR0" "BAR1"
 {
+  ArchiveHandle *archiveHandle = (ArchiveHandle*)userData;
+
   UNUSED_VARIABLE(OLD);
 fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
-//asm("int3");
 
-//  NEW->ctsFlag = TRUE;
+  // BAR0 use simple key, CTS and no salt
+  archiveHandle->cryptSimpleKeyFlag = TRUE;
+  archiveHandle->cryptCTSFlag       = TRUE;
   memset(NEW->salt,0,sizeof(NEW->salt));
 
 fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
@@ -283,13 +288,17 @@ CHUNK KEY "KEY0" Key
 #
 # parent: none
 # never compress, encrypted as specified
-CHUNK META "MTA1" Meta
-  uint16[4] cryptAlgorithms;
-  crc32     crc
+#CHUNK META "MTA1" Meta
+#  uint16[4] cryptAlgorithms;
+#  crc32     crc
+
+CHUNK META "MTA0" Meta
+  uint16 cryptAlgorithm;
+  crc32  crc
 
 # meta entry
 #
-# parent: MTA1
+# parent: MTA0
 # never compress, encrypted as specified in MTA1
 CHUNK META_ENTRY "MENT" MetaEntry
   ENCRYPT
