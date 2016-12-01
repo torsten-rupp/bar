@@ -574,6 +574,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 Errors Crypt_init(CryptInfo       *cryptInfo,
                   CryptAlgorithms cryptAlgorithm,
                   uint            cryptMode,
+                  CryptKey        *cryptKey,
                   const Password  *password,
                   const byte      *salt,
                   uint            saltLength
@@ -584,6 +585,7 @@ Errors __Crypt_init(const char      *__fileName__,
                     CryptInfo       *cryptInfo,
                     CryptAlgorithms cryptAlgorithm,
                     uint            cryptMode,
+                    CryptKey        *cryptKey,
                     const Password  *password,
                     const byte      *salt,
                     uint            saltLength
@@ -1445,6 +1447,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(fileCryptKey->da
       error = Crypt_init(&cryptInfo,
                          SECRET_KEY_CRYPT_ALGORITHM,
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         cryptKey,
                          password,
 //TODO
                          NULL,  // salt
@@ -1535,6 +1538,7 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
       error = Crypt_init(&cryptInfo,
                          SECRET_KEY_CRYPT_ALGORITHM,
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         cryptKey,
                          password,
                          salt,
                          saltLength

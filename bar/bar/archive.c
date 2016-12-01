@@ -503,6 +503,7 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle)
 
 LOCAL Errors cryptInit(CryptInfo       *cryptInfo,
                        CryptAlgorithms *cryptAlgorithms,
+                       CryptKey        *cryptKey,
                        uint            count,
                        Password        *cryptPassword,
                        const byte      cryptSalt,
@@ -518,6 +519,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = Crypt_init(cryptInfo,
                        cryptAlgorithms[i],
                        CRYPT_MODE_CBC,
+                       crypyKey,
                        cryptPassword,
                        cryptSalt,
                        cryptSaltLength
@@ -1113,6 +1115,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveHandle->cryptSalt,
                      sizeof(archiveHandle->cryptSalt)
@@ -4642,6 +4645,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -4658,6 +4662,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -4674,6 +4679,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -4690,6 +4696,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -4706,6 +4713,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -5058,6 +5066,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -5074,6 +5083,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -5090,6 +5100,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -5106,6 +5117,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -5345,6 +5357,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -5360,6 +5373,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -5588,6 +5602,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -5603,6 +5618,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -5916,6 +5932,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -5931,6 +5948,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -5946,6 +5964,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -5961,6 +5980,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -5976,6 +5996,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -5991,6 +6012,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -6277,6 +6299,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -6292,6 +6315,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
+                     &archiveHandle->cryptKey,
                      archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -6836,6 +6860,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveHandle->cryptSalt,
                          sizeof(archiveHandle->cryptSalt)
@@ -7234,6 +7259,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -7262,6 +7288,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -7281,6 +7308,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -7300,6 +7328,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -7319,6 +7348,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -7882,6 +7912,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -7901,6 +7932,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -7920,6 +7952,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -7939,6 +7972,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -8390,6 +8424,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -8409,6 +8444,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -8802,6 +8838,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -8821,6 +8858,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -9261,6 +9299,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -9280,6 +9319,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -9299,6 +9339,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -9318,6 +9359,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -9337,6 +9379,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -9356,6 +9399,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -9909,6 +9953,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
@@ -9928,6 +9973,7 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
+                         &archiveHandle->cryptKey,
                          password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
