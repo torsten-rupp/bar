@@ -1054,7 +1054,7 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
 LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
 {
   Errors         error;
-  ChunkBAR       chunkBar;
+  ChunkBAR       chunkBAR;
   ChunkKey       chunkKey;
   ChunkMeta      chunkMeta;
   ChunkMetaEntry chunkMetaEntry;
@@ -1063,7 +1063,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   assert(archiveHandle != NULL);
 
   // init BAR chunk
-  error = Chunk_init(&chunkBar.info,
+  error = Chunk_init(&chunkBAR.info,
                      NULL,  // parentChunkInfo
                      archiveHandle->chunkIO,
                      archiveHandle->chunkIOUserData,
@@ -1071,13 +1071,14 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
                      CHUNK_DEFINITION_BAR,
                      DEFAULT_ALIGNMENT,
                      NULL,  // cryptInfo
-                     &chunkBar
+                     &chunkBAR
                     );
   if (error != ERROR_NONE)
   {
     return error;
   }
-  memcpy(chunkBar.salt,archiveHandle->cryptSalt,sizeof(chunkBar.salt));
+  memset(chunkBAR.salt,0,sizeof(chunkBAR.salt));
+  memcpy(chunkBAR.salt,archiveHandle->cryptSalt,MIN(sizeof(chunkBAR.salt),archiveHandle->cryptSalt));
 
   // init meta chunk
   error = Chunk_init(&chunkMeta.info,
@@ -1092,16 +1093,17 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&chunkBar.info);
+    Chunk_done(&chunkBAR.info);
     return error;
   }
 #ifdef MULTI_CRYPT
-#else
-#endif
   chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
   chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
   chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
   chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+#else
+  chunkMeta.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
+#endif
 
   // init crypt
   error = Crypt_init(&cryptInfo,
@@ -1114,11 +1116,10 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&chunkBar.info);
+    Chunk_done(&chunkBAR.info);
     return error;
   }
-//  DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-//  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileEntry.cryptInfo,{ Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo); });
+  DEBUG_TESTCODE() { Crypt_done(&cryptInfo); return DEBUG_TESTCODE_ERROR(); }
 
   // init meta entry chunk
   error = Chunk_init(&chunkMetaEntry.info,
@@ -1135,7 +1136,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   {
     Crypt_done(&cryptInfo);
     Chunk_done(&chunkMeta.info);
-    Chunk_done(&chunkBar.info);
+    Chunk_done(&chunkBAR.info);
     return error;
   }
   Misc_getCurrentUserName(chunkMetaEntry.userName);
@@ -1147,13 +1148,13 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   String_set(chunkMetaEntry.comment,archiveHandle->jobOptions->comment);
 
   // write header chunks
-  error = Chunk_create(&chunkBar.info);
+  error = Chunk_create(&chunkBAR.info);
   if (error != ERROR_NONE)
   {
     Chunk_done(&chunkMetaEntry.info);
     Crypt_done(&cryptInfo);
     Chunk_done(&chunkMeta.info);
-    Chunk_done(&chunkBar.info);
+    Chunk_done(&chunkBAR.info);
     return error;
   }
   error = Chunk_create(&chunkMeta.info);
@@ -1162,7 +1163,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
     Chunk_done(&chunkMetaEntry.info);
     Crypt_done(&cryptInfo);
     Chunk_done(&chunkMeta.info);
-    Chunk_done(&chunkBar.info);
+    Chunk_done(&chunkBAR.info);
     return error;
   }
   error = Chunk_create(&chunkMetaEntry.info);
@@ -1171,7 +1172,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
     Chunk_done(&chunkMetaEntry.info);
     Crypt_done(&cryptInfo);
     Chunk_done(&chunkMeta.info);
-    Chunk_done(&chunkBar.info);
+    Chunk_done(&chunkBAR.info);
     return error;
   }
 
@@ -1182,7 +1183,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
     Chunk_done(&chunkMetaEntry.info);
     Crypt_done(&cryptInfo);
     Chunk_done(&chunkMeta.info);
-    Chunk_done(&chunkBar.info);
+    Chunk_done(&chunkBAR.info);
     return error;
   }
   error = Chunk_close(&chunkMeta.info);
@@ -1191,16 +1192,16 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
     Chunk_done(&chunkMetaEntry.info);
     Crypt_done(&cryptInfo);
     Chunk_done(&chunkMeta.info);
-    Chunk_done(&chunkBar.info);
+    Chunk_done(&chunkBAR.info);
     return error;
   }
-  error = Chunk_close(&chunkBar.info);
+  error = Chunk_close(&chunkBAR.info);
   if (error != ERROR_NONE)
   {
     Chunk_done(&chunkMetaEntry.info);
     Crypt_done(&cryptInfo);
     Chunk_done(&chunkMeta.info);
-    Chunk_done(&chunkBar.info);
+    Chunk_done(&chunkBAR.info);
     return error;
   }
 
@@ -1208,7 +1209,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   Chunk_done(&chunkMetaEntry.info);
   Crypt_done(&cryptInfo);
   Chunk_done(&chunkMeta.info);
-  Chunk_done(&chunkBar.info);
+  Chunk_done(&chunkBAR.info);
 
   return ERROR_NONE;
 }
@@ -6759,14 +6760,14 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     return error;
   }
   AUTOFREE_ADD(&autoFreeList1,&chunkMeta.info,{ Chunk_close(&chunkMeta.info); });
-  if (!Crypt_isValidAlgorithm(chunkMeta.cryptAlgorithms[0]))
+  if (!Crypt_isValidAlgorithm(chunkMeta.cryptAlgorithm))
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
-//TODO
-  cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(chunkMeta.cryptAlgorithms[0]);
+//TODO: multi crypt
+  cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(chunkMeta.cryptAlgorithm);
 
   // detect crypt block length
   error = Crypt_getBlockLength(cryptAlgorithm,&blockLength);
