@@ -378,7 +378,7 @@ while ($line=<STDIN>)
       print STDERR "Excpected '{' in line $lineNb\n";
       exit 1;
     }
-    writeCFile("LOCAL Errors transform_$structNameMap{$oldId}(Chunk$structNameMap{$oldId} *OLD, Chunk$structNameMap{$newId} *NEW)\n");
+    writeCFile("LOCAL Errors transform_$structNameMap{$oldId}(Chunk$structNameMap{$oldId} *OLD, Chunk$structNameMap{$newId} *NEW, void *userData)\n");
     writeCFile("{\n");
     writeCFile("#line ".($lineNb+1)." \"$definitionFileName\"\n");
     while ($line=<STDIN>)
