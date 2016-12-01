@@ -2418,10 +2418,10 @@ Errors Chunk_next(const ChunkIO *chunkIO,
                   ChunkHeader   *chunkHeader
                  )
 {
-  Errors error;
-  uint64 offset;
+  Errors                   error;
+  uint64                   offset;
   const ChunkTransformInfo *chunkTransformInfo;
-  uint   i;
+  uint                     i;
 
   assert(chunkIO != NULL);
   assert(chunkIO->tell != NULL);
