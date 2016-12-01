@@ -3795,7 +3795,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   // init variables
   AutoFree_init(&autoFreeList);
 
-  // detect block length of used crypt algorithm
+  // detect crypt block length
   error = Crypt_getBlockLength(jobOptions->cryptAlgorithms[0],&archiveHandle->blockLength);
   if (error != ERROR_NONE)
   {
@@ -3806,7 +3806,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   if (archiveHandle->blockLength > MAX_BUFFER_SIZE)
   {
     AutoFree_cleanup(&autoFreeList);
-    return ERROR_UNSUPPORTED_BLOCK_SIZE;
+    return ERROR_UNSUPPORTED_BLOCK_LENGTH;
   }
 
   // init archive info
@@ -4606,7 +4606,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      CHUNK_ID_FILE,
                      CHUNK_DEFINITION_FILE,
 //TODO: DEFAULT_ALIGNMENT
-                     0,  // alignment
+                     DEFAULT_ALIGNMENT,
                      NULL,  // cryptInfo
                      &archiveEntryInfo->file.chunkFile
                     );
@@ -4633,8 +4633,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+archiveEntryInfo->archiveHandle->cryptSalt,//                     NULL,  // salt
+sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -4649,8 +4649,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+archiveEntryInfo->archiveHandle->cryptSalt,//                     NULL,  // salt
+sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -4665,7 +4665,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
+archiveEntryInfo->archiveHandle->cryptSalt,//                     NULL,  // salt
                      0  // saltLength
                     );
   if (error != ERROR_NONE)
@@ -4681,8 +4681,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+archiveEntryInfo->archiveHandle->cryptSalt,//                     NULL,  // salt
+sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -4697,8 +4697,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+archiveEntryInfo->archiveHandle->cryptSalt,//                     NULL,  // salt
+sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // saltLength
                     );
   if (error != ERROR_NONE)
   {
@@ -6768,7 +6768,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
 //TODO
   cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(chunkMeta.cryptAlgorithms[0]);
 
-  // detect block length of used crypt algorithm
+  // detect crypt block length
   error = Crypt_getBlockLength(cryptAlgorithm,&blockLength);
   if (error != ERROR_NONE)
   {
@@ -7048,7 +7048,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                      CHUNK_ID_FILE,
                      CHUNK_DEFINITION_FILE,
 //TODO: DEFAULT_ALIGNMENT
-                     0,  // alignment
+                     DEFAULT_ALIGNMENT,
                      NULL,  // cryptInfo
                      &archiveEntryInfo->file.chunkFile
                     );
@@ -7125,7 +7125,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect block length
+  // detect crypt block length
 #ifndef MULTI_CRYPT
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
@@ -7144,7 +7144,6 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   }
 #endif
   assert(archiveEntryInfo->blockLength > 0);
-fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,archiveEntryInfo->blockLength);
 
   // allocate buffers
   archiveEntryInfo->file.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -7202,21 +7201,27 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
     // init file entry/extended attribute/delta/data/file crypt
     if (error == ERROR_NONE)
     {
+#if 0
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
+//archiveEntryInfo->archiveHandle->cryptSalt[0]=66;
+debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
+#endif
 #ifndef MULTI_CRYPT
       error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+archiveEntryInfo->archiveHandle->cryptSalt,//                         NULL,  // salt
+sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  // saltLength
                         );
 #else
       error = cryptInit(&archiveEntryInfo->file.chunkFileEntry.cryptInfos,
                         archiveEntryInfo->cryptAlgorithms,
                         SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms),
                         password,
-                        NULL,  // salt
-                        0  // saltLength
+archiveEntryInfo->archiveHandle->cryptSalt,//                        NULL,  // salt
+sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                        0  // saltLength
                        );
 #endif
       if (error == ERROR_NONE)
@@ -7230,8 +7235,8 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
                          archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+archiveEntryInfo->archiveHandle->cryptSalt,//                         NULL,  // salt
+sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -7244,8 +7249,8 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
                          archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+archiveEntryInfo->archiveHandle->cryptSalt,//                         NULL,  // salt
+sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -7258,8 +7263,8 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
                          archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+archiveEntryInfo->archiveHandle->cryptSalt,//                         NULL,  // salt
+sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -7272,8 +7277,8 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
                          archiveEntryInfo->cryptAlgorithms[0],
                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+archiveEntryInfo->archiveHandle->cryptSalt,//                         NULL,  // salt
+sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  // saltLength
                         );
       if (error == ERROR_NONE)
       {
@@ -7468,12 +7473,9 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
             break;
           case CHUNK_ID_FILE_DATA:
             // read file data chunk
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info,NULL,0));
             assert(Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_FILE_DATA,archiveEntryInfo->file.chunkFileData.info.alignment));
             error = Chunk_open(&archiveEntryInfo->file.chunkFileData.info,
                                &subChunkHeader,
-//TODO: remove
-//                             Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info,NULL,0)
                                CHUNK_FIXED_SIZE_FILE_DATA
                               );
             if (error != ERROR_NONE)
@@ -7758,7 +7760,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo-
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect block length
+  // detect crypt block length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -8260,7 +8262,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo-
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect block length
+  // detect crypt block length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -8658,7 +8660,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo-
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect block length
+  // detect crypt block length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -9087,7 +9089,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo-
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect block length
+  // detect crypt block length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -9713,7 +9715,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo-
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect block length
+  // detect crypt block length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {

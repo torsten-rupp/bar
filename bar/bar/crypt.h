@@ -125,6 +125,8 @@ typedef enum
 typedef struct
 {
   CryptAlgorithms  cryptAlgorithm;
+  byte             salt[CRYPT_SALT_LENGTH];
+  uint             saltLength;
   uint             blockLength;
   #ifdef HAVE_GCRYPT
     gcry_cipher_hd_t gcry_cipher_hd;

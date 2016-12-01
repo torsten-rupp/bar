@@ -222,7 +222,7 @@ ERROR UNKNOWN_COMPRESS_ALGORITHM       "unknown compress algorithm"
 ERROR COMPRESS_ALGORITHM_NOT_SUPPORTED "compress algorithm not supported"
 
 // --- crypt ------------------------------------------------------------
-ERROR UNSUPPORTED_BLOCK_SIZE           "unsupported block size"
+ERROR UNSUPPORTED_BLOCK_LENGTH         "unsupported block length"
 ERROR INIT_CRYPT
   if (!stringIsEmpty(ERROR_TEXT))
   {
@@ -288,6 +288,7 @@ ERROR INVALID_KEY                      "invalid key"
 ERROR INVALID_KEY_LENGTH               "invalid key length"
 // Note: because of name collisions with Windows include use INVALID_BLOCK_LENGTH_ instead of INVALID_BLOCK_LENGTH
 ERROR INVALID_BLOCK_LENGTH_            "invalid block length"
+ERROR INVALID_SALT_LENGTH              "invalid salt length"
 ERROR NO_PUBLIC_CRYPT_KEY              "no public encryption key"
 ERROR NO_PRIVATE_CRYPT_KEY             "no private encryption key"
 ERROR NO_PUBLIC_SIGNATURE_KEY          "no public signature key"

@@ -151,9 +151,11 @@ Errors Crypt_initAll(void)
       return ERRORX_(INIT_CRYPT,0,"Wrong gcrypt version (needed: %d)",GCRYPT_VERSION);
     }
 
-    gcry_control(GCRYCTL_DISABLE_SECMEM,         0);
+//TODO: OK?
+//    gcry_control(GCRYCTL_DISABLE_SECMEM,0);
+    gcry_control(GCRYCTL_INIT_SECMEM,16*1024,0);
     gcry_control(GCRYCTL_INITIALIZATION_FINISHED,0);
-    gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM,    0);
+//    gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM,0);
     #ifndef NDEBUG
 //NYI: required/useful?
 //      gcry_control(GCRYCTL_SET_DEBUG_FLAGS,1,0);
@@ -565,7 +567,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 /*---------------------------------------------------------------------*/
 
 #warning remove!
-#define CBS_ONCE
+#define _CTS_ONCE
 
 #ifdef NDEBUG
 Errors Crypt_init(CryptInfo       *cryptInfo,
@@ -588,9 +590,19 @@ Errors __Crypt_init(const char      *__fileName__,
 #endif /* NDEBUG */
 {
   assert(cryptInfo != NULL);
+  assert(saltLength <= sizeof(cryptInfo->salt));
 
   // init variables
   cryptInfo->cryptAlgorithm = cryptAlgorithm;
+  if (salt != NULL)
+  {
+    memcpy(cryptInfo->salt,salt,MIN(sizeof(cryptInfo->salt),saltLength));
+    cryptInfo->saltLength = saltLength;
+  }
+  else
+  {
+    cryptInfo->saltLength = 0;
+  }
 
   // init crypt algorithm
   switch (cryptAlgorithm)
@@ -697,7 +709,7 @@ Errors __Crypt_init(const char      *__fileName__,
           }
           cryptInfo->blockLength = n;
 
-          // get key length
+          // get key length [bits]
           keyLength = 0;
           switch (cryptAlgorithm)
           {
@@ -771,26 +783,31 @@ Errors __Crypt_init(const char      *__fileName__,
             return error;
           }
 
-
-#if 0
-//NYI: useful to set iv?
-          // set 0 IV
-          gcryptError = gcry_cipher_setiv(cryptInfo->gcry_cipher_hd,
-                                          NULL,
-                                          0
-                                         );
-          if (gcryptError != 0)
+#if 1
+fprintf(stderr,"%s, %d: set IV 1\n",__FILE__,__LINE__); debugDumpMemory(salt,cryptInfo->blockLength,0);
+          // set salt as IV
+          if (cryptInfo->saltLength > 0)
           {
-            error = ERRORX_(INIT_CIPHER,
-                            0,
-                            "Cannot set cipher IV (error: %s)",
-                            gpg_strerror(gcryptError)
-                           );
-            gcry_cipher_close(cryptInfo->gcry_cipher_hd);
-            return error;
+            if (cryptInfo->saltLength < cryptInfo->blockLength)
+            {
+              gcry_cipher_close(cryptInfo->gcry_cipher_hd);
+              return ERROR_INVALID_SALT_LENGTH;
+            }
+            gcryptError = gcry_cipher_setiv(cryptInfo->gcry_cipher_hd,
+                                            cryptInfo->salt,
+                                            cryptInfo->blockLength
+                                           );
+            if (gcryptError != 0)
+            {
+              error = ERRORX_(INIT_CIPHER,
+                              0,
+                              "Cannot set cipher IV (error: %s)",
+                              gpg_strerror(gcryptError)
+                             );
+              gcry_cipher_close(cryptInfo->gcry_cipher_hd);
+              return error;
+            }
           }
-
-          gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
 #endif /* 0 */
 
 //TODO
@@ -896,50 +913,17 @@ Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
     case CRYPT_ALGORITHM_CAMELLIA256:
       #ifdef HAVE_GCRYPT
         {
-          uint         ivLength;
-          char         iv[MAX_KEY_SIZE/8];
-          uint         z;
           gcry_error_t gcryptError;
 
           gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
 
-          if (seed != 0)
+          if (cryptInfo->saltLength > 0)
           {
-            // get IV length
-            ivLength = 0;
-            switch (cryptInfo->cryptAlgorithm)
-            {
-              case CRYPT_ALGORITHM_3DES:        ivLength = 192; break;
-              case CRYPT_ALGORITHM_CAST5:       ivLength = 128; break;
-              case CRYPT_ALGORITHM_BLOWFISH:    ivLength = 128; break;
-              case CRYPT_ALGORITHM_AES128:      ivLength = 128; break;
-              case CRYPT_ALGORITHM_AES192:      ivLength = 192; break;
-              case CRYPT_ALGORITHM_AES256:      ivLength = 256; break;
-              case CRYPT_ALGORITHM_TWOFISH128:  ivLength = 128; break;
-              case CRYPT_ALGORITHM_TWOFISH256:  ivLength = 256; break;
-              case CRYPT_ALGORITHM_SERPENT128:  ivLength = 128; break;
-              case CRYPT_ALGORITHM_SERPENT192:  ivLength = 192; break;
-              case CRYPT_ALGORITHM_SERPENT256:  ivLength = 256; break;
-              case CRYPT_ALGORITHM_CAMELLIA128: ivLength = 128; break;
-              case CRYPT_ALGORITHM_CAMELLIA192: ivLength = 192; break;
-              case CRYPT_ALGORITHM_CAMELLIA256: ivLength = 256; break;
-              default:
-                #ifndef NDEBUG
-                  HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                #endif /* NDEBUG */
-                break; /* not reached */
-            }
-
             // set IV
-            assert(sizeof(iv) >= (ivLength+7)/8);
-            for (z = 0; z < (ivLength+7)/8; z++)
-            {
-              iv[z] = (seed >> (z%8)*8) & 0xFF;
-            }
             gcryptError = gcry_cipher_setiv(cryptInfo->gcry_cipher_hd,
-                                            iv,
-                                            (ivLength+7)/8
-                                           );
+                                            cryptInfo->salt,
+                                            cryptInfo->blockLength
+                                         );
             if (gcryptError != 0)
             {
               return ERRORX_(INIT_CIPHER,
@@ -1010,12 +994,14 @@ fprintf(stderr,"%s, %d: Crypt_encrypt\n",__FILE__,__LINE__);
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
+#if 0
 #ifndef CBS_ONCE
         gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
         if (gcryptError != 0)
         {
           return ERROR_ENCRYPT_FAIL;
         }
+#endif
 #endif
 
         gcryptError = gcry_cipher_encrypt(cryptInfo->gcry_cipher_hd,
@@ -1079,12 +1065,14 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
-#ifndef CBS_ONCE
+#if 0
+#ifndef CTS_ONCE
         gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
         if (gcryptError != 0)
         {
           return ERROR_ENCRYPT_FAIL;
         }
+#endif
 #endif
 
         gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
@@ -1346,7 +1334,7 @@ Errors Crypt_getKeyData(CryptKey       *cryptKey,
     // get key data
     gcry_sexp_sprint(sexpToken,GCRYSEXP_FMT_ADVANCED,(char*)fileCryptKey->data,dataLength);
 #if 0
-debugDumpMemory(fileCryptKey->data,dataLength,FALSE);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(fileCryptKey->data,dataLength,FALSE);
 #endif /* 0 */
 
     // encrypt key
@@ -1382,7 +1370,7 @@ debugDumpMemory(fileCryptKey->data,dataLength,FALSE);
       Crypt_done(&cryptInfo);
     }
 #if 0
-debugDumpMemory(fileCryptKey->data,dataLength,FALSE);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(fileCryptKey->data,dataLength,FALSE);
 #endif /* 0 */
 
     // calculate CRC
@@ -1470,7 +1458,7 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
       Crypt_done(&cryptInfo);
     }
 #if 0
-debugDumpMemory(secureData,dataLength,FALSE);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(secureData,dataLength,FALSE);
 #endif /* 0 */
 
     // create S-expression with key
