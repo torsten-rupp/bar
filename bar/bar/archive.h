@@ -210,7 +210,7 @@ typedef struct
   CryptKey                 cryptKey;                                   // crypt key
   Password                 *cryptPassword;                             // crypt password for encryption/decryption
   bool                     cryptPasswordReadFlag;                      // TRUE iff input callback for crypt password called
-//  CryptKey                 cryptKey;                                   // public/private key for encryption/decryption of random key used for asymmetric encryptio
+//  CryptKey                 cryptPublicKey;                             // public key for encryption/decryption of random key used for asymmetric encryptio
 //TODO: use Key
   void                     *cryptKeyData;                              // encrypted random key used for asymmetric encryption
   uint                     cryptKeyDataLength;                         // length of encrypted random key

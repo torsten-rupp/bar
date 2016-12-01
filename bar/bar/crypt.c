@@ -681,6 +681,7 @@ Errors __Crypt_init(const char      *__fileName__,
           gcryptFlags = 0;
           if ((cryptMode & CRYPT_MODE_CTS) == CRYPT_MODE_CTS) gcryptFlags |= GCRY_CIPHER_CBC_CTS;
 
+#if 0
           // get max. key length, block length
           gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
                                               GCRYCTL_GET_KEYLEN,
@@ -737,7 +738,6 @@ Errors __Crypt_init(const char      *__fileName__,
               #endif /* NDEBUG */
               break; /* not reached */
           }
-keyDataLength=512;
           if (keyDataLength > maxKeyLength)
           {
             return ERRORX_(INIT_CIPHER,
@@ -747,6 +747,23 @@ keyDataLength=512;
                            keyDataLength
                           );
           }
+#else
+          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
+                                              GCRYCTL_GET_BLKLEN,
+                                              NULL,
+                                              &n
+                                             );
+          if (gcryptError != 0)
+          {
+            return ERRORX_(INIT_CIPHER,
+                           0,
+                           "detect block length of cipher '%s'%s",
+                           gcry_cipher_algo_name(gcryptAlgorithm),
+                           gpg_strerror(gcryptError)
+                          );
+          }
+          cryptInfo->blockLength = n;
+#endif
 
           // init cipher
           gcryptError = gcry_cipher_open(&cryptInfo->gcry_cipher_hd,
@@ -765,6 +782,7 @@ keyDataLength=512;
           }
 
           // set key
+#if 0
           keyData = Password_allocSecure(keyDataLength);
           if (keyData == NULL)
           {
@@ -817,6 +835,24 @@ fprintf(stderr,"%s, %d: (keyDataLength+7)/8=%d gcryptErro=%d %s\n",__FILE__,__LI
             return error;
           }
           Password_freeSecure(keyData);
+#else
+          gcryptError = gcry_cipher_setkey(cryptInfo->gcry_cipher_hd,
+                                           cryptKey->data,
+                                           cryptKey->dataLength
+                                          );
+          if (gcryptError != 0)
+          {
+            error = ERRORX_(INIT_CIPHER,
+                            0,
+                            "set key for cipher '%s' with %dbit: %s",
+                            gcry_cipher_algo_name(gcryptAlgorithm),
+                            keyDataLength,
+                            gpg_strerror(gcryptError)
+                           );
+            gcry_cipher_close(cryptInfo->gcry_cipher_hd);
+            return error;
+          }
+#endif
 
 fprintf(stderr,"%s, %d: set IV 1\n",__FILE__,__LINE__); debugDumpMemory(salt,cryptInfo->blockLength,0);
           // set salt as IV
@@ -1318,13 +1354,16 @@ void Crypt_doneKey(CryptKey *cryptKey)
 }
 
 Errors Crypt_deriveKey(CryptKey   *cryptKey,
-                       uint       keyLength,
+//                       uint       keyLength,
+                       CryptAlgorithms cryptAlgorithm,
                        Password   *password,
                        const byte *salt,
                        uint       saltLength
                       )
 {
   #ifdef HAVE_GCRYPT
+    Errors       error;
+    uint         keyLength;
     void         *data;
     uint         dataLength;
     gcry_error_t gcryptError;
@@ -1334,6 +1373,14 @@ Errors Crypt_deriveKey(CryptKey   *cryptKey,
   assert(cryptKey != NULL);
 
   #ifdef HAVE_GCRYPT
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    // get key length
+    error = Crypt_getKeyLength(cryptAlgorithm,&keyLength);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
     // allocate secure memory
     dataLength = (keyLength+7)/8;
     data       = Password_allocSecure(dataLength);
@@ -1341,6 +1388,7 @@ Errors Crypt_deriveKey(CryptKey   *cryptKey,
     {
       return ERROR_INSUFFICIENT_MEMORY;
     }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // derive key
     p = Password_deploy(password);
@@ -1357,6 +1405,7 @@ Errors Crypt_deriveKey(CryptKey   *cryptKey,
     Password_undeploy(password);
     if (gcryptError != 0)
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       Password_freeSecure(data);
       return ERRORX_(INIT_KEY,
                      0,
@@ -1372,11 +1421,16 @@ Errors Crypt_deriveKey(CryptKey   *cryptKey,
     }
     cryptKey->data       = data;
     cryptKey->dataLength = dataLength;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // free resources
+
+    return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(cryptKey);
     UNUSED_VARIABLE(cryptPaddingType);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
 }
 

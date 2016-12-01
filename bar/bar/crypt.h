@@ -142,7 +142,7 @@ typedef struct
 {
   CryptPaddingTypes cryptPaddingType;
   void              *data;              // data
-  uint              *dataLength;        // data length [bytes]
+  uint              dataLength;         // data length [bytes]
   #ifdef HAVE_GCRYPT
     gcry_sexp_t key;                    // key
   #endif /* HAVE_GCRYPT */
@@ -544,7 +544,7 @@ Errors Crypt_reset(CryptInfo *cryptInfo);
 
 Errors Crypt_encrypt(CryptInfo *cryptInfo,
                      void      *buffer,
-                     ulong      bufferLength
+                     ulong     bufferLength
                     );
 
 /***********************************************************************\
@@ -664,7 +664,8 @@ INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey)
 \***********************************************************************/
 
 Errors Crypt_deriveKey(CryptKey   *cryptKey,
-                       uint       keyLength,
+//                       uint       keyLength,
+                       CryptAlgorithms cryptAlgorithm,
                        Password   *password,
                        const byte *salt,
                        uint       saltLength

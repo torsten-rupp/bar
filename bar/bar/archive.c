@@ -3791,6 +3791,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
 {
   AutoFreeList autoFreeList;
   Errors       error;
+  uint         keyLength;
   bool         okFlag;
   ulong        maxCryptKeyDataLength;
 
@@ -3840,6 +3841,8 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   archiveHandle->cryptSimpleKeyFlag      = FALSE;
   archiveHandle->cryptCTSFlag            = FALSE;
 
+  Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
+
   Semaphore_init(&archiveHandle->passwordLock);
   archiveHandle->cryptType               = Crypt_isEncrypted(jobOptions->cryptAlgorithms[0]) ? jobOptions->cryptType : CRYPT_TYPE_NONE;
   archiveHandle->cryptPassword           = NULL;
@@ -3878,80 +3881,97 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   Crypt_randomize(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
 
   // init encryption key (if asymmetric encryption used)
-  if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
+  switch (archiveHandle->cryptType)
   {
-    // check if public key available
-    if (!isKeyAvailable(&jobOptions->cryptPublicKey))
-    {
-      AutoFree_cleanup(&autoFreeList);
-      return ERROR_NO_PUBLIC_CRYPT_KEY;
-    }
-
-    // init public key
-    Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
-    error = Crypt_setKeyData(&archiveHandle->cryptKey,
-                             jobOptions->cryptPublicKey.data,
-                             jobOptions->cryptPublicKey.length,
-                             NULL,  // password
-                             archiveHandle->cryptSalt,
-                             sizeof(archiveHandle->cryptSalt)
-                            );
-    if (error != ERROR_NONE)
-    {
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-
-    // create new random key (password) for encryption
-    archiveHandle->cryptPassword = Password_new();
-    if (archiveHandle->cryptPassword == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptPassword,{ Password_delete(archiveHandle->cryptPassword); });
-    maxCryptKeyDataLength = 2*MAX_PASSWORD_LENGTH;
-    okFlag = FALSE;
-    do
-    {
-      archiveHandle->cryptKeyData = malloc(maxCryptKeyDataLength);
-      if (archiveHandle->cryptKeyData == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-      error = Crypt_getRandomEncryptKey(archiveHandle->cryptPassword,
-                                        &archiveHandle->cryptKey,
-                                        jobOptions->cryptAlgorithms[0],
-                                        maxCryptKeyDataLength,
-                                        archiveHandle->cryptKeyData,
-                                        &archiveHandle->cryptKeyDataLength
-                                       );
+    case CRYPT_TYPE_NONE:
+      break;
+    case CRYPT_TYPE_SYMMETRIC:
+      // derive crypt key
+      error = Crypt_deriveKey(&archiveHandle->cryptKey,
+                              jobOptions->cryptAlgorithms[0],
+                              archiveHandle->cryptPassword,
+                              archiveHandle->cryptSalt,
+                              sizeof(archiveHandle->cryptSalt)
+                             );
       if (error != ERROR_NONE)
       {
-        free(archiveHandle->cryptKeyData);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-      if (archiveHandle->cryptKeyDataLength < maxCryptKeyDataLength)
+      break;
+    case CRYPT_TYPE_ASYMMETRIC:
+      // check if public key available
+      if (!isKeyAvailable(&jobOptions->cryptPublicKey))
       {
-        okFlag = TRUE;
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_NO_PUBLIC_CRYPT_KEY;
       }
-      else
+
+      // init public key
+      error = Crypt_setKeyData(&archiveHandle->cryptKey,
+                               jobOptions->cryptPublicKey.data,
+                               jobOptions->cryptPublicKey.length,
+                               NULL,  // password
+                               archiveHandle->cryptSalt,
+                               sizeof(archiveHandle->cryptSalt)
+                              );
+      if (error != ERROR_NONE)
       {
-        free(archiveHandle->cryptKeyData);
-        maxCryptKeyDataLength += 64;
+        AutoFree_cleanup(&autoFreeList);
+        return error;
       }
-    }
-    while (!okFlag);
-    AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptKeyData,{ free(archiveHandle->cryptKeyData); });
-    DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-#if 0
-Password_dump(archiveHandle->cryptPassword);
-{
-int z;
-byte *p=archiveHandle->cryptKeyData;
-fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprintf(stderr,"%02x",p[z]); fprintf(stderr,"\n");
-}
-#endif /* 0 */
+
+      // create new random key (password) for encryption
+      archiveHandle->cryptPassword = Password_new();
+      if (archiveHandle->cryptPassword == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptPassword,{ Password_delete(archiveHandle->cryptPassword); });
+      maxCryptKeyDataLength = 2*MAX_PASSWORD_LENGTH;
+      okFlag = FALSE;
+      do
+      {
+        archiveHandle->cryptKeyData = malloc(maxCryptKeyDataLength);
+        if (archiveHandle->cryptKeyData == NULL)
+        {
+          HALT_INSUFFICIENT_MEMORY();
+        }
+        error = Crypt_getRandomEncryptKey(archiveHandle->cryptPassword,
+                                          &archiveHandle->cryptKey,
+                                          jobOptions->cryptAlgorithms[0],
+                                          maxCryptKeyDataLength,
+                                          archiveHandle->cryptKeyData,
+                                          &archiveHandle->cryptKeyDataLength
+                                         );
+        if (error != ERROR_NONE)
+        {
+          free(archiveHandle->cryptKeyData);
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        if (archiveHandle->cryptKeyDataLength < maxCryptKeyDataLength)
+        {
+          okFlag = TRUE;
+        }
+        else
+        {
+          free(archiveHandle->cryptKeyData);
+          maxCryptKeyDataLength += 64;
+        }
+      }
+      while (!okFlag);
+      AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptKeyData,{ free(archiveHandle->cryptKeyData); });
+      DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+      #if 0
+        Password_dump(archiveHandle->cryptPassword);
+        {
+        int z;
+        byte *p=archiveHandle->cryptKeyData;
+        fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprintf(stderr,"%02x",p[z]); fprintf(stderr,"\n");
+        }
+      #endif /* 0 */
+      break;
   }
 
   // free resources
@@ -7044,6 +7064,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   AutoFreeList   autoFreeList1,autoFreeList2;
   Errors         error;
   ChunkHeader    chunkHeader;
+  uint           keyLength;
   uint64         index;
   PasswordHandle passwordHandle;
   const Password *password;
@@ -7168,7 +7189,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect crypt block length
+  // detect crypt block length, key length
 #ifndef MULTI_CRYPT
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
@@ -7187,6 +7208,13 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   }
 #endif
   assert(archiveEntryInfo->blockLength > 0);
+  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
 
   // allocate buffers
   archiveEntryInfo->file.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -7597,7 +7625,13 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
         // reset error and try next password
         if (password != NULL)
         {
-          error = ERROR_NONE;
+          // derive crypt key
+          error = Crypt_deriveKey(&archiveHandle->cryptKey,
+                                  archiveEntryInfo->cryptAlgorithms[0],
+                                  password,
+                                  archiveEntryInfo->archiveHandle->cryptSalt,
+                                  sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
+                                 );
         }
       }
       else
