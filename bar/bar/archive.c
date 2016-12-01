@@ -40,6 +40,8 @@
 #include "archive.h"
 
 /****************** Conditional compilation switches *******************/
+// NYI: multi crypt support
+#define _MULTI_CRYPT
 
 /***************************** Constants *******************************/
 
@@ -487,9 +489,17 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle)
   return ERROR_NONE;
 }
 
-#define _MULTI_CRYPT
-
 #ifdef MULTI_CRYPT
+
+/***********************************************************************\
+* Name   : cryptInit
+* Purpose:
+* Input  :
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors cryptInit(CryptInfo       *cryptInfo,
                        CryptAlgorithms *cryptAlgorithms,
                        uint            count,
@@ -524,6 +534,15 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
+/***********************************************************************\
+* Name   : cryptDone
+* Purpose:
+* Input  :
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void cryptDone(CryptInfo       *cryptInfo,
                      CryptAlgorithms *cryptAlgorithms,
                      uint            cryptAlgorithmCount
@@ -531,6 +550,15 @@ LOCAL void cryptDone(CryptInfo       *cryptInfo,
 {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 }
+
+/***********************************************************************\
+* Name   : cryptGetBlockLength
+* Purpose:
+* Input  :
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL Errors cryptGetBlockLength(CryptAlgorithms *cryptAlgorithms,
                                  uint            cryptAlgorithmCount,
@@ -868,6 +896,7 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_BAR,
                      CHUNK_DEFINITION_BAR,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &chunkBAR
@@ -930,6 +959,7 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_KEY,
                      CHUNK_DEFINITION_KEY,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &chunkKey
@@ -1039,7 +1069,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_BAR,
                      CHUNK_DEFINITION_BAR,
-                     0,  // alignment
+                     DEFAULT_ALIGNMENT,
                      NULL,  // cryptInfo
                      &chunkBar
                     );
@@ -1056,7 +1086,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_META,
                      CHUNK_DEFINITION_META,
-                     0,  // alignment,
+                     DEFAULT_ALIGNMENT,
                      NULL,  // cryptInfo,
                      &chunkMeta
                     );
@@ -1065,6 +1095,9 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
     Chunk_done(&chunkBar.info);
     return error;
   }
+#ifdef MULTI_CRYPT
+#else
+#endif
   chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
   chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
   chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
@@ -1204,6 +1237,7 @@ LOCAL Errors writeEncryptionKey(ArchiveHandle *archiveHandle)
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_KEY,
                      CHUNK_DEFINITION_KEY,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &chunkKey
@@ -1354,7 +1388,7 @@ exit(1);
                        archiveHandle->chunkIOUserData,
                        CHUNK_ID_SIGNATURE,
                        CHUNK_DEFINITION_SIGNATURE,
-                       0,  // alignment
+                       DEFAULT_ALIGNMENT,
                        NULL,  // cryptInfo
                        &chunkSignature
                       );
@@ -4477,6 +4511,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   archiveEntryInfo->indexHandle                    = indexHandle;
   archiveEntryInfo->mode                           = ARCHIVE_MODE_WRITE;
 
+#ifdef MULTI_CRYPT
+#else
+#endif
 fprintf(stderr,"%s, %d: %d %d %d %d\n",__FILE__,__LINE__,
 archiveHandle->jobOptions->cryptAlgorithms[0],
 archiveHandle->jobOptions->cryptAlgorithms[1],
@@ -4568,6 +4605,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      &archiveEntryInfo->file.intermediateFileHandle,
                      CHUNK_ID_FILE,
                      CHUNK_DEFINITION_FILE,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->file.chunkFile
@@ -4579,10 +4617,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
   DEBUG_TESTCODE() { Chunk_done(&archiveEntryInfo->file.chunkFile.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->file.chunkFile.compressAlgorithm  = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->file.byteCompressAlgorithm);
+#ifdef MULTI_CRYPT
   archiveEntryInfo->file.chunkFile.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
   archiveEntryInfo->file.chunkFile.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
   archiveEntryInfo->file.chunkFile.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
   archiveEntryInfo->file.chunkFile.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+#else
+  archiveEntryInfo->file.chunkFile.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
+#endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFile.info,{ Chunk_done(&archiveEntryInfo->file.chunkFile.info); });
 
   // init crypt
@@ -4979,6 +5021,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      &archiveEntryInfo->image.intermediateFileHandle,
                      CHUNK_ID_IMAGE,
                      CHUNK_DEFINITION_IMAGE,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->image.chunkImage
@@ -4990,10 +5033,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
   DEBUG_TESTCODE() { Chunk_done(&archiveEntryInfo->file.chunkFile.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->image.chunkImage.compressAlgorithm  = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.byteCompressAlgorithm);
+#ifdef MULTI_CRYPT
   archiveEntryInfo->image.chunkImage.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
   archiveEntryInfo->image.chunkImage.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
   archiveEntryInfo->image.chunkImage.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
   archiveEntryInfo->image.chunkImage.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+#else
+  archiveEntryInfo->image.chunkImage.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
+#endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImage.info,{ Chunk_done(&archiveEntryInfo->image.chunkImage.info); });
 
   // init crypt
@@ -5263,6 +5310,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_DIRECTORY,
                      CHUNK_DEFINITION_DIRECTORY,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->directory.chunkDirectory
@@ -5272,10 +5320,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+#ifdef MULTI_CRYPT
   archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
   archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
   archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
   archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+#else
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
+#endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->directory.chunkDirectory.info,{ Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info); });
 
   // init crypt
@@ -5501,6 +5553,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_LINK,
                      CHUNK_DEFINITION_LINK,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->link.chunkLink
@@ -5510,10 +5563,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+#ifdef MULTI_CRYPT
   archiveEntryInfo->link.chunkLink.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
   archiveEntryInfo->link.chunkLink.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
   archiveEntryInfo->link.chunkLink.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
   archiveEntryInfo->link.chunkLink.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+#else
+  archiveEntryInfo->link.chunkLink.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
+#endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->link.chunkLink.info,{ Chunk_done(&archiveEntryInfo->link.chunkLink.info); });
 
   // init crypt
@@ -5823,6 +5880,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      &archiveEntryInfo->hardLink.intermediateFileHandle,
                      CHUNK_ID_HARDLINK,
                      CHUNK_DEFINITION_HARDLINK,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->hardLink.chunkHardLink
@@ -5833,10 +5891,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     return error;
   }
   archiveEntryInfo->hardLink.chunkHardLink.compressAlgorithm  = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->hardLink.byteCompressAlgorithm);
+#ifdef MULTI_CRYPT
   archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
   archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
   archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
   archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+#else
+  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
+#endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLink.info,{ Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info); });
 
   // init crypt
@@ -6180,6 +6242,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_SPECIAL,
                      CHUNK_DEFINITION_SPECIAL,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->special.chunkSpecial
@@ -6189,10 +6252,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+#ifdef MULTI_CRYPT
   archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
   archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
   archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
   archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+#else
+  archiveEntryInfo->special.chunkSpecial.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
+#endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->special.chunkSpecial.info,{ Chunk_done(&archiveEntryInfo->special.chunkSpecial.info); });
 
   // init crypt
@@ -6645,7 +6712,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_META,
                      CHUNK_DEFINITION_META,
-                     0,  // alignment
+                     DEFAULT_ALIGNMENT,
                      NULL,  // cryptInfo
                      &chunkMeta
                     );
@@ -6680,7 +6747,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   while (chunkHeader.id != CHUNK_ID_META);
 
   // read meta chunk
-  assert(Chunk_getSize(&chunkMeta.info,NULL,0) == CHUNK_FIXED_SIZE_META);
+  assert(Chunk_getSize(&chunkMeta.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_META,chunkMeta.info.alignment));
   error = Chunk_open(&chunkMeta.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_META
@@ -6980,6 +7047,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_FILE,
                      CHUNK_DEFINITION_FILE,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->file.chunkFile
@@ -7015,7 +7083,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   while (chunkHeader.id != CHUNK_ID_FILE);
 
   // read file chunk
-  assert(Chunk_getSize(&archiveEntryInfo->file.chunkFile.info,NULL,0) == CHUNK_FIXED_SIZE_FILE);
+  assert(Chunk_getSize(&archiveEntryInfo->file.chunkFile.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_FILE,archiveEntryInfo->file.chunkFile.info.alignment));
   error = Chunk_open(&archiveEntryInfo->file.chunkFile.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_FILE
@@ -7039,16 +7107,23 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   archiveEntryInfo->file.byteCompressAlgorithm  = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.compressAlgorithm);
 
   // get and check crypt algorithm
-  if (!Crypt_isValidAlgorithm(archiveEntryInfo->file.chunkFile.cryptAlgorithms[0]))
+  if (!Crypt_isValidAlgorithm(archiveEntryInfo->file.chunkFile.cryptAlgorithm))
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
+#ifdef MULTI_CRYPT
   archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithms[0]);
   archiveEntryInfo->cryptAlgorithms[1] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithms[1]);
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithms[2]);
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithms[3]);
+#else
+  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithm);
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#endif
 
   // detect block length
 #ifndef MULTI_CRYPT
@@ -7393,10 +7468,13 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
             break;
           case CHUNK_ID_FILE_DATA:
             // read file data chunk
-            assert(Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info,NULL,0) == CHUNK_FIXED_SIZE_FILE_DATA);
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info,NULL,0));
+            assert(Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_FILE_DATA,archiveEntryInfo->file.chunkFileData.info.alignment));
             error = Chunk_open(&archiveEntryInfo->file.chunkFileData.info,
                                &subChunkHeader,
-                               CHUNK_FIXED_SIZE_FILE_DATA//Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info,NULL,0)
+//TODO: remove
+//                             Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info,NULL,0)
+                               CHUNK_FIXED_SIZE_FILE_DATA
                               );
             if (error != ERROR_NONE)
             {
@@ -7602,6 +7680,7 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_IMAGE,
                      CHUNK_DEFINITION_IMAGE,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->image.chunkImage
@@ -7637,7 +7716,7 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
   while (chunkHeader.id != CHUNK_ID_IMAGE);
 
   // read image chunk
-  assert(Chunk_getSize(&archiveEntryInfo->image.chunkImage.info,NULL,0) == CHUNK_FIXED_SIZE_IMAGE);
+  assert(Chunk_getSize(&archiveEntryInfo->image.chunkImage.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_IMAGE,archiveEntryInfo->image.chunkImage.info.alignment));
   error = Chunk_open(&archiveEntryInfo->image.chunkImage.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_IMAGE
@@ -7661,16 +7740,23 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
   archiveEntryInfo->image.byteCompressAlgorithm  = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.compressAlgorithm);
 
   // get and check crypt algorithm
-  if (!Crypt_isValidAlgorithm(archiveEntryInfo->image.chunkImage.cryptAlgorithms[0]))
+  if (!Crypt_isValidAlgorithm(archiveEntryInfo->image.chunkImage.cryptAlgorithm))
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
+#ifdef MULTI_CRYPT
   archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithms[0]);
   archiveEntryInfo->cryptAlgorithms[1] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithms[1]);
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithms[2]);
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithms[3]);
+#else
+  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithm);
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#endif
 
   // detect block length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
@@ -7921,7 +8007,7 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
             break;
           case CHUNK_ID_IMAGE_DATA:
             // read image data chunk
-            assert(Chunk_getSize(&archiveEntryInfo->image.chunkImageData.info,NULL,0) == CHUNK_FIXED_SIZE_IMAGE_DATA);
+            assert(Chunk_getSize(&archiveEntryInfo->image.chunkImageData.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_IMAGE_DATA,archiveEntryInfo->image.chunkImageData.info.alignment));
             error = Chunk_open(&archiveEntryInfo->image.chunkImageData.info,
                                &subChunkHeader,
                                CHUNK_FIXED_SIZE_IMAGE_DATA//Chunk_getSize(&archiveEntryInfo->image.chunkImageData.info,NULL,0)
@@ -8106,6 +8192,7 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_DIRECTORY,
                      CHUNK_DEFINITION_DIRECTORY,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->directory.chunkDirectory
@@ -8141,7 +8228,7 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
   while (chunkHeader.id != CHUNK_ID_DIRECTORY);
 
   // read directory chunk
-  assert(Chunk_getSize(&archiveEntryInfo->directory.chunkDirectory.info,NULL,0) == CHUNK_FIXED_SIZE_DIRECTORY);
+  assert(Chunk_getSize(&archiveEntryInfo->directory.chunkDirectory.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_DIRECTORY,archiveEntryInfo->directory.chunkDirectory.info.alignment));
   error = Chunk_open(&archiveEntryInfo->directory.chunkDirectory.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_DIRECTORY
@@ -8155,16 +8242,23 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->directory.chunkDirectory.info,{ Chunk_close(&archiveEntryInfo->directory.chunkDirectory.info); });
 
   // get and check crypt algorithm
-  if (!Crypt_isValidAlgorithm(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[0]))
+  if (!Crypt_isValidAlgorithm(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm))
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
+#ifdef MULTI_CRYPT
   archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[0]);
   archiveEntryInfo->cryptAlgorithms[1] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[1]);
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[2]);
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[3]);
+#else
+  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm);
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#endif
 
   // detect block length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
@@ -8495,6 +8589,7 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_LINK,
                      CHUNK_DEFINITION_LINK,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->link.chunkLink
@@ -8531,7 +8626,7 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
   while (chunkHeader.id != CHUNK_ID_LINK);
 
   // read link chunk
-  assert(Chunk_getSize(&archiveEntryInfo->link.chunkLink.info,NULL,0) == CHUNK_FIXED_SIZE_LINK);
+  assert(Chunk_getSize(&archiveEntryInfo->link.chunkLink.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_LINK,archiveEntryInfo->link.chunkLink.info.alignment));
   error = Chunk_open(&archiveEntryInfo->link.chunkLink.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_LINK
@@ -8545,16 +8640,23 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->link.chunkLink.info,{ Chunk_close(&archiveEntryInfo->link.chunkLink.info); });
 
   // get and check crypt algorithm
-  if (!Crypt_isValidAlgorithm(archiveEntryInfo->link.chunkLink.cryptAlgorithms[0]))
+  if (!Crypt_isValidAlgorithm(archiveEntryInfo->link.chunkLink.cryptAlgorithm))
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
+#ifdef MULTI_CRYPT
   archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->link.chunkLink.cryptAlgorithms[0]);
   archiveEntryInfo->cryptAlgorithms[1] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->link.chunkLink.cryptAlgorithms[1]);
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->link.chunkLink.cryptAlgorithms[2]);
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->link.chunkLink.cryptAlgorithms[3]);
+#else
+  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->link.chunkLink.cryptAlgorithm);
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#endif
 
   // detect block length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
@@ -8907,6 +9009,7 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_HARDLINK,
                      CHUNK_DEFINITION_HARDLINK,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->hardLink.chunkHardLink
@@ -8942,7 +9045,7 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
   while (chunkHeader.id != CHUNK_ID_HARDLINK);
 
   // read hard link chunk
-  assert(Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLink.info,NULL,0) == CHUNK_FIXED_SIZE_HARDLINK);
+  assert(Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLink.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_HARDLINK,archiveEntryInfo->hardLink.chunkHardLink.info.alignment));
   error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLink.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_HARDLINK
@@ -8966,16 +9069,23 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
   archiveEntryInfo->hardLink.byteCompressAlgorithm  = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.compressAlgorithm);
 
   // get and check crypt algorithm
-  if (!Crypt_isValidAlgorithm(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[0]))
+  if (!Crypt_isValidAlgorithm(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm))
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
+#ifdef MULTI_CRYPT
   archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[0]);
   archiveEntryInfo->cryptAlgorithms[1] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[1]);
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[2]);
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[3]);
+#else
+  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm);
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#endif
 
   // detect block length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
@@ -9349,7 +9459,7 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
             break;
           case CHUNK_ID_HARDLINK_DATA:
             // read hard link data chunk
-            assert(Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkData.info,NULL,0) == CHUNK_FIXED_SIZE_HARDLINK_DATA);
+            assert(Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkData.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_HARDLINK_DATA,archiveEntryInfo->hardLink.chunkHardLinkData.info.alignment));
             error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                                &subChunkHeader,
                                CHUNK_FIXED_SIZE_HARDLINK_DATA
@@ -9534,6 +9644,7 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_SPECIAL,
                      CHUNK_DEFINITION_SPECIAL,
+//TODO: DEFAULT_ALIGNMENT
                      0,  // alignment
                      NULL,  // cryptInfo
                      &archiveEntryInfo->special.chunkSpecial
@@ -9570,7 +9681,7 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
   while (chunkHeader.id != CHUNK_ID_SPECIAL);
 
   // read special chunk
-  assert(Chunk_getSize(&archiveEntryInfo->special.chunkSpecial.info,NULL,0) == CHUNK_FIXED_SIZE_SPECIAL);
+  assert(Chunk_getSize(&archiveEntryInfo->special.chunkSpecial.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_SPECIAL,archiveEntryInfo->special.chunkSpecial.info.alignment));
   error = Chunk_open(&archiveEntryInfo->special.chunkSpecial.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_SPECIAL
@@ -9584,16 +9695,23 @@ fprintf(stderr,"%s, %d: archiveEntryInfo->blockLength=%d\n",__FILE__,__LINE__,ar
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->special.chunkSpecial.info,{ Chunk_close(&archiveEntryInfo->special.chunkSpecial.info); });
 
   // get and check crypt algorithm
-  if (!Crypt_isValidAlgorithm(archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[0]))
+  if (!Crypt_isValidAlgorithm(archiveEntryInfo->special.chunkSpecial.cryptAlgorithm))
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
+#ifdef MULTI_CRYPT
   archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[0]);
   archiveEntryInfo->cryptAlgorithms[1] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[1]);
   archiveEntryInfo->cryptAlgorithms[2] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[2]);
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[3]);
+#else
+  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->special.chunkSpecial.cryptAlgorithm);
+  archiveEntryInfo->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+  archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#endif
 
   // detect block length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
@@ -9931,7 +10049,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                      archiveHandle->chunkIOUserData,
                      CHUNK_ID_SIGNATURE,
                      CHUNK_DEFINITION_SIGNATURE,
-                     0,  // alignment
+                     DEFAULT_ALIGNMENT,
                      NULL,  // cryptInfo
                      &chunkSignature
                     );
@@ -11788,7 +11906,7 @@ Errors Archive_verifySignatures(StorageInfo          *storageInfo,
                      &storageHandle,
                      CHUNK_ID_SIGNATURE,
                      CHUNK_DEFINITION_SIGNATURE,
-                     0,  // alignment
+                     DEFAULT_ALIGNMENT,
                      NULL,  // cryptInfo
                      &chunkSignature
                     );

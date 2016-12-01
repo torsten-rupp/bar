@@ -122,7 +122,7 @@
 # ----------------------------------------------------------------------
 
 # salt length
-const SALT_LENGTH = 128
+const SALT_LENGTH                    = 128
 
 # encryption algorithms
 const CRYPT_ALGORITHM_NONE           = 0
@@ -239,13 +239,6 @@ const MAC_ALGORITHM_SHA2_512         = 4
 # never compress/encrypted
 CHUNK BAR "BAR1" BAR
   byte[128] salt;
-#  string   userName;
-#  string   hostName;
-#  string   jobUUID;
-#  string   scheduleUUID;
-#  uint16   archiveType;
-#  uint64   createdDateTime;
-#  string   comment;
   crc32  crc
 
 CHUNK BAR "BAR0" BAR DEPRECATED
@@ -315,25 +308,26 @@ CHUNK META_ENTRY "MENT" MetaEntry
 #
 # parent: none
 # never compress/encrypted
-CHUNK FILE "FIL1" File
-  uint16    compressAlgorithm;
-  uint16[4] cryptAlgorithms;
-  crc32  crc
+#CHUNK FILE "FIL1" File
+#  uint16    compressAlgorithm;
+#  uint16[4] cryptAlgorithms;
+#  crc32  crc
 
-CHUNK FILE "FIL0" File DEPRECATED
+#CHUNK FILE "FIL0" File DEPRECATED
+CHUNK FILE "FIL0" File
   uint16 compressAlgorithm;
   uint16 cryptAlgorithm;
   crc32  crc
 
-TRANSFORM "FIL0" "FIL1"
-{
-  NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
-  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#TRANSFORM "FIL0" "FIL1"
+#{
+#  NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
+#  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+#  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+#  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 
-  return ERROR_NONE;
-}
+#  return ERROR_NONE;
+#}
 
 # file entry
 #
@@ -388,25 +382,26 @@ CHUNK FILE_DATA "FDAT" FileData
 #
 # parent: none
 # never compress/encrypted
-CHUNK IMAGE "IMG1" Image
-  uint16    compressAlgorithm;
-  uint16[4] cryptAlgorithms;
-  crc32     crc
+#CHUNK IMAGE "IMG1" Image
+#  uint16    compressAlgorithm;
+#  uint16[4] cryptAlgorithms;
+#  crc32     crc
 
-CHUNK IMAGE "IMG0" Image DEPRECATED
+#CHUNK IMAGE "IMG0" Image DEPRECATED
+CHUNK IMAGE "IMG0" Image
   uint16 compressAlgorithm;
   uint16 cryptAlgorithm;
   crc32  crc
 
-TRANSFORM "IMG0" "IMG1"
-{
-  NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
-  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#TRANSFORM "IMG0" "IMG1"
+#{
+#  NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
+#  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+#  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+#  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 
-  return ERROR_NONE;
-}
+#  return ERROR_NONE;
+#}
 
 # image entry
 #
@@ -449,23 +444,24 @@ CHUNK IMAGE_DATA "IDAT" ImageData
 #
 # parent: none
 # never compress/encrypted
-CHUNK DIRECTORY "DIR1" Directory
-  uint16[4] cryptAlgorithms;
-  crc32     crc
+#CHUNK DIRECTORY "DIR1" Directory
+#  uint16[4] cryptAlgorithms;
+#  crc32     crc
 
-CHUNK DIRECTORY "DIR0" Directory DEPRECATED
+#CHUNK DIRECTORY "DIR0" Directory DEPRECATED
+CHUNK DIRECTORY "DIR0" Directory
   uint16 cryptAlgorithm;
   crc32  crc
 
-TRANSFORM "DIR0" "DIR1"
-{
-  NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
-  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
-
-  return ERROR_NONE;
-}
+#TRANSFORM "DIR0" "DIR1"
+#{
+#  NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
+#  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+#  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+#  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#
+#  return ERROR_NONE;
+#}
 
 # directory entry
 #
@@ -496,23 +492,24 @@ CHUNK DIRECTORY_EXTENDED_ATTRIBUTE "DEAT" DirectoryExtendedAttribute
 #
 # parent: none
 # never compress/encrypted
-CHUNK LINK "LNK1" Link
-  uint16[4] cryptAlgorithms;
-  crc32  crc
+#CHUNK LINK "LNK1" Link
+#  uint16[4] cryptAlgorithms;
+#  crc32  crc
 
-CHUNK LINK "LNK0" Link0 DEPRECATED
+#CHUNK LINK "LNK0" Link0 DEPRECATED
+CHUNK LINK "LNK0" Link
   uint16 cryptAlgorithm;
   crc32  crc
 
-TRANSFORM "LNK0" "LNK1"
-{
-  NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
-  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
-
-  return ERROR_NONE;
-}
+#TRANSFORM "LNK0" "LNK1"
+#{
+#  NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
+#  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+#  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+#  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#
+#  return ERROR_NONE;
+#}
 
 # (symbolic) link entry
 #
@@ -544,25 +541,26 @@ CHUNK LINK_EXTENDED_ATTRIBUTE "LEAT" LinkExtendedAttribute
 #
 # parent: none
 # never compress/encrypted
-CHUNK HARDLINK "HLN1" HardLink
-  uint16    compressAlgorithm;
-  uint16[4] cryptAlgorithms;
-  crc32     crc
+#CHUNK HARDLINK "HLN1" HardLink
+#  uint16    compressAlgorithm;
+#  uint16[4] cryptAlgorithms;
+#  crc32     crc
 
-CHUNK HARDLINK "HLN0" HardLink DEPRECATED
+#CHUNK HARDLINK "HLN0" HardLink DEPRECATED
+CHUNK HARDLINK "HLN0" HardLink
   uint16 compressAlgorithm;
   uint16 cryptAlgorithm;
   crc32  crc
 
-TRANSFORM "HLN0" "HLN1"
-{
-  NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
-  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
-
-  return ERROR_NONE;
-}
+#TRANSFORM "HLN0" "HLN1"
+#{
+#  NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
+#  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+#  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+#  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#
+#  return ERROR_NONE;
+#}
 
 # hard link entry
 #
@@ -625,23 +623,24 @@ CHUNK HARDLINK_DATA "HDAT" HardLinkData
 #
 # parent: none
 # never compress/encrypted
-CHUNK SPECIAL "SPE1" Special
-  uint16[4] cryptAlgorithms;
-  crc32     crc
+#CHUNK SPECIAL "SPE1" Special
+#  uint16[4] cryptAlgorithms;
+#  crc32     crc
 
-CHUNK SPECIAL "SPE0" Special DEPRECATED
+#CHUNK SPECIAL "SPE0" Special DEPRECATED
+CHUNK SPECIAL "SPE0" Special
   uint16 cryptAlgorithm;
   crc32  crc
 
-TRANSFORM "SPE0" "SPE1"
-{
-  NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
-  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
-  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
-
-  return ERROR_NONE;
-}
+#TRANSFORM "SPE0" "SPE1"
+#{
+#  NEW->cryptAlgorithms[0] = OLD->cryptAlgorithm;
+#  NEW->cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
+#  NEW->cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
+#  NEW->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
+#
+#  return ERROR_NONE;
+#}
 
 # special entry
 #
