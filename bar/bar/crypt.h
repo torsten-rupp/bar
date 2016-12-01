@@ -65,8 +65,12 @@ typedef enum
 #define DEFAULT_ASYMMETRIC_CRYPT_KEY_BITS 2048
 
 // crypt modes
-#define CRYPT_MODE_CBC (1 << 0)   // cipher block chaining
-#define CRYPT_MODE_CTS (1 << 1)   // cipher text stealing
+#define CRYPT_MODE_KDF        0          // use key derivation function to generate password
+#define CRYPT_MODE_SIMPLE_KEY (1 << 0)   // use simple function to generate password
+#define CRYPT_MODE_CBC        (1 << 1)   // cipher block chaining
+#define CRYPT_MODE_CTS        (1 << 2)   // cipher text stealing
+
+#define CRYPT_MODE_NONE 0
 
 // available hash algorithms
 typedef enum
@@ -136,10 +140,12 @@ typedef struct
 // public/private key
 typedef struct
 {
-  #ifdef HAVE_GCRYPT
-    gcry_sexp_t key;
-  #endif /* HAVE_GCRYPT */
   CryptPaddingTypes cryptPaddingType;
+  void              *data;              // data
+  uint              *dataLength;        // data length [bytes]
+  #ifdef HAVE_GCRYPT
+    gcry_sexp_t key;                    // key
+  #endif /* HAVE_GCRYPT */
 } CryptKey;
 
 // crypt hash info block
@@ -436,7 +442,7 @@ void Crypt_randomize(byte *buffer, uint length);
 * Name   : Crypt_getKeyLength
 * Purpose: get key length of crypt algorithm
 * Input  : -
-* Output : keyLength - key length (bits)
+* Output : keyLength - key length [bits]
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -516,16 +522,12 @@ void __Crypt_done(const char *__fileName__,
 * Name   : Crypt_reset
 * Purpose: reset crypt handle
 * Input  : cryptInfo - crypt info block
-*          seed      - seed value for initializing IV (use 0LL if not
-*                      needed)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_reset(CryptInfo *cryptInfo,
-                   uint64    seed
-                  );
+Errors Crypt_reset(CryptInfo *cryptInfo);
 
 /***********************************************************************\
 * Name   : Crypt_encrypt
@@ -608,7 +610,7 @@ bool Crypt_isAsymmetricSupported(void);
 * Name   : Crypt_initKey
 * Purpose: initialize public/private key
 * Input  : cryptKey         - crypt key
-*          cryptPaddingType - padding type
+*          cryptPaddingType - padding type; see CryptPaddingTypes
 * Output : -
 * Return : -
 * Notes  : -
@@ -647,8 +649,28 @@ INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey)
 #endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
 
 /***********************************************************************\
+* Name   : Crypt_deriveKey
+* Purpose: derive and generate a crypt key from a password
+* Input  : cryptKey   - crypt key
+*          keyLength  - crypt key length [bits]
+*          password   - password
+*          salt       - encryption salt (can be NULL)
+*          saltLength - encryption salt length
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_deriveKey(CryptKey   *cryptKey,
+                       uint       keyLength,
+                       Password   *password,
+                       const byte *salt,
+                       uint       saltLength
+                      );
+
+/***********************************************************************\
 * Name   : Crypt_getKeyData
-* Purpose: get public/private key data as base64-encoded string
+* Purpose: get public/private key data
 * Input  : cryptKey      - crypt key
 *          keyData       - data variable
 *          keyDataLength - data length variable
@@ -671,7 +693,7 @@ Errors Crypt_getKeyData(CryptKey       *cryptKey,
 
 /***********************************************************************\
 * Name   : Crypt_setKeyData
-* Purpose: set public/private key data from base64-encoded string
+* Purpose: set public/private key data
 * Input  : cryptKey      - crypt key
 *          keyData       - data with encrypted key
 *          keyDataLength - length of key data
@@ -699,7 +721,7 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
 *          password   - password to encrypt key (can be NULL)
 *          salt       - encryption salt (can be NULL)
 *          saltLength - encryption salt length
-* Output : string - string with encrypted key data
+* Output : string - string with encrypted key data (base64-encoded)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -715,7 +737,7 @@ Errors Crypt_getKeyString(CryptKey       *cryptKey,
 * Name   : Crypt_setKeyString
 * Purpose: set public/private key data from base64-encoded string
 * Input  : cryptKey   - crypt key
-*          string     - string with encrypted key data
+*          string     - string with encrypted key data (base64-encoded)
 *          password   - password to decrypt key (can be NULL)
 *          salt       - encryption salt (can be NULL)
 *          saltLength - encryption salt length (can be 0)
@@ -845,24 +867,6 @@ Errors Crypt_keyDecrypt(const CryptKey *cryptKey,
                         uint           *bufferLength,
                         uint           maxBufferLength
                        );
-
-/***********************************************************************\
-* Name   : Crypt_deriveKey
-* Purpose: derive and generate a encryption crypt key from a password
-* Input  : cryptKey      - crypt key
-*          password      - password
-*          salt          - encryption salt (can be NULL)
-*          saltLength    - encryption salt length
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Crypt_deriveEncryptKey(Password   *key,
-                              Password   *password,
-                              const byte *salt,
-                              uint       saltLength
-                             );
 
 /***********************************************************************\
 * Name   : Crypt_getRandomEncryptKey
