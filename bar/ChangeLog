@@ -9,10 +9,12 @@
     (see options --generate-signature-keys,
     --signature-prive-key, --signature-public-key,
     --no-signatures, --skip-verify-signatures)
-  * BARControl: use keys from .pem files
   * added meta info chunk: store user name, host name,
     job UUID, schedule UUID, type, created date/time,
     comment into archives
+  * improved encryption: added salt to crypt
+  * BARControl: read keys from .pem files, JKS is now
+    obsolete
   * added option --comment
   * added option --info
 
