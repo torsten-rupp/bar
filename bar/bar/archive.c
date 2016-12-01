@@ -40,6 +40,7 @@
 #include "archive.h"
 
 /****************** Conditional compilation switches *******************/
+#define SUPPORT_BAR0_CHUNK       // require simple key, CTS, no salt
 // NYI: multi crypt support
 #define _MULTI_CRYPT
 
@@ -516,7 +517,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     error = Crypt_init(cryptInfo,
                        cryptAlgorithms[i],
-                       CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                       CRYPT_MODE_CBC,
                        cryptPassword,
                        cryptSalt,
                        cryptSaltLength
@@ -909,7 +910,8 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
   // read BAR chunk
   error = Chunk_open(&chunkBAR.info,
                      chunkHeader,
-                     chunkHeader->size
+                     chunkHeader->size,
+                     archiveHandle
                     );
   if (error != ERROR_NONE)
   {
@@ -972,7 +974,8 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
   // read key chunk
   error = Chunk_open(&chunkInfoKey,
                      chunkHeader,
-                     chunkHeader->size
+                     chunkHeader->size,
+                     archiveHandle
                     );
   if (error != ERROR_NONE)
   {
@@ -1109,7 +1112,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   error = Crypt_init(&cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
                      archiveHandle->cryptSalt,
                      sizeof(archiveHandle->cryptSalt)
@@ -2260,7 +2263,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         */
         Compress_reset(&archiveEntryInfo->file.deltaCompressInfo);
         Compress_reset(&archiveEntryInfo->file.byteCompressInfo);
-        Crypt_reset(&archiveEntryInfo->file.cryptInfo,0);
+        Crypt_reset(&archiveEntryInfo->file.cryptInfo);
 
         // find next suitable archive part
         findNextArchivePart(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
@@ -2832,7 +2835,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         */
         Compress_reset(&archiveEntryInfo->image.deltaCompressInfo);
         Compress_reset(&archiveEntryInfo->image.byteCompressInfo);
-        Crypt_reset(&archiveEntryInfo->image.cryptInfo,0);
+        Crypt_reset(&archiveEntryInfo->image.cryptInfo);
 
         // find next suitable archive part
         findNextArchivePart(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
@@ -3445,7 +3448,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         */
         Compress_reset(&archiveEntryInfo->hardLink.deltaCompressInfo);
         Compress_reset(&archiveEntryInfo->hardLink.byteCompressInfo);
-        Crypt_reset(&archiveEntryInfo->hardLink.cryptInfo,0);
+        Crypt_reset(&archiveEntryInfo->hardLink.cryptInfo);
 
         // find next suitable archive part
         findNextArchivePart(archiveEntryInfo->archiveHandle,archiveEntryInfo->indexHandle);
@@ -3831,7 +3834,8 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   archiveHandle->getPasswordUserData     = getPasswordUserData;
   archiveHandle->logHandle               = logHandle;
 
-  Crypt_randomize(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
+  archiveHandle->cryptSimpleKeyFlag      = FALSE;
+  archiveHandle->cryptCTSFlag            = FALSE;
 
   Semaphore_init(&archiveHandle->passwordLock);
   archiveHandle->cryptType               = Crypt_isEncrypted(jobOptions->cryptAlgorithms[0]) ? jobOptions->cryptType : CRYPT_TYPE_NONE;
@@ -3867,6 +3871,9 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->file.fileName,{ String_delete(archiveHandle->file.fileName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
 
+  // get crypt salt
+  Crypt_randomize(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
+
   // init encryption key (if asymmetric encryption used)
   if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
   {
@@ -3883,8 +3890,8 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                              jobOptions->cryptPublicKey.data,
                              jobOptions->cryptPublicKey.length,
                              NULL,  // password
-                             NULL,  // salt
-                             0  // saltLength
+                             archiveHandle->cryptSalt,
+                             sizeof(archiveHandle->cryptSalt)
                             );
     if (error != ERROR_NONE)
     {
@@ -4010,6 +4017,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   archiveHandle->logHandle               = logHandle;
 
   memset(archiveHandle->cryptSalt,0,sizeof(archiveHandle->cryptSalt));
+  archiveHandle->cryptSimpleKeyFlag      = FALSE;
+  archiveHandle->cryptCTSFlag            = FALSE;
 
   Semaphore_init(&archiveHandle->passwordLock);
   archiveHandle->cryptType               = CRYPT_TYPE_NONE;
@@ -4338,8 +4347,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                                        archiveHandle->jobOptions->cryptPrivateKey.data,
                                                        archiveHandle->jobOptions->cryptPrivateKey.length,
                                                        NULL,  // password
-                                                       NULL,  // salt
-                                                       0  // saltLength
+                                                       archiveHandle->cryptSalt,
+                                                       sizeof(archiveHandle->cryptSalt)
                                                       );
         if (archiveHandle->pendingError == ERROR_NONE)
         {
@@ -4360,8 +4369,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                                          archiveHandle->jobOptions->cryptPrivateKey.data,
                                                          archiveHandle->jobOptions->cryptPrivateKey.length,
                                                          password,
-                                                         NULL,  // salt
-                                                         0  // saltLength
+                                                         archiveHandle->cryptSalt,
+                                                         sizeof(archiveHandle->cryptSalt)
                                                         );
           if (archiveHandle->pendingError == ERROR_NONE)
           {
@@ -4632,10 +4641,10 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-archiveEntryInfo->archiveHandle->cryptSalt,//                     NULL,  // salt
-sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -4648,10 +4657,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-archiveEntryInfo->archiveHandle->cryptSalt,//                     NULL,  // salt
-sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -4664,10 +4673,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-archiveEntryInfo->archiveHandle->cryptSalt,//                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -4680,10 +4689,10 @@ archiveEntryInfo->archiveHandle->cryptSalt,//                     NULL,  // salt
   error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-archiveEntryInfo->archiveHandle->cryptSalt,//                     NULL,  // salt
-sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -4696,10 +4705,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-archiveEntryInfo->archiveHandle->cryptSalt,//                     NULL,  // salt
-sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -5048,10 +5057,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -5064,10 +5073,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -5080,10 +5089,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -5096,10 +5105,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -5335,10 +5344,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -5350,10 +5359,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -5578,10 +5587,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -5593,10 +5602,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -5906,10 +5915,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -5921,10 +5930,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -5936,10 +5945,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -5951,10 +5960,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -5966,10 +5975,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -5981,10 +5990,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->hardLink.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -6267,10 +6276,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -6282,10 +6291,10 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                     0  // s
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                     CRYPT_MODE_CBC,
                      archiveHandle->cryptPassword,
-                     NULL,  // salt
-                     0  // saltLength
+                     archiveEntryInfo->archiveHandle->cryptSalt,
+                     sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
   if (error != ERROR_NONE)
   {
@@ -6490,8 +6499,8 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
                                  archiveHandle->jobOptions->cryptPrivateKey.data,
                                  archiveHandle->jobOptions->cryptPrivateKey.length,
                                  NULL,  // password
-                                 NULL,  // salt
-                                 0  // saltLength
+                                 archiveHandle->cryptSalt,
+                                 sizeof(archiveHandle->cryptSalt)
                                 );
         if (error == ERROR_NONE)
         {
@@ -6512,8 +6521,8 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
                                    archiveHandle->jobOptions->cryptPrivateKey.data,
                                    archiveHandle->jobOptions->cryptPrivateKey.length,
                                    password,
-                                   NULL,  // salt
-                                   0  // saltLength
+                                   archiveHandle->cryptSalt,
+                                   sizeof(archiveHandle->cryptSalt)
                                   );
           if (error == ERROR_NONE)
           {
@@ -6751,7 +6760,8 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   assert(Chunk_getSize(&chunkMeta.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_META,chunkMeta.info.alignment));
   error = Chunk_open(&chunkMeta.info,
                      &chunkHeader,
-                     CHUNK_FIXED_SIZE_META
+                     CHUNK_FIXED_SIZE_META,
+                     archiveHandle
                     );
   if (error != ERROR_NONE)
   {
@@ -6820,10 +6830,15 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       error = Crypt_init(&cryptInfo,
                          cryptAlgorithm,
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveHandle->cryptSalt,
+                         sizeof(archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -6870,7 +6885,8 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
             // read meta entry chunk
             error = Chunk_open(&chunkMetaEntry.info,
                                &subChunkHeader,
-                               subChunkHeader.size
+                               subChunkHeader.size,
+                               archiveHandle
                               );
             if (error != ERROR_NONE)
             {
@@ -7087,7 +7103,8 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   assert(Chunk_getSize(&archiveEntryInfo->file.chunkFile.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_FILE,archiveEntryInfo->file.chunkFile.info.alignment));
   error = Chunk_open(&archiveEntryInfo->file.chunkFile.info,
                      &chunkHeader,
-                     CHUNK_FIXED_SIZE_FILE
+                     CHUNK_FIXED_SIZE_FILE,
+                     archiveHandle
                     );
   if (error != ERROR_NONE)
   {
@@ -7211,18 +7228,23 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
 #ifndef MULTI_CRYPT
       error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-archiveEntryInfo->archiveHandle->cryptSalt,//                         NULL,  // salt
-sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
 #else
       error = cryptInit(&archiveEntryInfo->file.chunkFileEntry.cryptInfos,
                         archiveEntryInfo->cryptAlgorithms,
                         SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms),
                         password,
-archiveEntryInfo->archiveHandle->cryptSalt,//                        NULL,  // salt
-sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                        0  // saltLength
+                        archiveEntryInfo->archiveHandle->cryptSalt,
+                        sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                        );
 #endif
       if (error == ERROR_NONE)
@@ -7234,10 +7256,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                        0  /
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-archiveEntryInfo->archiveHandle->cryptSalt,//                         NULL,  // salt
-sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -7248,10 +7275,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-archiveEntryInfo->archiveHandle->cryptSalt,//                         NULL,  // salt
-sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -7262,10 +7294,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-archiveEntryInfo->archiveHandle->cryptSalt,//                         NULL,  // salt
-sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -7276,10 +7313,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-archiveEntryInfo->archiveHandle->cryptSalt,//                         NULL,  // salt
-sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -7377,7 +7419,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
             // read file entry chunk
             error = Chunk_open(&archiveEntryInfo->file.chunkFileEntry.info,
                                &subChunkHeader,
-                               subChunkHeader.size
+                               subChunkHeader.size,
+                               archiveHandle
                               );
             if (error != ERROR_NONE)
             {
@@ -7409,7 +7452,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
                 // read file extended attribute chunk
                 error = Chunk_open(&archiveEntryInfo->file.chunkFileExtendedAttribute.info,
                                    &subChunkHeader,
-                                   subChunkHeader.size
+                                   subChunkHeader.size,
+                                   archiveHandle
                                   );
                 if (error != ERROR_NONE)
                 {
@@ -7445,7 +7489,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
             // read file delta chunk
             error = Chunk_open(&archiveEntryInfo->file.chunkFileDelta.info,
                                &subChunkHeader,
-                               subChunkHeader.size
+                               subChunkHeader.size,
+                               archiveHandle
                               );
             if (error != ERROR_NONE)
             {
@@ -7477,7 +7522,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
             assert(Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_FILE_DATA,archiveEntryInfo->file.chunkFileData.info.alignment));
             error = Chunk_open(&archiveEntryInfo->file.chunkFileData.info,
                                &subChunkHeader,
-                               CHUNK_FIXED_SIZE_FILE_DATA
+                               CHUNK_FIXED_SIZE_FILE_DATA,
+                               archiveHandle
                               );
             if (error != ERROR_NONE)
             {
@@ -7722,7 +7768,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
   assert(Chunk_getSize(&archiveEntryInfo->image.chunkImage.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_IMAGE,archiveEntryInfo->image.chunkImage.info.alignment));
   error = Chunk_open(&archiveEntryInfo->image.chunkImage.info,
                      &chunkHeader,
-                     CHUNK_FIXED_SIZE_IMAGE
+                     CHUNK_FIXED_SIZE_IMAGE,
+                     archiveHandle
                     );
   if (error != ERROR_NONE)
   {
@@ -7829,10 +7876,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -7843,10 +7895,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -7857,10 +7914,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -7871,10 +7933,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -7955,7 +8022,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
             // read image entry chunk
             error = Chunk_open(&archiveEntryInfo->image.chunkImageEntry.info,
                                &subChunkHeader,
-                               subChunkHeader.size
+                               subChunkHeader.size,
+                               archiveHandle
                               );
             if (error != ERROR_NONE)
             {
@@ -7981,7 +8049,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
             // read image delta chunk
             error = Chunk_open(&archiveEntryInfo->image.chunkImageDelta.info,
                                &subChunkHeader,
-                               subChunkHeader.size
+                               subChunkHeader.size,
+                               archiveHandle
                               );
             if (error != ERROR_NONE)
             {
@@ -8013,7 +8082,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
             assert(Chunk_getSize(&archiveEntryInfo->image.chunkImageData.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_IMAGE_DATA,archiveEntryInfo->image.chunkImageData.info.alignment));
             error = Chunk_open(&archiveEntryInfo->image.chunkImageData.info,
                                &subChunkHeader,
-                               CHUNK_FIXED_SIZE_IMAGE_DATA//Chunk_getSize(&archiveEntryInfo->image.chunkImageData.info,NULL,0)
+                               CHUNK_FIXED_SIZE_IMAGE_DATA,
+                               archiveHandle
                               );
             if (error != ERROR_NONE)
             {
@@ -8234,7 +8304,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
   assert(Chunk_getSize(&archiveEntryInfo->directory.chunkDirectory.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_DIRECTORY,archiveEntryInfo->directory.chunkDirectory.info.alignment));
   error = Chunk_open(&archiveEntryInfo->directory.chunkDirectory.info,
                      &chunkHeader,
-                     CHUNK_FIXED_SIZE_DIRECTORY
+                     CHUNK_FIXED_SIZE_DIRECTORY,
+                     archiveHandle
                     );
   if (error != ERROR_NONE)
   {
@@ -8313,10 +8384,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -8327,10 +8403,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -8393,7 +8474,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
             // read directory entry chunk
             error = Chunk_open(&archiveEntryInfo->directory.chunkDirectoryEntry.info,
                                &subChunkHeader,
-                               subChunkHeader.size
+                               subChunkHeader.size,
+                               archiveHandle
                               );
             if (error != ERROR_NONE)
             {
@@ -8423,7 +8505,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
                 // read directory extended attribute chunk
                 error = Chunk_open(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,
                                    &subChunkHeader,
-                                   subChunkHeader.size
+                                   subChunkHeader.size,
+                                   archiveHandle
                                   );
                 if (error != ERROR_NONE)
                 {
@@ -8632,7 +8715,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
   assert(Chunk_getSize(&archiveEntryInfo->link.chunkLink.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_LINK,archiveEntryInfo->link.chunkLink.info.alignment));
   error = Chunk_open(&archiveEntryInfo->link.chunkLink.info,
                      &chunkHeader,
-                     CHUNK_FIXED_SIZE_LINK
+                     CHUNK_FIXED_SIZE_LINK,
+                     archiveHandle
                     );
   if (error != ERROR_NONE)
   {
@@ -8712,10 +8796,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -8726,10 +8815,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -8792,7 +8886,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
             // read link entry chunk
             error = Chunk_open(&archiveEntryInfo->link.chunkLinkEntry.info,
                                &subChunkHeader,
-                               subChunkHeader.size
+                               subChunkHeader.size,
+                               archiveHandle
                               );
             if (error != ERROR_NONE)
             {
@@ -8823,7 +8918,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
                 // read link extended attribute chunk
                 error = Chunk_open(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,
                                    &subChunkHeader,
-                                   subChunkHeader.size
+                                   subChunkHeader.size,
+                                   archiveHandle
                                   );
                 if (error != ERROR_NONE)
                 {
@@ -9051,7 +9147,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
   assert(Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLink.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_HARDLINK,archiveEntryInfo->hardLink.chunkHardLink.info.alignment));
   error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLink.info,
                      &chunkHeader,
-                     CHUNK_FIXED_SIZE_HARDLINK
+                     CHUNK_FIXED_SIZE_HARDLINK,
+                     archiveHandle
                     );
   if (error != ERROR_NONE)
   {
@@ -9158,10 +9255,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -9172,10 +9274,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -9186,10 +9293,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -9200,10 +9312,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -9214,10 +9331,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -9228,10 +9350,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -9346,7 +9473,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
             // read hard link entry chunk
             error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,
                                &subChunkHeader,
-                               subChunkHeader.size
+                               subChunkHeader.size,
+                               archiveHandle
                               );
             if (error != ERROR_NONE)
             {
@@ -9374,7 +9502,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
             // read hard link name chunk
             error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkName.info,
                                &subChunkHeader,
-                               subChunkHeader.size
+                               subChunkHeader.size,
+                               archiveHandle
                               );
             if (error != ERROR_NONE)
             {
@@ -9397,7 +9526,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
                 // read hard link extended attribute chunk
                 error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,
                                    &subChunkHeader,
-                                   subChunkHeader.size
+                                   subChunkHeader.size,
+                                   archiveHandle
                                   );
                 if (error != ERROR_NONE)
                 {
@@ -9433,7 +9563,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
             // read hard link delta chunk
             error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info,
                                &subChunkHeader,
-                               subChunkHeader.size
+                               subChunkHeader.size,
+                               archiveHandle
                               );
             if (error != ERROR_NONE)
             {
@@ -9465,7 +9596,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
             assert(Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkData.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_HARDLINK_DATA,archiveEntryInfo->hardLink.chunkHardLinkData.info.alignment));
             error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                                &subChunkHeader,
-                               CHUNK_FIXED_SIZE_HARDLINK_DATA
+                               CHUNK_FIXED_SIZE_HARDLINK_DATA,
+                               archiveHandle
                               );
             if (error != ERROR_NONE)
             {
@@ -9687,7 +9819,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
   assert(Chunk_getSize(&archiveEntryInfo->special.chunkSpecial.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_SPECIAL,archiveEntryInfo->special.chunkSpecial.info.alignment));
   error = Chunk_open(&archiveEntryInfo->special.chunkSpecial.info,
                      &chunkHeader,
-                     CHUNK_FIXED_SIZE_SPECIAL
+                     CHUNK_FIXED_SIZE_SPECIAL,
+                     archiveHandle
                     );
   if (error != ERROR_NONE)
   {
@@ -9770,10 +9903,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -9784,10 +9922,15 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
     {
       error = Crypt_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                         CRYPT_MODE_CBC
+                         #ifdef SUPPORT_BAR0_CHUNK
+                           | (archiveHandle->cryptSimpleKeyFlag ? CRYPT_MODE_SIMPLE_KEY : 0)
+                           | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
+                         #endif
+                         ,
                          password,
-                         NULL,  // salt
-                         0  // saltLength
+                         archiveEntryInfo->archiveHandle->cryptSalt,
+                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
       if (error == ERROR_NONE)
       {
@@ -9850,7 +9993,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
             // read special entry chunk
             error = Chunk_open(&archiveEntryInfo->special.chunkSpecialEntry.info,
                                &subChunkHeader,
-                               subChunkHeader.size
+                               subChunkHeader.size,
+                               archiveHandle
                               );
             if (error != ERROR_NONE)
             {
@@ -9883,7 +10027,8 @@ sizeof(archiveEntryInfo->archiveHandle->cryptSalt)//                         0  
                 // read special extended attribute chunk
                 error = Chunk_open(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,
                                    &subChunkHeader,
-                                   subChunkHeader.size
+                                   subChunkHeader.size,
+                                   archiveHandle
                                   );
                 if (error != ERROR_NONE)
                 {
@@ -10066,7 +10211,8 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
   // read signature chunk
   error = Chunk_open(&chunkSignature.info,
                      &chunkHeader,
-                     chunkHeader.size
+                     chunkHeader.size,
+                     archiveHandle
                     );
   if (error != ERROR_NONE)
   {
@@ -11971,7 +12117,8 @@ Errors Archive_verifySignatures(StorageInfo          *storageInfo,
       // read signature chunk
       error = Chunk_open(&chunkSignature.info,
                          &chunkHeader,
-                         chunkHeader.size
+                         chunkHeader.size,
+                         NULL  // transformUserData
                         );
       if (error != ERROR_NONE)
       {

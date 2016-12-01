@@ -202,6 +202,8 @@ typedef struct
   LogHandle                *logHandle;                                 // log handle
 
   byte                     cryptSalt[CRYPT_SALT_LENGTH];               // crypt salt
+  bool                     cryptSimpleKeyFlag;                         // TRUE iff crypt use simple key only (required for old style archives)
+  bool                     cryptCTSFlag;                               // TRUE iff crypt use cipher text stealing (CTS) (required for old style archives)
 
   Semaphore                passwordLock;                               // input password lock
   CryptTypes               cryptType;                                  // crypt type (symmetric/asymmetric; see CryptTypes)
@@ -220,8 +222,7 @@ typedef struct
   ArchiveIOTypes           ioType;                                     // i/o type
   union
   {
-    // local file         // delta compress info
-      CompressInfo                    byteCompressInfo;
+    // local file
     struct
     {
       String               appendFileName;
