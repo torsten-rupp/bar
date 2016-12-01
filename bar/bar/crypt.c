@@ -764,6 +764,7 @@ Errors __Crypt_init(const char      *__fileName__,
           }
           cryptInfo->blockLength = n;
 #endif
+fprintf(stderr,"%s, %d: blockLength=%d\n",__FILE__,__LINE__,cryptInfo->blockLength);
 
           // init cipher
           gcryptError = gcry_cipher_open(&cryptInfo->gcry_cipher_hd,
@@ -780,6 +781,7 @@ Errors __Crypt_init(const char      *__fileName__,
                            gpg_strerror(gcryptError)
                           );
           }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
           // set key
 #if 0
@@ -836,6 +838,8 @@ fprintf(stderr,"%s, %d: (keyDataLength+7)/8=%d gcryptErro=%d %s\n",__FILE__,__LI
           }
           Password_freeSecure(keyData);
 #else
+fprintf(stderr,"%s, %d: crypt key\n",__FILE__,__LINE__);
+debugDumpMemory(cryptKey->data,cryptKey->dataLength,0);
           gcryptError = gcry_cipher_setkey(cryptInfo->gcry_cipher_hd,
                                            cryptKey->data,
                                            cryptKey->dataLength

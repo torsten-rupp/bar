@@ -7263,6 +7263,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   }
   foundFileEntryFlag = FALSE;
   foundFileDataFlag  = FALSE;
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   do
   {
     // reset
