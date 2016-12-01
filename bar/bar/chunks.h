@@ -109,7 +109,7 @@ typedef uint32 ChunkId;
 typedef const uint ChunkDefinition;
 
 // chunk transformation info
-typedef Errors(*ChunkTransformFunction)(void *oldChunk, void *newChunk);
+typedef Errors(*ChunkTransformFunction)(void *oldChunk, void *newChunk, void *userData);
 typedef struct
 {
   struct
@@ -246,28 +246,28 @@ ulong Chunk_getSize(const ChunkInfo *chunkInfo,
 \***********************************************************************/
 
 #ifdef NDEBUG
-Errors Chunk_init(ChunkInfo     *chunkInfo,
-                  ChunkInfo     *parentChunkInfo,
-                  const ChunkIO *chunkIO,
-                  void          *chunkIOUserData,
-                  ChunkId       chunkId,
+Errors Chunk_init(ChunkInfo       *chunkInfo,
+                  ChunkInfo       *parentChunkInfo,
+                  const ChunkIO   *chunkIO,
+                  void            *chunkIOUserData,
+                  ChunkId         chunkId,
                   ChunkDefinition *definition,
-                  uint          alignment,
-                  CryptInfo     *cryptInfo,
-                  void          *data
+                  uint            alignment,
+                  CryptInfo       *cryptInfo,
+                  void            *data
                  );
 #else /* not NDEBUG */
-Errors __Chunk_init(const char    *__fileName__,
-                    ulong         __lineNb__,
-                    ChunkInfo     *chunkInfo,
-                    ChunkInfo     *parentChunkInfo,
-                    const ChunkIO *chunkIO,
-                    void          *chunkIOUserData,
-                    ChunkId       chunkId,
+Errors __Chunk_init(const char      *__fileName__,
+                    ulong           __lineNb__,
+                    ChunkInfo       *chunkInfo,
+                    ChunkInfo       *parentChunkInfo,
+                    const ChunkIO   *chunkIO,
+                    void            *chunkIOUserData,
+                    ChunkId         chunkId,
                     ChunkDefinition *definition,
-                    uint          alignment,
-                    CryptInfo     *cryptInfo,
-                    void          *data
+                    uint            alignment,
+                    CryptInfo       *cryptInfo,
+                    void            *data
                    );
 #endif /* NDEBUG */
 
@@ -422,14 +422,16 @@ Errors Chunk_seek(ChunkInfo *chunkInfo, uint64 index);
 #ifdef NDEBUG
 Errors Chunk_open(ChunkInfo         *chunkInfo,
                   const ChunkHeader *chunkHeader,
-                  ulong             dataSize
+                  ulong             dataSize,
+                  void              *transformUserData
                  );
 #else /* not NDEBUG */
 Errors __Chunk_open(const char        *__fileName__,
                     ulong             __lineNb__,
                     ChunkInfo         *chunkInfo,
                     const ChunkHeader *chunkHeader,
-                    ulong             dataSize
+                    ulong             dataSize,
+                    void              *transformUserData
                    );
 #endif /* NDEBUG */
 
