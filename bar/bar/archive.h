@@ -521,6 +521,28 @@ void Archive_clearDecryptPasswords(void);
 const Password *Archive_appendDecryptPassword(const Password *password);
 
 /***********************************************************************\
+* Name   : Archive_clearDecryptKeys
+* Purpose: clear decrypt keys (except default keys)
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Archive_clearDecryptKeys(void);
+
+/***********************************************************************\
+* Name   : Archive_appendDecryptKey
+* Purpose: create key from password and append key to decrypt key list
+* Input  : password - decrypt password to append
+* Output : -
+* Return : appended password
+* Notes  : -
+\***********************************************************************/
+
+const CryptKey *Archive_appendDecryptKey(const Password *password);
+
+/***********************************************************************\
 * Name   : Archive_waitDecryptPassword
 * Purpose: wait for new decrypt password in list
 * Input  : password - new decrypt password
