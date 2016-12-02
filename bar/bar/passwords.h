@@ -40,6 +40,8 @@ typedef struct
 {
   char *data;
   uint length;
+  void *keyData;
+  uint keyDataLength;
   #ifndef HAVE_GCRYPT
     char plain[MAX_PASSWORD_LENGTH+1];     /* needed for temporary storage
                                               of plain password if secure
@@ -267,24 +269,25 @@ char Password_getChar(const Password *password, uint index);
 * Purpose: deploy password as C-string
 * Input  : password - password
 * Output : -
-* Return : C-string
+* Return : plain password text
 * Notes  : use deploy as less and as short a possible! If no secure
-*          memory is available the password will be stored a plain text
-*          in memory.
+*          memory is available the password will be stored as plain text
+*          in standard memory which maybe read
 \***********************************************************************/
 
-const char *Password_deploy(Password *password);
+const char *Password_deploy(const Password *password);
 
 /***********************************************************************\
 * Name   : Password_undeploy
 * Purpose: undeploy password
 * Input  : password - password
+*          plain    - plain password text
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Password_undeploy(Password *password);
+void Password_undeploy(const Password *password, const char *plain);
 
 /***********************************************************************\
 * Name   : Password_equals

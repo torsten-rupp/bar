@@ -255,7 +255,7 @@ LOCAL String StorageSCP_getName(StorageSpecifier *storageSpecifier,
                                )
 {
   ConstString storageFileName;
-  const char  *plainLoginPassword;
+  const char  *plainPassword;
 
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_SCP);
@@ -281,9 +281,9 @@ LOCAL String StorageSCP_getName(StorageSpecifier *storageSpecifier,
     if (!Password_isEmpty(storageSpecifier->loginPassword))
     {
       String_appendChar(storageSpecifier->storageName,':');
-      plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
-      String_appendCString(storageSpecifier->storageName,plainLoginPassword);
-      Password_undeploy(storageSpecifier->loginPassword);
+      plainPassword = Password_deploy(storageSpecifier->loginPassword);
+      String_appendCString(storageSpecifier->storageName,plainPassword);
+      Password_undeploy(storageSpecifier->loginPassword,plainPassword);
     }
     String_appendChar(storageSpecifier->storageName,'@');
   }

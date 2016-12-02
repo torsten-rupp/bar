@@ -128,8 +128,8 @@ typedef struct
 typedef struct
 {
   ArchiveHandle       *archiveHandle;
+  Password             *configCryptPassword;              // config crypt password or NULL
   PasswordModes       passwordMode;                      // password input mode
-  const Password      *cryptPassword;                    // crypt password
   const PasswordNode  *passwordNode;                     // next password node to use
   GetPasswordFunction getPasswordFunction;               // password input callback
   void                *getPasswordUserData;
@@ -156,7 +156,7 @@ typedef struct
 typedef struct
 {
   ArchiveHandle        *archiveHandle;
-  const Password       *configCryptPassword;              // config crypt password or NULL
+  Password             *configCryptPassword;              // config crypt password or NULL
   PasswordModes        passwordMode;                      // password input mode
   const DecryptKeyNode *nextDecryptKeyNode;               // next decrypt key node to use
   GetPasswordFunction  getPasswordFunction;               // password input callback
@@ -227,7 +227,7 @@ LOCAL void freeDecryptKeyNode(DecryptKeyNode *decryptKeyNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  Crypt_done(&decryptKeyNode->cryptKey);
+  Crypt_doneKey(&decryptKeyNode->cryptKey);
   Password_delete(decryptKeyNode->password);
 }
 
@@ -498,10 +498,14 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
 
 /***********************************************************************\
 * Name   : getDecryptKey
-* Purpose: get decrypt key
-* Input  : 
+* Purpose: get decrypt key for password with appropiated key size for
+*          crypt algorithm
+* Input  : password - password
+*          cryptAlgorithm
+*          salt       - salt
+*          saltLength - salt length
 * Output : -
-* Return : 
+* Return :
 * Notes  : -
 \***********************************************************************/
 
@@ -519,6 +523,7 @@ LOCAL CryptKey *getDecryptKey(Password        *password,
   decryptKeyNode = LIST_FIND(&decryptKeyList,decryptKeyNode,Password_equals(decryptKeyNode->password,password));
   if (decryptKeyNode == NULL)
   {
+fprintf(stderr,"%s, %d: getDecryptKey\n",__FILE__,__LINE__);
     // add new decrypt key
     decryptKeyNode = LIST_NEW_NODE(DecryptKeyNode);
     if (decryptKeyNode == NULL)
@@ -528,7 +533,8 @@ LOCAL CryptKey *getDecryptKey(Password        *password,
     decryptKeyNode->cryptAlgorithm = cryptAlgorithm;
     decryptKeyNode->password       = Password_duplicate(password);
 
-    // derive key from password with salt
+    // derive decrypt key from password with salt
+    Crypt_initKey(&decryptKeyNode->cryptKey,CRYPT_PADDING_TYPE_NONE);
     error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
                             cryptAlgorithm,
                             password,
@@ -538,15 +544,18 @@ LOCAL CryptKey *getDecryptKey(Password        *password,
 //TODO: error?
     if (error != ERROR_NONE)
     {
+      Crypt_doneKey(&decryptKeyNode->cryptKey);
       Password_delete(decryptKeyNode->password);
       LIST_DELETE_NODE(decryptKeyNode);
       return NULL;
     }
+fprintf(stderr,"%s, %d: decrypt key\n",__FILE__,__LINE__);
+debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLength,0);
 
     // add to decrypt key list
     List_append(&decryptKeyList,decryptKeyNode);
   }
-  
+
   return (decryptKeyNode != NULL) ? &decryptKeyNode->cryptKey : NULL;
 }
 
@@ -554,7 +563,7 @@ LOCAL CryptKey *getDecryptKey(Password        *password,
 * Name   : getNextDecryptKey
 * Purpose: get next decrypt key
 * Input  : decryptKeyHandle - decrypt key handle
-*          
+*
 * Output : -
 * Return : decrypt key or NULL if no more decrypt keys
 * Notes  : Ordering of decrypt keys search:
@@ -571,11 +580,11 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyHandle *decryptKeyHandle,
                                         uint             saltLength
                                        )
 {
-  bool           semaphoreLock;
+  bool                 semaphoreLock;
   const DecryptKeyNode *decryptKeyNode;
-  const CryptKey *decryptKey;
-  Password       newPassword;
-  Errors         error;
+  const CryptKey       *decryptKey;
+  Password             newPassword;
+  Errors               error;
 
   assert(decryptKeyHandle != NULL);
   assert(decryptKeyHandle->archiveHandle != NULL);
@@ -737,11 +746,15 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle)
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if (Crypt_isEncrypted(archiveHandle->jobOptions->cryptAlgorithms[0]) && (archiveHandle->cryptPassword == NULL))
+    if (   Crypt_isEncrypted(archiveHandle->jobOptions->cryptAlgorithms[0])
+        && (archiveHandle->cryptPassword == NULL)
+       )
     {
+      // get crypt password
       cryptPassword = Password_new();
       if (cryptPassword == NULL)
       {
+        Semaphore_unlock(&archiveHandle->passwordLock);
         return ERROR_NO_CRYPT_PASSWORD;
       }
       error = getCryptPassword(cryptPassword,
@@ -793,7 +806,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                        cryptAlgorithms[i],
                        CRYPT_MODE_CBC,
                        crypyKey,
-                       cryptPassword,
                        cryptSalt,
                        cryptSaltLength
                       );
@@ -1389,7 +1401,6 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveHandle->cryptSalt,
                      sizeof(archiveHandle->cryptSalt)
                     );
@@ -4011,24 +4022,43 @@ const CryptKey *Archive_appendDecryptKey(const Password *password)
   decryptKeyNode = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
+fprintf(stderr,"%s, %d: Archive_appendDecryptKey xxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
 //TODO:
 //    decryptKey = getDecryptKey();
     // find crypt key
-    decryptKeyNode = decryptKeyList.head;
-    while ((decryptKeyNode != NULL) && !Password_equals(decryptKeyNode->password,password))
-    {
-      decryptKeyNode = decryptKeyNode->next;
-    }
+    decryptKeyNode = LIST_FIND(&decryptKeyList,decryptKeyNode,Password_equals(decryptKeyNode->password,password));
     if (decryptKeyNode == NULL)
     {
-      // add password
+      // add new decrypt key
       decryptKeyNode = LIST_NEW_NODE(DecryptKeyNode);
       if (decryptKeyNode == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
+//      decryptKeyNode->cryptAlgorithm = cryptAlgorithm;
       decryptKeyNode->password = Password_duplicate(password);
 
+      // derive decrypt key from password with salt
+      Crypt_initKey(&decryptKeyNode->cryptKey,CRYPT_PADDING_TYPE_NONE);
+//TODO:
+#if 0
+      error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
+                              cryptAlgorithm,
+                              password,
+                              salt,
+                              saltLength
+                             );
+//TODO: error?
+      if (error != ERROR_NONE)
+      {
+        Crypt_doneKey(&decryptKeyNode->cryptKey);
+        Password_delete(decryptKeyNode->password);
+        LIST_DELETE_NODE(decryptKeyNode);
+        return NULL;
+      }
+#endif
+
+      // add to decrypt key list
       List_append(&decryptKeyList,decryptKeyNode);
     }
 
@@ -4122,20 +4152,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   // init variables
   AutoFree_init(&autoFreeList);
 
-  // detect crypt block length
-  error = Crypt_getBlockLength(jobOptions->cryptAlgorithms[0],&archiveHandle->blockLength);
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  assert(archiveHandle->blockLength > 0);
-  if (archiveHandle->blockLength > MAX_BUFFER_SIZE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return ERROR_UNSUPPORTED_BLOCK_LENGTH;
-  }
-
   // init archive info
   archiveHandle->jobUUID                 = String_duplicate(jobUUID);
   archiveHandle->scheduleUUID            = String_duplicate(scheduleUUID);
@@ -4199,13 +4215,36 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   // get crypt salt
   Crypt_randomize(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
 
-  // init encryption key (if asymmetric encryption used)
+  // detect crypt block length
+  error = Crypt_getBlockLength(jobOptions->cryptAlgorithms[0],&archiveHandle->blockLength);
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  assert(archiveHandle->blockLength > 0);
+  if (archiveHandle->blockLength > MAX_BUFFER_SIZE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return ERROR_UNSUPPORTED_BLOCK_LENGTH;
+  }
+
+  // init crypt password
+  error = initCryptPassword(archiveHandle);
+  if (error !=  ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+
+  // init encryption key
   switch (archiveHandle->cryptType)
   {
     case CRYPT_TYPE_NONE:
+      // nothing to do
       break;
     case CRYPT_TYPE_SYMMETRIC:
-      // derive crypt key
+      // derive crypt key from password with salt
       error = Crypt_deriveKey(&archiveHandle->cryptKey,
                               jobOptions->cryptAlgorithms[0],
                               archiveHandle->cryptPassword,
@@ -4240,7 +4279,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
         return error;
       }
 
-      // create new random key (password) for encryption
+      // create new random key for encryption
       archiveHandle->cryptPassword = Password_new();
       if (archiveHandle->cryptPassword == NULL)
       {
@@ -4985,7 +5024,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -5002,7 +5040,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -5019,7 +5056,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -5036,7 +5072,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -5053,7 +5088,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -5406,7 +5440,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -5423,7 +5456,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -5440,7 +5472,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -5457,7 +5488,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -5697,7 +5727,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -5713,7 +5742,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -5942,7 +5970,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -5958,7 +5985,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -6272,7 +6298,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -6288,7 +6313,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -6304,7 +6328,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -6320,7 +6343,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -6336,7 +6358,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -6352,7 +6373,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -6639,7 +6659,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -6655,7 +6674,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
-                     archiveHandle->cryptPassword,
                      archiveEntryInfo->archiveHandle->cryptSalt,
                      sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                     );
@@ -7048,21 +7066,21 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                              String        comment
                             )
 {
-  AutoFreeList    autoFreeList1,autoFreeList2;
-  Errors          error;
-  ChunkMeta       chunkMeta;
-  ChunkHeader     chunkHeader;
-  CryptAlgorithms cryptAlgorithm;
-  uint            blockLength;
-  PasswordHandle  passwordHandle;
-  const Password  *password;
-  bool            passwordFlag;
-  CryptInfo       cryptInfo;
-  ChunkMetaEntry  chunkMetaEntry;
-  uint64          index;
-  bool            decryptedFlag;
-  ChunkHeader     subChunkHeader;
-  bool            foundMetaEntryFlag;
+  AutoFreeList     autoFreeList1,autoFreeList2;
+  Errors           error;
+  ChunkMeta        chunkMeta;
+  ChunkHeader      chunkHeader;
+  CryptAlgorithms  cryptAlgorithm;
+  uint             blockLength;
+  DecryptKeyHandle decryptKeyHandle;
+  const CryptKey   *decryptKey;
+  bool             passwordFlag;
+  CryptInfo        cryptInfo;
+  ChunkMetaEntry   chunkMetaEntry;
+  uint64           index;
+  bool             decryptedFlag;
+  ChunkHeader      subChunkHeader;
+  bool             foundMetaEntryFlag;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->jobOptions != NULL);
@@ -7160,24 +7178,27 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       assert(archiveHandle->cryptPassword != NULL);
-      password = archiveHandle->cryptPassword;
+      decryptKey = &archiveHandle->cryptKey;
     }
     else
     {
-      password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveHandle,
-                                         archiveHandle->jobOptions,
-                                         archiveHandle->jobOptions->cryptPasswordMode,
-                                         archiveHandle->getPasswordFunction,
-                                         archiveHandle->getPasswordUserData
-                                        );
+      decryptKey = getFirstDecryptKey(&decryptKeyHandle,
+                                      archiveHandle,
+                                      archiveHandle->jobOptions,
+                                      archiveHandle->jobOptions->cryptPasswordMode,
+                                      archiveHandle->getPasswordFunction,
+                                      archiveHandle->getPasswordUserData,
+                                      cryptAlgorithm,
+                                      archiveHandle->cryptSalt,
+                                      sizeof(archiveHandle->cryptSalt)
+                                     );
     }
-    passwordFlag  = (password != NULL);
+    passwordFlag  = (decryptKey != NULL);
     decryptedFlag = FALSE;
   }
   else
   {
-    password      = NULL;
+    decryptKey    = NULL;
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
@@ -7199,8 +7220,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
-                         password,
+                         decryptKey,
                          archiveHandle->cryptSalt,
                          sizeof(archiveHandle->cryptSalt)
                         );
@@ -7296,25 +7316,31 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
 
     if (error != ERROR_NONE)
     {
-      if (Crypt_isEncrypted(cryptAlgorithm) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
+      if (   Crypt_isEncrypted(cryptAlgorithm)
+          && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
+         )
       {
-        // get next password
-        password = getNextDecryptPassword(&passwordHandle);
+        // get next decrypt key
+        decryptKey = getNextDecryptKey(&decryptKeyHandle,
+                                       cryptAlgorithm,
+                                       archiveHandle->cryptSalt,
+                                       sizeof(archiveHandle->cryptSalt)
+                                      );
 
-        // reset error and try next password
-        if (password != NULL)
+        // reset error and try next decrypt key
+        decryptKey = NULL;
         {
           error = ERROR_NONE;
         }
       }
       else
       {
-        // no more passwords when no encryption or asymmetric encryption is used
-        password = NULL;
+        // no more decrypt keys when no encryption or asymmetric encryption is used
+        decryptKey = NULL;
       }
     }
   }
-  while ((error != ERROR_NONE) && (password != NULL));
+  while ((error != ERROR_NONE) && (decryptKey != NULL));
   if (error != ERROR_NONE)
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
@@ -7380,18 +7406,17 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                                 )
 #endif /* NDEBUG */
 {
-  AutoFreeList   autoFreeList1,autoFreeList2;
-  Errors         error;
-  ChunkHeader    chunkHeader;
-  uint           keyLength;
-  uint64         index;
-//TODO: indent
+  AutoFreeList     autoFreeList1,autoFreeList2;
+  Errors           error;
+  ChunkHeader      chunkHeader;
+  uint             keyLength;
+  uint64           index;
   DecryptKeyHandle decryptKeyHandle;
-  const CryptKey *decryptKey;
-  bool           passwordFlag;
-  bool           decryptedFlag;
-  ChunkHeader    subChunkHeader;
-  bool           foundFileEntryFlag,foundFileDataFlag;
+  const CryptKey   *decryptKey;
+  bool             passwordFlag;
+  bool             decryptedFlag;
+  ChunkHeader      subChunkHeader;
+  bool             foundFileEntryFlag,foundFileDataFlag;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -7560,7 +7585,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       assert(archiveHandle->cryptPassword != NULL);
-      decryptKey = archiveHandle->cryptPassword;
+      decryptKey = &archiveHandle->cryptKey;
     }
     else
     {
@@ -7568,8 +7593,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                                       archiveHandle,
                                       archiveHandle->jobOptions,
                                       archiveHandle->jobOptions->cryptPasswordMode,
-                                      archiveHandle->getPasswordFunction,
-                                      archiveHandle->getPasswordUserData,
+                                      CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       archiveEntryInfo->cryptAlgorithms[0],
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
@@ -7586,7 +7610,6 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   }
   foundFileEntryFlag = FALSE;
   foundFileDataFlag  = FALSE;
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   do
   {
     // reset
@@ -7612,7 +7635,6 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                          #endif
                          ,
                          decryptKey,
-NULL,//                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -7642,7 +7664,6 @@ NULL,//                         password,
                          #endif
                          ,
                          decryptKey,
-NULL,//                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -7662,7 +7683,6 @@ NULL,//                         password,
                          #endif
                          ,
                          decryptKey,
-NULL,//                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -7682,7 +7702,6 @@ NULL,//                         password,
                          #endif
                          ,
                          decryptKey,
-NULL,//                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -7702,7 +7721,6 @@ NULL,//                         password,
                          #endif
                          ,
                          decryptKey,
-NULL,//                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -7829,42 +7847,40 @@ NULL,//                         password,
             foundFileEntryFlag = TRUE;
             break;
           case CHUNK_ID_FILE_EXTENDED_ATTRIBUTE:
+            if (fileExtendedAttributeList != NULL)
             {
-              if (fileExtendedAttributeList != NULL)
+              // read file extended attribute chunk
+              error = Chunk_open(&archiveEntryInfo->file.chunkFileExtendedAttribute.info,
+                                 &subChunkHeader,
+                                 subChunkHeader.size,
+                                 archiveHandle
+                                );
+              if (error != ERROR_NONE)
               {
-                // read file extended attribute chunk
-                error = Chunk_open(&archiveEntryInfo->file.chunkFileExtendedAttribute.info,
-                                   &subChunkHeader,
-                                   subChunkHeader.size,
-                                   archiveHandle
-                                  );
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
-
-                // add extended attribute to list
-                File_addExtendedAttribute(fileExtendedAttributeList,
-                                          archiveEntryInfo->file.chunkFileExtendedAttribute.name,
-                                          archiveEntryInfo->file.chunkFileExtendedAttribute.value.data,
-                                          archiveEntryInfo->file.chunkFileExtendedAttribute.value.length
-                                         );
-
-                // close file extended attribute chunk
-                error = Chunk_close(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
+                break;
               }
-              else
+
+              // add extended attribute to list
+              File_addExtendedAttribute(fileExtendedAttributeList,
+                                        archiveEntryInfo->file.chunkFileExtendedAttribute.name,
+                                        archiveEntryInfo->file.chunkFileExtendedAttribute.value.data,
+                                        archiveEntryInfo->file.chunkFileExtendedAttribute.value.length
+                                       );
+
+              // close file extended attribute chunk
+              error = Chunk_close(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
+              if (error != ERROR_NONE)
               {
-                // skip file extended attribute chunk
-                error = Chunk_skipSub(&archiveEntryInfo->file.chunkFile.info,&subChunkHeader);
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
+                break;
+              }
+            }
+            else
+            {
+              // skip file extended attribute chunk
+              error = Chunk_skipSub(&archiveEntryInfo->file.chunkFile.info,&subChunkHeader);
+              if (error != ERROR_NONE)
+              {
+                break;
               }
             }
             break;
@@ -7942,13 +7958,15 @@ NULL,//                         password,
 
     if (error != ERROR_NONE)
     {
-      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
+      if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
+          && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
+         )
       {
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyHandle,
                                        archiveEntryInfo->cryptAlgorithms[0],
-                                       archiveEntryInfo->archiveHandle->cryptSalt,
-                                       sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
+                                       archiveHandle->cryptSalt,
+                                       sizeof(archiveHandle->cryptSalt)
                                       );
 
         // reset error and try next decrypt key
@@ -8069,16 +8087,16 @@ NULL,//                         password,
                                  )
 #endif /* NDEBUG */
 {
-  AutoFreeList   autoFreeList1,autoFreeList2;
-  Errors         error;
-  ChunkHeader    chunkHeader;
-  uint64         index;
-  PasswordHandle passwordHandle;
-  const Password *password;
-  bool           passwordFlag;
-  bool           decryptedFlag;
-  ChunkHeader    subChunkHeader;
-  bool           foundImageEntryFlag,foundImageDataFlag;
+  AutoFreeList     autoFreeList1,autoFreeList2;
+  Errors           error;
+  ChunkHeader      chunkHeader;
+  uint64           index;
+  DecryptKeyHandle decryptKeyHandle;
+  const CryptKey   *decryptKey;
+  bool             passwordFlag;
+  bool             decryptedFlag;
+  ChunkHeader      subChunkHeader;
+  bool             foundImageEntryFlag,foundImageDataFlag;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -8229,24 +8247,27 @@ NULL,//                         password,
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       assert(archiveHandle->cryptPassword != NULL);
-      password = archiveHandle->cryptPassword;
+      decryptKey = &archiveHandle->cryptKey;
     }
     else
     {
-      password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveHandle,
-                                         archiveHandle->jobOptions,
-                                         archiveHandle->jobOptions->cryptPasswordMode,
-                                         archiveHandle->getPasswordFunction,
-                                         archiveHandle->getPasswordUserData
-                                        );
+      decryptKey = getFirstDecryptKey(&decryptKeyHandle,
+                                      archiveHandle,
+                                      archiveHandle->jobOptions,
+                                      archiveHandle->jobOptions->cryptPasswordMode,
+                                      archiveHandle->getPasswordFunction,
+                                      archiveHandle->getPasswordUserData,
+                                      archiveEntryInfo->cryptAlgorithms[0],
+                                      archiveHandle->cryptSalt,
+                                      sizeof(archiveHandle->cryptSalt)
+                                     );
     }
-    passwordFlag  = (password != NULL);
+    passwordFlag  = (decryptKey != NULL);
     decryptedFlag = FALSE;
   }
   else
   {
-    password      = NULL;
+    decryptKey    = NULL;
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
@@ -8269,8 +8290,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
-                         password,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -8289,8 +8309,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
-                         password,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -8309,8 +8328,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
-                         password,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -8329,8 +8347,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
-                         password,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -8509,25 +8526,31 @@ NULL,//                         password,
 
     if (error != ERROR_NONE)
     {
-      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
+      if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
+          && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
+         )
       {
-        // get next password
-        password = getNextDecryptPassword(&passwordHandle);
+        // get next decrypt key
+        decryptKey = getNextDecryptKey(&decryptKeyHandle,
+                                       archiveEntryInfo->cryptAlgorithms[0],
+                                       archiveHandle->cryptSalt,
+                                       sizeof(archiveHandle->cryptSalt)
+                                      );
 
-        // reset error and try next password
-        if (password != NULL)
+        // reset error and try next decrypt key
+        if (decryptKey != NULL)
         {
           error = ERROR_NONE;
         }
       }
       else
       {
-        // no more passwords when no encryption or asymmetric encryption is used
-        password = NULL;
+        // no more decrypt keys when no encryption or asymmetric encryption is used
+        decryptKey = NULL;
       }
     }
   }
-  while ((error != ERROR_NONE) && (password != NULL));
+  while ((error != ERROR_NONE) && (decryptKey != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
@@ -8619,16 +8642,16 @@ NULL,//                         password,
                                      )
 #endif /* NDEBUG */
 {
-  AutoFreeList   autoFreeList1,autoFreeList2;
-  Errors         error;
-  ChunkHeader    chunkHeader;
-  uint64         index;
-  PasswordHandle passwordHandle;
-  const Password *password;
-  bool           passwordFlag;
-  bool           decryptedFlag;
-  bool           foundDirectoryEntryFlag;
-  ChunkHeader    subChunkHeader;
+  AutoFreeList     autoFreeList1,autoFreeList2;
+  Errors           error;
+  ChunkHeader      chunkHeader;
+  uint64           index;
+  DecryptKeyHandle decryptKeyHandle;
+  const CryptKey   *decryptKey;
+  bool             passwordFlag;
+  bool             decryptedFlag;
+  bool             foundDirectoryEntryFlag;
+  ChunkHeader      subChunkHeader;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -8743,23 +8766,26 @@ NULL,//                         password,
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       assert(archiveHandle->cryptPassword != NULL);
-      password = archiveHandle->cryptPassword;
+      decryptKey = &archiveHandle->cryptKey;
     }
     else
     {
-      password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveHandle,
-                                         archiveHandle->jobOptions,
-                                         archiveHandle->jobOptions->cryptPasswordMode,
-                                         CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData)
-                                        );
+      decryptKey = getFirstDecryptKey(&decryptKeyHandle,
+                                      archiveHandle,
+                                      archiveHandle->jobOptions,
+                                      archiveHandle->jobOptions->cryptPasswordMode,
+                                      CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
+                                      archiveEntryInfo->cryptAlgorithms[0],
+                                      archiveHandle->cryptSalt,
+                                      sizeof(archiveHandle->cryptSalt)
+                                     );
     }
-    passwordFlag  = (password != NULL);
+    passwordFlag  = (decryptKey != NULL);
     decryptedFlag = FALSE;
   }
   else
   {
-    password      = NULL;
+    decryptKey    = NULL;
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
@@ -8782,7 +8808,6 @@ NULL,//                         password,
                          #endif
                          ,
                          &archiveHandle->cryptKey,
-                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -8802,7 +8827,6 @@ NULL,//                         password,
                          #endif
                          ,
                          &archiveHandle->cryptKey,
-                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -8892,42 +8916,40 @@ NULL,//                         password,
             foundDirectoryEntryFlag = TRUE;
             break;
           case CHUNK_ID_DIRECTORY_EXTENDED_ATTRIBUTE:
+            if (fileExtendedAttributeList != NULL)
             {
-              if (fileExtendedAttributeList != NULL)
+              // read directory extended attribute chunk
+              error = Chunk_open(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,
+                                 &subChunkHeader,
+                                 subChunkHeader.size,
+                                 archiveHandle
+                                );
+              if (error != ERROR_NONE)
               {
-                // read directory extended attribute chunk
-                error = Chunk_open(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,
-                                   &subChunkHeader,
-                                   subChunkHeader.size,
-                                   archiveHandle
-                                  );
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
-
-                // add extended attribute to list
-                File_addExtendedAttribute(fileExtendedAttributeList,
-                                          archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.name,
-                                          archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.value.data,
-                                          archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.value.length
-                                         );
-
-                // close directory extended attribute chunk
-                error = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
+                break;
               }
-              else
+
+              // add extended attribute to list
+              File_addExtendedAttribute(fileExtendedAttributeList,
+                                        archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.name,
+                                        archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.value.data,
+                                        archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.value.length
+                                       );
+
+              // close directory extended attribute chunk
+              error = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
+              if (error != ERROR_NONE)
               {
-                // skip file extended attribute chunk
-                error = Chunk_skipSub(&archiveEntryInfo->directory.chunkDirectory.info,&subChunkHeader);
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
+                break;
+              }
+            }
+            else
+            {
+              // skip file extended attribute chunk
+              error = Chunk_skipSub(&archiveEntryInfo->directory.chunkDirectory.info,&subChunkHeader);
+              if (error != ERROR_NONE)
+              {
+                break;
               }
             }
             break;
@@ -8953,25 +8975,31 @@ NULL,//                         password,
 
     if (error != ERROR_NONE)
     {
-      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
+      if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
+          && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
+         )
       {
-        // get next password
-        password = getNextDecryptPassword(&passwordHandle);
+        // get next decrypt key
+        decryptKey = getNextDecryptKey(&decryptKeyHandle,
+                                       archiveEntryInfo->cryptAlgorithms[0],
+                                       archiveHandle->cryptSalt,
+                                       sizeof(archiveHandle->cryptSalt)
+                                      );
 
-        // reset error and try next password
-        if (password != NULL)
+        // reset error and try next decrypt key
+        if (decryptKey != NULL)
         {
           error = ERROR_NONE;
         }
       }
       else
       {
-        // no more passwords when no encryption or asymmetric encryption is used
-        password = NULL;
+        // no more decrypt keys when no encryption or asymmetric encryption is used
+        decryptKey = NULL;
       }
     }
   }
-  while ((error != ERROR_NONE) && (password != NULL));
+  while ((error != ERROR_NONE) && (decryptKey != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
@@ -9031,16 +9059,16 @@ NULL,//                         password,
                                 )
 #endif /* NDEBUG */
 {
-  AutoFreeList   autoFreeList1,autoFreeList2;
-  Errors         error;
-  ChunkHeader    chunkHeader;
-  uint64         index;
-  PasswordHandle passwordHandle;
-  const Password *password;
-  bool           passwordFlag;
-  bool           decryptedFlag;
-  bool           foundLinkEntryFlag;
-  ChunkHeader    subChunkHeader;
+  AutoFreeList     autoFreeList1,autoFreeList2;
+  Errors           error;
+  ChunkHeader      chunkHeader;
+  uint64           index;
+  DecryptKeyHandle decryptKeyHandle;
+  const CryptKey   *decryptKey;
+  bool             passwordFlag;
+  bool             decryptedFlag;
+  bool             foundLinkEntryFlag;
+  ChunkHeader      subChunkHeader;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -9156,24 +9184,26 @@ NULL,//                         password,
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       assert(archiveHandle->cryptPassword != NULL);
-      password = archiveHandle->cryptPassword;
+      decryptKey = &archiveHandle->cryptKey;
     }
     else
     {
-      password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveHandle,
-                                         archiveHandle->jobOptions,
-                                         archiveHandle->jobOptions->cryptPasswordMode,
-                                         archiveHandle->getPasswordFunction,
-                                         archiveHandle->getPasswordUserData
-                                        );
+      decryptKey = getFirstDecryptKey(&decryptKeyHandle,
+                                      archiveHandle,
+                                      archiveHandle->jobOptions,
+                                      archiveHandle->jobOptions->cryptPasswordMode,
+                                      CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
+                                      archiveEntryInfo->cryptAlgorithms[0],
+                                      archiveHandle->cryptSalt,
+                                      sizeof(archiveHandle->cryptSalt)
+                                     );
     }
-    passwordFlag  = (password != NULL);
+    passwordFlag  = (decryptKey != NULL);
     decryptedFlag = FALSE;
   }
   else
   {
-    password      = NULL;
+    decryptKey    = NULL;
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
@@ -9196,7 +9226,6 @@ NULL,//                         password,
                          #endif
                          ,
                          &archiveHandle->cryptKey,
-                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9216,7 +9245,6 @@ NULL,//                         password,
                          #endif
                          ,
                          &archiveHandle->cryptKey,
-                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9307,42 +9335,40 @@ NULL,//                         password,
             foundLinkEntryFlag = TRUE;
             break;
           case CHUNK_ID_LINK_EXTENDED_ATTRIBUTE:
+            if (fileExtendedAttributeList != NULL)
             {
-              if (fileExtendedAttributeList != NULL)
+              // read link extended attribute chunk
+              error = Chunk_open(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,
+                                 &subChunkHeader,
+                                 subChunkHeader.size,
+                                 archiveHandle
+                                );
+              if (error != ERROR_NONE)
               {
-                // read link extended attribute chunk
-                error = Chunk_open(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,
-                                   &subChunkHeader,
-                                   subChunkHeader.size,
-                                   archiveHandle
-                                  );
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
-
-                // add extended attribute to list
-                File_addExtendedAttribute(fileExtendedAttributeList,
-                                          archiveEntryInfo->link.chunkLinkExtendedAttribute.name,
-                                          archiveEntryInfo->link.chunkLinkExtendedAttribute.value.data,
-                                          archiveEntryInfo->link.chunkLinkExtendedAttribute.value.length
-                                         );
-
-                // close link extended attribute chunk
-                error = Chunk_close(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
+                break;
               }
-              else
+
+              // add extended attribute to list
+              File_addExtendedAttribute(fileExtendedAttributeList,
+                                        archiveEntryInfo->link.chunkLinkExtendedAttribute.name,
+                                        archiveEntryInfo->link.chunkLinkExtendedAttribute.value.data,
+                                        archiveEntryInfo->link.chunkLinkExtendedAttribute.value.length
+                                       );
+
+              // close link extended attribute chunk
+              error = Chunk_close(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
+              if (error != ERROR_NONE)
               {
-                // skip file extended attribute chunk
-                error = Chunk_skipSub(&archiveEntryInfo->link.chunkLink.info,&subChunkHeader);
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
+                break;
+              }
+            }
+            else
+            {
+              // skip file extended attribute chunk
+              error = Chunk_skipSub(&archiveEntryInfo->link.chunkLink.info,&subChunkHeader);
+              if (error != ERROR_NONE)
+              {
+                break;
               }
             }
             break;
@@ -9368,25 +9394,31 @@ NULL,//                         password,
 
     if (error != ERROR_NONE)
     {
-      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
+      if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
+          && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
+         )
       {
-        // get next password
-        password = getNextDecryptPassword(&passwordHandle);
+        // get next decrypt key
+        decryptKey = getNextDecryptKey(&decryptKeyHandle,
+                                       archiveEntryInfo->cryptAlgorithms[0],
+                                       archiveHandle->cryptSalt,
+                                       sizeof(archiveHandle->cryptSalt)
+                                      );
 
-        // reset error and try next password
-        if (password != NULL)
+        // reset error and try next decrypt key
+        if (decryptKey != NULL)
         {
           error = ERROR_NONE;
         }
       }
       else
       {
-        // no more passwords when no encryption or asymmetric encryption is used
-        password = NULL;
+        // no more decrypt keys when no encryption or asymmetric encryption is used
+        decryptKey = NULL;
       }
     }
   }
-  while ((error != ERROR_NONE) && (password != NULL));
+  while ((error != ERROR_NONE) && (decryptKey != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
@@ -9456,16 +9488,16 @@ NULL,//                         password,
                                     )
 #endif /* NDEBUG */
 {
-  AutoFreeList   autoFreeList1,autoFreeList2;
-  Errors         error;
-  ChunkHeader    chunkHeader;
-  uint64         index;
-  PasswordHandle passwordHandle;
-  const Password *password;
-  bool           passwordFlag;
-  bool           decryptedFlag;
-  ChunkHeader    subChunkHeader;
-  bool           foundHardLinkEntryFlag,foundHardLinkDataFlag;
+  AutoFreeList     autoFreeList1,autoFreeList2;
+  Errors           error;
+  ChunkHeader      chunkHeader;
+  uint64           index;
+  DecryptKeyHandle decryptKeyHandle;
+  const CryptKey   *decryptKey;
+  bool             passwordFlag;
+  bool             decryptedFlag;
+  ChunkHeader      subChunkHeader;
+  bool             foundHardLinkEntryFlag,foundHardLinkDataFlag;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -9616,24 +9648,26 @@ NULL,//                         password,
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       assert(archiveHandle->cryptPassword != NULL);
-      password = archiveHandle->cryptPassword;
+      decryptKey = &archiveHandle->cryptKey;
     }
     else
     {
-      password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveHandle,
-                                         archiveHandle->jobOptions,
-                                         archiveHandle->jobOptions->cryptPasswordMode,
-                                         archiveHandle->getPasswordFunction,
-                                         archiveHandle->getPasswordUserData
-                                        );
+      decryptKey = getFirstDecryptKey(&decryptKeyHandle,
+                                      archiveHandle,
+                                      archiveHandle->jobOptions,
+                                      archiveHandle->jobOptions->cryptPasswordMode,
+                                      CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
+                                      archiveEntryInfo->cryptAlgorithms[0],
+                                      archiveHandle->cryptSalt,
+                                      sizeof(archiveHandle->cryptSalt)
+                                     );
     }
-    passwordFlag  = (password != NULL);
+    passwordFlag  = (decryptKey != NULL);
     decryptedFlag = FALSE;
   }
   else
   {
-    password      = NULL;
+    decryptKey    = NULL;
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
@@ -9657,7 +9691,6 @@ NULL,//                         password,
                          #endif
                          ,
                          &archiveHandle->cryptKey,
-                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9677,7 +9710,6 @@ NULL,//                         password,
                          #endif
                          ,
                          &archiveHandle->cryptKey,
-                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9697,7 +9729,6 @@ NULL,//                         password,
                          #endif
                          ,
                          &archiveHandle->cryptKey,
-                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9717,7 +9748,6 @@ NULL,//                         password,
                          #endif
                          ,
                          &archiveHandle->cryptKey,
-                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9737,7 +9767,6 @@ NULL,//                         password,
                          #endif
                          ,
                          &archiveHandle->cryptKey,
-                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9757,7 +9786,6 @@ NULL,//                         password,
                          #endif
                          ,
                          &archiveHandle->cryptKey,
-                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9921,42 +9949,40 @@ NULL,//                         password,
             }
             break;
           case CHUNK_ID_HARDLINK_EXTENDED_ATTRIBUTE:
+            if (fileExtendedAttributeList != NULL)
             {
-              if (fileExtendedAttributeList != NULL)
+              // read hard link extended attribute chunk
+              error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,
+                                 &subChunkHeader,
+                                 subChunkHeader.size,
+                                 archiveHandle
+                                );
+              if (error != ERROR_NONE)
               {
-                // read hard link extended attribute chunk
-                error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,
-                                   &subChunkHeader,
-                                   subChunkHeader.size,
-                                   archiveHandle
-                                  );
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
-
-                // add extended attribute to list
-                File_addExtendedAttribute(fileExtendedAttributeList,
-                                          archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.name,
-                                          archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.value.data,
-                                          archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.value.length
-                                         );
-
-                // close hard link extended attribute name chunk
-                error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
+                break;
               }
-              else
+
+              // add extended attribute to list
+              File_addExtendedAttribute(fileExtendedAttributeList,
+                                        archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.name,
+                                        archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.value.data,
+                                        archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.value.length
+                                       );
+
+              // close hard link extended attribute name chunk
+              error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
+              if (error != ERROR_NONE)
               {
-                // skip file extended attribute chunk
-                error = Chunk_skipSub(&archiveEntryInfo->hardLink.chunkHardLink.info,&subChunkHeader);
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
+                break;
+              }
+            }
+            else
+            {
+              // skip file extended attribute chunk
+              error = Chunk_skipSub(&archiveEntryInfo->hardLink.chunkHardLink.info,&subChunkHeader);
+              if (error != ERROR_NONE)
+              {
+                break;
               }
             }
             break;
@@ -10034,25 +10060,31 @@ NULL,//                         password,
 
     if (error != ERROR_NONE)
     {
-      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
+      if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
+          && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
+         )
       {
-        // get next password
-        password = getNextDecryptPassword(&passwordHandle);
+        // get next decrypt key
+        decryptKey = getNextDecryptKey(&decryptKeyHandle,
+                                       archiveEntryInfo->cryptAlgorithms[0],
+                                       archiveHandle->cryptSalt,
+                                       sizeof(archiveHandle->cryptSalt)
+                                      );
 
-        // reset error and try next password
-        if (password != NULL)
+        // reset error and try next decrypt key
+        if (decryptKey != NULL)
         {
           error = ERROR_NONE;
         }
       }
       else
       {
-        // no more passwords when no encryption or asymmetric encryption is used
-        password = NULL;
+        // no more decrypt keys when no encryption or asymmetric encryption is used
+        decryptKey = NULL;
       }
     }
   }
-  while ((error != ERROR_NONE) && (password != NULL));
+  while ((error != ERROR_NONE) && (decryptKey != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
@@ -10143,16 +10175,16 @@ NULL,//                         password,
                                    )
 #endif /* NDEBUG */
 {
-  AutoFreeList   autoFreeList1,autoFreeList2;
-  Errors         error;
-  ChunkHeader    chunkHeader;
-  uint64         index;
-  PasswordHandle passwordHandle;
-  const Password *password;
-  bool           passwordFlag;
-  bool           decryptedFlag;
-  bool           foundSpecialEntryFlag;
-  ChunkHeader    subChunkHeader;
+  AutoFreeList     autoFreeList1,autoFreeList2;
+  Errors           error;
+  ChunkHeader      chunkHeader;
+  uint64           index;
+  DecryptKeyHandle decryptKeyHandle;
+  const CryptKey   *decryptKey;
+  bool             passwordFlag;
+  bool             decryptedFlag;
+  bool             foundSpecialEntryFlag;
+  ChunkHeader      subChunkHeader;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -10268,24 +10300,26 @@ NULL,//                         password,
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       assert(archiveHandle->cryptPassword != NULL);
-      password = archiveHandle->cryptPassword;
+      decryptKey = &archiveHandle->cryptKey;
     }
     else
     {
-      password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveHandle,
-                                         archiveHandle->jobOptions,
-                                         archiveHandle->jobOptions->cryptPasswordMode,
-                                         archiveHandle->getPasswordFunction,
-                                         archiveHandle->getPasswordUserData
-                                        );
+      decryptKey = getFirstDecryptKey(&decryptKeyHandle,
+                                      archiveHandle,
+                                      archiveHandle->jobOptions,
+                                      archiveHandle->jobOptions->cryptPasswordMode,
+                                      CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
+                                      archiveEntryInfo->cryptAlgorithms[0],
+                                      archiveHandle->cryptSalt,
+                                      sizeof(archiveHandle->cryptSalt)
+                                     );
     }
-    passwordFlag  = (password != NULL);
+    passwordFlag  = (decryptKey != NULL);
     decryptedFlag = FALSE;
   }
   else
   {
-    password      = NULL;
+    decryptKey    = NULL;
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
@@ -10311,7 +10345,6 @@ NULL,//                         password,
                          #endif
                          ,
                          &archiveHandle->cryptKey,
-                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -10331,7 +10364,6 @@ NULL,//                         password,
                          #endif
                          ,
                          &archiveHandle->cryptKey,
-                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -10424,42 +10456,40 @@ NULL,//                         password,
             foundSpecialEntryFlag = TRUE;
             break;
           case CHUNK_ID_SPECIAL_EXTENDED_ATTRIBUTE:
+            if (fileExtendedAttributeList != NULL)
             {
-              if (fileExtendedAttributeList != NULL)
+              // read special extended attribute chunk
+              error = Chunk_open(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,
+                                 &subChunkHeader,
+                                 subChunkHeader.size,
+                                 archiveHandle
+                                );
+              if (error != ERROR_NONE)
               {
-                // read special extended attribute chunk
-                error = Chunk_open(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,
-                                   &subChunkHeader,
-                                   subChunkHeader.size,
-                                   archiveHandle
-                                  );
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
-
-                // add extended attribute to list
-                File_addExtendedAttribute(fileExtendedAttributeList,
-                                          archiveEntryInfo->special.chunkSpecialExtendedAttribute.name,
-                                          archiveEntryInfo->special.chunkSpecialExtendedAttribute.value.data,
-                                          archiveEntryInfo->special.chunkSpecialExtendedAttribute.value.length
-                                         );
-
-                // close special extended attribute chunk
-                error = Chunk_close(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
+                break;
               }
-              else
+
+              // add extended attribute to list
+              File_addExtendedAttribute(fileExtendedAttributeList,
+                                        archiveEntryInfo->special.chunkSpecialExtendedAttribute.name,
+                                        archiveEntryInfo->special.chunkSpecialExtendedAttribute.value.data,
+                                        archiveEntryInfo->special.chunkSpecialExtendedAttribute.value.length
+                                       );
+
+              // close special extended attribute chunk
+              error = Chunk_close(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
+              if (error != ERROR_NONE)
               {
-                // skip file extended attribute chunk
-                error = Chunk_skipSub(&archiveEntryInfo->special.chunkSpecial.info,&subChunkHeader);
-                if (error != ERROR_NONE)
-                {
-                  break;
-                }
+                break;
+              }
+            }
+            else
+            {
+              // skip file extended attribute chunk
+              error = Chunk_skipSub(&archiveEntryInfo->special.chunkSpecial.info,&subChunkHeader);
+              if (error != ERROR_NONE)
+              {
+                break;
               }
             }
             break;
@@ -10485,25 +10515,31 @@ NULL,//                         password,
 
     if (error != ERROR_NONE)
     {
-      if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
+      if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
+          && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
+         )
       {
-        // get next password
-        password = getNextDecryptPassword(&passwordHandle);
+        // get next decrypt key
+        decryptKey = getNextDecryptKey(&decryptKeyHandle,
+                                       archiveEntryInfo->cryptAlgorithms[0],
+                                       archiveHandle->cryptSalt,
+                                       sizeof(archiveHandle->cryptSalt)
+                                      );
 
-        // reset error and try next password
-        if (password != NULL)
+        // reset error and try next decrypt key
+        if (decryptKey != NULL)
         {
           error = ERROR_NONE;
         }
       }
       else
       {
-        // no more passwords when no encryption or asymmetric encryption is used
-        password = NULL;
+        // no more decrypt keys when no encryption or asymmetric encryption is used
+        decryptKey = NULL;
       }
     }
   }
-  while ((error != ERROR_NONE) && (password != NULL));
+  while ((error != ERROR_NONE) && (decryptKey != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {

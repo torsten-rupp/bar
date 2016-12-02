@@ -191,7 +191,7 @@ LOCAL bool initWebDAVLogin(ConstString         hostName,
 LOCAL CURLcode initWebDAVHandle(CURL *curlHandle, ConstString url, ConstString loginName, Password *loginPassword, long timeout)
 {
   CURLcode    curlCode;
-  const char *plainLoginPassword;
+  const char *plainPassword;
 
   // reset
   curl_easy_reset(curlHandle);
@@ -235,9 +235,9 @@ LOCAL CURLcode initWebDAVHandle(CURL *curlHandle, ConstString url, ConstString l
   }
   if (curlCode == CURLE_OK)
   {
-    plainLoginPassword = Password_deploy(loginPassword);
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-    Password_undeploy(loginPassword);
+    plainPassword = Password_deploy(loginPassword);
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainPassword);
+    Password_undeploy(loginPassword,plainPassword);
   }
 
   // set nop-handlers
@@ -547,7 +547,7 @@ LOCAL String StorageWebDAV_getName(StorageSpecifier *storageSpecifier,
                                   )
 {
   ConstString storageFileName;
-  const char  *plainLoginPassword;
+  const char  *plainPassword;
 
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
@@ -573,9 +573,9 @@ LOCAL String StorageWebDAV_getName(StorageSpecifier *storageSpecifier,
     if (!Password_isEmpty(storageSpecifier->loginPassword))
     {
       String_appendChar(storageSpecifier->storageName,':');
-      plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
-      String_appendCString(storageSpecifier->storageName,plainLoginPassword);
-      Password_undeploy(storageSpecifier->loginPassword);
+      plainPassword = Password_deploy(storageSpecifier->loginPassword);
+      String_appendCString(storageSpecifier->storageName,plainPassword);
+      Password_undeploy(storageSpecifier->loginPassword,plainPassword);
     }
     String_appendChar(storageSpecifier->storageName,'@');
   }
@@ -2135,7 +2135,7 @@ LOCAL Errors StorageWebDAV_getFileInfo(StorageInfo *storageInfo,
     Server            server;
     CURL              *curlHandle;
     String            baseURL;
-    const char        *plainLoginPassword;
+    const char        *plainPassword;
     CURLcode          curlCode;
     String            pathName,baseName;
     String            url;

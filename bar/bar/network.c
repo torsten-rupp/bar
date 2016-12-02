@@ -771,13 +771,13 @@ Errors Network_connect(SocketHandle *socketHandle,
           {
             error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s",ssh2ErrorText);
           }
-          Password_undeploy(password);
+          Password_undeploy(password,plainPassword);
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
           close(socketHandle->handle);
           return error;
         }
-        Password_undeploy(password);
+        Password_undeploy(password,plainPassword);
 #else
         // authorize interactive
         if (libssh2_userauth_keyboard_interactive(socketHandle->ssh2.session,

@@ -6463,7 +6463,7 @@ void configValueFormatDonePassword(void **formatUserData, void *userData)
 bool configValueFormatPassword(void **formatUserData, void *userData, String line)
 {
   Password   *password;
-  const char *s;
+  const char *plain;
 
   assert(formatUserData != NULL);
   assert(line != NULL);
@@ -6473,9 +6473,9 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
   password = (Password*)(*formatUserData);
   if (password != NULL)
   {
-    s = Password_deploy(password);
-    String_format(line,"%'s",s);
-    Password_undeploy(password);
+    plain = Password_deploy(password);
+    String_format(line,"%'s",plain);
+    Password_undeploy(password,plain);
 
     (*formatUserData) = NULL;
 

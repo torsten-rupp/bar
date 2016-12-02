@@ -380,7 +380,8 @@ char Password_getChar(const Password *password, uint index)
     #ifdef HAVE_GCRYPT
       return password->data[index];
     #else /* not HAVE_GCRYPT */
-      return password->data[index]^obfuscator[index];
+      return password->data[index]^obfuscator[inde      memoryHeader = gcry_malloc_secure(sizeof(MemoryHeader)+size);
+x];
     #endif /* HAVE_GCRYPT */
   }
   else
@@ -443,11 +444,12 @@ double Password_getQualityLevel(const Password *password)
   #undef CHECK
 }
 
-const char *Password_deploy(Password *password)
+const char *Password_deploy(const Password *password)
 {
   #ifdef HAVE_GCRYPT
   #else /* not HAVE_GCRYPT */
-    uint z;
+    char *plain;
+    uint i;
   #endif /* HAVE_GCRYPT */
 
   if (password != NULL)
@@ -457,12 +459,17 @@ const char *Password_deploy(Password *password)
     #ifdef HAVE_GCRYPT
       return password->data;
     #else /* not HAVE_GCRYPT */
-      for (z = 0; z < password->length; z++)
+      plain = Password_allocSecure(password->length+1);
+      if (plain == NULL)
       {
-        password->plain[z] = password->data[z]^obfuscator[z];
+        return NULL;
       }
-      password->plain[password->length] = '\0';
-      return password->plain;
+      for (i = 0; i < password->length; i++)
+      {
+        plain[i] = password->data[i]^obfuscator[z];
+      }
+      plain[password->length] = '\0';
+      return plain;
     #endif /* HAVE_GCRYPT */
   }
   else
@@ -471,14 +478,16 @@ const char *Password_deploy(Password *password)
   }
 }
 
-void Password_undeploy(Password *password)
+void Password_undeploy(const Password *password, const char *plain)
 {
   if (password != NULL)
   {
     #ifdef HAVE_GCRYPT
       UNUSED_VARIABLE(password);
+      UNUSED_VARIABLE(plain);
     #else /* not HAVE_GCRYPT */
-      memset(password->plain,0,MAX_PASSWORD_LENGTH);
+      memset(plain,0,MAX_PASSWORD_LENGTH);
+      Password_freeSecure(plain);
     #endif /* HAVE_GCRYPT */
   }
 }

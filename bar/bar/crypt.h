@@ -472,7 +472,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 * Input  : cryptInfo      - crypt info block
 *          cryptAlgorithm - crypt algorithm to use
 *          cryptMode      - crypt mode
-*          password       - crypt password
+*          cryptKey       - crypt key
 *          salt           - encryption salt (can be NULL)
 *          saltLength     - encryption salt length
 * Output : -
@@ -484,8 +484,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 Errors Crypt_init(CryptInfo       *cryptInfo,
                   CryptAlgorithms cryptAlgorithm,
                   uint            cryptMode,
-                  CryptKey        *cryptKey,
-                  const Password  *password,
+                  const CryptKey  *cryptKey,
                   const byte      *salt,
                   uint            saltLength
                  );
@@ -495,8 +494,7 @@ Errors __Crypt_init(const char      *__fileName__,
                     CryptInfo       *cryptInfo,
                     CryptAlgorithms cryptAlgorithm,
                     uint            cryptMode,
-                    CryptKey        *cryptKey,
-                    const Password  *password,
+                    const CryptKey  *cryptKey,
                     const byte      *salt,
                     uint            saltLength
                    );

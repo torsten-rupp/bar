@@ -329,7 +329,7 @@ LOCAL Errors Remote_setJobOptionPassword(const RemoteHost *remoteHost, ConstStri
 
   plainPassword = Password_deploy(password);
   error = Remote_executeCommand(remoteHost,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,plainPassword);
-  Password_undeploy(password);
+  Password_undeploy(password,plainPassword);
 
   return error;
 }

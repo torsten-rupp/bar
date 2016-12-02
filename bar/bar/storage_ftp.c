@@ -179,7 +179,7 @@ LOCAL bool initFTPLogin(ConstString         hostName,
 LOCAL CURLcode initFTPHandle(CURL *curlHandle, ConstString url, ConstString loginName, Password *loginPassword, long timeout)
 {
   CURLcode    curlCode;
-  const char *plainLoginPassword;
+  const char *plainPassword;
 
   // reset
   curl_easy_reset(curlHandle);
@@ -227,9 +227,9 @@ LOCAL CURLcode initFTPHandle(CURL *curlHandle, ConstString url, ConstString logi
   }
   if (curlCode == CURLE_OK)
   {
-    plainLoginPassword = Password_deploy(loginPassword);
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
-    Password_undeploy(loginPassword);
+    plainPassword = Password_deploy(loginPassword);
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainPassword);
+    Password_undeploy(loginPassword,plainPassword);
   }
 
   // set nop-handlers
@@ -279,7 +279,7 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
     CURLcode   curlCode;
   #elif defined(HAVE_FTP)
     netbuf     *ftpControl;
-    const char *plainLoginPassword;
+    const char *plainPassword;
   #endif
 
   #if   defined(HAVE_CURL)
@@ -332,18 +332,18 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
     }
 
     // login
-    plainLoginPassword = Password_deploy(loginPassword);
+    plainPassword = Password_deploy(loginPassword);
     if (FtpLogin(String_cString(loginName),
-                 plainLoginPassword,
+                 plainPassword,
                  ftpControl
                 ) != 1
        )
     {
-      Password_undeploy(loginPassword);
+      Password_undeploy(loginPassword,plainPassword);
       FtpClose(ftpControl);
       return ERROR_FTP_AUTHENTICATION;
     }
-    Password_undeploy(loginPassword);
+    Password_undeploy(loginPassword,plainPassword);
     FtpQuit(ftpControl);
   #endif
 
@@ -975,7 +975,7 @@ LOCAL void StorageFTP_getName(StorageSpecifier *storageSpecifier,
                              )
 {
   ConstString storageFileName;
-  const char  *plainLoginPassword;
+  const char  *plainPassword;
 
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FTP);
@@ -1001,9 +1001,9 @@ LOCAL void StorageFTP_getName(StorageSpecifier *storageSpecifier,
     if (!Password_isEmpty(storageSpecifier->loginPassword))
     {
       String_appendChar(storageSpecifier->storageName,':');
-      plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
-      String_appendCString(storageSpecifier->storageName,plainLoginPassword);
-      Password_undeploy(storageSpecifier->loginPassword);
+      plainPassword = Password_deploy(storageSpecifier->loginPassword);
+      String_appendCString(storageSpecifier->storageName,plainPassword);
+      Password_undeploy(storageSpecifier->loginPassword,plainPassword);
     }
     String_appendChar(storageSpecifier->storageName,'@');
   }
@@ -1493,7 +1493,7 @@ LOCAL bool StorageFTP_exists(StorageInfo *storageInfo, ConstString archiveName)
     ConstString     token;
   #elif defined(HAVE_FTP)
     netbuf     *control;
-    const char *plainLoginPassword;
+    const char *plainPassword;
     String     tmpFileName;
     FileHandle fileHandle;
     bool       foundFlag;
@@ -1577,18 +1577,18 @@ LOCAL bool StorageFTP_exists(StorageInfo *storageInfo, ConstString archiveName)
     }
 
     // FTP login
-    plainLoginPassword = Password_deploy(storageInfo->storageSpecifier.loginPassword);
+    plainPassword = Password_deploy(storageInfo->storageSpecifier.loginPassword);
     if (FtpLogin(String_cString(storageInfo->storageSpecifier.loginName),
-                 plainLoginPassword,
+                 plainPassword,
                  control
                 ) != 1
        )
     {
-      Password_undeploy(storageInfo->storageSpecifier.loginPassword);
+      Password_undeploy(storageInfo->storageSpecifier.loginPassword,plainPassword);
       FtpClose(control);
       return ERROR_FTP_AUTHENTICATION;
     }
-    Password_undeploy(storageInfo->storageSpecifier.loginPassword);
+    Password_undeploy(storageInfo->storageSpecifier.loginPassword,plainPassword);
 
     // check if file exists: first try non-passive, then passive mode
     tmpFileName = File_newFileName();
@@ -1957,7 +1957,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     double          fileSize;
     int             runningHandles;
   #elif defined(HAVE_FTP)
-    const char *plainLoginPassword;
+    const char *plain;
     String     tmpFileName;
     FileHandle fileHandle;
     bool       foundFlag;
@@ -2160,19 +2160,19 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     }
 
     // FTP login
-    plainLoginPassword = Password_deploy(storageInfo->storageSpecifier.loginPassword);
+    plain = Password_deploy(storageInfo->storageSpecifier.loginPassword);
     if (FtpLogin(String_cString(storageInfo->storageSpecifier.loginName),
-                 plainLoginPassword,
+                 plain,
                  storageHandle->ftp.control
                 ) != 1
        )
     {
-      Password_undeploy(storageInfo->storageSpecifier.loginPassword);
+      Password_undeploy(storageInfo->storageSpecifier.loginPassword,plain);
       FtpClose(storageHandle->ftp.control);
       free(storageHandle->ftp.readAheadBuffer.data);
       return ERROR_FTP_AUTHENTICATION;
     }
-    Password_undeploy(storageInfo->storageSpecifier.loginPassword);
+    Password_undeploy(storageInfo->storageSpecifier.loginPassword,plain);
 
     // check if file exists: first try non-passive, then passive mode
     tmpFileName = File_newFileName();
@@ -3255,7 +3255,7 @@ LOCAL Errors StorageFTP_getFileInfo(StorageInfo *storageInfo,
     String            pathName,baseName;
     String            url;
     CURLcode          curlCode;
-    const char        *plainLoginPassword;
+    const char        *plain;
     StringTokenizer   nameTokenizer;
     ConstString       token;
     String            ftpCommand;
@@ -3385,7 +3385,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     Errors       error;
     AutoFreeList autoFreeList;
     FTPServer    ftpServer;
-    const char   *plainLoginPassword;
+    const char   *plain;
     netbuf       *control;
   #else /* not HAVE_CURL || HAVE_FTP */
   #endif /* HAVE_CURL || HAVE_FTP */
@@ -3679,19 +3679,19 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     }
 
     // FTP login
-    plainLoginPassword = Password_deploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
+    plainPassword = Password_deploy(storageDirectoryListHandle->storageSpecifier.loginPassword);
     if (FtpLogin(String_cString(storageDirectoryListHandle->storageSpecifier.loginName),
-                 plainLoginPassword,
+                 plainPassword,
                  control
                 ) != 1
        )
     {
-      Password_undeploy(loginPassword);
+      Password_undeploy(loginPassword,plainPassword);
       FtpClose(control);
       AutoFree_cleanup(&autoFreeList);
       return ERROR_FTP_AUTHENTICATION;
     }
-    Password_undeploy(loginPassword);
+    Password_undeploy(loginPassword,plainPassword);
 
     // read directory: first try non-passive, then passive mode
     FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,control);
