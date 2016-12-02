@@ -135,10 +135,41 @@ typedef struct
   void                *getPasswordUserData;
 } PasswordHandle;
 
+// crypt key list
+typedef struct DecryptKeyNode
+{
+  LIST_NODE_HEADER(struct DecryptKeyNode);
+
+  CryptKey        cryptKey;
+  CryptAlgorithms cryptAlgorithm;
+  Password        *password;
+} DecryptKeyNode;
+
+typedef struct
+{
+  LIST_HEADER(DecryptKeyNode);
+  Semaphore            lock;
+  const DecryptKeyNode *newDecryptKeyNode;               // new added decrypt key
+} DecryptKeyList;
+
+// decrypt key handle
+typedef struct
+{
+  ArchiveHandle        *archiveHandle;
+  const Password       *configCryptPassword;              // config crypt password or NULL
+  PasswordModes        passwordMode;                      // password input mode
+  const DecryptKeyNode *nextDecryptKeyNode;               // next decrypt key node to use
+  GetPasswordFunction  getPasswordFunction;               // password input callback
+  void                 *getPasswordUserData;
+} DecryptKeyHandle;
+
 /***************************** Variables *******************************/
 
 // list with all known decryption passwords
 LOCAL PasswordList decryptPasswordList;
+
+// list with all known crypt keys
+LOCAL DecryptKeyList decryptKeyList;
 
 /****************************** Macros *********************************/
 
@@ -178,6 +209,26 @@ LOCAL void freePasswordNode(PasswordNode *passwordNode, void *userData)
   UNUSED_VARIABLE(userData);
 
   Password_delete(passwordNode->password);
+}
+
+/***********************************************************************\
+* Name   : freeDecryptKeyNode
+* Purpose: free decrypt key node
+* Input  : decryptKeyNode - decrypt key node
+*          userData       - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeDecryptKeyNode(DecryptKeyNode *decryptKeyNode, void *userData)
+{
+  assert(decryptKeyNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  Crypt_done(&decryptKeyNode->cryptKey);
+  Password_delete(decryptKeyNode->password);
 }
 
 /***********************************************************************\
@@ -443,6 +494,228 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
   passwordHandle->getPasswordUserData = getPasswordUserData;
 
   return getNextDecryptPassword(passwordHandle);
+}
+
+/***********************************************************************\
+* Name   : getDecryptKey
+* Purpose: get decrypt key
+* Input  : 
+* Output : -
+* Return : 
+* Notes  : -
+\***********************************************************************/
+
+LOCAL CryptKey *getDecryptKey(Password        *password,
+                              CryptAlgorithms cryptAlgorithm,
+                              const byte      *salt,
+                              uint            saltLength
+                             )
+{
+  DecryptKeyNode *decryptKeyNode;
+  Errors         error;
+
+  assert(password != NULL);
+
+  decryptKeyNode = LIST_FIND(&decryptKeyList,decryptKeyNode,Password_equals(decryptKeyNode->password,password));
+  if (decryptKeyNode == NULL)
+  {
+    // add new decrypt key
+    decryptKeyNode = LIST_NEW_NODE(DecryptKeyNode);
+    if (decryptKeyNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    decryptKeyNode->cryptAlgorithm = cryptAlgorithm;
+    decryptKeyNode->password       = Password_duplicate(password);
+
+    // derive key from password with salt
+    error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
+                            cryptAlgorithm,
+                            password,
+                            salt,
+                            saltLength
+                           );
+//TODO: error?
+    if (error != ERROR_NONE)
+    {
+      Password_delete(decryptKeyNode->password);
+      LIST_DELETE_NODE(decryptKeyNode);
+      return NULL;
+    }
+
+    // add to decrypt key list
+    List_append(&decryptKeyList,decryptKeyNode);
+  }
+  
+  return (decryptKeyNode != NULL) ? &decryptKeyNode->cryptKey : NULL;
+}
+
+/***********************************************************************\
+* Name   : getNextDecryptKey
+* Purpose: get next decrypt key
+* Input  : decryptKeyHandle - decrypt key handle
+*          
+* Output : -
+* Return : decrypt key or NULL if no more decrypt keys
+* Notes  : Ordering of decrypt keys search:
+*            - next decrypt key from list
+*            - decrypt key with password from config
+*            - decrypt key with password from command line
+*            - ask for password (only if no command line password set)
+*              and add decrypt key
+\***********************************************************************/
+
+LOCAL const CryptKey *getNextDecryptKey(DecryptKeyHandle *decryptKeyHandle,
+                                        CryptAlgorithms  cryptAlgorithm,
+                                        const byte       *salt,
+                                        uint             saltLength
+                                       )
+{
+  bool           semaphoreLock;
+  const DecryptKeyNode *decryptKeyNode;
+  const CryptKey *decryptKey;
+  Password       newPassword;
+  Errors         error;
+
+  assert(decryptKeyHandle != NULL);
+  assert(decryptKeyHandle->archiveHandle != NULL);
+
+  decryptKey = NULL;
+//  SEMAPHORE_LOCKED_DO(semaphoreLock,&cryptKeyHandle->archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    while ((decryptKey == NULL) && (decryptKeyHandle->passwordMode != PASSWORD_MODE_NONE))
+    {
+      if      (decryptKeyHandle->nextDecryptKeyNode != NULL)
+      {
+        // get next crypt key from list
+        decryptKey = &decryptKeyHandle->nextDecryptKeyNode->cryptKey;
+        decryptKeyHandle->nextDecryptKeyNode = decryptKeyHandle->nextDecryptKeyNode->next;
+      }
+      else
+      {
+        switch (decryptKeyHandle->passwordMode)
+        {
+           case PASSWORD_MODE_NONE:
+             // no more decrypt keys
+             break;
+           case PASSWORD_MODE_CONFIG:
+             // get decrypt key from config
+             if (decryptKeyHandle->configCryptPassword != NULL)
+             {
+               decryptKey = getDecryptKey(decryptKeyHandle->configCryptPassword,
+                                          cryptAlgorithm,
+                                          salt,
+                                          saltLength
+                                         );
+             }
+
+             // next password mode is: default
+             decryptKeyHandle->passwordMode = PASSWORD_MODE_DEFAULT;
+             break;
+           case PASSWORD_MODE_DEFAULT:
+             // get decrypt key from global config
+             if (globalOptions.cryptPassword != NULL)
+             {
+               decryptKey = getDecryptKey(globalOptions.cryptPassword,
+                                          cryptAlgorithm,
+                                          salt,
+                                          saltLength
+                                         );
+             }
+
+             // next password mode is: ask
+             decryptKeyHandle->passwordMode = PASSWORD_MODE_ASK;
+             break;
+           case PASSWORD_MODE_ASK:
+             // input password and derive decrypt key
+             if (decryptKeyHandle->getPasswordFunction != NULL)
+             {
+               Password_init(&newPassword);
+               error = decryptKeyHandle->getPasswordFunction(NULL,  // loginName
+                                                             &newPassword,
+                                                             PASSWORD_TYPE_CRYPT,
+                                                             (decryptKeyHandle->archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
+                                                               ? String_cString(Storage_getPrintableName(&decryptKeyHandle->archiveHandle->storage.storageSpecifier,NULL))
+                                                               : NULL,
+                                                             FALSE,
+                                                             FALSE,
+                                                             decryptKeyHandle->getPasswordUserData
+                                                            );
+               if (error == ERROR_NONE)
+               {
+                 // add to decrypt key list
+                 decryptKey = getDecryptKey(&newPassword,
+                                            cryptAlgorithm,
+                                            salt,
+                                            saltLength
+                                           );
+               }
+               else
+               {
+                 // next password mode is: none
+                 decryptKeyHandle->passwordMode = PASSWORD_MODE_NONE;
+               }
+               Password_done(&newPassword);
+             }
+             else
+             {
+               // next password mode is: none
+               decryptKeyHandle->passwordMode = PASSWORD_MODE_NONE;
+             }
+             break;
+           default:
+             #ifndef NDEBUG
+               HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+             #endif /* NDEBUG */
+             break; /* not reached */
+        }
+      }
+    }
+  }
+
+  return decryptKey;
+}
+
+/***********************************************************************\
+* Name   : getFirstDecryptKey
+* Purpose: get first decrypt key
+* Input  : archiveHandle       - archive handle
+*          jobOptions          - job options
+*          passwordMode        - password mode
+*          getPasswordFunction - get password call-back
+*          getPasswordUserData - user data for get password call-back
+//TODO
+* Output : decryptKeyHandle - intialized decrypt key handle
+* Return : decrypt key or NULL if no more decrypt keys
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyHandle    *decryptKeyHandle,
+                                         ArchiveHandle       *archiveHandle,
+                                         const JobOptions    *jobOptions,
+                                         PasswordModes       passwordMode,
+                                         GetPasswordFunction getPasswordFunction,
+                                         void                *getPasswordUserData,
+                                         CryptAlgorithms     cryptAlgorithm,
+                                         const byte          *salt,
+                                         uint                saltLength
+                                        )
+{
+  assert(decryptKeyHandle != NULL);
+
+  decryptKeyHandle->archiveHandle       = archiveHandle;
+  decryptKeyHandle->configCryptPassword = jobOptions->cryptPassword;
+  decryptKeyHandle->passwordMode        = (passwordMode != PASSWORD_MODE_DEFAULT) ? passwordMode : jobOptions->cryptPasswordMode;
+  decryptKeyHandle->nextDecryptKeyNode  = decryptPasswordList.head;
+  decryptKeyHandle->getPasswordFunction = getPasswordFunction;
+  decryptKeyHandle->getPasswordUserData = getPasswordUserData;
+
+  return getNextDecryptKey(decryptKeyHandle,
+                           cryptAlgorithm,
+                           salt,
+                           saltLength
+                          );
 }
 
 /***********************************************************************\
@@ -3613,11 +3886,18 @@ Errors Archive_initAll(void)
   List_init(&decryptPasswordList);
   decryptPasswordList.newPasswordNode = NULL;
 
+  Semaphore_init(&decryptKeyList.lock);
+  List_init(&decryptKeyList);
+  decryptKeyList.newDecryptKeyNode = NULL;
+
   return ERROR_NONE;
 }
 
 void Archive_doneAll(void)
 {
+  List_done(&decryptKeyList,(ListNodeFreeFunction)freeDecryptKeyNode,NULL);
+  Semaphore_done(&decryptKeyList.lock);
+
   List_done(&decryptPasswordList,(ListNodeFreeFunction)freePasswordNode,NULL);
   Semaphore_done(&decryptPasswordList.lock);
 }
@@ -3719,6 +3999,45 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   assert(passwordNode != NULL);
 
   return passwordNode->password;
+}
+
+const CryptKey *Archive_appendDecryptKey(const Password *password)
+{
+  DecryptKeyNode *decryptKeyNode;
+  SemaphoreLock  semaphoreLock;
+
+  assert(password != NULL);
+
+  decryptKeyNode = NULL;
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+//TODO:
+//    decryptKey = getDecryptKey();
+    // find crypt key
+    decryptKeyNode = decryptKeyList.head;
+    while ((decryptKeyNode != NULL) && !Password_equals(decryptKeyNode->password,password))
+    {
+      decryptKeyNode = decryptKeyNode->next;
+    }
+    if (decryptKeyNode == NULL)
+    {
+      // add password
+      decryptKeyNode = LIST_NEW_NODE(DecryptKeyNode);
+      if (decryptKeyNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      decryptKeyNode->password = Password_duplicate(password);
+
+      List_append(&decryptKeyList,decryptKeyNode);
+    }
+
+    // set reference to new added decrypt key
+    decryptKeyList.newDecryptKeyNode = decryptKeyNode;
+  }
+  assert(decryptKeyNode != NULL);
+
+  return &decryptKeyNode->cryptKey;
 }
 
 bool Archive_waitDecryptPassword(Password *password, long timeout)
@@ -7066,8 +7385,9 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   ChunkHeader    chunkHeader;
   uint           keyLength;
   uint64         index;
-  PasswordHandle passwordHandle;
-  const Password *password;
+//TODO: indent
+  DecryptKeyHandle decryptKeyHandle;
+  const CryptKey *decryptKey;
   bool           passwordFlag;
   bool           decryptedFlag;
   ChunkHeader    subChunkHeader;
@@ -7240,24 +7560,27 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
       assert(archiveHandle->cryptPassword != NULL);
-      password = archiveHandle->cryptPassword;
+      decryptKey = archiveHandle->cryptPassword;
     }
     else
     {
-      password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveHandle,
-                                         archiveHandle->jobOptions,
-                                         archiveHandle->jobOptions->cryptPasswordMode,
-                                         archiveHandle->getPasswordFunction,
-                                         archiveHandle->getPasswordUserData
-                                        );
+      decryptKey = getFirstDecryptKey(&decryptKeyHandle,
+                                      archiveHandle,
+                                      archiveHandle->jobOptions,
+                                      archiveHandle->jobOptions->cryptPasswordMode,
+                                      archiveHandle->getPasswordFunction,
+                                      archiveHandle->getPasswordUserData,
+                                      archiveEntryInfo->cryptAlgorithms[0],
+                                      archiveHandle->cryptSalt,
+                                      sizeof(archiveHandle->cryptSalt)
+                                     );
     }
-    passwordFlag  = (password != NULL);
+    passwordFlag  = (decryptKey != NULL);
     decryptedFlag = FALSE;
   }
   else
   {
-    password      = NULL;
+    decryptKey    = NULL;
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
@@ -7288,8 +7611,8 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
-                         password,
+                         decryptKey,
+NULL,//                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -7297,7 +7620,8 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
       error = cryptInit(&archiveEntryInfo->file.chunkFileEntry.cryptInfos,
                         archiveEntryInfo->cryptAlgorithms,
                         SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms),
-                        password,
+                         decryptKey,
+NULL,//                         password,
                         archiveEntryInfo->archiveHandle->cryptSalt,
                         sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                        );
@@ -7317,8 +7641,8 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
-                         password,
+                         decryptKey,
+NULL,//                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -7337,8 +7661,8 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
-                         password,
+                         decryptKey,
+NULL,//                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -7357,8 +7681,8 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
-                         password,
+                         decryptKey,
+NULL,//                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -7377,8 +7701,8 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
-                         password,
+                         decryptKey,
+NULL,//                         password,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -7620,29 +7944,27 @@ debugDumpMemory(archiveEntryInfo->archiveHandle->cryptSalt,16,0);
     {
       if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC))
       {
-        // get next password
-        password = getNextDecryptPassword(&passwordHandle);
+        // get next decrypt key
+        decryptKey = getNextDecryptKey(&decryptKeyHandle,
+                                       archiveEntryInfo->cryptAlgorithms[0],
+                                       archiveEntryInfo->archiveHandle->cryptSalt,
+                                       sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
+                                      );
 
-        // reset error and try next password
-        if (password != NULL)
+        // reset error and try next decrypt key
+        if (decryptKey != NULL)
         {
-          // derive crypt key
-          error = Crypt_deriveKey(&archiveHandle->cryptKey,
-                                  archiveEntryInfo->cryptAlgorithms[0],
-                                  password,
-                                  archiveEntryInfo->archiveHandle->cryptSalt,
-                                  sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
-                                 );
+          error = ERROR_NONE;
         }
       }
       else
       {
-        // no more passwords when no encryption or asymmetric encryption is used
-        password = NULL;
+        // no more decrypt keys when no encryption or asymmetric encryption is used
+        decryptKey = NULL;
       }
     }
   }
-  while ((error != ERROR_NONE) && (password != NULL));
+  while ((error != ERROR_NONE) && (decryptKey != NULL));
   AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
