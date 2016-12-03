@@ -669,25 +669,6 @@ Errors __Crypt_init(const char      *__fileName__,
           gcryptFlags = 0;
           if ((cryptMode & CRYPT_MODE_CTS) == CRYPT_MODE_CTS) gcryptFlags |= GCRY_CIPHER_CBC_CTS;
 
-#if 0
-          // get max. key length, block length
-          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
-                                              GCRYCTL_GET_KEYLEN,
-                                              NULL,
-                                              &n
-                                             );
-          if (gcryptError != 0)
-          {
-            return ERRORX_(INIT_CIPHER,
-                           0,
-                           "detect max. key length of cipher '%s': %s",
-                           gcry_cipher_algo_name(gcryptAlgorithm),
-                           gpg_strerror(gcryptError)
-                          );
-          }
-          maxKeyLength = n*8;
-#endif
-
           // get block length
           gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
                                               GCRYCTL_GET_BLKLEN,
