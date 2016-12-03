@@ -104,8 +104,9 @@ void *Password_allocSecure(size_t size)
     #else
       p = gcry_malloc_secure(size);
     #endif
+    memset(p,0,size);
   #else /* not HAVE_GCRYPT */
-    memoryHeader = (MemoryHeader*)malloc(sizeof(MemoryHeader)+size);
+    memoryHeader = (MemoryHeader*)cmalloc(1,sizeof(MemoryHeader)+size);
     memoryHeader->size = size;
     p = (byte*)memoryHeader+sizeof(MemoryHeader);
   #endif /* HAVE_GCRYPT */
