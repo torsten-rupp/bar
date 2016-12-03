@@ -153,8 +153,8 @@ void Password_init(Password *password)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  password->data[0] = '\0';
-  password->length = 0;
+  password->data[0]    = '\0';
+  password->dataLength = 0;
 }
 
 void Password_done(Password *password)
@@ -236,8 +236,8 @@ void Password_clear(Password *password)
 {
   assert(password != NULL);
 
-  password->data[0] = '\0';
-  password->length = 0;
+  password->data[0]    = '\0';
+  password->dataLength = 0;
 }
 
 void Password_set(Password *password, const Password *fromPassword)
@@ -247,12 +247,12 @@ void Password_set(Password *password, const Password *fromPassword)
   if (fromPassword != NULL)
   {
     memmove(password->data,fromPassword->data,MAX_PASSWORD_LENGTH+1);
-    password->length = fromPassword->length;
+    password->dataLength = fromPassword->dataLength;
   }
   else
   {
-    password->data[0] = '\0';
-    password->length = 0;
+    password->data[0]    = '\0';
+    password->dataLength = 0;
   }
 }
 
@@ -276,7 +276,7 @@ void Password_setString(Password *password, const String string)
     }
   #endif /* HAVE_GCRYPT */
   password->data[length] = '\0';
-  password->length = length;
+  password->dataLength   = length;
 }
 
 void Password_setCString(Password *password, const char *s)
@@ -299,7 +299,7 @@ void Password_setCString(Password *password, const char *s)
     }
   #endif /* HAVE_GCRYPT */
   password->data[length] = '\0';
-  password->length = length;
+  password->dataLength   = length;
 }
 
 void Password_setBuffer(Password *password, const void *buffer, uint length)
@@ -323,22 +323,22 @@ void Password_setBuffer(Password *password, const void *buffer, uint length)
     }
   #endif /* HAVE_GCRYPT */
   password->data[length] = '\0';
-  password->length = length;
+  password->dataLength   = length;
 }
 
 void Password_appendChar(Password *password, char ch)
 {
   assert(password != NULL);
 
-  if (password->length < MAX_PASSWORD_LENGTH)
+  if (password->dataLength < MAX_PASSWORD_LENGTH)
   {
     #ifdef HAVE_GCRYPT
-      password->data[password->length] = ch;
+      password->data[password->dataLength] = ch;
     #else /* not HAVE_GCRYPT */
-      password->data[password->length] = ch^obfuscator[password->length];
+      password->data[password->dataLength] = ch^obfuscator[password->dataLength];
     #endif /* HAVE_GCRYPT */
-    password->length++;
-    password->data[password->length] = '\0';
+    password->dataLength++;
+    password->data[password->dataLength] = '\0';
   }
 }
 
@@ -346,36 +346,36 @@ void Password_random(Password *password, uint length)
 {
   #ifdef HAVE_GCRYPT
   #else /* not HAVE_GCRYPT */
-    uint z;
+    uint i;
   #endif /* HAVE_GCRYPT */
 
   assert(password != NULL);
 
-  password->length = MIN(length,MAX_PASSWORD_LENGTH);
+  password->dataLength = MIN(length,MAX_PASSWORD_LENGTH);
   #ifdef HAVE_GCRYPT
-    gcry_create_nonce((unsigned char*)password->data,password->length);
+    gcry_create_nonce((unsigned char*)password->data,password->dataLength);
   #else /* not HAVE_GCRYPT */
     srandom((unsigned int)time(NULL));
-    for (z = 0; z < password->length; z++)
+    for (i = 0; i < password->dataLength; i++)
     {
-      password->data[z] = (char)(random()%256)^obfuscator[z];
+      password->data[z] = (char)(random()%256)^obfuscator[i];
     }
   #endif /* HAVE_GCRYPT */
 }
 
 uint Password_length(const Password *password)
 {
-  return (password != NULL)?password->length:0;
+  return (password != NULL)?password->dataLength:0;
 }
 
 bool Password_isEmpty(const Password *password)
 {
-  return (password == NULL) || (password->length == 0);
+  return (password == NULL) || (password->dataLength == 0);
 }
 
 char Password_getChar(const Password *password, uint index)
 {
-  if ((password != NULL) && (index < password->length))
+  if ((password != NULL) && (index < password->dataLength))
   {
     #ifdef HAVE_GCRYPT
       return password->data[index];
@@ -400,7 +400,7 @@ double Password_getQualityLevel(const Password *password)
 
   uint browniePoints,maxBrowniePoints;
   bool flag0,flag1;
-  uint z;
+  uint i;
 
   assert(password != NULL);
 
@@ -408,31 +408,31 @@ double Password_getQualityLevel(const Password *password)
   maxBrowniePoints = 0;
 
   // length >= 8
-  CHECK(password->length >= 8);
+  CHECK(password->dataLength >= 8);
 
   // contain numbers
   flag0 = FALSE;
-  for (z = 0; z < password->length; z++)
+  for (i = 0; i < password->dataLength; i++)
   {
-    flag0 |= isdigit(password->data[z]);
+    flag0 |= isdigit(password->data[i]);
   }
   CHECK(flag0);
 
   // contain special characters
   flag0 = FALSE;
-  for (z = 0; z < password->length; z++)
+  for (i = 0; i < password->dataLength; i++)
   {
-    flag0 |= (strchr(" !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",password->data[z]) != NULL);
+    flag0 |= (strchr(" !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",password->data[i]) != NULL);
   }
   CHECK(flag0);
 
   // capital/non-capital letters
   flag0 = FALSE;
   flag1 = FALSE;
-  for (z = 0; z < password->length; z++)
+  for (i = 0; i < password->dataLength; i++)
   {
-    flag0 |= (toupper(password->data[z]) != password->data[z]);
-    flag1 |= (tolower(password->data[z]) != password->data[z]);
+    flag0 |= (toupper(password->data[i]) != password->data[i]);
+    flag1 |= (tolower(password->data[i]) != password->data[i]);
   }
   CHECK(flag0 && flag1);
 
@@ -454,21 +454,21 @@ const char *Password_deploy(const Password *password)
 
   if (password != NULL)
   {
-    assert(password->length <= MAX_PASSWORD_LENGTH);
+    assert(password->dataLength <= MAX_PASSWORD_LENGTH);
 
     #ifdef HAVE_GCRYPT
       return password->data;
     #else /* not HAVE_GCRYPT */
-      plain = Password_allocSecure(password->length+1);
+      plain = Password_allocSecure(password->dataLength+1);
       if (plain == NULL)
       {
         return NULL;
       }
-      for (i = 0; i < password->length; i++)
+      for (i = 0; i < password->dataLength; i++)
       {
         plain[i] = password->data[i]^obfuscator[z];
       }
-      plain[password->length] = '\0';
+      plain[password->dataLength] = '\0';
       return plain;
     #endif /* HAVE_GCRYPT */
   }
@@ -501,15 +501,15 @@ bool Password_equals(const Password *password0, const Password *password1)
 
   if (   (password0 != NULL)
       && (password1 != NULL)
-      && (password0->length == password1->length)
+      && (password0->dataLength == password1->dataLength)
      )
   {
     #ifdef HAVE_GCRYPT
-      return memcmp(password0->data,password1->data,password0->length) == 0;
+      return memcmp(password0->data,password1->data,password0->dataLength) == 0;
     #else /* not HAVE_GCRYPT */
-      for (z = 0; z < password0->length; z++)
+      for (i = 0; i < password0->dataLength; i++)
       {
-        if ((password0->data[z]^obfuscator[z]) != (password1->data[z]^obfuscator[z])) return FALSE;
+        if ((password0->data[i]^obfuscator[i]) != (password1->data[i]^obfuscator[i])) return FALSE;
       }
     #endif /* HAVE_GCRYPT */
   }
@@ -732,8 +732,8 @@ bool Password_inputVerify(const Password *password,
 
   // verify password
   equalFlag = TRUE;
-  if (password->length != verifyPassword.length) equalFlag = FALSE;
-  if (memcmp(password->data,verifyPassword.data,password->length) != 0) equalFlag = FALSE;
+  if (password->dataLength != verifyPassword.dataLength) equalFlag = FALSE;
+  if (memcmp(password->data,verifyPassword.data,password->dataLength) != 0) equalFlag = FALSE;
 
   // free resources
   Password_done(&verifyPassword);
@@ -744,17 +744,17 @@ bool Password_inputVerify(const Password *password,
 #if 0
 void Password_dump(const char *text, Password *password)
 {
-  uint z;
+  uint i;
 
   assert(password != NULL);
 
   fprintf(stderr,text);
-  for (z = 0; z < password->length; z++)
+  for (i = 0; i < password->dataLength; i++)
   {
     #ifdef HAVE_GCRYPT
-      fprintf(stderr,"%02x",(byte)password->data[z]);
+      fprintf(stderr,"%02x",(byte)password->data[i]);
     #else /* not HAVE_GCRYPT */
-      fprintf(stderr,"%02x",(byte)(password->data[z]^obfuscator[z]));
+      fprintf(stderr,"%02x",(byte)(password->data[i]^obfuscator[z]));
     #endif /* HAVE_GCRYPT */
   }
   fprintf(stderr,"\n");

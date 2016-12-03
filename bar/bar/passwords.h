@@ -39,7 +39,7 @@
 typedef struct
 {
   char *data;
-  uint length;
+  uint dataLength;
   void *keyData;
   uint keyDataLength;
   #ifndef HAVE_GCRYPT
