@@ -471,7 +471,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 * Purpose: create new crypt handle
 * Input  : cryptInfo      - crypt info block
 *          cryptAlgorithm - crypt algorithm to use
-*          cryptMode      - crypt mode
+*          cryptMode      - crypt mode; see CRYPT_MODE_...
 *          cryptKey       - crypt key
 *          salt           - encryption salt (can be NULL)
 *          saltLength     - encryption salt length
@@ -675,6 +675,7 @@ Errors Crypt_deriveKey(CryptKey   *cryptKey,
 * Input  : cryptKey           - crypt key
 *          encryptedKey       - encrypted key variable
 *          encryptedkeyLength - encrypted key length variable
+*          cryptMode  - crypt mode; see CRYPT_MODE_...
 *          password           - password for encryption (can be NULL)
 *          salt               - encryption salt (can be NULL)
 *          saltLength         - encryption salt length
@@ -687,6 +688,7 @@ Errors Crypt_deriveKey(CryptKey   *cryptKey,
 Errors Crypt_getKeyData(CryptKey       *cryptKey,
                         void           **encryptedKey,
                         uint           *encryptedKeyLength,
+                        uint           cryptMode,
                         const Password *password,
                         const byte     *salt,
                         uint           saltLength
@@ -698,6 +700,7 @@ Errors Crypt_getKeyData(CryptKey       *cryptKey,
 * Input  : cryptKey           - crypt key
 *          encryptedKey       - encrypted key
 *          encryptedKeyLength - length of encrypted key
+*          cryptMode  - crypt mode; see CRYPT_MODE_...
 *          password           - password for decryption (can be NULL)
 *          salt               - encryption salt (can be NULL)
 *          saltLength         - encryption salt length
@@ -709,6 +712,7 @@ Errors Crypt_getKeyData(CryptKey       *cryptKey,
 Errors Crypt_setKeyData(CryptKey       *cryptKey,
                         const void     *encryptedKey,
                         uint           encryptedKeyLength,
+                        uint           cryptMode,
                         const Password *password,
                         const byte     *salt,
                         uint           saltLength
@@ -719,6 +723,7 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
 * Purpose: get encrypted key as base64-encoded string
 * Input  : cryptKey   - crypt key
 *          string     - string variable
+*          cryptMode  - crypt mode; see CRYPT_MODE_...
 *          password   - password for encryption (can be NULL)
 *          salt       - encryption salt (can be NULL)
 *          saltLength - encryption salt length
@@ -729,6 +734,7 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
 
 Errors Crypt_getKeyString(CryptKey       *cryptKey,
                           String         string,
+                          uint           cryptMode,
                           const Password *password,
                           const byte     *salt,
                           uint           saltLength
@@ -739,6 +745,7 @@ Errors Crypt_getKeyString(CryptKey       *cryptKey,
 * Purpose: decrypt key from base64-encoded string
 * Input  : cryptKey   - crypt key variable
 *          string     - string with encrypted key (base64-encoded)
+*          cryptMode  - crypt mode; see CRYPT_MODE_...
 *          password   - password for decryption (can be NULL)
 *          salt       - encryption salt (can be NULL)
 *          saltLength - encryption salt length
@@ -749,6 +756,7 @@ Errors Crypt_getKeyString(CryptKey       *cryptKey,
 
 Errors Crypt_setKeyString(CryptKey       *cryptKey,
                           const String   string,
+                          uint           cryptMode,
                           const Password *password,
                           const byte     *salt,
                           uint           saltLength
@@ -771,6 +779,7 @@ String Crypt_getKeyExponent(CryptKey *cryptKey);
 * Name   : Crypt_readKeyFile
 * Purpose: read key from file (base64-encoded)
 * Input  : fileName   - file name
+*          cryptMode      - crypt mode; see CRYPT_MODE_...
 *          password   - password tor decrypt key (can be NULL)
 *          salt       - encryption salt (can be NULL)
 *          saltLength - encryption salt length
@@ -781,6 +790,7 @@ String Crypt_getKeyExponent(CryptKey *cryptKey);
 
 Errors Crypt_readKeyFile(CryptKey       *cryptKey,
                          const String   fileName,
+                         uint           cryptMode,
                          const Password *password,
                          const byte     *salt,
                          uint           saltLength
@@ -791,6 +801,7 @@ Errors Crypt_readKeyFile(CryptKey       *cryptKey,
 * Purpose: write key to file (base64-encoded)
 * Input  : cryptKey   - crypt key
 *          fileName   - file name
+*          cryptMode      - crypt mode; see CRYPT_MODE_...
 *          password   - password to encrypt key (can be NULL)
 *          salt       - encryption salt (can be NULL)
 *          saltLength - encryption salt length
@@ -801,6 +812,7 @@ Errors Crypt_readKeyFile(CryptKey       *cryptKey,
 
 Errors Crypt_writeKeyFile(CryptKey       *cryptKey,
                           const String   fileName,
+                          uint           cryptMode,
                           const Password *password,
                           const byte     *salt,
                           uint           saltLength
