@@ -4269,6 +4269,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
       error = Crypt_setKeyData(&archiveHandle->cryptKey,
                                jobOptions->cryptPublicKey.data,
                                jobOptions->cryptPublicKey.length,
+                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                NULL,  // password
                                archiveHandle->cryptSalt,
                                sizeof(archiveHandle->cryptSalt)
@@ -4727,6 +4728,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
         archiveHandle->pendingError = Crypt_setKeyData(&archiveHandle->cryptKey,
                                                        archiveHandle->jobOptions->cryptPrivateKey.data,
                                                        archiveHandle->jobOptions->cryptPrivateKey.length,
+                                                       CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                                        NULL,  // password
                                                        archiveHandle->cryptSalt,
                                                        sizeof(archiveHandle->cryptSalt)
@@ -4749,6 +4751,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
           archiveHandle->pendingError = Crypt_setKeyData(&archiveHandle->cryptKey,
                                                          archiveHandle->jobOptions->cryptPrivateKey.data,
                                                          archiveHandle->jobOptions->cryptPrivateKey.length,
+                                                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                                          password,
                                                          archiveHandle->cryptSalt,
                                                          sizeof(archiveHandle->cryptSalt)
@@ -4903,14 +4906,14 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   archiveEntryInfo->mode                           = ARCHIVE_MODE_WRITE;
 
 #ifdef MULTI_CRYPT
-#else
-#endif
 fprintf(stderr,"%s, %d: %d %d %d %d\n",__FILE__,__LINE__,
 archiveHandle->jobOptions->cryptAlgorithms[0],
 archiveHandle->jobOptions->cryptAlgorithms[1],
 archiveHandle->jobOptions->cryptAlgorithms[2],
 archiveHandle->jobOptions->cryptAlgorithms[3]
 );
+#else
+#endif
   memcpy(archiveEntryInfo->cryptAlgorithms,archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms));
   archiveEntryInfo->blockLength                    = archiveHandle->blockLength;
 
@@ -6879,6 +6882,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
         error = Crypt_setKeyData(&archiveHandle->cryptKey,
                                  archiveHandle->jobOptions->cryptPrivateKey.data,
                                  archiveHandle->jobOptions->cryptPrivateKey.length,
+                                 CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                  NULL,  // password
                                  archiveHandle->cryptSalt,
                                  sizeof(archiveHandle->cryptSalt)
@@ -6901,6 +6905,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
           error = Crypt_setKeyData(&archiveHandle->cryptKey,
                                    archiveHandle->jobOptions->cryptPrivateKey.data,
                                    archiveHandle->jobOptions->cryptPrivateKey.length,
+                                   CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                    password,
                                    archiveHandle->cryptSalt,
                                    sizeof(archiveHandle->cryptSalt)
@@ -8807,7 +8812,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -8826,7 +8831,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9225,7 +9230,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9244,7 +9249,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9690,7 +9695,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9709,7 +9714,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9728,7 +9733,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9747,7 +9752,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9766,7 +9771,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -9785,7 +9790,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -10344,7 +10349,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );
@@ -10363,7 +10368,7 @@ NULL,//                         password,
                            | (archiveHandle->cryptCTSFlag       ? CRYPT_MODE_CTS : 0)
                          #endif
                          ,
-                         &archiveHandle->cryptKey,
+                         decryptKey,
                          archiveEntryInfo->archiveHandle->cryptSalt,
                          sizeof(archiveEntryInfo->archiveHandle->cryptSalt)
                         );

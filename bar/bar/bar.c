@@ -2915,6 +2915,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
     fileName = String_newCString(value);
     error = Crypt_readKeyFile(cryptKey,
                               fileName,
+                              CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                               NULL,  // password
                               NULL,  // salt
                               0  // saltLength
@@ -2949,10 +2950,12 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
         return FALSE;
       }
 
+//TODO: use Crypt_setKeyString
       // set crypt key data
       error = Crypt_setKeyData(cryptKey,
                                data,
                                dataLength,
+      CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                NULL,  // password
                                NULL,  // salt
                                0  // saltLength
@@ -2975,6 +2978,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
     error = Crypt_setKeyData(cryptKey,
                              value,
                              strlen(value),
+                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                              NULL,  // password
                              NULL,  // salt
                              0  // saltLength
@@ -8053,6 +8057,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   {
     error = Crypt_writeKeyFile(&publicKey,
                                publicKeyFileName,
+                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                NULL,  // password
                                NULL,  // salt
                                0  // saltLength
@@ -8071,6 +8076,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     printf("Created public encryption key '%s'\n",String_cString(publicKeyFileName));
     error = Crypt_writeKeyFile(&privateKey,
                                privateKeyFileName,
+                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                &cryptPassword,
                                NULL,  // salt
                                0  // saltLength
@@ -8092,6 +8098,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   {
     error = Crypt_getKeyString(&publicKey,
                                data,
+                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                NULL,  // password,
                                NULL,  // salt
                                0  // saltLength
@@ -8109,6 +8116,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     printf("crypt-public-key = base64:%s\n",String_cString(data));
     error = Crypt_getKeyString(&privateKey,
                                data,
+                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                NULL,  // password,
                                NULL,  // salt
                                0  // saltLength
@@ -8203,6 +8211,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   {
     error = Crypt_writeKeyFile(&publicKey,
                                publicKeyFileName,
+                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                NULL,  // password
                                NULL,  // salt
                                0  // saltLength
@@ -8220,6 +8229,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     printf("Created public signature key '%s'\n",String_cString(publicKeyFileName));
     error = Crypt_writeKeyFile(&privateKey,
                                privateKeyFileName,
+                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                NULL,  // password,
                                NULL,  // salt
                                0  // saltLength
@@ -8240,6 +8250,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   {
     error = Crypt_getKeyString(&publicKey,
                                keyString,
+                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                NULL,  // password,
                                NULL,  // salt
                                0  // saltLength
@@ -8257,6 +8268,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     printf("signature-public-key = base64:%s\n",String_cString(keyString));
     error = Crypt_getKeyString(&privateKey,
                                keyString,
+                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                NULL,  // password,
                                NULL,  // salt
                                0  // saltLength
