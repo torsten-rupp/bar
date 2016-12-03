@@ -234,7 +234,7 @@ ERROR INIT_CRYPT
   }
 
 ERROR NO_CRYPT_PASSWORD                "no password given for cipher"
-ERROR INVALID_CRYPT_PASSWORD           "invalid encryption password"
+ERROR INVALID_CRYPT_PASSWORD           "invalid decryption password"
 ERROR CRYPT_PASSWORDS_MISMATCH         "encryption passwords mismatch"
 ERROR INIT_CIPHER
   stringCopy(errorText,"init cipher fail",sizeof(errorText));
