@@ -671,22 +671,22 @@ Errors Crypt_deriveKey(CryptKey   *cryptKey,
 
 /***********************************************************************\
 * Name   : Crypt_getKeyData
-* Purpose: get public/private key data
-* Input  : cryptKey      - crypt key
-*          keyData       - data variable
-*          keyDataLength - data length variable
-*          password      - password to encrypt key (can be NULL)
-*          salt          - encryption salt (can be NULL)
-*          saltLength    - encryption salt length
-* Output : keyData       - data with encrypted key
-*          keyDataLength - length of key data
+* Purpose: get encrypted key
+* Input  : cryptKey           - crypt key
+*          encryptedKey       - encrypted key variable
+*          encryptedkeyLength - encrypted key length variable
+*          password           - password for encryption (can be NULL)
+*          salt               - encryption salt (can be NULL)
+*          saltLength         - encryption salt length
+* Output : encryptedKey       - encrypted key
+*          encryptedKeyLength - length of encrypted key
 * Return : ERROR_NONE or error code
-* Notes  : keyData must be freed with Password_freeSecure()!
+* Notes  : encryptedKey must be freed with Password_freeSecure()!
 \***********************************************************************/
 
 Errors Crypt_getKeyData(CryptKey       *cryptKey,
-                        void           **keyData,
-                        uint           *keyDataLength,
+                        void           **encryptedKey,
+                        uint           *encryptedKeyLength,
                         const Password *password,
                         const byte     *salt,
                         uint           saltLength
@@ -694,21 +694,21 @@ Errors Crypt_getKeyData(CryptKey       *cryptKey,
 
 /***********************************************************************\
 * Name   : Crypt_setKeyData
-* Purpose: set public/private key data
-* Input  : cryptKey      - crypt key
-*          keyData       - data with encrypted key
-*          keyDataLength - length of key data
-*          password      - password to decrypt key (can be NULL)
-*          salt          - encryption salt (can be NULL)
-*          saltLength    - encryption salt length
-* Output : -
+* Purpose: decrypt key
+* Input  : cryptKey           - crypt key
+*          encryptedKey       - encrypted key
+*          encryptedKeyLength - length of encrypted key
+*          password           - password for decryption (can be NULL)
+*          salt               - encryption salt (can be NULL)
+*          saltLength         - encryption salt length
+* Output : cryptKey - crypt key
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Crypt_setKeyData(CryptKey       *cryptKey,
-                        const void     *keyData,
-                        uint           keyDataLength,
+                        const void     *encryptedKey,
+                        uint           encryptedKeyLength,
                         const Password *password,
                         const byte     *salt,
                         uint           saltLength
@@ -716,13 +716,13 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
 
 /***********************************************************************\
 * Name   : Crypt_getKeyString
-* Purpose: get public/private key data as base64-encoded string
+* Purpose: get encrypted key as base64-encoded string
 * Input  : cryptKey   - crypt key
 *          string     - string variable
-*          password   - password to encrypt key (can be NULL)
+*          password   - password for encryption (can be NULL)
 *          salt       - encryption salt (can be NULL)
 *          saltLength - encryption salt length
-* Output : string - string with encrypted key data (base64-encoded)
+* Output : string - string with encrypted key (base64-encoded)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -736,13 +736,13 @@ Errors Crypt_getKeyString(CryptKey       *cryptKey,
 
 /***********************************************************************\
 * Name   : Crypt_setKeyString
-* Purpose: set public/private key data from base64-encoded string
-* Input  : cryptKey   - crypt key
-*          string     - string with encrypted key data (base64-encoded)
-*          password   - password to decrypt key (can be NULL)
+* Purpose: decrypt key from base64-encoded string
+* Input  : cryptKey   - crypt key variable
+*          string     - string with encrypted key (base64-encoded)
+*          password   - password for decryption (can be NULL)
 *          salt       - encryption salt (can be NULL)
-*          saltLength - encryption salt length (can be 0)
-* Output : -
+*          saltLength - encryption salt length
+* Output : cryptKey - crypt key
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
