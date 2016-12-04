@@ -1288,7 +1288,7 @@ test3 test_crypt: $(TEST_BAR)
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=3DES+CAST5+AES256+CAMELLIA256 --crypt-password='$(TEST_PASSWORD_CRYPT)' --max-threads=1" \
           test_file_operations \
-          ; \
+          ;
 	@$(ECHO) "ok"
 
 test3-debug test_crypt-debug: $(TEST_BAR_DEBUG)
