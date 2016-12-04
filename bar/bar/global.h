@@ -907,21 +907,6 @@ typedef struct
   while (0)
 
 /***********************************************************************\
-* Name   : MEMSET, MEMCLEAR
-* Purpose: set/clear memory macros
-* Input  : p     - pointer
-*          value - value
-*          size  - size (in bytes)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#define MEMSET(p,value,size) memset(p,value,size)
-
-#define MEMCLEAR(p,size) memset(p,0,size)
-
-/***********************************************************************\
 * Name   : _
 * Purpose: internationalization text macro
 * Input  : text - text
@@ -1287,6 +1272,119 @@ static inline ulong swapLONG(ulong n)
          | ((n & 0x00FF0000) >>  8)
          | ((n & 0x0000FF00) <<  8)
          | ((n & 0x000000FF) << 24);
+}
+
+/***********************************************************************\
+* Name   : memFill
+* Purpose: fill memory
+* Input  : p - memory address
+*          n - size of memory [bytes]
+*          d - fill value
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+static inline void *memFill(void *p, size_t n, byte d)
+{
+  memset(p,d,n);
+
+  return p;
+}
+
+/***********************************************************************\
+* Name   : memClear
+* Purpose: clear memory content (fill with 0)
+* Input  : p - memory address
+*          n - size of memory [bytes]
+* Output : -
+* Return : p
+* Notes  : -
+\***********************************************************************/
+
+static inline void *memClear(void *p, size_t n)
+{
+  memFill(p,n,0);
+
+  return p;
+}
+
+/***********************************************************************\
+* Name   : memCopy
+* Purpose: copy memory (may overlap)
+* Input  : p0,p1 - destination/source memory address
+*          n0,n1 - destination/source size [bytes]
+* Output : -
+* Return : p0
+* Notes  : -
+\***********************************************************************/
+
+static inline void *memCopy(void *p0, size_t n0, const void *p1, size_t n1)
+{
+  size_t n;
+
+  assert(p0 != NULL);
+  assert(p1 != NULL);
+
+  n = MIN(n0,n1);
+  if (   ((p0 > p1) && ((size_t)((byte*)p0-(byte*)p1) < n))
+      || ((p1 > p0) && ((size_t)((byte*)p1-(byte*)p0) < n))
+     )
+  {
+    // memory overlap
+    memmove(p0,p1,n);
+  }
+  else
+  {
+    // memory do not overlap
+    memcpy(p0,p1,n);
+  }
+  memset((byte*)p0+(n0-n),0,n0-n);
+
+  return p0;
+}
+
+/***********************************************************************\
+* Name   : memCopyFast
+* Purpose: copy memory (must not overlap)
+* Input  : p0,p1 - destination/source memory address
+*          n0,n1 - destination/source size [bytes]
+* Output : -
+* Return : p0
+* Notes  : -
+\***********************************************************************/
+
+static inline void *memCopyFast(void *p0, size_t n0, const void *p1, size_t n1)
+{
+  size_t n;
+
+  assert(p0 != NULL);
+  assert(p1 != NULL);
+
+  n = MIN(n0,n1);
+  // memory must not overlap
+  assert(   ((p0 < p1) || ((size_t)((byte*)p0-(byte*)p1)) >= n)
+         && ((p1 < p0) || ((size_t)((byte*)p1-(byte*)p0)) >= n)
+        );
+  memcpy(p0,p1,n);
+  memset((byte*)p0+(n0-n),0,n0-n);
+
+  return p0;
+}
+
+/***********************************************************************\
+* Name   : memEquals
+* Purpose: check if memory content equals
+* Input  : p0,p1 - memory address
+*          n     - size of memory [bytes]
+* Output : -
+* Return : TRUE iff memory content equals
+* Notes  : -
+\***********************************************************************/
+
+static inline bool memEquals(const void *p0, const void *p1, size_t n)
+{
+  return memcmp(p0,p1,n) == 0;
 }
 
 /*---------------------------------------------------------------------*/
