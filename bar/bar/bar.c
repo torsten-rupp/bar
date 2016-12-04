@@ -7983,6 +7983,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   publicKeyFileName  = String_new();
   privateKeyFileName = String_new();
   data               = String_new();
+  Password_init(&cryptPassword);
 
   if (keyFileBaseName != NULL)
   {
@@ -7996,6 +7997,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     if (File_exists(publicKeyFileName))
     {
       printError("Public key file '%s' already exists!\n",String_cString(publicKeyFileName));
+      Password_done(&cryptPassword);
       String_delete(data);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
@@ -8004,6 +8006,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     if (File_exists(privateKeyFileName))
     {
       printError("Private key file '%s' already exists!\n",String_cString(privateKeyFileName));
+      Password_done(&cryptPassword);
       String_delete(data);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
@@ -8012,7 +8015,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   }
 
   // get crypt password for private key encryption
-  Password_init(&cryptPassword);
   if (Password_isEmpty(globalOptions.cryptPassword))
   {
     error = getPasswordConsole(NULL,  // name
@@ -8043,8 +8045,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   if (error != ERROR_NONE)
   {
     printError("Cannot create encryption key pair (error: %s)!\n",Error_getText(error));
-    Crypt_doneKey(&privateKey);
-    Crypt_doneKey(&publicKey);
     Password_done(&cryptPassword);
     String_delete(data);
     String_delete(privateKeyFileName);
@@ -8064,7 +8064,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
                                            );
     if (error != ERROR_NONE)
     {
-      printError("Cannot write encryption public key file!\n");
+      printError("Cannot write encryption public key file (error: %s)!\n",Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       Password_done(&cryptPassword);
@@ -8083,7 +8083,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
                                            );
     if (error != ERROR_NONE)
     {
-      printError("Cannot write encryption private key file!\n");
+      printError("Cannot write encryption private key file (error: %s)!\n",Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       Password_done(&cryptPassword);
@@ -8105,9 +8105,10 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
                                            );
     if (error != ERROR_NONE)
     {
-      printError("Cannot get encryption public key!\n");
+      printError("Cannot get encryption public key (error: %s)!\n",Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
+      Password_done(&cryptPassword);
       String_delete(data);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
@@ -8123,9 +8124,10 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
                                            );
     if (error != ERROR_NONE)
     {
-      printError("Cannot get encryption private key!\n");
+      printError("Cannot get encryption private key (error: %s)!\n",Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
+      Password_done(&cryptPassword);
       String_delete(data);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
