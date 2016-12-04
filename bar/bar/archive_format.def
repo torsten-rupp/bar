@@ -254,8 +254,8 @@ TRANSFORM "BAR0" "BAR1"
 fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
 
   // BAR0 use simple key, CTS and no salt
-  archiveHandle->cryptSimpleKeyFlag = TRUE;
-  archiveHandle->cryptCTSFlag       = TRUE;
+  archiveHandle->cryptMode |= CRYPT_MODE_SIMPLE_KEY;
+  archiveHandle->cryptMode |= CRYPT_MODE_CTS;
   memset(NEW->salt,0,sizeof(NEW->salt));
 
 fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);

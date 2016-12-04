@@ -202,8 +202,9 @@ typedef struct
   LogHandle                *logHandle;                                 // log handle
 
   byte                     cryptSalt[CRYPT_SALT_LENGTH];               // crypt salt
-  bool                     cryptSimpleKeyFlag;                         // TRUE iff crypt use simple key only (required for old style archives)
-  bool                     cryptCTSFlag;                               // TRUE iff crypt use cipher text stealing (CTS) (required for old style archives)
+  uint                     cryptMode;
+//  bool                     cryptSimpleKeyFlag;                         // TRUE iff crypt use simple key only (required for old style archives)
+//  bool                     cryptCTSFlag;                               // TRUE iff crypt use cipher text stealing (CTS) (required for old style archives)
 
   Semaphore                passwordLock;                               // input password lock
   CryptTypes               cryptType;                                  // crypt type (symmetric/asymmetric; see CryptTypes)
@@ -684,6 +685,15 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                          ArchiveHandle *archiveHandle
                         );
 #endif /* NDEBUG */
+
+void Archive_setSalt(ArchiveHandle *archiveHandle,
+                     const byte    *salt,
+                     uint          saltLength
+                    );
+
+void Archive_setCryptMode(ArchiveHandle *archiveHandle,
+                          uint          cryptMode
+                         );
 
 /***********************************************************************\
 * Name   : Archive_storageInterrupt

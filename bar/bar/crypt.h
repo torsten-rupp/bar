@@ -144,7 +144,7 @@ typedef struct
   void              *data;              // data
   uint              dataLength;         // data length [bytes]
   #ifdef HAVE_GCRYPT
-    gcry_sexp_t key;                    // key
+    gcry_sexp_t key;                    // public/private key
   #endif /* HAVE_GCRYPT */
 } CryptKey;
 
@@ -661,17 +661,19 @@ INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey)
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_deriveKey(CryptKey   *cryptKey,
+Errors Crypt_deriveKey(CryptKey        *cryptKey,
 //                       uint       keyLength,
                        CryptAlgorithms cryptAlgorithm,
-                       Password   *password,
-                       const byte *salt,
-                       uint       saltLength
+                       const Password  *password,
+                       const byte      *salt,
+                       uint            saltLength
                       );
 
+/*---------------------------------------------------------------------*/
+
 /***********************************************************************\
-* Name   : Crypt_getKeyData
-* Purpose: get encrypted key
+* Name   : Crypt_getPublicPrivateKeyData
+* Purpose: encrypt public/private key and get encrypted key
 * Input  : cryptKey           - crypt key
 *          encryptedKey       - encrypted key variable
 *          encryptedkeyLength - encrypted key length variable
@@ -685,18 +687,18 @@ Errors Crypt_deriveKey(CryptKey   *cryptKey,
 * Notes  : encryptedKey must be freed with Password_freeSecure()!
 \***********************************************************************/
 
-Errors Crypt_getKeyData(CryptKey       *cryptKey,
-                        void           **encryptedKey,
-                        uint           *encryptedKeyLength,
-                        uint           cryptMode,
-                        const Password *password,
-                        const byte     *salt,
-                        uint           saltLength
-                       );
+Errors Crypt_getPublicPrivateKeyData(CryptKey       *cryptKey,
+                                     void           **encryptedKey,
+                                     uint           *encryptedKeyLength,
+                                     uint           cryptMode,
+                                     const Password *password,
+                                     const byte     *salt,
+                                     uint           saltLength
+                                    );
 
 /***********************************************************************\
-* Name   : Crypt_setKeyData
-* Purpose: decrypt key
+* Name   : Crypt_setPublicPrivateKeyData
+* Purpose: decrypt public/private key and set key data
 * Input  : cryptKey           - crypt key
 *          encryptedKey       - encrypted key
 *          encryptedKeyLength - length of encrypted key
@@ -709,18 +711,19 @@ Errors Crypt_getKeyData(CryptKey       *cryptKey,
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_setKeyData(CryptKey       *cryptKey,
-                        const void     *encryptedKey,
-                        uint           encryptedKeyLength,
-                        uint           cryptMode,
-                        const Password *password,
-                        const byte     *salt,
-                        uint           saltLength
-                       );
+Errors Crypt_setPublicPrivateKeyData(CryptKey       *cryptKey,
+                                     const void     *encryptedKey,
+                                     uint           encryptedKeyLength,
+                                     uint           cryptMode,
+                                     const Password *password,
+                                     const byte     *salt,
+                                     uint           saltLength
+                                    );
 
 /***********************************************************************\
-* Name   : Crypt_getKeyString
-* Purpose: get encrypted key as base64-encoded string
+* Name   : Crypt_getPublicPrivateKeyString
+* Purpose: encrypt public/private key and get encrypted key as
+*          base64-encoded string
 * Input  : cryptKey   - crypt key
 *          string     - string variable
 *          cryptMode  - crypt mode; see CRYPT_MODE_...
@@ -732,17 +735,18 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_getKeyString(CryptKey       *cryptKey,
-                          String         string,
-                          uint           cryptMode,
-                          const Password *password,
-                          const byte     *salt,
-                          uint           saltLength
-                         );
+Errors Crypt_getPublicPrivateKeyString(CryptKey       *cryptKey,
+                                       String         string,
+                                       uint           cryptMode,
+                                       const Password *password,
+                                       const byte     *salt,
+                                       uint           saltLength
+                                      );
 
 /***********************************************************************\
-* Name   : Crypt_setKeyString
-* Purpose: decrypt key from base64-encoded string
+* Name   : Crypt_setPublicPrivateKeyString
+* Purpose: decrypt public/private key and set key data from
+*          base64-encoded string
 * Input  : cryptKey   - crypt key variable
 *          string     - string with encrypted key (base64-encoded)
 *          cryptMode  - crypt mode; see CRYPT_MODE_...
@@ -754,16 +758,17 @@ Errors Crypt_getKeyString(CryptKey       *cryptKey,
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_setKeyString(CryptKey       *cryptKey,
-                          const String   string,
-                          uint           cryptMode,
-                          const Password *password,
-                          const byte     *salt,
-                          uint           saltLength
-                         );
+Errors Crypt_setPublicPrivateKeyString(CryptKey       *cryptKey,
+                                       const String   string,
+                                       uint           cryptMode,
+                                       const Password *password,
+                                       const byte     *salt,
+                                       uint           saltLength
+                                      );
 
 /***********************************************************************\
-* Name   : Crypt_getKeyModulus, Crypt_getKeyExponent
+* Name   : Crypt_getPublicPrivateKeyModulus,
+*          Crypt_getPublicPrivateKeyExponent
 * Purpose: get public/private key modulus/exponent as hex-string
 * Input  : cryptKey - crypt key
 *          string   - string variable
@@ -772,11 +777,11 @@ Errors Crypt_setKeyString(CryptKey       *cryptKey,
 * Notes  : -
 \***********************************************************************/
 
-String Crypt_getKeyModulus(CryptKey *cryptKey);
-String Crypt_getKeyExponent(CryptKey *cryptKey);
+String Crypt_getPublicPrivateKeyModulus(CryptKey *cryptKey);
+String Crypt_getPublicPrivateKeyExponent(CryptKey *cryptKey);
 
 /***********************************************************************\
-* Name   : Crypt_readKeyFile
+* Name   : Crypt_readPublicPrivateKeyFile
 * Purpose: read key from file (base64-encoded)
 * Input  : fileName   - file name
 *          cryptMode      - crypt mode; see CRYPT_MODE_...
@@ -788,16 +793,16 @@ String Crypt_getKeyExponent(CryptKey *cryptKey);
 * Notes  : use own specific file format
 \***********************************************************************/
 
-Errors Crypt_readKeyFile(CryptKey       *cryptKey,
-                         const String   fileName,
-                         uint           cryptMode,
-                         const Password *password,
-                         const byte     *salt,
-                         uint           saltLength
-                        );
+Errors Crypt_readPublicPrivateKeyFile(CryptKey       *cryptKey,
+                                      const String   fileName,
+                                      uint           cryptMode,
+                                      const Password *password,
+                                      const byte     *salt,
+                                      uint           saltLength
+                                     );
 
 /***********************************************************************\
-* Name   : Crypt_writeKeyFile
+* Name   : Crypt_writePublicPrivateKeyFile
 * Purpose: write key to file (base64-encoded)
 * Input  : cryptKey   - crypt key
 *          fileName   - file name
@@ -810,16 +815,16 @@ Errors Crypt_readKeyFile(CryptKey       *cryptKey,
 * Notes  : use own specific file format
 \***********************************************************************/
 
-Errors Crypt_writeKeyFile(CryptKey       *cryptKey,
-                          const String   fileName,
-                          uint           cryptMode,
-                          const Password *password,
-                          const byte     *salt,
-                          uint           saltLength
-                         );
+Errors Crypt_writePublicPrivateKeyFile(CryptKey       *cryptKey,
+                                       const String   fileName,
+                                       uint           cryptMode,
+                                       const Password *password,
+                                       const byte     *salt,
+                                       uint           saltLength
+                                      );
 
 /***********************************************************************\
-* Name   : Crypt_createKeyPair
+* Name   : Crypt_createPublicPrivateKeyPair
 * Purpose: create new public/private key pair encryption/decryption
 * Input  : bits - number of RSA key bits
 * Output : publicCryptKey  - public crypt key (encryption or signature
@@ -830,11 +835,11 @@ Errors Crypt_writeKeyFile(CryptKey       *cryptKey,
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_createKeyPair(CryptKey          *publicCryptKey,
-                           CryptKey          *privateCryptKey,
-                           uint              bits,
-                           CryptPaddingTypes cryptPaddingType
-                          );
+Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
+                                        CryptKey          *privateCryptKey,
+                                        uint              bits,
+                                        CryptPaddingTypes cryptPaddingType
+                                       );
 
 /***********************************************************************\
 * Name   : Crypt_keyEncrypt

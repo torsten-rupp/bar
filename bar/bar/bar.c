@@ -2913,13 +2913,13 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
     // read key file (base64 encoded)
 
     fileName = String_newCString(value);
-    error = Crypt_readKeyFile(cryptKey,
-                              fileName,
-                              CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                              NULL,  // password
-                              NULL,  // salt
-                              0  // saltLength
-                             );
+    error = Crypt_readPublicPrivateKeyFile(cryptKey,
+                                           fileName,
+                                           CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                           NULL,  // password
+                                           NULL,  // salt
+                                           0  // saltLength
+                                          );
     if (error != ERROR_NONE)
     {
       stringCopy(errorMessage,Error_getText(error),errorMessageSize);
@@ -2952,14 +2952,14 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
 
 //TODO: use Crypt_setKeyString
       // set crypt key data
-      error = Crypt_setKeyData(cryptKey,
-                               data,
-                               dataLength,
-      CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                               NULL,  // password
-                               NULL,  // salt
-                               0  // saltLength
-                              );
+      error = Crypt_setPublicPrivateKeyData(cryptKey,
+                                            data,
+                                            dataLength,
+                   CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            NULL,  // password
+                                            NULL,  // salt
+                                            0  // saltLength
+                                           );
       if (error != ERROR_NONE)
       {
         stringCopy(errorMessage,Error_getText(error),errorMessageSize);
@@ -2975,14 +2975,14 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
     // plain key string
 
     // set crypt key data
-    error = Crypt_setKeyData(cryptKey,
-                             value,
-                             strlen(value),
-                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                             NULL,  // password
-                             NULL,  // salt
-                             0  // saltLength
-                            );
+    error = Crypt_setPublicPrivateKeyData(cryptKey,
+                                          value,
+                                          strlen(value),
+                                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                          NULL,  // password
+                                          NULL,  // salt
+                                          0  // saltLength
+                                         );
     if (error != ERROR_NONE)
     {
       stringCopy(errorMessage,Error_getText(error),errorMessageSize);
@@ -8039,7 +8039,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   }
 
   // generate new key pair for encryption
-  error = Crypt_createKeyPair(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE);
+  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE);
   if (error != ERROR_NONE)
   {
     printError("Cannot create encryption key pair (error: %s)!\n",Error_getText(error));
@@ -8055,13 +8055,13 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   // output keys
   if (keyFileBaseName != NULL)
   {
-    error = Crypt_writeKeyFile(&publicKey,
-                               publicKeyFileName,
-                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                               NULL,  // password
-                               NULL,  // salt
-                               0  // saltLength
-                              );
+    error = Crypt_writePublicPrivateKeyFile(&publicKey,
+                                            publicKeyFileName,
+                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            NULL,  // password
+                                            NULL,  // salt
+                                            0  // saltLength
+                                           );
     if (error != ERROR_NONE)
     {
       printError("Cannot write encryption public key file!\n");
@@ -8074,13 +8074,13 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
       return error;
     }
     printf("Created public encryption key '%s'\n",String_cString(publicKeyFileName));
-    error = Crypt_writeKeyFile(&privateKey,
-                               privateKeyFileName,
-                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                               &cryptPassword,
-                               NULL,  // salt
-                               0  // saltLength
-                              );
+    error = Crypt_writePublicPrivateKeyFile(&privateKey,
+                                            privateKeyFileName,
+                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            &cryptPassword,
+                                            NULL,  // salt
+                                            0  // saltLength
+                                           );
     if (error != ERROR_NONE)
     {
       printError("Cannot write encryption private key file!\n");
@@ -8096,13 +8096,13 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   }
   else
   {
-    error = Crypt_getKeyString(&publicKey,
-                               data,
-                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                               NULL,  // password,
-                               NULL,  // salt
-                               0  // saltLength
-                              );
+    error = Crypt_getPublicPrivateKeyString(&publicKey,
+                                            data,
+                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            NULL,  // password,
+                                            NULL,  // salt
+                                            0  // saltLength
+                                           );
     if (error != ERROR_NONE)
     {
       printError("Cannot get encryption public key!\n");
@@ -8114,13 +8114,13 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
       return error;
     }
     printf("crypt-public-key = base64:%s\n",String_cString(data));
-    error = Crypt_getKeyString(&privateKey,
-                               data,
-                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                               NULL,  // password,
-                               NULL,  // salt
-                               0  // saltLength
-                              );
+    error = Crypt_getPublicPrivateKeyString(&privateKey,
+                                            data,
+                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            NULL,  // password,
+                                            NULL,  // salt
+                                            0  // saltLength
+                                           );
     if (error != ERROR_NONE)
     {
       printError("Cannot get encryption private key!\n");
@@ -8194,7 +8194,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   }
 
   // generate new key pair for signature
-  error = Crypt_createKeyPair(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE);
+  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE);
   if (error != ERROR_NONE)
   {
     printError("Cannot create signature key pair (error: %s)!\n",Error_getText(error));
@@ -8209,13 +8209,13 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   // output keys
   if (keyFileBaseName != NULL)
   {
-    error = Crypt_writeKeyFile(&publicKey,
-                               publicKeyFileName,
-                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                               NULL,  // password
-                               NULL,  // salt
-                               0  // saltLength
-                              );
+    error = Crypt_writePublicPrivateKeyFile(&publicKey,
+                                            publicKeyFileName,
+                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            NULL,  // password
+                                            NULL,  // salt
+                                            0  // saltLength
+                                           );
     if (error != ERROR_NONE)
     {
       printError("Cannot write signature public key file!\n");
@@ -8227,13 +8227,13 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       return error;
     }
     printf("Created public signature key '%s'\n",String_cString(publicKeyFileName));
-    error = Crypt_writeKeyFile(&privateKey,
-                               privateKeyFileName,
-                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                               NULL,  // password,
-                               NULL,  // salt
-                               0  // saltLength
-                              );
+    error = Crypt_writePublicPrivateKeyFile(&privateKey,
+                                            privateKeyFileName,
+                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            NULL,  // password,
+                                            NULL,  // salt
+                                            0  // saltLength
+                                           );
     if (error != ERROR_NONE)
     {
       printError("Cannot write signature private key file!\n");
@@ -8248,13 +8248,13 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   }
   else
   {
-    error = Crypt_getKeyString(&publicKey,
-                               keyString,
-                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                               NULL,  // password,
-                               NULL,  // salt
-                               0  // saltLength
-                              );
+    error = Crypt_getPublicPrivateKeyString(&publicKey,
+                                            keyString,
+                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            NULL,  // password,
+                                            NULL,  // salt
+                                            0  // saltLength
+                                           );
     if (error != ERROR_NONE)
     {
       printError("Cannot get signature public key!\n");
@@ -8266,13 +8266,13 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       return error;
     }
     printf("signature-public-key = base64:%s\n",String_cString(keyString));
-    error = Crypt_getKeyString(&privateKey,
-                               keyString,
-                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                               NULL,  // password,
-                               NULL,  // salt
-                               0  // saltLength
-                              );
+    error = Crypt_getPublicPrivateKeyString(&privateKey,
+                                            keyString,
+                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            NULL,  // password,
+                                            NULL,  // salt
+                                            0  // saltLength
+                                           );
     if (error != ERROR_NONE)
     {
       printError("Cannot get signature private key!\n");

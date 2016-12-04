@@ -76,6 +76,8 @@ typedef struct
 typedef struct
 {
   StorageInfo       *storageInfo;
+  byte              cryptSalt[CRYPT_SALT_LENGTH];
+  uint              cryptMode;
   ArchiveEntryTypes archiveEntryType;
   uint64            offset;
 } EntryMsg;
@@ -1061,6 +1063,10 @@ LOCAL void testThreadCode(TestInfo *testInfo)
       break;
     }
 
+    // set salt and crypt mode
+    Archive_setSalt(&archiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
+    Archive_setCryptMode(&archiveHandle,entryMsg.cryptMode);
+
     // seek to start of entry
     error = Archive_seek(&archiveHandle,entryMsg.offset);
     if (error != ERROR_NONE)
@@ -1341,6 +1347,8 @@ NULL,  //               requestedAbortFlag,
 
     // send entry to test threads
     entryMsg.storageInfo      = &storageInfo;
+    memCopyFast(entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt),archiveHandle.cryptSalt,sizeof(archiveHandle.cryptSalt));
+    entryMsg.cryptMode        = archiveHandle.cryptMode;
     entryMsg.archiveEntryType = archiveEntryType;
     entryMsg.offset           = offset;
     if (!MsgQueue_put(&testInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))

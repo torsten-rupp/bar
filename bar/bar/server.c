@@ -18038,7 +18038,7 @@ LOCAL void initSession(ClientInfo *clientInfo)
   #else /* not NO_SESSION_ID */
     memset(clientInfo->sessionId,0,sizeof(SessionId));
   #endif /* NO_SESSION_ID */
-  (void)Crypt_createKeyPair(&clientInfo->publicKey,&clientInfo->secretKey,SESSION_KEY_SIZE,CRYPT_PADDING_TYPE_PKCS1);
+  (void)Crypt_createPublicPrivateKeyPair(&clientInfo->publicKey,&clientInfo->secretKey,SESSION_KEY_SIZE,CRYPT_PADDING_TYPE_PKCS1);
 }
 
 /***********************************************************************\
@@ -18077,8 +18077,8 @@ LOCAL void sendSessionId(ClientInfo *clientInfo)
 
   // format session data
   id = encodeHex(String_new(),clientInfo->sessionId,sizeof(SessionId));
-  n  = Crypt_getKeyModulus(&clientInfo->publicKey);
-  e  = Crypt_getKeyExponent(&clientInfo->publicKey);
+  n  = Crypt_getPublicPrivateKeyModulus(&clientInfo->publicKey);
+  e  = Crypt_getPublicPrivateKeyExponent(&clientInfo->publicKey);
   if ((n !=NULL) && (e != NULL))
   {
     s  = String_format(String_new(),
