@@ -1580,7 +1580,6 @@ Errors Crypt_getPublicPrivateKeyString(CryptKey       *cryptKey,
                                          );
     if (error != ERROR_NONE)
     {
-      Password_freeSecure(encryptedKey);
       return error;
     }
 
