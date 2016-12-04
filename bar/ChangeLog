@@ -1,7 +1,7 @@
 2016-12-xx 0.21
   * parallel test, compare
-  * fragmented create of huge files (size > 128M by default;
-    see option --fragment-size). Speed-up store huge files!
+  * fragmented processing of huge files (size > 128M by default;
+    see option --fragment-size). Speed-up storage of huge files
   * added meta-data chunk with host, name, UUID, created,
     comment
   * added option --comment
@@ -12,7 +12,12 @@
   * added meta info chunk: store user name, host name,
     job UUID, schedule UUID, type, created date/time,
     comment into archives
-  * improved encryption: added salt to crypt
+  * hardend encryption: added salt to crypt (Note: this
+    required a new archive format BAR1; the old format BAR0
+    can still be read)
+  * hardend encryption: use key derivation function (Note: this
+    required a new archive format BAR1; the old format BAR0
+    can still be read)
   * BARControl: read keys from .pem files, JKS is now
     obsolete
   * added option --comment
