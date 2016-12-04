@@ -2141,6 +2141,7 @@ LOCAL Errors listArchiveContent(StorageSpecifier    *storageSpecifier,
                                 LogHandle           *logHandle
                                )
 {
+  String               printableStorageName;
   CryptSignatureStates allCryptSignatureState;
   bool                 printedHeaderFlag,printedMetaInfoFlag;
   ulong                fileCount;
@@ -2158,6 +2159,12 @@ bool         remoteBarFlag;
 
 // NYI ???
 remoteBarFlag=FALSE;
+
+  // init variables
+  printableStorageName = String_new();
+
+  // get printable storage name
+  Storage_getPrintableName(printableStorageName,storageSpecifier,fileName);
 
   allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
   printedHeaderFlag      = FALSE;
@@ -2232,7 +2239,7 @@ remoteBarFlag=FALSE;
         }
 
         // list contents
-        printArchiveName(Storage_getPrintableName(storageSpecifier,fileName),showEntriesFlag);
+        printArchiveName(printableStorageName,showEntriesFlag);
         while (   !Archive_eof(&archiveHandle,TRUE,TRUE)
                && (error == ERROR_NONE)
               )
@@ -2247,7 +2254,7 @@ remoteBarFlag=FALSE;
           if (error != ERROR_NONE)
           {
             printWarning("Cannot read next entry from storage '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,fileName),
+                       String_cString(printableStorageName),
                        Error_getText(error)
                       );
             break;
@@ -2291,7 +2298,7 @@ remoteBarFlag=FALSE;
 //TODO: remove
 #if 0
                     printError("Cannot read 'file' content from storage '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,fileName),
+                               String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
 #endif
@@ -2408,7 +2415,7 @@ remoteBarFlag=FALSE;
 //TODO: remove
 #if 0
                     printError("Cannot read 'image' content from storage '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,fileName),
+                               String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
 #endif
@@ -2506,7 +2513,7 @@ remoteBarFlag=FALSE;
 //TODO: remove
 #if 0
                     printError("Cannot read 'directory' content from storage '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,fileName),
+                               String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
 #endif
@@ -2595,7 +2602,7 @@ remoteBarFlag=FALSE;
 //TODO: remove
 #if 0
                     printError("Cannot read 'link' content from storage '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,fileName),
+                               String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
 #endif
@@ -2699,7 +2706,7 @@ remoteBarFlag=FALSE;
 //TODO: remove
 #if 0
                     printError("Cannot read 'hard link' content from storage '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,fileName),
+                               String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
 #endif
@@ -2806,7 +2813,7 @@ remoteBarFlag=FALSE;
 //TODO: remove
 #if 0
                     printError("Cannot read 'special' content from storage '%s' (error: %s)!\n",
-                               Storage_getPrintableNameCString(storageSpecifier,fileName),
+                               String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
 #endif
@@ -3788,6 +3795,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
   if (error != ERROR_NONE)
   {
+    String_delete(printableStorageName);
     return error;
   }
 
@@ -3814,6 +3822,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     printArchiveList();
     printArchiveListFooter(List_count(&archiveContentList));
   }
+
+  // free resources
+  String_delete(printableStorageName);
 
   return (   !jobOptions->skipVerifySignaturesFlag
           && (allCryptSignatureState != CRYPT_SIGNATURE_STATE_NONE)
@@ -3920,6 +3931,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
                                   const PatternList          *excludePatternList
                                  )
 {
+  String    printableStorageName;
   String    fileName,dateTimeString;
   ulong     fileCount;
   String    line;
@@ -3935,12 +3947,17 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
 
-  printDirectoryListHeader(Storage_getPrintableName(storageSpecifier,NULL));
+  // init variables
+  printableStorageName = String_new();
+  fileName             = String_new();
+  dateTimeString       = String_new();
+  fileCount            = 0;
+  line                 = String_new();
 
-  fileName       = String_new();
-  dateTimeString = String_new();
-  fileCount      = 0;
-  line           = String_new();
+  // get printable storage name
+  Storage_getPrintableName(printableStorageName,storageSpecifier,NULL);
+
+  printDirectoryListHeader(printableStorageName);
   while (!Storage_endOfDirectoryList(storageDirectoryListHandle))
   {
     // read next directory entry
@@ -4039,6 +4056,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
   String_delete(line);
   String_delete(dateTimeString);
   String_delete(fileName);
+  String_delete(printableStorageName);
 
   printDirectoryListFooter(fileCount);
 

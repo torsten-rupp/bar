@@ -3676,7 +3676,7 @@ LOCAL void jobThreadCode(void)
                    LOG_TYPE_ALWAYS,
                    "Aborted job '%s': invalid storage '%s' (error: %s)\n",
                    String_cString(jobName),
-                   Storage_getPrintableNameCString(&storageSpecifier,NULL),
+                   String_cString(storageName),
                    Error_getText(jobNode->runningInfo.error)
                   );
       }
@@ -5602,7 +5602,7 @@ LOCAL void indexThreadCode(void)
         error = Storage_parseName(&storageSpecifier,storageName);
         if (error == ERROR_NONE)
         {
-          String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+          Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
         }
         else
         {
@@ -5890,11 +5890,14 @@ LOCAL void autoIndexThreadCode(void)
 
             if (!String_isEmpty(baseName))
             {
+              // get printable storage name
+              Storage_getPrintableName(printableStorageName,&storageSpecifier,baseName);
+
               // read directory and scan all sub-directories for .bar files if possible
               pprintInfo(4,
                          "INDEX: ",
                          "Auto-index scan '%s'\n",
-                         String_cString(Storage_getPrintableName(&storageSpecifier,baseName))
+                         String_cString(printableStorageName)
                         );
               File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
               (void)Storage_forAll(pattern,
@@ -5915,6 +5918,8 @@ LOCAL void autoIndexThreadCode(void)
                                          case FILE_TYPE_FILE:
                                          case FILE_TYPE_LINK:
                                          case FILE_TYPE_HARDLINK:
+                                           Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+
                                            // get index id, request index update
                                            if (Index_findStorageByName(indexHandle,
                                                                        &storageSpecifier,
@@ -5950,7 +5955,7 @@ LOCAL void autoIndexThreadCode(void)
                                                              LOG_TYPE_INDEX,
                                                              "INDEX",
                                                              "Requested update index for '%s'\n",
-                                                             String_cString(Storage_getPrintableName(&storageSpecifier,NULL))
+                                                             String_cString(printableStorageName)
                                                             );
                                                }
                                              }
@@ -5981,7 +5986,7 @@ LOCAL void autoIndexThreadCode(void)
                                                            LOG_TYPE_INDEX,
                                                            "INDEX",
                                                            "Requested add index for '%s'\n",
-                                                           String_cString(Storage_getPrintableName(&storageSpecifier,NULL))
+                                                           String_cString(printableStorageName)
                                                           );
                                              }
                                            }
@@ -6046,7 +6051,7 @@ LOCAL void autoIndexThreadCode(void)
           error = Storage_parseName(&storageSpecifier,storageName);
           if (error == ERROR_NONE)
           {
-            String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+            Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
           }
           else
           {
@@ -15694,7 +15699,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error == ERROR_NONE)
     {
-      String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+      Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
     }
     else
     {
@@ -16178,6 +16183,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   bool             forceRefresh;
   StorageSpecifier storageSpecifier;
   StorageInfo      storageInfo;
+  String           printableStorageName;
   IndexId          storageId;
   Errors           error;
 
@@ -16232,6 +16238,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                       ) == ERROR_NONE
          )
       {
+        printableStorageName = Storage_getPrintableName(String_new(),&storageSpecifier,NULL);
+
         if (Index_findStorageByName(indexHandle,
                                     &storageSpecifier,
                                     NULL,  // archiveName
@@ -16269,7 +16277,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
         {
           error = Index_newStorage(indexHandle,
                                    INDEX_ID_NONE, // entityId
-                                   Storage_getPrintableName(&storageSpecifier,NULL),
+                                   printableStorageName,
                                    INDEX_STATE_UPDATE_REQUESTED,
                                    INDEX_MODE_MANUAL,
                                    &storageId
@@ -16281,9 +16289,11 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
         {
           sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
                            storageId,
-                           Storage_getPrintableName(&storageSpecifier,NULL)
+                           printableStorageName
                           );
         }
+
+        String_delete(printableStorageName);
       }
     }
   }
@@ -16294,6 +16304,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
     error = Storage_forAll(pattern,
                            CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                            {
+                             String printableStorageName;
+
                              UNUSED_VARIABLE(fileInfo);
                              UNUSED_VARIABLE(userData);
 
@@ -16302,6 +16314,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                              {
                                if (String_endsWithCString(storageSpecifier.fileName,FILE_NAME_EXTENSION_ARCHIVE_FILE))
                                {
+                                 printableStorageName = Storage_getPrintableName(String_new(),&storageSpecifier,storageName);
+
 //fprintf(stderr,"%s, %d: storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
                                  if (Index_findStorageByName(indexHandle,
                                                              &storageSpecifier,
@@ -16353,8 +16367,10 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
 
                                  sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
                                                   storageId,
-                                                  Storage_getPrintableName(&storageSpecifier,storageName)
+                                                  printableStorageName
                                                  );
+
+                                 String_delete(printableStorageName);
                                }
                              }
 
@@ -17214,7 +17230,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
         error = Storage_parseName(&storageSpecifier,storageName);
         if (error == ERROR_NONE)
         {
-          String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+          Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
         }
         else
         {

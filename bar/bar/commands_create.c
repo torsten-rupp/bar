@@ -4002,7 +4002,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   void             *autoFreeSavePoint;
   StorageMsg       storageMsg;
   Errors           error;
-  ConstString      printableStorageName;
+  String           printableStorageName;
   FileInfo         fileInfo;
   Server           server;
   FileHandle       fileHandle;
@@ -4034,11 +4034,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  pathName = String_new();
-  existingStorageName = String_new();
-  existingPathName = String_new();
+  printableStorageName = String_new();
+  pathName             = String_new();
+  existingStorageName  = String_new();
+  existingPathName     = String_new();
   Storage_initSpecifier(&existingStorageSpecifier);
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
+  AUTOFREE_ADD(&autoFreeList,pathName,{ String_delete(printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,pathName,{ String_delete(pathName); });
   AUTOFREE_ADD(&autoFreeList,existingStorageName,{ String_delete(existingStorageName); });
   AUTOFREE_ADD(&autoFreeList,existingPathName,{ String_delete(existingPathName); });
@@ -4092,7 +4094,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                 );
 
     // get printable storage name
-    printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.archiveName);
+    Storage_getPrintableName(printableStorageName,createInfo->storageSpecifier,storageMsg.archiveName);
 
     // pre-process
     error = Storage_preProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->startTime,FALSE);
@@ -4436,7 +4438,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         if (createInfo->storageInfo.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
         {
 //fprintf(stderr,"%s, %d: append to entity of uuid %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
-          printableStorageName = Storage_getPrintableName(createInfo->storageSpecifier,storageMsg.archiveName);
+          Storage_getPrintableName(printableStorageName,createInfo->storageSpecifier,storageMsg.archiveName);
 
           // find matching entity and assign storage to entity
           File_getFilePathName(pathName,storageMsg.archiveName);
@@ -4699,6 +4701,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   String_delete(existingPathName);
   String_delete(existingStorageName);
   String_delete(pathName);
+  String_delete(printableStorageName);
   free(buffer);
   AutoFree_done(&autoFreeList);
 
@@ -6710,6 +6713,7 @@ Errors Command_create(ConstString                  jobUUID,
                      )
 {
   AutoFreeList     autoFreeList;
+  String           printableStorageName;
   String           incrementalListFileName;
   bool             useIncrementalFileInfoFlag;
   bool             incrementalFileInfoExistFlag;
@@ -6733,9 +6737,11 @@ Errors Command_create(ConstString                  jobUUID,
 
   // init variables
   AutoFree_init(&autoFreeList);
+  printableStorageName         = String_new();
   incrementalListFileName      = NULL;
   useIncrementalFileInfoFlag   = FALSE;
   incrementalFileInfoExistFlag = FALSE;
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // check if storage name given
   if (String_isEmpty(storageName))
@@ -6808,6 +6814,9 @@ Errors Command_create(ConstString                  jobUUID,
     AUTOFREE_ADDX(&autoFreeList,mountNode,(MountNode *mountNode),{ if (Device_isMounted(mountNode->name) && (mountNode->alwaysUnmount || mountNode->mounted)) Device_umount(mountNode->name); });
   }
 
+  // get printable storage name
+  Storage_getPrintableName(printableStorageName,createInfo.storageSpecifier,NULL);
+
   // init storage
   error = Storage_init(&createInfo.storageInfo,
                        createInfo.storageSpecifier,
@@ -6821,7 +6830,7 @@ Errors Command_create(ConstString                  jobUUID,
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize storage '%s' (error: %s)\n",
-               Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -6910,7 +6919,7 @@ Errors Command_create(ConstString                  jobUUID,
       if (error != ERROR_NONE)
       {
         printError("Cannot create index for '%s' (error: %s)!\n",
-                   Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+                   String_cString(printableStorageName),
                    Error_getText(error)
                   );
         AutoFree_cleanup(&autoFreeList);
@@ -6930,7 +6939,7 @@ Errors Command_create(ConstString                  jobUUID,
     if (error != ERROR_NONE)
     {
       printError("Cannot create index for '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+                 String_cString(printableStorageName),
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
@@ -6945,7 +6954,7 @@ Errors Command_create(ConstString                  jobUUID,
     if (error != ERROR_NONE)
     {
       printError("Cannot create index for '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+                 String_cString(printableStorageName),
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
@@ -6974,7 +6983,7 @@ Errors Command_create(ConstString                  jobUUID,
   if (error != ERROR_NONE)
   {
     printError("Cannot create archive file '%s' (error: %s)\n",
-               Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -7043,7 +7052,7 @@ Errors Command_create(ConstString                  jobUUID,
   if (error != ERROR_NONE)
   {
     printError("Cannot close archive '%s' (error: %s)\n",
-               Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -7074,7 +7083,7 @@ Errors Command_create(ConstString                  jobUUID,
     if (error != ERROR_NONE)
     {
       printError("Cannot create index for '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+                 String_cString(printableStorageName),
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
@@ -7087,7 +7096,7 @@ Errors Command_create(ConstString                  jobUUID,
     if (error != ERROR_NONE)
     {
       printError("Cannot create index for '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(createInfo.storageSpecifier,NULL),
+                 String_cString(printableStorageName),
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
@@ -7196,6 +7205,7 @@ Errors Command_create(ConstString                  jobUUID,
   Index_close(indexHandle);
   free(createThreads);
   Storage_doneSpecifier(&storageSpecifier);
+  String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 
   return error;

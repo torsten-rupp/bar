@@ -78,7 +78,7 @@ typedef struct
 // entry message send to compare threads
 typedef struct
 {
-  StorageInfo       *storageInfo;
+  const StorageInfo *storageInfo;
   byte              cryptSalt[CRYPT_SALT_LENGTH];
   uint              cryptMode;
   ArchiveEntryTypes archiveEntryType;
@@ -111,10 +111,8 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 {
   assert(entryMsg != NULL);
 
+  UNUSED_VARIABLE(entryMsg);
   UNUSED_VARIABLE(userData);
-
-//      StringList_done(&entryMsg->nameList);
-//      String_delete(entryMsg->name);
 }
 
 /***********************************************************************\
@@ -1604,14 +1602,16 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
 
 LOCAL void compareThreadCode(CompareInfo *compareInfo)
 {
-  byte              *buffer0,*buffer1;
-  ArchiveHandle     archiveHandle;
-  EntryMsg          entryMsg;
-  Errors            error;
+  String        printableStorageName;
+  byte          *buffer0,*buffer1;
+  ArchiveHandle archiveHandle;
+  EntryMsg      entryMsg;
+  Errors        error;
 
   assert(compareInfo != NULL);
 
   // init variables
+  printableStorageName = String_new();
   buffer0 = (byte*)malloc(BUFFER_SIZE);
   if (buffer0 == NULL)
   {
@@ -1622,6 +1622,9 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+
+  // get printable storage name
+  Storage_getPrintableName(printableStorageName,compareInfo->storageSpecifier,NULL);
 
   // compare entries
   while (   (compareInfo->failError == ERROR_NONE)
@@ -1645,11 +1648,9 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
     if (error != ERROR_NONE)
     {
       printError("Cannot open storage '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(compareInfo->storageSpecifier,NULL),
+                 String_cString(printableStorageName),
                  Error_getText(error)
                 );
-      free(buffer1);
-      free(buffer0);
       if (compareInfo->failError == ERROR_NONE) compareInfo->failError = error;
       break;
     }
@@ -1663,7 +1664,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
     if (error != ERROR_NONE)
     {
       printError("Cannot read storage '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(compareInfo->storageSpecifier,NULL),
+                 String_cString(printableStorageName),
                  Error_getText(error)
                 );
       if (compareInfo->failError == ERROR_NONE) compareInfo->failError = error;
@@ -1676,7 +1677,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
         error = compareFileEntry(&archiveHandle,
                                  compareInfo->includeEntryList,
                                  compareInfo->excludePatternList,
-                                 Storage_getPrintableNameCString(compareInfo->storageSpecifier,NULL),
+                                 String_cString(printableStorageName),
                                  compareInfo->jobOptions,
                                  compareInfo->fragmentList,
                                  buffer0,
@@ -1688,7 +1689,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
         error = compareImageEntry(&archiveHandle,
                                   compareInfo->includeEntryList,
                                   compareInfo->excludePatternList,
-                                  Storage_getPrintableNameCString(compareInfo->storageSpecifier,NULL),
+                                  String_cString(printableStorageName),
                                   compareInfo->jobOptions,
                                   compareInfo->fragmentList,
                                   buffer0,
@@ -1700,7 +1701,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
         error = compareDirectoryEntry(&archiveHandle,
                                       compareInfo->includeEntryList,
                                       compareInfo->excludePatternList,
-                                      Storage_getPrintableNameCString(compareInfo->storageSpecifier,NULL),
+                                      String_cString(printableStorageName),
                                       compareInfo->jobOptions
                                      );
         break;
@@ -1708,7 +1709,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
         error = compareLinkEntry(&archiveHandle,
                                  compareInfo->includeEntryList,
                                  compareInfo->excludePatternList,
-                                 Storage_getPrintableNameCString(compareInfo->storageSpecifier,NULL),
+                                 String_cString(printableStorageName),
                                  compareInfo->jobOptions
                                 );
         break;
@@ -1716,7 +1717,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
         error = compareHardLinkEntry(&archiveHandle,
                                      compareInfo->includeEntryList,
                                      compareInfo->excludePatternList,
-                                     Storage_getPrintableNameCString(compareInfo->storageSpecifier,NULL),
+                                     String_cString(printableStorageName),
                                      compareInfo->jobOptions,
                                      compareInfo->fragmentList,
                                      buffer0,
@@ -1728,7 +1729,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
         error = compareSpecialEntry(&archiveHandle,
                                     compareInfo->includeEntryList,
                                     compareInfo->excludePatternList,
-                                    Storage_getPrintableNameCString(compareInfo->storageSpecifier,NULL),
+                                    String_cString(printableStorageName),
                                     compareInfo->jobOptions
                                    );
         break;
@@ -1762,6 +1763,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
   // free resources
   free(buffer1);
   free(buffer0);
+  String_delete(printableStorageName);
 }
 
 /***********************************************************************\
@@ -1794,12 +1796,13 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                                    LogHandle           *logHandle
                                   )
 {
-  CompareInfo          compareInfo;
+  String               printableStorageName;
+  Thread               *compareThreads;
+  uint                 compareThreadCount;
   StorageInfo          storageInfo;
   Errors               error;
   CryptSignatureStates allCryptSignatureState;
-  Thread               *compareThreads;
-  uint                 compareThreadCount;
+  CompareInfo          compareInfo;
   uint                 i;
   Errors               failError;
   ArchiveHandle        archiveHandle;
@@ -1814,26 +1817,16 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
   assert(fragmentList != NULL);
 
   // init variables
-  compareThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  printableStorageName = String_new();
+  compareThreadCount   = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
   compareThreads = (Thread*)malloc(compareThreadCount*sizeof(Thread));
   if (compareThreads == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  // init compare info
-  initCompareInfo(&compareInfo,
-                  fragmentList,
-                  storageSpecifier,
-                  includeEntryList,
-                  excludePatternList,
-                  deltaSourceList,
-                  jobOptions,
-//TODO
-NULL,  //               pauseTestFlag,
-NULL,  //               requestedAbortFlag,
-                  logHandle
-                 );
+  // get printable storage name
+  Storage_getPrintableName(printableStorageName,storageSpecifier,fileName);
 
   // init storage
   error = Storage_init(&storageInfo,
@@ -1848,11 +1841,11 @@ NULL,  //               requestedAbortFlag,
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize storage '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,fileName),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
-    doneCompareInfo(&compareInfo);
     free(compareThreads);
+    String_delete(printableStorageName);
     return error;
   }
 
@@ -1868,8 +1861,8 @@ NULL,  //               requestedAbortFlag,
     if (error != ERROR_NONE)
     {
       (void)Storage_done(&storageInfo);
-      doneCompareInfo(&compareInfo);
       free(compareThreads);
+      String_delete(printableStorageName);
       return error;
     }
     if (   (allCryptSignatureState != CRYPT_SIGNATURE_STATE_NONE)
@@ -1877,14 +1870,28 @@ NULL,  //               requestedAbortFlag,
        )
     {
       printError("Invalid signature in '%s'!\n",
-                 Storage_getPrintableNameCString(storageSpecifier,fileName)
+                 String_cString(printableStorageName)
                 );
       (void)Storage_done(&storageInfo);
-      doneCompareInfo(&compareInfo);
       free(compareThreads);
+      String_delete(printableStorageName);
       return ERROR_INVALID_SIGNATURE;
     }
   }
+
+  // init compare info
+  initCompareInfo(&compareInfo,
+                  fragmentList,
+                  storageSpecifier,
+                  includeEntryList,
+                  excludePatternList,
+                  deltaSourceList,
+                  jobOptions,
+//TODO
+NULL,  //               pauseTestFlag,
+NULL,  //               requestedAbortFlag,
+                  logHandle
+                 );
 
   // start compare threads
   for (i = 0; i < compareThreadCount; i++)
@@ -1908,12 +1915,13 @@ NULL,  //               requestedAbortFlag,
   if (error != ERROR_NONE)
   {
     printError("Cannot open storage '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,fileName),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
     (void)Storage_done(&storageInfo);
     doneCompareInfo(&compareInfo);
     free(compareThreads);
+    String_delete(printableStorageName);
     return error;
   }
   DEBUG_TESTCODE() { (void)Archive_close(&archiveHandle); (void)Storage_done(&storageInfo); return DEBUG_TESTCODE_ERROR(); }
@@ -1921,7 +1929,7 @@ NULL,  //               requestedAbortFlag,
   // read archive entries
   printInfo(0,
             "Compare storage '%s'%s",
-            Storage_getPrintableNameCString(storageSpecifier,fileName),
+            String_cString(printableStorageName),
             !isPrintInfo(1) ? "..." : ":\n"
            );
   failError = ERROR_NONE;
@@ -1939,7 +1947,7 @@ NULL,  //               requestedAbortFlag,
     if (error != ERROR_NONE)
     {
       printError("Cannot read next entry in archive '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(storageSpecifier,fileName),
+                 String_cString(printableStorageName),
                  Error_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
@@ -1989,6 +1997,7 @@ NULL,  //               requestedAbortFlag,
 
   // free resources
   free(compareThreads);
+  String_delete(printableStorageName);
 
   return error;
 }

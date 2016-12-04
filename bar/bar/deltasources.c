@@ -166,9 +166,10 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
                          LogHandle           *logHandle
                         )
 {
+  String            printableStorageName;
   bool              restoredFlag;
-  StorageInfo       storageInfo;
   byte              *buffer;
+  StorageInfo       storageInfo;
 //  bool              abortFlag;
   Errors            error;
   ArchiveHandle     archiveHandle;
@@ -182,14 +183,16 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
   assert(destinationFileName != NULL);
 
   // initialize variables
-  restoredFlag = FALSE;
-
-  // allocate resources
+  printableStorageName = String_new();
+  restoredFlag         = FALSE;
   buffer = malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+
+  // get printable storage name
+  Storage_getPrintableName(printableStorageName,storageSpecifier,NULL);
 
   // init storage
   error = Storage_init(&storageInfo,
@@ -204,7 +207,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize storage '%s' (error: %s)!\n",
-               String_cString(Storage_getPrintableName(storageSpecifier,NULL)),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
     return error;
@@ -694,6 +697,7 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
 
   // free resources
   free(buffer);
+  String_delete(printableStorageName);
 
   if      (failError != ERROR_NONE)
   {

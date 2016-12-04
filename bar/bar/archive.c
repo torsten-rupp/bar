@@ -254,13 +254,28 @@ LOCAL Errors getCryptPassword(Password            *password,
                               void                *getPasswordUserData
                              )
 {
+  String printableStorageName;
   Errors error;
 
   assert(password != NULL);
   assert(archiveHandle != NULL);
   assert(jobOptions != NULL);
 
+  // init variables
+  printableStorageName = String_new();
+
   error = ERROR_UNKNOWN;
+
+  // get printable storage name
+  switch (archiveHandle->ioType)
+  {
+    case ARCHIVE_IO_TYPE_FILE:
+      String_set(printableStorageName,archiveHandle->file.fileName);
+      break;
+    case ARCHIVE_IO_TYPE_STORAGE:
+      Storage_getPrintableName(printableStorageName,&archiveHandle->storage.storageSpecifier,NULL);
+      break;
+  }
 
   switch (jobOptions->cryptPasswordMode)
   {
@@ -278,7 +293,7 @@ LOCAL Errors getCryptPassword(Password            *password,
                                       password,
                                       PASSWORD_TYPE_CRYPT,
                                       (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
-                                        ? String_cString(Storage_getPrintableName(&archiveHandle->storage.storageSpecifier,NULL))
+                                        ? String_cString(printableStorageName)
                                         : NULL,
                                       TRUE,
                                       TRUE,
@@ -306,7 +321,7 @@ LOCAL Errors getCryptPassword(Password            *password,
                                       password,
                                       PASSWORD_TYPE_CRYPT,
                                       (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
-                                        ? String_cString(Storage_getPrintableName(&archiveHandle->storage.storageSpecifier,NULL))
+                                        ? String_cString(printableStorageName)
                                         : NULL,
                                       TRUE,
                                       TRUE,
@@ -339,7 +354,7 @@ LOCAL Errors getCryptPassword(Password            *password,
                                       password,
                                       PASSWORD_TYPE_CRYPT,
                                       (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
-                                        ? String_cString(Storage_getPrintableName(&archiveHandle->storage.storageSpecifier,NULL))
+                                        ? String_cString(printableStorageName)
                                         : NULL,
                                       TRUE,
                                       TRUE,
@@ -364,6 +379,9 @@ LOCAL Errors getCryptPassword(Password            *password,
   }
   assert(error != ERROR_UNKNOWN);
 
+  // free resources
+  String_delete(printableStorageName);
+
   return error;
 }
 
@@ -384,6 +402,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 {
   bool           semaphoreLock;
   const Password *password;
+  String               printableStorageName;
   Password       newPassword;
   Errors         error;
 
@@ -423,12 +442,13 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
              if (passwordHandle->getPasswordFunction != NULL)
              {
                // input password
+               printableStorageName = Storage_getPrintableName(String_new(),&passwordHandle->archiveHandle->storage.storageSpecifier,NULL);
                Password_init(&newPassword);
                error = passwordHandle->getPasswordFunction(NULL,  // loginName
                                                            &newPassword,
                                                            PASSWORD_TYPE_CRYPT,
                                                            (passwordHandle->archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
-                                                             ? String_cString(Storage_getPrintableName(&passwordHandle->archiveHandle->storage.storageSpecifier,NULL))
+                                                             ? String_cString(printableStorageName)
                                                              : NULL,
                                                            FALSE,
                                                            FALSE,
@@ -445,6 +465,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
                  passwordHandle->passwordMode = PASSWORD_MODE_NONE;
                }
                Password_done(&newPassword);
+               String_delete(printableStorageName);
              }
              else
              {
@@ -638,6 +659,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator *decryptKeyIterator,
   bool                 semaphoreLock;
   const DecryptKeyNode *decryptKeyNode;
   const CryptKey       *decryptKey;
+  String               printableStorageName;
   Password             newPassword;
   Errors               error;
 
@@ -696,12 +718,14 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator *decryptKeyIterator,
              // input password and derive decrypt key
              if (decryptKeyIterator->getPasswordFunction != NULL)
              {
+               // input password
+               printableStorageName = Storage_getPrintableName(String_new(),&decryptKeyIterator->archiveHandle->storage.storageSpecifier,NULL);
                Password_init(&newPassword);
                error = decryptKeyIterator->getPasswordFunction(NULL,  // loginName
                                                              &newPassword,
                                                              PASSWORD_TYPE_CRYPT,
                                                              (decryptKeyIterator->archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
-                                                               ? String_cString(Storage_getPrintableName(&decryptKeyIterator->archiveHandle->storage.storageSpecifier,NULL))
+                                                               ? String_cString(printableStorageName)
                                                                : NULL,
                                                              FALSE,
                                                              FALSE,
@@ -722,6 +746,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator *decryptKeyIterator,
                  decryptKeyIterator->passwordMode = PASSWORD_MODE_NONE;
                }
                Password_done(&newPassword);
+               String_delete(printableStorageName);
              }
              else
              {
@@ -4478,7 +4503,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   archiveHandle->ioType                  = ARCHIVE_IO_TYPE_STORAGE;
   archiveHandle->storage.storageInfo     = storageInfo;
   Storage_duplicateSpecifier(&archiveHandle->storage.storageSpecifier,&storageInfo->storageSpecifier);
-  archiveHandle->printableStorageName    = String_duplicate(Storage_getPrintableName(&archiveHandle->storage.storageSpecifier,fileName));
+  archiveHandle->printableStorageName    = Storage_getPrintableName(String_new(),&archiveHandle->storage.storageSpecifier,fileName);
   Semaphore_init(&archiveHandle->chunkIOLock);
   archiveHandle->chunkIO                 = &CHUNK_IO_STORAGE;
   archiveHandle->chunkIOUserData         = &archiveHandle->storage.storageHandle;
@@ -12680,6 +12705,7 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
                           LogHandle        *logHandle
                          )
 {
+  String  printableStorageName;
   Errors  error;
   IndexId storageId;
 
@@ -12687,17 +12713,20 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
   assert(storageInfo != NULL);
 
   // create new storage index
+  printableStorageName = Storage_getPrintableName(String_new(),&storageInfo->storageSpecifier,NULL);
   error = Index_newStorage(indexHandle,
                            DATABASE_ID_NONE, // entityId
-                           Storage_getPrintableName(&storageInfo->storageSpecifier,NULL),
+                           printableStorageName,
                            INDEX_STATE_UPDATE,
                            indexMode,
                            &storageId
                           );
   if (error != ERROR_NONE)
   {
+    String_delete(printableStorageName);
     return error;
   }
+  String_delete(printableStorageName);
 
   // add index
   error = Archive_updateIndex(indexHandle,
@@ -12759,7 +12788,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   printableStorageName = String_new();
 
   // get printable name
-  String_set(printableStorageName,Storage_getPrintableName(&storageInfo->storageSpecifier,NULL));
+  Storage_getPrintableName(printableStorageName,&storageInfo->storageSpecifier,NULL);
 
   // open archive (Note optimization: try sftp for scp protocol, because sftp support seek()-operation)
   if (storageSpecifier.type == STORAGE_TYPE_SCP)

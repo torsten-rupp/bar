@@ -391,23 +391,21 @@ LOCAL Errors handleError(RestoreInfo *restoreInfo, Errors error)
 /***********************************************************************\
 * Name   : restoreFileEntry
 * Purpose: restore file entry
-* Input  : restoreInfo      - restore info
-*          archiveHandle    - archive handle
-*          storageSpecifier - storage specifier
-*          archiveName      - archive name
-*          buffer           - buffer for temporary data
-*          bufferSize       - size of data buffer
+* Input  : restoreInfo          - restore info
+*          archiveHandle        - archive handle
+*          printableStorageName - printable storage name
+*          buffer               - buffer for temporary data
+*          bufferSize           - size of data buffer
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
-                              ArchiveHandle    *archiveHandle,
-                              StorageSpecifier *storageSpecifier,
-                              ConstString      archiveName,
-                              byte             *buffer,
-                              uint             bufferSize
+LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
+                              ArchiveHandle *archiveHandle,
+                              ConstString   printableStorageName,
+                              byte          *buffer,
+                              uint          bufferSize
                              )
 {
   AutoFreeList              autoFreeList;
@@ -454,7 +452,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -627,7 +625,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
       {
         printInfo(1,"FAIL!\n");
         printError("Cannot read content of archive '%s' (error: %s)!\n",
-                   Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                   String_cString(printableStorageName),
                    Error_getText(error)
                   );
         break;
@@ -782,23 +780,23 @@ LOCAL Errors restoreFileEntry(RestoreInfo      *restoreInfo,
 /***********************************************************************\
 * Name   : restoreImageEntry
 * Purpose: restore image entry
-* Input  : restoreInfo      - restore info
-*          archiveHandle    - archive handle
-*          storageSpecifier - storage specifier
-*          archiveName      - archive name
-*          buffer           - buffer for temporary data
-*          bufferSize       - size of data buffer
+* Input  : restoreInfo          - restore info
+*          archiveHandle        - archive handle
+*          storageSpecifier     - storage specifier
+*          archiveName          - archive name
+*          printableStorageName - printable storage name
+*          buffer               - buffer for temporary data
+*          bufferSize           - size of data buffer
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
-                               ArchiveHandle    *archiveHandle,
-                               StorageSpecifier *storageSpecifier,
-                               ConstString      archiveName,
-                               byte             *buffer,
-                               uint             bufferSize
+LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
+                               ArchiveHandle *archiveHandle,
+                               ConstString   printableStorageName,
+                               byte          *buffer,
+                               uint          bufferSize
                               )
 {
   AutoFreeList     autoFreeList;
@@ -844,7 +842,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -1069,7 +1067,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
       {
         printInfo(1,"FAIL!\n");
         printError("Cannot read content of archive '%s' (error: %s)!\n",
-                   Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                   String_cString(printableStorageName),
                    Error_getText(error)
                   );
         break;
@@ -1217,23 +1215,21 @@ LOCAL Errors restoreImageEntry(RestoreInfo      *restoreInfo,
 /***********************************************************************\
 * Name   : restoreDirectoryEntry
 * Purpose: restore directory entry
-* Input  : restoreInfo      - restore info
-*          archiveHandle    - archive handle
-*          storageSpecifier - storage specifier
-*          archiveName      - archive name
-*          buffer           - buffer for temporary data
-*          bufferSize       - size of data buffer
+* Input  : restoreInfo          - restore info
+*          archiveHandle        - archive handle
+*          printableStorageName - printable storage name
+*          buffer               - buffer for temporary data
+*          bufferSize           - size of data buffer
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreDirectoryEntry(RestoreInfo      *restoreInfo,
-                                   ArchiveHandle    *archiveHandle,
-                                   StorageSpecifier *storageSpecifier,
-                                   ConstString      archiveName,
-                                   byte             *buffer,
-                                   uint             bufferSize
+LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
+                                   ArchiveHandle *archiveHandle,
+                                   ConstString   printableStorageName,
+                                   byte          *buffer,
+                                   uint          bufferSize
                                   )
 {
   AutoFreeList              autoFreeList;
@@ -1267,7 +1263,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo      *restoreInfo,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -1396,23 +1392,21 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo      *restoreInfo,
 /***********************************************************************\
 * Name   : restoreLinkEntry
 * Purpose: restore link entry
-* Input  : restoreInfo      - restore info
-*          archiveHandle    - archive handle
-*          storageSpecifier - storage specifier
-*          archiveName      - archive name
-*          buffer           - buffer for temporary data
-*          bufferSize       - size of data buffer
+* Input  : restoreInfo          - restore info
+*          archiveHandle        - archive handle
+*          printableStorageName - printable storage name
+*          buffer               - buffer for temporary data
+*          bufferSize           - size of data buffer
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreLinkEntry(RestoreInfo      *restoreInfo,
-                              ArchiveHandle    *archiveHandle,
-                              StorageSpecifier *storageSpecifier,
-                              ConstString      archiveName,
-                              byte             *buffer,
-                              uint             bufferSize
+LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
+                              ArchiveHandle *archiveHandle,
+                              ConstString   printableStorageName,
+                              byte          *buffer,
+                              uint          bufferSize
                              )
 {
   AutoFreeList              autoFreeList;
@@ -1451,7 +1445,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo      *restoreInfo,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -1636,23 +1630,21 @@ LOCAL Errors restoreLinkEntry(RestoreInfo      *restoreInfo,
 /***********************************************************************\
 * Name   : restoreHardLinkEntry
 * Purpose: restore hardlink entry
-* Input  : restoreInfo      - restore info
-*          archiveHandle    - archive handle
-*          storageSpecifier - storage specifier
-*          archiveName      - archive name
-*          buffer           - buffer for temporary data
-*          bufferSize       - size of data buffer
+* Input  : restoreInfo          - restore info
+*          archiveHandle        - archive handle
+*          printableStorageName - printable storage name
+*          buffer               - buffer for temporary data
+*          bufferSize           - size of data buffer
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
-                                  ArchiveHandle    *archiveHandle,
-                                  StorageSpecifier *storageSpecifier,
-                                  ConstString      archiveName,
-                                  byte             *buffer,
-                                  uint             bufferSize
+LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
+                                  ArchiveHandle *archiveHandle,
+                                  ConstString   printableStorageName,
+                                  byte          *buffer,
+                                  uint          bufferSize
                                  )
 {
   AutoFreeList              autoFreeList;
@@ -1700,7 +1692,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -1883,7 +1875,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
           {
             printInfo(1,"FAIL!\n");
             printError("Cannot read content of archive '%s' (error: %s)!\n",
-                       Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                       String_cString(printableStorageName),
                        Error_getText(error)
                       );
             break;
@@ -2092,23 +2084,21 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo      *restoreInfo,
 /***********************************************************************\
 * Name   : restoreSpecialEntry
 * Purpose: restore special entry
-* Input  : restoreInfo      - restore info
-*          archiveHandle    - archive handle
-*          storageSpecifier - storage specifier
-*          archiveName      - archive name
-*          buffer           - buffer for temporary data
-*          bufferSize       - size of data buffer
+* Input  : restoreInfo          - restore info
+*          archiveHandle        - archive handle
+*          printableStorageName - printable storage name
+*          buffer               - buffer for temporary data
+*          bufferSize           - size of data buffer
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreSpecialEntry(RestoreInfo      *restoreInfo,
-                                 ArchiveHandle    *archiveHandle,
-                                 StorageSpecifier *storageSpecifier,
-                                 ConstString      archiveName,
-                                 byte             *buffer,
-                                 uint             bufferSize
+LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
+                                 ArchiveHandle *archiveHandle,
+                                 ConstString   printableStorageName,
+                                 byte          *buffer,
+                                 uint          bufferSize
                                 )
 {
   AutoFreeList              autoFreeList;
@@ -2143,7 +2133,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo      *restoreInfo,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -2344,6 +2334,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
                                   )
 {
   AutoFreeList         autoFreeList;
+  String               printableStorageName;
   byte                 *buffer;
   StorageInfo          storageInfo;
   Errors               error;
@@ -2359,15 +2350,20 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
 
   // init variables
   AutoFree_init(&autoFreeList);
+  printableStorageName = String_new();
   buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
 
+  // get printable storage name
+  Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
+
   // init status info
-  String_set(restoreInfo->statusInfo.storageName,Storage_getPrintableName(storageSpecifier,archiveName));
+  String_set(restoreInfo->statusInfo.storageName,printableStorageName);
   restoreInfo->statusInfo.storageDoneSize  = 0LL;
   restoreInfo->statusInfo.storageTotalSize = 0LL;
   updateStatusInfo(restoreInfo,TRUE);
@@ -2385,7 +2381,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize storage '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -2414,7 +2410,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
        )
     {
       printError("Invalid signature in '%s'!\n",
-                 Storage_getPrintableNameCString(storageSpecifier,archiveName)
+                 String_cString(printableStorageName)
                 );
       AutoFree_cleanup(&autoFreeList);
       error = handleError(restoreInfo,error);
@@ -2434,7 +2430,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
   if (error != ERROR_NONE)
   {
     printError("Cannot open storage '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,archiveName),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -2450,7 +2446,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
   // read archive entries
   printInfo(0,
             "Restore from '%s'%s",
-            Storage_getPrintableNameCString(storageSpecifier,archiveName),
+            String_cString(printableStorageName),
             !isPrintInfo(1) ? "..." : ":\n"
            );
   failError = ERROR_NONE;
@@ -2475,7 +2471,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
     if (error != ERROR_NONE)
     {
       printError("Cannot read next entry in archive '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(storageSpecifier,archiveName),
+                 String_cString(printableStorageName),
                  Error_getText(error)
                 );
       if (failError == ERROR_NONE) failError = handleError(restoreInfo,error);
@@ -2492,8 +2488,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
       case ARCHIVE_ENTRY_TYPE_FILE:
         error = restoreFileEntry(restoreInfo,
                                  &archiveHandle,
-                                 storageSpecifier,
-                                 archiveName,
+                                 printableStorageName,
                                  buffer,
                                  BUFFER_SIZE
                                 );
@@ -2501,8 +2496,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
       case ARCHIVE_ENTRY_TYPE_IMAGE:
         error = restoreImageEntry(restoreInfo,
                                   &archiveHandle,
-                                  storageSpecifier,
-                                  archiveName,
+                                  printableStorageName,
                                   buffer,
                                   BUFFER_SIZE
                                  );
@@ -2510,8 +2504,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
         error = restoreDirectoryEntry(restoreInfo,
                                       &archiveHandle,
-                                      storageSpecifier,
-                                      archiveName,
+                                      printableStorageName,
                                       buffer,
                                       BUFFER_SIZE
                                      );
@@ -2519,8 +2512,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
       case ARCHIVE_ENTRY_TYPE_LINK:
         error = restoreLinkEntry(restoreInfo,
                                  &archiveHandle,
-                                 storageSpecifier,
-                                 archiveName,
+                                 printableStorageName,
                                  buffer,
                                  BUFFER_SIZE
                                 );
@@ -2528,8 +2520,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
         error = restoreHardLinkEntry(restoreInfo,
                                      &archiveHandle,
-                                     storageSpecifier,
-                                     archiveName,
+                                     printableStorageName,
                                      buffer,
                                      BUFFER_SIZE
                                     );
@@ -2537,8 +2528,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         error = restoreSpecialEntry(restoreInfo,
                                     &archiveHandle,
-                                    storageSpecifier,
-                                    archiveName,
+                                    printableStorageName,
                                     buffer,
                                     BUFFER_SIZE
                                    );
@@ -2581,6 +2571,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
 
   // free resources
   free(buffer);
+  String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 
   return failError;

@@ -230,6 +230,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
                               uint            *id
                              )
 {
+  String                     printableStorageName;
   StorageSpecifier           storageSpecifier;
   Errors                     error;
   DeltaSourceNode            *deltaSourceNode;
@@ -245,6 +246,9 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
   assert(deltaSourceList != NULL);
   assert(storageName != NULL);
 
+  // init variables
+  printableStorageName = String_new();
+
   // parse storage name
   Storage_initSpecifier(&storageSpecifier);
   error = Storage_parseName(&storageSpecifier,storageName);
@@ -253,6 +257,9 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
+
+  // get printable storage name
+  Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
   deltaSourceNode = NULL;
 
@@ -334,7 +341,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
   if (deltaSourceNode == NULL)
   {
     printWarning("No matching entry for delta source '%s' found\n",
-                 String_cString(Storage_getPrintableName(&storageSpecifier,NULL))
+                 String_cString(printableStorageName)
                 );
 
     deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
@@ -352,6 +359,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
+  String_delete(printableStorageName);
 
   if (id != NULL) (*id) = deltaSourceNode->id;
 
@@ -364,6 +372,7 @@ Errors DeltaSourceList_update(DeltaSourceList *deltaSourceList,
                               PatternTypes    patternType
                              )
 {
+  String                     printableStorageName;
   StorageSpecifier           storageSpecifier;
   Errors                     error;
   DeltaSourceNode            *deltaSourceNode;
@@ -382,6 +391,9 @@ Errors DeltaSourceList_update(DeltaSourceList *deltaSourceList,
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 UNUSED_VARIABLE(id);
 
+  // init variables
+  printableStorageName = String_new();
+
   // parse storage name
   Storage_initSpecifier(&storageSpecifier);
   error = Storage_parseName(&storageSpecifier,storageName);
@@ -390,6 +402,9 @@ UNUSED_VARIABLE(id);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
+
+  // get printable storage name
+  Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
   deltaSourceNode = NULL;
 
@@ -471,7 +486,7 @@ UNUSED_VARIABLE(id);
   if (deltaSourceNode == NULL)
   {
     printWarning("No matching entry for delta source '%s' found\n",
-                 String_cString(Storage_getPrintableName(&storageSpecifier,NULL))
+                 String_cString(printableStorageName)
                 );
 
     deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
@@ -489,6 +504,7 @@ UNUSED_VARIABLE(id);
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
+  String_delete(printableStorageName);
 
   return ERROR_NONE;
 }

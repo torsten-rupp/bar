@@ -686,10 +686,31 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         );
 #endif /* NDEBUG */
 
-void Archive_setSalt(ArchiveHandle *archiveHandle,
-                     const byte    *salt,
-                     uint          saltLength
-                    );
+/***********************************************************************\
+* Name   : Archive_setCryptSalt
+* Purpose: set new crypt salt
+* Input  : archiveHandle - archive handle
+*          salt          - crypt salt
+*          saltLength    - crypt salt length
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Archive_setCryptSalt(ArchiveHandle *archiveHandle,
+                          const byte    *salt,
+                          uint          saltLength
+                         );
+
+/***********************************************************************\
+* Name   : Archive_setCryptMode
+* Purpose: set new crypt mode
+* Input  : archiveHandle - archive handle
+*          cryptMode     - crypt mode; see CRYPT_MODE_...
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 void Archive_setCryptMode(ArchiveHandle *archiveHandle,
                           uint          cryptMode

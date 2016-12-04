@@ -986,7 +986,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error == ERROR_NONE)
     {
-      String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+      Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
     }
     else
     {
@@ -1078,7 +1078,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error == ERROR_NONE)
     {
-      String_set(printableStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+      Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
     }
     else
     {
@@ -1901,7 +1901,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
   StorageSpecifier storageSpecifier;
   String           storageName;
   String           duplicateStorageName;
-  String           deleteStorageName;
+  String           printableStorageName;
   ulong            n;
   IndexId          storageId;
   IndexQueryHandle indexQueryHandle1,indexQueryHandle2;
@@ -1920,7 +1920,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
   duplicateStorageName = String_new();
-  deleteStorageName    = String_new();
+  printableStorageName = String_new();
 
   // get storage entry
   n = 0L;
@@ -2017,11 +2017,11 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
             error = Storage_parseName(&storageSpecifier,duplicateStorageName);
             if (error == ERROR_NONE)
             {
-              String_set(deleteStorageName,Storage_getPrintableName(&storageSpecifier,NULL));
+              Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
             }
             else
             {
-              String_set(deleteStorageName,duplicateStorageName);
+              String_set(printableStorageName,duplicateStorageName);
             }
           }
         }
@@ -2050,7 +2050,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
                         "INDEX",
                         "Deleted duplicate index #%lld: '%s'\n",
                         duplicateStorageId,
-                        String_cString(deleteStorageName)
+                        String_cString(printableStorageName)
                        );
             n++;
           }
@@ -2083,7 +2083,7 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
   }
 
   // free resources
-  String_delete(deleteStorageName);
+  String_delete(printableStorageName);
   String_delete(duplicateStorageName);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);

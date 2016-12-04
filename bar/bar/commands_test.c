@@ -75,7 +75,7 @@ typedef struct
 // entry message send to test threads
 typedef struct
 {
-  StorageInfo       *storageInfo;
+  const StorageInfo *storageInfo;
   byte              cryptSalt[CRYPT_SALT_LENGTH];
   uint              cryptMode;
   ArchiveEntryTypes archiveEntryType;
@@ -108,10 +108,8 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 {
   assert(entryMsg != NULL);
 
+  UNUSED_VARIABLE(entryMsg);
   UNUSED_VARIABLE(userData);
-
-//      StringList_done(&entryMsg->nameList);
-//      String_delete(entryMsg->name);
 }
 
 /***********************************************************************\
@@ -1019,20 +1017,24 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
 
 LOCAL void testThreadCode(TestInfo *testInfo)
 {
-  byte              *buffer;
-
-  ArchiveHandle     archiveHandle;
-  EntryMsg          entryMsg;
-  Errors            error;
+  String        printableStorageName;
+  byte          *buffer;
+  ArchiveHandle archiveHandle;
+  EntryMsg      entryMsg;
+  Errors        error;
 
   assert(testInfo != NULL);
 
   // init variables
+  printableStorageName = String_new();
   buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+
+  // get printable storage name
+  Storage_getPrintableName(printableStorageName,testInfo->storageSpecifier,NULL);
 
   // test entries
   while (   (testInfo->failError == ERROR_NONE)
@@ -1055,7 +1057,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     if (error != ERROR_NONE)
     {
       printError("Cannot open storage '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
+                 String_cString(printableStorageName),
                  Error_getText(error)
                 );
       free(buffer);
@@ -1072,7 +1074,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     if (error != ERROR_NONE)
     {
       printError("Cannot read storage '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
+                 String_cString(printableStorageName),
                  Error_getText(error)
                 );
       if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
@@ -1085,7 +1087,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         error = testFileEntry(&archiveHandle,
                               testInfo->includeEntryList,
                               testInfo->excludePatternList,
-                              Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
+                              String_cString(printableStorageName),
                               testInfo->jobOptions,
                               testInfo->fragmentList,
                               buffer,
@@ -1096,7 +1098,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         error = testImageEntry(&archiveHandle,
                                testInfo->includeEntryList,
                                testInfo->excludePatternList,
-                               Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
+                               String_cString(printableStorageName),
                                testInfo->jobOptions,
                                testInfo->fragmentList,
                                buffer,
@@ -1107,7 +1109,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         error = testDirectoryEntry(&archiveHandle,
                                    testInfo->includeEntryList,
                                    testInfo->excludePatternList,
-                                   Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
+                                   String_cString(printableStorageName),
                                    testInfo->jobOptions
                                   );
         break;
@@ -1115,7 +1117,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         error = testLinkEntry(&archiveHandle,
                               testInfo->includeEntryList,
                               testInfo->excludePatternList,
-                              Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
+                              String_cString(printableStorageName),
                               testInfo->jobOptions
                              );
         break;
@@ -1123,7 +1125,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         error = testHardLinkEntry(&archiveHandle,
                                   testInfo->includeEntryList,
                                   testInfo->excludePatternList,
-                                  Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
+                                  String_cString(printableStorageName),
                                   testInfo->jobOptions,
                                   testInfo->fragmentList,
                                   buffer,
@@ -1134,7 +1136,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         error = testSpecialEntry(&archiveHandle,
                                  testInfo->includeEntryList,
                                  testInfo->excludePatternList,
-                                 Storage_getPrintableNameCString(testInfo->storageSpecifier,NULL),
+                                 String_cString(printableStorageName),
                                  testInfo->jobOptions
                                 );
         break;
@@ -1164,6 +1166,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 
   // free resources
   free(buffer);
+  String_delete(printableStorageName);
 }
 
 /***********************************************************************\
@@ -1196,12 +1199,13 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                                 LogHandle           *logHandle
                                )
 {
-  TestInfo             testInfo;
+  String               printableStorageName;
+  Thread               *testThreads;
+  uint                 testThreadCount;
   StorageInfo          storageInfo;
   Errors               error;
   CryptSignatureStates allCryptSignatureState;
-  Thread               *testThreads;
-  uint                 testThreadCount;
+  TestInfo             testInfo;
   uint                 i;
   Errors               failError;
   ArchiveHandle        archiveHandle;
@@ -1216,26 +1220,16 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   assert(fragmentList != NULL);
 
   // init variables
-  testThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  printableStorageName = String_new();
+  testThreadCount      = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
   testThreads = (Thread*)malloc(testThreadCount*sizeof(Thread));
   if (testThreads == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  // init test info
-  initTestInfo(&testInfo,
-               fragmentList,
-               storageSpecifier,
-               includeEntryList,
-               excludePatternList,
-               deltaSourceList,
-               jobOptions,
-//TODO
-NULL,  //               pauseTestFlag,
-NULL,  //               requestedAbortFlag,
-               logHandle
-              );
+  // get printable storage name
+  Storage_getPrintableName(printableStorageName,storageSpecifier,fileName);
 
   // init storage
   error = Storage_init(&storageInfo,
@@ -1250,11 +1244,11 @@ NULL,  //               requestedAbortFlag,
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize storage '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,NULL),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
-    doneTestInfo(&testInfo);
     free(testThreads);
+    String_delete(printableStorageName);
     return error;
   }
 
@@ -1270,8 +1264,8 @@ NULL,  //               requestedAbortFlag,
     if (error != ERROR_NONE)
     {
       (void)Storage_done(&storageInfo);
-      doneTestInfo(&testInfo);
       free(testThreads);
+      String_delete(printableStorageName);
       return error;
     }
     if (   (allCryptSignatureState != CRYPT_SIGNATURE_STATE_NONE)
@@ -1279,14 +1273,28 @@ NULL,  //               requestedAbortFlag,
        )
     {
       printError("Invalid signature in '%s'!\n",
-                 Storage_getPrintableNameCString(storageSpecifier,fileName)
+                 String_cString(printableStorageName)
                 );
       (void)Storage_done(&storageInfo);
-      doneTestInfo(&testInfo);
       free(testThreads);
+      String_delete(printableStorageName);
       return ERROR_INVALID_SIGNATURE;
     }
   }
+
+  // init test info
+  initTestInfo(&testInfo,
+               fragmentList,
+               storageSpecifier,
+               includeEntryList,
+               excludePatternList,
+               deltaSourceList,
+               jobOptions,
+//TODO
+NULL,  //               pauseTestFlag,
+NULL,  //               requestedAbortFlag,
+               logHandle
+              );
 
   // start test threads
   for (i = 0; i < testThreadCount; i++)
@@ -1310,19 +1318,20 @@ NULL,  //               requestedAbortFlag,
   if (error != ERROR_NONE)
   {
     printError("Cannot open storage '%s' (error: %s)!\n",
-               Storage_getPrintableNameCString(storageSpecifier,NULL),
+               String_cString(printableStorageName),
                Error_getText(error)
               );
     (void)Storage_done(&storageInfo);
     doneTestInfo(&testInfo);
     free(testThreads);
+    String_delete(printableStorageName);
     return error;
   }
 
   // read archive entries
   printInfo(0,
             "Test storage '%s'%s",
-            Storage_getPrintableNameCString(storageSpecifier,NULL),
+            String_cString(printableStorageName),
             !isPrintInfo(1) ? "..." : ":\n"
            );
   failError = ERROR_NONE;
@@ -1338,7 +1347,7 @@ NULL,  //               requestedAbortFlag,
     if (error != ERROR_NONE)
     {
       printError("Cannot read next entry in archive '%s' (error: %s)!\n",
-                 Storage_getPrintableNameCString(storageSpecifier,NULL),
+                 String_cString(printableStorageName),
                  Error_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
@@ -1387,6 +1396,7 @@ NULL,  //               requestedAbortFlag,
 
   // free resources
   free(testThreads);
+  String_delete(printableStorageName);
 
   return ERROR_NONE;
 }
