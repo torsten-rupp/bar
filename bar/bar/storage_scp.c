@@ -297,12 +297,14 @@ LOCAL String StorageSCP_getName(StorageSpecifier *storageSpecifier,
   return storageSpecifier->storageName;
 }
 
-LOCAL ConstString StorageSCP_getPrintableName(StorageSpecifier *storageSpecifier,
-                                              ConstString      fileName
-                                             )
+LOCAL void StorageSCP_getPrintableName(String                 string,
+                                       const StorageSpecifier *storageSpecifier,
+                                       ConstString            fileName
+                                      )
 {
   ConstString storageFileName;
 
+  assert(string != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_SCP);
 
@@ -320,19 +322,17 @@ LOCAL ConstString StorageSCP_getPrintableName(StorageSpecifier *storageSpecifier
     storageFileName = storageSpecifier->fileName;
   }
 
-  String_appendCString(storageSpecifier->storageName,"scp://");
-  String_append(storageSpecifier->storageName,storageSpecifier->hostName);
+  String_appendCString(string,"scp://");
+  String_append(string,storageSpecifier->hostName);
   if ((storageSpecifier->hostPort != 0) && (storageSpecifier->hostPort != 22))
   {
-    String_format(storageSpecifier->storageName,":%d",storageSpecifier->hostPort);
+    String_format(string,":%d",storageSpecifier->hostPort);
   }
   if (!String_isEmpty(storageFileName))
   {
-    String_appendChar(storageSpecifier->storageName,'/');
-    String_append(storageSpecifier->storageName,storageFileName);
+    String_appendChar(string,'/');
+    String_append(string,storageFileName);
   }
-
-  return storageSpecifier->storageName;
 }
 
 LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,

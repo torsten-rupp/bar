@@ -589,12 +589,14 @@ LOCAL String StorageWebDAV_getName(StorageSpecifier *storageSpecifier,
   return storageSpecifier->storageName;
 }
 
-LOCAL ConstString StorageWebDAV_getPrintableName(StorageSpecifier *storageSpecifier,
-                                                 ConstString      fileName
-                                                )
+LOCAL void StorageWebDAV_getPrintableName(String                 string,
+                                          const StorageSpecifier *storageSpecifier,
+                                          ConstString            fileName
+                                         )
 {
   ConstString storageFileName;
 
+  assert(string != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
 
@@ -612,20 +614,18 @@ LOCAL ConstString StorageWebDAV_getPrintableName(StorageSpecifier *storageSpecif
     storageFileName = storageSpecifier->fileName;
   }
 
-      String_appendCString(storageSpecifier->storageName,"webdav://");
-      if (!String_isEmpty(storageSpecifier->loginName))
-      {
-        String_append(storageSpecifier->storageName,storageSpecifier->loginName);
-        String_appendChar(storageSpecifier->storageName,'@');
-      }
-      String_append(storageSpecifier->storageName,storageSpecifier->hostName);
-      if (!String_isEmpty(storageFileName))
-      {
-        String_appendChar(storageSpecifier->storageName,'/');
-        String_append(storageSpecifier->storageName,storageFileName);
-      }
-
-  return storageSpecifier->storageName;
+  String_appendCString(string,"webdav://");
+  if (!String_isEmpty(storageSpecifier->loginName))
+  {
+    String_append(string,storageSpecifier->loginName);
+    String_appendChar(string,'@');
+  }
+  String_append(string,storageSpecifier->hostName);
+  if (!String_isEmpty(storageFileName))
+  {
+    String_appendChar(string,'/');
+    String_append(string,storageFileName);
+  }
 }
 
 LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,

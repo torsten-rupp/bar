@@ -1459,12 +1459,19 @@ const char *Storage_getNameCString(StorageSpecifier *storageSpecifier,
   return String_cString(Storage_getName(storageSpecifier,fileName));
 }
 
-ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
+ConstString Storage_getPrintableName(String           string,
+                                     StorageSpecifier *storageSpecifier,
                                      ConstString      fileName
                                     )
 {
   assert(storageSpecifier != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
+
+  // get result variable to use
+  if (string == NULL)
+  {
+    string = storageSpecifier->storageName;
+  }
 
   // get file to use
   if (fileName == NULL)
@@ -1480,39 +1487,39 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
     }
   }
 
-  String_clear(storageSpecifier->storageName);
+  String_clear(string);
   switch (storageSpecifier->type)
   {
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      StorageFile_getPrintableName(storageSpecifier,fileName);
+      StorageFile_getPrintableName(string,storageSpecifier,fileName);
       break;
     case STORAGE_TYPE_FTP:
-      StorageFTP_getPrintableName(storageSpecifier,fileName);
+      StorageFTP_getPrintableName(string,storageSpecifier,fileName);
       break;
     case STORAGE_TYPE_SSH:
       if (!String_isEmpty(fileName))
       {
-        String_append(storageSpecifier->storageName,fileName);
+        String_append(string,fileName);
       }
       break;
     case STORAGE_TYPE_SCP:
-      StorageSCP_getPrintableName(storageSpecifier,fileName);
+      StorageSCP_getPrintableName(string,storageSpecifier,fileName);
       break;
     case STORAGE_TYPE_SFTP:
-      StorageSFTP_getPrintableName(storageSpecifier,fileName);
+      StorageSFTP_getPrintableName(string,storageSpecifier,fileName);
       break;
     case STORAGE_TYPE_WEBDAV:
-      StorageWebDAV_getPrintableName(storageSpecifier,fileName);
+      StorageWebDAV_getPrintableName(string,storageSpecifier,fileName);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      StorageOptical_getPrintableName(storageSpecifier,fileName);
+      StorageOptical_getPrintableName(string,storageSpecifier,fileName);
       break;
     case STORAGE_TYPE_DEVICE:
-      StorageDevice_getPrintableName(storageSpecifier,fileName);
+      StorageDevice_getPrintableName(string,storageSpecifier,fileName);
       break;
     default:
       #ifndef NDEBUG
@@ -1521,14 +1528,15 @@ ConstString Storage_getPrintableName(StorageSpecifier *storageSpecifier,
       break;
   }
 
-  return storageSpecifier->storageName;
+  return string;
 }
 
-const char *Storage_getPrintableNameCString(StorageSpecifier *storageSpecifier,
+const char *Storage_getPrintableNameCString(String           string,
+                                            StorageSpecifier *storageSpecifier,
                                             ConstString      fileName
                                            )
 {
-  return String_cString(Storage_getPrintableName(storageSpecifier,fileName));
+  return String_cString(Storage_getPrintableName(string,storageSpecifier,fileName));
 }
 
 #ifdef NDEBUG

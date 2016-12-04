@@ -290,13 +290,16 @@ LOCAL String StorageSFTP_getName(StorageSpecifier *storageSpecifier,
   return storageSpecifier->storageName;
 }
 
-LOCAL ConstString StorageSFTP_getPrintableName(StorageSpecifier *storageSpecifier,
-                                               ConstString      fileName
-                                              )
+LOCAL void StorageSFTP_getPrintableName(String                 string,
+                                        const StorageSpecifier *storageSpecifier,
+                                        ConstString            fileName
+                                       )
 {
   ConstString storageFileName;
 
+  assert(string != NULL);
   assert(storageSpecifier != NULL);
+  assert(storageSpecifier->type == STORAGE_TYPE_SFTP);
 
   // get file to use
   if      (!String_isEmpty(fileName))
@@ -312,19 +315,17 @@ LOCAL ConstString StorageSFTP_getPrintableName(StorageSpecifier *storageSpecifie
     storageFileName = storageSpecifier->fileName;
   }
 
-  String_appendCString(storageSpecifier->storageName,"sftp://");
-  String_append(storageSpecifier->storageName,storageSpecifier->hostName);
+  String_appendCString(string,"sftp://");
+  String_append(string,storageSpecifier->hostName);
   if ((storageSpecifier->hostPort != 0) && (storageSpecifier->hostPort != 22))
   {
-    String_format(storageSpecifier->storageName,":%d",storageSpecifier->hostPort);
+    String_format(string,":%d",storageSpecifier->hostPort);
   }
   if (!String_isEmpty(storageFileName))
   {
-    String_appendChar(storageSpecifier->storageName,'/');
-    String_append(storageSpecifier->storageName,storageFileName);
+    String_appendChar(string,'/');
+    String_append(string,storageFileName);
   }
-
-  return storageSpecifier->storageName;
 }
 
 LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,

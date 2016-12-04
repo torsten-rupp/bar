@@ -114,13 +114,16 @@ LOCAL String StorageFile_getName(StorageSpecifier *storageSpecifier,
   return storageSpecifier->storageName;
 }
 
-LOCAL ConstString StorageFile_getPrintableName(StorageSpecifier *storageSpecifier,
-                                               ConstString      fileName
-                                              )
+LOCAL void StorageFile_getPrintableName(String                 string,
+                                        const StorageSpecifier *storageSpecifier,
+                                        ConstString            fileName
+                                       )
 {
   ConstString storageFileName;
 
+  assert(string != NULL);
   assert(storageSpecifier != NULL);
+  assert(storageSpecifier->type == STORAGE_TYPE_FILESYSTEM);
 
   // get file to use
   if      (!String_isEmpty(fileName))
@@ -136,13 +139,11 @@ LOCAL ConstString StorageFile_getPrintableName(StorageSpecifier *storageSpecifie
     storageFileName = storageSpecifier->fileName;
   }
 
-  String_clear(storageSpecifier->storageName);
+  String_clear(string);
   if (!String_isEmpty(storageFileName))
   {
-    String_append(storageSpecifier->storageName,storageFileName);
+    String_append(string,storageFileName);
   }
-
-  return storageSpecifier->storageName;
 }
 
 LOCAL Errors StorageFile_init(StorageInfo            *storageInfo,

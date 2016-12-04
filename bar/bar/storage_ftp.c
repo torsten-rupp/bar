@@ -1019,12 +1019,14 @@ LOCAL void StorageFTP_getName(StorageSpecifier *storageSpecifier,
   }
 }
 
-LOCAL void StorageFTP_getPrintableName(StorageSpecifier *storageSpecifier,
-                                       ConstString      fileName
+LOCAL void StorageFTP_getPrintableName(String                 string,
+                                       const StorageSpecifier *storageSpecifier,
+                                       ConstString            fileName
                                       )
 {
   ConstString storageFileName;
 
+  assert(string != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FTP);
 
@@ -1042,21 +1044,21 @@ LOCAL void StorageFTP_getPrintableName(StorageSpecifier *storageSpecifier,
     storageFileName = storageSpecifier->fileName;
   }
 
-  String_appendCString(storageSpecifier->storageName,"ftp://");
+  String_appendCString(string,"ftp://");
   if (!String_isEmpty(storageSpecifier->loginName))
   {
-    String_append(storageSpecifier->storageName,storageSpecifier->loginName);
-    String_appendChar(storageSpecifier->storageName,'@');
+    String_append(string,storageSpecifier->loginName);
+    String_appendChar(string,'@');
   }
-  String_append(storageSpecifier->storageName,storageSpecifier->hostName);
+  String_append(string,storageSpecifier->hostName);
   if ((storageSpecifier->hostPort != 0) && (storageSpecifier->hostPort != 21))
   {
-    String_format(storageSpecifier->storageName,":%d",storageSpecifier->hostPort);
+    String_format(string,":%d",storageSpecifier->hostPort);
   }
   if (!String_isEmpty(storageFileName))
   {
-    String_appendChar(storageSpecifier->storageName,'/');
-    String_append(storageSpecifier->storageName,storageFileName);
+    String_appendChar(string,'/');
+    String_append(string,storageFileName);
   }
 }
 
