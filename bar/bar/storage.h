@@ -1007,7 +1007,7 @@ bool Storage_equalNames(ConstString storageName1,
                        );
 
 /***********************************************************************\
-* Name   : Storage_getName, Storage_getNameCString
+* Name   : Storage_getName
 * Purpose: get storage name
 * Input  : storageSpecifierString - storage specifier string
 *          fileName               - file name (can be NULL)
@@ -1019,12 +1019,9 @@ bool Storage_equalNames(ConstString storageName1,
 String Storage_getName(StorageSpecifier *storageSpecifier,
                        ConstString      fileName
                       );
-const char *Storage_getNameCString(StorageSpecifier *storageSpecifier,
-                                   ConstString      fileName
-                                  );
 
 /***********************************************************************\
-* Name   : Storage_getPrintableName, Storage_getPrintableNameCString
+* Name   : Storage_getPrintableName
 * Purpose: get printable storage name (without password)
 * Input  : storageSpecifierString - storage specifier string
 *          fileName               - file name (can be NULL)
@@ -1041,10 +1038,6 @@ ConstString Storage_getPrintableName(String           string,
                                      ConstString      fileName
                                     );
 #pragma GCC pop_options
-const char *Storage_getPrintableNameCString(String           string,
-                                            StorageSpecifier *storageSpecifier,
-                                            ConstString      fileName
-                                           );
 
 /***********************************************************************\
 * Name   : Storage_prepare

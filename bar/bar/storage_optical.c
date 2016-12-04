@@ -764,14 +764,14 @@ LOCAL String StorageOptical_getName(StorageSpecifier *storageSpecifier,
   return storageSpecifier->storageName;
 }
 
-LOCAL void StorageOptical_getPrintableName(String                 string,
+LOCAL void StorageOptical_getPrintableName(String                 printableStorageName,
                                            const StorageSpecifier *storageSpecifier,
                                            ConstString            fileName
                                           )
 {
   ConstString storageFileName;
 
-  assert(string != NULL);
+  assert(printableStorageName != NULL);
   assert(storageSpecifier != NULL);
   assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
 
@@ -789,46 +789,45 @@ LOCAL void StorageOptical_getPrintableName(String                 string,
     storageFileName = storageSpecifier->fileName;
   }
 
-  String_clear(string);
   switch (storageSpecifier->type)
   {
     case STORAGE_TYPE_CD:
-      String_appendCString(string,"cd://");
+      String_appendCString(printableStorageName,"cd://");
       if (!String_isEmpty(storageSpecifier->deviceName))
       {
-        String_append(string,storageSpecifier->deviceName);
-        String_appendChar(string,':');
+        String_append(printableStorageName,storageSpecifier->deviceName);
+        String_appendChar(printableStorageName,':');
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(string,'/');
-        String_append(string,storageFileName);
+        String_appendChar(printableStorageName,'/');
+        String_append(printableStorageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_DVD:
-      String_appendCString(string,"dvd://");
+      String_appendCString(printableStorageName,"dvd://");
       if (!String_isEmpty(storageSpecifier->deviceName))
       {
-        String_append(string,storageSpecifier->deviceName);
-        String_appendChar(string,':');
+        String_append(printableStorageName,storageSpecifier->deviceName);
+        String_appendChar(printableStorageName,':');
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(string,'/');
-        String_append(string,storageFileName);
+        String_appendChar(printableStorageName,'/');
+        String_append(printableStorageName,storageFileName);
       }
       break;
     case STORAGE_TYPE_BD:
-      String_appendCString(string,"bd://");
+      String_appendCString(printableStorageName,"bd://");
       if (!String_isEmpty(storageSpecifier->deviceName))
       {
-        String_append(string,storageSpecifier->deviceName);
-        String_appendChar(string,':');
+        String_append(printableStorageName,storageSpecifier->deviceName);
+        String_appendChar(printableStorageName,':');
       }
       if (!String_isEmpty(storageFileName))
       {
-        String_appendChar(string,'/');
-        String_append(string,storageFileName);
+        String_appendChar(printableStorageName,'/');
+        String_append(printableStorageName,storageFileName);
       }
       break;
     default:

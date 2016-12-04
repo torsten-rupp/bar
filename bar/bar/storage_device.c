@@ -342,14 +342,14 @@ LOCAL String StorageDevice_getName(StorageSpecifier *storageSpecifier,
   return storageSpecifier->storageName;
 }
 
-LOCAL void StorageDevice_getPrintableName(String                 string,
+LOCAL void StorageDevice_getPrintableName(String                 printableStorageName,
                                           const StorageSpecifier *storageSpecifier,
                                           ConstString            fileName
                                          )
 {
   ConstString storageFileName;
 
-  assert(string != NULL);
+  assert(printableStorageName != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_DEVICE);
 
@@ -367,16 +367,16 @@ LOCAL void StorageDevice_getPrintableName(String                 string,
     storageFileName = storageSpecifier->fileName;
   }
 
-  String_appendCString(string,"device://");
+  String_appendCString(printableStorageName,"device://");
   if (!String_isEmpty(storageSpecifier->deviceName))
   {
-    String_append(string,storageSpecifier->deviceName);
-    String_appendChar(string,':');
+    String_append(printableStorageName,storageSpecifier->deviceName);
+    String_appendChar(printableStorageName,':');
   }
   if (!String_isEmpty(storageFileName))
   {
-    String_appendChar(string,'/');
-    String_append(string,storageFileName);
+    String_appendChar(printableStorageName,'/');
+    String_append(printableStorageName,storageFileName);
   }
 }
 

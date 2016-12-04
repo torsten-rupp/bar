@@ -589,14 +589,14 @@ LOCAL String StorageWebDAV_getName(StorageSpecifier *storageSpecifier,
   return storageSpecifier->storageName;
 }
 
-LOCAL void StorageWebDAV_getPrintableName(String                 string,
+LOCAL void StorageWebDAV_getPrintableName(String                 printableStorageName,
                                           const StorageSpecifier *storageSpecifier,
                                           ConstString            fileName
                                          )
 {
   ConstString storageFileName;
 
-  assert(string != NULL);
+  assert(printableStorageName != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
 
@@ -614,17 +614,17 @@ LOCAL void StorageWebDAV_getPrintableName(String                 string,
     storageFileName = storageSpecifier->fileName;
   }
 
-  String_appendCString(string,"webdav://");
+  String_appendCString(printableStorageName,"webdav://");
   if (!String_isEmpty(storageSpecifier->loginName))
   {
-    String_append(string,storageSpecifier->loginName);
-    String_appendChar(string,'@');
+    String_append(printableStorageName,storageSpecifier->loginName);
+    String_appendChar(printableStorageName,'@');
   }
-  String_append(string,storageSpecifier->hostName);
+  String_append(printableStorageName,storageSpecifier->hostName);
   if (!String_isEmpty(storageFileName))
   {
-    String_appendChar(string,'/');
-    String_append(string,storageFileName);
+    String_appendChar(printableStorageName,'/');
+    String_append(printableStorageName,storageFileName);
   }
 }
 

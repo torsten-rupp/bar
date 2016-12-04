@@ -1452,13 +1452,6 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
   return storageSpecifier->storageName;
 }
 
-const char *Storage_getNameCString(StorageSpecifier *storageSpecifier,
-                                   ConstString      fileName
-                                  )
-{
-  return String_cString(Storage_getName(storageSpecifier,fileName));
-}
-
 ConstString Storage_getPrintableName(String           string,
                                      StorageSpecifier *storageSpecifier,
                                      ConstString      fileName

@@ -114,14 +114,14 @@ LOCAL String StorageFile_getName(StorageSpecifier *storageSpecifier,
   return storageSpecifier->storageName;
 }
 
-LOCAL void StorageFile_getPrintableName(String                 string,
+LOCAL void StorageFile_getPrintableName(String                 printableStorageName,
                                         const StorageSpecifier *storageSpecifier,
                                         ConstString            fileName
                                        )
 {
   ConstString storageFileName;
 
-  assert(string != NULL);
+  assert(printableStorageName != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FILESYSTEM);
 
@@ -139,10 +139,9 @@ LOCAL void StorageFile_getPrintableName(String                 string,
     storageFileName = storageSpecifier->fileName;
   }
 
-  String_clear(string);
   if (!String_isEmpty(storageFileName))
   {
-    String_append(string,storageFileName);
+    String_append(printableStorageName,storageFileName);
   }
 }
 
