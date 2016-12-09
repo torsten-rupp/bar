@@ -523,19 +523,22 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
 * Name   : getDecryptKey
 * Purpose: get decrypt key for password with appropiated key size for
 *          crypt algorithm
-* Input  : password - password
+* Input  : password           - password
 *          cryptAlgorithm
-*          salt       - salt
-*          saltLength - salt length
+*          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
+*          salt               - salt
+*          saltLength         - salt length                                           );
+
 * Output : -
-* Return :
+* Return : crypt key or NULL
 * Notes  : -
 \***********************************************************************/
 
-LOCAL CryptKey *getDecryptKey(Password        *password,
-                              CryptAlgorithms cryptAlgorithm,
-                              const byte      *salt,
-                              uint            saltLength
+LOCAL CryptKey *getDecryptKey(Password            *password,
+                              CryptAlgorithms     cryptAlgorithm,
+                              CryptKeyDeriveTypes cryptKeyDeriveType,
+                              const byte          *salt,
+                              uint                saltLength
                              )
 {
   DecryptKeyNode *decryptKeyNode;
@@ -563,6 +566,7 @@ fprintf(stderr,"%s, %d: new getDecryptKey\n",__FILE__,__LINE__);
     // derive decrypt key from password with salt
     error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
                             cryptAlgorithm,
+                            cryptKeyDeriveType,
                             password,
                             salt,
                             saltLength
@@ -595,6 +599,7 @@ memEquals(decryptKeyNode->salt,salt,saltLength)
 );
       error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
                               cryptAlgorithm,
+                              cryptKeyDeriveType,
                               password,
                               salt,
                               saltLength
@@ -639,7 +644,9 @@ debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLengt
 * Name   : getNextDecryptKey
 * Purpose: get next decrypt key
 * Input  : decryptKeyIterator - decrypt key iterator
+//TODO
 *
+*          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
 * Output : -
 * Return : decrypt key or NULL if no more decrypt keys
 * Notes  : Ordering of decrypt keys search:
@@ -650,10 +657,11 @@ debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLengt
 *              and add decrypt key
 \***********************************************************************/
 
-LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator *decryptKeyIterator,
-                                        CryptAlgorithms    cryptAlgorithm,
-                                        const byte         *salt,
-                                        uint               saltLength
+LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
+                                        CryptAlgorithms     cryptAlgorithm,
+                                        CryptKeyDeriveTypes cryptKeyDeriveType,
+                                        const byte          *salt,
+                                        uint                saltLength
                                        )
 {
   bool                 semaphoreLock;
@@ -692,6 +700,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator *decryptKeyIterator,
              {
                decryptKey = getDecryptKey(decryptKeyIterator->configCryptPassword,
                                           cryptAlgorithm,
+                                          cryptKeyDeriveType,
                                           salt,
                                           saltLength
                                          );
@@ -706,6 +715,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator *decryptKeyIterator,
              {
                decryptKey = getDecryptKey(globalOptions.cryptPassword,
                                           cryptAlgorithm,
+                                          cryptKeyDeriveType,
                                           salt,
                                           saltLength
                                          );
@@ -736,6 +746,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator *decryptKeyIterator,
                  // add to decrypt key list
                  decryptKey = getDecryptKey(&newPassword,
                                             cryptAlgorithm,
+                                            cryptKeyDeriveType,
                                             salt,
                                             saltLength
                                            );
@@ -776,6 +787,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator *decryptKeyIterator,
 *          getPasswordFunction - get password call-back
 *          getPasswordUserData - user data for get password call-back
 //TODO
+*          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
 * Output : decryptKeyIterator - decrypt key iterator
 * Return : decrypt key or NULL if no more decrypt keys
 * Notes  : -
@@ -788,6 +800,7 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator
                                          GetPasswordFunction getPasswordFunction,
                                          void                *getPasswordUserData,
                                          CryptAlgorithms     cryptAlgorithm,
+                                         CryptKeyDeriveTypes cryptKeyDeriveType,
                                          const byte          *salt,
                                          uint                saltLength
                                         )
@@ -803,6 +816,7 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator
 
   return getNextDecryptKey(decryptKeyIterator,
                            cryptAlgorithm,
+                           cryptKeyDeriveType,
                            salt,
                            saltLength
                           );
@@ -4256,6 +4270,8 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   archiveHandle->logHandle               = logHandle;
 
   archiveHandle->cryptMode               = CRYPT_MODE_NONE;
+  archiveHandle->cryptKeyDeriveType      = CRYPT_KEY_DERIVE_FUNCTION;
+
 //  archiveHandle->cryptSimpleKeyFlag      = FALSE;
 //  archiveHandle->cryptCTSFlag            = FALSE;
 
@@ -4333,6 +4349,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // derive crypt key from password with salt
       error = Crypt_deriveKey(&archiveHandle->cryptKey,
                               jobOptions->cryptAlgorithms[0],
+                              archiveHandle->cryptKeyDeriveType,
                               archiveHandle->cryptPassword,
                               archiveHandle->cryptSalt,
                               sizeof(archiveHandle->cryptSalt)
@@ -4358,9 +4375,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                             jobOptions->cryptPublicKey.data,
                                             jobOptions->cryptPublicKey.length,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_KEY_DERIVE_NONE,
                                             NULL,  // password
-                                            archiveHandle->cryptSalt,
-                                            sizeof(archiveHandle->cryptSalt)
+                                            NULL,  // salt
+                                            0  // saltLength
                                            );
       if (error != ERROR_NONE)
       {
@@ -4488,6 +4506,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   memset(archiveHandle->cryptSalt,0,sizeof(archiveHandle->cryptSalt));
   archiveHandle->cryptMode               = CRYPT_MODE_NONE;
+  archiveHandle->cryptKeyDeriveType      = CRYPT_KEY_DERIVE_FUNCTION;
 //  archiveHandle->cryptSimpleKeyFlag      = FALSE;
 //  archiveHandle->cryptCTSFlag            = FALSE;
 
@@ -4657,8 +4676,6 @@ void Archive_setSalt(ArchiveHandle *archiveHandle,
                      uint          saltLength
                     )
 {
-  Errors error;
-
   assert(archiveHandle != NULL);
 
   memCopyFast(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),salt,saltLength);
@@ -4668,11 +4685,18 @@ void Archive_setCryptMode(ArchiveHandle *archiveHandle,
                           uint          cryptMode
                          )
 {
-  Errors error;
-
   assert(archiveHandle != NULL);
 
   archiveHandle->cryptMode = cryptMode;
+}
+
+void Archive_setCryptKeyDeriveType(ArchiveHandle       *archiveHandle,
+                                   CryptKeyDeriveTypes cryptKeyDeriveType
+                                  )
+{
+  assert(archiveHandle != NULL);
+
+  archiveHandle->cryptKeyDeriveType = cryptKeyDeriveType;
 }
 
 Errors Archive_storageInterrupt(ArchiveHandle *archiveHandle)
@@ -4841,9 +4865,10 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                                                     archiveHandle->jobOptions->cryptPrivateKey.data,
                                                                     archiveHandle->jobOptions->cryptPrivateKey.length,
                                                                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                                                    archiveHandle->cryptKeyDeriveType,
                                                                     NULL,  // password
-                                                                    archiveHandle->cryptSalt,
-                                                                    sizeof(archiveHandle->cryptSalt)
+                                                                    NULL,  // salt
+                                                                    0  // saltLength
                                                                    );
         if (archiveHandle->pendingError == ERROR_NONE)
         {
@@ -4864,6 +4889,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                                                       archiveHandle->jobOptions->cryptPrivateKey.data,
                                                                       archiveHandle->jobOptions->cryptPrivateKey.length,
                                                                       CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                                                      archiveHandle->cryptKeyDeriveType,
                                                                       password,
                                                                       archiveHandle->cryptSalt,
                                                                       sizeof(archiveHandle->cryptSalt)
@@ -6988,16 +7014,18 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
           return ERROR_NO_PRIVATE_CRYPT_KEY;
         }
 
-        // read private key, try to read key with no password, all passwords
+        // read private key, try to read key with no password/all passwords
         Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
         decryptedFlag = FALSE;
+//TODO
         error = Crypt_setPublicPrivateKeyData(&archiveHandle->cryptKey,
                                               archiveHandle->jobOptions->cryptPrivateKey.data,
                                               archiveHandle->jobOptions->cryptPrivateKey.length,
                                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                              archiveHandle->cryptKeyDeriveType,
                                               NULL,  // password
-                                              archiveHandle->cryptSalt,
-                                              sizeof(archiveHandle->cryptSalt)
+                                              NULL,  // salt
+                                              0  // saltLength
                                              );
         if (error == ERROR_NONE)
         {
@@ -7018,6 +7046,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
                                                 archiveHandle->jobOptions->cryptPrivateKey.data,
                                                 archiveHandle->jobOptions->cryptPrivateKey.length,
                                                 CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                                archiveHandle->cryptKeyDeriveType,
                                                 password,
                                                 archiveHandle->cryptSalt,
                                                 sizeof(archiveHandle->cryptSalt)
@@ -7306,6 +7335,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                                       archiveHandle->getPasswordFunction,
                                       archiveHandle->getPasswordUserData,
                                       cryptAlgorithm,
+                                      archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
                                      );
@@ -7435,6 +7465,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
                                        cryptAlgorithm,
+                                       archiveHandle->cryptKeyDeriveType,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
                                       );
@@ -7707,6 +7738,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                                       archiveHandle->jobOptions->cryptPasswordMode,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       archiveEntryInfo->cryptAlgorithms[0],
+                                      archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
                                      );
@@ -8052,6 +8084,7 @@ NULL,//                         password,
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
                                        archiveEntryInfo->cryptAlgorithms[0],
+                                       archiveHandle->cryptKeyDeriveType,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
                                       );
@@ -8345,6 +8378,7 @@ NULL,//                         password,
                                       archiveHandle->getPasswordFunction,
                                       archiveHandle->getPasswordUserData,
                                       archiveEntryInfo->cryptAlgorithms[0],
+                                      archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
                                      );
@@ -8600,6 +8634,7 @@ NULL,//                         password,
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
                                        archiveEntryInfo->cryptAlgorithms[0],
+                                       archiveHandle->cryptKeyDeriveType,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
                                       );
@@ -8843,6 +8878,7 @@ NULL,//                         password,
                                       archiveHandle->jobOptions->cryptPasswordMode,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       archiveEntryInfo->cryptAlgorithms[0],
+                                      archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
                                      );
@@ -9040,6 +9076,7 @@ NULL,//                         password,
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
                                        archiveEntryInfo->cryptAlgorithms[0],
+                                       archiveHandle->cryptKeyDeriveType,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
                                       );
@@ -9252,6 +9289,7 @@ NULL,//                         password,
                                       archiveHandle->jobOptions->cryptPasswordMode,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       archiveEntryInfo->cryptAlgorithms[0],
+                                      archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
                                      );
@@ -9449,6 +9487,7 @@ NULL,//                         password,
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
                                        archiveEntryInfo->cryptAlgorithms[0],
+                                       archiveHandle->cryptKeyDeriveType,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
                                       );
@@ -9706,6 +9745,7 @@ NULL,//                         password,
                                       archiveHandle->jobOptions->cryptPasswordMode,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       archiveEntryInfo->cryptAlgorithms[0],
+                                      archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
                                      );
@@ -10085,6 +10125,7 @@ NULL,//                         password,
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
                                        archiveEntryInfo->cryptAlgorithms[0],
+                                       archiveHandle->cryptKeyDeriveType,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
                                       );
@@ -10328,6 +10369,7 @@ NULL,//                         password,
                                       archiveHandle->jobOptions->cryptPasswordMode,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       archiveEntryInfo->cryptAlgorithms[0],
+                                      archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
                                      );
@@ -10530,6 +10572,7 @@ NULL,//                         password,
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
                                        archiveEntryInfo->cryptAlgorithms[0],
+                                       archiveHandle->cryptKeyDeriveType,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
                                       );

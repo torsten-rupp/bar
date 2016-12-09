@@ -72,6 +72,14 @@ typedef enum
 
 #define CRYPT_MODE_NONE 0
 
+// key derive types
+typedef enum
+{
+  CRYPT_KEY_DERIVE_NONE,
+  CRYPT_KEY_DERIVE_SIMPLE,
+  CRYPT_KEY_DERIVE_FUNCTION
+} CryptKeyDeriveTypes;
+
 // available hash algorithms
 typedef enum
 {
@@ -651,22 +659,24 @@ INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey)
 /***********************************************************************\
 * Name   : Crypt_deriveKey
 * Purpose: derive and generate a crypt key from a password
-* Input  : cryptKey   - crypt key
-*          keyLength  - crypt key length [bits]
-*          password   - password
-*          salt       - encryption salt (can be NULL)
-*          saltLength - encryption salt length
+* Input  : cryptKey           - crypt key
+*          keyLength          - crypt key length [bits]
+*          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
+*          password           - password
+*          salt               - encryption salt (can be NULL)
+*          saltLength         - encryption salt length
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_deriveKey(CryptKey        *cryptKey,
+Errors Crypt_deriveKey(CryptKey            *cryptKey,
 //                       uint       keyLength,
-                       CryptAlgorithms cryptAlgorithm,
-                       const Password  *password,
-                       const byte      *salt,
-                       uint            saltLength
+                       CryptAlgorithms     cryptAlgorithm,
+                       CryptKeyDeriveTypes cryptKeyDeriveType,
+                       const Password      *password,
+                       const byte          *salt,
+                       uint                saltLength
                       );
 
 /*---------------------------------------------------------------------*/
@@ -674,35 +684,92 @@ Errors Crypt_deriveKey(CryptKey        *cryptKey,
 /***********************************************************************\
 * Name   : Crypt_getPublicPrivateKeyData
 * Purpose: encrypt public/private key and get encrypted key
-* Input  : cryptKey           - crypt key
-*          encryptedKey       - encrypted key variable
-*          encryptedkeyLength - encrypted key length variable
-*          cryptMode  - crypt mode; see CRYPT_MODE_...
-*          password           - password for encryption (can be NULL)
-*          salt               - encryption salt (can be NULL)
-*          saltLength         - encryption salt length
-* Output : encryptedKey       - encrypted key
-*          encryptedKeyLength - length of encrypted key
+* Input  : cryptKey               - crypt key
+*          encryptedKeyData       - encrypted key variable
+*          encryptedkeyDataLength - encrypted key length variable
+*          cryptMode              - crypt mode; see CRYPT_MODE_...
+*          cryptKeyDeriveType     - key derive type; see
+*                                   CryptKeyDeriveTypes
+*          password               - password for encryption (can be
+*                                   NULL)
+*          salt                   - encryption salt (can be NULL)
+*          saltLength             - encryption salt length
+* Output : encryptedKey           - encrypted key
+*          encryptedKeyLength     - length of encrypted key
 * Return : ERROR_NONE or error code
 * Notes  : encryptedKey must be freed with Password_freeSecure()!
 \***********************************************************************/
 
-Errors Crypt_getPublicPrivateKeyData(CryptKey       *cryptKey,
-                                     void           **encryptedKey,
-                                     uint           *encryptedKeyLength,
-                                     uint           cryptMode,
-                                     const Password *password,
-                                     const byte     *salt,
-                                     uint           saltLength
+Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
+                                     void                **encryptedKeyData,
+                                     uint                *encryptedKeyDataLength,
+                                     uint                cryptMode,
+                                     CryptKeyDeriveTypes cryptKeyDeriveType,
+                                     const Password      *password,
+                                     const byte          *salt,
+                                     uint                saltLength
                                     );
 
 /***********************************************************************\
 * Name   : Crypt_setPublicPrivateKeyData
 * Purpose: decrypt public/private key and set key data
+* Input  : cryptKey               - crypt key
+*          encryptedKeyData       - encrypted key
+*          encryptedKeyDataLength - length of encrypted key
+*          cryptMode              - crypt mode; see CRYPT_MODE_...
+*          cryptKeyDeriveType     - key derive type; see
+*                                   CryptKeyDeriveTypes
+*          password               - password for decryption (can be NULL)
+*          salt                   - encryption salt (can be NULL)
+*          saltLength             - encryption salt length
+* Output : cryptKey - crypt key
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
+                                     const void          *encryptedKeyData,
+                                     uint                encryptedKeyDataLength,
+                                     uint                cryptMode,
+                                     CryptKeyDeriveTypes cryptKeyDeriveType,
+                                     const Password      *password,
+                                     const byte          *salt,
+                                     uint                saltLength
+                                    );
+
+/***********************************************************************\
+* Name   : Crypt_getPublicPrivateKeyString
+* Purpose: encrypt public/private key and get encrypted key as
+*          base64-encoded string
 * Input  : cryptKey           - crypt key
-*          encryptedKey       - encrypted key
-*          encryptedKeyLength - length of encrypted key
-*          cryptMode  - crypt mode; see CRYPT_MODE_...
+*          string             - string variable
+*          cryptMode          - crypt mode; see CRYPT_MODE_...
+*          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
+*          password           - password for encryption (can be NULL)
+*          salt               - encryption salt (can be NULL)
+*          saltLength         - encryption salt length
+* Output : string - string with encrypted key (base64-encoded)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_getPublicPrivateKeyString(CryptKey            *cryptKey,
+                                       String              string,
+                                       uint                cryptMode,
+                                       CryptKeyDeriveTypes cryptKeyDeriveType,
+                                       const Password      *password,
+                                       const byte          *salt,
+                                       uint                saltLength
+                                      );
+
+/***********************************************************************\
+* Name   : Crypt_setPublicPrivateKeyString
+* Purpose: decrypt public/private key and set key data from
+*          base64-encoded string
+* Input  : cryptKey           - crypt key variable
+*          string             - string with encrypted key (base64-encoded)
+*          cryptMode          - crypt mode; see CRYPT_MODE_...
+*          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
 *          password           - password for decryption (can be NULL)
 *          salt               - encryption salt (can be NULL)
 *          saltLength         - encryption salt length
@@ -711,59 +778,13 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey       *cryptKey,
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_setPublicPrivateKeyData(CryptKey       *cryptKey,
-                                     const void     *encryptedKey,
-                                     uint           encryptedKeyLength,
-                                     uint           cryptMode,
-                                     const Password *password,
-                                     const byte     *salt,
-                                     uint           saltLength
-                                    );
-
-/***********************************************************************\
-* Name   : Crypt_getPublicPrivateKeyString
-* Purpose: encrypt public/private key and get encrypted key as
-*          base64-encoded string
-* Input  : cryptKey   - crypt key
-*          string     - string variable
-*          cryptMode  - crypt mode; see CRYPT_MODE_...
-*          password   - password for encryption (can be NULL)
-*          salt       - encryption salt (can be NULL)
-*          saltLength - encryption salt length
-* Output : string - string with encrypted key (base64-encoded)
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Crypt_getPublicPrivateKeyString(CryptKey       *cryptKey,
-                                       String         string,
-                                       uint           cryptMode,
-                                       const Password *password,
-                                       const byte     *salt,
-                                       uint           saltLength
-                                      );
-
-/***********************************************************************\
-* Name   : Crypt_setPublicPrivateKeyString
-* Purpose: decrypt public/private key and set key data from
-*          base64-encoded string
-* Input  : cryptKey   - crypt key variable
-*          string     - string with encrypted key (base64-encoded)
-*          cryptMode  - crypt mode; see CRYPT_MODE_...
-*          password   - password for decryption (can be NULL)
-*          salt       - encryption salt (can be NULL)
-*          saltLength - encryption salt length
-* Output : cryptKey - crypt key
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Crypt_setPublicPrivateKeyString(CryptKey       *cryptKey,
-                                       const String   string,
-                                       uint           cryptMode,
-                                       const Password *password,
-                                       const byte     *salt,
-                                       uint           saltLength
+Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
+                                       const String        string,
+                                       uint                cryptMode,
+                                       CryptKeyDeriveTypes cryptKeyDeriveType,
+                                       const Password      *password,
+                                       const byte          *salt,
+                                       uint                saltLength
                                       );
 
 /***********************************************************************\
@@ -793,12 +814,13 @@ String Crypt_getPublicPrivateKeyExponent(CryptKey *cryptKey);
 * Notes  : use own specific file format
 \***********************************************************************/
 
-Errors Crypt_readPublicPrivateKeyFile(CryptKey       *cryptKey,
-                                      const String   fileName,
-                                      uint           cryptMode,
-                                      const Password *password,
-                                      const byte     *salt,
-                                      uint           saltLength
+Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
+                                      const String        fileName,
+                                      uint                cryptMode,
+                                      CryptKeyDeriveTypes cryptKeyDeriveType,
+                                      const Password      *password,
+                                      const byte          *salt,
+                                      uint                saltLength
                                      );
 
 /***********************************************************************\
@@ -815,12 +837,13 @@ Errors Crypt_readPublicPrivateKeyFile(CryptKey       *cryptKey,
 * Notes  : use own specific file format
 \***********************************************************************/
 
-Errors Crypt_writePublicPrivateKeyFile(CryptKey       *cryptKey,
-                                       const String   fileName,
-                                       uint           cryptMode,
-                                       const Password *password,
-                                       const byte     *salt,
-                                       uint           saltLength
+Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
+                                       const String        fileName,
+                                       uint                cryptMode,
+                                       CryptKeyDeriveTypes cryptKeyDeriveType,
+                                       const Password      *password,
+                                       const byte          *salt,
+                                       uint                saltLength
                                       );
 
 /***********************************************************************\

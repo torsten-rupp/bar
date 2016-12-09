@@ -203,6 +203,7 @@ typedef struct
 
   byte                     cryptSalt[CRYPT_SALT_LENGTH];               // crypt salt
   uint                     cryptMode;
+  CryptKeyDeriveTypes      cryptKeyDeriveType;
 //  bool                     cryptSimpleKeyFlag;                         // TRUE iff crypt use simple key only (required for old style archives)
 //  bool                     cryptCTSFlag;                               // TRUE iff crypt use cipher text stealing (CTS) (required for old style archives)
 
@@ -715,6 +716,21 @@ void Archive_setCryptSalt(ArchiveHandle *archiveHandle,
 void Archive_setCryptMode(ArchiveHandle *archiveHandle,
                           uint          cryptMode
                          );
+
+/***********************************************************************\
+* Name   : Archive_setCryptKeyDeriveType
+* Purpose: set new crypt key derive type
+* Input  : archiveHandle      - archive handle
+*          cryptKeyDeriveType - crypt key derive type; see
+*                               CryptKeyDeriveTypes
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Archive_setCryptKeyDeriveType(ArchiveHandle       *archiveHandle,
+                                   CryptKeyDeriveTypes cryptKeyDeriveType
+                                  );
 
 /***********************************************************************\
 * Name   : Archive_storageInterrupt

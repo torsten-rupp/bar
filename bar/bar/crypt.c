@@ -113,6 +113,25 @@ LOCAL const struct
 // used symmetric encryption algorithm in RSA hybrid encryption
 #define SECRET_KEY_CRYPT_ALGORITHM CRYPT_ALGORITHM_AES256
 
+// empty salt
+LOCAL const byte NO_SALT[512/8] = {0,0,0,0,
+                                   0,0,0,0,
+                                   0,0,0,0,
+                                   0,0,0,0,
+                                   0,0,0,0,
+                                   0,0,0,0,
+                                   0,0,0,0,
+                                   0,0,0,0,
+                                   0,0,0,0,
+                                   0,0,0,0,
+                                   0,0,0,0,
+                                   0,0,0,0,
+                                   0,0,0,0,
+                                   0,0,0,0,
+                                   0,0,0,0,
+                                   0,0,0,0
+                                 };
+
 /***************************** Datatypes *******************************/
 
 typedef struct
@@ -724,7 +743,7 @@ Errors __Crypt_init(const char      *__fileName__,
 
 //fprintf(stderr,"%s, %d: set IV 1\n",__FILE__,__LINE__); debugDumpMemory(salt,cryptInfo->blockLength,0);
           // set salt as IV
-          if (cryptInfo->salt != NULL)
+          if ((cryptInfo->salt != NULL) && (cryptInfo->saltLength > 0))
           {
             if (cryptInfo->saltLength < cryptInfo->blockLength)
             {
@@ -1224,12 +1243,13 @@ void Crypt_doneKey(CryptKey *cryptKey)
   #endif /* HAVE_GCRYPT */
 }
 
-Errors Crypt_deriveKey(CryptKey        *cryptKey,
+Errors Crypt_deriveKey(CryptKey            *cryptKey,
 //                       uint       keyLength,
-                       CryptAlgorithms cryptAlgorithm,
-                       const Password  *password,
-                       const byte      *salt,
-                       uint            saltLength
+                       CryptAlgorithms     cryptAlgorithm,
+                       CryptKeyDeriveTypes cryptKeyDeriveType,
+                       const Password      *password,
+                       const byte          *salt,
+                       uint                saltLength
                       )
 {
   #ifdef HAVE_GCRYPT
@@ -1237,13 +1257,14 @@ Errors Crypt_deriveKey(CryptKey        *cryptKey,
     uint         keyLength;
     void         *data;
     uint         dataLength;
+    uint         i;
     gcry_error_t gcryptError;
     const char   *plainPassword;
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
+  assert((password == NULL) || (cryptKeyDeriveType != CRYPT_KEY_DERIVE_NONE));
 
-fprintf(stderr,"%s, %d: Crypt_deriveKey +++++++++++++++++++++++++++++++++++++++++++++++\n",__FILE__,__LINE__);
   #ifdef HAVE_GCRYPT
     // get key length
     error = Crypt_getKeyLength(cryptAlgorithm,&keyLength);
@@ -1262,26 +1283,40 @@ fprintf(stderr,"%s, %d: Crypt_deriveKey ++++++++++++++++++++++++++++++++++++++++
     }
 
     // derive key
-    plainPassword = Password_deploy(password);
-    gcryptError = gcry_kdf_derive(plainPassword,
-                                  (size_t)Password_length(password),
-                                  KEY_DERIVE_ALGORITHM,
-                                  KEY_DERIVE_HASH_ALGORITHM,
-                                  salt,
-                                  saltLength,
-                                  KEY_DERIVE_ITERATIONS,
-                                  dataLength,
-                                  data
-                                 );
-    Password_undeploy(password,plainPassword);
-    if (gcryptError != 0)
+    switch (cryptKeyDeriveType)
     {
-      Password_freeSecure(data);
-      return ERRORX_(INIT_KEY,
-                     0,
-                     "%s",
-                     gpg_strerror(gcryptError)
-                    );
+      case CRYPT_KEY_DERIVE_NONE:
+        break;
+      case CRYPT_KEY_DERIVE_SIMPLE:
+        for (i = 0; i < dataLength; i++)
+        {
+          ((byte*)data)[i] = Password_getChar(password,i);
+        }
+        break;
+      case CRYPT_KEY_DERIVE_FUNCTION:
+        assert(dataLength < sizeof(NO_SALT));
+        plainPassword = Password_deploy(password);
+        gcryptError = gcry_kdf_derive(plainPassword,
+                                      (size_t)Password_length(password),
+                                      KEY_DERIVE_ALGORITHM,
+                                      KEY_DERIVE_HASH_ALGORITHM,
+                                      ((salt != NULL) && saltLength > 0) ? salt : NO_SALT,
+                                      ((salt != NULL) && saltLength > 0) ? saltLength : sizeof(NO_SALT),
+                                      KEY_DERIVE_ITERATIONS,
+                                      dataLength,
+                                      data
+                                     );
+        Password_undeploy(password,plainPassword);
+        if (gcryptError != 0)
+        {
+          Password_freeSecure(data);
+          return ERRORX_(INIT_KEY,
+                         0,
+                         "%s",
+                         gpg_strerror(gcryptError)
+                        );
+        }
+        break;
     }
 
     // set key
@@ -1303,13 +1338,14 @@ fprintf(stderr,"%s, %d: Crypt_deriveKey ++++++++++++++++++++++++++++++++++++++++
   #endif /* HAVE_GCRYPT */
 }
 
-Errors Crypt_getPublicPrivateKeyData(CryptKey       *cryptKey,
-                                     void           **encryptedKey,
-                                     uint           *encryptedKeyLength,
-                                     uint           cryptMode,
-                                     const Password *password,
-                                     const byte     *salt,
-                                     uint           saltLength
+Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
+                                     void                **encryptedKeyData,
+                                     uint                *encryptedKeyDataLength,
+                                     uint                cryptMode,
+                                     CryptKeyDeriveTypes cryptKeyDeriveType,
+                                     const Password      *password,
+                                     const byte          *salt,
+                                     uint                saltLength
                                     )
 {
   #ifdef HAVE_GCRYPT
@@ -1317,13 +1353,14 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey       *cryptKey,
     gcry_sexp_t      sexpToken;
     size_t           dataLength;
     EncryptedKeyInfo *encryptedKeyInfo;
+    CryptKey         encryptKey;
     CryptInfo        cryptInfo;
     Errors           error;
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
-  assert(encryptedKey != NULL);
-  assert(encryptedKeyLength != NULL);
+  assert(encryptedKeyData != NULL);
+  assert(encryptedKeyDataLength != NULL);
 
   #ifdef HAVE_GCRYPT
     // get crypt algorithm block length
@@ -1345,7 +1382,7 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey       *cryptKey,
     // get key length
     dataLength = gcry_sexp_sprint(sexpToken,GCRYSEXP_FMT_ADVANCED,NULL,0);
 
-    // allocate encrypte key info (header+aligned encryped key buffer)
+    // allocate encrypted key info (header+aligned encryped key buffer)
     encryptedKeyInfo = (EncryptedKeyInfo*)Password_allocSecure(sizeof(EncryptedKeyInfo)+ALIGN(dataLength,blockLength));
     if (encryptedKeyInfo == NULL)
     {
@@ -1365,17 +1402,32 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(encryptedKeyInfo
     if (password != NULL)
     {
       // initialize crypt
+      Crypt_initKey(&encryptKey,CRYPT_PADDING_TYPE_NONE);
+      error = Crypt_deriveKey(&encryptKey,
+                              SECRET_KEY_CRYPT_ALGORITHM,
+                              cryptKeyDeriveType,
+                              password,
+                              salt,
+                              saltLength
+                             );
+      if (error != ERROR_NONE)
+      {
+        Crypt_doneKey(&encryptKey);
+        Password_freeSecure(encryptedKeyInfo);
+        return error;
+      }
       error = Crypt_init(&cryptInfo,
                          SECRET_KEY_CRYPT_ALGORITHM,
                          cryptMode,
 //TODO
 //                         CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                         cryptKey,
+                         &encryptKey,
                          salt,
                          saltLength
                         );
       if (error != ERROR_NONE)
       {
+        Crypt_doneKey(&encryptKey);
         Password_freeSecure(encryptedKeyInfo);
         return error;
       }
@@ -1391,6 +1443,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(encryptedKeyInfo
 
       // done crypt
       Crypt_done(&cryptInfo);
+      Crypt_doneKey(&encryptKey);
     }
 #if 0
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(encryptedKeyInfo->data,dataLength,FALSE);
@@ -1402,8 +1455,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(encryptedKeyInfo
     // calculate CRC
     encryptedKeyInfo->crc = htonl(crc32(crc32(0,Z_NULL,0),encryptedKeyInfo->data,dataLength));
 
-    (*encryptedKey      ) = encryptedKeyInfo;
-    (*encryptedKeyLength) = sizeof(EncryptedKeyInfo)+ALIGN(dataLength,blockLength);
+    (*encryptedKeyData      ) = encryptedKeyInfo;
+    (*encryptedKeyDataLength) = sizeof(EncryptedKeyInfo)+ALIGN(dataLength,blockLength);
 
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
@@ -1420,13 +1473,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(encryptedKeyInfo
   #endif /* HAVE_GCRYPT */
 }
 
-Errors Crypt_setPublicPrivateKeyData(CryptKey       *cryptKey,
-                                     const void     *encryptedKey,
-                                     uint           encryptedKeyLength,
-                                     uint           cryptMode,
-                                     const Password *password,
-                                     const byte     *salt,
-                                     uint           saltLength
+Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
+                                     const void          *encryptedKeyData,
+                                     uint                encryptedKeyDataLength,
+                                     uint                cryptMode,
+                                     CryptKeyDeriveTypes cryptKeyDeriveType,
+                                     const Password      *password,
+                                     const byte          *salt,
+                                     uint                saltLength
                                     )
 {
   #ifdef HAVE_GCRYPT
@@ -1440,7 +1494,7 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey       *cryptKey,
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
-  assert(encryptedKey != NULL);
+  assert(encryptedKeyData != NULL);
 
   #ifdef HAVE_GCRYPT
     // get crypt algorithm block length
@@ -1451,24 +1505,24 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey       *cryptKey,
     }
 
     // check min. key length
-    if (encryptedKeyLength < sizeof(EncryptedKeyInfo))
+    if (encryptedKeyDataLength < sizeof(EncryptedKeyInfo))
     {
       return ERROR_INVALID_KEY;
     }
 
     // allocate secure memory
-    encryptedKeyInfo = (EncryptedKeyInfo*)Password_allocSecure(encryptedKeyLength);
+    encryptedKeyInfo = (EncryptedKeyInfo*)Password_allocSecure(encryptedKeyDataLength);
     if (encryptedKeyInfo == NULL)
     {
       return ERROR_INSUFFICIENT_MEMORY;
     }
 
     // get key, key length
-    encryptedKeyInfo = (EncryptedKeyInfo*)encryptedKey;
+    encryptedKeyInfo = (EncryptedKeyInfo*)encryptedKeyData;
     dataLength = ntohl(encryptedKeyInfo->dataLength);
 
     // check key length
-    if (encryptedKeyLength < sizeof(EncryptedKeyInfo)+ALIGN(dataLength,blockLength))
+    if (encryptedKeyDataLength < sizeof(EncryptedKeyInfo)+ALIGN(dataLength,blockLength))
     {
       Password_freeSecure(encryptedKeyInfo);
       return ERROR_INVALID_KEY;
@@ -1551,12 +1605,13 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(secureData,dataL
   #endif /* HAVE_GCRYPT */
 }
 
-Errors Crypt_getPublicPrivateKeyString(CryptKey       *cryptKey,
-                                       String         string,
-                                       uint           cryptMode,
-                                       const Password *password,
-                                       const byte     *salt,
-                                       uint           saltLength
+Errors Crypt_getPublicPrivateKeyString(CryptKey            *cryptKey,
+                                       String              string,
+                                       uint                cryptMode,
+                                       CryptKeyDeriveTypes cryptKeyDeriveType,
+                                       const Password      *password,
+                                       const byte          *salt,
+                                       uint                saltLength
                                       )
 {
   #ifdef HAVE_GCRYPT
@@ -1574,6 +1629,7 @@ Errors Crypt_getPublicPrivateKeyString(CryptKey       *cryptKey,
                                           &encryptedKey,
                                           &encryptedKeyLength,
                                           cryptMode,
+                                          cryptKeyDeriveType,
                                           password,
                                           salt,
                                           saltLength
@@ -1602,12 +1658,13 @@ Errors Crypt_getPublicPrivateKeyString(CryptKey       *cryptKey,
   #endif /* HAVE_GCRYPT */
 }
 
-Errors Crypt_setPublicPrivateKeyString(CryptKey       *cryptKey,
-                                       const String   string,
-                                       uint           cryptMode,
-                                       const Password *password,
-                                       const byte     *salt,
-                                       uint           saltLength
+Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
+                                       const String        string,
+                                       uint                cryptMode,
+                                       CryptKeyDeriveTypes cryptKeyDeriveType,
+                                       const Password      *password,
+                                       const byte          *salt,
+                                       uint                saltLength
                                       )
 {
   #ifdef HAVE_GCRYPT
@@ -1646,6 +1703,7 @@ Errors Crypt_setPublicPrivateKeyString(CryptKey       *cryptKey,
                                           encryptedKey,
                                           encryptedKeyLength,
                                           cryptMode,
+                                          cryptKeyDeriveType,
                                           password,
                                           salt,
                                           saltLength
@@ -1774,12 +1832,13 @@ String Crypt_getPublicPrivateKeyExponent(CryptKey *cryptKey)
   #endif /* HAVE_GCRYPT */
 }
 
-Errors Crypt_readPublicPrivateKeyFile(CryptKey       *cryptKey,
-                                      const String   fileName,
-                                      uint           cryptMode,
-                                      const Password *password,
-                                      const byte     *salt,
-                                      uint           saltLength
+Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
+                                      const String        fileName,
+                                      uint                cryptMode,
+                                      CryptKeyDeriveTypes cryptKeyDeriveType,
+                                      const Password      *password,
+                                      const byte          *salt,
+                                      uint                saltLength
                                      )
 {
   String     data;
@@ -1813,7 +1872,7 @@ Errors Crypt_readPublicPrivateKeyFile(CryptKey       *cryptKey,
   File_close(&fileHandle);
 
   // set key data
-  error = Crypt_setPublicPrivateKeyString(cryptKey,data,cryptMode,password,salt,saltLength);
+  error = Crypt_setPublicPrivateKeyString(cryptKey,data,cryptMode,cryptKeyDeriveType,password,salt,saltLength);
   if (error != ERROR_NONE)
   {
     String_delete(data);
@@ -1826,12 +1885,13 @@ Errors Crypt_readPublicPrivateKeyFile(CryptKey       *cryptKey,
   return ERROR_NONE;
 }
 
-Errors Crypt_writePublicPrivateKeyFile(CryptKey       *cryptKey,
-                                       const String   fileName,
-                                       uint           cryptMode,
-                                       const Password *password,
-                                       const byte     *salt,
-                                       uint           saltLength
+Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
+                                       const String        fileName,
+                                       uint                cryptMode,
+                                       CryptKeyDeriveTypes cryptKeyDeriveType,
+                                       const Password      *password,
+                                       const byte          *salt,
+                                       uint                saltLength
                                       )
 {
   String     data;
@@ -1843,7 +1903,7 @@ Errors Crypt_writePublicPrivateKeyFile(CryptKey       *cryptKey,
 
   // get key string
   data = String_new();
-  error = Crypt_getPublicPrivateKeyString(cryptKey,data,cryptMode,password,salt,saltLength);
+  error = Crypt_getPublicPrivateKeyString(cryptKey,data,cryptMode,cryptKeyDeriveType,password,salt,saltLength);
   if (error != ERROR_NONE)
   {
     String_delete(data);
@@ -1897,6 +1957,7 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
                   cryptPaddingType
                  );
 
+fprintf(stderr,"%s, %d: keyLength=%d\n",__FILE__,__LINE__,keyLength);
     // create key parameters
     description = String_format(String_new(),"(genkey (rsa (nbits 4:%d)))",keyLength);
     gcryptError = gcry_sexp_new(&sexpKeyParameters,

@@ -537,7 +537,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,3,&compressExcludePatternList,                     cmdOptionParsePattern,NULL,                                  "exclude compression pattern","pattern"                                    ),
 
   CMD_OPTION_SPECIAL      ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms,                      cmdOptionParseCryptAlgorithms,NULL,                          "select crypt algorithms to use\n"
-                                                                                                                                                                                 "  none"
+                                                                                                                                                                                 "  none (default)"
                                                                                                                                                                                  #ifdef HAVE_GCRYPT
                                                                                                                                                                                  "\n"
                                                                                                                                                                                  "  3DES\n"
@@ -556,7 +556,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
                                                                                                                                                                                  "  CAMELLIA256"
                                                                                                                                                                                  #endif
                                                                                                                                                                                  ,
-                                                                                                                                                                                 "algorithm,..."                                                            ),
+                                                                                                                                                                                 "algorithm"                                                            ),
   CMD_OPTION_SELECT       ("crypt-type",                   0,  0,2,jobOptions.cryptType,                            COMMAND_LINE_OPTIONS_CRYPT_TYPES,                            "select crypt type"                                                        ),
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,2,&globalOptions.cryptPassword,                    cmdOptionParsePassword,NULL,                                 "crypt password (use with care!)","password"                               ),
   CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,2,&jobOptions.cryptPublicKey,                      cmdOptionParseKeyData,NULL,                                  "public key for asymmetric encryption","file name|data"                    ),
@@ -2916,6 +2916,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
     error = Crypt_readPublicPrivateKeyFile(cryptKey,
                                            fileName,
                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                           CRYPT_KEY_DERIVE_NONE,
                                            NULL,  // password
                                            NULL,  // salt
                                            0  // saltLength
@@ -2955,7 +2956,8 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
       error = Crypt_setPublicPrivateKeyData(cryptKey,
                                             data,
                                             dataLength,
-                   CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_KEY_DERIVE_NONE,
                                             NULL,  // password
                                             NULL,  // salt
                                             0  // saltLength
@@ -2979,6 +2981,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
                                           value,
                                           strlen(value),
                                           CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                          CRYPT_KEY_DERIVE_NONE,
                                           NULL,  // password
                                           NULL,  // salt
                                           0  // saltLength
@@ -8058,6 +8061,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     error = Crypt_writePublicPrivateKeyFile(&publicKey,
                                             publicKeyFileName,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_KEY_DERIVE_NONE,
                                             NULL,  // password
                                             NULL,  // salt
                                             0  // saltLength
@@ -8077,6 +8081,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     error = Crypt_writePublicPrivateKeyFile(&privateKey,
                                             privateKeyFileName,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_KEY_DERIVE_FUNCTION,
                                             &cryptPassword,
                                             NULL,  // salt
                                             0  // saltLength
@@ -8099,6 +8104,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     error = Crypt_getPublicPrivateKeyString(&publicKey,
                                             data,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_KEY_DERIVE_NONE,
                                             NULL,  // password,
                                             NULL,  // salt
                                             0  // saltLength
@@ -8118,6 +8124,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     error = Crypt_getPublicPrivateKeyString(&privateKey,
                                             data,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_KEY_DERIVE_NONE,
                                             NULL,  // password,
                                             NULL,  // salt
                                             0  // saltLength
@@ -8214,6 +8221,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     error = Crypt_writePublicPrivateKeyFile(&publicKey,
                                             publicKeyFileName,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_KEY_DERIVE_NONE,
                                             NULL,  // password
                                             NULL,  // salt
                                             0  // saltLength
@@ -8232,6 +8240,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     error = Crypt_writePublicPrivateKeyFile(&privateKey,
                                             privateKeyFileName,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_KEY_DERIVE_NONE,
                                             NULL,  // password,
                                             NULL,  // salt
                                             0  // saltLength
@@ -8253,6 +8262,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     error = Crypt_getPublicPrivateKeyString(&publicKey,
                                             keyString,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_KEY_DERIVE_NONE,
                                             NULL,  // password,
                                             NULL,  // salt
                                             0  // saltLength
@@ -8271,6 +8281,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     error = Crypt_getPublicPrivateKeyString(&privateKey,
                                             keyString,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_KEY_DERIVE_NONE,
                                             NULL,  // password,
                                             NULL,  // salt
                                             0  // saltLength

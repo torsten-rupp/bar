@@ -253,9 +253,9 @@ TRANSFORM "BAR0" "BAR1"
   UNUSED_VARIABLE(OLD);
 fprintf(stderr,"%s, %d: TRANSFORM ------------------------------\n",__FILE__,__LINE__);
 
-  // BAR0 use simple key, CTS and no salt
-  archiveHandle->cryptMode |= CRYPT_MODE_SIMPLE_KEY;
+  // BAR0 use CTS, simple key derive, and no salt
   archiveHandle->cryptMode |= CRYPT_MODE_CTS;
+  archiveHandle->cryptKeyDeriveType = CRYPT_KEY_DERIVE_SIMPLE;
   memset(NEW->salt,0,sizeof(NEW->salt));
 
 fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
