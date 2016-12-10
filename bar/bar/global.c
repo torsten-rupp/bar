@@ -731,7 +731,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
     }
     else
     {
-      fprintf(stderr,"xxxxDEBUG ERROR: resource 0x%016"PRIxPTR" (%d bytes) not found in debug list at %s, line %lu\n",
+      fprintf(stderr,"DEBUG ERROR: resource 0x%016"PRIxPTR" (%d bytes) not found in debug list at %s, line %lu\n",
               (uintptr_t)resource,
               size,
               __fileName__,
