@@ -608,7 +608,7 @@ void debugAddResourceTrace(const char *__fileName__,
     }
     if (debugResourceNode != NULL)
     {
-      fprintf(stderr,"DEBUG WARNING: multiple init of resource '%s' 0x%016"PRIuPTR" (%d bytes) at %s, %lu which was previously initialized at %s, %ld!\n",
+      fprintf(stderr,"DEBUG WARNING: multiple init of resource '%s' 0x%016"PRIxPTR" (%d bytes) at %s, %lu which was previously initialized at %s, %ld!\n",
               variableName,
               (uintptr_t)resource,
               size,
@@ -683,7 +683,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
     }
     if (debugResourceNode != NULL)
     {
-      fprintf(stderr,"DEBUG ERROR: multiple free of resource '%s' 0x%016"PRIuPTR" (%d bytes) at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
+      fprintf(stderr,"DEBUG ERROR: multiple free of resource '%s' 0x%016"PRIxPTR" (%d bytes) at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
               debugResourceNode->variableName,
               (uintptr_t)debugResourceNode->resource,
               debugResourceNode->size,
@@ -731,7 +731,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
     }
     else
     {
-      fprintf(stderr,"DEBUG ERROR: resource 0x%016"PRIuPTR" (%d bytes) not found in debug list at %s, line %lu\n",
+      fprintf(stderr,"xxxxDEBUG ERROR: resource 0x%016"PRIxPTR" (%d bytes) not found in debug list at %s, line %lu\n",
               (uintptr_t)resource,
               size,
               __fileName__,
@@ -774,7 +774,7 @@ void debugCheckResourceTrace(const char *__fileName__,
       }
       if (debugResourceNode != NULL)
       {
-        fprintf(stderr,"DEBUG ERROR: resource '%s' 0x%016"PRIuPTR" (%d bytes) invalid at %s, %lu which was allocated at %s, %lu and freed at %s, %lu!\n",
+        fprintf(stderr,"DEBUG ERROR: resource '%s' 0x%016"PRIxPTR" (%d bytes) invalid at %s, %lu which was allocated at %s, %lu and freed at %s, %lu!\n",
                 debugResourceNode->variableName,
                 (uintptr_t)debugResourceNode->resource,
                 debugResourceNode->size,
@@ -794,7 +794,7 @@ void debugCheckResourceTrace(const char *__fileName__,
       }
       else
       {
-        fprintf(stderr,"DEBUG ERROR: resource '%s' 0x%016"PRIuPTR" not found in debug list at %s, line %lu\n",
+        fprintf(stderr,"DEBUG ERROR: resource '%s' 0x%016"PRIxPTR" not found in debug list at %s, line %lu\n",
                 variableName,
                 (uintptr_t)resource,
                 __fileName__,
@@ -834,7 +834,7 @@ void debugResourceDumpInfo(FILE *handle)
   {
     LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
     {
-      fprintf(handle,"DEBUG: resource '%s' 0x%016"PRIuPTR" (%d bytes) allocated at %s, line %lu\n",
+      fprintf(handle,"DEBUG: resource '%s' 0x%016"PRIxPTR" (%d bytes) allocated at %s, line %lu\n",
               debugResourceNode->variableName,
               (uintptr_t)debugResourceNode->resource,
               debugResourceNode->size,
@@ -877,7 +877,7 @@ void debugResourceCheck(void)
     {
       LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
       {
-        fprintf(stderr,"DEBUG: lost resource '%s' 0x%016"PRIuPTR" (%d bytes) allocated at %s, line %lu\n",
+        fprintf(stderr,"DEBUG: lost resource '%s' 0x%016"PRIxPTR" (%d bytes) allocated at %s, line %lu\n",
                 debugResourceNode->variableName,
                 (uintptr_t)debugResourceNode->resource,
                 debugResourceNode->size,
@@ -925,7 +925,7 @@ LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
     if (fileName   == NULL) fileName   = "<unknown file>";
     if (symbolName == NULL) symbolName = "<unknown symbol>";
     for (i = 0; i < stackTraceOutputInfo->indent; i++) fputc(' ',stackTraceOutputInfo->handle);
-    fprintf(stackTraceOutputInfo->handle,"  [0x%016"PRIuPTR"] %s (%s:%lu)\n",(uintptr_t)address,symbolName,fileName,lineNb);
+    fprintf(stackTraceOutputInfo->handle,"  [0x%016"PRIxPTR"] %s (%s:%lu)\n",(uintptr_t)address,symbolName,fileName,lineNb);
   }
   stackTraceOutputInfo->count++;
 }
@@ -984,7 +984,7 @@ void debugDumpStackTrace(FILE       *handle,
     for (z = 1+skipFrameCount; z < stackTraceSize; z++)
     {
       for (i = 0; i < indent; i++) fputc(' ',handle);
-      fprintf(handle,"  %2d 0x%016"PRIuPTR": %s\n",z,(uintptr_t)stackTrace[z],functionNames[z]);
+      fprintf(handle,"  %2d 0x%016"PRIxPTR": %s\n",z,(uintptr_t)stackTrace[z],functionNames[z]);
     }
     free(functionNames);
   #else /* not HAVE_... */
