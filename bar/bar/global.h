@@ -284,7 +284,7 @@ typedef struct
 
 /***********************************************************************\
 * Name   : LAMBDA
-* Purpose: define a lambda-function
+* Purpose: define a lambda-function (anonymouse function)
 * Input  : functionReturnType - call-back function return type
 *          functionSignature  - call-back function signature
 *          functionBody       - call-back function body
@@ -293,7 +293,7 @@ typedef struct
 * Notes  : example
 *          List_removeAndFree(list,
 *                             node,
-*                             CALLBACK_INLINE(ListNodeFreeFunction,(...),{ ... },NULL)
+*                             LAMBDA(void,(...),{ ... })
 *                            );
 \***********************************************************************/
 
@@ -305,8 +305,26 @@ typedef struct
   })
 
 /***********************************************************************\
+* Name   : CLOSURE
+* Purpose: define a closure-function call
+* Input  : functionReturnType - closure function return type
+*          functionBody       - closure function body
+* Output : -
+* Return : function result
+* Notes  : example
+*          int a = CLOSURE(int,{ return 123; });
+\***********************************************************************/
+
+#define CLOSURE(functionReturnType,functionBody) \
+  ({ \
+    auto functionReturnType __closure__ (void); \
+    functionReturnType __closure__ (void) functionBody \
+    __closure__(); \
+  })
+
+/***********************************************************************\
 * Name   : CALLBACK_INLINE
-* Purpose: define an inline call-back function (lambda-function)
+* Purpose: define an inline call-back function (anonymouse function)
 * Input  : functionReturnType - call-back function signature
 *          functionSignature  - call-back function signature
 *          functionBody       - call-back function body
@@ -316,7 +334,7 @@ typedef struct
 * Notes  : example
 *          List_removeAndFree(list,
 *                             node,
-*                             CALLBACK_INLINE(ListNodeFreeFunction,(...),{ ... },NULL)
+*                             CALLBACK_INLINE(void,(...),{ ... },NULL)
 *                            );
 \***********************************************************************/
 
