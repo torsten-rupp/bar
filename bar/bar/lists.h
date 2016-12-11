@@ -226,30 +226,38 @@ typedef enum
 \***********************************************************************/
 
 #define LIST_FIND_FIRST(list,variable,condition) \
-  CLOSURE(void*, \
-  { \
-    assert((void*)(list) != NULL); \
-    \
-    variable = (list)->head; \
-    while ((variable != NULL) && !(condition)) \
+  ({ \
+    auto typeof((list)->head) __closure__ (void); \
+    typeof((list)->head) __closure__ (void) \
     { \
-      variable = variable->next; \
+      assert((void*)(list) != NULL); \
+      \
+      variable = (list)->head; \
+      while ((variable != NULL) && !(condition)) \
+      { \
+        variable = variable->next; \
+      } \
+      \
+      return variable; \
     } \
-    \
-    return variable; \
+    __closure__(); \
   })
 #define LIST_FIND_LAST(list,variable,condition) \
-  CLOSURE(void*, \
-  { \
-    assert((void*)(list) != NULL); \
-    \
-    variable = (list)->tail; \
-    while ((variable != NULL) && !(condition)) \
+  ({ \
+    auto typeof((list)->head) __closure__ (void); \
+    typeof((list)->head) __closure__ (void) \
     { \
-      variable = variable->prev; \
+      assert((void*)(list) != NULL); \
+      \
+      variable = (list)->tail; \
+      while ((variable != NULL) && !(condition)) \
+      { \
+        variable = variable->prev; \
+      } \
+      \
+      return variable; \
     } \
-    \
-    return variable; \
+    __closure__(); \
   })
 #define LIST_FIND(list,variable,condition) LIST_FIND_FIRST(list,variable,condition)
 
