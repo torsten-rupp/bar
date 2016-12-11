@@ -40,8 +40,6 @@ typedef struct
 {
   char *data;
   uint dataLength;
-  void *keyData;
-  uint keyDataLength;
   #ifndef HAVE_GCRYPT
     char plain[MAX_PASSWORD_LENGTH+1];     /* needed for temporary storage
                                               of plain password if secure

@@ -99,20 +99,32 @@ void *Password_allocSecure(size_t size)
   #ifdef HAVE_GCRYPT
     #ifndef NDEBUG
       memoryHeader = gcry_malloc_secure(sizeof(MemoryHeader)+size);
+      if (memoryHeader == NULL)
+      {
+        return NULL;
+      }
       memoryHeader->size = size;
       p = (byte*)memoryHeader+sizeof(MemoryHeader);
     #else
       p = gcry_malloc_secure(size);
+      if (p == NULL)
+      {
+        return NULL;
+      }
     #endif
     memset(p,0,size);
   #else /* not HAVE_GCRYPT */
     memoryHeader = (MemoryHeader*)cmalloc(1,sizeof(MemoryHeader)+size);
+    if (memoryHeader == NULL)
+    {
+      return NULL;
+    }
     memoryHeader->size = size;
     p = (byte*)memoryHeader+sizeof(MemoryHeader);
   #endif /* HAVE_GCRYPT */
 
-  #if !defined(NDEBUG) || !defined(HAVE_GCRYPT)
-    DEBUG_ADD_RESOURCE_TRACE(p,size);
+  #ifndef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(p,sizeof(MemoryHeader));
   #endif
 
   return p;
@@ -126,9 +138,8 @@ void Password_freeSecure(void *p)
 
   assert(p != NULL);
 
-  #if !defined(NDEBUG) || !defined(HAVE_GCRYPT)
-    memoryHeader = (MemoryHeader*)((byte*)p - sizeof(MemoryHeader));
-    DEBUG_REMOVE_RESOURCE_TRACE(p,memoryHeader->size);
+  #ifndef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(p,sizeof(MemoryHeader));
   #endif
 
   #ifdef HAVE_GCRYPT
