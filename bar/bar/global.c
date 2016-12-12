@@ -676,11 +676,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
   pthread_mutex_lock(&debugResourceLock);
   {
     // find in free-list to check for duplicate free
-    debugResourceNode = debugResourceFreeList.head;
-    while ((debugResourceNode != NULL) && ((debugResourceNode->resource != resource) || (debugResourceNode->size != size)))
-    {
-      debugResourceNode = debugResourceNode->next;
-    }
+    debugResourceNode = LIST_FIND(&debugResourceFreeList,debugResourceNode,(debugResourceNode->resource == resource) && (debugResourceNode->size == size));
     if (debugResourceNode != NULL)
     {
       fprintf(stderr,"DEBUG ERROR: multiple free of resource '%s' 0x%016"PRIxPTR" (%d bytes) at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
@@ -704,11 +700,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
     }
 
     // remove resource from allocated list, add resource to free-list, shorten free-list
-    debugResourceNode = debugResourceAllocList.head;
-    while ((debugResourceNode != NULL) && ((debugResourceNode->resource != resource) || (debugResourceNode->size != size)))
-    {
-      debugResourceNode = debugResourceNode->next;
-    }
+    debugResourceNode = LIST_FIND(&debugResourceAllocList,debugResourceNode,(debugResourceNode->resource == resource) && (debugResourceNode->size == size));
     if (debugResourceNode != NULL)
     {
       // remove from allocated list
@@ -759,19 +751,11 @@ void debugCheckResourceTrace(const char *__fileName__,
   pthread_mutex_lock(&debugResourceLock);
   {
     // find in allocate-list
-    debugResourceNode = debugResourceAllocList.head;
-    while ((debugResourceNode != NULL) && (debugResourceNode->resource != resource))
-    {
-      debugResourceNode = debugResourceNode->next;
-    }
+    debugResourceNode = LIST_FIND(&debugResourceAllocList,debugResourceNode,debugResourceNode->resource == resource);
     if (debugResourceNode == NULL)
     {
-      // find in free-list to check for duplicate free
-      debugResourceNode = debugResourceFreeList.head;
-      while ((debugResourceNode != NULL) && (debugResourceNode->resource != resource))
-      {
-        debugResourceNode = debugResourceNode->next;
-      }
+      // find in free-list to check if already freed
+      debugResourceNode = LIST_FIND(&debugResourceFreeList,debugResourceNode,debugResourceNode->resource == resource);
       if (debugResourceNode != NULL)
       {
         fprintf(stderr,"DEBUG ERROR: resource '%s' 0x%016"PRIxPTR" (%d bytes) invalid at %s, %lu which was allocated at %s, %lu and freed at %s, %lu!\n",
