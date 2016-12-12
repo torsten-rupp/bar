@@ -1527,6 +1527,9 @@ void Database_doneAll(void)
   Errors error;
   int    sqliteMode;
   int    sqliteResult;
+  #ifndef NDEBUG
+    DatabaseHandle *debugDatabaseHandle;
+  #endif /* NDEBUG */
 
   assert(databaseHandle != NULL);
 
@@ -1714,6 +1717,10 @@ void Database_doneAll(void)
                        )
 #endif /* NDEBUG */
 {
+  #ifndef NDEBUG
+    DatabaseHandle *debugDatabaseHandle;
+  #endif /* NDEBUG */
+
   assert(databaseHandle != NULL);
   assert(databaseHandle->handle != NULL);
 
