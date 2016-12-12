@@ -976,10 +976,10 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SELECT            ("crypt-type",                   &jobOptions.cryptType,-1,                                      CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_VALUE_SELECT            ("crypt-password-mode",          &jobOptions.cryptPasswordMode,-1,                              CONFIG_VALUE_PASSWORD_MODES),
   CONFIG_VALUE_SPECIAL           ("crypt-password",               &globalOptions.cryptPassword,-1,                               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_VALUE_SPECIAL           ("crypt-public-key",             &jobOptions.cryptPublicKey,-1,                                 configValueParseKey,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_SPECIAL           ("crypt-private-key",            &jobOptions.cryptPrivateKey,-1,                                configValueParseKey,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_SPECIAL           ("signature-public-key",         &globalOptions.signaturePublicKey,-1,                          configValueParseKey,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_SPECIAL           ("signature-private-key",        &globalOptions.signaturePrivateKey,-1,                         configValueParseKey,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("crypt-public-key",             &jobOptions.cryptPublicKey,-1,                                 configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("crypt-private-key",            &jobOptions.cryptPrivateKey,-1,                                configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("signature-public-key",         &globalOptions.signaturePublicKey,-1,                          configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("signature-private-key",        &globalOptions.signaturePrivateKey,-1,                         configValueParseKeyData,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_SPECIAL           ("include-file",                 &includeEntryList,-1,                                          configValueParseFileEntryPattern,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_CSTRING           ("include-file-command",         &includeFileCommand,-1                                         ),
@@ -1127,16 +1127,16 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_INTEGER           ("ssh-port",                     &defaultSSHServer.ssh.port,-1,                                 0,65535,NULL),
   CONFIG_VALUE_STRING            ("ssh-login-name",               &defaultSSHServer.ssh.loginName,-1                             ),
   CONFIG_VALUE_SPECIAL           ("ssh-password",                 &defaultSSHServer.ssh.password,-1,                             configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_VALUE_SPECIAL           ("ssh-public-key",               &defaultSSHServer.ssh.publicKey,-1,                            configValueParseKey,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_SPECIAL           ("ssh-private-key",              &defaultSSHServer.ssh.privateKey,-1,                           configValueParseKey,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("ssh-public-key",               &defaultSSHServer.ssh.publicKey,-1,                            configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("ssh-private-key",              &defaultSSHServer.ssh.privateKey,-1,                           configValueParseKeyData,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_INTEGER           ("ssh-max-connections",          &defaultSSHServer.maxConnectionCount,-1,                       0,MAX_INT,NULL),
   CONFIG_VALUE_INTEGER64         ("ssh-max-storage-size",         &defaultSSHServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL),
   CONFIG_VALUE_BEGIN_SECTION     ("ssh-server",-1),
     CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                     Server,ssh.port,                                               0,65535,NULL),
     CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",               Server,ssh.loginName                                           ),
     CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",                 Server,ssh.password,                                           configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key",               Server,ssh.publicKey,                                          configValueParseKey,configValueFormatInitKey,configValueFormatDoneKey,configValueFormatKey,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",              Server,ssh.privateKey,                                         configValueParseKey,configValueFormatInitKey,configValueFormatDoneKey,configValueFormatKey,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key",               Server,ssh.publicKey,                                          configValueParseKeyData,configValueFormatInitKeyData,configValueFormatDoneKeyData,configValueFormatKeyData,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",              Server,ssh.privateKey,                                         configValueParseKeyData,configValueFormatInitKeyData,configValueFormatDoneKeyData,configValueFormatKeyData,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("ssh-max-connections",          Server,maxConnectionCount,                                     0,MAX_INT,NULL),
     CONFIG_STRUCT_VALUE_INTEGER64("ssh-max-storage-size",         Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
     CONFIG_STRUCT_VALUE_STRING   ("ssh-write-pre-command",        Server,writePreProcessCommand                                  ),
@@ -1197,7 +1197,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_INTEGER           ("server-tls-port",              &serverTLSPort,-1,                                             0,65535,NULL),
   CONFIG_VALUE_SPECIAL           ("server-ca-file",               &serverCA,-1,                                                  configValueParseCertificate,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("server-cert-file",             &serverCert,-1,                                                configValueParseCertificate,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_SPECIAL           ("server-key-file",              &serverKey,-1,                                                 configValueParseKey,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("server-key-file",              &serverKey,-1,                                                 configValueParseKeyData,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("server-password",              &serverPassword,-1,                                            configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
   CONFIG_VALUE_INTEGER           ("server-max-connections",       &serverMaxConnections,-1,                                      0,65535,NULL),
   CONFIG_VALUE_CSTRING           ("server-jobs-directory",        &serverJobsDirectory,-1                                        ),
@@ -1972,6 +1972,181 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   (void)File_close(&fileHandle);
 
   return !failFlag;
+}
+
+LOCAL Errors readCAFile(Certificate *certificate, const char *fileName)
+{
+  Errors     error;
+  FileHandle fileHandle;
+  uint64     dataLength;
+  void       *data;
+
+  assert(certificate != NULL);
+  assert(fileName != NULL);
+
+  certificate->data   = NULL;
+  certificate->length = 0;
+
+  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // get file size
+  dataLength = File_getSize(&fileHandle);
+  if (dataLength == 0LL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_NO_TLS_CA;
+  }
+
+  // allocate memory
+  data = malloc((size_t)dataLength);
+  if (data == NULL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+
+  // read file data
+  error = File_read(&fileHandle,
+                    data,
+                    dataLength,
+                    NULL
+                   );
+  if (error != ERROR_NONE)
+  {
+    free(data);
+    (void)File_close(&fileHandle);
+    return error;
+  }
+
+  // close file
+  (void)File_close(&fileHandle);
+
+  // set certificate data
+  if (certificate->data != NULL) free(certificate->data);
+  certificate->data   = data;
+  certificate->length = dataLength;
+
+  return ERROR_NONE;
+}
+
+LOCAL Errors readCertificateFile(Certificate *certificate, const char *fileName)
+{
+  Errors     error;
+  FileHandle fileHandle;
+  uint64     dataLength;
+  void       *data;
+
+  assert(certificate != NULL);
+  assert(fileName != NULL);
+
+  certificate->data   = NULL;
+  certificate->length = 0;
+
+  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // get file size
+  dataLength = File_getSize(&fileHandle);
+  if (dataLength == 0LL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_NO_TLS_CERTIFICATE;
+  }
+
+  // allocate memory
+  data = malloc((size_t)dataLength);
+  if (data == NULL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+
+  // read file data
+  error = File_read(&fileHandle,
+                    data,
+                    dataLength,
+                    NULL
+                   );
+  if (error != ERROR_NONE)
+  {
+    free(data);
+    (void)File_close(&fileHandle);
+    return error;
+  }
+
+  // close file
+  (void)File_close(&fileHandle);
+
+  // set certificate data
+  if (certificate->data != NULL) free(certificate->data);
+  certificate->data   = data;
+  certificate->length = dataLength;
+
+  return ERROR_NONE;
+}
+
+LOCAL Errors readKeyFile(Key *key, const char *fileName)
+{
+  Errors     error;
+  FileHandle fileHandle;
+  uint64     dataLength;
+  void       *data;
+
+  assert(key != NULL);
+  assert(fileName != NULL);
+
+  // open file
+  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // get file size
+  dataLength = File_getSize(&fileHandle);
+  if (dataLength == 0LL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_NO_TLS_KEY;
+  }
+
+  // allocate secure memory
+  data = Password_allocSecure((size_t)dataLength);
+  if (data == NULL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+
+  // read file data
+  error = File_read(&fileHandle,
+                    data,
+                    dataLength,
+                    NULL
+                   );
+  if (error != ERROR_NONE)
+  {
+    Password_freeSecure(data);
+    (void)File_close(&fileHandle);
+    return error;
+  }
+
+  // close file
+  (void)File_close(&fileHandle);
+
+  // set key data
+  if (key->data != NULL) Password_freeSecure(key->data);
+  key->data   = data;
+  key->length = dataLength;
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -2808,10 +2983,12 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
 
 LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
-  Key    *key = (Key*)variable;
-  Errors error;
-  uint   dataLength;
-  void   *data;
+  Key        *key = (Key*)variable;
+  Errors     error;
+  String     string;
+  FileHandle fileHandle;
+  uint       dataLength;
+  void       *data;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2822,16 +2999,53 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
 
   if (File_existsCString(value))
   {
-    // read key file
-    error = readKeyFile(key,value);
+    // read key data from file
+
+    // read file contents
+    string = String_new();
+    error = File_openCString(&fileHandle,value,FILE_OPEN_READ);
     if (error != ERROR_NONE)
     {
-      stringCopy(errorMessage,Error_getText(error),errorMessageSize);
+      String_delete(string);
+      return error;
+    }
+    error = File_readLine(&fileHandle,string);
+    if (error != ERROR_NONE)
+    {
+      File_close(&fileHandle);
+      String_delete(string);
+      return error;
+    }
+    File_close(&fileHandle);
+
+    // allocate secure memory
+    dataLength = Misc_base64DecodeLength(string,STRING_BEGIN);
+    data = Password_allocSecure((size_t)dataLength);
+    if (data == NULL)
+    {
+      (void)File_close(&fileHandle);
+      return ERROR_INSUFFICIENT_MEMORY;
+    }
+
+    // decode base64
+    if (Misc_base64Decode((byte*)data,dataLength,string,STRING_BEGIN) == -1)
+    {
+      Password_freeSecure(data);
       return FALSE;
     }
+
+    // set key data
+    if (key->data != NULL) Password_freeSecure(key->data);
+    key->data   = data;
+    key->length = dataLength;
+    
+    // free resources
+    String_delete(string);
   }
   else if (stringStartsWith(value,"base64:"))
   {
+    // decode base64 encoded key data
+
     // get key data length
     dataLength = Misc_base64DecodeLengthCString(&value[7]);
     if (dataLength > 0)
@@ -2858,6 +3072,8 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
   }
   else
   {
+    // get plain key data
+
     // get key data length
     dataLength = strlen(value);
     if (dataLength > 0)
@@ -5154,7 +5370,6 @@ bool isCertificateAvailable(const Certificate *certificate)
   return certificate->data != NULL;
 }
 
-
 void clearCertificate(Certificate *certificate)
 {
   assert(certificate != NULL);
@@ -5163,7 +5378,6 @@ void clearCertificate(Certificate *certificate)
   certificate->data   = NULL;
   certificate->length = 0;
 }
-
 
 bool setCertificate(Certificate *certificate, const void *certificateData, uint certificateLength)
 {
@@ -5185,128 +5399,9 @@ bool setCertificate(Certificate *certificate, const void *certificateData, uint 
   return TRUE;
 }
 
-
 bool setCertificateString(Certificate *certificate, ConstString string)
 {
   return setCertificate(certificate,String_cString(string),String_length(string));
-}
-
-Errors readCAFile(Certificate *certificate, const char *fileName)
-{
-  Errors     error;
-  FileHandle fileHandle;
-  uint64     dataLength;
-  void       *data;
-
-  assert(certificate != NULL);
-  assert(fileName != NULL);
-
-  certificate->data   = NULL;
-  certificate->length = 0;
-
-  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // get file size
-  dataLength = File_getSize(&fileHandle);
-  if (dataLength == 0LL)
-  {
-    (void)File_close(&fileHandle);
-    return ERROR_NO_TLS_CA;
-  }
-
-  // allocate memory
-  data = malloc((size_t)dataLength);
-  if (data == NULL)
-  {
-    (void)File_close(&fileHandle);
-    return ERROR_INSUFFICIENT_MEMORY;
-  }
-
-  // read file data
-  error = File_read(&fileHandle,
-                    data,
-                    dataLength,
-                    NULL
-                   );
-  if (error != ERROR_NONE)
-  {
-    free(data);
-    (void)File_close(&fileHandle);
-    return error;
-  }
-
-  // close file
-  (void)File_close(&fileHandle);
-
-  // set certificate data
-  if (certificate->data != NULL) free(certificate->data);
-  certificate->data   = data;
-  certificate->length = dataLength;
-
-  return ERROR_NONE;
-}
-
-Errors readCertificateFile(Certificate *certificate, const char *fileName)
-{
-  Errors     error;
-  FileHandle fileHandle;
-  uint64     dataLength;
-  void       *data;
-
-  assert(certificate != NULL);
-  assert(fileName != NULL);
-
-  certificate->data   = NULL;
-  certificate->length = 0;
-
-  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // get file size
-  dataLength = File_getSize(&fileHandle);
-  if (dataLength == 0LL)
-  {
-    (void)File_close(&fileHandle);
-    return ERROR_NO_TLS_CERTIFICATE;
-  }
-
-  // allocate memory
-  data = malloc((size_t)dataLength);
-  if (data == NULL)
-  {
-    (void)File_close(&fileHandle);
-    return ERROR_INSUFFICIENT_MEMORY;
-  }
-
-  // read file data
-  error = File_read(&fileHandle,
-                    data,
-                    dataLength,
-                    NULL
-                   );
-  if (error != ERROR_NONE)
-  {
-    free(data);
-    (void)File_close(&fileHandle);
-    return error;
-  }
-
-  // close file
-  (void)File_close(&fileHandle);
-
-  // set certificate data
-  if (certificate->data != NULL) free(certificate->data);
-  certificate->data   = data;
-  certificate->length = dataLength;
-
-  return ERROR_NONE;
 }
 
 void initKey(Key *key)
@@ -5395,62 +5490,6 @@ bool setKey(Key *key, const void *keyData, uint keyLength)
 bool setKeyString(Key *key, ConstString string)
 {
   return setKey(key,String_cString(string),String_length(string));
-}
-
-Errors readKeyFile(Key *key, const char *fileName)
-{
-  Errors     error;
-  FileHandle fileHandle;
-  uint64     dataLength;
-  void       *data;
-
-  assert(key != NULL);
-  assert(fileName != NULL);
-
-  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // get file size
-  dataLength = File_getSize(&fileHandle);
-  if (dataLength == 0LL)
-  {
-    (void)File_close(&fileHandle);
-    return ERROR_NO_TLS_KEY;
-  }
-
-  // allocate secure memory
-  data = Password_allocSecure((size_t)dataLength);
-  if (data == NULL)
-  {
-    (void)File_close(&fileHandle);
-    return ERROR_INSUFFICIENT_MEMORY;
-  }
-
-  // read file data
-  error = File_read(&fileHandle,
-                    data,
-                    dataLength,
-                    NULL
-                   );
-  if (error != ERROR_NONE)
-  {
-    Password_freeSecure(data);
-    (void)File_close(&fileHandle);
-    return error;
-  }
-
-  // close file
-  (void)File_close(&fileHandle);
-
-  // set key data
-  if (key->data != NULL) Password_freeSecure(key->data);
-  key->data   = data;
-  key->length = dataLength;
-
-  return ERROR_NONE;
 }
 
 void initServer(Server *server, ConstString name, ServerTypes serverType)
@@ -7426,12 +7465,14 @@ bool configValueParseCertificate(void *userData, void *variable, const char *nam
   return TRUE;
 }
 
-bool configValueParseKey(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+bool configValueParseKeyData(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  Key    *key = (Key*)variable;
-  Errors error;
-  uint   dataLength;
-  void   *data;
+  Key        *key = (Key*)variable;
+  Errors     error;
+  String     string;
+  FileHandle fileHandle;
+  uint       dataLength;
+  void       *data;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -7443,15 +7484,53 @@ bool configValueParseKey(void *userData, void *variable, const char *name, const
 
   if (File_existsCString(value))
   {
-    // read key file
-    error = readKeyFile(key,value);
+    // read key data from file
+
+    // read file contents
+    string = String_new();
+    error = File_openCString(&fileHandle,value,FILE_OPEN_READ);
     if (error != ERROR_NONE)
     {
+      String_delete(string);
+      return error;
+    }
+    error = File_readLine(&fileHandle,string);
+    if (error != ERROR_NONE)
+    {
+      File_close(&fileHandle);
+      String_delete(string);
+      return error;
+    }
+    File_close(&fileHandle);
+
+    // allocate secure memory
+    dataLength = Misc_base64DecodeLength(string,STRING_BEGIN);
+    data = Password_allocSecure((size_t)dataLength);
+    if (data == NULL)
+    {
+      (void)File_close(&fileHandle);
+      return ERROR_INSUFFICIENT_MEMORY;
+    }
+
+    // decode base64
+    if (Misc_base64Decode((byte*)data,dataLength,string,STRING_BEGIN) == -1)
+    {
+      Password_freeSecure(data);
       return FALSE;
     }
+
+    // set key data
+    if (key->data != NULL) Password_freeSecure(key->data);
+    key->data   = data;
+    key->length = dataLength;
+
+    // free resources
+    String_delete(string);
   }
   else if (stringStartsWith(value,"base64:"))
   {
+    // decode base64 encoded key data
+
     // get key data length
     dataLength = Misc_base64DecodeLengthCString(&value[7]);
     if (dataLength > 0)
@@ -7478,6 +7557,8 @@ bool configValueParseKey(void *userData, void *variable, const char *name, const
   }
   else
   {
+    // get plain key data
+
     // get key data length
     dataLength = strlen(value);
     if (dataLength > 0)
@@ -7502,7 +7583,7 @@ bool configValueParseKey(void *userData, void *variable, const char *name, const
   return TRUE;
 }
 
-void configValueFormatInitKey(void **formatUserData, void *userData, void *variable)
+void configValueFormatInitKeyData(void **formatUserData, void *userData, void *variable)
 {
   assert(formatUserData != NULL);
 
@@ -7511,13 +7592,13 @@ void configValueFormatInitKey(void **formatUserData, void *userData, void *varia
   (*formatUserData) = (Key*)variable;
 }
 
-void configValueFormatDoneKey(void **formatUserData, void *userData)
+void configValueFormatDoneKeyData(void **formatUserData, void *userData)
 {
   UNUSED_VARIABLE(formatUserData);
   UNUSED_VARIABLE(userData);
 }
 
-bool configValueFormatKey(void **formatUserData, void *userData, String line)
+bool configValueFormatKeyData(void **formatUserData, void *userData, String line)
 {
   Key *key;
 
@@ -7981,6 +8062,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   Errors   error;
   Password cryptPassword;
   CryptKey publicKey,privateKey;
+  String   pathName;
 
   // initialize variables
   publicKeyFileName  = String_new();
@@ -8054,10 +8136,41 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     String_delete(publicKeyFileName);
     return error;
   }
+fprintf(stderr,"%s, %d: public %d \n",__FILE__,__LINE__,publicKey.dataLength); debugDumpMemory(publicKey.data,publicKey.dataLength,0);
+fprintf(stderr,"%s, %d: private %d\n",__FILE__,__LINE__,privateKey.dataLength); debugDumpMemory(privateKey.data,privateKey.dataLength,0);
 
   // output keys
   if (keyFileBaseName != NULL)
   {
+    // create directory if it does not exists
+    pathName = File_getFilePathNameCString(String_new(),keyFileBaseName);
+    if      (!File_exists(pathName))
+    {
+      error = File_makeDirectory(pathName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot create directory '%s' (error: %s)!\n",String_cString(pathName),Error_getText(error));
+        String_delete(pathName);
+        Password_done(&cryptPassword);
+        String_delete(data);
+        String_delete(privateKeyFileName);
+        String_delete(publicKeyFileName);
+        return error;
+      }
+    }
+    else if (!File_isDirectory(pathName))
+    {
+      printError("'%s' is not a directory!\n",String_cString(pathName));
+      String_delete(pathName);
+      Password_done(&cryptPassword);
+      String_delete(data);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return error;
+    }
+    String_delete(pathName);
+
+    // write encryption public key
     error = Crypt_writePublicPrivateKeyFile(&publicKey,
                                             publicKeyFileName,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -8078,6 +8191,8 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
       return error;
     }
     printf("Created public encryption key '%s'\n",String_cString(publicKeyFileName));
+
+    // write encryption private key
     error = Crypt_writePublicPrivateKeyFile(&privateKey,
                                             privateKeyFileName,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -8101,6 +8216,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   }
   else
   {
+    // output encryption public key
     error = Crypt_getPublicPrivateKeyString(&publicKey,
                                             data,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -8121,6 +8237,8 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
       return error;
     }
     printf("crypt-public-key = base64:%s\n",String_cString(data));
+
+    // output encryption private key
     error = Crypt_getPublicPrivateKeyString(&privateKey,
                                             data,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -8169,6 +8287,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   String   keyString;
   Errors   error;
   CryptKey publicKey,privateKey;
+  String   pathName;
 
   // initialize variables
   publicKeyFileName  = String_new();
@@ -8218,6 +8337,37 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   // output keys
   if (keyFileBaseName != NULL)
   {
+    // create directory if it does not exists
+    pathName = File_getFilePathNameCString(String_new(),keyFileBaseName);
+    if      (!File_exists(pathName))
+    {
+      error = File_makeDirectory(pathName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot create directory '%s' (error: %s)!\n",String_cString(pathName),Error_getText(error));
+        String_delete(pathName);
+        Crypt_doneKey(&privateKey);
+        Crypt_doneKey(&publicKey);
+        String_delete(keyString);
+        String_delete(privateKeyFileName);
+        String_delete(publicKeyFileName);
+        return error;
+      }
+    }
+    else if (!File_isDirectory(pathName))
+    {
+      printError("'%s' is not a directory!\n",String_cString(pathName));
+      String_delete(pathName);
+      Crypt_doneKey(&privateKey);
+      Crypt_doneKey(&publicKey);
+      String_delete(keyString);
+      String_delete(privateKeyFileName);
+      String_delete(publicKeyFileName);
+      return error;
+    }
+    String_delete(pathName);
+
+    // write signature public key
     error = Crypt_writePublicPrivateKeyFile(&publicKey,
                                             publicKeyFileName,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -8237,6 +8387,8 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       return error;
     }
     printf("Created public signature key '%s'\n",String_cString(publicKeyFileName));
+
+    // write signature private key
     error = Crypt_writePublicPrivateKeyFile(&privateKey,
                                             privateKeyFileName,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -8259,6 +8411,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   }
   else
   {
+    // output signature public key
     error = Crypt_getPublicPrivateKeyString(&publicKey,
                                             keyString,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -8278,6 +8431,8 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       return error;
     }
     printf("signature-public-key = base64:%s\n",String_cString(keyString));
+
+    // output signature private key
     error = Crypt_getPublicPrivateKeyString(&privateKey,
                                             keyString,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -8763,6 +8918,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   }
   globalOptions.barExecutable = argv[0];
 
+//TODO remove
 #if 0
 {
 CryptKey p,s;

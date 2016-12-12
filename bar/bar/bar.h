@@ -600,6 +600,7 @@ bool setCertificate(Certificate *certificate, const void *certificateData, uint 
 
 bool setCertificateString(Certificate *kecertificatey, ConstString string);
 
+#if 0
 /***********************************************************************\
 * Name   : readCAFile
 * Purpose: read certicate authority file
@@ -623,6 +624,19 @@ Errors readCAFile(Certificate *certificate, const char *fileName);
 \***********************************************************************/
 
 Errors readCertificateFile(Certificate *certificate, const char *fileName);
+
+/***********************************************************************\
+* Name   : readKeyFile
+* Purpose: read public/private key file
+* Input  : key      - key variable
+*          fileName - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors readKeyFile(Key *key, const char *fileName);
+#endif
 
 /***********************************************************************\
 * Name   : initKey
@@ -704,18 +718,6 @@ bool setKey(Key *key, const void *keyData, uint keyLength);
 \***********************************************************************/
 
 bool setKeyString(Key *key, ConstString string);
-
-/***********************************************************************\
-* Name   : readKeyFile
-* Purpose: read public/private key file
-* Input  : key      - key variable
-*          fileName - file name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors readKeyFile(Key *key, const char *fileName);
 
 // ----------------------------------------------------------------------
 
@@ -1723,8 +1725,8 @@ bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, 
 bool configValueParseCertificate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
-* Name   : configValueParseKeyFile
-* Purpose: config value option call back for parsing key
+* Name   : configValueParseKeyData
+* Purpose: config value option call back for parsing key data
 * Input  : userData - user data
 *          variable - config variable
 *          name     - config name
@@ -1735,11 +1737,11 @@ bool configValueParseCertificate(void *userData, void *variable, const char *nam
 * Notes  : read from file or decode base64 data
 \***********************************************************************/
 
-bool configValueParseKey(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+bool configValueParseKeyData(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
-* Name   : configValueFormatInitKey
-* Purpose: init format config key
+* Name   : configValueFormatInitKeyData
+* Purpose: init format config key data
 * Input  : userData - user data
 *          variable - config variable
 * Output : formatUserData - format user data
@@ -1748,11 +1750,11 @@ bool configValueParseKey(void *userData, void *variable, const char *name, const
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatInitKey(void **formatUserData, void *userData, void *variable);
+void configValueFormatInitKeyData(void **formatUserData, void *userData, void *variable);
 
 /***********************************************************************\
-* Name   : configValueFormatDoneKey
-* Purpose: done format of config key
+* Name   : configValueFormatDoneKeyData
+* Purpose: done format of config key data
 * Input  : formatUserData - format user data
 *          userData       - user data
 * Input  : -
@@ -1761,11 +1763,11 @@ void configValueFormatInitKey(void **formatUserData, void *userData, void *varia
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatDoneKey(void **formatUserData, void *userData);
+void configValueFormatDoneKeyData(void **formatUserData, void *userData);
 
 /***********************************************************************\
-* Name   : configValueFormatKey
-* Purpose: format key config statement
+* Name   : configValueFormatKeyData
+* Purpose: format key data config statement
 * Input  : formatUserData - format user data
 *          userData       - user data
 *          line           - line variable
@@ -1776,7 +1778,7 @@ void configValueFormatDoneKey(void **formatUserData, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatKey(void **formatUserData, void *userData, String line);
+bool configValueFormatKeyData(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseDeprecated...
