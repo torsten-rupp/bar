@@ -140,10 +140,11 @@ typedef struct DecryptKeyNode
 {
   LIST_NODE_HEADER(struct DecryptKeyNode);
 
+  Password        *password;
+  uint            keyLength;
   byte            salt[CRYPT_SALT_LENGTH];
   uint            saltLength;
-  CryptAlgorithms cryptAlgorithm;
-  Password        *password;
+//  CryptAlgorithms cryptAlgorithm;
   CryptKey        cryptKey;
 } DecryptKeyNode;
 
@@ -158,11 +159,11 @@ typedef struct
 typedef struct
 {
   ArchiveHandle        *archiveHandle;
-  Password             *configCryptPassword;              // config crypt password or NULL
   PasswordModes        passwordMode;                      // password input mode
-  const DecryptKeyNode *nextDecryptKeyNode;               // next decrypt key node to use
+  Password             *configCryptPassword;              // config crypt password or NULL
   GetPasswordFunction  getPasswordFunction;               // password input callback
   void                 *getPasswordUserData;
+  const DecryptKeyNode *nextDecryptKeyNode;               // next decrypt key node to use
 } DecryptKeyIterator;
 
 /***************************** Variables *******************************/
@@ -524,18 +525,17 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
 * Purpose: get decrypt key for password with appropiated key size for
 *          crypt algorithm
 * Input  : password           - password
-*          cryptAlgorithm
+*          keyLength          - key length [bits]
 *          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
 *          salt               - salt
-*          saltLength         - salt length                                           );
-
+*          saltLength         - salt length [bytes]
 * Output : -
 * Return : crypt key or NULL
 * Notes  : -
 \***********************************************************************/
 
 LOCAL CryptKey *getDecryptKey(Password            *password,
-                              CryptAlgorithms     cryptAlgorithm,
+                              uint                keyLength,
                               CryptKeyDeriveTypes cryptKeyDeriveType,
                               const byte          *salt,
                               uint                saltLength
@@ -545,27 +545,27 @@ LOCAL CryptKey *getDecryptKey(Password            *password,
   Errors         error;
 
   assert(password != NULL);
+  assert(keyLength > 0);
 
   // find/add decrypt key
   decryptKeyNode = LIST_FIND(&decryptKeyList,decryptKeyNode,Password_equals(decryptKeyNode->password,password));
   if (decryptKeyNode == NULL)
   {
-fprintf(stderr,"%s, %d: new getDecryptKey\n",__FILE__,__LINE__);
     // init new decrypt key
     decryptKeyNode = LIST_NEW_NODE(DecryptKeyNode);
     if (decryptKeyNode == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    decryptKeyNode->cryptAlgorithm = cryptAlgorithm;
+    decryptKeyNode->password   = Password_duplicate(password);
+    decryptKeyNode->keyLength  = keyLength;
     memCopyFast(decryptKeyNode->salt,sizeof(decryptKeyNode->salt),salt,saltLength);
     decryptKeyNode->saltLength = MIN(sizeof(decryptKeyNode->salt),saltLength);
-    decryptKeyNode->password = Password_duplicate(password);
-    Crypt_initKey(&decryptKeyNode->cryptKey,CRYPT_PADDING_TYPE_NONE);
 
     // derive decrypt key from password with salt
+    Crypt_initKey(&decryptKeyNode->cryptKey,CRYPT_PADDING_TYPE_NONE);
     error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
-                            cryptAlgorithm,
+                            keyLength,
                             cryptKeyDeriveType,
                             password,
                             salt,
@@ -579,6 +579,7 @@ fprintf(stderr,"%s, %d: new getDecryptKey\n",__FILE__,__LINE__);
       LIST_DELETE_NODE(decryptKeyNode);
       return NULL;
     }
+//fprintf(stderr,"%s, %d: crypt key %d\n",__FILE__,__LINE__,decryptKeyNode->cryptKey.dataLength); debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLength,FALSE);
 
     // add to decrypt key list
     List_append(&decryptKeyList,decryptKeyNode);
@@ -586,19 +587,19 @@ fprintf(stderr,"%s, %d: new getDecryptKey\n",__FILE__,__LINE__);
   else
   {
     // check if salt/algorithm changed => calculate new key derivation
-    if (   (decryptKeyNode->cryptAlgorithm != cryptAlgorithm)
+    if (   (decryptKeyNode->keyLength != keyLength)
         || (decryptKeyNode->saltLength != saltLength)
         || !memEquals(decryptKeyNode->salt,salt,saltLength)
        )
     {
       // derive decrypt key from password with salt
 fprintf(stderr,"%s, %d: %d %d, %d %d, %d\n",__FILE__,__LINE__,
-decryptKeyNode->cryptAlgorithm,cryptAlgorithm,
+decryptKeyNode->keyLength,keyLength,
 decryptKeyNode->saltLength,saltLength,
 memEquals(decryptKeyNode->salt,salt,saltLength)
 );
       error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
-                              cryptAlgorithm,
+                              keyLength,
                               cryptKeyDeriveType,
                               password,
                               salt,
@@ -610,12 +611,12 @@ memEquals(decryptKeyNode->salt,salt,saltLength)
         return NULL;
       }
 
-      // store new crypt algorith and salt
-      decryptKeyNode->cryptAlgorithm = cryptAlgorithm;
+      // store new key length and salt
+      decryptKeyNode->keyLength  = keyLength;
       memCopyFast(decryptKeyNode->salt,sizeof(decryptKeyNode->salt),salt,saltLength);
       decryptKeyNode->saltLength = MIN(sizeof(decryptKeyNode->salt),saltLength);
-  //fprintf(stderr,"%s, %d: decrypt key\n",__FILE__,__LINE__);
-  //debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLength,0);
+//fprintf(stderr,"%s, %d: decrypt key\n",__FILE__,__LINE__);
+//debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLength,0);
     }
   }
 #if 0
@@ -643,9 +644,10 @@ debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLengt
 * Name   : getNextDecryptKey
 * Purpose: get next decrypt key
 * Input  : decryptKeyIterator - decrypt key iterator
-//TODO
-*
+*          keyLength          - key length [bits]
 *          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
+*          salt               - salt
+*          saltLength         - salt length [bytes]
 * Output : -
 * Return : decrypt key or NULL if no more decrypt keys
 * Notes  : Ordering of decrypt keys search:
@@ -657,7 +659,7 @@ debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLengt
 \***********************************************************************/
 
 LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
-                                        CryptAlgorithms     cryptAlgorithm,
+                                        uint                keyLength,
                                         CryptKeyDeriveTypes cryptKeyDeriveType,
                                         const byte          *salt,
                                         uint                saltLength
@@ -698,7 +700,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
              if (decryptKeyIterator->configCryptPassword != NULL)
              {
                decryptKey = getDecryptKey(decryptKeyIterator->configCryptPassword,
-                                          cryptAlgorithm,
+                                          keyLength,
                                           cryptKeyDeriveType,
                                           salt,
                                           saltLength
@@ -713,7 +715,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
              if (globalOptions.cryptPassword != NULL)
              {
                decryptKey = getDecryptKey(globalOptions.cryptPassword,
-                                          cryptAlgorithm,
+                                          keyLength,
                                           cryptKeyDeriveType,
                                           salt,
                                           saltLength
@@ -744,7 +746,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                {
                  // add to decrypt key list
                  decryptKey = getDecryptKey(&newPassword,
-                                            cryptAlgorithm,
+                                            keyLength,
                                             cryptKeyDeriveType,
                                             salt,
                                             saltLength
@@ -785,8 +787,10 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
 *          passwordMode        - password mode
 *          getPasswordFunction - get password call-back
 *          getPasswordUserData - user data for get password call-back
-//TODO
+*          keyLength          - key length [bits]
 *          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
+*          salt               - salt
+*          saltLength         - salt length [bytes]
 * Output : decryptKeyIterator - decrypt key iterator
 * Return : decrypt key or NULL if no more decrypt keys
 * Notes  : -
@@ -794,11 +798,11 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
 
 LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                                          ArchiveHandle       *archiveHandle,
-                                         const JobOptions    *jobOptions,
                                          PasswordModes       passwordMode,
+                                         const Password      *cryptPassword,
                                          GetPasswordFunction getPasswordFunction,
                                          void                *getPasswordUserData,
-                                         CryptAlgorithms     cryptAlgorithm,
+                                         uint                keyLength,
                                          CryptKeyDeriveTypes cryptKeyDeriveType,
                                          const byte          *salt,
                                          uint                saltLength
@@ -807,14 +811,14 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator
   assert(decryptKeyIterator != NULL);
 
   decryptKeyIterator->archiveHandle       = archiveHandle;
-  decryptKeyIterator->configCryptPassword = jobOptions->cryptPassword;
-  decryptKeyIterator->passwordMode        = (passwordMode != PASSWORD_MODE_DEFAULT) ? passwordMode : jobOptions->cryptPasswordMode;
-  decryptKeyIterator->nextDecryptKeyNode  = decryptPasswordList.head;
+  decryptKeyIterator->passwordMode        = passwordMode;
+  decryptKeyIterator->configCryptPassword = cryptPassword;
   decryptKeyIterator->getPasswordFunction = getPasswordFunction;
   decryptKeyIterator->getPasswordUserData = getPasswordUserData;
+  decryptKeyIterator->nextDecryptKeyNode  = decryptPasswordList.head;
 
   return getNextDecryptKey(decryptKeyIterator,
-                           cryptAlgorithm,
+                           keyLength,
                            cryptKeyDeriveType,
                            salt,
                            saltLength
@@ -1409,21 +1413,10 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
   Chunk_done(&chunkKey.info);
 
 #if 0
-  // init password
-  if (archiveHandle->cryptPassword == NULL)
-  {
-    archiveHandle->cryptPassword = Password_new();
-    if (archiveHandle->cryptPassword == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-  }
-#endif
-
   // get decrypt key
   error = Crypt_getDecryptKey(&archiveHandle->cryptKey,
 //TODO
-32,
+192,
                               privateCryptKey,
                               encryptedKeyData,
                               encryptedKeyDataLength
@@ -1435,6 +1428,7 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
     free(encryptedKeyData);
     return error;
   }
+#endif
 fprintf(stderr,"%s, %d: %d encrypted random key \n",__FILE__,__LINE__,archiveHandle->cryptKey.dataLength); debugDumpMemory(archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,0);
 
   // set crypt data
@@ -2975,7 +2969,7 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
 /***********************************************************************\
 * Name   : writeImageDataBlocks
-* Purpose: encrpyt and write image data blocks, split archive
+* Purpose: encrypt and write image data blocks, split archive
 * Input  : archiveEntryInfo  - archive image entry info data
 *          allowNewPartFlag  - TRUE iff new archive part can be created
 * Output : -
@@ -4158,7 +4152,7 @@ fprintf(stderr,"%s, %d: Archive_appendDecryptKey xxxxxxxxxxxxxxxxxxxxxxxxxxxx\n"
 //TODO:
 #if 0
       error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
-                              cryptAlgorithm,
+                              keyLength,
                               password,
                               salt,
                               saltLength
@@ -5205,9 +5199,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFile.info,{ Chunk_done(&archiveEntryInfo->file.chunkFile.info); });
 
   // init crypt
-fprintf(stderr,"%s, %d: %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,archiveHandle->cryptKey.key);
   error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
-//TODO
+//TODO MULTI_CRYPT
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
@@ -5223,7 +5216,7 @@ fprintf(stderr,"%s, %d: %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.da
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileEntry.cryptInfo,{ Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo); });
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
-//TODO
+//TODO MULTI_CRYPT
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
@@ -5239,7 +5232,7 @@ fprintf(stderr,"%s, %d: %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.da
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,{ Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo); });
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
-//TODO
+//TODO MULTI_CRYPT
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
@@ -5255,7 +5248,7 @@ fprintf(stderr,"%s, %d: %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.da
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileDelta.cryptInfo,{ Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo); });
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
-//TODO
+//TODO MULTI_CRYPT
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
@@ -5271,7 +5264,7 @@ fprintf(stderr,"%s, %d: %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.da
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileData.cryptInfo,{ Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); });
 
   error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
-//TODO
+//TODO MULTI_CRYPT
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
@@ -7270,6 +7263,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   ChunkHeader        chunkHeader;
   CryptAlgorithms    cryptAlgorithm;
   uint               blockLength;
+  uint               keyLength;
   DecryptKeyIterator decryptKeyIterator;
   const CryptKey     *decryptKey;
   bool               passwordFlag;
@@ -7358,7 +7352,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
 //TODO: multi crypt
   cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(chunkMeta.cryptAlgorithm);
 
-  // detect crypt block length
+  // detect crypt block length, crypt key length
   error = Crypt_getBlockLength(cryptAlgorithm,&blockLength);
   if (error != ERROR_NONE)
   {
@@ -7367,6 +7361,14 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     return error;
   }
   assert(blockLength > 0);
+  error = Crypt_getKeyLength(cryptAlgorithm,&keyLength);
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
+  assert(keyLength > 0);
 
   // try to read meta entry with all passwords
   AutoFree_init(&autoFreeList2);
@@ -7375,18 +7377,26 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   {
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
-      assert(archiveHandle->cryptPassword != NULL);
+#if 0
+      error = Crypt_getDecryptKey(&archiveHandle->cryptKey,
+    //TODO
+    keyLength,
+                                  privateCryptKey,
+                                  archiveHandle->encryptedKeyData,
+                                  archiveHandle->encryptedKeyDataLength
+                                 );
+#endif
       decryptKey = &archiveHandle->cryptKey;
     }
     else
     {
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
-                                      archiveHandle->jobOptions,
                                       archiveHandle->jobOptions->cryptPasswordMode,
+                                      archiveHandle->jobOptions->cryptPassword,
                                       archiveHandle->getPasswordFunction,
                                       archiveHandle->getPasswordUserData,
-                                      cryptAlgorithm,
+                                      keyLength,
                                       archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
@@ -7516,7 +7526,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
       {
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
-                                       cryptAlgorithm,
+                                       keyLength,
                                        archiveHandle->cryptKeyDeriveType,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
@@ -7604,8 +7614,8 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   AutoFreeList       autoFreeList1,autoFreeList2;
   Errors             error;
   ChunkHeader        chunkHeader;
-  uint               keyLength;
   uint64             index;
+  uint               keyLength;
   DecryptKeyIterator decryptKeyIterator;
   const CryptKey     *decryptKey;
   bool               passwordFlag;
@@ -7729,7 +7739,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect crypt block length, key length
+  // detect crypt block length, crypt key length
 #ifndef MULTI_CRYPT
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
@@ -7785,10 +7795,10 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     {
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
-                                      archiveHandle->jobOptions,
                                       archiveHandle->jobOptions->cryptPasswordMode,
+                                      archiveHandle->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
-                                      archiveEntryInfo->cryptAlgorithms[0],
+                                      keyLength,
                                       archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
@@ -8134,7 +8144,7 @@ NULL,//                         password,
       {
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
-                                       archiveEntryInfo->cryptAlgorithms[0],
+                                       keyLength,
                                        archiveHandle->cryptKeyDeriveType,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
@@ -8262,6 +8272,7 @@ NULL,//                         password,
   Errors             error;
   ChunkHeader        chunkHeader;
   uint64             index;
+  uint               keyLength;
   DecryptKeyIterator decryptKeyIterator;
   const CryptKey     *decryptKey;
   bool               passwordFlag;
@@ -8384,7 +8395,7 @@ NULL,//                         password,
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect crypt block length
+  // detect crypt block length, crypt key length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -8393,6 +8404,14 @@ NULL,//                         password,
     return error;
   }
   assert(archiveEntryInfo->blockLength > 0);
+  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
+  assert(keyLength > 0);
 
   // allocate buffers
   archiveEntryInfo->image.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -8424,11 +8443,11 @@ NULL,//                         password,
     {
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
-                                      archiveHandle->jobOptions,
                                       archiveHandle->jobOptions->cryptPasswordMode,
+                                      archiveHandle->jobOptions->cryptPassword,
                                       archiveHandle->getPasswordFunction,
                                       archiveHandle->getPasswordUserData,
-                                      archiveEntryInfo->cryptAlgorithms[0],
+                                      keyLength,
                                       archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
@@ -8684,7 +8703,7 @@ NULL,//                         password,
       {
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
-                                       archiveEntryInfo->cryptAlgorithms[0],
+                                       keyLength,
                                        archiveHandle->cryptKeyDeriveType,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
@@ -8799,6 +8818,7 @@ NULL,//                         password,
   Errors             error;
   ChunkHeader        chunkHeader;
   uint64             index;
+  uint               keyLength;
   DecryptKeyIterator decryptKeyIterator;
   const CryptKey     *decryptKey;
   bool               passwordFlag;
@@ -8901,7 +8921,7 @@ NULL,//                         password,
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect crypt block length
+  // detect crypt block length, crypt key length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -8910,6 +8930,14 @@ NULL,//                         password,
     return error;
   }
   assert(archiveEntryInfo->blockLength > 0);
+  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
+  assert(keyLength > 0);
 
   // try to read directory entry with all passwords
   AutoFree_init(&autoFreeList2);
@@ -8918,17 +8946,16 @@ NULL,//                         password,
   {
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
-      assert(archiveHandle->cryptPassword != NULL);
       decryptKey = &archiveHandle->cryptKey;
     }
     else
     {
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
-                                      archiveHandle->jobOptions,
                                       archiveHandle->jobOptions->cryptPasswordMode,
+                                      archiveHandle->jobOptions,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
-                                      archiveEntryInfo->cryptAlgorithms[0],
+                                      keyLength,
                                       archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
@@ -9126,7 +9153,7 @@ NULL,//                         password,
       {
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
-                                       archiveEntryInfo->cryptAlgorithms[0],
+                                       keyLength,
                                        archiveHandle->cryptKeyDeriveType,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
@@ -9209,6 +9236,7 @@ NULL,//                         password,
   Errors             error;
   ChunkHeader        chunkHeader;
   uint64             index;
+  uint               keyLength;
   DecryptKeyIterator decryptKeyIterator;
   const CryptKey     *decryptKey;
   bool               passwordFlag;
@@ -9312,7 +9340,7 @@ NULL,//                         password,
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect crypt block length
+  // detect crypt block length, crypt key length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -9321,6 +9349,14 @@ NULL,//                         password,
     return error;
   }
   assert(archiveEntryInfo->blockLength > 0);
+  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
+  assert(keyLength > 0);
 
   // try to read link entry with all passwords
   AutoFree_init(&autoFreeList2);
@@ -9329,17 +9365,16 @@ NULL,//                         password,
   {
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
-      assert(archiveHandle->cryptPassword != NULL);
       decryptKey = &archiveHandle->cryptKey;
     }
     else
     {
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
-                                      archiveHandle->jobOptions,
                                       archiveHandle->jobOptions->cryptPasswordMode,
+                                      archiveHandle->jobOptions,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
-                                      archiveEntryInfo->cryptAlgorithms[0],
+                                      keyLength,
                                       archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
@@ -9537,7 +9572,7 @@ NULL,//                         password,
       {
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
-                                       archiveEntryInfo->cryptAlgorithms[0],
+                                       keyLength,
                                        archiveHandle->cryptKeyDeriveType,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
@@ -9630,6 +9665,7 @@ NULL,//                         password,
   Errors             error;
   ChunkHeader        chunkHeader;
   uint64             index;
+  uint               keyLength;
   DecryptKeyIterator decryptKeyIterator;
   const CryptKey     *decryptKey;
   bool               passwordFlag;
@@ -9752,7 +9788,7 @@ NULL,//                         password,
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect crypt block length
+  // detect crypt block length, crypt key length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -9761,6 +9797,14 @@ NULL,//                         password,
     return error;
   }
   assert(archiveEntryInfo->blockLength > 0);
+  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
+  assert(keyLength > 0);
 
   // allocate buffers
   archiveEntryInfo->hardLink.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -9785,17 +9829,16 @@ NULL,//                         password,
   {
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
-      assert(archiveHandle->cryptPassword != NULL);
       decryptKey = &archiveHandle->cryptKey;
     }
     else
     {
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
-                                      archiveHandle->jobOptions,
                                       archiveHandle->jobOptions->cryptPasswordMode,
+                                      archiveHandle->jobOptions,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
-                                      archiveEntryInfo->cryptAlgorithms[0],
+                                      keyLength,
                                       archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
@@ -10175,7 +10218,7 @@ NULL,//                         password,
       {
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
-                                       archiveEntryInfo->cryptAlgorithms[0],
+                                       keyLength,
                                        archiveHandle->cryptKeyDeriveType,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
@@ -10289,6 +10332,7 @@ NULL,//                         password,
   Errors             error;
   ChunkHeader        chunkHeader;
   uint64             index;
+  uint               keyLength;
   DecryptKeyIterator decryptKeyIterator;
   const CryptKey     *decryptKey;
   bool               passwordFlag;
@@ -10392,7 +10436,7 @@ NULL,//                         password,
   archiveEntryInfo->cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
 #endif
 
-  // detect crypt block length
+  // detect crypt block length, crypt key length
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -10401,6 +10445,14 @@ NULL,//                         password,
     return error;
   }
   assert(archiveEntryInfo->blockLength > 0);
+  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList1);
+    return error;
+  }
+  assert(keyLength > 0);
 
   // try to read special entry with all passwords
   AutoFree_init(&autoFreeList2);
@@ -10409,17 +10461,16 @@ NULL,//                         password,
   {
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
-      assert(archiveHandle->cryptPassword != NULL);
       decryptKey = &archiveHandle->cryptKey;
     }
     else
     {
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
-                                      archiveHandle->jobOptions,
                                       archiveHandle->jobOptions->cryptPasswordMode,
+                                      archiveHandle->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
-                                      archiveEntryInfo->cryptAlgorithms[0],
+                                      keyLength,
                                       archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
                                       sizeof(archiveHandle->cryptSalt)
@@ -10622,7 +10673,7 @@ NULL,//                         password,
       {
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
-                                       archiveEntryInfo->cryptAlgorithms[0],
+                                       keyLength,
                                        archiveHandle->cryptKeyDeriveType,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
