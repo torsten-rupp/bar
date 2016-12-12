@@ -1211,32 +1211,32 @@ public class BARServer
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
               output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
 
-  /*
-  Dprintf.dprintf("ssl info");
-  String[] ss;
+/*
+Dprintf.dprintf("ssl info");
+String[] ss;
 
-  ss = sslSocket.getSupportedCipherSuites();
-  for (String s : ss)
-  {
-  Dprintf.dprintf("getSupportedCipherSuites=%s",s);
-  }
-  ss = sslSocket.getSupportedProtocols();
-  for (String s : ss)
-  {
-  Dprintf.dprintf("getSupportedProtocols=%s",s);
-  }
-  ss = sslSocket.getEnabledProtocols();
-  for (String s : ss)
-  {
-  Dprintf.dprintf("getEnabledProtocols=%s",s);
-  }
-  //sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_RC4_128_MD5","SSL_RSA_WITH_RC4_128_SHA","TLS_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_DSS_WITH_AES_128_CBC_SHA"," SSL_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"," SSL_RSA_WITH_DES_CBC_SHA"," SSL_DHE_RSA_WITH_DES_CBC_SHA"," SSL_DHE_DSS_WITH_DES_CBC_SHA"," SSL_RSA_EXPORT_WITH_RC4_40_MD5"," SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
-  sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA","SSL_RSA_WITH_DES_CBC_SHA","SSL_DHE_RSA_WITH_DES_CBC_SHA","SSL_DHE_DSS_WITH_DES_CBC_SHA","SSL_RSA_EXPORT_WITH_RC4_40_MD5","SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
-  sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
-  /**/
+ss = sslSocket.getSupportedCipherSuites();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedCipherSuites=%s",s);
+}
+ss = sslSocket.getSupportedProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedProtocols=%s",s);
+}
+ss = sslSocket.getEnabledProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getEnabledProtocols=%s",s);
+}
+//sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_RC4_128_MD5","SSL_RSA_WITH_RC4_128_SHA","TLS_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_DSS_WITH_AES_128_CBC_SHA"," SSL_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"," SSL_RSA_WITH_DES_CBC_SHA"," SSL_DHE_RSA_WITH_DES_CBC_SHA"," SSL_DHE_DSS_WITH_DES_CBC_SHA"," SSL_RSA_EXPORT_WITH_RC4_40_MD5"," SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA","SSL_RSA_WITH_DES_CBC_SHA","SSL_DHE_RSA_WITH_DES_CBC_SHA","SSL_DHE_DSS_WITH_DES_CBC_SHA","SSL_RSA_EXPORT_WITH_RC4_40_MD5","SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
+/**/
 
-  //java.security.cert.Certificate[] serverCerts = sslSocket.getSession().getPeerCertificates();
-  //Dprintf.dprintf("serverCerts=%s\n",serverCerts);
+//java.security.cert.Certificate[] serverCerts = sslSocket.getSession().getPeerCertificates();
+//Dprintf.dprintf("serverCerts=%s\n",serverCerts);
 
               // connection established => done
               socket = sslSocket;
@@ -1316,31 +1316,31 @@ public class BARServer
               // start session
               startSession(input,output);
 
-    /*
-    String[] ss;
+/*
+String[] ss;
 
-    ss = sslSocket.getSupportedCipherSuites();
-    for (String s : ss)
-    {
-    Dprintf.dprintf("getSupportedCipherSuites=%s",s);
-    }
-    ss = sslSocket.getSupportedProtocols();
-    for (String s : ss)
-    {
-    Dprintf.dprintf("getSupportedProtocols=%s",s);
-    }
-    ss = sslSocket.getEnabledProtocols();
-    for (String s : ss)
-    {
-    Dprintf.dprintf("getEnabledProtocols=%s",s);
-    }
-    //sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_RC4_128_MD5","SSL_RSA_WITH_RC4_128_SHA","TLS_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_DSS_WITH_AES_128_CBC_SHA"," SSL_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"," SSL_RSA_WITH_DES_CBC_SHA"," SSL_DHE_RSA_WITH_DES_CBC_SHA"," SSL_DHE_DSS_WITH_DES_CBC_SHA"," SSL_RSA_EXPORT_WITH_RC4_40_MD5"," SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
-    sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA","SSL_RSA_WITH_DES_CBC_SHA","SSL_DHE_RSA_WITH_DES_CBC_SHA","SSL_DHE_DSS_WITH_DES_CBC_SHA","SSL_RSA_EXPORT_WITH_RC4_40_MD5","SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
-    sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
-    */
+ss = sslSocket.getSupportedCipherSuites();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedCipherSuites=%s",s);
+}
+ss = sslSocket.getSupportedProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedProtocols=%s",s);
+}
+ss = sslSocket.getEnabledProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getEnabledProtocols=%s",s);
+}
+//sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_RC4_128_MD5","SSL_RSA_WITH_RC4_128_SHA","TLS_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_DSS_WITH_AES_128_CBC_SHA"," SSL_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"," SSL_RSA_WITH_DES_CBC_SHA"," SSL_DHE_RSA_WITH_DES_CBC_SHA"," SSL_DHE_DSS_WITH_DES_CBC_SHA"," SSL_RSA_EXPORT_WITH_RC4_40_MD5"," SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA","SSL_RSA_WITH_DES_CBC_SHA","SSL_DHE_RSA_WITH_DES_CBC_SHA","SSL_DHE_DSS_WITH_DES_CBC_SHA","SSL_RSA_EXPORT_WITH_RC4_40_MD5","SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
+*/
 
-    //java.security.cert.Certificate[] serverCerts = sslSocket.getSession().getPeerCertificates();
-    //Dprintf.dprintf("serverCerts=%s\n",serverCerts);
+//java.security.cert.Certificate[] serverCerts = sslSocket.getSession().getPeerCertificates();
+//Dprintf.dprintf("serverCerts=%s\n",serverCerts);
 
               // connection established => done
               socket = sslSocket;
@@ -1430,32 +1430,32 @@ public class BARServer
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
               output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
 
-  /*
-  Dprintf.dprintf("ssl info");
-  String[] ss;
+/*
+Dprintf.dprintf("ssl info");
+String[] ss;
 
-  ss = sslSocket.getSupportedCipherSuites();
-  for (String s : ss)
-  {
-  Dprintf.dprintf("getSupportedCipherSuites=%s",s);
-  }
-  ss = sslSocket.getSupportedProtocols();
-  for (String s : ss)
-  {
-  Dprintf.dprintf("getSupportedProtocols=%s",s);
-  }
-  ss = sslSocket.getEnabledProtocols();
-  for (String s : ss)
-  {
-  Dprintf.dprintf("getEnabledProtocols=%s",s);
-  }
-  //sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_RC4_128_MD5","SSL_RSA_WITH_RC4_128_SHA","TLS_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_DSS_WITH_AES_128_CBC_SHA"," SSL_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"," SSL_RSA_WITH_DES_CBC_SHA"," SSL_DHE_RSA_WITH_DES_CBC_SHA"," SSL_DHE_DSS_WITH_DES_CBC_SHA"," SSL_RSA_EXPORT_WITH_RC4_40_MD5"," SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
-  sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA","SSL_RSA_WITH_DES_CBC_SHA","SSL_DHE_RSA_WITH_DES_CBC_SHA","SSL_DHE_DSS_WITH_DES_CBC_SHA","SSL_RSA_EXPORT_WITH_RC4_40_MD5","SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
-  sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
-  /**/
+ss = sslSocket.getSupportedCipherSuites();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedCipherSuites=%s",s);
+}
+ss = sslSocket.getSupportedProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedProtocols=%s",s);
+}
+ss = sslSocket.getEnabledProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getEnabledProtocols=%s",s);
+}
+//sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_RC4_128_MD5","SSL_RSA_WITH_RC4_128_SHA","TLS_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_DSS_WITH_AES_128_CBC_SHA"," SSL_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"," SSL_RSA_WITH_DES_CBC_SHA"," SSL_DHE_RSA_WITH_DES_CBC_SHA"," SSL_DHE_DSS_WITH_DES_CBC_SHA"," SSL_RSA_EXPORT_WITH_RC4_40_MD5"," SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA","SSL_RSA_WITH_DES_CBC_SHA","SSL_DHE_RSA_WITH_DES_CBC_SHA","SSL_DHE_DSS_WITH_DES_CBC_SHA","SSL_RSA_EXPORT_WITH_RC4_40_MD5","SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
+/**/
 
-  //java.security.cert.Certificate[] serverCerts = sslSocket.getSession().getPeerCertificates();
-  //Dprintf.dprintf("serverCerts=%s\n",serverCerts);
+//java.security.cert.Certificate[] serverCerts = sslSocket.getSession().getPeerCertificates();
+//Dprintf.dprintf("serverCerts=%s\n",serverCerts);
 
               // connection established => done
               socket = sslSocket;
@@ -1530,31 +1530,31 @@ public class BARServer
               // start session
               startSession(input,output);
 
-  /*
-  String[] ss;
+/*
+String[] ss;
 
-  ss = sslSocket.getSupportedCipherSuites();
-  for (String s : ss)
-  {
-  Dprintf.dprintf("getSupportedCipherSuites=%s",s);
-  }
-  ss = sslSocket.getSupportedProtocols();
-  for (String s : ss)
-  {
-  Dprintf.dprintf("getSupportedProtocols=%s",s);
-  }
-  ss = sslSocket.getEnabledProtocols();
-  for (String s : ss)
-  {
-  Dprintf.dprintf("getEnabledProtocols=%s",s);
-  }
-  //sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_RC4_128_MD5","SSL_RSA_WITH_RC4_128_SHA","TLS_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_DSS_WITH_AES_128_CBC_SHA"," SSL_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"," SSL_RSA_WITH_DES_CBC_SHA"," SSL_DHE_RSA_WITH_DES_CBC_SHA"," SSL_DHE_DSS_WITH_DES_CBC_SHA"," SSL_RSA_EXPORT_WITH_RC4_40_MD5"," SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
-  sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA","SSL_RSA_WITH_DES_CBC_SHA","SSL_DHE_RSA_WITH_DES_CBC_SHA","SSL_DHE_DSS_WITH_DES_CBC_SHA","SSL_RSA_EXPORT_WITH_RC4_40_MD5","SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
-  sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
-  */
+ss = sslSocket.getSupportedCipherSuites();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedCipherSuites=%s",s);
+}
+ss = sslSocket.getSupportedProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getSupportedProtocols=%s",s);
+}
+ss = sslSocket.getEnabledProtocols();
+for (String s : ss)
+{
+Dprintf.dprintf("getEnabledProtocols=%s",s);
+}
+//sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_RC4_128_MD5","SSL_RSA_WITH_RC4_128_SHA","TLS_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_RSA_WITH_AES_128_CBC_SHA"," TLS_DHE_DSS_WITH_AES_128_CBC_SHA"," SSL_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA"," SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA"," SSL_RSA_WITH_DES_CBC_SHA"," SSL_DHE_RSA_WITH_DES_CBC_SHA"," SSL_DHE_DSS_WITH_DES_CBC_SHA"," SSL_RSA_EXPORT_WITH_RC4_40_MD5"," SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA","SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA","SSL_RSA_WITH_DES_CBC_SHA","SSL_DHE_RSA_WITH_DES_CBC_SHA","SSL_DHE_DSS_WITH_DES_CBC_SHA","SSL_RSA_EXPORT_WITH_RC4_40_MD5","SSL_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA","SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"});
+sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
+*/
 
-  //java.security.cert.Certificate[] serverCerts = sslSocket.getSession().getPeerCertificates();
-  //Dprintf.dprintf("serverCerts=%s\n",serverCerts);
+//java.security.cert.Certificate[] serverCerts = sslSocket.getSession().getPeerCertificates();
+//Dprintf.dprintf("serverCerts=%s\n",serverCerts);
 
               // connection established => done
               socket = sslSocket;
