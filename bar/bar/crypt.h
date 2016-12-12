@@ -694,7 +694,7 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
 *          salt                   - encryption salt (can be NULL)
 *          saltLength             - encryption salt length
 * Output : encryptedKey           - encrypted key
-*          encryptedKeyLength     - length of encrypted key
+*          encryptedKeyLength     - length of encrypted key [bytes]
 * Return : ERROR_NONE or error code
 * Notes  : encryptedKey must be freed with Password_freeSecure()!
 \***********************************************************************/
@@ -917,10 +917,11 @@ Errors Crypt_keyDecrypt(const CryptKey *cryptKey,
 *                                  key
 *          encryptedKey          - buffer for encrypted random key
 *          maxEncryptedKeyLength - max. length of encryption buffer
+*                                 [bytes]
 *          encryptedKeyLength    - buffer length variable
 * Output : cryptKey           - created random crypt key
 *          encryptedKey       - encrypted random key
-*          encryptedKeyLength - length of encrypted random key
+*          encryptedKeyLength - length of encrypted random key [bytes]
 * Return : ERROR_NONE or error code
 * Notes  : if encryptBufferLength==maxEncryptBufferLength buffer was to
 *          small!
@@ -939,9 +940,10 @@ Errors Crypt_getRandomEncryptKey(CryptKey       *cryptKey,
 * Name   : Crypt_getDecryptKey
 * Purpose: get decryption key
 * Input  : cryptKey           - crypt key variable
+*          keyLength          - crypt key length [bits]
 *          privateKey         - private key to decrypt key
 *          encryptedKey       - encrypted random key
-*          encryptedKeyLength - length of encrypted random key
+*          encryptedKeyLength - length of encrypted random key [bytes]
 * Output : cryptKey - decryption key
 * Return : ERROR_NONE or error code
 * Notes  : -

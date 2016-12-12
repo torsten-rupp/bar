@@ -41,6 +41,9 @@
 
 /****************** Conditional compilation switches *******************/
 
+#define _DEBUG_ASYMMETRIC_CRYPT
+
+
 /***************************** Constants *******************************/
 
 #define MAX_KEY_SIZE 2048               // max. size of a key in bits
@@ -105,10 +108,25 @@ LOCAL const struct
 #define KEY_DERIVE_ITERATIONS     20000
 #define KEY_DERIVE_KEY_SIZE       (512/8)
 
-// PKCS1 encoded message buffer for RSA encryption/decryption
-#define PKCS1_ENCODED_MESSAGE_LENGTH         (512/8)
-#define PKCS1_RANDOM_KEY_LENGTH              (PKCS1_ENCODED_MESSAGE_LENGTH*8-(1+1+8+1)*8)
-#define PKCS1_ENCODED_MESSAGE_PADDING_LENGTH (PKCS1_ENCODED_MESSAGE_LENGTH-(PKCS1_RANDOM_KEY_LENGTH+7)/8-1-1-1)
+/* PKCS1 encoded message buffer for RSA encryption/decryption
+   format 0x00 0x02 <PS random data> 0x00 <key data>
+
+   +------+------+----------------+------+------------------------+
+   | 0x00 | 0x02 |    random      | 0x00 | key data               |
+   +------+------+----------------+------+------------------------+
+    <----> <----> <--------------> <----> <---------------------->
+      1      1     random length     1     key length
+    <------------------------------------------------------------>
+                               64 (512bit)
+
+   Note: random length must be at least 8 bytes!
+
+   See: https://tools.ietf.org/html/rfc3447
+*/
+#define PKCS1_ENCODED_MESSAGE_LENGTH         (512/8)  // [bytes]
+#define PKCS1_MIN_RANDOM_LENGTH              8  // [bytes]
+#define PKCS1_KEY_LENGTH                     ((PKCS1_ENCODED_MESSAGE_LENGTH-(1+1+PKCS1_MIN_RANDOM_LENGTH+1))*8)  // [bits]
+#define PKCS1_ENCODED_MESSAGE_PADDING_LENGTH (PKCS1_ENCODED_MESSAGE_LENGTH-ALIGN(PKCS1_KEY_LENGTH,8)/8-1-1-1)  // [bytes]
 
 // used symmetric encryption algorithm in RSA hybrid encryption
 #define SECRET_KEY_CRYPT_ALGORITHM CRYPT_ALGORITHM_AES256
@@ -492,6 +510,7 @@ Errors Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm,
                           );
           }
           (*keyLength) = n*8;
+fprintf(stderr,"%s, %d: cryptAlgorithm=%d keyLength=%d\n",__FILE__,__LINE__,cryptAlgorithm,*keyLength);
         }
       #else /* not HAVE_GCRYPT */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -733,13 +752,13 @@ Errors __Crypt_init(const char      *__fileName__,
                                           );
           if (gcryptError != 0)
           {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: cryptKey->dataLength=%d\n",__FILE__,__LINE__,cryptKey->dataLength);
 //asm("int3");
             error = ERRORX_(INIT_CIPHER,
                             0,
                             "set key for cipher '%s' with %dbit: %s",
                             gcry_cipher_algo_name(gcryptAlgorithm),
-                            cryptKey->dataLength,
+                            cryptKey->dataLength*8,
                             gpg_strerror(gcryptError)
                            );
             gcry_cipher_close(cryptInfo->gcry_cipher_hd);
@@ -1269,9 +1288,7 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
 
   #ifdef HAVE_GCRYPT
     // allocate secure memory
-//TODO: use ALIGN
-    dataLength = (keyLength+7)/8;
-assert(dataLength == ALIGN(keyLength,8)/8);
+    dataLength = ALIGN(keyLength,8)/8;
     data       = Password_allocSecure(dataLength);
     if (data == NULL)
     {
@@ -1448,7 +1465,9 @@ fprintf(stderr,"%s, %d: derived key\n",__FILE__,__LINE__); debugDumpMemory(encry
       Crypt_done(&cryptInfo);
       Crypt_doneKey(&encryptKey);
     }
+#ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: %d encrypted key\n",__FILE__,__LINE__,dataLength); debugDumpMemory(encryptedKeyInfo->data,alignedDataLength,FALSE);
+#endif
 
     // get encrypted key info key length
     encryptedKeyInfo->dataLength = htonl(dataLength);
@@ -1535,7 +1554,9 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
       return ERROR_INSUFFICIENT_MEMORY;
     }
     memCopyFast(data,alignedDataLength,encryptedKeyInfo->data,alignedDataLength);
+#ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: encrypted private key\n",__FILE__,__LINE__); debugDumpMemory(data,alignedDataLength,FALSE);
+#endif
 
     // check CRC
     crc = crc32(crc32(0,Z_NULL,0),(Bytef*)data,alignedDataLength);
@@ -1571,7 +1592,9 @@ fprintf(stderr,"%s, %d: encrypted private key\n",__FILE__,__LINE__); debugDumpMe
         Password_freeSecure(data);
         return error;
       }
-fprintf(stderr,"%s, %d: derived key \n",__FILE__,__LINE__); debugDumpMemory(encryptKey.data,encryptKey.dataLength,FALSE);
+#ifdef DEBUG_ASYMMETRIC_CRYPT
+fprintf(stderr,"%s, %d: derived key %d\n",__FILE__,__LINE__,encryptKey.dataLength); debugDumpMemory(encryptKey.data,encryptKey.dataLength,FALSE);
+#endif
       error = Crypt_init(&cryptInfo,
                          SECRET_KEY_CRYPT_ALGORITHM,
                          cryptMode,
@@ -1601,7 +1624,9 @@ fprintf(stderr,"%s, %d: derived key \n",__FILE__,__LINE__); debugDumpMemory(encr
       Crypt_done(&cryptInfo);
       Crypt_doneKey(&encryptKey);
     }
+#ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: decrypted private key\n",__FILE__,__LINE__); debugDumpMemory(data,alignedDataLength,FALSE);
+#endif
 
     // create S-expression with key
     if (cryptKey->key != NULL)
@@ -2299,7 +2324,7 @@ Errors Crypt_getRandomEncryptKey(CryptKey       *cryptKey,
 //gcry_sexp_dump(publicKey->key);
 
     // check key length
-    if (keyLength > PKCS1_RANDOM_KEY_LENGTH)
+    if (keyLength > PKCS1_KEY_LENGTH)
     {
       return ERROR_INVALID_KEY_LENGTH;
     }
@@ -2319,17 +2344,15 @@ Errors Crypt_getRandomEncryptKey(CryptKey       *cryptKey,
     gcry_sexp_release(sexpToken);
 
     // create random key
-    dataLength = (PKCS1_RANDOM_KEY_LENGTH+7)/8;  
-//TODO:
-assert(dataLength == ALIGN(PKCS1_RANDOM_KEY_LENGTH,8)/8);
+    dataLength = ALIGN(PKCS1_KEY_LENGTH,8)/8;
     data = Password_allocSecure(dataLength);
     if (data == NULL)
     {
       return ERROR_INSUFFICIENT_MEMORY;
-    }   
+    }
     gcry_create_nonce((unsigned char*)data,dataLength);
 
-    // create padded encoded message block: format 0x00 0x02 <PS random data> 0x00 <key data>; size 512bit
+    // create padded encoded message block: format 0x00 0x02 <PS random data 8 byte> 0x00 <key data>; size 512bit
     pkcs1EncodedMessage = Password_allocSecure(PKCS1_ENCODED_MESSAGE_LENGTH);
     if (pkcs1EncodedMessage == NULL)
     {
@@ -2338,7 +2361,7 @@ assert(dataLength == ALIGN(PKCS1_RANDOM_KEY_LENGTH,8)/8);
     }
     pkcs1EncodedMessage[0] = 0x00;
     pkcs1EncodedMessage[1] = 0x02;
-    gcry_randomize((unsigned char*)&pkcs1EncodedMessage[1+1],PKCS1_ENCODED_MESSAGE_PADDING_LENGTH,GCRY_STRONG_RANDOM);
+    gcry_create_nonce((unsigned char*)&pkcs1EncodedMessage[1+1],PKCS1_ENCODED_MESSAGE_PADDING_LENGTH);
     pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH] = 0x00;
     memcpy(&pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH+1],data,dataLength);
 fprintf(stderr,"%s, %d: encoded pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS1_ENCODED_MESSAGE_LENGTH); debugDumpMemory(pkcs1EncodedMessage,PKCS1_ENCODED_MESSAGE_LENGTH,0);
@@ -2396,7 +2419,7 @@ fprintf(stderr,"%s, %d: encrptioed pkcs1EncodedMessage %d\n",__FILE__,__LINE__,e
     // set key
     if (cryptKey->data != NULL) Password_freeSecure(cryptKey->data);
     cryptKey->data       = data;
-    cryptKey->dataLength = (keyLength+7)/8;
+    cryptKey->dataLength = ALIGN(keyLength,8)/8;
 
     // free resources
     gcry_sexp_release(sexpEncryptData);
@@ -2441,6 +2464,11 @@ Errors Crypt_getDecryptKey(CryptKey       *cryptKey,
 //fprintf(stderr,"%s,%d: ---------------------------------\n",__FILE__,__LINE__);
 //fprintf(stderr,"%s,%d: private key\n",__FILE__,__LINE__);
 //gcry_sexp_dump(privateKey->key);
+    // check key length
+    if (keyLength > PKCS1_KEY_LENGTH)
+    {
+      return ERROR_INVALID_KEY_LENGTH;
+    }
 
     // check if private key available
     if (!Crypt_isKeyAvailable(privateKey))
@@ -2457,7 +2485,9 @@ Errors Crypt_getDecryptKey(CryptKey       *cryptKey,
     gcry_sexp_release(sexpToken);
 
     // create S-expression with encrypted data
-fprintf(stderr,"%s, %d: encrypte random key %d\n",__FILE__,__LINE__,dataLength); debugDumpMemory(encryptedKey,encryptedKeyLength,0);
+#ifdef DEBUG_ASYMMETRIC_CRYPT
+fprintf(stderr,"%s, %d: encrypted random key %d\n",__FILE__,__LINE__,encryptedKeyLength); debugDumpMemory(encryptedKey,encryptedKeyLength,0);
+#endif
     gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (rsa (a %b)))",encryptedKeyLength,encryptedKey);
     if (gcryptError != 0)
     {
@@ -2505,7 +2535,9 @@ fprintf(stderr,"%s, %d: encrypte random key %d\n",__FILE__,__LINE__,dataLength);
     // MPI does not store leading 0 -> do padding with 0 for required length
     memCopy(&pkcs1EncodedMessage[PKCS1_ENCODED_MESSAGE_LENGTH-dataLength],dataLength,&data[0],dataLength);
     memClear(&pkcs1EncodedMessage[0],PKCS1_ENCODED_MESSAGE_LENGTH-dataLength);
+#ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS1_ENCODED_MESSAGE_LENGTH); debugDumpMemory(pkcs1EncodedMessage,PKCS1_ENCODED_MESSAGE_LENGTH,0);
+#endif
 
     // check PKCS1 encoded message block
     if (   (pkcs1EncodedMessage[0] != 0x00)
@@ -2518,9 +2550,9 @@ fprintf(stderr,"%s, %d: pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS1_ENCODE
       gcry_sexp_release(sexpEncryptData);
       return ERROR_WRONG_PRIVATE_KEY;
     }
-    
+
     // get key data
-    data = Password_allocSecure(keyLength);
+    data = Password_allocSecure(ALIGN(keyLength,8)/8);
     if (data == NULL)
     {
       Password_freeSecure(pkcs1EncodedMessage);
@@ -2528,13 +2560,13 @@ fprintf(stderr,"%s, %d: pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS1_ENCODE
       gcry_sexp_release(sexpEncryptData);
       return ERROR_INSUFFICIENT_MEMORY;
     }
-    memCopy(data,keyLength,&pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH+1],dataLength);
-fprintf(stderr,"%s, %d: key data %d\n",__FILE__,__LINE__,keyLength); debugDumpMemory(data,keyLength,0);
+    memCopy(data,ALIGN(keyLength,8)/8,&pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH+1],dataLength);
+fprintf(stderr,"%s, %d: key data %d dataLength=%d\n",__FILE__,__LINE__,keyLength,dataLength); debugDumpMemory(data,keyLength,0);
 
     // set key
     if (cryptKey->data != NULL) Password_freeSecure(cryptKey->data);
     cryptKey->data       = data;
-    cryptKey->dataLength = keyLength;
+    cryptKey->dataLength = ALIGN(keyLength,8)/8;
 
     // free resources
     Password_freeSecure(pkcs1EncodedMessage);
