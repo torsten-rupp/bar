@@ -2081,6 +2081,7 @@ if (false) {
           if (menuItem.getSelection())
           {
             boolean connectOkFlag = false;
+            String  errorMessage  = null;
 
             // try to connect to server with current credentials
             if (!connectOkFlag)
@@ -2110,11 +2111,41 @@ if (false) {
               }
               catch (ConnectionError error)
               {
-                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
+                if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
               }
               catch (CommunicationError error)
               {
-                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
+                if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+              }
+            }
+
+            // try to connect to server without TLS/SSL
+            if (!connectOkFlag && loginData.forceSSL)
+            {
+              if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Connection fail. Try to connect without TLS/SSL?"),BARControl.tr("Try without TLS/SSL"),BARControl.tr("Cancel")))
+              {
+                try
+                {
+                  BARServer.connect(display,
+                                    loginData.serverName,
+                                    loginData.serverPort,
+                                    loginData.serverTLSPort,
+                                    false,  // forceSSL
+                                    loginData.password,
+                                    (String)null,  // serverCAFileName
+                                    (String)null,  // serverCertificateFileName
+                                    (String)null  // serverKeyFileName
+                                   );
+                  connectOkFlag = true;
+                }
+                catch (ConnectionError error)
+                {
+                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+                }
+                catch (CommunicationError error)
+                {
+                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+                }
               }
             }
 
@@ -2147,12 +2178,24 @@ if (false) {
                 }
                 catch (ConnectionError error)
                 {
-                  Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
+                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
                 }
                 catch (CommunicationError error)
                 {
-                  Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
+                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
                 }
+              }
+            }
+
+            if (!connectOkFlag)
+            {
+              if (errorMessage != null)
+              {
+                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+errorMessage);
+              }
+              else
+              {
+                Dialogs.error(new Shell(),BARControl.tr("Connection fail"));
               }
             }
 
