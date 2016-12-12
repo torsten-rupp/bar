@@ -1024,20 +1024,16 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
 * Name   : Storage_getPrintableName
 * Purpose: get printable storage name (without password)
 * Input  : storageSpecifierString - storage specifier string
-*          fileName               - file name (can be NULL)
+*          archiveName            - archive name (can be NULL)
 * Output : -
 * Return : printable storage name
-* Notes  : if fileName is NULL file name from storageSpecifier is used
+* Notes  : if archiveName is NULL file name from storageSpecifier is used
 \***********************************************************************/
 
-// String is a pointer type. Why can't this be a pointer to a const struct?
-#pragma GCC push_options
-#pragma GCC diagnostic ignored "-Wignored-qualifiers"
-ConstString Storage_getPrintableName(String           string,
-                                     StorageSpecifier *storageSpecifier,
-                                     ConstString      fileName
-                                    );
-#pragma GCC pop_options
+String Storage_getPrintableName(String           string,
+                                StorageSpecifier *storageSpecifier,
+                                ConstString      archiveName
+                               );
 
 /***********************************************************************\
 * Name   : Storage_prepare

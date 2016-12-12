@@ -1452,10 +1452,10 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
   return storageSpecifier->storageName;
 }
 
-ConstString Storage_getPrintableName(String           string,
-                                     StorageSpecifier *storageSpecifier,
-                                     ConstString      fileName
-                                    )
+String Storage_getPrintableName(String           string,
+                                StorageSpecifier *storageSpecifier,
+                                ConstString      archiveName
+                               )
 {
   assert(storageSpecifier != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
@@ -1467,16 +1467,16 @@ ConstString Storage_getPrintableName(String           string,
   }
 
   // get file to use
-  if (fileName == NULL)
+  if (archiveName == NULL)
   {
 //TODO: impleemtn Storage_getPattern()
     if (storageSpecifier->archivePatternString != NULL)
     {
-      fileName = storageSpecifier->archivePatternString;
+      archiveName = storageSpecifier->archivePatternString;
     }
     else
     {
-      fileName = storageSpecifier->fileName;
+      archiveName = storageSpecifier->fileName;
     }
   }
 
@@ -1486,33 +1486,33 @@ ConstString Storage_getPrintableName(String           string,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      StorageFile_getPrintableName(string,storageSpecifier,fileName);
+      StorageFile_getPrintableName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_FTP:
-      StorageFTP_getPrintableName(string,storageSpecifier,fileName);
+      StorageFTP_getPrintableName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_SSH:
-      if (!String_isEmpty(fileName))
+      if (!String_isEmpty(archiveName))
       {
-        String_append(string,fileName);
+        String_append(string,archiveName);
       }
       break;
     case STORAGE_TYPE_SCP:
-      StorageSCP_getPrintableName(string,storageSpecifier,fileName);
+      StorageSCP_getPrintableName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_SFTP:
-      StorageSFTP_getPrintableName(string,storageSpecifier,fileName);
+      StorageSFTP_getPrintableName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_WEBDAV:
-      StorageWebDAV_getPrintableName(string,storageSpecifier,fileName);
+      StorageWebDAV_getPrintableName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      StorageOptical_getPrintableName(string,storageSpecifier,fileName);
+      StorageOptical_getPrintableName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_DEVICE:
-      StorageDevice_getPrintableName(string,storageSpecifier,fileName);
+      StorageDevice_getPrintableName(string,storageSpecifier,archiveName);
       break;
     default:
       #ifndef NDEBUG
@@ -1522,14 +1522,6 @@ ConstString Storage_getPrintableName(String           string,
   }
 
   return string;
-}
-
-const char *Storage_getPrintableNameCString(String           string,
-                                            StorageSpecifier *storageSpecifier,
-                                            ConstString      fileName
-                                           )
-{
-  return String_cString(Storage_getPrintableName(string,storageSpecifier,fileName));
 }
 
 #ifdef NDEBUG
