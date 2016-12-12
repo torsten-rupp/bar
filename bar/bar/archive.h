@@ -202,10 +202,8 @@ typedef struct
   LogHandle                *logHandle;                                 // log handle
 
   byte                     cryptSalt[CRYPT_SALT_LENGTH];               // crypt salt
-  uint                     cryptMode;
-  CryptKeyDeriveTypes      cryptKeyDeriveType;
-//  bool                     cryptSimpleKeyFlag;                         // TRUE iff crypt use simple key only (required for old style archives)
-//  bool                     cryptCTSFlag;                               // TRUE iff crypt use cipher text stealing (CTS) (required for old style archives)
+  uint                     cryptMode;                                  // crypt mode; see CRYPT_MODE_....
+  CryptKeyDeriveTypes      cryptKeyDeriveType;                         // key derive type; see CryptKeyDeriveTypes
 
   Semaphore                passwordLock;                               // input password lock
   CryptTypes               cryptType;                                  // crypt type (symmetric/asymmetric; see CryptTypes)
@@ -214,8 +212,8 @@ typedef struct
   bool                     cryptPasswordReadFlag;                      // TRUE iff input callback for crypt password called
 //  CryptKey                 cryptPublicKey;                             // public key for encryption/decryption of random key used for asymmetric encryptio
 //TODO: use Key
-  void                     *cryptKeyData;                              // encrypted random key used for asymmetric encryption
-  uint                     cryptKeyDataLength;                         // length of encrypted random key
+  void                     *encryptedKeyData;                          // encrypted random key used for asymmetric encryption
+  uint                     encryptedKeyDataLength;                     // length of encrypted random key
 
   void                     *signatureKeyData;                          // signature random key
   uint                     signatureKeyDataLength;                     // length of signature random key

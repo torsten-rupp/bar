@@ -402,7 +402,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 {
   bool           semaphoreLock;
   const Password *password;
-  String               printableStorageName;
+  String         printableStorageName;
   Password       newPassword;
   Errors         error;
 
@@ -1271,6 +1271,7 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
 
   assert(archiveHandle != NULL);
   assert(chunkHeader != NULL);
+  assert(chunkHeader->id == CHUNK_ID_BAR);
 
   // init key chunk
   error = Chunk_init(&chunkBAR.info,
@@ -1319,26 +1320,30 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
 /***********************************************************************\
 * Name   : readEncryptionKey
 * Purpose: read encryption key
-* Input  : archiveHandle - archive handle
-*          chunkHeader - key chunk header
+* Input  : archiveHandle   - archive handle
+*          chunkHeader     - key chunk header
+*          privateCryptKey - private decryption key
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
-                               const ChunkHeader *chunkHeader
+                               const ChunkHeader *chunkHeader,
+                               const CryptKey    *privateCryptKey
                               )
 {
-  Errors    error;
-  ChunkInfo chunkInfoKey;
-  ChunkKey  chunkKey;
+  Errors   error;
+  ChunkKey chunkKey;
+  uint     encryptedKeyDataLength;
+  void     *encryptedKeyData;
 
   assert(archiveHandle != NULL);
   assert(chunkHeader != NULL);
+  assert(chunkHeader->id == CHUNK_ID_KEY);
 
   // init key chunk
-  error = Chunk_init(&chunkInfoKey,
+  error = Chunk_init(&chunkKey.info,
                      NULL,  // parentChunkInfo
                      archiveHandle->chunkIO,
                      archiveHandle->chunkIOUserData,
@@ -1355,56 +1360,57 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
   }
 
   // read key chunk
-  error = Chunk_open(&chunkInfoKey,
+  error = Chunk_open(&chunkKey.info,
                      chunkHeader,
-                     chunkHeader->size,
+                     CHUNK_FIXED_SIZE_KEY,
                      archiveHandle
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&chunkInfoKey);
+    Chunk_done(&chunkKey.info);
     return error;
   }
-  archiveHandle->cryptKeyDataLength = chunkHeader->size-Chunk_getSize(&chunkInfoKey,NULL,0);
-  if (archiveHandle->cryptKeyData != NULL) free(archiveHandle->cryptKeyData);
-  archiveHandle->cryptKeyData = malloc(archiveHandle->cryptKeyDataLength);
-  if (archiveHandle->cryptKeyData == NULL)
+//TODO: CHeck negative
+  encryptedKeyDataLength = chunkHeader->size-CHUNK_FIXED_SIZE_KEY;
+  encryptedKeyData       = malloc(encryptedKeyDataLength);
+  if (encryptedKeyData == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  error = Chunk_readData(&chunkInfoKey,
-                         archiveHandle->cryptKeyData,
-                         archiveHandle->cryptKeyDataLength,
-                         NULL
+  error = Chunk_readData(&chunkKey.info,
+                         encryptedKeyData,
+                         encryptedKeyDataLength,
+                         NULL  // bytesRead: read all
                         );
   if (error != ERROR_NONE)
   {
-    free(archiveHandle->cryptKeyData); archiveHandle->cryptKeyData = NULL;
-    Chunk_close(&chunkInfoKey);
-    Chunk_done(&chunkInfoKey);
+    free(encryptedKeyData);
+    Chunk_close(&chunkKey.info);
+    Chunk_done(&chunkKey.info);
     return error;
   }
 
   // check if all data read
-  if (!Chunk_eofSub(&chunkInfoKey))
+  if (!Chunk_eofSub(&chunkKey.info))
   {
-    free(archiveHandle->cryptKeyData); archiveHandle->cryptKeyData = NULL;
-    Chunk_close(&chunkInfoKey);
-    Chunk_done(&chunkInfoKey);
+    free(encryptedKeyData);
+    Chunk_close(&chunkKey.info);
+    Chunk_done(&chunkKey.info);
     return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(archiveHandle->printableStorageName));
   }
 
   // close chunk
-  error = Chunk_close(&chunkInfoKey);
+  error = Chunk_close(&chunkKey.info);
   if (error != ERROR_NONE)
   {
-    free(archiveHandle->cryptKeyData); archiveHandle->cryptKeyData = NULL;
-    Chunk_done(&chunkInfoKey);
+    free(encryptedKeyData);
+    Chunk_done(&chunkKey.info);
     return error;
   }
-  Chunk_done(&chunkInfoKey);
+  Chunk_done(&chunkKey.info);
 
-  // get decrypt key
+#if 0
+  // init password
   if (archiveHandle->cryptPassword == NULL)
   {
     archiveHandle->cryptPassword = Password_new();
@@ -1413,17 +1419,31 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
       HALT_INSUFFICIENT_MEMORY();
     }
   }
+#endif
+
+  // get decrypt key
   error = Crypt_getDecryptKey(&archiveHandle->cryptKey,
-                              archiveHandle->cryptKeyData,
-                              archiveHandle->cryptKeyDataLength,
-                              archiveHandle->cryptPassword
+//TODO
+32,
+                              privateCryptKey,
+                              encryptedKeyData,
+                              encryptedKeyDataLength
                              );
   if (error != ERROR_NONE)
   {
-    Password_delete(archiveHandle->cryptPassword); archiveHandle->cryptPassword = NULL;
-    free(archiveHandle->cryptKeyData); archiveHandle->cryptKeyData = NULL;
+//    Crypt_doneKey(&privateCryptKey);
+//    Password_delete(archiveHandle->cryptPassword); archiveHandle->cryptPassword = NULL;
+    free(encryptedKeyData);
     return error;
   }
+fprintf(stderr,"%s, %d: %d encrypted random key \n",__FILE__,__LINE__,archiveHandle->cryptKey.dataLength); debugDumpMemory(archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,0);
+
+  // set crypt data
+  if (archiveHandle->encryptedKeyData != NULL) free(archiveHandle->encryptedKeyData);
+  archiveHandle->encryptedKeyData       = encryptedKeyData;
+  archiveHandle->encryptedKeyDataLength = encryptedKeyDataLength;
+
+  // free resources
 
   return ERROR_NONE;
 }
@@ -1642,8 +1662,8 @@ LOCAL Errors writeEncryptionKey(ArchiveHandle *archiveHandle)
     return error;
   }
   error = Chunk_writeData(&chunkKey.info,
-                          archiveHandle->cryptKeyData,
-                          archiveHandle->cryptKeyDataLength
+                          archiveHandle->encryptedKeyData,
+                          archiveHandle->encryptedKeyDataLength
                          );
   if (error != ERROR_NONE)
   {
@@ -4237,8 +4257,9 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   AutoFreeList autoFreeList;
   Errors       error;
   uint         keyLength;
+  CryptKey     publicCryptKey;
   bool         okFlag;
-  ulong        maxCryptKeyDataLength;
+  ulong        maxEncryptedKeyDataLength;
 
   assert(archiveHandle != NULL);
   assert(archiveStoreFunction != NULL);
@@ -4272,18 +4293,13 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   archiveHandle->cryptMode               = CRYPT_MODE_NONE;
   archiveHandle->cryptKeyDeriveType      = CRYPT_KEY_DERIVE_FUNCTION;
 
-//  archiveHandle->cryptSimpleKeyFlag      = FALSE;
-//  archiveHandle->cryptCTSFlag            = FALSE;
-
-  Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
-
   Semaphore_init(&archiveHandle->passwordLock);
   archiveHandle->cryptType               = Crypt_isEncrypted(jobOptions->cryptAlgorithms[0]) ? jobOptions->cryptType : CRYPT_TYPE_NONE;
+  Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
-  archiveHandle->cryptKeyData            = NULL;
-  archiveHandle->cryptKeyDataLength      = 0;
-  Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
+  archiveHandle->encryptedKeyData        = NULL;
+  archiveHandle->encryptedKeyDataLength  = 0;
 //  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
 
   archiveHandle->ioType                  = ARCHIVE_IO_TYPE_FILE;
@@ -4335,7 +4351,14 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
       // nothing to do
       break;
     case CRYPT_TYPE_SYMMETRIC:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      // get key length
+      error = Crypt_getKeyLength(jobOptions->cryptAlgorithms[0],&keyLength);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      assert(keyLength > 0);
+
       // init crypt password
       error = initCryptPassword(archiveHandle);
       if (error !=  ERROR_NONE)
@@ -4343,12 +4366,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-      AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptPassword,{ Password_delete(archiveHandle->cryptPassword); });
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // derive crypt key from password with salt
       error = Crypt_deriveKey(&archiveHandle->cryptKey,
-                              jobOptions->cryptAlgorithms[0],
+                              keyLength,
                               archiveHandle->cryptKeyDeriveType,
                               archiveHandle->cryptPassword,
                               archiveHandle->cryptSalt,
@@ -4356,11 +4377,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                              );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     case CRYPT_TYPE_ASYMMETRIC:
       // check if public key available
@@ -4370,8 +4389,17 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         return ERROR_NO_PUBLIC_CRYPT_KEY;
       }
 
+      // get key length
+      error = Crypt_getKeyLength(jobOptions->cryptAlgorithms[0],&keyLength);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      assert(keyLength > 0);
+
       // init public key
-      error = Crypt_setPublicPrivateKeyData(&archiveHandle->cryptKey,
+      Crypt_initKey(&publicCryptKey,CRYPT_PADDING_TYPE_NONE);
+      error = Crypt_setPublicPrivateKeyData(&publicCryptKey,
                                             jobOptions->cryptPublicKey.data,
                                             jobOptions->cryptPublicKey.length,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -4382,51 +4410,58 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                            );
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+        Crypt_doneKey(&publicCryptKey);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
+      AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptPassword,{ Crypt_doneKey(&publicCryptKey); });
 
       // create new random key for encryption
+#if 0
       archiveHandle->cryptPassword = Password_new();
       if (archiveHandle->cryptPassword == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
       AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptPassword,{ Password_delete(archiveHandle->cryptPassword); });
-      maxCryptKeyDataLength = 2*MAX_PASSWORD_LENGTH;
+#endif
+
+      maxEncryptedKeyDataLength = 2*MAX_PASSWORD_LENGTH;
       okFlag = FALSE;
       do
       {
-        archiveHandle->cryptKeyData = malloc(maxCryptKeyDataLength);
-        if (archiveHandle->cryptKeyData == NULL)
+        archiveHandle->encryptedKeyData = malloc(maxEncryptedKeyDataLength);
+        if (archiveHandle->encryptedKeyData == NULL)
         {
           HALT_INSUFFICIENT_MEMORY();
         }
-        error = Crypt_getRandomEncryptKey(archiveHandle->cryptPassword,
-                                          &archiveHandle->cryptKey,
-                                          jobOptions->cryptAlgorithms[0],
-                                          maxCryptKeyDataLength,
-                                          archiveHandle->cryptKeyData,
-                                          &archiveHandle->cryptKeyDataLength
+        error = Crypt_getRandomEncryptKey(&archiveHandle->cryptKey,
+                                          keyLength,
+                                          &publicCryptKey,
+                                          archiveHandle->encryptedKeyData,
+                                          maxEncryptedKeyDataLength,
+                                          &archiveHandle->encryptedKeyDataLength
                                          );
         if (error != ERROR_NONE)
         {
-          free(archiveHandle->cryptKeyData);
+          free(archiveHandle->encryptedKeyData);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-        if (archiveHandle->cryptKeyDataLength < maxCryptKeyDataLength)
+        if (archiveHandle->encryptedKeyDataLength < maxEncryptedKeyDataLength)
         {
           okFlag = TRUE;
         }
         else
         {
-          free(archiveHandle->cryptKeyData);
-          maxCryptKeyDataLength += 64;
+          free(archiveHandle->encryptedKeyData);
+          maxEncryptedKeyDataLength += 64;
         }
       }
       while (!okFlag);
-      AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptKeyData,{ free(archiveHandle->cryptKeyData); });
+fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,archiveHandle->cryptKey.key); debugDumpMemory(archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,0);
+      AUTOFREE_ADD(&autoFreeList,&archiveHandle->encryptedKeyData,{ free(archiveHandle->encryptedKeyData); });
       DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       #if 0
         Password_dump(archiveHandle->cryptPassword);
@@ -4436,6 +4471,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprintf(stderr,"%02x",p[z]); fprintf(stderr,"\n");
         }
       #endif /* 0 */
+      
+      // free resources
+      Crypt_doneKey(&publicCryptKey);
       break;
   }
 
@@ -4507,16 +4545,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   memset(archiveHandle->cryptSalt,0,sizeof(archiveHandle->cryptSalt));
   archiveHandle->cryptMode               = CRYPT_MODE_NONE;
   archiveHandle->cryptKeyDeriveType      = CRYPT_KEY_DERIVE_FUNCTION;
-//  archiveHandle->cryptSimpleKeyFlag      = FALSE;
-//  archiveHandle->cryptCTSFlag            = FALSE;
 
   Semaphore_init(&archiveHandle->passwordLock);
   archiveHandle->cryptType               = CRYPT_TYPE_NONE;
+  Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
-  Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
-  archiveHandle->cryptKeyData            = NULL;
-  archiveHandle->cryptKeyDataLength      = 0;
+  archiveHandle->encryptedKeyData        = NULL;
+  archiveHandle->encryptedKeyDataLength  = 0;
 //  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
 
   archiveHandle->ioType                  = ARCHIVE_IO_TYPE_STORAGE;
@@ -4639,9 +4675,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // free resources
   if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
   {
-    assert(archiveHandle->cryptKeyData != NULL);
+    assert(archiveHandle->encryptedKeyData != NULL);
 
-    free(archiveHandle->cryptKeyData);
+    free(archiveHandle->encryptedKeyData);
   }
 //  Crypt_doneKey(&archiveHandle->signatureCryptKey);
   Crypt_doneKey(&archiveHandle->cryptKey);
@@ -4809,6 +4845,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
   bool           chunkHeaderFoundFlag;
   bool           scanFlag;
   ChunkHeader    chunkHeader;
+  CryptKey       privateCryptKey;
   bool           decryptedFlag;
   PasswordHandle passwordHandle;
   const Password *password;
@@ -4858,10 +4895,11 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
           return FALSE;
         }
 
+//fprintf(stderr,"%s, %d: private key1 \n",__FILE__,__LINE__); debugDumpMemory(archiveHandle->jobOptions->cryptPrivateKey.data,archiveHandle->jobOptions->cryptPrivateKey.length,0);
         // init private key: try with no password, then all passwords
-        Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
+        Crypt_initKey(&privateCryptKey,CRYPT_PADDING_TYPE_NONE);
         decryptedFlag = FALSE;
-        archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&archiveHandle->cryptKey,
+        archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&privateCryptKey,
                                                                     archiveHandle->jobOptions->cryptPrivateKey.data,
                                                                     archiveHandle->jobOptions->cryptPrivateKey.length,
                                                                     CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -4874,46 +4912,51 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
         {
           decryptedFlag = TRUE;
         }
-        password = getFirstDecryptPassword(&passwordHandle,
-                                           archiveHandle,
-                                           archiveHandle->jobOptions,
-                                           archiveHandle->jobOptions->cryptPasswordMode,
-                                           archiveHandle->getPasswordFunction,
-                                           archiveHandle->getPasswordUserData
-                                          );
-        while (   !decryptedFlag
-               && (password != NULL)
-              )
+        else
         {
-          archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&archiveHandle->cryptKey,
-                                                                      archiveHandle->jobOptions->cryptPrivateKey.data,
-                                                                      archiveHandle->jobOptions->cryptPrivateKey.length,
-                                                                      CRYPT_MODE_CBC|CRYPT_MODE_CTS,
-                                                                      archiveHandle->cryptKeyDeriveType,
-                                                                      password,
-                                                                      archiveHandle->cryptSalt,
-                                                                      sizeof(archiveHandle->cryptSalt)
-                                                                     );
-          if (archiveHandle->pendingError == ERROR_NONE)
+          password = getFirstDecryptPassword(&passwordHandle,
+                                             archiveHandle,
+                                             archiveHandle->jobOptions,
+                                             archiveHandle->jobOptions->cryptPasswordMode,
+                                             archiveHandle->getPasswordFunction,
+                                             archiveHandle->getPasswordUserData
+                                            );
+          while (   !decryptedFlag
+                 && (password != NULL)
+                )
           {
-            decryptedFlag = TRUE;
-          }
-          else
-          {
-            // next password
-            password = getNextDecryptPassword(&passwordHandle);
+            archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&privateCryptKey,
+                                                                        archiveHandle->jobOptions->cryptPrivateKey.data,
+                                                                        archiveHandle->jobOptions->cryptPrivateKey.length,
+                                                                        CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                                                        archiveHandle->cryptKeyDeriveType,
+                                                                        password,
+                                                                        NULL,  // salt
+                                                                        0  // saltLength
+                                                                       );
+            if (archiveHandle->pendingError == ERROR_NONE)
+            {
+              decryptedFlag = TRUE;
+            }
+            else
+            {
+              // next password
+              password = getNextDecryptPassword(&passwordHandle);
+            }
           }
         }
         if (!decryptedFlag)
         {
           archiveHandle->pendingError = ERROR_KEY_ENCRYPT_FAIL;
+          Crypt_doneKey(&privateCryptKey);
           return FALSE;
         }
 
         // read encryption key
-        archiveHandle->pendingError = readEncryptionKey(archiveHandle,&chunkHeader);
+        archiveHandle->pendingError = readEncryptionKey(archiveHandle,&chunkHeader,&privateCryptKey);
         if (archiveHandle->pendingError != ERROR_NONE)
         {
+          Crypt_doneKey(&privateCryptKey);
           return FALSE;
         }
 #if 0
@@ -4925,6 +4968,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 }
 #endif /* 0 */
         archiveHandle->cryptType = CRYPT_TYPE_ASYMMETRIC;
+
+        // free resources
+        Crypt_doneKey(&privateCryptKey);
 
         scanFlag = FALSE;
         break;
@@ -5160,6 +5206,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFile.info,{ Chunk_done(&archiveEntryInfo->file.chunkFile.info); });
 
   // init crypt
+fprintf(stderr,"%s, %d: %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,archiveHandle->cryptKey.key);
   error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
 //TODO
                      archiveHandle->jobOptions->cryptAlgorithms[0],
@@ -6969,6 +7016,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
   Errors         error;
   bool           scanMode;
   ChunkHeader    chunkHeader;
+  CryptKey       privateCryptKey;
   bool           decryptedFlag;
   PasswordHandle passwordHandle;
   const Password *password;
@@ -7015,10 +7063,10 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
         }
 
         // read private key, try to read key with no password/all passwords
-        Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
+        Crypt_initKey(&privateCryptKey,CRYPT_PADDING_TYPE_NONE);
         decryptedFlag = FALSE;
 //TODO
-        error = Crypt_setPublicPrivateKeyData(&archiveHandle->cryptKey,
+        error = Crypt_setPublicPrivateKeyData(&privateCryptKey,
                                               archiveHandle->jobOptions->cryptPrivateKey.data,
                                               archiveHandle->jobOptions->cryptPrivateKey.length,
                                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -7042,7 +7090,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
                && (password != NULL)
               )
         {
-          error = Crypt_setPublicPrivateKeyData(&archiveHandle->cryptKey,
+          error = Crypt_setPublicPrivateKeyData(&privateCryptKey,
                                                 archiveHandle->jobOptions->cryptPrivateKey.data,
                                                 archiveHandle->jobOptions->cryptPrivateKey.length,
                                                 CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -7063,13 +7111,15 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
         }
         if (!decryptedFlag)
         {
+          Crypt_doneKey(&privateCryptKey);
           return error;
         }
 
         // read encryption key
-        error = readEncryptionKey(archiveHandle,&chunkHeader);
+        error = readEncryptionKey(archiveHandle,&chunkHeader,&privateCryptKey);
         if (error != ERROR_NONE)
         {
+          Crypt_doneKey(&privateCryptKey);
           return error;
         }
 #if 0
@@ -7081,6 +7131,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 }
 #endif /* 0 */
         archiveHandle->cryptType = CRYPT_TYPE_ASYMMETRIC;
+
+        // free resources
+        Crypt_doneKey(&privateCryptKey);
 
         scanMode = FALSE;
         break;
@@ -7727,7 +7780,6 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   {
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
-      assert(archiveHandle->cryptPassword != NULL);
       decryptKey = &archiveHandle->cryptKey;
     }
     else

@@ -671,8 +671,7 @@ INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey)
 \***********************************************************************/
 
 Errors Crypt_deriveKey(CryptKey            *cryptKey,
-//                       uint       keyLength,
-                       CryptAlgorithms     cryptAlgorithm,
+                       uint                keyLength,
                        CryptKeyDeriveTypes cryptKeyDeriveType,
                        const Password      *password,
                        const byte          *salt,
@@ -912,45 +911,47 @@ Errors Crypt_keyDecrypt(const CryptKey *cryptKey,
 /***********************************************************************\
 * Name   : Crypt_getRandomEncryptKey
 * Purpose: get random encryption key
-* Input  : key                         - random key variable
-*          publicKey                   - public key for encryption of
-*                                        random key
-*          cryptAlgorithm              - used symmetric crypt algorithm
-*          encryptedKeyBuffer          - buffer for encrypted random key
-*          maxEncryptedKeyBufferLength - max. length of encryption
-*                                        buffer
-* Output : key                      - created random key
-*          encryptedKeyBuffer       - encrypted random key
-*          encryptedKeyBufferLength - length of encrypted random key
+* Input  : cryptKey              - crypt key variable
+*          keyLength             - crypt key length [bits]
+*          publicKey             - public key for encryption of random
+*                                  key
+*          encryptedKey          - buffer for encrypted random key
+*          maxEncryptedKeyLength - max. length of encryption buffer
+*          encryptedKeyLength    - buffer length variable
+* Output : cryptKey           - created random crypt key
+*          encryptedKey       - encrypted random key
+*          encryptedKeyLength - length of encrypted random key
 * Return : ERROR_NONE or error code
 * Notes  : if encryptBufferLength==maxEncryptBufferLength buffer was to
 *          small!
 \***********************************************************************/
 
-Errors Crypt_getRandomEncryptKey(Password        *key,
-                                 CryptKey        *publicKey,
-                                 CryptAlgorithms cryptAlgorithm,
-                                 uint            maxEncryptedKeyBufferLength,
-                                 void            *encryptedKeyBuffer,
-                                 uint            *encryptedKeyBufferLength
+Errors Crypt_getRandomEncryptKey(CryptKey       *cryptKey,
+                                 uint           keyLength,
+                                 const CryptKey *publicKey,
+                                 void           *encryptedKey,
+                                 uint           maxEncryptedKeyLength,
+                                 uint           *encryptedKeyLength
                                 );
 
 // TODO: remove?
 /***********************************************************************\
 * Name   : Crypt_getDecryptKey
 * Purpose: get decryption key
-* Input  : privateKey        - private key to decrypt key
-*          encryptData       - encrypted random key
-*          encryptDataLength - length of encrypted random key
-* Output : password - decryption password
+* Input  : cryptKey           - crypt key variable
+*          privateKey         - private key to decrypt key
+*          encryptedKey       - encrypted random key
+*          encryptedKeyLength - length of encrypted random key
+* Output : cryptKey - decryption key
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_getDecryptKey(CryptKey   *privateKey,
-                           const void *encryptData,
-                           uint       encryptDataLength,
-                           Password   *password
+Errors Crypt_getDecryptKey(CryptKey       *cryptKey,
+                           uint           keyLength,
+                           const CryptKey *privateKey,
+                           const void     *encryptedKey,
+                           uint           encryptedKeyLength
                           );
 
 /***********************************************************************\
