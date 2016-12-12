@@ -558,8 +558,8 @@ fprintf(stderr,"%s, %d: new getDecryptKey\n",__FILE__,__LINE__);
       HALT_INSUFFICIENT_MEMORY();
     }
     decryptKeyNode->cryptAlgorithm = cryptAlgorithm;
+    memCopyFast(decryptKeyNode->salt,sizeof(decryptKeyNode->salt),salt,saltLength);
     decryptKeyNode->saltLength = MIN(sizeof(decryptKeyNode->salt),saltLength);
-    memcpy(decryptKeyNode->salt,salt,decryptKeyNode->saltLength);
     decryptKeyNode->password = Password_duplicate(password);
     Crypt_initKey(&decryptKeyNode->cryptKey,CRYPT_PADDING_TYPE_NONE);
 
@@ -612,9 +612,8 @@ memEquals(decryptKeyNode->salt,salt,saltLength)
 
       // store new crypt algorith and salt
       decryptKeyNode->cryptAlgorithm = cryptAlgorithm;
+      memCopyFast(decryptKeyNode->salt,sizeof(decryptKeyNode->salt),salt,saltLength);
       decryptKeyNode->saltLength = MIN(sizeof(decryptKeyNode->salt),saltLength);
-      memcpy(decryptKeyNode->salt,salt,decryptKeyNode->saltLength);
-      decryptKeyNode->saltLength = saltLength;
   //fprintf(stderr,"%s, %d: decrypt key\n",__FILE__,__LINE__);
   //debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLength,0);
     }
@@ -1302,7 +1301,7 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
     return error;
   }
 //TODO: size
-  memcpy(archiveHandle->cryptSalt,chunkBAR.salt,sizeof(archiveHandle->cryptSalt));
+  memCopyFast(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),chunkBAR.salt,sizeof(chunkBAR.salt));
 //fprintf(stderr,"%s, %d: init crypt salt\n",__FILE__,__LINE__); debugDumpMemory(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),0);
 
   // close chunk
@@ -1483,8 +1482,8 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   {
     return error;
   }
-  memset(chunkBAR.salt,0,sizeof(chunkBAR.salt));
-  memcpy(chunkBAR.salt,archiveHandle->cryptSalt,MIN(sizeof(chunkBAR.salt),archiveHandle->cryptSalt));
+  memClear(chunkBAR.salt,sizeof(chunkBAR.salt));
+  memCopyFast(chunkBAR.salt,sizeof(chunkBAR.salt),archiveHandle->cryptSalt,archiveHandle->cryptSalt);
 
   // init meta chunk
   error = Chunk_init(&chunkMeta.info,
@@ -4471,7 +4470,7 @@ fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archive
         fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprintf(stderr,"%02x",p[z]); fprintf(stderr,"\n");
         }
       #endif /* 0 */
-      
+
       // free resources
       Crypt_doneKey(&publicCryptKey);
       break;
@@ -4542,7 +4541,7 @@ fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archive
   archiveHandle->getPasswordUserData     = getPasswordUserData;
   archiveHandle->logHandle               = logHandle;
 
-  memset(archiveHandle->cryptSalt,0,sizeof(archiveHandle->cryptSalt));
+  memClear(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
   archiveHandle->cryptMode               = CRYPT_MODE_NONE;
   archiveHandle->cryptKeyDeriveType      = CRYPT_KEY_DERIVE_FUNCTION;
 
@@ -5098,7 +5097,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 );
 #else
 #endif
-  memcpy(archiveEntryInfo->cryptAlgorithms,archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms));
+  memCopyFast(archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveHandle->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength                    = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType               = ARCHIVE_ENTRY_TYPE_FILE;
@@ -5513,7 +5512,7 @@ fprintf(stderr,"%s, %d: %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.da
   archiveEntryInfo->indexHandle                     = indexHandle;
   archiveEntryInfo->mode                            = ARCHIVE_MODE_WRITE;
 
-  memcpy(archiveEntryInfo->cryptAlgorithms,archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms));
+  memCopyFast(archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveHandle->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength                     = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType                = ARCHIVE_ENTRY_TYPE_IMAGE;
@@ -5877,7 +5876,7 @@ fprintf(stderr,"%s, %d: %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.da
   archiveEntryInfo->indexHandle      = indexHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
-  memcpy(archiveEntryInfo->cryptAlgorithms,archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms));
+  memCopyFast(archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveHandle->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
@@ -6120,7 +6119,7 @@ fprintf(stderr,"%s, %d: %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.da
   archiveEntryInfo->indexHandle      = indexHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
-  memcpy(archiveEntryInfo->cryptAlgorithms,archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms));
+  memCopyFast(archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveHandle->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
@@ -6369,7 +6368,7 @@ fprintf(stderr,"%s, %d: %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.da
   archiveEntryInfo->indexHandle                        = indexHandle;
   archiveEntryInfo->mode                               = ARCHIVE_MODE_WRITE;
 
-  memcpy(archiveEntryInfo->cryptAlgorithms,archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms));
+  memCopyFast(archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveHandle->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength                        = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType                   = ARCHIVE_ENTRY_TYPE_HARDLINK;
@@ -6809,7 +6808,7 @@ fprintf(stderr,"%s, %d: %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.da
   archiveEntryInfo->indexHandle      = indexHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
-  memcpy(archiveEntryInfo->cryptAlgorithms,archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms));
+  memCopyFast(archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),archiveHandle->jobOptions->cryptAlgorithms,sizeof(archiveHandle->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
@@ -8004,7 +8003,7 @@ NULL,//                         password,
             String_set(fileName,archiveEntryInfo->file.chunkFileEntry.name);
             if (fileInfo != NULL)
             {
-              memset(fileInfo,0,sizeof(FileInfo));
+              memClear(fileInfo,sizeof(FileInfo));
               fileInfo->type            = FILE_TYPE_FILE;
               fileInfo->size            = archiveEntryInfo->file.chunkFileEntry.size;
               fileInfo->timeLastAccess  = archiveEntryInfo->file.chunkFileEntry.timeLastAccess;
@@ -9049,7 +9048,7 @@ NULL,//                         password,
             String_set(directoryName,archiveEntryInfo->directory.chunkDirectoryEntry.name);
             if (fileInfo != NULL)
             {
-              memset(fileInfo,0,sizeof(FileInfo));
+              memClear(fileInfo,sizeof(FileInfo));
               fileInfo->type            = FILE_TYPE_DIRECTORY;
               fileInfo->timeLastAccess  = archiveEntryInfo->directory.chunkDirectoryEntry.timeLastAccess;
               fileInfo->timeModified    = archiveEntryInfo->directory.chunkDirectoryEntry.timeModified;
@@ -9460,7 +9459,7 @@ NULL,//                         password,
             String_set(destinationName,archiveEntryInfo->link.chunkLinkEntry.destinationName);
             if (fileInfo != NULL)
             {
-              memset(fileInfo,0,sizeof(FileInfo));
+              memClear(fileInfo,sizeof(FileInfo));
               fileInfo->type            = FILE_TYPE_LINK;
               fileInfo->timeLastAccess  = archiveEntryInfo->link.chunkLinkEntry.timeLastAccess;
               fileInfo->timeModified    = archiveEntryInfo->link.chunkLinkEntry.timeModified;
@@ -10024,7 +10023,7 @@ NULL,//                         password,
             // get hard link meta data
             if (fileInfo != NULL)
             {
-              memset(fileInfo,0,sizeof(FileInfo));
+              memClear(fileInfo,sizeof(FileInfo));
               fileInfo->type            = FILE_TYPE_HARDLINK;
               fileInfo->size            = archiveEntryInfo->hardLink.chunkHardLinkEntry.size;
               fileInfo->timeLastAccess  = archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastAccess;
@@ -10542,7 +10541,7 @@ NULL,//                         password,
             String_set(specialName,archiveEntryInfo->special.chunkSpecialEntry.name);
             if (fileInfo != NULL)
             {
-              memset(fileInfo,0,sizeof(FileInfo));
+              memClear(fileInfo,sizeof(FileInfo));
               fileInfo->type            = FILE_TYPE_SPECIAL;
               fileInfo->timeLastAccess  = archiveEntryInfo->special.chunkSpecialEntry.timeLastAccess;
               fileInfo->timeModified    = archiveEntryInfo->special.chunkSpecialEntry.timeModified;
