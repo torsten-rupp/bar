@@ -119,7 +119,7 @@ LOCAL const struct
     <------------------------------------------------------------>
                                64 (512bit)
 
-   Note: random length must be at least 8 bytes!
+   Note: random length must be at least 8 bytes and do not contain 0-bytes!
 
    See: https://tools.ietf.org/html/rfc3447
 */
@@ -504,13 +504,12 @@ Errors Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm,
           {
             return ERRORX_(INIT_CIPHER,
                            0,
-                           "detect block length of '%s' cipher: %s",
+                           "detect key length of '%s' cipher: %s",
                            gcry_cipher_algo_name(gcryptAlgorithm),
                            gpg_strerror(gcryptError)
                           );
           }
           (*keyLength) = n*8;
-fprintf(stderr,"%s, %d: cryptAlgorithm=%d keyLength=%d\n",__FILE__,__LINE__,cryptAlgorithm,*keyLength);
         }
       #else /* not HAVE_GCRYPT */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -642,8 +641,8 @@ Errors __Crypt_init(const char      *__fileName__,
   cryptInfo->cryptAlgorithm = cryptAlgorithm;
   if (salt != NULL)
   {
-    memcpy(cryptInfo->salt,salt,MIN(sizeof(cryptInfo->salt),saltLength));
-    cryptInfo->saltLength = saltLength;
+    cryptInfo->saltLength = MIN(sizeof(cryptInfo->salt),saltLength);
+    memcpy(cryptInfo->salt,salt,cryptInfo->saltLength);
   }
   else
   {
@@ -677,6 +676,7 @@ Errors __Crypt_init(const char      *__fileName__,
           unsigned int gcryptFlags;
           gcry_error_t gcryptError;
           size_t       n;
+          uint         keyLength;
           Errors       error;
 
           // get gcrpyt algorithm, gcrypt mode, gcrypt flags
@@ -708,7 +708,7 @@ Errors __Crypt_init(const char      *__fileName__,
           gcryptFlags = 0;
           if ((cryptMode & CRYPT_MODE_CTS) == CRYPT_MODE_CTS) gcryptFlags |= GCRY_CIPHER_CBC_CTS;
 
-          // get block length
+          // get block length, key length
           gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
                                               GCRYCTL_GET_BLKLEN,
                                               NULL,
@@ -724,7 +724,28 @@ Errors __Crypt_init(const char      *__fileName__,
                           );
           }
           cryptInfo->blockLength = n;
+          gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
+                                              GCRYCTL_GET_KEYLEN,
+                                              NULL,
+                                              &n
+                                             );
+          if (gcryptError != 0)
+          {
+            return ERRORX_(INIT_CIPHER,
+                           0,
+                           "detect key length of '%s' cipher: %s",
+                           gcry_cipher_algo_name(gcryptAlgorithm),
+                           gpg_strerror(gcryptError)
+                          );
+          }
+          keyLength = (uint)(n*8);
 //fprintf(stderr,"%s, %d: blockLength=%d\n",__FILE__,__LINE__,cryptInfo->blockLength);
+
+          // check key length
+          if (keyLength > cryptKey->dataLength*8)
+          {
+            return ERROR_INVALID_KEY_LENGTH;
+          }
 
           // init cipher
           gcryptError = gcry_cipher_open(&cryptInfo->gcry_cipher_hd,
@@ -742,13 +763,13 @@ Errors __Crypt_init(const char      *__fileName__,
                           );
           }
 
-          // set key
+          // set key (Note: use correct key length which may be smaller than provided crypt key length)
 #ifndef NDEBUG
 //fprintf(stderr,"%s, %d: crypt key %d\n",__FILE__,__LINE__,cryptKey->dataLength); debugDumpMemory(cryptKey->data,cryptKey->dataLength,0);
 #endif
           gcryptError = gcry_cipher_setkey(cryptInfo->gcry_cipher_hd,
                                            cryptKey->data,
-                                           cryptKey->dataLength
+                                           keyLength/8
                                           );
           if (gcryptError != 0)
           {
@@ -1407,7 +1428,9 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
     // get key
     gcry_sexp_sprint(sexpToken,GCRYSEXP_FMT_ADVANCED,(char*)encryptedKeyInfo->data,dataLength);
     gcry_sexp_release(sexpToken);
+#ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: %d raw key\n",__FILE__,__LINE__,dataLength); debugDumpMemory(encryptedKeyInfo->data,alignedDataLength,FALSE);
+#endif
 
     // encrypt key (if password given)
     if (password != NULL)
@@ -2305,6 +2328,8 @@ Errors Crypt_getRandomEncryptKey(CryptKey       *cryptKey,
     void         *data;
     uint         dataLength;
     byte         *pkcs1EncodedMessage;
+    byte         randomBuffer[32];
+    uint         i,j;
     gcry_sexp_t  sexpData;
     gcry_sexp_t  sexpEncryptData;
     const char   *encryptedData;
@@ -2352,7 +2377,7 @@ Errors Crypt_getRandomEncryptKey(CryptKey       *cryptKey,
     }
     gcry_create_nonce((unsigned char*)data,dataLength);
 
-    // create padded encoded message block: format 0x00 0x02 <PS random data 8 byte> 0x00 <key data>; size 512bit
+    // create padded encoded message block: format 0x00 0x02 <PS random data> 0x00 <key data>; size 512bit
     pkcs1EncodedMessage = Password_allocSecure(PKCS1_ENCODED_MESSAGE_LENGTH);
     if (pkcs1EncodedMessage == NULL)
     {
@@ -2361,10 +2386,33 @@ Errors Crypt_getRandomEncryptKey(CryptKey       *cryptKey,
     }
     pkcs1EncodedMessage[0] = 0x00;
     pkcs1EncodedMessage[1] = 0x02;
-    gcry_create_nonce((unsigned char*)&pkcs1EncodedMessage[1+1],PKCS1_ENCODED_MESSAGE_PADDING_LENGTH);
+    j = 0;
+    gcry_create_nonce((unsigned char*)randomBuffer,sizeof(randomBuffer));
+    for (i = 0; i < PKCS1_ENCODED_MESSAGE_PADDING_LENGTH; i++)
+    {
+      // get random byte (exclude 0-bytes)
+      while ((j >= sizeof(randomBuffer)) || (randomBuffer[j] == 0))
+      {
+        if (j >= sizeof(randomBuffer))
+        {
+          gcry_create_nonce((unsigned char*)randomBuffer,sizeof(randomBuffer));
+          j = 0;
+        }
+        else
+        {
+          j++;
+        }
+      }
+
+      // store random byte
+      pkcs1EncodedMessage[1+1+i] = randomBuffer[j];
+      j++;
+    }
     pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH] = 0x00;
     memcpy(&pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH+1],data,dataLength);
+#ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: encoded pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS1_ENCODED_MESSAGE_LENGTH); debugDumpMemory(pkcs1EncodedMessage,PKCS1_ENCODED_MESSAGE_LENGTH,0);
+#endif
 
     // create S-expression with data
     gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %b))",PKCS1_ENCODED_MESSAGE_LENGTH,(char*)pkcs1EncodedMessage);
@@ -2410,7 +2458,9 @@ fprintf(stderr,"%s, %d: encoded pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS
       Password_freeSecure(data);
       return ERROR_KEY_ENCRYPT_FAIL;
     }
-fprintf(stderr,"%s, %d: encrptioed pkcs1EncodedMessage %d\n",__FILE__,__LINE__,encryptedDataLength); debugDumpMemory(encryptedData,encryptedDataLength,0);
+#ifdef DEBUG_ASYMMETRIC_CRYPT
+fprintf(stderr,"%s, %d: encrypted pkcs1EncodedMessage %d\n",__FILE__,__LINE__,encryptedDataLength); debugDumpMemory(encryptedData,encryptedDataLength,0);
+#endif
     (*encryptedKeyLength) = encryptedDataLength;
     memcpy(encryptedKey,encryptedData,MIN(encryptedDataLength,maxEncryptedKeyLength));
     gcry_sexp_release(sexpToken);
@@ -2551,6 +2601,9 @@ fprintf(stderr,"%s, %d: pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS1_ENCODE
       return ERROR_WRONG_PRIVATE_KEY;
     }
 
+    // get key length
+    if (keyLength == 0) keyLength = PKCS1_KEY_LENGTH;
+
     // get key data
     data = Password_allocSecure(ALIGN(keyLength,8)/8);
     if (data == NULL)
@@ -2561,7 +2614,9 @@ fprintf(stderr,"%s, %d: pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS1_ENCODE
       return ERROR_INSUFFICIENT_MEMORY;
     }
     memCopy(data,ALIGN(keyLength,8)/8,&pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH+1],dataLength);
-fprintf(stderr,"%s, %d: key data %d dataLength=%d\n",__FILE__,__LINE__,keyLength,dataLength); debugDumpMemory(data,keyLength,0);
+#ifdef DEBUG_ASYMMETRIC_CRYPT
+fprintf(stderr,"%s, %d: key data %d\n",__FILE__,__LINE__,keyLength); debugDumpMemory(data,ALIGN(keyLength,8)/8,0);
+#endif
 
     // set key
     if (cryptKey->data != NULL) Password_freeSecure(cryptKey->data);
