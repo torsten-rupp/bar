@@ -802,12 +802,12 @@ bool List_contains(const void             *list,
 * Notes  : -
 \***********************************************************************/
 
-inline void *List_find(const void             *list,
+INLINE void *List_find(const void             *list,
                        ListNodeEqualsFunction listNodeEqualsFunction,
                        void                   *listNodeEqualsUserData
                       );
 #if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
-inline void *List_find(const void             *list,
+INLINE void *List_find(const void             *list,
                        ListNodeEqualsFunction listNodeEqualsFunction,
                        void                   *listNodeEqualsUserData
                       )
