@@ -128,7 +128,7 @@ typedef struct
 typedef struct
 {
   ArchiveHandle       *archiveHandle;
-  Password            *configCryptPassword;              // config crypt password or NULL
+  Password            *jobCryptPassword;                 // job crypt password or NULL
   PasswordModes       passwordMode;                      // password input mode
   const PasswordNode  *passwordNode;                     // next password node to use
   GetPasswordFunction getPasswordFunction;               // password input callback
@@ -160,7 +160,7 @@ typedef struct
 {
   ArchiveHandle        *archiveHandle;
   PasswordModes        passwordMode;                      // password input mode
-  Password             *configCryptPassword;              // config crypt password or NULL
+  Password             *jobCryptPassword;                 // job crypt password or NULL
   GetPasswordFunction  getPasswordFunction;               // password input callback
   void                 *getPasswordUserData;
   const DecryptKeyNode *nextDecryptKeyNode;               // next decrypt key node to use
@@ -428,7 +428,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
            case PASSWORD_MODE_NONE:
              break;
            case PASSWORD_MODE_CONFIG:
-             password = passwordHandle->configCryptPassword;
+             password = passwordHandle->jobCryptPassword;
 
              // next password mode is: default
              passwordHandle->passwordMode = PASSWORD_MODE_DEFAULT;
@@ -511,7 +511,7 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
   assert(passwordHandle != NULL);
 
   passwordHandle->archiveHandle       = archiveHandle;
-  passwordHandle->configCryptPassword = jobOptions->cryptPassword;
+  passwordHandle->jobCryptPassword    = jobOptions->cryptPassword;
   passwordHandle->passwordMode        = (passwordMode != PASSWORD_MODE_DEFAULT) ? passwordMode : jobOptions->cryptPasswordMode;
   passwordHandle->passwordNode        = decryptPasswordList.head;
   passwordHandle->getPasswordFunction = getPasswordFunction;
@@ -521,8 +521,8 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
 }
 
 /***********************************************************************\
-* Name   : getDecryptKey
-* Purpose: get decrypt key for password with appropiated key size for
+* Name   : addDecryptKey
+* Purpose: add decrypt key for password with appropiated key length for
 *          crypt algorithm
 * Input  : password           - password
 *          keyLength          - key length [bits]
@@ -534,7 +534,7 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
 * Notes  : -
 \***********************************************************************/
 
-LOCAL CryptKey *getDecryptKey(Password            *password,
+LOCAL CryptKey *addDecryptKey(Password            *password,
                               uint                keyLength,
                               CryptKeyDeriveTypes cryptKeyDeriveType,
                               const byte          *salt,
@@ -622,7 +622,7 @@ memEquals(decryptKeyNode->salt,salt,saltLength)
 #if 0
 if (decryptKeyNode != NULL)
 {
-fprintf(stderr,"%s, %d: getDecryptKey \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: addDecryptKey \n",__FILE__,__LINE__);
 fprintf(stderr,"%s, %d:   crypt alg %d\n",__FILE__,__LINE__,
 decryptKeyNode->cryptAlgorithm
 );
@@ -697,9 +697,9 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
              break;
            case PASSWORD_MODE_CONFIG:
              // get decrypt key from config
-             if (decryptKeyIterator->configCryptPassword != NULL)
+             if (decryptKeyIterator->jobCryptPassword != NULL)
              {
-               decryptKey = getDecryptKey(decryptKeyIterator->configCryptPassword,
+               decryptKey = addDecryptKey(decryptKeyIterator->jobCryptPassword,
                                           keyLength,
                                           cryptKeyDeriveType,
                                           salt,
@@ -714,7 +714,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
              // get decrypt key from global config
              if (globalOptions.cryptPassword != NULL)
              {
-               decryptKey = getDecryptKey(globalOptions.cryptPassword,
+               decryptKey = addDecryptKey(globalOptions.cryptPassword,
                                           keyLength,
                                           cryptKeyDeriveType,
                                           salt,
@@ -745,7 +745,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                if (error == ERROR_NONE)
                {
                  // add to decrypt key list
-                 decryptKey = getDecryptKey(&newPassword,
+                 decryptKey = addDecryptKey(&newPassword,
                                             keyLength,
                                             cryptKeyDeriveType,
                                             salt,
@@ -812,7 +812,7 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator
 
   decryptKeyIterator->archiveHandle       = archiveHandle;
   decryptKeyIterator->passwordMode        = passwordMode;
-  decryptKeyIterator->configCryptPassword = cryptPassword;
+  decryptKeyIterator->jobCryptPassword    = cryptPassword;
   decryptKeyIterator->getPasswordFunction = getPasswordFunction;
   decryptKeyIterator->getPasswordUserData = getPasswordUserData;
   decryptKeyIterator->nextDecryptKeyNode  = decryptPasswordList.head;
@@ -1412,24 +1412,19 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
   }
   Chunk_done(&chunkKey.info);
 
-#if 0
   // get decrypt key
   error = Crypt_getDecryptKey(&archiveHandle->cryptKey,
-//TODO
-192,
+                              0,  // keyLength
                               privateCryptKey,
                               encryptedKeyData,
                               encryptedKeyDataLength
                              );
   if (error != ERROR_NONE)
   {
-//    Crypt_doneKey(&privateCryptKey);
-//    Password_delete(archiveHandle->cryptPassword); archiveHandle->cryptPassword = NULL;
     free(encryptedKeyData);
     return error;
   }
-#endif
-fprintf(stderr,"%s, %d: %d encrypted random key \n",__FILE__,__LINE__,archiveHandle->cryptKey.dataLength); debugDumpMemory(archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,0);
+//fprintf(stderr,"%s, %d: %d encrypted random key \n",__FILE__,__LINE__,archiveHandle->cryptKey.dataLength); debugDumpMemory(archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,0);
 
   // set crypt data
   if (archiveHandle->encryptedKeyData != NULL) free(archiveHandle->encryptedKeyData);
@@ -4133,7 +4128,7 @@ const CryptKey *Archive_appendDecryptKey(const Password *password)
   {
 fprintf(stderr,"%s, %d: Archive_appendDecryptKey xxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
 //TODO:
-//    decryptKey = getDecryptKey();
+//    decryptKey = addDecryptKey();
     // find crypt key
     decryptKeyNode = LIST_FIND(&decryptKeyList,decryptKeyNode,Password_equals(decryptKeyNode->password,password));
     if (decryptKeyNode == NULL)
@@ -4323,7 +4318,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   // get crypt salt
   Crypt_randomize(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
 
-  // detect crypt block length
+  // detect crypt block length, crypt key length
   error = Crypt_getBlockLength(jobOptions->cryptAlgorithms[0],&archiveHandle->blockLength);
   if (error != ERROR_NONE)
   {
@@ -4336,6 +4331,11 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
     AutoFree_cleanup(&autoFreeList);
     return ERROR_UNSUPPORTED_BLOCK_LENGTH;
   }
+  error = Crypt_getKeyLength(jobOptions->cryptAlgorithms[0],&keyLength);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   // init encryption key
   switch (archiveHandle->cryptType)
@@ -4344,14 +4344,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
       // nothing to do
       break;
     case CRYPT_TYPE_SYMMETRIC:
-      // get key length
-      error = Crypt_getKeyLength(jobOptions->cryptAlgorithms[0],&keyLength);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-      assert(keyLength > 0);
-
       // init crypt password
       error = initCryptPassword(archiveHandle);
       if (error !=  ERROR_NONE)
@@ -4382,14 +4374,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
         return ERROR_NO_PUBLIC_CRYPT_KEY;
       }
 
-      // get key length
-      error = Crypt_getKeyLength(jobOptions->cryptAlgorithms[0],&keyLength);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-      assert(keyLength > 0);
-
       // init public key
       Crypt_initKey(&publicCryptKey,CRYPT_PADDING_TYPE_NONE);
       error = Crypt_setPublicPrivateKeyData(&publicCryptKey,
@@ -4411,15 +4395,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
       AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptPassword,{ Crypt_doneKey(&publicCryptKey); });
 
       // create new random key for encryption
-#if 0
-      archiveHandle->cryptPassword = Password_new();
-      if (archiveHandle->cryptPassword == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-      AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptPassword,{ Password_delete(archiveHandle->cryptPassword); });
-#endif
-
       maxEncryptedKeyDataLength = 2*MAX_PASSWORD_LENGTH;
       okFlag = FALSE;
       do
@@ -4456,14 +4431,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
 fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,archiveHandle->cryptKey.key); debugDumpMemory(archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,0);
       AUTOFREE_ADD(&autoFreeList,&archiveHandle->encryptedKeyData,{ free(archiveHandle->encryptedKeyData); });
       DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-      #if 0
-        Password_dump(archiveHandle->cryptPassword);
-        {
-        int z;
-        byte *p=archiveHandle->cryptKeyData;
-        fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprintf(stderr,"%02x",p[z]); fprintf(stderr,"\n");
-        }
-      #endif /* 0 */
 
       // free resources
       Crypt_doneKey(&publicCryptKey);
@@ -7368,7 +7335,6 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
-  assert(keyLength > 0);
 
   // try to read meta entry with all passwords
   AutoFree_init(&autoFreeList2);
@@ -7533,7 +7499,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                                       );
 
         // reset error and try next decrypt key
-        decryptKey = NULL;
+        if (decryptKey != NULL)
         {
           error = ERROR_NONE;
         }
@@ -8411,7 +8377,6 @@ NULL,//                         password,
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
-  assert(keyLength > 0);
 
   // allocate buffers
   archiveEntryInfo->image.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -8937,7 +8902,6 @@ NULL,//                         password,
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
-  assert(keyLength > 0);
 
   // try to read directory entry with all passwords
   AutoFree_init(&autoFreeList2);
@@ -9356,7 +9320,6 @@ NULL,//                         password,
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
-  assert(keyLength > 0);
 
   // try to read link entry with all passwords
   AutoFree_init(&autoFreeList2);
@@ -9804,7 +9767,6 @@ NULL,//                         password,
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
-  assert(keyLength > 0);
 
   // allocate buffers
   archiveEntryInfo->hardLink.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -10452,7 +10414,6 @@ NULL,//                         password,
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
-  assert(keyLength > 0);
 
   // try to read special entry with all passwords
   AutoFree_init(&autoFreeList2);
