@@ -1144,7 +1144,9 @@ test-debug:
 test-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_VALGRIND) test
 
-test_win: $(TEST_BAR)
+test_win: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
 	$(TEST_BAR) -o -c c:\\tmp\\x.bar -# c:\\users\\torsten
 	$(TEST_BAR) -L c:\\tmp\\x.bar 
 
@@ -1155,7 +1157,9 @@ test_clean:
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(RMF)  $(TEST_CONFIG) $(TEST_SERVER_CONFIG) $(TEST_KEYS)
 
-test1 test_basic: $(TEST_BAR)
+test1 test_basic: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
 	@$(ECHO_NO_LF) "Test 1: basic..."
 	@$(MAKE) \
           BAR_FILE="test" \
@@ -1183,7 +1187,9 @@ test1-debug test_basic-debug: $(TEST_BAR_DEBUG)
 test1-valgrind test_basic-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_basic
 
-test2 test_compress: $(TEST_BAR)
+test2 test_compress: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
 	@$(ECHO_NO_LF) "Test 2: compress..."
 	for compress in $(COMPRESS_NAMES); do \
           $(MAKE) \
@@ -1225,7 +1231,9 @@ test2-debug test_compress-debug: $(TEST_BAR_DEBUG)
 test2-valgrind test_compress-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_compress
 
-test_delta_compress: $(TEST_BAR)
+test_delta_compress: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
 	@$(ECHO_NO_LF) "Test 2: delta compress..."
 	for compress in $(COMPRESS_NAMES); do \
           $(MAKE) \
@@ -1257,7 +1265,9 @@ test_delta_compress-debug: $(TEST_BAR_DEBUG)
 test_delta_compress-valgrind: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_delta_compress
 
-test3 test_crypt: $(TEST_BAR)
+test3 test_crypt: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
 	@$(ECHO_NO_LF) "Test 3: crypt..."
 	for crypt in $(CRYPT_NAMES); do \
           $(MAKE) \
@@ -1291,13 +1301,15 @@ test3 test_crypt: $(TEST_BAR)
             exit $$rc; \
           fi; \
         done
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=3DES+CAST5+AES256+CAMELLIA256 --crypt-password='$(TEST_PASSWORD_CRYPT)' --max-threads=1" \
-          test_file_operations \
-          ;
 	@$(ECHO) "ok"
+
+# multi-crypt
+#	$(MAKE) \
+#          BAR_FILE="test" \
+#          BAR_PATTERN="test" \
+#          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=3DES+CAST5+AES256+CAMELLIA256 --crypt-password='$(TEST_PASSWORD_CRYPT)' --max-threads=1" \
+#          test_file_operations \
+#          ;
 
 test3-debug test_crypt-debug: $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_crypt
@@ -1305,7 +1317,11 @@ test3-debug test_crypt-debug: $(TEST_BAR_DEBUG)
 test3-valgrind test_crypt-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_crypt
 
-test4 test_asymmetric_crypt: $(TEST_BAR) $(TEST_KEYS)
+test4 test_asymmetric_crypt: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
 	@$(ECHO_NO_LF) "Test 4: asymmetric crypt..."
 	for crypt in $(CRYPT_NAMES); do \
           $(MAKE) \
@@ -1339,6 +1355,22 @@ test4 test_asymmetric_crypt: $(TEST_BAR) $(TEST_KEYS)
             exit $$rc; \
           fi; \
         done
+	# wrong public key
+	for crypt in $(CRYPT_NAMES); do \
+          if test ! $$crypt = "none"; then \
+            $(RMF) test/test.bar; \
+            DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_OTHER_PUBLIC) -c test/test.bar test/data; \
+            rc=$$?; \
+            if test $$rc -ne 0; then \
+              exit $$rc; \
+            fi; \
+            $(call functionTestCheckExitcode,1,1,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) test/test.bar); \
+            rc=$$?; \
+            if test $$rc -ne 0; then \
+              exit $$rc; \
+            fi; \
+          fi; \
+        done
 	@$(ECHO) "ok"
 
 test4-debug test_asymmetric_crypt-debug: $(TEST_BAR_DEBUG)
@@ -1347,7 +1379,10 @@ test4-debug test_asymmetric_crypt-debug: $(TEST_BAR_DEBUG)
 test4-valgrind test_asymmetric-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_asymmetric_crypt
 
-test5 test_signatures: $(TEST_BAR) $(TEST_KEYS)
+test5 test_signatures: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS)
 	@$(ECHO_NO_LF) "Test 5: signatures..."
 	$(MAKE) \
           BAR_FILE="test" \
@@ -1369,7 +1404,7 @@ test5 test_signatures: $(TEST_BAR) $(TEST_KEYS)
           ;
 	# wrong signature
 	@$(RMRF) $(TEST_FILES_CLEAN)
-	DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) -c test/test.bar test/data
+	DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) -c test/test.bar test/data
 	$(call functionTestCheckExitcode,1,1,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_OTHER_PUBLIC) --info test/test.bar)
 	@$(ECHO) "ok"
 
@@ -1379,8 +1414,10 @@ test5-debug test_signatures-debug: $(TEST_BAR_DEBUG)
 test5-valgrind signatures-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_signatures
 
-test6 test_split: $(TEST_BAR)
-	@$(ECHO_NO_LF) "Test 5: split..."
+test6 test_split: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
+	@$(ECHO_NO_LF) "Test 6: split..."
 	$(MAKE) \
           BAR_FILE="test-###" \
           BAR_PATTERN="test-*" \
@@ -1407,8 +1444,10 @@ test6-debug test_split-debug: $(TEST_BAR_DEBUG)
 test6-valgrind test_split-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_split
 
-test7 test_image: $(TEST_BAR)
-	@$(ECHO_NO_LF) "Test 6: image..."
+test7 test_image: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
+	@$(ECHO_NO_LF) "Test 7: image..."
 	for compress in none zip9; do \
           $(MAKE) \
             BAR_FILE="test" \
@@ -1439,8 +1478,10 @@ test7-debug test_image-debug: $(TEST_BAR_DEBUG)
 test7-valgrind test_image-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_image
 
-test8 test_storage: $(TEST_BAR)
-	@$(ECHO_NO_LF) "Test 7: storage..."
+test8 test_storage: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
+	@$(ECHO_NO_LF) "Test 8: storage..."
 	@$(MAKE) test_storage_file \
 	         test_storage_ftp \
 	         test_storage_scp \
@@ -1453,7 +1494,9 @@ test8-debug test_storage-debug: $(TEST_BAR_DEBUG)
 test8-valgrind test_storage-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage
 
-test_storage_file: $(TEST_BAR)
+test_storage_file: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
 	$(MAKE) \
           BAR_STORAGE="file://test/" \
           BAR_FILE="test" \
@@ -1476,7 +1519,9 @@ test_storage_file-debug: $(TEST_BAR_DEBUG)
 test_storage_file-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_file
 
-test_storage_ftp: $(TEST_BAR)
+test_storage_ftp: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
 	@$(call functionVerifyParameter,TEST_PASSWORD_FTP,parameter TEST_PASSWORD_FTP nor TEST_PASSWORD set)
 	$(MAKE) \
           BAR_STORAGE="ftp://$(TEST_HOST_FTP)/test/" \
@@ -1499,7 +1544,9 @@ test_storage_ftp-debug: $(TEST_BAR_DEBUG)
 test_storage_ftp-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_ftp
 
-test_storage_scp: $(TEST_BAR)
+test_storage_scp: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
 	@$(call functionVerifyParameter,TEST_PASSWORD_SCP,parameter TEST_PASSWORD_SCP nor TEST_PASSWORD set)
 	@$(call functionVerifyParameter,TEST_PUBLIC_KEY_SCP,parameter TEST_PUBLIC_KEY_SCP nor TEST_PUBLIC_KEY_SSH set)
 	@$(call functionVerifyParameter,TEST_PRIVATE_KEY_SCP,parameter TEST_PRIVATE_KEY_SCP nor TEST_PRIVATE_KEY_SSH set)
@@ -1524,7 +1571,9 @@ test_storage_scp-debug: $(TEST_BAR_DEBUG)
 test_storage_scp-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_scp
 
-test_storage_sftp: $(TEST_BAR)
+test_storage_sftp: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
 	@$(call functionVerifyParameter,TEST_PASSWORD_SFTP,parameter TEST_PASSWORD_SFTP nor TEST_PASSWORD set)
 	@$(call functionVerifyParameter,TEST_PUBLIC_KEY_SFTP,parameter TEST_PUBLIC_KEY_SFTP nor TEST_PUBLIC_KEY_SSH set)
 	@$(call functionVerifyParameter,TEST_PRIVATE_KEY_SFTP,parameter TEST_PRIVATE_KEY_SFTP nor TEST_PRIVATE_KEY_SSH set)
@@ -1549,7 +1598,9 @@ test_storage_sftp-debug: $(TEST_BAR_DEBUG)
 test_storage_sftp-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_sftp
 
-test_storage_webdav: $(TEST_BAR)
+test_storage_webdav: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
 	@$(call functionVerifyParameter,TEST_PASSWORD_WEBDAV,parameter TEST_PASSWORD_WEBDAV nor TEST_PASSWORD set)
 	$(MAKE) \
           BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/test/" \
@@ -1573,8 +1624,10 @@ test_storage_webdav-debug: $(TEST_BAR_DEBUG)
 test_storage_webdav-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_webdav
 
-test9 test_hugefiles: $(TEST_BAR)
-	@$(ECHO_NO_LF) "Test 8: huge files..."
+test9 test_hugefiles: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
+	@$(ECHO_NO_LF) "Test 9: huge files..."
 	for compress in $(COMPRESS_NAMES_HUGE); do \
           $(MAKE) \
             BAR_FILE="test" \
@@ -1595,8 +1648,10 @@ test9-debug test_hugefiles-debug: $(TEST_BAR_DEBUG)
 test9-valgrind test_hugefiles-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_hugefiles
 
-test10 test_dvd: $(TEST_BAR)
-	@$(ECHO_NO_LF) "Test 9: dvd..."
+test10 test_dvd: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
+	@$(ECHO_NO_LF) "Test 109: dvd..."
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
@@ -1611,8 +1666,10 @@ test10-debug test_dvd-debug: $(TEST_BAR_DEBUG)
 test10-valgrind test_dvd-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_dvd
 
-test11 test_server: $(TEST_BAR)
-	@$(ECHO_NO_LF) "Test 10: server..."
+test11 test_server: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
+	@$(ECHO_NO_LF) "Test 11: server..."
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
@@ -1627,7 +1684,9 @@ test11-debug test_serverd-debug: $(TEST_BAR_DEBUG)
 test11-valgrind test_server-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_server
 
-test_combined: $(TEST_BAR)
+test_combined: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
 	@$(ECHO_NO_LF) "Test combined..."
 	for compress in $(TEST_COMBINED_COMPRESS_NAMES); do \
           for crypt in $(TEST_COMBINED_CRYPT_NAMES); do \
