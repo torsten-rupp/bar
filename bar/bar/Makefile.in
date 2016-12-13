@@ -1348,7 +1348,7 @@ test4-valgrind test_asymmetric-valgrind: $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_asymmetric_crypt
 
 test5 test_signatures: $(TEST_BAR) $(TEST_KEYS)
-	@$(ECHO_NO_LF) "Test 4: signatures..."
+	@$(ECHO_NO_LF) "Test 5: signatures..."
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
@@ -1367,6 +1367,10 @@ test5 test_signatures: $(TEST_BAR) $(TEST_KEYS)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE)" \
           test_file_operations_dryrun \
           ;
+	# wrong signature
+	@$(RMRF) $(TEST_FILES_CLEAN)
+	DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) -c test/test.bar test/data
+	$(call functionTestCheckExitcode,1,1,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_OTHER_PUBLIC) --info test/test.bar)
 	@$(ECHO) "ok"
 
 test5-debug test_signatures-debug: $(TEST_BAR_DEBUG)
