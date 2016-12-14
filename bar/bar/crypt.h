@@ -302,7 +302,17 @@ void Crypt_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-bool Crypt_isSymmetricSupported(void);
+INLINE bool Crypt_isSymmetricSupported(void);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE bool Crypt_isSymmetricSupported(void)
+{
+  #ifdef HAVE_GCRYPT
+    return TRUE;
+  #else /* not HAVE_GCRYPT */
+    return FALSE;
+  #endif /* HAVE_GCRYPT */
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_isValidAlgorithm
@@ -336,6 +346,24 @@ bool Crypt_isValidHashAlgorithm(uint16 n);
 \***********************************************************************/
 
 bool Crypt_isValidMACAlgorithm(uint16 n);
+
+/***********************************************************************\
+* Name   : Crypt_isValidSignatureState
+* Purpose: check if valid signature state
+* Input  : cryptSignatureState - signature state
+* Output : -
+* Return : TRUE iff valid, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Crypt_isValidSignatureState(CryptSignatureStates cryptSignatureState);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE bool Crypt_isValidSignatureState(CryptSignatureStates cryptSignatureState)
+{
+  return    (cryptSignatureState == CRYPT_SIGNATURE_STATE_NONE)
+         || (cryptSignatureState == CRYPT_SIGNATURE_STATE_OK  );
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_algorithmToString
@@ -612,7 +640,17 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
 * Notes  : -
 \***********************************************************************/
 
-bool Crypt_isAsymmetricSupported(void);
+INLINE bool Crypt_isAsymmetricSupported(void);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+ INLINE bool Crypt_isAsymmetricSupported(void)
+{
+  #ifdef HAVE_GCRYPT
+    return TRUE;
+  #else /* not HAVE_GCRYPT */
+    return FALSE;
+  #endif /* HAVE_GCRYPT */
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_initKey

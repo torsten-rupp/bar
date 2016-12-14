@@ -217,6 +217,7 @@ typedef struct
 
   void                     *signatureKeyData;                          // signature random key
   uint                     signatureKeyDataLength;                     // length of signature random key
+  uint64                   nextSignatureOffset;                        // next signature start offset
 
   uint                     blockLength;                                // block length for file entry/file data (depend on used crypt algorithm)
 
@@ -397,6 +398,11 @@ typedef struct ArchiveEntryInfo
       ChunkSpecialEntry               chunkSpecialEntry;               // entry chunk
       ChunkHardLinkExtendedAttribute  chunkSpecialExtendedAttribute;   // extended attribute chunk
     } special;
+    struct
+    {
+      ChunkMeta                       chunkMeta;                       // base chunk
+      ChunkMetaEntry                  chunkMetaEntry;                  // entry chunk
+    } meta;
   };
 } ArchiveEntryInfo;
 
@@ -437,6 +443,7 @@ typedef bool(*ArchiveAbortCallbackFunction)(void *userData);
   #define Archive_newLinkEntry(...)       __Archive_newLinkEntry      (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_newHardLinkEntry(...)   __Archive_newHardLinkEntry  (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_newSpecialEntry(...)    __Archive_newSpecialEntry   (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_readMetaEntry(...)      __Archive_readMetaEntry   (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_readFileEntry(...)      __Archive_readFileEntry     (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_readImageEntry(...)     __Archive_readImageEntry    (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_readDirectoryEntry(...) __Archive_readDirectoryEntry(__FILE__,__LINE__, ## __VA_ARGS__)
@@ -1055,7 +1062,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 /***********************************************************************\
 * Name   : Archive_readMetaEntry
 * Purpose: read meta info from archive
-* Input  : archiveHandle - archive handle
+* Input  : archiveEntryInfo - archive file entry info
+*          archiveHandle    - archive handle
 * Output : userName        - user name (can be NULL)
 *          hostName        - host name (can be NULL)
 *          jobUUID         - job UUID (can be NULL)
@@ -1067,15 +1075,31 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
-                             String        userName,
-                             String        hostName,
-                             String        jobUUID,
-                             String        scheduleUUID,
-                             ArchiveTypes  *archiveType,
-                             uint64        *createdDateTime,
-                             String        comment
-                            );
+#ifdef NDEBUG
+  Errors Archive_readMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
+                               ArchiveHandle    *archiveHandle,
+                               String           userName,
+                               String           hostName,
+                               String           jobUUID,
+                               String           scheduleUUID,
+                               ArchiveTypes     *archiveType,
+                               uint64           *createdDateTime,
+                               String           comment
+                              );
+#else /* not NDEBUG */
+  Errors __Archive_readMetaEntry(const char       *__fileName__,
+                                 ulong            __lineNb__,
+                                 ArchiveEntryInfo *archiveEntryInfo,
+                                 ArchiveHandle    *archiveHandle,
+                                 String           userName,
+                                 String           hostName,
+                                 String           jobUUID,
+                                 String           scheduleUUID,
+                                 ArchiveTypes     *archiveType,
+                                 uint64           *createdDateTime,
+                                 String           comment
+                                );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_readFileEntry
@@ -1522,7 +1546,6 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle);
 * Input  : storageInfo             - storage info
 *          fileName                - file name (can be NULL)
 *          jobOptions              - option settings
-*          logHandle               - log handle (can be NULL)
 *          allCryptSignaturesState - state of all signatures; see
 *                                    CryptSignatureStates (can be NULL)
 * Output : allCryptSignaturesState - state of all signatures; see
@@ -1534,7 +1557,6 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle);
 Errors Archive_verifySignatures(StorageInfo          *storageInfo,
                                 ConstString          fileName,
                                 const JobOptions     *jobOptions,
-                                LogHandle            *logHandle,
                                 CryptSignatureStates *allCryptSignaturesState
                                );
 

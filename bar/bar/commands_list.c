@@ -2208,7 +2208,6 @@ remoteBarFlag=FALSE;
           error = Archive_verifySignatures(&storageInfo,
                                            fileName,
                                            jobOptions,
-                                           logHandle,
                                            &allCryptSignatureState
                                           );
           if (error != ERROR_NONE)
@@ -2897,7 +2896,8 @@ remoteBarFlag=FALSE;
                   jobUUID      = String_new();
                   scheduleUUID = String_new();
                   comment      = String_new();
-                  error = Archive_readMetaEntry(&archiveHandle,
+                  error = Archive_readMetaEntry(&archiveEntryInfo,
+                                                &archiveHandle,
                                                 name,
                                                 hostName,
                                                 jobUUID,
@@ -2937,6 +2937,13 @@ remoteBarFlag=FALSE;
                                  );
                     printf("\n");
                     printedMetaInfoFlag = TRUE;
+                  }
+
+                  // close archive file, free resources
+                  error = Archive_closeEntry(&archiveEntryInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    printWarning("close 'special' entry fail (error: %s)\n",Error_getText(error));
                   }
 
                   // free resources

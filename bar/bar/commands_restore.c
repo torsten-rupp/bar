@@ -2396,7 +2396,6 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
     error = Archive_verifySignatures(&storageInfo,
                                      archiveName,
                                      restoreInfo->jobOptions,
-                                     restoreInfo->logHandle,
                                      &allCryptSignatureState
                                     );
     if (error != ERROR_NONE)
@@ -2405,9 +2404,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
       error = handleError(restoreInfo,error);
       return error;
     }
-    if (   (allCryptSignatureState != CRYPT_SIGNATURE_STATE_NONE)
-        && (allCryptSignatureState != CRYPT_SIGNATURE_STATE_OK)
-       )
+    if (!Crypt_isValidSignatureState(allCryptSignatureState))
     {
       printError("Invalid signature in '%s'!\n",
                  String_cString(printableStorageName)

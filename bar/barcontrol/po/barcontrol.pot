@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-12-12 16:54+0100\n"
+"POT-Creation-Date: 2016-12-14 11:57+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -171,8 +171,12 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/BARControl.java:2125
-msgid "Connection fail1"
+#: src/BARControl.java:2125 src/BARControl.java:2194 src/BARControl.java:2198
+#: src/BARControl.java:2259 src/BARControl.java:2263 src/BARControl.java:2699
+#: src/BARControl.java:2706 src/BARControl.java:2739 src/BARControl.java:2746
+#: src/BARControl.java:3713 src/BARControl.java:3725 src/BARControl.java:3747
+#: src/BARControl.java:3766
+msgid "Connection fail"
 msgstr ""
 
 #: src/BARControl.java:2125 src/BARControl.java:3725
@@ -183,24 +187,12 @@ msgstr ""
 msgid "Try without TLS/SSL"
 msgstr ""
 
-#: src/BARControl.java:2194 src/BARControl.java:2198
-msgid "Connection fail"
-msgstr ""
-
 #: src/BARControl.java:2220
 msgid "Program"
 msgstr ""
 
 #: src/BARControl.java:2222
 msgid "Connect"
-msgstr ""
-
-#: src/BARControl.java:2259
-msgid "Connection fail5"
-msgstr ""
-
-#: src/BARControl.java:2263
-msgid "Connection fail6"
 msgstr ""
 
 #: src/BARControl.java:2278 src/TabStatus.java:776 src/TabStatus.java:1479
@@ -297,22 +289,6 @@ msgstr ""
 msgid "Try again"
 msgstr ""
 
-#: src/BARControl.java:2699
-msgid "Connection fail7"
-msgstr ""
-
-#: src/BARControl.java:2706
-msgid "Connection fail8"
-msgstr ""
-
-#: src/BARControl.java:2739
-msgid "Connection fail9"
-msgstr ""
-
-#: src/BARControl.java:2746
-msgid "Connection fail10"
-msgstr ""
-
 #: src/BARControl.java:2767
 msgid "Internal error"
 msgstr ""
@@ -340,22 +316,6 @@ msgstr ""
 #: src/BARControl.java:3556
 #, java-format
 msgid "Cannot restore ''{0}'': {1} - skipped"
-msgstr ""
-
-#: src/BARControl.java:3713
-msgid "Connection fail11"
-msgstr ""
-
-#: src/BARControl.java:3725
-msgid "Connection fail12"
-msgstr ""
-
-#: src/BARControl.java:3747
-msgid "Connection fail13"
-msgstr ""
-
-#: src/BARControl.java:3766
-msgid "Connection fail14"
 msgstr ""
 
 #: src/BARWidgets.java:561 src/BARWidgets.java:591 src/BARWidgets.java:630

@@ -1046,6 +1046,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 //TODO: open only when changed
     // open archive
     error = Archive_open(&archiveHandle,
+//TODO: const?
                          entryMsg.storageInfo,
                          NULL,  // fileName,
                          testInfo->deltaSourceList,
@@ -1065,8 +1066,8 @@ LOCAL void testThreadCode(TestInfo *testInfo)
       break;
     }
 
-    // set salt and crypt mode
-    Archive_setSalt(&archiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
+    // set crypt salt and crypt mode
+    Archive_setCryptSalt(&archiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
     Archive_setCryptMode(&archiveHandle,entryMsg.cryptMode);
 
     // seek to start of entry
@@ -1258,7 +1259,6 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
     error = Archive_verifySignatures(&storageInfo,
                                      fileName,
                                      jobOptions,
-                                     logHandle,
                                      &allCryptSignatureState
                                     );
     if (error != ERROR_NONE)
@@ -1268,9 +1268,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
       String_delete(printableStorageName);
       return error;
     }
-    if (   (allCryptSignatureState != CRYPT_SIGNATURE_STATE_NONE)
-        && (allCryptSignatureState != CRYPT_SIGNATURE_STATE_OK)
-       )
+    if (!Crypt_isValidSignatureState(allCryptSignatureState))
     {
       printError("Invalid signature in '%s'!\n",
                  String_cString(printableStorageName)

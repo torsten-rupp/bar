@@ -1655,8 +1655,8 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
       break;
     }
 
-    // set salt and crypt mode
-    Archive_setSalt(&archiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
+    // set crypt salt and crypt mode
+    Archive_setCryptSalt(&archiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
     Archive_setCryptMode(&archiveHandle,entryMsg.cryptMode);
 
     // seek to start of entry
@@ -1855,7 +1855,6 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
     error = Archive_verifySignatures(&storageInfo,
                                      fileName,
                                      jobOptions,
-                                     logHandle,
                                      &allCryptSignatureState
                                     );
     if (error != ERROR_NONE)
@@ -1865,9 +1864,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
       String_delete(printableStorageName);
       return error;
     }
-    if (   (allCryptSignatureState != CRYPT_SIGNATURE_STATE_NONE)
-        && (allCryptSignatureState != CRYPT_SIGNATURE_STATE_OK)
-       )
+    if (!Crypt_isValidSignatureState(allCryptSignatureState))
     {
       printError("Invalid signature in '%s'!\n",
                  String_cString(printableStorageName)

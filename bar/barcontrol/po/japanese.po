@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-12-12 16:52+0100\n"
+"POT-Creation-Date: 2016-12-14 11:57+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -171,9 +171,13 @@ msgstr "ログイン"
 msgid "Cancel"
 msgstr "キャンセル"
 
-#: src/BARControl.java:2125
+#: src/BARControl.java:2125 src/BARControl.java:2194 src/BARControl.java:2198
+#: src/BARControl.java:2259 src/BARControl.java:2263 src/BARControl.java:2699
+#: src/BARControl.java:2706 src/BARControl.java:2739 src/BARControl.java:2746
+#: src/BARControl.java:3713 src/BARControl.java:3725 src/BARControl.java:3747
+#: src/BARControl.java:3766
 #, fuzzy
-msgid "Connection fail1"
+msgid "Connection fail"
 msgstr "接続ミス"
 
 #: src/BARControl.java:2125 src/BARControl.java:3725
@@ -184,11 +188,6 @@ msgstr ""
 msgid "Try without TLS/SSL"
 msgstr ""
 
-#: src/BARControl.java:2194 src/BARControl.java:2198
-#, fuzzy
-msgid "Connection fail"
-msgstr "接続ミス"
-
 #: src/BARControl.java:2220
 msgid "Program"
 msgstr "プログラム"
@@ -196,16 +195,6 @@ msgstr "プログラム"
 #: src/BARControl.java:2222
 #, fuzzy
 msgid "Connect"
-msgstr "接続ミス"
-
-#: src/BARControl.java:2259
-#, fuzzy
-msgid "Connection fail5"
-msgstr "接続ミス"
-
-#: src/BARControl.java:2263
-#, fuzzy
-msgid "Connection fail6"
 msgstr "接続ミス"
 
 #: src/BARControl.java:2278 src/TabStatus.java:776 src/TabStatus.java:1479
@@ -305,26 +294,6 @@ msgstr "エラー："
 msgid "Try again"
 msgstr "再試行"
 
-#: src/BARControl.java:2699
-#, fuzzy
-msgid "Connection fail7"
-msgstr "接続ミス"
-
-#: src/BARControl.java:2706
-#, fuzzy
-msgid "Connection fail8"
-msgstr "接続ミス"
-
-#: src/BARControl.java:2739
-#, fuzzy
-msgid "Connection fail9"
-msgstr "接続ミス"
-
-#: src/BARControl.java:2746
-#, fuzzy
-msgid "Connection fail10"
-msgstr "接続ミス"
-
 #: src/BARControl.java:2767
 #, fuzzy
 msgid "Internal error"
@@ -359,26 +328,6 @@ msgstr ""
 "''{0}''\n"
 "\n"
 "(エラー: {1})"
-
-#: src/BARControl.java:3713
-#, fuzzy
-msgid "Connection fail11"
-msgstr "接続ミス"
-
-#: src/BARControl.java:3725
-#, fuzzy
-msgid "Connection fail12"
-msgstr "接続ミス"
-
-#: src/BARControl.java:3747
-#, fuzzy
-msgid "Connection fail13"
-msgstr "接続ミス"
-
-#: src/BARControl.java:3766
-#, fuzzy
-msgid "Connection fail14"
-msgstr "接続ミス"
 
 #: src/BARWidgets.java:561 src/BARWidgets.java:591 src/BARWidgets.java:630
 #: src/TabJobs.java:4014 src/TabJobs.java:4037 src/TabJobs.java:4069
@@ -4198,6 +4147,50 @@ msgstr "接続ミス"
 #: src/TabStatus.java:2564
 msgid "Average execution time"
 msgstr ""
+
+#, fuzzy
+#~ msgid "Connection fail1"
+#~ msgstr "接続ミス"
+
+#, fuzzy
+#~ msgid "Connection fail5"
+#~ msgstr "接続ミス"
+
+#, fuzzy
+#~ msgid "Connection fail6"
+#~ msgstr "接続ミス"
+
+#, fuzzy
+#~ msgid "Connection fail7"
+#~ msgstr "接続ミス"
+
+#, fuzzy
+#~ msgid "Connection fail8"
+#~ msgstr "接続ミス"
+
+#, fuzzy
+#~ msgid "Connection fail9"
+#~ msgstr "接続ミス"
+
+#, fuzzy
+#~ msgid "Connection fail10"
+#~ msgstr "接続ミス"
+
+#, fuzzy
+#~ msgid "Connection fail11"
+#~ msgstr "接続ミス"
+
+#, fuzzy
+#~ msgid "Connection fail12"
+#~ msgstr "接続ミス"
+
+#, fuzzy
+#~ msgid "Connection fail13"
+#~ msgstr "接続ミス"
+
+#, fuzzy
+#~ msgid "Connection fail14"
+#~ msgstr "接続ミス"
 
 #, fuzzy
 #~ msgid "Connection fail2"

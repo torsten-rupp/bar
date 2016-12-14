@@ -128,7 +128,7 @@ typedef struct
 typedef struct
 {
   ArchiveHandle       *archiveHandle;
-  Password            *jobCryptPassword;                 // job crypt password or NULL
+  const Password      *jobCryptPassword;                 // job crypt password or NULL
   PasswordModes       passwordMode;                      // password input mode
   const PasswordNode  *passwordNode;                     // next password node to use
   GetPasswordFunction getPasswordFunction;               // password input callback
@@ -160,7 +160,7 @@ typedef struct
 {
   ArchiveHandle        *archiveHandle;
   PasswordModes        passwordMode;                      // password input mode
-  Password             *jobCryptPassword;                 // job crypt password or NULL
+  const Password       *jobCryptPassword;                 // job crypt password or NULL
   GetPasswordFunction  getPasswordFunction;               // password input callback
   void                 *getPasswordUserData;
   const DecryptKeyNode *nextDecryptKeyNode;               // next decrypt key node to use
@@ -534,7 +534,7 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
 * Notes  : -
 \***********************************************************************/
 
-LOCAL CryptKey *addDecryptKey(Password            *password,
+LOCAL CryptKey *addDecryptKey(const Password      *password,
                               uint                keyLength,
                               CryptKeyDeriveTypes cryptKeyDeriveType,
                               const byte          *salt,
@@ -571,7 +571,6 @@ LOCAL CryptKey *addDecryptKey(Password            *password,
                             salt,
                             saltLength
                            );
-//TODO: error?
     if (error != ERROR_NONE)
     {
       Crypt_doneKey(&decryptKeyNode->cryptKey);
@@ -593,11 +592,6 @@ LOCAL CryptKey *addDecryptKey(Password            *password,
        )
     {
       // derive decrypt key from password with salt
-fprintf(stderr,"%s, %d: %d %d, %d %d, %d\n",__FILE__,__LINE__,
-decryptKeyNode->keyLength,keyLength,
-decryptKeyNode->saltLength,saltLength,
-memEquals(decryptKeyNode->salt,salt,saltLength)
-);
       error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
                               keyLength,
                               cryptKeyDeriveType,
@@ -605,7 +599,6 @@ memEquals(decryptKeyNode->salt,salt,saltLength)
                               salt,
                               saltLength
                              );
-  //TODO: error?
       if (error != ERROR_NONE)
       {
         return NULL;
@@ -619,23 +612,6 @@ memEquals(decryptKeyNode->salt,salt,saltLength)
 //debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLength,0);
     }
   }
-#if 0
-if (decryptKeyNode != NULL)
-{
-fprintf(stderr,"%s, %d: addDecryptKey \n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d:   crypt alg %d\n",__FILE__,__LINE__,
-decryptKeyNode->cryptAlgorithm
-);
-fprintf(stderr,"%s, %d:   salt %d\n",__FILE__,__LINE__,
-decryptKeyNode->saltLength
-);
-debugDumpMemory(decryptKeyNode->salt,decryptKeyNode->saltLength,0);
-fprintf(stderr,"%s, %d:   data %d\n",__FILE__,__LINE__,
-decryptKeyNode->cryptKey.dataLength
-);
-debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLength,0);
-}
-#endif
 
   return (decryptKeyNode != NULL) ? &decryptKeyNode->cryptKey : NULL;
 }
@@ -665,12 +641,11 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                                         uint                saltLength
                                        )
 {
-  bool                 semaphoreLock;
-  const DecryptKeyNode *decryptKeyNode;
-  const CryptKey       *decryptKey;
-  String               printableStorageName;
-  Password             newPassword;
-  Errors               error;
+  bool           semaphoreLock;
+  const CryptKey *decryptKey;
+  String         printableStorageName;
+  Password       newPassword;
+  Errors         error;
 
   assert(decryptKeyIterator != NULL);
   assert(decryptKeyIterator->archiveHandle != NULL);
@@ -815,7 +790,7 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator
   decryptKeyIterator->jobCryptPassword    = cryptPassword;
   decryptKeyIterator->getPasswordFunction = getPasswordFunction;
   decryptKeyIterator->getPasswordUserData = getPasswordUserData;
-  decryptKeyIterator->nextDecryptKeyNode  = decryptPasswordList.head;
+  decryptKeyIterator->nextDecryptKeyNode  = (DecryptKeyNode*)List_first(&decryptKeyList);
 
   return getNextDecryptKey(decryptKeyIterator,
                            keyLength,
@@ -1304,7 +1279,7 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
     Chunk_done(&chunkBAR.info);
     return error;
   }
-//TODO: size
+  assert(sizeof(archiveHandle->cryptSalt) == sizeof(chunkBAR.salt));
   memCopyFast(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),chunkBAR.salt,sizeof(chunkBAR.salt));
 //fprintf(stderr,"%s, %d: init crypt salt\n",__FILE__,__LINE__); debugDumpMemory(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),0);
 
@@ -1345,6 +1320,12 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
   assert(chunkHeader != NULL);
   assert(chunkHeader->id == CHUNK_ID_KEY);
 
+  // check size
+  if (chunkHeader->size < CHUNK_FIXED_SIZE_KEY)
+  {
+    return ERROR_INVALID_CHUNK_SIZE;
+  }
+
   // init key chunk
   error = Chunk_init(&chunkKey.info,
                      NULL,  // parentChunkInfo
@@ -1362,7 +1343,7 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
     return error;
   }
 
-  // read key chunk
+  // open key chunk
   error = Chunk_open(&chunkKey.info,
                      chunkHeader,
                      CHUNK_FIXED_SIZE_KEY,
@@ -1373,7 +1354,8 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
     Chunk_done(&chunkKey.info);
     return error;
   }
-//TODO: CHeck negative
+
+  // read key chunk
   encryptedKeyDataLength = chunkHeader->size-CHUNK_FIXED_SIZE_KEY;
   encryptedKeyData       = malloc(encryptedKeyDataLength);
   if (encryptedKeyData == NULL)
@@ -1449,7 +1431,6 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
 {
   Errors         error;
   ChunkBAR       chunkBAR;
-  ChunkKey       chunkKey;
   ChunkMeta      chunkMeta;
   ChunkMetaEntry chunkMetaEntry;
   CryptInfo      cryptInfo;
@@ -1471,8 +1452,8 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   {
     return error;
   }
-  memClear(chunkBAR.salt,sizeof(chunkBAR.salt));
-  memCopyFast(chunkBAR.salt,sizeof(chunkBAR.salt),archiveHandle->cryptSalt,archiveHandle->cryptSalt);
+  assert(sizeof(chunkBAR.salt) == sizeof(archiveHandle->cryptSalt));
+  memCopyFast(chunkBAR.salt,sizeof(chunkBAR.salt),archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
 
   // init meta chunk
   error = Chunk_init(&chunkMeta.info,
@@ -1501,7 +1482,8 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
 
   // init crypt
   error = Crypt_init(&cryptInfo,
-//TODO
+//TODO: MULTI_CRYPT
+//TODO: CBC, CTS?
                      archiveHandle->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
@@ -1696,7 +1678,7 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->chunkIO != NULL);
-  assert(archiveHandle->chunkIO->seek != NULL);
+  assert(archiveHandle->chunkIO->tell != NULL);
 
   if (   (Crypt_isKeyAvailable(&globalOptions.signaturePrivateKey))
       && !globalOptions.noSignatureFlag
@@ -1724,8 +1706,7 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
     error = calcuateHash(archiveHandle->chunkIO,
                          archiveHandle->chunkIOUserData,
                          &signatureHash,
-//TODO
-0LL,//                       offset,
+                         archiveHandle->nextSignatureOffset,
                          index
                         );
     if (error != ERROR_NONE)
@@ -1734,6 +1715,7 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
       return error;
     }
 /*
+TODO: support dynamic hash length?
     hashLength = Crypt_getHashLength(&signatureHash);
     hash = malloc(hashLength);
     if (hash == NULL)
@@ -1811,9 +1793,16 @@ exit(1);
       return error;
     }
 
+    // store next signature offset
+    error = archiveHandle->chunkIO->tell(archiveHandle->chunkIOUserData,&archiveHandle->nextSignatureOffset);
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+
     // free resources
     Chunk_done(&chunkSignature.info);
-//    free(hash);
     Crypt_doneHash(&signatureHash);
     AutoFree_done(&autoFreeList);
   }
@@ -2554,7 +2543,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           return error;
         }
 
-        // update part size
+        // update fragment size
         archiveEntryInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->file.deltaCompressInfo);
         error = Chunk_update(&archiveEntryInfo->file.chunkFileData.info);
         if (error != ERROR_NONE)
@@ -2637,7 +2626,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           }
         }
 
-        // store fragment offset, count for next fragment
+        // update fragment offset for next fragment, reset size
         archiveEntryInfo->file.chunkFileData.fragmentOffset += archiveEntryInfo->file.chunkFileData.fragmentSize;
         archiveEntryInfo->file.chunkFileData.fragmentSize   =  0LL;
 
@@ -3740,7 +3729,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           return error;
         }
 
-        // update part size
+        // update fragment size
         archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->hardLink.deltaCompressInfo);
         error = Chunk_update(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
         if (error != ERROR_NONE)
@@ -3822,7 +3811,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           }
         }
 
-        // store fragment offset, count for next fragment
+        // update fragment offset for next fragment, reset size
         archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset += archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize;
         archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   =  0LL;
 
@@ -4289,6 +4278,8 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   archiveHandle->encryptedKeyData        = NULL;
   archiveHandle->encryptedKeyDataLength  = 0;
 //  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
+  archiveHandle->signatureKeyDataLength  = 0;
+  archiveHandle->nextSignatureOffset     = 0LL;
 
   archiveHandle->ioType                  = ARCHIVE_IO_TYPE_FILE;
   archiveHandle->file.fileName           = String_new();
@@ -4514,6 +4505,8 @@ fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archive
   archiveHandle->encryptedKeyData        = NULL;
   archiveHandle->encryptedKeyDataLength  = 0;
 //  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
+  archiveHandle->signatureKeyDataLength  = 0;
+  archiveHandle->nextSignatureOffset     = 0LL;
 
   archiveHandle->ioType                  = ARCHIVE_IO_TYPE_STORAGE;
   archiveHandle->storage.storageInfo     = storageInfo;
@@ -4667,10 +4660,10 @@ fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archive
   return error;
 }
 
-void Archive_setSalt(ArchiveHandle *archiveHandle,
-                     const byte    *salt,
-                     uint          saltLength
-                    )
+void Archive_setCryptSalt(ArchiveHandle *archiveHandle,
+                          const byte    *salt,
+                          uint          saltLength
+                         )
 {
   assert(archiveHandle != NULL);
 
@@ -5334,6 +5327,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
   DEBUG_TESTCODE() { Chunk_done(&archiveEntryInfo->file.chunkFileData.info); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   archiveEntryInfo->file.chunkFileData.fragmentOffset = fragmentOffset;
+//TODO
   archiveEntryInfo->file.chunkFileData.fragmentSize   = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileData.info,{ Chunk_done(&archiveEntryInfo->file.chunkFileData.info); });
 
@@ -6630,6 +6624,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     return error;
   }
   archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset = fragmentOffset;
+//TODO
   archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   = 0LL;
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkData.info,{ Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info); });
 
@@ -7214,33 +7209,50 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   return ERROR_NONE;
 }
 
-Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
-                             String        userName,
-                             String        hostName,
-                             String        jobUUID,
-                             String        scheduleUUID,
-                             ArchiveTypes  *archiveType,
-                             uint64        *createdDateTime,
-                             String        comment
-                            )
+#ifdef NDEBUG
+  Errors Archive_readMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
+                               ArchiveHandle    *archiveHandle,
+                               String           userName,
+                               String           hostName,
+                               String           jobUUID,
+                               String           scheduleUUID,
+                               ArchiveTypes     *archiveType,
+                               uint64           *createdDateTime,
+                               String           comment
+                              )
+#else /* not NDEBUG */
+  Errors __Archive_readMetaEntry(const char       *__fileName__,
+                                 ulong            __lineNb__,
+                                 ArchiveEntryInfo *archiveEntryInfo,
+                                 ArchiveHandle    *archiveHandle,
+                                 String           userName,
+                                 String           hostName,
+                                 String           jobUUID,
+                                 String           scheduleUUID,
+                                 ArchiveTypes     *archiveType,
+                                 uint64           *createdDateTime,
+                                 String           comment
+                                )
+#endif /* NDEBUG */
 {
   AutoFreeList       autoFreeList1,autoFreeList2;
   Errors             error;
-  ChunkMeta          chunkMeta;
+//  ChunkMeta          chunkMeta;
   ChunkHeader        chunkHeader;
-  CryptAlgorithms    cryptAlgorithm;
-  uint               blockLength;
+//  CryptAlgorithms    cryptAlgorithm;
+//  uint               blockLength;
   uint               keyLength;
   DecryptKeyIterator decryptKeyIterator;
   const CryptKey     *decryptKey;
   bool               passwordFlag;
-  CryptInfo          cryptInfo;
-  ChunkMetaEntry     chunkMetaEntry;
+//  CryptInfo          cryptInfo;
+//  ChunkMetaEntry     chunkMetaEntry;
   uint64             index;
   bool               decryptedFlag;
   ChunkHeader        subChunkHeader;
   bool               foundMetaEntryFlag;
 
+  assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
   assert(archiveHandle->jobOptions != NULL);
 
@@ -7255,8 +7267,12 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   // init variables
   AutoFree_init(&autoFreeList1);
 
+  archiveEntryInfo->archiveHandle    = archiveHandle;
+  archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
+  archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_META;
+
   // init meta chunk
-  error = Chunk_init(&chunkMeta.info,
+  error = Chunk_init(&archiveEntryInfo->meta.chunkMeta.info,
                      NULL,  // parentChunkInfo
                      archiveHandle->chunkIO,
                      archiveHandle->chunkIOUserData,
@@ -7264,14 +7280,14 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                      CHUNK_DEFINITION_META,
                      DEFAULT_ALIGNMENT,
                      NULL,  // cryptInfo
-                     &chunkMeta
+                     &archiveEntryInfo->meta.chunkMeta
                     );
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList1,&chunkMeta.info,{ Chunk_done(&chunkMeta.info); });
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->meta.chunkMeta.info,{ Chunk_done(&archiveEntryInfo->meta.chunkMeta.info); });
 
   // find next meta chunk
   do
@@ -7297,8 +7313,8 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   while (chunkHeader.id != CHUNK_ID_META);
 
   // read meta chunk
-  assert(Chunk_getSize(&chunkMeta.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_META,chunkMeta.info.alignment));
-  error = Chunk_open(&chunkMeta.info,
+  assert(Chunk_getSize(&archiveEntryInfo->meta.chunkMeta.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_META,archiveEntryInfo->meta.chunkMeta.info.alignment));
+  error = Chunk_open(&archiveEntryInfo->meta.chunkMeta.info,
                      &chunkHeader,
                      CHUNK_FIXED_SIZE_META,
                      archiveHandle
@@ -7309,26 +7325,28 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList1,&chunkMeta.info,{ Chunk_close(&chunkMeta.info); });
-  if (!Crypt_isValidAlgorithm(chunkMeta.cryptAlgorithm))
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->meta.chunkMeta.info,{ Chunk_close(&archiveEntryInfo->meta.chunkMeta.info); });
+
+  // get and check crypt algorithm
+  if (!Crypt_isValidAlgorithm(archiveEntryInfo->meta.chunkMeta.cryptAlgorithm))
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
     return ERROR_INVALID_CRYPT_ALGORITHM;
   }
 //TODO: multi crypt
-  cryptAlgorithm = CRYPT_CONSTANT_TO_ALGORITHM(chunkMeta.cryptAlgorithm);
+  archiveEntryInfo->cryptAlgorithms[0] = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->meta.chunkMeta.cryptAlgorithm);
 
   // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(cryptAlgorithm,&blockLength);
+  error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithms[0],&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
     return error;
   }
-  assert(blockLength > 0);
-  error = Crypt_getKeyLength(cryptAlgorithm,&keyLength);
+  assert(archiveEntryInfo->blockLength > 0);
+  error = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0],&keyLength);
   if (error != ERROR_NONE)
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
@@ -7336,22 +7354,13 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
     return error;
   }
 
-  // try to read meta entry with all passwords
+  // try to read meta entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
-  Chunk_tell(&chunkMeta.info,&index);
-  if (Crypt_isEncrypted(cryptAlgorithm))
+  Chunk_tell(&archiveEntryInfo->meta.chunkMeta.info,&index);
+  if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
     if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
     {
-#if 0
-      error = Crypt_getDecryptKey(&archiveHandle->cryptKey,
-    //TODO
-    keyLength,
-                                  privateCryptKey,
-                                  archiveHandle->encryptedKeyData,
-                                  archiveHandle->encryptedKeyDataLength
-                                 );
-#endif
       decryptKey = &archiveHandle->cryptKey;
     }
     else
@@ -7360,8 +7369,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                                       archiveHandle,
                                       archiveHandle->jobOptions->cryptPasswordMode,
                                       archiveHandle->jobOptions->cryptPassword,
-                                      archiveHandle->getPasswordFunction,
-                                      archiveHandle->getPasswordUserData,
+                                      CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       keyLength,
                                       archiveHandle->cryptKeyDeriveType,
                                       archiveHandle->cryptSalt,
@@ -7382,13 +7390,13 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   {
     // reset
     AutoFree_freeAll(&autoFreeList2);
-    error = Chunk_seek(&chunkMeta.info,index);
+    error = Chunk_seek(&archiveEntryInfo->meta.chunkMeta.info,index);
 
     // init meta entry crypt
     if (error == ERROR_NONE)
     {
-      error = Crypt_init(&cryptInfo,
-                         cryptAlgorithm,
+      error = Crypt_init(&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo,
+                         archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
                          decryptKey,
                          archiveHandle->cryptSalt,
@@ -7396,38 +7404,38 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                         );
       if (error == ERROR_NONE)
       {
-        AUTOFREE_ADD(&autoFreeList2,&cryptInfo,{ Crypt_done(&cryptInfo); });
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo,{ Crypt_done(&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo); });
       }
     }
 
     // init meta entry chunk
     if (error == ERROR_NONE)
     {
-      error = Chunk_init(&chunkMetaEntry.info,
-                         &chunkMeta.info,
+      error = Chunk_init(&archiveEntryInfo->meta.chunkMetaEntry.info,
+                         &archiveEntryInfo->meta.chunkMeta.info,
                          CHUNK_USE_PARENT,
                          CHUNK_USE_PARENT,
                          CHUNK_ID_META_ENTRY,
                          CHUNK_DEFINITION_META_ENTRY,
-                         blockLength,
-                         &cryptInfo,
-                         &chunkMetaEntry
+                         archiveEntryInfo->blockLength,
+                         &archiveEntryInfo->meta.chunkMetaEntry.cryptInfo,
+                         &archiveEntryInfo->meta.chunkMetaEntry
                         );
       if (error == ERROR_NONE)
       {
-        AUTOFREE_ADD(&autoFreeList2,&chunkMetaEntry.info,{ Chunk_done(&chunkMetaEntry.info); });
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->meta.chunkMetaEntry.info,{ Chunk_done(&archiveEntryInfo->meta.chunkMetaEntry.info); });
       }
     }
 
-    // try to read meta entry
+    // read meta entry
     if (error == ERROR_NONE)
     {
-      while (   !Chunk_eofSub(&chunkMeta.info)
+      while (   !Chunk_eofSub(&archiveEntryInfo->meta.chunkMeta.info)
              && !foundMetaEntryFlag
              && (error == ERROR_NONE)
             )
       {
-        error = Chunk_nextSub(&chunkMeta.info,&subChunkHeader);
+        error = Chunk_nextSub(&archiveEntryInfo->meta.chunkMeta.info,&subChunkHeader);
         if (error != ERROR_NONE)
         {
           break;
@@ -7437,7 +7445,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
         {
           case CHUNK_ID_META_ENTRY:
             // read meta entry chunk
-            error = Chunk_open(&chunkMetaEntry.info,
+            error = Chunk_open(&archiveEntryInfo->meta.chunkMetaEntry.info,
                                &subChunkHeader,
                                subChunkHeader.size,
                                archiveHandle
@@ -7448,16 +7456,13 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
             }
 
             // get meta data
-            if (userName        != NULL) String_set(userName,chunkMetaEntry.userName);
-            if (hostName        != NULL) String_set(hostName,chunkMetaEntry.hostName);
-            if (jobUUID         != NULL) String_set(jobUUID,chunkMetaEntry.jobUUID);
-            if (scheduleUUID    != NULL) String_set(scheduleUUID,chunkMetaEntry.scheduleUUID);
-            if (archiveType     != NULL) (*archiveType) = chunkMetaEntry.archiveType;
-            if (createdDateTime != NULL) (*createdDateTime) = chunkMetaEntry.createdDateTime;
-            if (comment         != NULL) String_set(comment,chunkMetaEntry.comment);
-
-            // close meta entry chunk
-            Chunk_close(&chunkMetaEntry.info);
+            if (userName        != NULL) String_set(userName,archiveEntryInfo->meta.chunkMetaEntry.userName);
+            if (hostName        != NULL) String_set(hostName,archiveEntryInfo->meta.chunkMetaEntry.hostName);
+            if (jobUUID         != NULL) String_set(jobUUID,archiveEntryInfo->meta.chunkMetaEntry.jobUUID);
+            if (scheduleUUID    != NULL) String_set(scheduleUUID,archiveEntryInfo->meta.chunkMetaEntry.scheduleUUID);
+            if (archiveType     != NULL) (*archiveType) = archiveEntryInfo->meta.chunkMetaEntry.archiveType;
+            if (createdDateTime != NULL) (*createdDateTime) = archiveEntryInfo->meta.chunkMetaEntry.createdDateTime;
+            if (comment         != NULL) String_set(comment,archiveEntryInfo->meta.chunkMetaEntry.comment);
 
             foundMetaEntryFlag = TRUE;
             break;
@@ -7471,7 +7476,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
                            String_cString(archiveHandle->printableStorageName)
                           );
             }
-            error = Chunk_skipSub(&chunkMeta.info,&subChunkHeader);
+            error = Chunk_skipSub(&archiveEntryInfo->meta.chunkMeta.info,&subChunkHeader);
             if (error != ERROR_NONE)
             {
               break;
@@ -7486,7 +7491,7 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
 
     if (error != ERROR_NONE)
     {
-      if (   Crypt_isEncrypted(cryptAlgorithm)
+      if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
           && (archiveHandle->cryptType != CRYPT_TYPE_ASYMMETRIC)
          )
       {
@@ -7525,19 +7530,21 @@ Errors Archive_readMetaEntry(ArchiveHandle *archiveHandle,
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
     AutoFree_cleanup(&autoFreeList1);
-    if      (error != ERROR_NONE)                                return error;
-    else if (Crypt_isEncrypted(cryptAlgorithm) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)                                     return ERROR_INVALID_CRYPT_PASSWORD;
-    else if (!foundMetaEntryFlag)                                return ERROR_NO_META_ENTRY;
+    if      (error != ERROR_NONE)                                                      return error;
+    else if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) && !passwordFlag) return ERROR_NO_CRYPT_PASSWORD;
+    else if (!decryptedFlag)                                                           return ERROR_INVALID_CRYPT_PASSWORD;
+    else if (!foundMetaEntryFlag)                                                      return ERROR_NO_META_ENTRY;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
 
-  // close
-  Chunk_close(&chunkMeta.info);
-
   // done resources
-  Chunk_done(&chunkMeta.info);
   AutoFree_done(&autoFreeList1);
+
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,sizeof(ArchiveEntryInfo));
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveEntryInfo,sizeof(ArchiveEntryInfo));
+  #endif /* NDEBUG */
 
   return ERROR_NONE;
 
@@ -8806,7 +8813,7 @@ NULL,//                         password,
   // init variables
   AutoFree_init(&autoFreeList1);
 
-  archiveEntryInfo->archiveHandle      = archiveHandle;
+  archiveEntryInfo->archiveHandle    = archiveHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
 
@@ -8903,7 +8910,7 @@ NULL,//                         password,
     return error;
   }
 
-  // try to read directory entry with all passwords
+  // try to read directory entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->directory.chunkDirectory.info,&index);
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
@@ -8917,7 +8924,7 @@ NULL,//                         password,
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
                                       archiveHandle->jobOptions->cryptPasswordMode,
-                                      archiveHandle->jobOptions,
+                                      archiveHandle->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       keyLength,
                                       archiveHandle->cryptKeyDeriveType,
@@ -9223,7 +9230,7 @@ NULL,//                         password,
   // init variables
   AutoFree_init(&autoFreeList1);
 
-  archiveEntryInfo->archiveHandle      = archiveHandle;
+  archiveEntryInfo->archiveHandle    = archiveHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
 
@@ -9335,7 +9342,7 @@ NULL,//                         password,
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
                                       archiveHandle->jobOptions->cryptPasswordMode,
-                                      archiveHandle->jobOptions,
+                                      archiveHandle->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       keyLength,
                                       archiveHandle->cryptKeyDeriveType,
@@ -9798,7 +9805,7 @@ NULL,//                         password,
       decryptKey = getFirstDecryptKey(&decryptKeyIterator,
                                       archiveHandle,
                                       archiveHandle->jobOptions->cryptPasswordMode,
-                                      archiveHandle->jobOptions,
+                                      archiveHandle->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       keyLength,
                                       archiveHandle->cryptKeyDeriveType,
@@ -10317,7 +10324,7 @@ NULL,//                         password,
   // init variables
   AutoFree_init(&autoFreeList1);
 
-  archiveEntryInfo->archiveHandle      = archiveHandle;
+  archiveEntryInfo->archiveHandle    = archiveHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
 
@@ -10935,7 +10942,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // update file and chunks if header is written
               if (archiveEntryInfo->file.headerWrittenFlag)
               {
-                // update part size
+                // update fragment size
                 archiveEntryInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->file.deltaCompressInfo);
                 if (error == ERROR_NONE)
                 {
@@ -11321,7 +11328,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               // update file and chunks if header is written
               if (archiveEntryInfo->hardLink.headerWrittenFlag)
               {
-                // update part size
+                // update fragment size
                 archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->hardLink.deltaCompressInfo);
                 if (error == ERROR_NONE)
                 {
@@ -11641,6 +11648,22 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
             Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
 
             Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_META:
+          {
+            // close chunks
+            tmpError = Chunk_close(&archiveEntryInfo->meta.chunkMetaEntry.info);
+            if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+            tmpError = Chunk_close(&archiveEntryInfo->meta.chunkMeta.info);
+            if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+
+            // free resources
+            Chunk_done(&archiveEntryInfo->meta.chunkMetaEntry.info);
+
+            Crypt_done(&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo);
+
+            Chunk_done(&archiveEntryInfo->meta.chunkMeta.info);
           }
           break;
         default:
@@ -12564,7 +12587,6 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle)
 Errors Archive_verifySignatures(StorageInfo          *storageInfo,
                                 ConstString          fileName,
                                 const JobOptions     *jobOptions,
-                                LogHandle            *logHandle,
                                 CryptSignatureStates *cryptSignaturesState
                                )
 {
@@ -12870,7 +12892,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                           )
 {
 //TODO: remove?
-#define _ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
+  #define _ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
 
   StorageSpecifier  storageSpecifier;
   String            printableStorageName;
@@ -12885,6 +12907,10 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   String            directoryName;
   String            linkName;
   String            destinationName;
+  StaticString      (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString      (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes      archiveType;
+  uint64            createdDateTime;
 
   assert(indexHandle != NULL);
   assert(storageInfo != NULL);
@@ -12963,24 +12989,24 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
-#if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
-  error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
-  if (error != ERROR_NONE)
-  {
-    Archive_close(&archiveHandle);
-    Index_setState(indexHandle,
-                   storageId,
-                   INDEX_STATE_ERROR,
-                   0LL,
-                   "%s (error code: %d)",
-                   Error_getText(error),
-                   Error_getCode(error)
-                  );
-    String_delete(printableStorageName);
-    Storage_doneSpecifier(&storageSpecifier);
-    return error;
-  }
-#endif
+  #if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
+    error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
+    if (error != ERROR_NONE)
+    {
+      Archive_close(&archiveHandle);
+      Index_setState(indexHandle,
+                     storageId,
+                     INDEX_STATE_ERROR,
+                     0LL,
+                     "%s (error code: %d)",
+                     Error_getText(error),
+                     Error_getCode(error)
+                    );
+      String_delete(printableStorageName);
+      Storage_doneSpecifier(&storageSpecifier);
+      return error;
+    }
+  #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
 
   // clear index
   error = Index_clearStorage(indexHandle,
@@ -12990,9 +13016,9 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
 
-#if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
-    (void)Index_rollbackTransaction(indexHandle);
-#endif
+    #if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
+      (void)Index_rollbackTransaction(indexHandle);
+    #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
     Archive_close(&archiveHandle);
     Index_setState(indexHandle,
                    storageId,
@@ -13028,14 +13054,14 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     // pause
     if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
     {
-#if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
-      // end transaction
-      error = Index_endTransaction(indexHandle);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-#endif
+      #if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
+        // end transaction
+        error = Index_endTransaction(indexHandle);
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
+      #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
 
 #if 0
       // temporarly close storage
@@ -13062,14 +13088,14 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       }
 #endif /* 0 */
 
-#if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
-      // start transaction
-      error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-#endif
+      #if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
+        // start transaction
+        error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
+      #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
     }
 #endif
 
@@ -13399,9 +13425,32 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
         break;
       case ARCHIVE_ENTRY_TYPE_META:
         {
+          FileInfo fileInfo;
+
+          // open archive link
+          error = Archive_readMetaEntry(&archiveEntryInfo,
+                                        &archiveHandle,
+                                        NULL,  // userName
+                                        NULL,  // hostName
+                                        jobUUID,
+                                        scheduleUUID,
+                                        &archiveType,
+                                        &createdDateTime,
+                                        NULL  // comment
+                                       );
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
+
 //TODO
+fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID));
+//error = Archive_skipNextEntry(&archiveHandle);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-error = Archive_skipNextEntry(&archiveHandle);
+//asm("int3");
+
+          // close archive file, free resources
+          (void)Archive_closeEntry(&archiveEntryInfo);
         }
         break;
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
@@ -13430,14 +13479,14 @@ error = Archive_skipNextEntry(&archiveHandle);
 #if 1
     if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
     {
-#if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
-      // end transaction
-      error = Index_endTransaction(indexHandle);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-#endif
+      #if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
+        // end transaction
+        error = Index_endTransaction(indexHandle);
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
+      #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
 
 #if 0
       // temporarly close storage
@@ -13464,14 +13513,14 @@ error = Archive_skipNextEntry(&archiveHandle);
       }
 #endif /* 0 */
 
-#if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
-      // start transacation
-      error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-#endif
+      #if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
+        // start transacation
+        error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
+      #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
     }
 #endif
 
@@ -13484,16 +13533,16 @@ error = Archive_skipNextEntry(&archiveHandle);
   String_delete(directoryName);
   String_delete(imageName);
   String_delete(fileName);
-#if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
-  if (error == ERROR_NONE)
-  {
-    error = Index_endTransaction(indexHandle);
-  }
-  else
-  {
-    (void)Index_rollbackTransaction(indexHandle);
-  }
-#endif
+  #if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
+    if (error == ERROR_NONE)
+    {
+      error = Index_endTransaction(indexHandle);
+    }
+    else
+    {
+      (void)Index_rollbackTransaction(indexHandle);
+    }
+  #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
 
   if      (error != ERROR_NONE)
   {

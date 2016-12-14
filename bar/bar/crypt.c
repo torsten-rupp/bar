@@ -214,15 +214,6 @@ void Crypt_doneAll(void)
 {
 }
 
-bool Crypt_isSymmetricSupported(void)
-{
-  #ifdef HAVE_GCRYPT
-    return TRUE;
-  #else /* not HAVE_GCRYPT */
-    return FALSE;
-  #endif /* HAVE_GCRYPT */
-}
-
 bool Crypt_isValidAlgorithm(uint16 n)
 {
   uint i;
@@ -1243,15 +1234,6 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
 }
 
 /*---------------------------------------------------------------------*/
-
-bool Crypt_isAsymmetricSupported(void)
-{
-  #ifdef HAVE_GCRYPT
-    return TRUE;
-  #else /* not HAVE_GCRYPT */
-    return FALSE;
-  #endif /* HAVE_GCRYPT */
-}
 
 void Crypt_initKey(CryptKey          *cryptKey,
                    CryptPaddingTypes cryptPaddingType

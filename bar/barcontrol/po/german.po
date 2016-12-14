@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-12-12 16:52+0100\n"
+"POT-Creation-Date: 2016-12-14 11:57+0100\n"
 "PO-Revision-Date: 2016-10-13 09:04+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -172,9 +172,13 @@ msgstr "Login"
 msgid "Cancel"
 msgstr "Abbrechen"
 
-#: src/BARControl.java:2125
+#: src/BARControl.java:2125 src/BARControl.java:2194 src/BARControl.java:2198
+#: src/BARControl.java:2259 src/BARControl.java:2263 src/BARControl.java:2699
+#: src/BARControl.java:2706 src/BARControl.java:2739 src/BARControl.java:2746
+#: src/BARControl.java:3713 src/BARControl.java:3725 src/BARControl.java:3747
+#: src/BARControl.java:3766
 #, fuzzy
-msgid "Connection fail1"
+msgid "Connection fail"
 msgstr "Verbindung fehlgeschlagen"
 
 #: src/BARControl.java:2125 src/BARControl.java:3725
@@ -185,11 +189,6 @@ msgstr ""
 msgid "Try without TLS/SSL"
 msgstr ""
 
-#: src/BARControl.java:2194 src/BARControl.java:2198
-#, fuzzy
-msgid "Connection fail"
-msgstr "Verbindung fehlgeschlagen"
-
 #: src/BARControl.java:2220
 msgid "Program"
 msgstr "Programm"
@@ -197,16 +196,6 @@ msgstr "Programm"
 #: src/BARControl.java:2222
 msgid "Connect"
 msgstr "Verbinden"
-
-#: src/BARControl.java:2259
-#, fuzzy
-msgid "Connection fail5"
-msgstr "Verbindung fehlgeschlagen"
-
-#: src/BARControl.java:2263
-#, fuzzy
-msgid "Connection fail6"
-msgstr "Verbindung fehlgeschlagen"
 
 #: src/BARControl.java:2278 src/TabStatus.java:776 src/TabStatus.java:1479
 msgid "Start"
@@ -304,26 +293,6 @@ msgstr "Fehler:"
 msgid "Try again"
 msgstr "Neu versuchen"
 
-#: src/BARControl.java:2699
-#, fuzzy
-msgid "Connection fail7"
-msgstr "Verbindung fehlgeschlagen"
-
-#: src/BARControl.java:2706
-#, fuzzy
-msgid "Connection fail8"
-msgstr "Verbindung fehlgeschlagen"
-
-#: src/BARControl.java:2739
-#, fuzzy
-msgid "Connection fail9"
-msgstr "Verbindung fehlgeschlagen"
-
-#: src/BARControl.java:2746
-#, fuzzy
-msgid "Connection fail10"
-msgstr "Verbindung fehlgeschlagen"
-
 #: src/BARControl.java:2767
 msgid "Internal error"
 msgstr "Interner Fehler"
@@ -352,26 +321,6 @@ msgstr "Bitte {0} Passwort eingeben für: {1}"
 #, java-format
 msgid "Cannot restore ''{0}'': {1} - skipped"
 msgstr "Fehler bei der Wiederherstellung von ''{0}'': {1}"
-
-#: src/BARControl.java:3713
-#, fuzzy
-msgid "Connection fail11"
-msgstr "Verbindung fehlgeschlagen"
-
-#: src/BARControl.java:3725
-#, fuzzy
-msgid "Connection fail12"
-msgstr "Verbindung fehlgeschlagen"
-
-#: src/BARControl.java:3747
-#, fuzzy
-msgid "Connection fail13"
-msgstr "Verbindung fehlgeschlagen"
-
-#: src/BARControl.java:3766
-#, fuzzy
-msgid "Connection fail14"
-msgstr "Verbindung fehlgeschlagen"
 
 #: src/BARWidgets.java:561 src/BARWidgets.java:591 src/BARWidgets.java:630
 #: src/TabJobs.java:4014 src/TabJobs.java:4037 src/TabJobs.java:4069
@@ -4104,6 +4053,50 @@ msgstr "Anzahl Ausführungen"
 #: src/TabStatus.java:2564
 msgid "Average execution time"
 msgstr "Durchschnittliche Ausführungszeit"
+
+#, fuzzy
+#~ msgid "Connection fail1"
+#~ msgstr "Verbindung fehlgeschlagen"
+
+#, fuzzy
+#~ msgid "Connection fail5"
+#~ msgstr "Verbindung fehlgeschlagen"
+
+#, fuzzy
+#~ msgid "Connection fail6"
+#~ msgstr "Verbindung fehlgeschlagen"
+
+#, fuzzy
+#~ msgid "Connection fail7"
+#~ msgstr "Verbindung fehlgeschlagen"
+
+#, fuzzy
+#~ msgid "Connection fail8"
+#~ msgstr "Verbindung fehlgeschlagen"
+
+#, fuzzy
+#~ msgid "Connection fail9"
+#~ msgstr "Verbindung fehlgeschlagen"
+
+#, fuzzy
+#~ msgid "Connection fail10"
+#~ msgstr "Verbindung fehlgeschlagen"
+
+#, fuzzy
+#~ msgid "Connection fail11"
+#~ msgstr "Verbindung fehlgeschlagen"
+
+#, fuzzy
+#~ msgid "Connection fail12"
+#~ msgstr "Verbindung fehlgeschlagen"
+
+#, fuzzy
+#~ msgid "Connection fail13"
+#~ msgstr "Verbindung fehlgeschlagen"
+
+#, fuzzy
+#~ msgid "Connection fail14"
+#~ msgstr "Verbindung fehlgeschlagen"
 
 #, fuzzy
 #~ msgid "Connection fail2"
