@@ -520,17 +520,17 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                             NULL,  // totalEntryCount
                                                             NULL  // totalEntrySize
                                                            )
-                                   && Index_findEntityByJobUUID(newIndexHandle,
-                                                                jobUUID,
-                                                                NULL,  // uuidId
-                                                                &entityId,
-                                                                NULL,  // scheduleUUDI
-                                                                NULL,  // createdDateTime
-                                                                NULL,  // archiveType
-                                                                NULL,  // lastErrorMessage
-                                                                NULL,  // totalEntryCount
-                                                                NULL  // totalEntrySize,
-                                                               )
+                                   && Index_findEntityByUUID(newIndexHandle,
+                                                             jobUUID,
+                                                             NULL,  // scheduleUUDI
+                                                             NULL,  // uuidId
+                                                             &entityId,
+                                                             NULL,  // createdDateTime
+                                                             NULL,  // archiveType
+                                                             NULL,  // lastErrorMessage
+                                                             NULL,  // totalEntryCount
+                                                             NULL  // totalEntrySize,
+                                                            )
                                   )
                                {
                                  error = ERROR_NONE;

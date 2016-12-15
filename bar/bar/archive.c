@@ -7486,9 +7486,6 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
       }
     }
 
-    // free resources
-    AutoFree_cleanup(&autoFreeList2);
-
     if (error != ERROR_NONE)
     {
       if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
@@ -7517,6 +7514,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
     }
   }
   while ((error != ERROR_NONE) && (decryptKey != NULL));
+  AUTOFREE_ADD(&autoFreeList1,&autoFreeList2,{ AutoFree_cleanup(&autoFreeList2); });
   if (error != ERROR_NONE)
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
@@ -11475,6 +11473,28 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
             Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
           }
           break;
+        case ARCHIVE_ENTRY_TYPE_META:
+          {
+            if (!archiveEntryInfo->archiveHandle->jobOptions->dryRunFlag)
+            {
+              // close chunks
+              tmpError = Chunk_close(&archiveEntryInfo->meta.chunkMetaEntry.info);
+              if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+              tmpError = Chunk_close(&archiveEntryInfo->meta.chunkMeta.info);
+              if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+
+              // unlock archive
+              Semaphore_unlock(&archiveEntryInfo->archiveHandle->chunkIOLock);
+
+              // free resources
+              Chunk_done(&archiveEntryInfo->meta.chunkMetaEntry.info);
+
+              Crypt_done(&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo);
+
+              Chunk_done(&archiveEntryInfo->meta.chunkMeta.info);
+            }
+          }
+          break;
         default:
           #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -13165,7 +13185,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
           pprintInfo(4,"INDEX: ","Added file '%s', %lubytes to index for '%s'\n",String_cString(fileName),fileInfo.size,String_cString(printableStorageName));
 
-          // close archive file, free resources
+          // close archive entry
           (void)Archive_closeEntry(&archiveEntryInfo);
         }
         break;
@@ -13213,7 +13233,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
           }
           pprintInfo(4,"INDEX: ","Added image '%s', %lubytes to index for '%s'\n",String_cString(imageName),deviceInfo.size,String_cString(printableStorageName));
 
-          // close archive file, free resources
+          // close archive entry
           (void)Archive_closeEntry(&archiveEntryInfo);
         }
         break;
@@ -13257,7 +13277,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
           pprintInfo(4,"INDEX: ","Added directory '%s' to index for '%s'\n",String_cString(directoryName),String_cString(printableStorageName));
 
-          // close archive file, free resources
+          // close archive entry
           (void)Archive_closeEntry(&archiveEntryInfo);
         }
         break;
@@ -13303,7 +13323,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
           pprintInfo(4,"INDEX: ","Added link '%s' to index for '%s'\n",String_cString(linkName),String_cString(printableStorageName));
 
-          // close archive file, free resources
+          // close archive entry
           (void)Archive_closeEntry(&archiveEntryInfo);
         }
         break;
@@ -13371,7 +13391,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
           pprintInfo(4,"INDEX: ","Added hardlink '%s', %lubytes to index for '%s'\n",String_cString(StringList_first(&fileNameList,NULL)),fileInfo.size,String_cString(printableStorageName));
 
-          // close archive file, free resources
+          // close archive entry
           (void)Archive_closeEntry(&archiveEntryInfo);
           StringList_done(&fileNameList);
         }
@@ -13419,15 +13439,16 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
           pprintInfo(4,"INDEX: ","Added special '%s' to index for '%s'\n",String_cString(fileName),String_cString(printableStorageName));
 
-          // close archive file, free resources
+          // close archive entry
           (void)Archive_closeEntry(&archiveEntryInfo);
         }
         break;
       case ARCHIVE_ENTRY_TYPE_META:
         {
           FileInfo fileInfo;
+          IndexId  entityId;
 
-          // open archive link
+          // open archive meta
           error = Archive_readMetaEntry(&archiveEntryInfo,
                                         &archiveHandle,
                                         NULL,  // userName
@@ -13443,13 +13464,47 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             break;
           }
 
-//TODO
-fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID));
-//error = Archive_skipNextEntry(&archiveHandle);
+          // find entity
+          if (Index_findEntityByUUID(indexHandle,
+                                     jobUUID,
+                                     scheduleUUID,
+                                     NULL,  // uuidId
+                                     &entityId,
+                                     NULL,  // archiveType,
+                                     NULL,  // createdDateTime,
+                                     NULL,  // lastErrorMessage,
+                                     NULL,  // totalEntryCount,
+                                     NULL  // totalEntrySize
+                                    )
+             )
+          {
+            // update existing entity
+          }
+          else
+          {
+            // create new entity
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//asm("int3");
+            error = Index_newEntity(indexHandle,
+                                    jobUUID,
+                                    scheduleUUID,
+                                    archiveType,
+                                    createdDateTime,
+                                    FALSE,  // locked
+                                    &entityId
+                                   );
+            if (error != ERROR_NONE)
+            {
+              (void)Archive_closeEntry(&archiveEntryInfo);
+              break;
+            }
+fprintf(stderr,"%s, %d: XXXXXXXXXXXX %d\n",__FILE__,__LINE__,entityId);
+          }
 
-          // close archive file, free resources
+
+//TODO
+fprintf(stderr,"%s, %d: jobUUID=%s scheduleUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
+
+          // close archive entry
           (void)Archive_closeEntry(&archiveEntryInfo);
         }
         break;
@@ -13628,6 +13683,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                      Error_getCode(error)
                     );
     }
+
+    // update entity, uuid
+//TODO
+//    Index_updateEntityInfos();
+//    Index_updateUUIDInfos();
 
     // get total time last changed/entries/size
     if (totalTimeLastChanged != NULL) (*totalTimeLastChanged) = timeLastChanged;
@@ -13893,7 +13953,7 @@ archiveHandle->archiveInitUserData              = NULL;
             File_close(&fileHandle);
           }
 
-          // close source archive file, free resources
+          // close source archive file
           (void)Archive_closeEntry(&sourceArchiveEntryInfo);
 
           // free resources
@@ -14114,7 +14174,7 @@ archiveHandle->archiveInitUserData              = NULL;
             printInfo(3,"  Restore '%s'...skipped\n",String_cString(imageName));
           }
 
-          // close archive file, free resources
+          // close archive entry
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
@@ -14268,7 +14328,7 @@ archiveHandle->archiveInitUserData              = NULL;
             printInfo(3,"  Restore '%s'...skipped\n",String_cString(directoryName));
           }
 
-          // close archive file
+          // close archive entry
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
@@ -14491,7 +14551,7 @@ archiveHandle->archiveInitUserData              = NULL;
             printInfo(3,"  Restore '%s'...skipped\n",String_cString(linkName));
           }
 
-          // close archive file
+          // close archive entry
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
@@ -14893,7 +14953,7 @@ archiveHandle->archiveInitUserData              = NULL;
             continue;
           }
 
-          // close archive file, free resources
+          // close archive entry
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
@@ -15111,7 +15171,7 @@ archiveHandle->archiveInitUserData              = NULL;
             printInfo(3,"  Restore '%s'...skipped\n",String_cString(fileName));
           }
 
-          // close archive file
+          // close archive entry
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {

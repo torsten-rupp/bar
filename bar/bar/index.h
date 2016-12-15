@@ -606,13 +606,13 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
                             );
 
 /***********************************************************************\
-* Name   : Index_findEntityByJobUUID
-* Purpose: find entity info by job UUID
-* Input  : indexHandle - index handle
-*          jobUUID     - unique job UUID
+* Name   : Index_findEntityByUUID
+* Purpose: find entity info by job/schedule UUID
+* Input  : indexHandle  - index handle
+*          jobUUID      - unique job UUID
+*          scheduleUUID - unique schedule UUID (can be NULL)
 * Output : uuidId           - index id of UUID entry (can be NULL)
 *          entityId         - index id of entity entry (can be NULL)
-*          scheduleUUID     - unique schedule UUID (can be NULL)
 *          archiveType      - archive type (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          lastErrorMessage - last error message (can be NULL)
@@ -622,17 +622,17 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
-                               ConstString  jobUUID,
-                               IndexId      *uuidId,
-                               IndexId      *entityId,
-                               ConstString  scheduleUUID,
-                               ArchiveTypes *archiveType,
-                               uint64       *createdDateTime,
-                               String       lastErrorMessage,
-                               ulong        *totalEntryCount,
-                               uint64       *totalEntrySize
-                              );
+bool Index_findEntityByUUID(IndexHandle  *indexHandle,
+                            ConstString  jobUUID,
+                            ConstString  scheduleUUID,
+                            IndexId      *uuidId,
+                            IndexId      *entityId,
+                            ArchiveTypes *archiveType,
+                            uint64       *createdDateTime,
+                            String       lastErrorMessage,
+                            ulong        *totalEntryCount,
+                            uint64       *totalEntrySize
+                           );
 
 /***********************************************************************\
 * Name   : Index_findByStorageId

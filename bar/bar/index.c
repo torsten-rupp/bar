@@ -4421,17 +4421,17 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
   return result;
 }
 
-bool Index_findEntityByJobUUID(IndexHandle  *indexHandle,
-                               ConstString  jobUUID,
-                               IndexId      *uuidId,
-                               IndexId      *entityId,
-                               ConstString  scheduleUUID,
-                               ArchiveTypes *archiveType,
-                               uint64       *createdDateTime,
-                               String       lastErrorMessage,
-                               ulong        *totalEntryCount,
-                               uint64       *totalEntrySize
-                              )
+bool Index_findEntityByUUID(IndexHandle  *indexHandle,
+                            ConstString  jobUUID,
+                            ConstString  scheduleUUID,
+                            IndexId      *uuidId,
+                            IndexId      *entityId,
+                            ArchiveTypes *archiveType,
+                            uint64       *createdDateTime,
+                            String       lastErrorMessage,
+                            ulong        *totalEntryCount,
+                            uint64       *totalEntrySize
+                           )
 {
   String              filterString;
   Errors              error;
