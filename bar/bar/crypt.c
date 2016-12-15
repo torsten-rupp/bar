@@ -2031,7 +2031,6 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
                   cryptPaddingType
                  );
 
-fprintf(stderr,"%s, %d: keyLength=%d\n",__FILE__,__LINE__,keyLength);
     // create key parameters
     description = String_format(String_new(),"(genkey (rsa (nbits 4:%d)))",keyLength);
     gcryptError = gcry_sexp_new(&sexpKeyParameters,
