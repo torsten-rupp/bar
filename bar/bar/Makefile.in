@@ -1686,8 +1686,9 @@ test11-valgrind test_server-valgrind:
 
 test_combined: \
   $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test combined... cccccccccccccccc=$(TEST_BAR)"
+  $(TEST_CONFIG) \
+  $(TEST_KEYS)
+	@$(ECHO_NO_LF) "Test combined..."
 	for compress in $(TEST_COMBINED_COMPRESS_NAMES); do \
           for crypt in $(TEST_COMBINED_CRYPT_NAMES); do \
             $(MAKE) \
