@@ -278,7 +278,8 @@ LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char 
 LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+//TODO: multi crypt
+//LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
@@ -536,6 +537,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,2,globalOptions.compressMinFileSize,               0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                          "minimal size of file for compression",NULL                                ),
   CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,3,&compressExcludePatternList,                     cmdOptionParsePattern,NULL,                                  "exclude compression pattern","pattern"                                    ),
 
+// TODO
+#if MULTI_CRYPT
   CMD_OPTION_SPECIAL      ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms,                      cmdOptionParseCryptAlgorithms,NULL,                          "select crypt algorithms to use\n"
                                                                                                                                                                                  "  none (default)"
                                                                                                                                                                                  #ifdef HAVE_GCRYPT
@@ -556,7 +559,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
                                                                                                                                                                                  "  CAMELLIA256"
                                                                                                                                                                                  #endif
                                                                                                                                                                                  ,
-                                                                                                                                                                                 "algorithm"                                                            ),
+                                                                                                                                                                                 "algorithm"                                                                ),
+#endif
+  CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms,                      COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                       "select crypt algorithms to use"                                           ),
   CMD_OPTION_SELECT       ("crypt-type",                   0,  0,2,jobOptions.cryptType,                            COMMAND_LINE_OPTIONS_CRYPT_TYPES,                            "select crypt type"                                                        ),
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,2,&globalOptions.cryptPassword,                    cmdOptionParsePassword,NULL,                                 "crypt password (use with care!)","password"                               ),
   CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,2,&jobOptions.cryptPublicKey,                      cmdOptionParseKeyData,NULL,                                  "public key for asymmetric encryption","file name|data"                    ),
@@ -972,7 +977,9 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SPECIAL           ("compress-algorithm",           &jobOptions.compressAlgorithms,-1,                             configValueParseCompressAlgorithms,NULL,NULL,NULL,&jobOptions),
 
-  CONFIG_VALUE_SPECIAL           ("crypt-algorithm",              jobOptions.cryptAlgorithms,-1,                                configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
+// multi crypt
+//  CONFIG_VALUE_SPECIAL           ("crypt-algorithm",              jobOptions.cryptAlgorithms,-1,                                 configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
+  CONFIG_VALUE_SELECT            ("crypt-algorithm",              jobOptions.cryptAlgorithms,-1,                                 CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_VALUE_SELECT            ("crypt-type",                   &jobOptions.cryptType,-1,                                      CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_VALUE_SELECT            ("crypt-password-mode",          &jobOptions.cryptPasswordMode,-1,                              CONFIG_VALUE_PASSWORD_MODES),
   CONFIG_VALUE_SPECIAL           ("crypt-password",               &globalOptions.cryptPassword,-1,                               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
@@ -2853,6 +2860,7 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
   return TRUE;
 }
 
+#ifdef MULTI_CRYPT
 /***********************************************************************\
 * Name   : cmdOptionParseCryptAlgorithms
 * Purpose: command line option call back for parsing crypt algorithms
@@ -2911,6 +2919,8 @@ LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const c
 
   return TRUE;
 }
+#endif /* MULTI_CRYPT */
+
 
 /***********************************************************************\
 * Name   : cmdOptionParsePassword
@@ -3006,12 +3016,14 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
     error = File_openCString(&fileHandle,value,FILE_OPEN_READ);
     if (error != ERROR_NONE)
     {
+      stringCopy(errorMessage,Error_getText(error),errorMessageSize);
       String_delete(string);
       return error;
     }
     error = File_readLine(&fileHandle,string);
     if (error != ERROR_NONE)
     {
+      stringCopy(errorMessage,Error_getText(error),errorMessageSize);
       File_close(&fileHandle);
       String_delete(string);
       return error;
@@ -3023,6 +3035,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
     data = Password_allocSecure((size_t)dataLength);
     if (data == NULL)
     {
+      stringCopy(errorMessage,"insufficient secure memory",errorMessageSize);
       (void)File_close(&fileHandle);
       return ERROR_INSUFFICIENT_MEMORY;
     }
@@ -3030,6 +3043,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
     // decode base64
     if (Misc_base64Decode((byte*)data,dataLength,string,STRING_BEGIN) == -1)
     {
+      stringCopy(errorMessage,"decode base64 fail",errorMessageSize);
       Password_freeSecure(data);
       return FALSE;
     }
@@ -3038,7 +3052,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
     if (key->data != NULL) Password_freeSecure(key->data);
     key->data   = data;
     key->length = dataLength;
-    
+
     // free resources
     String_delete(string);
   }
@@ -3054,12 +3068,14 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
       data = Password_allocSecure(dataLength);
       if (data == NULL)
       {
+        stringCopy(errorMessage,"insufficient secure memory",errorMessageSize);
         return FALSE;
       }
 
       // decode base64
       if (Misc_base64DecodeCString((byte*)data,dataLength,&value[7]) == -1)
       {
+        stringCopy(errorMessage,"decode base64 fail",errorMessageSize);
         Password_freeSecure(data);
         return FALSE;
       }
@@ -3082,6 +3098,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
       data = Password_allocSecure(dataLength);
       if (data == NULL)
       {
+        stringCopy(errorMessage,"insufficient secure memory",errorMessageSize);
         return FALSE;
       }
 
@@ -6533,6 +6550,7 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
   }
 }
 
+#ifdef MULTI_CRYPT
 bool configValueParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   StringTokenizer stringTokenizer;
@@ -6583,6 +6601,7 @@ bool configValueParseCryptAlgorithms(void *userData, void *variable, const char 
 
   return TRUE;
 }
+#endif /* MULTI_CRYPT */
 
 void configValueFormatInitCryptAlgorithms(void **formatUserData, void *userData, void *variable)
 {

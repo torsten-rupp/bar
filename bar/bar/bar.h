@@ -1129,6 +1129,7 @@ void configValueFormatDonePassword(void **formatUserData, void *userData);
 
 bool configValueFormatPassword(void **formatUserData, void *userData, String line);
 
+#ifdef MULTI_CRYPT
 /***********************************************************************\
 * Name   : configValueParseCryptAlgorithms
 * Purpose: config value option call back for parsing crypt algorithms
@@ -1144,6 +1145,7 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
 \***********************************************************************/
 
 bool configValueParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
+#endif /* MULTI_CRYPT */
 
 /***********************************************************************\
 * Name   : configValueFormatInitCryptAlgorithms
