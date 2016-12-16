@@ -2145,7 +2145,6 @@ LOCAL Errors listArchiveContent(StorageSpecifier    *storageSpecifier,
   CryptSignatureStates allCryptSignatureState;
   bool                 printedHeaderFlag,printedMetaInfoFlag;
   ulong                fileCount;
-  uint64               signatureOffset;
   Errors               error;
 bool         remoteBarFlag;
 //  SSHSocketList sshSocketList;
@@ -2170,7 +2169,6 @@ remoteBarFlag=FALSE;
   printedHeaderFlag      = FALSE;
   printedMetaInfoFlag    = FALSE;
   fileCount              = 0L;
-  signatureOffset        = 0LL;
   error                  = ERROR_NONE;
   switch (storageSpecifier->type)
   {

@@ -1981,6 +1981,8 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   return !failFlag;
 }
 
+//TODO: required? remove?
+#ifndef WERROR
 LOCAL Errors readCAFile(Certificate *certificate, const char *fileName)
 {
   Errors     error;
@@ -2039,6 +2041,7 @@ LOCAL Errors readCAFile(Certificate *certificate, const char *fileName)
 
   return ERROR_NONE;
 }
+#endif
 
 LOCAL Errors readCertificateFile(Certificate *certificate, const char *fileName)
 {

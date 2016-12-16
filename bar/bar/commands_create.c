@@ -964,7 +964,7 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
 
-  maxFragmentNumber = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
+  maxFragmentNumber = ((globalOptions.fragmentSize > 0LL) && (size > globalOptions.fragmentSize))
                         ? (size+globalOptions.fragmentSize-1)/globalOptions.fragmentSize
                         : 0;
   fragmentOffset    = 0LL;
@@ -1096,7 +1096,7 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
 
   assert(entryMsgQueue != NULL);
 
-  maxFragmentNumber = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
+  maxFragmentNumber = ((globalOptions.fragmentSize > 0LL) && (size > globalOptions.fragmentSize))
                         ? (size+globalOptions.fragmentSize-1)/globalOptions.fragmentSize
                         : 0;
   fragmentOffset    = 0LL;
