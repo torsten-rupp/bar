@@ -1696,7 +1696,7 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
     }
     AUTOFREE_ADD(&autoFreeList,&signatureHash,{ Crypt_doneHash(&signatureHash); });
 
-    // get signature hash
+    // get signature hash (Note: signature is also calculate from begin of archive)
     error = archiveHandle->chunkIO->tell(archiveHandle->chunkIOUserData,&index);
     if (error != ERROR_NONE)
     {
@@ -1706,7 +1706,7 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
     error = calcuateHash(archiveHandle->chunkIO,
                          archiveHandle->chunkIOUserData,
                          &signatureHash,
-                         archiveHandle->nextSignatureOffset,
+                         0LL,  // start
                          index
                         );
     if (error != ERROR_NONE)
@@ -1787,14 +1787,6 @@ exit(1);
       return error;
     }
     error = Chunk_close(&chunkSignature.info);
-    if (error != ERROR_NONE)
-    {
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-
-    // store next signature offset
-    error = archiveHandle->chunkIO->tell(archiveHandle->chunkIOUserData,&archiveHandle->nextSignatureOffset);
     if (error != ERROR_NONE)
     {
       AutoFree_cleanup(&autoFreeList);
@@ -4279,7 +4271,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   archiveHandle->encryptedKeyDataLength  = 0;
 //  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->signatureKeyDataLength  = 0;
-  archiveHandle->nextSignatureOffset     = 0LL;
 
   archiveHandle->ioType                  = ARCHIVE_IO_TYPE_FILE;
   archiveHandle->file.fileName           = String_new();
@@ -4506,7 +4497,6 @@ fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archive
   archiveHandle->encryptedKeyDataLength  = 0;
 //  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->signatureKeyDataLength  = 0;
-  archiveHandle->nextSignatureOffset     = 0LL;
 
   archiveHandle->ioType                  = ARCHIVE_IO_TYPE_STORAGE;
   archiveHandle->storage.storageInfo     = storageInfo;

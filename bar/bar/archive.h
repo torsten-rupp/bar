@@ -217,7 +217,6 @@ typedef struct
 
   void                     *signatureKeyData;                          // signature random key
   uint                     signatureKeyDataLength;                     // length of signature random key
-  uint64                   nextSignatureOffset;                        // next signature start offset
 
   uint                     blockLength;                                // block length for file entry/file data (depend on used crypt algorithm)
 
