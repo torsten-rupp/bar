@@ -381,7 +381,7 @@ typedef struct
 // storage handle
 typedef struct
 {
-  StorageInfo                  *storageInfo;
+  const StorageInfo            *storageInfo;
   StorageModes                 mode;                         // storage mode: READ, WRITE
   String                       archiveName;                  // archive name
 
@@ -1268,16 +1268,16 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString fileName);
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Storage_open(StorageHandle *storageHandle,
-                      StorageInfo   *storageInfo,
-                      ConstString   fileName
+  Errors Storage_open(StorageHandle     *storageHandle,
+                      const StorageInfo *storageInfo,
+                      ConstString       fileName
                      );
 #else /* not NDEBUG */
-  Errors __Storage_open(const char    *__fileName__,
-                        ulong         __lineNb__,
-                        StorageHandle *storageHandle,
-                        StorageInfo   *storageInfo,
-                        ConstString   fileName
+  Errors __Storage_open(const char        *__fileName__,
+                        ulong             __lineNb__,
+                        StorageHandle     *storageHandle,
+                        const StorageInfo *storageInfo,
+                        ConstString       fileName
                        );
 #endif /* NDEBUG */
 

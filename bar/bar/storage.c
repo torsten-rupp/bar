@@ -2078,16 +2078,16 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
 }
 
 #ifdef NDEBUG
-  Errors Storage_open(StorageHandle *storageHandle,
-                      StorageInfo   *storageInfo,
-                      ConstString   archiveName
+  Errors Storage_open(StorageHandle     *storageHandle,
+                      const StorageInfo *storageInfo,
+                      ConstString       archiveName
                      )
 #else /* not NDEBUG */
-  Errors __Storage_open(const char    *__fileName__,
-                        ulong         __lineNb__,
-                        StorageHandle *storageHandle,
-                        StorageInfo   *storageInfo,
-                        ConstString   archiveName
+  Errors __Storage_open(const char        *__fileName__,
+                        ulong             __lineNb__,
+                        StorageHandle     *storageHandle,
+                        const StorageInfo *storageInfo,
+                        ConstString       archiveName
                        )
 #endif /* NDEBUG */
 {
