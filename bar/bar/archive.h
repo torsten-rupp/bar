@@ -236,7 +236,7 @@ typedef struct
     {
       StorageSpecifier     storageSpecifier;                           // storage specifier structure
       String               storageFileName;                            // storage storage name
-      const StorageInfo          *storageInfo;                               // storage info
+//      const StorageInfo    *storageInfo;                               // storage info
       StorageHandle        storageHandle;
     } storage;
   };
@@ -639,7 +639,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 * Purpose: open archive
 * Input  : archiveHandle       - archive handle
 *          storageInfo         - storage info
-*          fileName            - file name (can be NULL)
+*          archiveName         - archive name (can be NULL)
 *          jobOptions          - option settings
 *          getPasswordFunction - get password call back (can be NULL)
 *          getPasswordUserData - user data for get password call back
@@ -652,7 +652,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 #ifdef NDEBUG
   Errors Archive_open(ArchiveHandle          *archiveHandle,
                       const StorageInfo      *storageInfo,
-                      ConstString            fileName,
+                      ConstString            archiveName,
                       DeltaSourceList        *deltaSourceList,
                       const JobOptions       *jobOptions,
                       GetPasswordFunction    getPasswordFunction,
@@ -664,7 +664,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         ulong                  __lineNb__,
                         ArchiveHandle          *archiveHandle,
                         const StorageInfo      *storageInfo,
-                        ConstString            fileName,
+                        ConstString            archiveName,
                         DeltaSourceList        *deltaSourceList,
                         const JobOptions       *jobOptions,
                         GetPasswordFunction    getPasswordFunction,
@@ -736,6 +736,7 @@ void Archive_setCryptKeyDeriveType(ArchiveHandle       *archiveHandle,
                                    CryptKeyDeriveTypes cryptKeyDeriveType
                                   );
 
+#if 0
 /***********************************************************************\
 * Name   : Archive_storageInterrupt
 * Purpose: interrupt create archive and close storage
@@ -757,6 +758,7 @@ Errors Archive_storageInterrupt(ArchiveHandle *archiveHandle);
 \***********************************************************************/
 
 Errors Archive_storageContinue(ArchiveHandle *archiveHandle);
+#endif
 
 /***********************************************************************\
 * Name   : Archive_eof

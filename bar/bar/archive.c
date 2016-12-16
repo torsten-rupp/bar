@@ -4441,7 +4441,7 @@ fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archive
 #ifdef NDEBUG
   Errors Archive_open(ArchiveHandle          *archiveHandle,
                       const StorageInfo      *storageInfo,
-                      ConstString            fileName,
+                      ConstString            archiveName,
                       DeltaSourceList        *deltaSourceList,
                       const JobOptions       *jobOptions,
                       GetPasswordFunction    getPasswordFunction,
@@ -4453,7 +4453,7 @@ fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archive
                         ulong                  __lineNb__,
                         ArchiveHandle          *archiveHandle,
                         const StorageInfo      *storageInfo,
-                        ConstString            fileName,
+                        ConstString            archiveName,
                         DeltaSourceList        *deltaSourceList,
                         const JobOptions       *jobOptions,
                         GetPasswordFunction    getPasswordFunction,
@@ -4499,9 +4499,10 @@ fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archive
   archiveHandle->signatureKeyDataLength  = 0;
 
   archiveHandle->ioType                  = ARCHIVE_IO_TYPE_STORAGE;
-  archiveHandle->storage.storageInfo     = storageInfo;
+//TODO: remove
+//  archiveHandle->storage.storageInfo     = storageInfo;
   Storage_duplicateSpecifier(&archiveHandle->storage.storageSpecifier,&storageInfo->storageSpecifier);
-  archiveHandle->printableStorageName    = Storage_getPrintableName(String_new(),&archiveHandle->storage.storageSpecifier,fileName);
+  archiveHandle->printableStorageName    = Storage_getPrintableName(String_new(),&archiveHandle->storage.storageSpecifier,archiveName);
   Semaphore_init(&archiveHandle->chunkIOLock);
   archiveHandle->chunkIO                 = &CHUNK_IO_STORAGE;
   archiveHandle->chunkIOUserData         = &archiveHandle->storage.storageHandle;
@@ -4530,8 +4531,8 @@ fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archive
 
   // open storage
   error = Storage_open(&archiveHandle->storage.storageHandle,
-                       archiveHandle->storage.storageInfo,
-                       fileName
+                       storageInfo,
+                       archiveName
                       );
   if (error != ERROR_NONE)
   {
@@ -4678,6 +4679,7 @@ void Archive_setCryptKeyDeriveType(ArchiveHandle       *archiveHandle,
   archiveHandle->cryptKeyDeriveType = cryptKeyDeriveType;
 }
 
+#if 0
 Errors Archive_storageInterrupt(ArchiveHandle *archiveHandle)
 {
   SemaphoreLock semaphoreLock;
@@ -4779,6 +4781,7 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle)
 
   return ERROR_NONE;
 }
+#endif
 
 bool Archive_eof(ArchiveHandle *archiveHandle,
                  bool          skipUnknownChunksFlag,
