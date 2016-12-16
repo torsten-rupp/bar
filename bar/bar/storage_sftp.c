@@ -226,9 +226,9 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sshSpecifier,
 }
 
 LOCAL bool StorageSFTP_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
-                                       ConstString            fileName1,
+                                       ConstString            archiveName1,
                                        const StorageSpecifier *storageSpecifier2,
-                                       ConstString            fileName2
+                                       ConstString            archiveName2
                                       )
 {
   assert(storageSpecifier1 != NULL);
@@ -236,16 +236,16 @@ LOCAL bool StorageSFTP_equalSpecifiers(const StorageSpecifier *storageSpecifier1
   assert(storageSpecifier2 != NULL);
   assert(storageSpecifier2->type == STORAGE_TYPE_SFTP);
 
-  if (fileName1 == NULL) fileName1 = storageSpecifier1->fileName;
-  if (fileName2 == NULL) fileName2 = storageSpecifier2->fileName;
+  if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
+  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
 
   return    String_equals(storageSpecifier1->hostName,storageSpecifier2->hostName)
          && String_equals(storageSpecifier1->loginName,storageSpecifier2->loginName)
-         && String_equals(fileName1,fileName2);
+         && String_equals(archiveName1,archiveName2);
 }
 
 LOCAL String StorageSFTP_getName(StorageSpecifier *storageSpecifier,
-                                 ConstString      fileName
+                                 ConstString      archiveName
                                 )
 {
   ConstString storageFileName;
@@ -254,9 +254,9 @@ LOCAL String StorageSFTP_getName(StorageSpecifier *storageSpecifier,
   assert(storageSpecifier != NULL);
 
   // get file to use
-  if      (!String_isEmpty(fileName))
+  if      (!String_isEmpty(archiveName))
   {
-    storageFileName = fileName;
+    storageFileName = archiveName;
   }
   else if (storageSpecifier->archivePatternString != NULL)
   {
@@ -264,7 +264,7 @@ LOCAL String StorageSFTP_getName(StorageSpecifier *storageSpecifier,
   }
   else
   {
-    storageFileName = storageSpecifier->fileName;
+    storageFileName = storageSpecifier->archiveName;
   }
 
   String_appendCString(storageSpecifier->storageName,"sftp://");
@@ -292,7 +292,7 @@ LOCAL String StorageSFTP_getName(StorageSpecifier *storageSpecifier,
 
 LOCAL void StorageSFTP_getPrintableName(String                 printableStorageName,
                                         const StorageSpecifier *storageSpecifier,
-                                        ConstString            fileName
+                                        ConstString            archiveName
                                        )
 {
   ConstString storageFileName;
@@ -302,9 +302,9 @@ LOCAL void StorageSFTP_getPrintableName(String                 printableStorageN
   assert(storageSpecifier->type == STORAGE_TYPE_SFTP);
 
   // get file to use
-  if      (!String_isEmpty(fileName))
+  if      (!String_isEmpty(archiveName))
   {
-    storageFileName = fileName;
+    storageFileName = archiveName;
   }
   else if (!String_isEmpty(storageSpecifier->archivePatternString))
   {
@@ -312,7 +312,7 @@ LOCAL void StorageSFTP_getPrintableName(String                 printableStorageN
   }
   else
   {
-    storageFileName = storageSpecifier->fileName;
+    storageFileName = storageSpecifier->archiveName;
   }
 
   String_appendCString(printableStorageName,"sftp://");

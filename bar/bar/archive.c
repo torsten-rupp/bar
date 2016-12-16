@@ -13477,11 +13477,12 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
              )
           {
             // update existing entity
+fprintf(stderr,"%s, %d: found %ld \n",__FILE__,__LINE__,entityId);
           }
           else
           {
             // create new entity
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: new \n",__FILE__,__LINE__);
             error = Index_newEntity(indexHandle,
                                     jobUUID,
                                     scheduleUUID,

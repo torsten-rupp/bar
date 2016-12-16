@@ -14,16 +14,16 @@
 
    Supported storage types:
 
-     ftp://[<login name>[:<login password>]@]<host name>[:<host port>]/<file name>
-     ssh://[<login name>@]<host name>[:<host port>]/<file name>
-     scp://[<login name>@]<host name>[:<host port>]/<file name>
-     sftp://[<login name>@]<host name>[:<host port>]/<file name>
-     webdav://[<login name>[:<login password>]@]<host name>/<file name>
-     cd://[<device name>:]<file name>
-     dvd://[<device name>:]<file name>
-     bd://[<device name>:]<file name>
-     device://[<device name>:]<file name>
-     file://<file name>
+     ftp://[<login name>[:<login password>]@]<host name>[:<host port>]/<archive name>
+     ssh://[<login name>@]<host name>[:<host port>]/<archive name>
+     scp://[<login name>@]<host name>[:<host port>]/<archive name>
+     sftp://[<login name>@]<host name>[:<host port>]/<archive name>
+     webdav://[<login name>[:<login password>]@]<host name>/<archive name>
+     cd://[<device name>:]<archive name>
+     dvd://[<device name>:]<archive name>
+     bd://[<device name>:]<archive name>
+     device://[<device name>:]<archive name>
+     file://<archive name>
      plain file name
 */
 
@@ -175,7 +175,7 @@ typedef struct
   String       loginName;                                    // login name
   Password     *loginPassword;                               // login name
   String       deviceName;                                   // device name
-  String       fileName;                                     // file name
+  String       archiveName;                                  // archive name
 
   String       archivePatternString;                         // archive pattern string or NULL if no pattern
   Pattern      archivePattern;
@@ -787,7 +787,7 @@ INLINE bool Storage_isPatternSpecifier(const StorageSpecifier *storageSpecifier)
 * Name   : Storage_equalSpecifiers
 * Purpose: compare specifiers if equals
 * Input  : storageSpecifier1,storageSpecifier2 - specifiers
-*          fileName1,fileName2                 - file names (can be
+*          archiveName1,archiveName2           - archive names (can be
 *                                                NULL)
 * Output : -
 * Return : TRUE iff equals
@@ -795,9 +795,9 @@ INLINE bool Storage_isPatternSpecifier(const StorageSpecifier *storageSpecifier)
 \***********************************************************************/
 
 bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
-                             ConstString            fileName1,
+                             ConstString            archiveName1,
                              const StorageSpecifier *storageSpecifier2,
-                             ConstString            fileName2
+                             ConstString            archiveName2
                             );
 
 /***********************************************************************\
@@ -973,7 +973,7 @@ bool Storage_parseDeviceSpecifier(ConstString deviceSpecifier,
 * Output : -
 * Return : storage type
 * Notes  : name structure:
-*            <type>://<storage specifier>/<filename>
+*            <type>://<storage specifier>/<archiveName>
 \***********************************************************************/
 
 StorageTypes Storage_getType(ConstString storageName);
@@ -986,7 +986,7 @@ StorageTypes Storage_getType(ConstString storageName);
 * Output : storageSpecifier - storage specific data
 * Return : ERROR_NONE or error code
 * Notes  : name structure:
-*            <type>://<storage specifier>/<filename>
+*            <type>://<storage specifier>/<archiveName>
 \***********************************************************************/
 
 Errors Storage_parseName(StorageSpecifier *storageSpecifier,
@@ -1010,14 +1010,14 @@ bool Storage_equalNames(ConstString storageName1,
 * Name   : Storage_getName
 * Purpose: get storage name
 * Input  : storageSpecifierString - storage specifier string
-*          fileName               - file name (can be NULL)
+*          archiveName            - archive name (can be NULL)
 * Output : -
 * Return : storage name
-* Notes  : if fileName is NULL file name from storageSpecifier is used
+* Notes  : if archiveName is NULL file name from storageSpecifier is used
 \***********************************************************************/
 
 String Storage_getName(StorageSpecifier *storageSpecifier,
-                       ConstString      fileName
+                       ConstString      archiveName
                       );
 
 /***********************************************************************\
@@ -1219,22 +1219,22 @@ Errors Storage_unloadVolume(StorageInfo *storageInfo);
 /***********************************************************************\
 * Name   : Storage_exists
 * Purpose: check if storage file exists
-* Input  : storage  - storage
-*          fileName - file name (can be NULL)
+* Input  : storage     - storage
+*          archiveName - archove name (can be NULL)
 * Output : -
 * Return : TRUE iff exists
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_exists(StorageInfo *storageInfo, ConstString fileName);
+bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName);
 
 /***********************************************************************\
 * Name   : Storage_create
 * Purpose: create new/append to storage
 * Input  : storageHandle - storage handle variable
 *          storage       - storage
-*          fileName      - file name
-*          fileSize      - file size [bytes]
+*          archiveName   - archive name
+*          archiveSize   - archive size [bytes]
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -1243,16 +1243,16 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString fileName);
 #ifdef NDEBUG
   Errors Storage_create(StorageHandle *storageHandle,
                         StorageInfo   *storageInfo,
-                        ConstString   fileName,
-                        uint64        fileSize
+                        ConstString   archiveName,
+                        uint64        archiveSize
                        );
 #else /* not NDEBUG */
   Errors __Storage_create(const char    *__fileName__,
                           ulong         __lineNb__,
                           StorageHandle *storageHandle,
                           StorageInfo   *storageInfo,
-                          ConstString   fileName,
-                          uint64        fileSize
+                          ConstString   archiveName,
+                          uint64        archiveSize
                          );
 #endif /* NDEBUG */
 
@@ -1261,7 +1261,7 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString fileName);
 * Purpose: open storage for reading
 * Input  : storageHandle - storage handle variable
 *          storage       - storage
-*          fileName      - file name (can be NULL)
+*          archiveName   - archive name (can be NULL)
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -1270,14 +1270,14 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString fileName);
 #ifdef NDEBUG
   Errors Storage_open(StorageHandle *storageHandle,
                       StorageInfo   *storageInfo,
-                      ConstString   fileName
+                      ConstString   archiveName
                      );
 #else /* not NDEBUG */
   Errors __Storage_open(const char    *__fileName__,
                         ulong         __lineNb__,
                         StorageHandle *storageHandle,
                         StorageInfo   *storageInfo,
-                        ConstString   fileName
+                        ConstString   archiveName
                        );
 #endif /* NDEBUG */
 
@@ -1386,13 +1386,13 @@ uint64 Storage_getSize(StorageHandle *storageHandle);
 * Name   : Storage_delete
 * Purpose: delete storage file
 * Input  : storageInfo - storage
-*          fileName    - file name (can be NULL)
+*          archiveName - archive name (can be NULL)
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_delete(StorageInfo *storageInfo, ConstString fileName);
+Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName);
 
 /***********************************************************************\
 * Name   : Storage_pruneDirectories
@@ -1412,7 +1412,7 @@ still not complete
 * Name   : Storage_getFileInfo
 * Purpose: get storage file info
 * Input  : storage     - storage
-*          fileName    - file name (can be NULL)
+*          archiveName - archive name (can be NULL)
 *          fileInfo    - file info variable
 * Output : fileInfo - file info
 * Return : ERROR_NONE or errorcode
@@ -1420,7 +1420,7 @@ still not complete
 \***********************************************************************/
 
 Errors Storage_getFileInfo(StorageInfo *storageInfo,
-                           ConstString fileName,
+                           ConstString archiveName,
                            FileInfo    *fileInfo
                           );
 #endif /* 0 */

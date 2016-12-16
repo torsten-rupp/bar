@@ -67,9 +67,9 @@ LOCAL void StorageFile_doneAll(void)
 }
 
 LOCAL bool StorageFile_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
-                                       ConstString            fileName1,
+                                       ConstString            archiveName1,
                                        const StorageSpecifier *storageSpecifier2,
-                                       ConstString            fileName2
+                                       ConstString            archiveName2
                                       )
 {
   assert(storageSpecifier1 != NULL);
@@ -77,14 +77,14 @@ LOCAL bool StorageFile_equalSpecifiers(const StorageSpecifier *storageSpecifier1
   assert(storageSpecifier2 != NULL);
   assert(storageSpecifier2->type == STORAGE_TYPE_FILESYSTEM);
 
-  if (fileName1 == NULL) fileName1 = storageSpecifier1->fileName;
-  if (fileName2 == NULL) fileName2 = storageSpecifier2->fileName;
+  if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
+  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
 
-  return String_equals(fileName1,fileName2);
+  return String_equals(archiveName1,archiveName2);
 }
 
 LOCAL String StorageFile_getName(StorageSpecifier *storageSpecifier,
-                                 ConstString      fileName
+                                 ConstString      archiveName
                                 )
 {
   ConstString storageFileName;
@@ -92,9 +92,9 @@ LOCAL String StorageFile_getName(StorageSpecifier *storageSpecifier,
   assert(storageSpecifier != NULL);
 
   // get file to use
-  if      (!String_isEmpty(fileName))
+  if      (!String_isEmpty(archiveName))
   {
-    storageFileName = fileName;
+    storageFileName = archiveName;
   }
   else if (storageSpecifier->archivePatternString != NULL)
   {
@@ -102,7 +102,7 @@ LOCAL String StorageFile_getName(StorageSpecifier *storageSpecifier,
   }
   else
   {
-    storageFileName = storageSpecifier->fileName;
+    storageFileName = storageSpecifier->archiveName;
   }
 
   String_clear(storageSpecifier->storageName);
@@ -116,7 +116,7 @@ LOCAL String StorageFile_getName(StorageSpecifier *storageSpecifier,
 
 LOCAL void StorageFile_getPrintableName(String                 printableStorageName,
                                         const StorageSpecifier *storageSpecifier,
-                                        ConstString            fileName
+                                        ConstString            archiveName
                                        )
 {
   ConstString storageFileName;
@@ -126,9 +126,9 @@ LOCAL void StorageFile_getPrintableName(String                 printableStorageN
   assert(storageSpecifier->type == STORAGE_TYPE_FILESYSTEM);
 
   // get file to use
-  if      (!String_isEmpty(fileName))
+  if      (!String_isEmpty(archiveName))
   {
-    storageFileName = fileName;
+    storageFileName = archiveName;
   }
   else if (!String_isEmpty(storageSpecifier->archivePatternString))
   {
@@ -136,7 +136,7 @@ LOCAL void StorageFile_getPrintableName(String                 printableStorageN
   }
   else
   {
-    storageFileName = storageSpecifier->fileName;
+    storageFileName = storageSpecifier->archiveName;
   }
 
   if (!String_isEmpty(storageFileName))

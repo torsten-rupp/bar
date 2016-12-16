@@ -672,9 +672,9 @@ LOCAL bool StorageOptical_parseSpecifier(ConstString deviceSpecifier,
 }
 
 LOCAL bool StorageOptical_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
-                                          ConstString            fileName1,
+                                          ConstString            archiveName1,
                                           const StorageSpecifier *storageSpecifier2,
-                                          ConstString            fileName2
+                                          ConstString            archiveName2
                                          )
 {
   assert(storageSpecifier1 != NULL);
@@ -682,15 +682,15 @@ LOCAL bool StorageOptical_equalSpecifiers(const StorageSpecifier *storageSpecifi
   assert(storageSpecifier2 != NULL);
   assert((storageSpecifier2->type == STORAGE_TYPE_CD) || (storageSpecifier2->type == STORAGE_TYPE_DVD) || (storageSpecifier2->type == STORAGE_TYPE_BD));
 
-  if (fileName1 == NULL) fileName1 = storageSpecifier1->fileName;
-  if (fileName2 == NULL) fileName2 = storageSpecifier2->fileName;
+  if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
+  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
 
   return    String_equals(storageSpecifier1->deviceName,storageSpecifier2->deviceName)
-         && String_equals(fileName1,fileName2);
+         && String_equals(archiveName1,archiveName2);
 }
 
 LOCAL String StorageOptical_getName(StorageSpecifier *storageSpecifier,
-                                    ConstString      fileName
+                                    ConstString      archiveName
                                    )
 {
   ConstString storageFileName;
@@ -699,9 +699,9 @@ LOCAL String StorageOptical_getName(StorageSpecifier *storageSpecifier,
   assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
 
   // get file to use
-  if      (!String_isEmpty(fileName))
+  if      (!String_isEmpty(archiveName))
   {
-    storageFileName = fileName;
+    storageFileName = archiveName;
   }
   else if (storageSpecifier->archivePatternString != NULL)
   {
@@ -709,7 +709,7 @@ LOCAL String StorageOptical_getName(StorageSpecifier *storageSpecifier,
   }
   else
   {
-    storageFileName = storageSpecifier->fileName;
+    storageFileName = storageSpecifier->archiveName;
   }
 
   String_clear(storageSpecifier->storageName);
@@ -766,7 +766,7 @@ LOCAL String StorageOptical_getName(StorageSpecifier *storageSpecifier,
 
 LOCAL void StorageOptical_getPrintableName(String                 printableStorageName,
                                            const StorageSpecifier *storageSpecifier,
-                                           ConstString            fileName
+                                           ConstString            archiveName
                                           )
 {
   ConstString storageFileName;
@@ -776,9 +776,9 @@ LOCAL void StorageOptical_getPrintableName(String                 printableStora
   assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
 
   // get file to use
-  if      (!String_isEmpty(fileName))
+  if      (!String_isEmpty(archiveName))
   {
-    storageFileName = fileName;
+    storageFileName = archiveName;
   }
   else if (!String_isEmpty(storageSpecifier->archivePatternString))
   {
@@ -786,7 +786,7 @@ LOCAL void StorageOptical_getPrintableName(String                 printableStora
   }
   else
   {
-    storageFileName = storageSpecifier->fileName;
+    storageFileName = storageSpecifier->archiveName;
   }
 
   switch (storageSpecifier->type)

@@ -5662,7 +5662,7 @@ uint getServerSettings(const StorageSpecifier *storageSpecifier,
         serverNode = LIST_FIND(&globalOptions.serverList,
                                serverNode,
                                   (serverNode->server.type == SERVER_TYPE_FILE)
-                               && String_startsWith(serverNode->server.name,storageSpecifier->fileName)
+                               && String_startsWith(serverNode->server.name,storageSpecifier->archiveName)
                               );
 
         if (serverNode != NULL)

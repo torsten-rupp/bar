@@ -3170,7 +3170,7 @@ remoteBarFlag=FALSE;
 //TODO
 
           // send list archive command
-          String_format(String_clear(line),"2 ARCHIVE_LIST name=%S",storageSpecifier->fileName);
+          String_format(String_clear(line),"2 ARCHIVE_LIST name=%S",storageSpecifier->archiveName);
           Network_executeWriteLine(&networkExecuteHandle,line);
           Network_executeSendEOF(&networkExecuteHandle);
 
