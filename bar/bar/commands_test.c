@@ -1540,7 +1540,7 @@ Errors Command_test(const StringList    *storageNameList,
     {
       if (!FragmentList_isEntryComplete(fragmentNode))
       {
-        printInfo(0,"Warning: incomplete file '%s'\n",String_cString(fragmentNode->name));
+        printInfo(0,"Warning: incomplete entry '%s'\n",String_cString(fragmentNode->name));
         if (isPrintInfo(2))
         {
           printInfo(2,"  Fragments:\n");
