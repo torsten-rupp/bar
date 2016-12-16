@@ -4440,7 +4440,7 @@ fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archive
 
 #ifdef NDEBUG
   Errors Archive_open(ArchiveHandle          *archiveHandle,
-                      StorageInfo            *storageInfo,
+                      const StorageInfo      *storageInfo,
                       ConstString            fileName,
                       DeltaSourceList        *deltaSourceList,
                       const JobOptions       *jobOptions,
@@ -4452,7 +4452,7 @@ fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archive
   Errors __Archive_open(const char             *__fileName__,
                         ulong                  __lineNb__,
                         ArchiveHandle          *archiveHandle,
-                        StorageInfo            *storageInfo,
+                        const StorageInfo      *storageInfo,
                         ConstString            fileName,
                         DeltaSourceList        *deltaSourceList,
                         const JobOptions       *jobOptions,
@@ -5016,6 +5016,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   assert(archiveHandle->blockLength > 0);
   assert(fileInfo != NULL);
 
+//TODO
+UNUSED_VARIABLE(fragmentSize);
+
   // init variables
   AutoFree_init(&autoFreeList);
 
@@ -5439,6 +5442,9 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   assert(archiveHandle->blockLength > 0);
   assert(deviceInfo != NULL);
   assert(deviceInfo->blockSize > 0);
+
+//TODO
+UNUSED_VARIABLE(blockCount);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -6295,6 +6301,9 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   assert(archiveHandle->jobOptions != NULL);
   assert(archiveHandle->blockLength > 0);
   assert(fileInfo != NULL);
+
+//TODO
+UNUSED_VARIABLE(fragmentSize);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -13435,8 +13444,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
         break;
       case ARCHIVE_ENTRY_TYPE_META:
         {
-          FileInfo fileInfo;
-          IndexId  entityId;
+          IndexId entityId;
 
           // open archive meta
           error = Archive_readMetaEntry(&archiveEntryInfo,
@@ -13487,7 +13495,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               (void)Archive_closeEntry(&archiveEntryInfo);
               break;
             }
-fprintf(stderr,"%s, %d: XXXXXXXXXXXX %d\n",__FILE__,__LINE__,entityId);
+fprintf(stderr,"%s, %d: XXXXXXXXXXXX %ld\n",__FILE__,__LINE__,(long)entityId);
           }
 
 

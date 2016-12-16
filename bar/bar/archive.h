@@ -236,7 +236,7 @@ typedef struct
     {
       StorageSpecifier     storageSpecifier;                           // storage specifier structure
       String               storageFileName;                            // storage storage name
-      StorageInfo          *storageInfo;                               // storage info
+      const StorageInfo          *storageInfo;                               // storage info
       StorageHandle        storageHandle;
     } storage;
   };
@@ -651,7 +651,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 
 #ifdef NDEBUG
   Errors Archive_open(ArchiveHandle          *archiveHandle,
-                      StorageInfo            *storageInfo,
+                      const StorageInfo      *storageInfo,
                       ConstString            fileName,
                       DeltaSourceList        *deltaSourceList,
                       const JobOptions       *jobOptions,
@@ -663,7 +663,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
   Errors __Archive_open(const char             *__fileName__,
                         ulong                  __lineNb__,
                         ArchiveHandle          *archiveHandle,
-                        StorageInfo            *storageInfo,
+                        const StorageInfo      *storageInfo,
                         ConstString            fileName,
                         DeltaSourceList        *deltaSourceList,
                         const JobOptions       *jobOptions,
