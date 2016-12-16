@@ -75,7 +75,7 @@ typedef struct
 // entry message send to test threads
 typedef struct
 {
-  const StorageInfo *storageInfo;
+  StorageInfo       *storageInfo;
   byte              cryptSalt[CRYPT_SALT_LENGTH];
   uint              cryptMode;
   ArchiveEntryTypes archiveEntryType;
@@ -1046,7 +1046,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 //TODO: open only when changed
     // open archive
     error = Archive_open(&archiveHandle,
-//TODO: const?
                          entryMsg.storageInfo,
                          NULL,  // fileName,
                          testInfo->deltaSourceList,

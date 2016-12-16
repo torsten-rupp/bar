@@ -78,7 +78,7 @@ typedef struct
 // entry message send to compare threads
 typedef struct
 {
-  const StorageInfo *storageInfo;
+  StorageInfo       *storageInfo;
   byte              cryptSalt[CRYPT_SALT_LENGTH];
   uint              cryptMode;
   ArchiveEntryTypes archiveEntryType;
