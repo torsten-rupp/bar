@@ -277,9 +277,9 @@ LOCAL Errors initChunkBuffer(ChunkBuffer     *chunkBuffer,
       if (cryptInfo != NULL)
       {
 //TODO
-uint b,x;
-byte *p;
-Crypt_getBlockLength(CRYPT_ALGORITHM_AES256,&b);
+//uint b,x;
+//byte *p;
+//Crypt_getBlockLength(CRYPT_ALGORITHM_AES256,&b);
 //fprintf(stderr,"%s, %d: Crypt_decrypt %d %d\n",__FILE__,__LINE__,n,b);
         Crypt_reset(cryptInfo);
 #if 1
@@ -342,8 +342,6 @@ Crypt_getBlockLength(CRYPT_ALGORITHM_AES256,&b);
 
 LOCAL Errors doneChunkBuffer(ChunkBuffer *chunkBuffer)
 {
-  Errors error;
-
   assert(chunkBuffer != NULL);
 
   DEBUG_REMOVE_RESOURCE_TRACE(chunkBuffer,sizeof(ChunkBuffer));
@@ -369,6 +367,8 @@ LOCAL Errors doneChunkBuffer(ChunkBuffer *chunkBuffer)
 #endif
 
   free(chunkBuffer->buffer);
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -843,11 +843,11 @@ LOCAL Errors doneDefinition(const char      *__fileName__,
 * Notes  : -
 \***********************************************************************/
 
-ulong getDefinitionSize(ChunkDefinition *definition,
-                        uint            alignment,
-                        const void      *chunkData,
-                        ulong           dataLength
-                   )
+LOCAL ulong getDefinitionSize(ChunkDefinition *definition,
+                              uint            alignment,
+                              const void      *chunkData,
+                              ulong           dataLength
+                             )
 {
   ulong size;
   int   i;
@@ -2085,9 +2085,6 @@ ulong Chunk_getSize(const ChunkInfo *chunkInfo,
                     ulong           dataLength
                    )
 {
-  ulong size;
-  int   i;
-
   assert(chunkInfo != NULL);
 
   return getDefinitionSize(chunkInfo->definition,
@@ -2095,228 +2092,6 @@ ulong Chunk_getSize(const ChunkInfo *chunkInfo,
                            chunkData,
                            dataLength
                           );
-
-#if 0
-obsolete
-  size = 0;
-  i    = 0;
-  while (chunkInfo->definition[i+0] != CHUNK_DATATYPE_NONE)
-  {
-    switch (chunkInfo->definition[i+0])
-    {
-      case CHUNK_DATATYPE_BYTE:
-      case CHUNK_DATATYPE_UINT8:
-      case CHUNK_DATATYPE_INT8:
-        size += sizeof(uint8);
-
-        i += 2;
-        break;
-      case CHUNK_DATATYPE_UINT16:
-      case CHUNK_DATATYPE_INT16:
-        size += sizeof(uint16);
-
-        i += 2;
-        break;
-      case CHUNK_DATATYPE_UINT32:
-      case CHUNK_DATATYPE_INT32:
-        size += sizeof(uint32);
-
-        i += 2;
-        break;
-      case CHUNK_DATATYPE_UINT64:
-      case CHUNK_DATATYPE_INT64:
-        size += sizeof(uint64);
-
-        i += 2;
-        break;
-      case CHUNK_DATATYPE_STRING:
-        {
-          String s;
-
-          assert(chunkData != NULL);
-
-          s = (*((String*)((byte*)chunkData+chunkInfo->definition[i+1])));
-          assert(s != NULL);
-          size += sizeof(uint16)+String_length(s);
-
-          i += 2;
-        }
-        break;
-
-      case CHUNK_DATATYPE_BYTE |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-      case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-      case CHUNK_DATATYPE_INT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-        {
-          uint length;
-
-          length = (uint)chunkInfo->definition[i+1];
-          size += ALIGN(length*sizeof(uint8),sizeof(uint32));
-
-          i += 3;
-        }
-        break;
-      case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-      case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-        {
-          uint length;
-
-          length = (uint)chunkInfo->definition[i+1];
-          size += ALIGN(length*sizeof(uint16),sizeof(uint32));
-
-          i += 3;
-        }
-        break;
-      case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-      case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-        {
-          uint length;
-
-          length = (uint)chunkInfo->definition[i+1];
-          size += ALIGN(length*sizeof(uint32),sizeof(uint32));
-
-          i += 3;
-        }
-        break;
-      case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-      case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-        {
-          uint length;
-
-          length = (uint)chunkInfo->definition[i+1];
-          size += ALIGN(length*sizeof(uint64),sizeof(uint32));
-
-          i += 3;
-        }
-        break;
-      case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-        {
-          uint   length;
-          String s;
-
-          assert(chunkData != NULL);
-
-          length = (uint)chunkInfo->definition[i+1];
-          while (length > 0)
-          {
-            s = (*((String*)((byte*)chunkData+chunkInfo->definition[i+1])));
-            assert(s != NULL);
-            size += sizeof(uint16)+String_length(s);
-          }
-
-          i += 3;
-        }
-        break;
-      case CHUNK_DATATYPE_BYTE |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
-      case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
-      case CHUNK_DATATYPE_INT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
-        {
-          uint length;
-
-          assert(chunkData != NULL);
-
-          length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
-          size += sizeof(uint16)+ALIGN(length*sizeof(uint8),sizeof(uint32));
-
-          i += 3;
-        }
-        break;
-      case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
-      case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
-        {
-          uint length;
-
-          assert(chunkData != NULL);
-
-          length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
-          size += sizeof(uint16)+ALIGN(length*sizeof(uint16),sizeof(uint32));
-
-          i += 3;
-        }
-        break;
-      case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
-      case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
-        {
-          uint length;
-
-          assert(chunkData != NULL);
-
-          length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
-          size += sizeof(uint16)+ALIGN(length*sizeof(uint32),sizeof(uint32));
-
-          i += 3;
-        }
-        break;
-      case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
-      case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
-        {
-          uint length;
-
-          assert(chunkData != NULL);
-
-          length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
-          size += sizeof(uint16)+ALIGN(length*sizeof(uint64),sizeof(uint32));
-
-          i += 3;
-        }
-        break;
-      case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
-        {
-          uint   length;
-          String s;
-
-          assert(chunkData != NULL);
-
-          length = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
-          size += sizeof(uint16);
-          while (length > 0)
-          {
-            s = (*((String*)((byte*)chunkData+chunkInfo->definition[i+1])));
-            assert(s != NULL);
-            size += sizeof(uint16)+String_length(s);
-          }
-
-          i += 3;
-        }
-        break;
-
-      case CHUNK_DATATYPE_CRC32:
-        size += sizeof(uint32);
-
-        i += 2;
-        break;
-
-      case CHUNK_DATATYPE_DATA:
-        size += dataLength;
-
-        i += 2;
-        break;
-
-      case CHUNK_ALIGN:
-        {
-          uint   alignment;
-
-          assert(chunkData != NULL);
-
-          alignment = (*((uint*)((byte*)chunkData+chunkInfo->definition[i+1])));
-          size = ALIGN(size,alignment);
-
-          i += 2;
-        }
-        break;
-
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; /* not reached */
-      #endif /* NDEBUG */
-    }
-  }
-
-  // align size
-  size = ALIGN(size,chunkInfo->alignment);
-
-  return size;
-#endif
 }
 
 #ifdef NDEBUG
@@ -2415,7 +2190,6 @@ Errors Chunk_next(const ChunkIO *chunkIO,
   Errors                   error;
   uint64                   offset;
   const ChunkTransformInfo *chunkTransformInfo;
-  uint                     i;
 
   assert(chunkIO != NULL);
   assert(chunkIO->tell != NULL);
@@ -2899,7 +2673,7 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
     {
       chunkHeader->id            = chunkTransformInfo->new.id;
       chunkHeader->transformInfo = chunkTransformInfo;
-fprintf(stderr,"%s, %d: --- transform function %x %x\n",__FILE__,__LINE__,chunkHeader->id,chunkHeader->transformInfo);
+fprintf(stderr,"%s, %d: --- transform function %x %p\n",__FILE__,__LINE__,chunkHeader->id,chunkHeader->transformInfo);
       break;
     }
     chunkTransformInfo++;
