@@ -32,6 +32,7 @@
 #include "stringlists.h"
 #include "files.h"
 #include "network.h"
+#include "semaphore.h"
 #include "errors.h"
 
 #include "errors.h"
@@ -1643,6 +1644,8 @@ LOCAL Errors StorageOptical_open(StorageHandle *storageHandle,
 
 LOCAL void StorageOptical_close(StorageHandle *storageHandle)
 {
+  SemaphoreLock semaphoreLock;
+
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
@@ -1661,12 +1664,18 @@ LOCAL void StorageOptical_close(StorageHandle *storageHandle)
       #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_MODE_WRITE:
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+        {
+          storageHandle->storageInfo->opticalDisk.write.totalSize += File_getSize(&storageHandle->opticalDisk.write.fileHandle);
+        }
+        StringList_append(&storageHandle->storageInfo->opticalDisk.write.fileNameList,storageHandle->opticalDisk.write.fileName);
+      }
       if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
       {
-        storageHandle->storageInfo->opticalDisk.write.totalSize += File_getSize(&storageHandle->opticalDisk.write.fileHandle);
-        File_close(&storageHandle->opticalDisk.write.fileHandle);
+        (void)File_close(&storageHandle->opticalDisk.write.fileHandle);
       }
-      StringList_append(&storageHandle->storageInfo->opticalDisk.write.fileNameList,storageHandle->opticalDisk.write.fileName);
       String_delete(storageHandle->opticalDisk.write.fileName);
       break;
     #ifndef NDEBUG

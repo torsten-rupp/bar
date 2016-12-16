@@ -60,6 +60,7 @@
 #include "stringlists.h"
 #include "files.h"
 #include "network.h"
+#include "semaphores.h"
 #include "errors.h"
 
 #include "crypt.h"
@@ -209,6 +210,7 @@ typedef struct
 // storage info
 typedef struct
 {
+  Semaphore                       lock;
   StorageSpecifier                storageSpecifier;          // storage specifier data
   const JobOptions                *jobOptions;
 
@@ -1232,7 +1234,7 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName);
 * Name   : Storage_create
 * Purpose: create new/append to storage
 * Input  : storageHandle - storage handle variable
-*          storage       - storage
+*          storageInfo   - storage info
 *          archiveName   - archive name
 *          archiveSize   - archive size [bytes]
 * Output : -
@@ -1260,7 +1262,7 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName);
 * Name   : Storage_open
 * Purpose: open storage for reading
 * Input  : storageHandle - storage handle variable
-*          storage       - storage
+*          storageInfo   - storage info
 *          archiveName   - archive name (can be NULL)
 * Output : -
 * Return : ERROR_NONE or errorcode

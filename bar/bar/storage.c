@@ -39,6 +39,7 @@
 #include "stringlists.h"
 #include "files.h"
 #include "network.h"
+#include "semaphores.h"
 #include "errors.h"
 
 #include "errors.h"
@@ -1567,6 +1568,7 @@ String Storage_getPrintableName(String           string,
 
   // initialize variables
   AutoFree_init(&autoFreeList);
+  Semaphore_init(&storageInfo->lock);
   Storage_duplicateSpecifier(&storageInfo->storageSpecifier,storageSpecifier);
   storageInfo->jobOptions                = jobOptions;
   storageInfo->updateStatusInfoFunction  = storageUpdateStatusInfoFunction;
@@ -1587,6 +1589,7 @@ String Storage_getPrintableName(String           string,
     storageInfo->requestedVolumeNumber   = 1;
     storageInfo->volumeState             = STORAGE_VOLUME_STATE_LOADED;
   }
+  AUTOFREE_ADD(&autoFreeList,&storageInfo->lock,{ Semaphore_done(&storageInfo->lock); });
   AUTOFREE_ADD(&autoFreeList,&storageInfo->storageSpecifier,{ Storage_doneSpecifier(&storageInfo->storageSpecifier); });
 
   // init protocol specific values
@@ -1716,6 +1719,7 @@ String Storage_getPrintableName(String           string,
   }
 
   Storage_doneSpecifier(&storageInfo->storageSpecifier);
+  Semaphore_done(&storageInfo->lock);
 
   return error;
 }
