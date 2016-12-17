@@ -1032,9 +1032,9 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
 * Notes  : if archiveName is NULL file name from storageSpecifier is used
 \***********************************************************************/
 
-String Storage_getPrintableName(String           string,
-                                StorageSpecifier *storageSpecifier,
-                                ConstString      archiveName
+String Storage_getPrintableName(String                 string,
+                                const StorageSpecifier *storageSpecifier,
+                                ConstString            archiveName
                                );
 
 /***********************************************************************\

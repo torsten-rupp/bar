@@ -1278,7 +1278,7 @@ void *Crypt_getMAC(const CryptMAC *cryptMAC,
 * Notes  : -
 \***********************************************************************/
 
-bool Crypt_equalsMAC(const CryptMAC *cryptMAC,
+bool Crypt_verifyMAC(const CryptMAC *cryptMAC,
                      void           *mac,
                      uint           macLength
                     );

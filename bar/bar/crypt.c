@@ -602,7 +602,9 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 
 /*---------------------------------------------------------------------*/
 
+#ifndef WERROR
 #warning remove!
+#endif
 #define _CTS_ONCE
 
 #ifdef NDEBUG
@@ -661,7 +663,6 @@ Errors __Crypt_init(const char      *__fileName__,
     case CRYPT_ALGORITHM_CAMELLIA256:
       #ifdef HAVE_GCRYPT
         {
-          uint         passwordLength;
           int          gcryptAlgorithm;
           int          gcryptMode;
           unsigned int gcryptFlags;
@@ -803,7 +804,9 @@ fprintf(stderr,"%s, %d: cryptKey->dataLength=%d\n",__FILE__,__LINE__,cryptKey->d
           }
 
 //TODO
+#ifndef WERROR
 #warning remove
+#endif
 #ifdef CBS_ONCE
           gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
           if (gcryptError != 0)
@@ -927,7 +930,9 @@ Errors Crypt_reset(CryptInfo *cryptInfo)
           }
 
 //TODO
+#ifndef WERROR
 #warning remove
+#endif
 #ifdef CBS_ONCE
           gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
           if (gcryptError != 0)
@@ -2482,6 +2487,7 @@ Errors Crypt_getDecryptKey(CryptKey       *cryptKey,
     gcry_sexp_t  sexpEncryptData;
     gcry_sexp_t  sexpData;
     byte         *pkcs1EncodedMessage;
+    const byte   *keyData;
     size_t       dataLength;
     byte         *data;
     gcry_error_t gcryptError;
@@ -2545,8 +2551,8 @@ fprintf(stderr,"%s, %d: encrypted random key %d\n",__FILE__,__LINE__,encryptedKe
       gcry_sexp_release(sexpEncryptData);
       return ERROR_KEY_ENCRYPT_FAIL;
     }
-    data = (const byte*)gcry_sexp_nth_data(sexpData,0,&dataLength);
-    if (data == NULL)
+    keyData = (const byte*)gcry_sexp_nth_data(sexpData,0,&dataLength);
+    if (keyData == NULL)
     {
       Password_freeSecure(pkcs1EncodedMessage);
       gcry_sexp_release(sexpData);
@@ -2564,7 +2570,7 @@ fprintf(stderr,"%s, %d: encrypted random key %d\n",__FILE__,__LINE__,encryptedKe
     }
 
     // MPI does not store leading 0 -> do padding with 0 for required length
-    memCopy(&pkcs1EncodedMessage[PKCS1_ENCODED_MESSAGE_LENGTH-dataLength],dataLength,&data[0],dataLength);
+    memCopy(&pkcs1EncodedMessage[PKCS1_ENCODED_MESSAGE_LENGTH-dataLength],dataLength,&keyData[0],dataLength);
     memClear(&pkcs1EncodedMessage[0],PKCS1_ENCODED_MESSAGE_LENGTH-dataLength);
 #ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS1_ENCODED_MESSAGE_LENGTH); debugDumpMemory(pkcs1EncodedMessage,PKCS1_ENCODED_MESSAGE_LENGTH,0);

@@ -694,7 +694,9 @@ fprintf(stderr,"%s, %d: Remote_executeCommand\n",__FILE__,__LINE__);
                                                                );
   if (error == ERROR_NONE) error = Remote_setJobOptionPassword (remoteHost,jobUUID,"crypt-password",         jobOptions->cryptPassword               );
 //TODO
+#ifndef WERROR
 #warning TODO
+#endif
 //  if (error == ERROR_NONE) error = Remote_setJobOptionString   (remoteHost,jobUUID,"crypt-public-key",       jobOptions->cryptPublicKeyFileName      );
   if (error == ERROR_NONE) error = Remote_setJobOptionString   (remoteHost,jobUUID,"pre-command",            jobOptions->preProcessScript            );
   if (error == ERROR_NONE) error = Remote_setJobOptionString   (remoteHost,jobUUID,"post-command",           jobOptions->postProcessScript           );

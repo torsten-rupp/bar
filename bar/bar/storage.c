@@ -1453,9 +1453,9 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
   return storageSpecifier->storageName;
 }
 
-String Storage_getPrintableName(String           string,
-                                StorageSpecifier *storageSpecifier,
-                                ConstString      archiveName
+String Storage_getPrintableName(String                 string,
+                                const StorageSpecifier *storageSpecifier,
+                                ConstString            archiveName
                                )
 {
   assert(storageSpecifier != NULL);

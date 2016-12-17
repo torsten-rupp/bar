@@ -434,7 +434,11 @@ for my $transformation (@transformations)
              "  },\n"
             );
 }
-writeCFile("  { CHUNK_ID_NONE,CHUNK_ID_NONE,NULL,NULL,NULL }\n");
+writeCFile("  { { CHUNK_ID_NONE,0,0,NULL },\n".
+           "    { CHUNK_ID_NONE,0,0,NULL },\n".
+           "    NULL\n".
+           "  }\n"
+          );
 writeCFile("};\n");
 
 if ($constFileName ne "")
