@@ -1049,7 +1049,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
                          entryMsg.storageInfo,
                          NULL,  // fileName,
                          testInfo->deltaSourceList,
-                         testInfo->jobOptions,
                          testInfo->getPasswordFunction,
                          testInfo->getPasswordUserData,
                          testInfo->logHandle
@@ -1307,7 +1306,6 @@ NULL,  //               requestedAbortFlag,
                        &storageInfo,
                        fileName,
                        deltaSourceList,
-                       jobOptions,
                        getPasswordFunction,
                        getPasswordUserData,
                        logHandle

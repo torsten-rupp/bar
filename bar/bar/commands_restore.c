@@ -2420,7 +2420,6 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
                        &storageInfo,
                        archiveName,
                        restoreInfo->deltaSourceList,
-                       restoreInfo->jobOptions,
                        CALLBACK(restoreInfo->getPasswordFunction,restoreInfo->getPasswordUserData),
                        restoreInfo->logHandle
                       );

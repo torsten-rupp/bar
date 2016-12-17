@@ -5616,6 +5616,8 @@ LOCAL void indexThreadCode(void)
         startTimestamp = 0LL;
         endTimestamp   = 0LL;
         initJobOptions(&jobOptions);
+        jobOptions.cryptPassword = Password_duplicate(indexCryptPasswordNode->cryptPassword);
+        duplicateKey(&jobOptions.cryptPrivateKey,&indexCryptPasswordNode->cryptPrivateKey);
         error = Storage_init(&storageInfo,
                              &storageSpecifier,
                              &jobOptions,
@@ -5636,12 +5638,9 @@ LOCAL void indexThreadCode(void)
 #warning todo init?
 #endif
             startTimestamp = Misc_getTimestamp();
-            jobOptions.cryptPassword = Password_duplicate(indexCryptPasswordNode->cryptPassword);
-            duplicateKey(&jobOptions.cryptPrivateKey,&indexCryptPasswordNode->cryptPrivateKey);
             error = Archive_updateIndex(indexHandle,
                                         storageId,
                                         &storageInfo,
-                                        &jobOptions,
                                         &totalTimeLastChanged,
                                         &totalEntryCount,
                                         &totalEntrySize,
@@ -13574,7 +13573,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                        &storageInfo,
                        NULL,  // archive name
                        NULL,  // deltaSourceList
-                       &clientInfo->jobOptions,
                        CALLBACK(NULL,NULL),
                        NULL  // logHandle
                       );

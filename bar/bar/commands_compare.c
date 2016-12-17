@@ -1640,7 +1640,6 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
                          entryMsg.storageInfo,
                          NULL,  // fileName,
                          compareInfo->deltaSourceList,
-                         compareInfo->jobOptions,
                          compareInfo->getPasswordFunction,
                          compareInfo->getPasswordUserData,
                          compareInfo->logHandle
@@ -1904,7 +1903,6 @@ NULL,  //               requestedAbortFlag,
                        &storageInfo,
                        fileName,
                        deltaSourceList,
-                       jobOptions,
                        getPasswordFunction,
                        getPasswordUserData,
                        logHandle

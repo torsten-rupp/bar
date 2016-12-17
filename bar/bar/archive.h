@@ -189,13 +189,16 @@ typedef Errors(*ArchiveStoreFunction)(StorageInfo  *storageInfo,
 // archive handle
 typedef struct
 {
-  String                   jobUUID;
-  String                   scheduleUUID;
-  DeltaSourceList          *deltaSourceList;                           // list with delta sources
-  const JobOptions         *jobOptions;
-  IndexHandle              *indexHandle;                               // index handle or NULL (owned by opener/creator of archive)
+  StorageInfo              *storageInfo;
+  IndexHandle              *indexHandle;                               // index handle or NULL (database connection owned by opener/creator of archive)
   IndexId                  uuidId;                                     // index UUID id
   IndexId                  entityId;                                   // index entity id
+  IndexId                  storageId;                                  // index storage id
+
+  String                   jobUUID;
+  String                   scheduleUUID;
+
+  DeltaSourceList          *deltaSourceList;                           // list with delta sources
   ArchiveTypes             archiveType;
   ArchiveInitFunction      archiveInitFunction;                        // call back to initialize archive file
   void                     *archiveInitUserData;                       // user data for call back to initialize archive file
@@ -235,14 +238,13 @@ typedef struct
     struct
     {
       String               appendFileName;
-      String               fileName;                                   // file name
-      FileHandle           fileHandle;                                 // file handle
+      String               fileName;
+      FileHandle           fileHandle;
       bool                 openFlag;                                   // TRUE iff archive file is open
     } file;
     // local or remote storage
     struct
     {
-      StorageSpecifier     storageSpecifier;                           // storage specifier structure
       String               storageFileName;                            // storage storage name
       StorageHandle        storageHandle;
     } storage;
@@ -251,8 +253,6 @@ typedef struct
   Semaphore                chunkIOLock;                                // chunk i/o functions lock
   const ChunkIO            *chunkIO;                                   // chunk i/o functions
   void                     *chunkIOUserData;                           // chunk i/o functions data
-
-  IndexId                  storageId;                                  // index id of storage
 
   uint64                   entries;                                    // number of entries
   uint64                   archiveFileSize;                            // size of current archive file part
@@ -571,13 +571,13 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 * Name   : Archive_create
 * Purpose: create archive
 * Input  : archiveHandle        - archive handle
-*          entityId             - index UUID id or INDEX_ID_NONE
+*          storageInfo          - storage info
+*          indexHandle          - index handle or NULL
+*          uuidId               - index UUID id or INDEX_ID_NONE
+*          entityId             - index entity id or INDEX_ID_NONE
 *          jobUUID              - unique job id or NULL
 *          scheduleUUID         - unique schedule id or NULL
 *          deltaSourceList      - delta source list or NULL
-*          jobOptions           - job option settings
-*          indexHandle          - index handle or NULL
-*          entityId             - index entity id or INDEX_ID_NONE
 *          archiveType          - archive type
 *          archiveInitFunction  - call back to initialize archive file
 *          archiveInitUserData  - user data for call back
@@ -595,13 +595,13 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 
 #ifdef NDEBUG
   Errors Archive_create(ArchiveHandle          *archiveHandle,
+                        StorageInfo            *storageInfo,
+                        IndexHandle            *indexHandle,
                         IndexId                uuidId,
+                        IndexId                entityId,
                         ConstString            jobUUID,
                         ConstString            scheduleUUID,
                         DeltaSourceList        *deltaSourceList,
-                        const JobOptions       *jobOptions,
-                        IndexHandle            *indexHandle,
-                        IndexId                entityId,
                         ArchiveTypes           archiveType,
                         ArchiveInitFunction    archiveInitFunction,
                         void                   *archiveInitUserData,
@@ -619,13 +619,13 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
   Errors __Archive_create(const char             *__fileName__,
                           ulong                  __lineNb__,
                           ArchiveHandle          *archiveHandle,
+                          StorageInfo            *storageInfo,
+                          IndexHandle            *indexHandle,
                           IndexId                uuidId,
+                          IndexId                entityId,
                           ConstString            jobUUID,
                           ConstString            scheduleUUID,
                           DeltaSourceList        *deltaSourceList,
-                          const JobOptions       *jobOptions,
-                          IndexHandle            *indexHandle,
-                          IndexId                entityId,
                           ArchiveTypes           archiveType,
                           ArchiveInitFunction    archiveInitFunction,
                           void                   *archiveInitUserData,
@@ -661,7 +661,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                       StorageInfo         *storageInfo,
                       ConstString         archiveName,
                       DeltaSourceList     *deltaSourceList,
-                      const JobOptions    *jobOptions,
                       GetPasswordFunction getPasswordFunction,
                       void                *getPasswordUserData,
                       LogHandle           *logHandle
@@ -673,7 +672,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         StorageInfo         *storageInfo,
                         ConstString         archiveName,
                         DeltaSourceList     *deltaSourceList,
-                        const JobOptions    *jobOptions,
                         GetPasswordFunction getPasswordFunction,
                         void                *getPasswordUserData,
                         LogHandle           *logHandle
@@ -1574,7 +1572,6 @@ Errors Archive_verifySignatures(StorageInfo          *storageInfo,
 * Input  : indexHandle - index handle
 *          storageInfo - storage info
 *          indexMode   - index mode
-*          jobOptions  - job options
 *          logHandle   - log handle (can be NULL)
 * Output : totalTimeLastChanged - total last change time [s] (can be
 *                                 NULL)
@@ -1584,14 +1581,13 @@ Errors Archive_verifySignatures(StorageInfo          *storageInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_addToIndex(IndexHandle      *indexHandle,
-                          StorageInfo      *storageInfo,
-                          IndexModes       indexMode,
-                          const JobOptions *jobOptions,
-                          uint64           *totalTimeLastChanged,
-                          uint64           *totalEntries,
-                          uint64           *totalSize,
-                          LogHandle        *logHandle
+Errors Archive_addToIndex(IndexHandle *indexHandle,
+                          StorageInfo *storageInfo,
+                          IndexModes  indexMode,
+                          uint64      *totalTimeLastChanged,
+                          uint64      *totalEntries,
+                          uint64      *totalSize,
+                          LogHandle   *logHandle
                          );
 
 /***********************************************************************\
@@ -1600,7 +1596,6 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 * Input  : indexHandle           - index handle
 *          storageId             - index id of storage
 *          storageInfo           - storage info
-*          jobOptions            - job options
 *          pauseCallbackFunction - pause check callback (can be NULL)
 *          pauseCallbackUserData - pause user data
 *          abortCallbackFunction - abort check callback (can be NULL)
@@ -1616,7 +1611,6 @@ Errors Archive_addToIndex(IndexHandle      *indexHandle,
 Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            IndexId                      storageId,
                            StorageInfo                  *storageInfo,
-                           const JobOptions             *jobOptions,
                            uint64                       *totalTimeLastChanged,
                            uint64                       *totalEntries,
                            uint64                       *totalSize,

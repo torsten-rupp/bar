@@ -88,7 +88,8 @@ typedef struct
 // create info
 typedef struct
 {
-  const StorageSpecifier            *storageSpecifier;                  // storage specifier structure
+  StorageInfo                 storageInfo;                        // storage info
+//  const StorageSpecifier      *storageSpecifier;                  // storage specifier structure
   IndexHandle                 *indexHandle;
   ConstString                 jobUUID;                            // unique job id to store or NULL
   ConstString                 scheduleUUID;                       // unique schedule id to store or NULL
@@ -108,7 +109,7 @@ typedef struct
   bool                        partialFlag;                        // TRUE for create incremental/differential archive
   Dictionary                  namesDictionary;                    // dictionary with files (used for incremental/differental backup)
   bool                        storeIncrementalFileInfoFlag;       // TRUE to store incremental file data
-  StorageInfo                 storageInfo;                        // storage info
+//  StorageInfo                 storageInfo;                        // storage info
   time_t                      startTime;                          // start time [ms] (unix time)
 
   MsgQueue                    entryMsgQueue;                      // queue with entries to store
@@ -326,7 +327,10 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   assert(createInfo != NULL);
 
   // init variables
-  createInfo->storageSpecifier               = storageSpecifier;
+UNUSED_VARIABLE(storageSpecifier);
+//TODO
+//  createInfo->storageInfo                    = NULL;
+//  createInfo->storageSpecifier               = storageSpecifier;
   createInfo->indexHandle                    = indexHandle;
   createInfo->jobUUID                        = jobUUID;
   createInfo->scheduleUUID                   = scheduleUUID;
@@ -1207,6 +1211,9 @@ LOCAL Errors formatArchiveFileName(String           fileName,
   ulong          n;
   uint           z;
   int            d;
+
+  assert(fileName != NULL);
+  assert(templateFileName != NULL);
 
   // init variables
   Misc_getUUID(uuid);
@@ -3311,6 +3318,7 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
   StorageHandle storageHandle;
   uint64        archiveSize;
 
+  assert(storageInfo != NULL);
   assert(createInfo != NULL);
 
   UNUSED_VARIABLE(indexHandle);
@@ -3321,7 +3329,7 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
   // get archive file name
   archiveName = String_new();
   error = formatArchiveFileName(archiveName,
-                                createInfo->storageSpecifier->archiveName,
+                                storageInfo->storageSpecifier.archiveName,
                                 EXPAND_MACRO_MODE_STRING,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
@@ -3393,11 +3401,10 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   StorageMsg    storageMsg;
   SemaphoreLock semaphoreLock;
 
-  assert(createInfo != NULL);
-  assert(createInfo->storageSpecifier != NULL);
+  assert(storageInfo != NULL);
   assert(!String_isEmpty(intermediateFileName));
+  assert(createInfo != NULL);
 
-  UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(jobUUID);
   UNUSED_VARIABLE(scheduleUUID);
@@ -3413,7 +3420,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   // get archive file name
   archiveName = String_new();
   error = formatArchiveFileName(archiveName,
-                                createInfo->storageSpecifier->archiveName,
+                                storageInfo->storageSpecifier.archiveName,
                                 EXPAND_MACRO_MODE_STRING,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
@@ -4030,7 +4037,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
-  assert(createInfo->storageSpecifier != NULL);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -4099,7 +4105,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                 );
 
     // get printable storage name
-    Storage_getPrintableName(printableStorageName,createInfo->storageSpecifier,storageMsg.archiveName);
+    Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
 
     // pre-process
     error = Storage_preProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->startTime,FALSE);
@@ -4145,7 +4151,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                            );
 
       // purge archives by max. server storage size
-      getServerSettings(createInfo->storageSpecifier,createInfo->jobOptions,&server);
+      getServerSettings(&createInfo->storageInfo.storageSpecifier,createInfo->jobOptions,&server);
       if (server.maxStorageSize > fileInfo.size)
       {
         purgeStorageByServer(createInfo->indexHandle,
@@ -4339,7 +4345,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       // check if append and storage exists => assign to existing storage index
       if (   appendFlag
           && Index_findStorageByName(createInfo->indexHandle,
-                                     createInfo->storageSpecifier,
+                                     &createInfo->storageInfo.storageSpecifier,
                                      storageMsg.archiveName,
                                      NULL,  // uuidId
                                      NULL,  // entityId
@@ -4424,7 +4430,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         // delete old indizes for same storage file
         error = purgeStorageIndex(createInfo->indexHandle,
                                   storageMsg.storageId,
-                                  createInfo->storageSpecifier,
+                                  &createInfo->storageInfo.storageSpecifier,
                                   storageMsg.archiveName
                                  );
         if (error != ERROR_NONE)
@@ -4443,7 +4449,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         if (createInfo->storageInfo.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
         {
 //fprintf(stderr,"%s, %d: append to entity of uuid %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
-          Storage_getPrintableName(printableStorageName,createInfo->storageSpecifier,storageMsg.archiveName);
+          Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
 
           // find matching entity and assign storage to entity
           File_getFilePathName(pathName,storageMsg.archiveName);
@@ -4657,7 +4663,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       // get archive name pattern
       pattern = String_new();
       error = formatArchiveFileName(pattern,
-                                    createInfo->storageSpecifier->archiveName,
+                                    createInfo->storageInfo.storageSpecifier.archiveName,
                                     EXPAND_MACRO_MODE_PATTERN,
                                     createInfo->archiveType,
                                     createInfo->scheduleTitle,
@@ -6820,12 +6826,12 @@ Errors Command_create(ConstString                  jobUUID,
   }
 
   // get printable storage name
-  Storage_getPrintableName(printableStorageName,createInfo.storageSpecifier,NULL);
+  Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
   // init storage
   error = Storage_init(&createInfo.storageInfo,
-                       createInfo.storageSpecifier,
-                       createInfo.jobOptions,
+                       &storageSpecifier,
+                       jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(updateStorageStatusInfo,&createInfo),
@@ -6859,7 +6865,7 @@ Errors Command_create(ConstString                  jobUUID,
     else
     {
       formatIncrementalFileName(incrementalListFileName,
-                                createInfo.storageSpecifier
+                                &createInfo.storageInfo.storageSpecifier
                                );
     }
     Dictionary_init(&createInfo.namesDictionary,DICTIONARY_BYTE_COPY,CALLBACK_NULL,CALLBACK_NULL);
@@ -6970,13 +6976,13 @@ Errors Command_create(ConstString                  jobUUID,
 
   // create new archive
   error = Archive_create(&createInfo.archiveHandle,
+                         &createInfo.storageInfo,
+                         indexHandle,
                          uuidId,
+                         entityId,
                          jobUUID,
                          scheduleUUID,
                          deltaSourceList,
-                         jobOptions,
-                         indexHandle,
-                         entityId,
                          archiveType,
                          CALLBACK(NULL,NULL),  // archiveInitFunction
                          CALLBACK(NULL,NULL),  // archiveDoneFunction

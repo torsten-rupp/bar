@@ -1389,6 +1389,7 @@ bool Storage_equalNames(ConstString storageName1,
   return result;
 }
 
+//TODO: add storageName parameter?
 String Storage_getName(StorageSpecifier *storageSpecifier,
                        ConstString      archiveName
                       )

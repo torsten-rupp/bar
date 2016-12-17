@@ -2224,7 +2224,6 @@ remoteBarFlag=FALSE;
                              &storageInfo,
                              fileName,
                              NULL,  // deltaSourceList
-                             jobOptions,
                              getPasswordFunction,
                              getPasswordUserData,
                              logHandle

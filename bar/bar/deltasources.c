@@ -218,7 +218,6 @@ LOCAL Errors restoreFile(StorageSpecifier    *storageSpecifier,
                        &storageInfo,
                        NULL,  // archive name
                        deltaSourceList,
-                       jobOptions,
                        CALLBACK(getPasswordFunction,getPasswordUserData),
                        logHandle
                       );
