@@ -226,10 +226,10 @@ typedef struct
   void                     *encryptedKeyData;                          // encrypted random key used for asymmetric encryption
   uint                     encryptedKeyDataLength;                     // length of encrypted random key
 
-  void                     *signatureKeyData;                          // signature random key
-  uint                     signatureKeyDataLength;                     // length of signature random key
+  void                     *signatureKeyData;                          // signature key
+  uint                     signatureKeyDataLength;                     // length of signature key
 
-  uint                     blockLength;                                // block length for file entry/file data (depend on used crypt algorithm)
+  uint                     blockLength;                                // block length for crypt algorithm
 
   ArchiveIOTypes           ioType;                                     // i/o type
   union
