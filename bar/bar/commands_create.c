@@ -88,7 +88,7 @@ typedef struct
 // create info
 typedef struct
 {
-  StorageSpecifier            *storageSpecifier;                  // storage specifier structure
+  const StorageSpecifier            *storageSpecifier;                  // storage specifier structure
   IndexHandle                 *indexHandle;
   ConstString                 jobUUID;                            // unique job id to store or NULL
   ConstString                 scheduleUUID;                       // unique schedule id to store or NULL
@@ -3287,7 +3287,8 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 /***********************************************************************\
 * Name   : archiveGetSize
 * Purpose: call back to get archive size
-* Input  : indexHandle - index handle or NULL if no index
+* Input  : storageInfo - storage info
+*          indexHandle - index handle or NULL if no index
 *          storageId   - index storage id
 *          partNumber  - part number or ARCHIVE_PART_NUMBER_NONE for
 *                        single part
@@ -3297,7 +3298,8 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL uint64 archiveGetSize(IndexHandle *indexHandle,
+LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
+                            IndexHandle *indexHandle,
                             IndexId     storageId,
                             int         partNumber,
                             void        *userData
@@ -3335,7 +3337,7 @@ LOCAL uint64 archiveGetSize(IndexHandle *indexHandle,
   DEBUG_TESTCODE() { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
 
   // get archive size
-  error = Storage_open(&storageHandle,&createInfo->storageInfo,archiveName);
+  error = Storage_open(&storageHandle,storageInfo,archiveName);
   if (error != ERROR_NONE)
   {
     String_delete(archiveName);
@@ -3353,7 +3355,8 @@ LOCAL uint64 archiveGetSize(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : archiveStore
 * Purpose: call back to store archive file
-* Input  : indexHandle          - index handle or NULL if no index
+* Input  : storageInfo          - storage info
+*          indexHandle          - index handle or NULL if no index
 *          jobUUID              - job UUID id
 *          scheduleUUID         - schedule UUID id
 *          entityId             - index entity id
@@ -3369,7 +3372,8 @@ LOCAL uint64 archiveGetSize(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors archiveStore(IndexHandle  *indexHandle,
+LOCAL Errors archiveStore(StorageInfo  *storageInfo,
+                          IndexHandle  *indexHandle,
                           IndexId      uuidId,
                           ConstString  jobUUID,
                           ConstString  scheduleUUID,
@@ -3393,6 +3397,7 @@ LOCAL Errors archiveStore(IndexHandle  *indexHandle,
   assert(createInfo->storageSpecifier != NULL);
   assert(!String_isEmpty(intermediateFileName));
 
+  UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(jobUUID);
   UNUSED_VARIABLE(scheduleUUID);
@@ -3479,10 +3484,10 @@ LOCAL Errors archiveStore(IndexHandle  *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
-                               IndexId          storageId,
-                               StorageSpecifier *storageSpecifier,
-                               ConstString      archiveName
+LOCAL Errors purgeStorageIndex(IndexHandle            *indexHandle,
+                               IndexId                storageId,
+                               const StorageSpecifier *storageSpecifier,
+                               ConstString            archiveName
                               )
 {
   IndexId          oldUUIDId;

@@ -71,7 +71,8 @@ typedef enum
 /***********************************************************************\
 * Name   : ArchiveInitFunction
 * Purpose: call back before store archive file
-* Input  : indexHandle  - index handle or NULL if no index
+* Input  : storageInfo  - storage info
+*          indexHandle  - index handle or NULL if no index
 *          uuidId       - index UUID id
 *          jobUUID      - job UUID or NULL
 *          scheduleUUID - schedule UUID or NULL
@@ -86,7 +87,8 @@ typedef enum
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveInitFunction)(IndexHandle  *indexHandle,
+typedef Errors(*ArchiveInitFunction)(StorageInfo  *storageInfo,
+                                     IndexHandle  *indexHandle,
                                      IndexId      uuidId,
                                      ConstString  jobUUID,
                                      ConstString  scheduleUUID,
@@ -100,7 +102,8 @@ typedef Errors(*ArchiveInitFunction)(IndexHandle  *indexHandle,
 /***********************************************************************\
 * Name   : ArchiveDoneFunction
 * Purpose: call back after store archive file
-* Input  : indexHandle  - index handle or NULL if no index
+* Input  : storageInfo  - storage info
+*          indexHandle  - index handle or NULL if no index
 *          uuidId       - index UUID id
 *          jobUUID      - job UUID or NULL
 *          scheduleUUID - schedule UUID or NULL
@@ -115,7 +118,8 @@ typedef Errors(*ArchiveInitFunction)(IndexHandle  *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveDoneFunction)(IndexHandle  *indexHandle,
+typedef Errors(*ArchiveDoneFunction)(StorageInfo  *storageInfo,
+                                     IndexHandle  *indexHandle,
                                      IndexId      uuidId,
                                      ConstString  jobUUID,
                                      ConstString  scheduleUUID,
@@ -129,7 +133,8 @@ typedef Errors(*ArchiveDoneFunction)(IndexHandle  *indexHandle,
 /******************************************************************** ***\
 * Name   : ArchiveGetSizeFunction
 * Purpose: call back to get size of archive file
-* Input  : indexHandle - index handle or NULL if no index
+* Input  : storageInfo - storage info
+*          indexHandle - index handle or NULL if no index
 *          storageId   - index id of storage
 *          partNumber  - part number or ARCHIVE_PART_NUMBER_NONE for
 *                        single part
@@ -139,7 +144,8 @@ typedef Errors(*ArchiveDoneFunction)(IndexHandle  *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-typedef uint64(*ArchiveGetSizeFunction)(IndexHandle *indexHandle,
+typedef uint64(*ArchiveGetSizeFunction)(StorageInfo  *storageInfo,
+                                        IndexHandle *indexHandle,
                                         IndexId     storageId,
                                         int         partNumber,
                                         void        *userData
@@ -148,7 +154,8 @@ typedef uint64(*ArchiveGetSizeFunction)(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : ArchiveStoreFunction
 * Purpose: call back to store archive
-* Input  : indexHandle          - index handle or NULL if no index
+* Input  : storageInfo          - storage info
+*          indexHandle          - index handle or NULL if no index
 *          uuidId               - index UUID id
 *          jobUUID              - job UUID or NULL
 *          scheduleUUID         - schedule UUID or NULL
@@ -165,7 +172,8 @@ typedef uint64(*ArchiveGetSizeFunction)(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveStoreFunction)(IndexHandle  *indexHandle,
+typedef Errors(*ArchiveStoreFunction)(StorageInfo  *storageInfo,
+                                      IndexHandle  *indexHandle,
                                       IndexId      uuidId,
                                       ConstString  jobUUID,
                                       ConstString  scheduleUUID,
@@ -236,7 +244,6 @@ typedef struct
     {
       StorageSpecifier     storageSpecifier;                           // storage specifier structure
       String               storageFileName;                            // storage storage name
-//      const StorageInfo    *storageInfo;                               // storage info
       StorageHandle        storageHandle;
     } storage;
   };
@@ -650,26 +657,26 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Archive_open(ArchiveHandle          *archiveHandle,
-                      const StorageInfo      *storageInfo,
-                      ConstString            archiveName,
-                      DeltaSourceList        *deltaSourceList,
-                      const JobOptions       *jobOptions,
-                      GetPasswordFunction    getPasswordFunction,
-                      void                   *getPasswordUserData,
-                      LogHandle              *logHandle
+  Errors Archive_open(ArchiveHandle       *archiveHandle,
+                      StorageInfo         *storageInfo,
+                      ConstString         archiveName,
+                      DeltaSourceList     *deltaSourceList,
+                      const JobOptions    *jobOptions,
+                      GetPasswordFunction getPasswordFunction,
+                      void                *getPasswordUserData,
+                      LogHandle           *logHandle
                      );
 #else /* not NDEBUG */
-  Errors __Archive_open(const char             *__fileName__,
-                        ulong                  __lineNb__,
-                        ArchiveHandle          *archiveHandle,
-                        const StorageInfo      *storageInfo,
-                        ConstString            archiveName,
-                        DeltaSourceList        *deltaSourceList,
-                        const JobOptions       *jobOptions,
-                        GetPasswordFunction    getPasswordFunction,
-                        void                   *getPasswordUserData,
-                        LogHandle              *logHandle
+  Errors __Archive_open(const char          *__fileName__,
+                        ulong               __lineNb__,
+                        ArchiveHandle       *archiveHandle,
+                        StorageInfo         *storageInfo,
+                        ConstString         archiveName,
+                        DeltaSourceList     *deltaSourceList,
+                        const JobOptions    *jobOptions,
+                        GetPasswordFunction getPasswordFunction,
+                        void                *getPasswordUserData,
+                        LogHandle           *logHandle
                        );
 #endif /* NDEBUG */
 

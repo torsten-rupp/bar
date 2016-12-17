@@ -1112,11 +1112,12 @@ LOCAL void findNextArchivePart(ArchiveHandle *archiveHandle, IndexHandle *indexH
   {
     do
     {
-      storageSize = archiveHandle->archiveGetSizeFunction(indexHandle,
-                                                        archiveHandle->storageId,
-                                                        archiveHandle->partNumber,
-                                                        archiveHandle->archiveGetSizeUserData
-                                                       );
+      storageSize = archiveHandle->archiveGetSizeFunction(archiveHandle->storage.storageHandle.storageInfo,
+                                                          indexHandle,
+                                                          archiveHandle->storageId,
+                                                          archiveHandle->partNumber,
+                                                          archiveHandle->archiveGetSizeUserData
+                                                         );
       if (storageSize > archiveHandle->jobOptions->archivePartSize)
       {
         archiveHandle->partNumber++;
@@ -1904,18 +1905,19 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
       // call-back for init archive
       if (archiveHandle->archiveInitFunction != NULL)
       {
-        error = archiveHandle->archiveInitFunction(indexHandle,
-                                                 archiveHandle->uuidId,
-                                                 archiveHandle->jobUUID,
-                                                 archiveHandle->scheduleUUID,
-                                                 archiveHandle->entityId,
-                                                 archiveHandle->archiveType,
-                                                 archiveHandle->storageId,
-                                                 isSplittedArchive(archiveHandle)
-                                                   ? (int)archiveHandle->partNumber
-                                                   : ARCHIVE_PART_NUMBER_NONE,
-                                                 archiveHandle->archiveInitUserData
-                                                );
+        error = archiveHandle->archiveInitFunction(archiveHandle->storage.storageHandle.storageInfo,
+                                                   indexHandle,
+                                                   archiveHandle->uuidId,
+                                                   archiveHandle->jobUUID,
+                                                   archiveHandle->scheduleUUID,
+                                                   archiveHandle->entityId,
+                                                   archiveHandle->archiveType,
+                                                   archiveHandle->storageId,
+                                                   isSplittedArchive(archiveHandle)
+                                                     ? (int)archiveHandle->partNumber
+                                                     : ARCHIVE_PART_NUMBER_NONE,
+                                                   archiveHandle->archiveInitUserData
+                                                  );
         if (error != ERROR_NONE)
         {
           AutoFree_cleanup(&autoFreeList);
@@ -1983,20 +1985,21 @@ if (!archiveHandle->file.openFlag) return ERROR_NONE;
     // call-back to store archive
     if (archiveHandle->archiveStoreFunction != NULL)
     {
-      error = archiveHandle->archiveStoreFunction(indexHandle,
-                                                archiveHandle->uuidId,
-                                                archiveHandle->jobUUID,
-                                                archiveHandle->scheduleUUID,
-                                                archiveHandle->entityId,
-                                                archiveHandle->archiveType,
-                                                archiveHandle->storageId,
-                                                isSplittedArchive(archiveHandle)
-                                                  ? (int)archiveHandle->partNumber
-                                                  : ARCHIVE_PART_NUMBER_NONE,
-                                                archiveHandle->file.fileName,
-                                                Archive_getSize(archiveHandle),
-                                                archiveHandle->archiveStoreUserData
-                                               );
+      error = archiveHandle->archiveStoreFunction(archiveHandle->storage.storageHandle.storageInfo,
+                                                  indexHandle,
+                                                  archiveHandle->uuidId,
+                                                  archiveHandle->jobUUID,
+                                                  archiveHandle->scheduleUUID,
+                                                  archiveHandle->entityId,
+                                                  archiveHandle->archiveType,
+                                                  archiveHandle->storageId,
+                                                  isSplittedArchive(archiveHandle)
+                                                    ? (int)archiveHandle->partNumber
+                                                    : ARCHIVE_PART_NUMBER_NONE,
+                                                  archiveHandle->file.fileName,
+                                                  Archive_getSize(archiveHandle),
+                                                  archiveHandle->archiveStoreUserData
+                                                 );
       if (error != ERROR_NONE)
       {
         Semaphore_unlock(&archiveHandle->chunkIOLock);
@@ -2008,18 +2011,19 @@ if (!archiveHandle->file.openFlag) return ERROR_NONE;
     // call-back for done archive
     if (archiveHandle->archiveDoneFunction != NULL)
     {
-      error = archiveHandle->archiveDoneFunction(indexHandle,
-                                               archiveHandle->uuidId,
-                                               archiveHandle->jobUUID,
-                                               archiveHandle->scheduleUUID,
-                                               archiveHandle->entityId,
-                                               archiveHandle->archiveType,
-                                               archiveHandle->storageId,
-                                               isSplittedArchive(archiveHandle)
-                                                 ? (int)archiveHandle->partNumber
-                                                 : ARCHIVE_PART_NUMBER_NONE,
-                                               archiveHandle->archiveDoneUserData
-                                              );
+      error = archiveHandle->archiveDoneFunction(archiveHandle->storage.storageHandle.storageInfo,
+                                                 indexHandle,
+                                                 archiveHandle->uuidId,
+                                                 archiveHandle->jobUUID,
+                                                 archiveHandle->scheduleUUID,
+                                                 archiveHandle->entityId,
+                                                 archiveHandle->archiveType,
+                                                 archiveHandle->storageId,
+                                                 isSplittedArchive(archiveHandle)
+                                                   ? (int)archiveHandle->partNumber
+                                                   : ARCHIVE_PART_NUMBER_NONE,
+                                                 archiveHandle->archiveDoneUserData
+                                                );
       if (error != ERROR_NONE)
       {
         Semaphore_unlock(&archiveHandle->chunkIOLock);
@@ -4439,26 +4443,26 @@ fprintf(stderr,"%s, %d: random encrypt key %p %d %p\n",__FILE__,__LINE__,archive
 }
 
 #ifdef NDEBUG
-  Errors Archive_open(ArchiveHandle          *archiveHandle,
-                      const StorageInfo      *storageInfo,
-                      ConstString            archiveName,
-                      DeltaSourceList        *deltaSourceList,
-                      const JobOptions       *jobOptions,
-                      GetPasswordFunction    getPasswordFunction,
-                      void                   *getPasswordUserData,
-                      LogHandle              *logHandle
+  Errors Archive_open(ArchiveHandle       *archiveHandle,
+                      StorageInfo         *storageInfo,
+                      ConstString         archiveName,
+                      DeltaSourceList     *deltaSourceList,
+                      const JobOptions    *jobOptions,
+                      GetPasswordFunction getPasswordFunction,
+                      void                *getPasswordUserData,
+                      LogHandle           *logHandle
                      )
 #else /* not NDEBUG */
-  Errors __Archive_open(const char             *__fileName__,
-                        ulong                  __lineNb__,
-                        ArchiveHandle          *archiveHandle,
-                        const StorageInfo      *storageInfo,
-                        ConstString            archiveName,
-                        DeltaSourceList        *deltaSourceList,
-                        const JobOptions       *jobOptions,
-                        GetPasswordFunction    getPasswordFunction,
-                        void                   *getPasswordUserData,
-                        LogHandle              *logHandle
+  Errors __Archive_open(const char          *__fileName__,
+                        ulong               __lineNb__,
+                        ArchiveHandle       *archiveHandle,
+                        StorageInfo         *storageInfo,
+                        ConstString         archiveName,
+                        DeltaSourceList     *deltaSourceList,
+                        const JobOptions    *jobOptions,
+                        GetPasswordFunction getPasswordFunction,
+                        void                *getPasswordUserData,
+                        LogHandle           *logHandle
                        )
 #endif /* NDEBUG */
 {
@@ -13480,7 +13484,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
              )
           {
             // update existing entity
-fprintf(stderr,"%s, %d: found %ld \n",__FILE__,__LINE__,entityId);
+fprintf(stderr,"%s, %d: found %ld \n",__FILE__,__LINE__,(long)entityId);
           }
           else
           {
