@@ -524,9 +524,56 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
 }
 
 /***********************************************************************\
-* Name   : addDecryptKey
-* Purpose: add decrypt key for password with appropiated key length for
-*          crypt algorithm
+* Name   : deriveDecryptKey
+* Purpose: derive decrypt key for password with appropiated key length
+*          and salt
+* Input  : decryptKeyNode     - decrypt key node
+*          keyLength          - key length [bits]
+*          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
+*          salt               - salt
+*          saltLength         - salt length [bytes]
+* Output : -
+* Return : crypt key or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
+                              uint                keyLength,
+                              CryptKeyDeriveTypes cryptKeyDeriveType,
+                              const byte          *salt,
+                              uint                saltLength
+                             )
+{
+  Errors error;
+
+  assert(decryptKeyNode != NULL);
+  assert(keyLength > 0);
+
+  // derive decrypt key from password with salt
+  error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
+                          keyLength,
+                          cryptKeyDeriveType,
+                          decryptKeyNode->password,
+                          salt,
+                          saltLength
+                         );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // store new key length and salt
+  decryptKeyNode->keyLength  = keyLength;
+  memCopyFast(decryptKeyNode->salt,sizeof(decryptKeyNode->salt),salt,saltLength);
+  decryptKeyNode->saltLength = MIN(sizeof(decryptKeyNode->salt),saltLength);
+//fprintf(stderr,"%s, %d: decrypt key\n",__FILE__,__LINE__); debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLength,0);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : addDecryptKeyNode
+* Purpose: add decrypt key node for password with key length and salt
 * Input  : password           - password
 *          keyLength          - key length [bits]
 *          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
@@ -537,12 +584,12 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
 * Notes  : -
 \***********************************************************************/
 
-LOCAL CryptKey *addDecryptKey(const Password      *password,
-                              uint                keyLength,
-                              CryptKeyDeriveTypes cryptKeyDeriveType,
-                              const byte          *salt,
-                              uint                saltLength
-                             )
+LOCAL CryptKey *addDecryptKeyNode(const Password      *password,
+                                  uint                keyLength,
+                                  CryptKeyDeriveTypes cryptKeyDeriveType,
+                                  const byte          *salt,
+                                  uint                saltLength
+                                 )
 {
   DecryptKeyNode *decryptKeyNode;
   Errors         error;
@@ -564,16 +611,15 @@ LOCAL CryptKey *addDecryptKey(const Password      *password,
     decryptKeyNode->keyLength  = keyLength;
     memCopyFast(decryptKeyNode->salt,sizeof(decryptKeyNode->salt),salt,saltLength);
     decryptKeyNode->saltLength = MIN(sizeof(decryptKeyNode->salt),saltLength);
+    Crypt_initKey(&decryptKeyNode->cryptKey,CRYPT_PADDING_TYPE_NONE);
 
     // derive decrypt key from password with salt
-    Crypt_initKey(&decryptKeyNode->cryptKey,CRYPT_PADDING_TYPE_NONE);
-    error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
-                            keyLength,
-                            cryptKeyDeriveType,
-                            password,
-                            salt,
-                            saltLength
-                           );
+    error = deriveDecryptKey(decryptKeyNode,
+                             keyLength,
+                             cryptKeyDeriveType,
+                             salt,
+                             saltLength
+                            );
     if (error != ERROR_NONE)
     {
       Crypt_doneKey(&decryptKeyNode->cryptKey);
@@ -595,24 +641,16 @@ LOCAL CryptKey *addDecryptKey(const Password      *password,
        )
     {
       // derive decrypt key from password with salt
-      error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
-                              keyLength,
-                              cryptKeyDeriveType,
-                              password,
-                              salt,
-                              saltLength
-                             );
+      error = deriveDecryptKey(decryptKeyNode,
+                               keyLength,
+                               cryptKeyDeriveType,
+                               salt,
+                               saltLength
+                              );
       if (error != ERROR_NONE)
       {
         return NULL;
       }
-
-      // store new key length and salt
-      decryptKeyNode->keyLength  = keyLength;
-      memCopyFast(decryptKeyNode->salt,sizeof(decryptKeyNode->salt),salt,saltLength);
-      decryptKeyNode->saltLength = MIN(sizeof(decryptKeyNode->salt),saltLength);
-//fprintf(stderr,"%s, %d: decrypt key\n",__FILE__,__LINE__);
-//debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLength,0);
     }
   }
 
@@ -645,6 +683,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                                        )
 {
   bool           semaphoreLock;
+  DecryptKeyNode *decryptKeyNode;
   const CryptKey *decryptKey;
   String         printableStorageName;
   Password       newPassword;
@@ -655,7 +694,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
   assert(decryptKeyIterator->archiveHandle->storageInfo != NULL);
 
   decryptKey = NULL;
-//TODO
+//TODO: password lock on input?
 //  SEMAPHORE_LOCKED_DO(semaphoreLock,&cryptKeyHandle->archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
@@ -664,8 +703,26 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
       if      (decryptKeyIterator->nextDecryptKeyNode != NULL)
       {
         // get next crypt key from list
-        decryptKey = &decryptKeyIterator->nextDecryptKeyNode->cryptKey;
-        decryptKeyIterator->nextDecryptKeyNode = decryptKeyIterator->nextDecryptKeyNode->next;
+        decryptKeyNode = decryptKeyIterator->nextDecryptKeyNode;
+        decryptKeyIterator->nextDecryptKeyNode = decryptKeyNode->next;
+
+        // check if key length/salt change
+        if (   (decryptKeyNode->keyLength != keyLength)
+            || (decryptKeyNode->saltLength != saltLength)
+            || !memEquals(decryptKeyNode->salt,salt,saltLength)
+           )
+        {
+          if (deriveDecryptKey(decryptKeyNode,
+                               keyLength,
+                               cryptKeyDeriveType,
+                               salt,
+                               saltLength
+                              ) == ERROR_NONE
+             )
+          {
+            decryptKey = &decryptKeyNode->cryptKey;
+          }
+        }
       }
       else
       {
@@ -678,12 +735,12 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
              // get decrypt key from config
              if (decryptKeyIterator->jobCryptPassword != NULL)
              {
-               decryptKey = addDecryptKey(decryptKeyIterator->jobCryptPassword,
-                                          keyLength,
-                                          cryptKeyDeriveType,
-                                          salt,
-                                          saltLength
-                                         );
+               decryptKey = addDecryptKeyNode(decryptKeyIterator->jobCryptPassword,
+                                              keyLength,
+                                              cryptKeyDeriveType,
+                                              salt,
+                                              saltLength
+                                             );
              }
 
              // next password mode is: default
@@ -693,12 +750,12 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
              // get decrypt key from global config
              if (globalOptions.cryptPassword != NULL)
              {
-               decryptKey = addDecryptKey(globalOptions.cryptPassword,
-                                          keyLength,
-                                          cryptKeyDeriveType,
-                                          salt,
-                                          saltLength
-                                         );
+               decryptKey = addDecryptKeyNode(globalOptions.cryptPassword,
+                                              keyLength,
+                                              cryptKeyDeriveType,
+                                              salt,
+                                              saltLength
+                                             );
              }
 
              // next password mode is: ask
@@ -724,12 +781,12 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                if (error == ERROR_NONE)
                {
                  // add to decrypt key list
-                 decryptKey = addDecryptKey(&newPassword,
-                                            keyLength,
-                                            cryptKeyDeriveType,
-                                            salt,
-                                            saltLength
-                                           );
+                 decryptKey = addDecryptKeyNode(&newPassword,
+                                                keyLength,
+                                                cryptKeyDeriveType,
+                                                salt,
+                                                saltLength
+                                               );
                }
                else
                {
@@ -7539,12 +7596,6 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
                                       );
-
-        // reset error and try next decrypt key
-        if (decryptKey != NULL)
-        {
-          error = ERROR_NONE;
-        }
       }
       else
       {
@@ -7829,6 +7880,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   foundFileDataFlag  = FALSE;
   do
   {
+//fprintf(stderr,"%s, %d: decrpyt key \n",__FILE__,__LINE__); debugDumpMemory(decryptKey->data,decryptKey->dataLength,0);
     // reset
     AutoFree_freeAll(&autoFreeList2);
     error = Chunk_seek(&archiveEntryInfo->file.chunkFile.info,index);
@@ -7836,12 +7888,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
     // init file entry/extended attribute/delta/data/file crypt
     if (error == ERROR_NONE)
     {
-#if 0
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-debugDumpMemory(archiveHandle->cryptSalt,16,0);
-//archiveHandle->cryptSalt[0]=66;
-debugDumpMemory(archiveHandle->cryptSalt,16,0);
-#endif
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),0);
 #ifndef MULTI_CRYPT
       error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
@@ -8161,12 +8208,6 @@ NULL,//                         password,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
                                       );
-
-        // reset error and try next decrypt key
-        if (decryptKey != NULL)
-        {
-          error = ERROR_NONE;
-        }
       }
       else
       {
@@ -8720,12 +8761,6 @@ NULL,//                         password,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
                                       );
-
-        // reset error and try next decrypt key
-        if (decryptKey != NULL)
-        {
-          error = ERROR_NONE;
-        }
       }
       else
       {
@@ -8985,6 +9020,7 @@ NULL,//                         password,
   foundDirectoryEntryFlag = FALSE;
   do
   {
+//fprintf(stderr,"%s, %d: decrpyt key \n",__FILE__,__LINE__); debugDumpMemory(decryptKey->data,decryptKey->dataLength,0);
     // reset
     AutoFree_freeAll(&autoFreeList2);
     error = Chunk_seek(&archiveEntryInfo->directory.chunkDirectory.info,index);
@@ -9170,12 +9206,6 @@ NULL,//                         password,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
                                       );
-
-        // reset error and try next decrypt key
-        if (decryptKey != NULL)
-        {
-          error = ERROR_NONE;
-        }
       }
       else
       {
@@ -9589,12 +9619,6 @@ NULL,//                         password,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
                                       );
-
-        // reset error and try next decrypt key
-        if (decryptKey != NULL)
-        {
-          error = ERROR_NONE;
-        }
       }
       else
       {
@@ -10235,12 +10259,6 @@ NULL,//                         password,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
                                       );
-
-        // reset error and try next decrypt key
-        if (decryptKey != NULL)
-        {
-          error = ERROR_NONE;
-        }
       }
       else
       {
@@ -10690,12 +10708,6 @@ NULL,//                         password,
                                        archiveHandle->cryptSalt,
                                        sizeof(archiveHandle->cryptSalt)
                                       );
-
-        // reset error and try next decrypt key
-        if (decryptKey != NULL)
-        {
-          error = ERROR_NONE;
-        }
       }
       else
       {
