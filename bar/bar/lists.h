@@ -227,12 +227,12 @@ typedef enum
 
 #define LIST_FIND_FIRST(list,variable,condition) \
   ({ \
-    auto typeof((list)->head) __closure__ (void); \
-    typeof((list)->head) __closure__ (void) \
+    auto typeof(variable) __closure__ (void); \
+    typeof(variable) __closure__ (void) \
     { \
       assert((void*)(list) != NULL); \
       \
-      variable = (list)->head; \
+      variable = (typeof(variable))(list)->head; \
       while ((variable != NULL) && !(condition)) \
       { \
         variable = variable->next; \
@@ -244,12 +244,12 @@ typedef enum
   })
 #define LIST_FIND_LAST(list,variable,condition) \
   ({ \
-    auto typeof((list)->head) __closure__ (void); \
-    typeof((list)->head) __closure__ (void) \
+    auto typeof(variable) __closure__ (void); \
+    typeof(variable) __closure__ (void) \
     { \
       assert((void*)(list) != NULL); \
       \
-      variable = (list)->tail; \
+      variable = (typeof(variable))(list)->tail; \
       while ((variable != NULL) && !(condition)) \
       { \
         variable = variable->prev; \
