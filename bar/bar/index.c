@@ -4666,7 +4666,9 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                                 LEFT JOIN entities ON storage.entityId=entities.id \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                               GROUP BY storage.id \
-                             "
+                              WHERE storage.state!=%d \
+                             ",
+                             INDEX_STATE_DELETED
                             );
     if (error != ERROR_NONE)
     {
