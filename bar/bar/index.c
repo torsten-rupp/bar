@@ -4324,8 +4324,8 @@ bool Index_containsType(const IndexId indexIds[],
 }
 
 bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
-                             ConstString  jobUUID,
-                             ConstString  scheduleUUID,
+                             ConstString  findJobUUID,
+                             ConstString  findScheduleUUID,
                              IndexId      *uuidId,
                              uint64       *lastExecutedDateTime,
                              String       lastErrorMessage,
@@ -4356,8 +4356,8 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
   filterString = String_newCString("1");
 
   // filters
-  filterAppend(filterString,!String_isEmpty(jobUUID),"AND","uuids.jobUUID=%'S",jobUUID);
-  filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
+  filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","uuids.jobUUID=%'S",findJobUUID);
+  filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'S",findScheduleUUID);
 
 //TODO get errorMessage
   INDEX_DOX(error,
@@ -4422,8 +4422,8 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
 }
 
 bool Index_findEntityByUUID(IndexHandle  *indexHandle,
-                            ConstString  jobUUID,
-                            ConstString  scheduleUUID,
+                            ConstString  findJobUUID,
+                            ConstString  findScheduleUUID,
                             IndexId      *uuidId,
                             IndexId      *entityId,
                             ArchiveTypes *archiveType,
@@ -4451,8 +4451,8 @@ bool Index_findEntityByUUID(IndexHandle  *indexHandle,
   filterString = String_newCString("1");
 
   // get filters
-  filterAppend(filterString,!String_isEmpty(jobUUID),"AND","jobUUID=%'S",jobUUID);
-  filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","scheduleUUID=%'S",scheduleUUID);
+  filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","jobUUID=%'S",findJobUUID);
+  filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","scheduleUUID=%'S",findScheduleUUID);
 
 //TODO get errorMessage
   INDEX_DOX(error,
@@ -4512,7 +4512,7 @@ bool Index_findEntityByUUID(IndexHandle  *indexHandle,
 }
 
 bool Index_findStorageById(IndexHandle *indexHandle,
-                           IndexId     storageId,
+                           IndexId     findStorageId,
                            String      jobUUID,
                            String      scheduleUUID,
                            IndexId     *uuidId,
@@ -4534,7 +4534,7 @@ bool Index_findStorageById(IndexHandle *indexHandle,
   DatabaseId          uuidId_,entityId_;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+  assert(Index_getType(findStorageId) == INDEX_TYPE_STORAGE);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -4567,7 +4567,7 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                               GROUP BY storage.id \
                               LIMIT 0,1 \
                              ",
-                             Index_getDatabaseId(storageId)
+                             Index_getDatabaseId(findStorageId)
                             );
     if (error != ERROR_NONE)
     {
@@ -4608,8 +4608,8 @@ bool Index_findStorageById(IndexHandle *indexHandle,
 }
 
 bool Index_findStorageByName(IndexHandle            *indexHandle,
-                             const StorageSpecifier *storageSpecifier,
-                             ConstString            archiveName,
+                             const StorageSpecifier *findStorageSpecifier,
+                             ConstString            findArchiveName,
                              IndexId                *uuidId,
                              IndexId                *entityId,
                              String                 jobUUID,
@@ -4627,8 +4627,8 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 {
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
-  String              tmpStorageName;
-  StorageSpecifier    tmpStorageSpecifier;
+  String              storageName;
+  StorageSpecifier    storageSpecifier;
   bool                foundFlag;
   DatabaseId          uuidId_,entityId_,storageId_;
 
@@ -4673,8 +4673,8 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
       return error;
     }
 
-    tmpStorageName = String_new();
-    Storage_initSpecifier(&tmpStorageSpecifier);
+    storageName = String_new();
+    Storage_initSpecifier(&storageSpecifier);
     foundFlag   = FALSE;
     while (   !foundFlag
            && Database_getNextRow(&databaseQueryHandle,
@@ -4684,7 +4684,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                                   &entityId_,
                                   &storageId_,
                                   scheduleUUID,
-                                  tmpStorageName,
+                                  storageName,
                                   createdDateTime,
                                   size,
                                   indexState,
@@ -4696,10 +4696,10 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                                  )
           )
     {
-      if (Storage_parseName(&tmpStorageSpecifier,tmpStorageName) == ERROR_NONE)
+      if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
       {
-        foundFlag = Storage_equalSpecifiers(storageSpecifier,archiveName,
-                                            &tmpStorageSpecifier,NULL
+        foundFlag = Storage_equalSpecifiers(findStorageSpecifier,findArchiveName,
+                                            &storageSpecifier,NULL
                                            );
         if (foundFlag)
         {
@@ -4709,8 +4709,8 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
         }
       }
     }
-    Storage_doneSpecifier(&tmpStorageSpecifier);
-    String_delete(tmpStorageName);
+    Storage_doneSpecifier(&storageSpecifier);
+    String_delete(storageName);
 
     Database_finalize(&databaseQueryHandle);
 
@@ -4725,7 +4725,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 }
 
 bool Index_findStorageByState(IndexHandle   *indexHandle,
-                              IndexStateSet indexStateSet,
+                              IndexStateSet findIndexStateSet,
                               IndexId       *uuidId,
                               String        jobUUID,
                               IndexId       *entityId,
@@ -4783,7 +4783,7 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                               WHERE (storage.state IN (%S)) \
                               LIMIT 0,1 \
                              ",
-                             getIndexStateSetString(indexStateSetString,indexStateSet)
+                             getIndexStateSetString(indexStateSetString,findIndexStateSet)
                             );
     if (error != ERROR_NONE)
     {
@@ -7003,6 +7003,8 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 Errors Index_newStorage(IndexHandle *indexHandle,
                         IndexId     entityId,
                         ConstString storageName,
+                        uint64      createdDateTime,
+                        uint64      size,
                         IndexStates indexState,
                         IndexModes  indexMode,
                         IndexId     *storageId
@@ -7031,6 +7033,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                  entityId, \
                                  name, \
                                  created, \
+                                 size, \
                                  state, \
                                  mode, \
                                  lastChecked\
@@ -7039,14 +7042,17 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                 ( \
                                  %d, \
                                  %'S, \
-                                 DATETIME('now'), \
+                                 DATETIME(%llu,'unixepoch'), \
+                                 %llu, \
                                  %d, \
                                  %d, \
-                                 DATETIME('now')\
+                                 DATETIME('now') \
                                 ); \
                              ",
                              Index_getDatabaseId(entityId),
                              storageName,
+                             createdDateTime,
+                             size,
                              indexState,
                              indexMode
                             );
@@ -7056,6 +7062,70 @@ Errors Index_newStorage(IndexHandle *indexHandle,
     }
 
     (*storageId) = INDEX_ID_STORAGE(Database_getLastRowId(&indexHandle->databaseHandle));
+
+    return ERROR_NONE;
+  });
+
+  return error;
+}
+
+Errors Index_updateStorage(IndexHandle *indexHandle,
+                           IndexId     storageId,
+                           ConstString storageName,
+                           uint64      createdDateTime,
+                           uint64      size
+                          )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    if (storageName != NULL)
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "UPDATE storage \
+                                  SET name=%'S \
+                                  WHERE id=%lld; \
+                               ",
+                               storageName,
+                               createdDateTime,
+                               size,
+                               Index_getDatabaseId(storageId)
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
+
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "UPDATE storage \
+                                SET created=DATETIME(%llu,'unixepoch'), \
+                                    size=%llu \
+                                WHERE id=%lld; \
+                             ",
+                             createdDateTime,
+                             size,
+                             Index_getDatabaseId(storageId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
     return ERROR_NONE;
   });

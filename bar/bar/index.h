@@ -569,9 +569,9 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 /***********************************************************************\
 * Name   : Index_findUUIDByJobUUID
 * Purpose: find uuid info by job/schedule UUID
-* Input  : indexHandle  - index handle
-*          jobUUID      - unique job UUID
-*          scheduleUUID - unique schedule UUID or NULL
+* Input  : indexHandle      - index handle
+*          findJobUUID      - unique job UUID to find
+*          findScheduleUUID - unique schedule UUID to find (can be NULL)
 * Output : uuidId               - index id of UUID entry (can be NULL)
 *          lastExecutedDateTime - last executed date/time stamp [s] (can
 *                                 be NULL)
@@ -591,8 +591,8 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 \***********************************************************************/
 
 bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
-                             ConstString  jobUUID,
-                             ConstString  scheduleUUID,
+                             ConstString  findJobUUID,
+                             ConstString  findScheduleUUID,
                              IndexId      *uuidId,
                              uint64       *lastExecutedDateTime,
                              String       lastErrorMessage,
@@ -608,9 +608,9 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
 /***********************************************************************\
 * Name   : Index_findEntityByUUID
 * Purpose: find entity info by job/schedule UUID
-* Input  : indexHandle  - index handle
-*          jobUUID      - unique job UUID
-*          scheduleUUID - unique schedule UUID (can be NULL)
+* Input  : indexHandle      - index handle
+*          findJobUUID      - unique job UUID to find
+*          findScheduleUUID - unique schedule UUID to find (can be NULL)
 * Output : uuidId           - index id of UUID entry (can be NULL)
 *          entityId         - index id of entity entry (can be NULL)
 *          archiveType      - archive type (can be NULL)
@@ -623,8 +623,8 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
 \***********************************************************************/
 
 bool Index_findEntityByUUID(IndexHandle  *indexHandle,
-                            ConstString  jobUUID,
-                            ConstString  scheduleUUID,
+                            ConstString  findJobUUID,
+                            ConstString  findScheduleUUID,
                             IndexId      *uuidId,
                             IndexId      *entityId,
                             ArchiveTypes *archiveType,
@@ -638,7 +638,7 @@ bool Index_findEntityByUUID(IndexHandle  *indexHandle,
 * Name   : Index_findByStorageId
 * Purpose: find info by storage id
 * Input  : indexHandle - index handle
-*          storageId   - index id of storage
+*          findStorageId       - index id of storage to find
 * Output : jobUUID             - unique job UUID (can be NULL)
 *          scheduleUUID        - unique schedule UUID (can be NULL)
 *          uuidId              - index id of UUID entry (can be NULL)
@@ -658,7 +658,7 @@ bool Index_findEntityByUUID(IndexHandle  *indexHandle,
 \***********************************************************************/
 
 bool Index_findStorageById(IndexHandle *indexHandle,
-                           IndexId     storageId,
+                           IndexId     findStorageId,
                            String      jobUUID,
                            String      scheduleUUID,
                            IndexId     *uuidId,
@@ -677,9 +677,9 @@ bool Index_findStorageById(IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : Index_findByStorageName
 * Purpose: find info by storage name
-* Input  : indexHandle      - index handle
-*          storageSpecifier - storage specifier
-*          archiveName      - archive name or NULL
+* Input  : indexHandle          - index handle
+*          findStorageSpecifier - storage specifier to find
+*          findArchiveName      - archive name to find (can be NULL)
 * Output : entityId            - index id of entity (can be NULL)
 *          jobUUID             - unique job UUID (can be NULL)
 *          scheduleUUID        - unique schedule UUID (can be NULL)
@@ -700,8 +700,8 @@ bool Index_findStorageById(IndexHandle *indexHandle,
 \***********************************************************************/
 
 bool Index_findStorageByName(IndexHandle            *indexHandle,
-                             const StorageSpecifier *storageSpecifier,
-                             ConstString            archiveName,
+                             const StorageSpecifier *findStorageSpecifier,
+                             ConstString            findArchiveName,
                              IndexId                *uuidId,
                              IndexId                *entityId,
                              String                 jobUUID,
@@ -720,8 +720,8 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 /***********************************************************************\
 * Name   : Index_findStorageByState
 * Purpose: find storage info by state
-* Input  : indexHandle   - index handle
-*          indexStateSet - index state set
+* Input  : indexHandle       - index handle
+*          findIndexStateSet - index state set to find
 * Output : jobUUID             - unique job UUID (can be NULL)
 *          scheduleUUID        - unique schedule UUID (can be NULL)
 *          entityId            - index id of entity (can be NULL)
@@ -741,7 +741,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 \***********************************************************************/
 
 bool Index_findStorageByState(IndexHandle   *indexHandle,
-                              IndexStateSet indexStateSet,
+                              IndexStateSet findIndexStateSet,
                               IndexId       *uuidId,
                               String        jobUUID,
                               IndexId       *entityId,
@@ -1395,11 +1395,13 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 /***********************************************************************\
 * Name   : Index_newStorage
 * Purpose: create new storage index
-* Input  : indexHandle - index handle
-*          entityId    - index id of entity
-*          storageName - storage name
-*          indexState  - index state
-*          indexMode   - index mode
+* Input  : indexHandle     - index handle
+*          entityId        - index id of entity
+*          storageName     - storage name
+*          createdDateTime - create date/time
+*          size            - size [bytes]
+*          indexState      - index state
+*          indexMode       - index mode
 * Output : indexId - storageId id of new storage index
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1408,10 +1410,34 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 Errors Index_newStorage(IndexHandle *indexHandle,
                         IndexId     entityId,
                         ConstString storageName,
+                        uint64      createdDateTime,
+                        uint64      size,
                         IndexStates indexState,
                         IndexModes  indexMode,
                         IndexId     *storageId
                        );
+
+/***********************************************************************\
+* Name   : Index_updateStorage
+* Purpose: update storage index
+* Input  : indexHandle     - index handle
+*          storageId       - index id of storage
+*          storageName     - storage name
+*          createdDateTime - create date/time
+*          size            - size [bytes]
+*          indexState      - index state
+*          indexMode       - index mode
+* Output : indexId - storageId id of new storage index
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_updateStorage(IndexHandle *indexHandle,
+                           IndexId     storageId,
+                           ConstString storageName,
+                           uint64      createdDateTime,
+                           uint64      size
+                          );
 
 /***********************************************************************\
 * Name   : Index_deleteStorage

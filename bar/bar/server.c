@@ -5616,8 +5616,6 @@ LOCAL void indexThreadCode(void)
         startTimestamp = 0LL;
         endTimestamp   = 0LL;
         initJobOptions(&jobOptions);
-        jobOptions.cryptPassword = Password_duplicate(indexCryptPasswordNode->cryptPassword);
-        duplicateKey(&jobOptions.cryptPrivateKey,&indexCryptPasswordNode->cryptPrivateKey);
         error = Storage_init(&storageInfo,
                              &storageSpecifier,
                              &jobOptions,
@@ -5632,6 +5630,9 @@ LOCAL void indexThreadCode(void)
           // try to create index
           LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
           {
+            jobOptions.cryptPassword = Password_duplicate(indexCryptPasswordNode->cryptPassword);
+            duplicateKey(&jobOptions.cryptPrivateKey,&indexCryptPasswordNode->cryptPrivateKey);
+
             // index update
 //TODO
 #ifndef WERROR
@@ -5977,6 +5978,8 @@ LOCAL void autoIndexThreadCode(void)
                                              error = Index_newStorage(indexHandle,
                                                                       INDEX_ID_NONE, // entityId
                                                                       storageName,
+                                                                      0LL,  // createdDateTime
+                                                                      0LL,  // size
                                                                       INDEX_STATE_UPDATE_REQUESTED,
                                                                       INDEX_MODE_AUTO,
                                                                       &storageId
@@ -16278,6 +16281,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
           error = Index_newStorage(indexHandle,
                                    INDEX_ID_NONE, // entityId
                                    printableStorageName,
+                                   0LL,  // createdDateTime
+                                   0LL,  // size
                                    INDEX_STATE_UPDATE_REQUESTED,
                                    INDEX_MODE_MANUAL,
                                    &storageId
@@ -16355,6 +16360,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                    error = Index_newStorage(indexHandle,
                                                             INDEX_ID_NONE, // entityId
                                                             storageName,
+                                                            0LL,  // createdDateTime
+                                                            0LL,  // size
                                                             INDEX_STATE_UPDATE_REQUESTED,
                                                             INDEX_MODE_MANUAL,
                                                             &storageId

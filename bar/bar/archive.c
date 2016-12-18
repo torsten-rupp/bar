@@ -1958,6 +1958,8 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
         error = Index_newStorage(indexHandle,
                                  archiveHandle->entityId,
                                  NULL, // storageName
+                                 0LL,  // created
+                                 0LL,  // size
                                  INDEX_STATE_CREATE,
                                  INDEX_MODE_AUTO,
                                  &archiveHandle->storageId
@@ -12930,6 +12932,8 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
   error = Index_newStorage(indexHandle,
                            DATABASE_ID_NONE, // entityId
                            printableStorageName,
+                           0LL,  // created
+                           0LL,  // size
                            INDEX_STATE_UPDATE,
                            indexMode,
                            &storageId
@@ -12983,6 +12987,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   uint64            timeLastChanged;
   bool              abortedFlag,serverAllocationPendingFlag;
   ArchiveHandle     archiveHandle;
+  uint64            size;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
   String            fileName;
@@ -13059,6 +13064,9 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     return error;
   }
 
+  // get archive size
+  size = Archive_getSize(&archiveHandle);
+
   // set state 'update'
   Index_setState(indexHandle,
                  storageId,
@@ -13087,6 +13095,9 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       return error;
     }
   #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
+
+  // get current uuidId, entityId
+//TODO
 
   // clear index
   error = Index_clearStorage(indexHandle,
@@ -13505,7 +13516,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
         break;
       case ARCHIVE_ENTRY_TYPE_META:
         {
-          IndexId entityId;
+          IndexId newEntityId;
 
           // open archive meta
           error = Archive_readMetaEntry(&archiveEntryInfo,
@@ -13523,12 +13534,13 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             break;
           }
 
+//TODO
           // find entity
           if (Index_findEntityByUUID(indexHandle,
                                      jobUUID,
                                      scheduleUUID,
                                      NULL,  // uuidId
-                                     &entityId,
+                                     &newEntityId,
                                      NULL,  // archiveType,
                                      NULL,  // createdDateTime,
                                      NULL,  // lastErrorMessage,
@@ -13538,7 +13550,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
              )
           {
             // update existing entity
-fprintf(stderr,"%s, %d: found %ld \n",__FILE__,__LINE__,(long)entityId);
+fprintf(stderr,"%s, %d: found %ld \n",__FILE__,__LINE__,(long)newEntityId);
           }
           else
           {
@@ -13550,16 +13562,44 @@ fprintf(stderr,"%s, %d: new \n",__FILE__,__LINE__);
                                     archiveType,
                                     createdDateTime,
                                     FALSE,  // locked
-                                    &entityId
+                                    &newEntityId
                                    );
             if (error != ERROR_NONE)
             {
               (void)Archive_closeEntry(&archiveEntryInfo);
               break;
             }
-fprintf(stderr,"%s, %d: XXXXXXXXXXXX %ld\n",__FILE__,__LINE__,(long)entityId);
+fprintf(stderr,"%s, %d: XXXXXXXXXXXX %ld\n",__FILE__,__LINE__,(long)newEntityId);
           }
 
+          // update storage
+          error = Index_updateStorage(indexHandle,
+                                      storageId,
+                                      NULL,  // storageName
+                                      createdDateTime,
+                                      size
+                                     );
+          if (error != ERROR_NONE)
+          {
+            (void)Archive_closeEntry(&archiveEntryInfo);
+            break;
+          }
+
+          // assign storage
+          error = Index_assignTo(indexHandle,
+                                 NULL,           // jobUUID
+                                 INDEX_ID_NONE,  // entityId
+                                 storageId,
+                                 NULL,           // toJobUUID
+                                 newEntityId,
+                                 ARCHIVE_TYPE_NONE,
+                                 INDEX_ID_NONE  // toStorageId
+                                );
+          if (error != ERROR_NONE)
+          {
+            (void)Archive_closeEntry(&archiveEntryInfo);
+            break;
+          }
 
 //TODO
 fprintf(stderr,"%s, %d: jobUUID=%s scheduleUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
