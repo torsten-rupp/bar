@@ -13534,28 +13534,21 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
             break;
           }
 
-//TODO
-          // find entity
-          if (Index_findEntityByUUID(indexHandle,
-                                     jobUUID,
-                                     scheduleUUID,
-                                     NULL,  // uuidId
-                                     &newEntityId,
-                                     NULL,  // archiveType,
-                                     NULL,  // createdDateTime,
-                                     NULL,  // lastErrorMessage,
-                                     NULL,  // totalEntryCount,
-                                     NULL  // totalEntrySize
-                                    )
+          // find/create entity
+          if (!Index_findEntityByUUID(indexHandle,
+                                      jobUUID,
+                                      scheduleUUID,
+                                      NULL,  // uuidId
+                                      &newEntityId,
+                                      NULL,  // archiveType,
+                                      NULL,  // createdDateTime,
+                                      NULL,  // lastErrorMessage,
+                                      NULL,  // totalEntryCount,
+                                      NULL  // totalEntrySize
+                                     )
              )
           {
-            // update existing entity
-fprintf(stderr,"%s, %d: found %ld \n",__FILE__,__LINE__,(long)newEntityId);
-          }
-          else
-          {
             // create new entity
-fprintf(stderr,"%s, %d: new \n",__FILE__,__LINE__);
             error = Index_newEntity(indexHandle,
                                     jobUUID,
                                     scheduleUUID,
@@ -13569,7 +13562,6 @@ fprintf(stderr,"%s, %d: new \n",__FILE__,__LINE__);
               (void)Archive_closeEntry(&archiveEntryInfo);
               break;
             }
-fprintf(stderr,"%s, %d: XXXXXXXXXXXX %ld\n",__FILE__,__LINE__,(long)newEntityId);
           }
 
           // update storage
@@ -13585,7 +13577,7 @@ fprintf(stderr,"%s, %d: XXXXXXXXXXXX %ld\n",__FILE__,__LINE__,(long)newEntityId)
             break;
           }
 
-          // assign storage
+          // assign storage to entity
           error = Index_assignTo(indexHandle,
                                  NULL,           // jobUUID
                                  INDEX_ID_NONE,  // entityId
@@ -13600,9 +13592,6 @@ fprintf(stderr,"%s, %d: XXXXXXXXXXXX %ld\n",__FILE__,__LINE__,(long)newEntityId)
             (void)Archive_closeEntry(&archiveEntryInfo);
             break;
           }
-
-//TODO
-fprintf(stderr,"%s, %d: jobUUID=%s scheduleUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
 
           // close archive entry
           (void)Archive_closeEntry(&archiveEntryInfo);
