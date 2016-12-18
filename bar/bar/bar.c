@@ -8148,7 +8148,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   }
 
   // generate new key pair for encryption
-  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE);
+  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE,CRYPT_KEY_MODE_NONE);
   if (error != ERROR_NONE)
   {
     printError("Cannot create encryption key pair (error: %s)!\n",Error_getText(error));
@@ -8344,7 +8344,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   }
 
   // generate new key pair for signature
-  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE);
+  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE,CRYPT_KEY_MODE_NONE);
   if (error != ERROR_NONE)
   {
     printError("Cannot create signature key pair (error: %s)!\n",Error_getText(error));

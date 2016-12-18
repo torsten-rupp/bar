@@ -371,7 +371,7 @@ typedef struct
   ClientTypes           type;
 
   SessionId             sessionId;
-  CryptKey              publicKey,secretKey;
+  CryptKey              publicKey,privateKey;
   AuthorizationStates   authorizationState;
   AuthorizationFailNode *authorizationFailNode;
   bool                  quitFlag;
@@ -6416,7 +6416,7 @@ LOCAL bool decryptPassword(Password *password, const ClientInfo *clientInfo, Con
   if      (String_equalsIgnoreCaseCString(encryptType,"RSA") && Crypt_isAsymmetricSupported())
   {
 //fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
-    Crypt_keyDecrypt(&clientInfo->secretKey,
+    Crypt_keyDecrypt(&clientInfo->privateKey,
                      encryptedBuffer,
                      encryptedBufferLength,
                      encodedBuffer,
@@ -6482,7 +6482,7 @@ LOCAL bool checkPassword(const ClientInfo *clientInfo, ConstString encryptType, 
   if      (String_equalsIgnoreCaseCString(encryptType,"RSA") && Crypt_isAsymmetricSupported())
   {
 //fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
-    if (Crypt_keyDecrypt(&clientInfo->secretKey,
+    if (Crypt_keyDecrypt(&clientInfo->privateKey,
                          encryptedBuffer,
                          encryptedBufferLength,
                          encodedBuffer,
@@ -18054,7 +18054,7 @@ LOCAL void initSession(ClientInfo *clientInfo)
   #else /* not NO_SESSION_ID */
     memset(clientInfo->sessionId,0,sizeof(SessionId));
   #endif /* NO_SESSION_ID */
-  (void)Crypt_createPublicPrivateKeyPair(&clientInfo->publicKey,&clientInfo->secretKey,SESSION_KEY_SIZE,CRYPT_PADDING_TYPE_PKCS1);
+  (void)Crypt_createPublicPrivateKeyPair(&clientInfo->publicKey,&clientInfo->privateKey,SESSION_KEY_SIZE,CRYPT_PADDING_TYPE_PKCS1,CRYPT_KEY_MODE_TRANSIENT);
 }
 
 /***********************************************************************\
@@ -18070,8 +18070,8 @@ LOCAL void doneSession(ClientInfo *clientInfo)
 {
   assert(clientInfo != NULL);
 
+  Crypt_doneKey(&clientInfo->privateKey);
   Crypt_doneKey(&clientInfo->publicKey);
-  Crypt_doneKey(&clientInfo->secretKey);
 }
 
 /***********************************************************************\

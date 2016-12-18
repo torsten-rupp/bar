@@ -120,6 +120,11 @@ typedef enum
   CRYPT_PADDING_TYPE_OAEP
 } CryptPaddingTypes;
 
+// crypy key modes
+#define CRYPT_KEY_MODE_TRANSIENT (1 << 0)   // transient key (less secure)
+
+#define CRYPT_KEY_MODE_NONE 0
+
 // signatures states
 typedef enum
 {
@@ -886,7 +891,9 @@ Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
 /***********************************************************************\
 * Name   : Crypt_createPublicPrivateKeyPair
 * Purpose: create new public/private key pair encryption/decryption
-* Input  : bits - number of RSA key bits
+* Input  : bits             - number of RSA key bits
+*          cryptPaddingType - padding type; see CryptPaddingTypes
+*          cryptKeyMode     - crypt key mode; see CRYPT_KEY_MODE_...
 * Output : publicCryptKey  - public crypt key (encryption or signature
 *                            check)
 *          privateCryptKey - private crypt key (decryption or signature
@@ -898,7 +905,8 @@ Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
 Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
                                         CryptKey          *privateCryptKey,
                                         uint              bits,
-                                        CryptPaddingTypes cryptPaddingType
+                                        CryptPaddingTypes cryptPaddingType,
+                                        uint              cryptKeyMode
                                        );
 
 /***********************************************************************\

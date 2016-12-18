@@ -2014,7 +2014,8 @@ Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
 Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
                                         CryptKey          *privateCryptKey,
                                         uint              keyLength,
-                                        CryptPaddingTypes cryptPaddingType
+                                        CryptPaddingTypes cryptPaddingType,
+                                        uint              cryptKeyMode
                                        )
 {
   #ifdef HAVE_GCRYPT
@@ -2037,7 +2038,8 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
                  );
 
     // create key parameters
-    description = String_format(String_new(),"(genkey (rsa (nbits 4:%d)))",keyLength);
+    description = String_format(String_new(),"(genkey (rsa %s(nbits 4:%d)))",((cryptKeyMode & CRYPT_KEY_MODE_TRANSIENT) != 0) ? "(flags transient-key) " : "",keyLength);
+//fprintf(stderr,"%s, %d: description=%s\n",__FILE__,__LINE__,String_cString(description));
     gcryptError = gcry_sexp_new(&sexpKeyParameters,
                                 String_cString(description),
                                 0,
