@@ -5109,8 +5109,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   assert(archiveHandle->blockLength > 0);
   assert(fileInfo != NULL);
 
-//TODO
-UNUSED_VARIABLE(fragmentSize);
+  UNUSED_VARIABLE(fragmentSize);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -5537,8 +5536,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   assert(deviceInfo != NULL);
   assert(deviceInfo->blockSize > 0);
 
-//TODO
-UNUSED_VARIABLE(blockCount);
+  UNUSED_VARIABLE(blockCount);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -6399,8 +6397,7 @@ UNUSED_VARIABLE(blockCount);
   assert(archiveHandle->blockLength > 0);
   assert(fileInfo != NULL);
 
-//TODO
-UNUSED_VARIABLE(fragmentSize);
+  UNUSED_VARIABLE(fragmentSize);
 
   // init variables
   AutoFree_init(&autoFreeList);

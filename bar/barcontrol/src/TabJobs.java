@@ -4570,7 +4570,9 @@ widgetArchivePartSize.setListVisible(true);
         composite = Widgets.newComposite(tab);
         Widgets.layout(composite,4,1,TableLayoutData.WE);
         {
-          for (int i = 0; i < 4; i++)
+//TODO: multi crypt
+//          for (int i = 0; i < 4; i++)
+          for (int i = 0; i < 1; i++)
           {
             widgetCryptAlgorithms[i] = Widgets.newOptionMenu(composite);
             widgetCryptAlgorithms[i].setToolTipText(BARControl.tr("Encryption methods to use."));
@@ -4602,7 +4604,9 @@ widgetArchivePartSize.setListVisible(true);
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 StringBuilder buffer = new StringBuilder();
-                for (int i = 0; i < 4; i++)
+//TODO: multi crypt
+//                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < 1; i++)
                 {
                   if (buffer.length() > 0) buffer.append('+');
                   buffer.append(widgetCryptAlgorithms[i].getText());
@@ -4612,7 +4616,9 @@ widgetArchivePartSize.setListVisible(true);
               }
             });
           }
-          for (int i = 0; i < 4; i++)
+//TODO: multi crypt
+//          for (int i = 0; i < 4; i++)
+          for (int i = 0; i < 1; i++)
           {
             Widgets.addModifyListener(new WidgetModifyListener(widgetCryptAlgorithms[i],cryptAlgorithm)
             {
@@ -4622,7 +4628,9 @@ widgetArchivePartSize.setListVisible(true);
                 String[] s = StringUtils.split(cryptAlgorithm.getString(),"+");
 
                 int i = 0;
-                while (i < 4)
+//TODO: multi crypt
+//                while (i < 4)
+                while (i < 1)
                 {
                   if (i < s.length)
                   {
