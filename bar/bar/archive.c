@@ -158,12 +158,12 @@ typedef struct
 // decrypt key handle
 typedef struct
 {
-  ArchiveHandle        *archiveHandle;
-  PasswordModes        passwordMode;                      // password input mode
-  const Password       *jobCryptPassword;                 // job crypt password or NULL
-  GetPasswordFunction  getPasswordFunction;               // password input callback
-  void                 *getPasswordUserData;
-  const DecryptKeyNode *nextDecryptKeyNode;               // next decrypt key node to use
+  ArchiveHandle       *archiveHandle;
+  PasswordModes       passwordMode;                      // password input mode
+  const Password      *jobCryptPassword;                 // job crypt password or NULL
+  GetPasswordFunction getPasswordFunction;               // password input callback
+  void                *getPasswordUserData;
+  DecryptKeyNode      *nextDecryptKeyNode;               // next decrypt key node to use
 } DecryptKeyIterator;
 
 /***************************** Variables *******************************/
