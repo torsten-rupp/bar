@@ -210,18 +210,18 @@ sub writeCPostfix()
 {
   if ($defaultText ne "")
   {
-    writeCFile("    default: stringCopy(errorText,\"$defaultText\",sizeof(errorText)); break;\n");
+    writeCFile("    default: stringSet(errorText,\"$defaultText\",sizeof(errorText)); break;\n");
   }
   print CFILE_HANDLE "\
   }
-  if (stringIsEmpty(errorText)) stringCopy(errorText,\"unknown\",sizeof(errorText));
+  if (stringIsEmpty(errorText)) stringSet(errorText,\"unknown\",sizeof(errorText));
   #ifndef NDEBUG
     if (ERROR_FILENAME != NULL)
     {
-      stringConcat(errorText,\" at \",sizeof(errorText));
-      stringConcat(errorText,ERROR_FILENAME,sizeof(errorText));
-      stringConcat(errorText,\", \",sizeof(errorText));
-      stringConcat(errorText,ERROR_LINENB_TEXT,sizeof(errorText));
+      stringAppend(errorText,\" at \",sizeof(errorText));
+      stringAppend(errorText,ERROR_FILENAME,sizeof(errorText));
+      stringAppend(errorText,\", \",sizeof(errorText));
+      stringAppend(errorText,ERROR_LINENB_TEXT,sizeof(errorText));
     }
   #endif /* not NDEBUG */
 
@@ -610,7 +610,7 @@ while ($line=<STDIN>)
     writeHFile("  $PREFIX$name = $errorNumber,\n");
     writeJavaFile("  static final int $name = $errorNumber;\n");
     if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
-    writeCFile("    case $PREFIX$name: stringCopy(errorText,\"$text\",sizeof(errorText)); break;\n");
+    writeCFile("    case $PREFIX$name: stringSet(errorText,\"$text\",sizeof(errorText)); break;\n");
   }
   elsif ($line =~ /^ERROR\s+(\w+)\s+(\S.*)\s*$/)
   {
@@ -621,7 +621,7 @@ while ($line=<STDIN>)
     writeHFile("  $PREFIX$name = $errorNumber,\n");
     writeJavaFile("  static final int $name = $errorNumber;\n");
     if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
-    writeCFile("    case $PREFIX$name: stringCopy(errorText,$function,sizeof(errorText)); break;\n");
+    writeCFile("    case $PREFIX$name: stringSet(errorText,$function,sizeof(errorText)); break;\n");
   }
   elsif ($line =~ /^ERROR\s+(\w+)\s*$/)
   {
@@ -649,7 +649,7 @@ while ($line=<STDIN>)
     # none <text>
     my $text=$1;
     if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
-    writeCFile("    case ".$PREFIX."NONE: stringCopy(errorText,\"$text\",sizeof(errorText)); break;\n");
+    writeCFile("    case ".$PREFIX."NONE: stringSet(errorText,\"$text\",sizeof(errorText)); break;\n");
   }
   elsif ($line =~ /^DEFAULT\s+"(.*)"\s*$/)
   {
