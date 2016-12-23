@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
 * $Source: /tmp/cvs/onzen/src/Dialogs.java,v $
-* $Revision: 949 $
-* $Author: trupp $
+* $Revision: 1868 $
+* $Author: torsten $
 * Contents: dialog functions
 * Systems: all
 *
@@ -545,20 +545,24 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
 {
   private HashMap<String,T> shortcutMap = new HashMap<String,T>();
 
+//  public ListDirectory()
+//  {
+//  }
+
   /** get new file instance
    * @param name name
    * @return file instance
    */
-  abstract public T newInstance(String name);
+  abstract public T newFileInstance(String name);
 
   /** get new file instance
    * @param path path
    * @param name name
    * @return file instance
    */
-  public T newInstance(String path, String name)
+  public T newFileInstance(String path, String name)
   {
-    return newInstance(new File(path,name));
+    return newFileInstance(new File(path,name).getAbsolutePath());
   }
 
   /** get new file instance
@@ -566,18 +570,27 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
    * @param name name
    * @return file instance
    */
-  public T newInstance(File file, String name)
+  public T newFileInstance(T file, String name)
   {
-    return newInstance(new File(file,name));
+    return newFileInstance(new File(file,name).getAbsolutePath());
   }
 
   /** get new file instance
    * @param file file
    * @return file instance
    */
-  public T newInstance(File file)
+  public T newFileInstance(T file)
   {
-    return newInstance(file.getAbsolutePath());
+    return newFileInstance(file.getAbsolutePath());
+  }
+
+  /** get parent file instance
+   * @param file file
+   * @return parent file instance
+   */
+  public T getParentFile(T file)
+  {
+    return newFileInstance(file.getParentFile().getAbsolutePath());
   }
 
   /** compare files
@@ -591,7 +604,7 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
   /** get shortcut files
    * @param shortcut file collection
    */
-  public void getShortcuts(ArrayList<T> shortcutList)
+  public void getShortcuts(java.util.List<T> shortcutList)
   {
     shortcutList.clear();
     for (T shortcut : shortcutMap.values())
@@ -614,7 +627,7 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
    */
   public void addShortcut(String name)
   {
-    addShortcut(newInstance(name));
+    addShortcut(newFileInstance(name));
   }
 
   /** remove shortcut file
@@ -626,10 +639,10 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
   }
 
   /** open list files in directory
-   * @param pathName path name
+   * @param path path
    * @return true iff open
    */
-  abstract public boolean open(String pathName);
+  abstract public boolean open(T path);
 
   /** close list files in directory
    */
@@ -638,7 +651,7 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
   /** get next entry in directory
    * @return entry
    */
-  abstract public File getNext();
+  abstract public T getNext();
 
   /** check if directory
    * @param file file to check
@@ -689,6 +702,9 @@ class Dialogs
     DIRECTORY,
     ENTRY
   };
+
+  public final static int FILE_NONE        = 0;
+  public final static int FILE_SHOW_HIDDEN = 1 << 0;
 
   // --------------------------- variables --------------------------------
   private static I18n  i18n;
@@ -3018,6 +3034,8 @@ class Dialogs
    * @param fileName fileName or null
    * @param fileExtensions array with {name,pattern} or null
    * @param defaultFileExtension default file extension pattern or null
+   * @param flags flags; see FILE_...
+   * @param listDirectory list directory handler
    * @return file name or null
    */
   public static String file(Shell                 parentShell,
@@ -3026,6 +3044,7 @@ class Dialogs
                             String                oldFileName,
                             final String[]        fileExtensions,
                             String                defaultFileExtension,
+                            int                   flags,
                             final ListDirectory   listDirectory
                            )
   {
@@ -3178,10 +3197,11 @@ class Dialogs
        * @param path path
        * @param name name or null
        */
-      public void updateFileList(Table table, String path, String name)
+      public void updateFileList(Table table, File path, String name)
       {
         if (!table.isDisposed())
         {
+Dprintf.dprintf("path=%s",path);
           table.removeAll();
 
           if (listDirectory.open(path))
@@ -3392,6 +3412,7 @@ class Dialogs
     };
 
     int         row;
+    Pane        pane;
     Composite   composite;
     Label       label;
     Button      button;
@@ -3452,12 +3473,16 @@ class Dialogs
         Widgets.layout(widgetFolderUp,0,2,TableLayoutData.E);
       }
 
-      // lists
-      composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(1.0,new double[]{0.25,0.75},2));
-      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.NSWE));
+      // create pane
+      pane = Widgets.newPane(dialog,2,SWT.VERTICAL);
+      pane.setLayoutData(new TableLayoutData(1,0,TableLayoutData.NSWE));
+
+      // shortcut list
+      composite = pane.getComposite(0);
+      composite.setLayout(new TableLayout(1.0,1.0,2));
+      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
       {
-        widgetShortcutList = new List(composite,SWT.BORDER);
+        widgetShortcutList = new List(composite,SWT.BORDER|SWT.V_SCROLL);
         widgetShortcutList.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
         menu = Widgets.newPopupMenu(dialog);
         {
@@ -3482,12 +3507,18 @@ class Dialogs
           });
         }
         widgetShortcutList.setMenu(menu);
+      }
 
+      // file list
+      composite = pane.getComposite(1);
+      composite.setLayout(new TableLayout(1.0,1.0,2));
+      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+      {
         widgetFileList = new Table(composite,SWT.BORDER);
         widgetFileList.setHeaderVisible(true);
         widgetFileList.setLinesVisible(true);
         widgetFileList.setLayout(new TableLayout(new double[]{1.0,0.0,0.0,0.0},1.0));
-        widgetFileList.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE));
+        widgetFileList.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
         SelectionListener selectionListener = new SelectionListener()
         {
@@ -3553,9 +3584,16 @@ class Dialogs
           widgetFilter = null;
         }
 
-        widgetShowHidden = new Button(composite,SWT.CHECK);
-        widgetShowHidden.setText(Dialogs.tr("show hidden"));
-        widgetShowHidden.setLayoutData(new TableLayoutData(0,2,TableLayoutData.E));
+        if ((flags & FILE_SHOW_HIDDEN) != 0)
+        {
+          widgetShowHidden = new Button(composite,SWT.CHECK);
+          widgetShowHidden.setText(Dialogs.tr("show hidden"));
+          widgetShowHidden.setLayoutData(new TableLayoutData(0,2,TableLayoutData.E));
+        }
+        else
+        {
+          widgetShowHidden = null;
+        }
 
         if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.SAVE) || (type == FileDialogTypes.ENTRY))
         {
@@ -3616,7 +3654,10 @@ class Dialogs
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
-          updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
+          updater.updateFileList(widgetFileList,
+                                 (File)widgetPath.getData(),
+                                 (widgetName != null) ? widgetName.getText() : null
+                                );
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
@@ -3631,7 +3672,7 @@ class Dialogs
         {
           File file = (File)widgetPath.getData();
 
-          File parentFile = file.getParentFile();
+          File parentFile = listDirectory.getParentFile(file);
           if (parentFile != null)
           {
             // set new path, clear name
@@ -3640,7 +3681,10 @@ class Dialogs
             if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.ENTRY)) widgetName.setText("");
 
             // update list
-            updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
+            updater.updateFileList(widgetFileList,
+                                   (File)widgetPath.getData(),
+                                   (widgetName != null) ? widgetName.getText() : null
+                                  );
 
             // enable/disable done button
             widgetDone.setEnabled(   ((type == FileDialogTypes.OPEN     ) && !widgetName.getText().isEmpty())
@@ -3667,7 +3711,10 @@ class Dialogs
               if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.ENTRY)) widgetName.setText("");
 
               // update list
-              updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
+              updater.updateFileList(widgetFileList,
+                                     (File)widgetPath.getData(),
+                                     (widgetName != null) ? widgetName.getText() : null
+                                    );
             }
             else if (listDirectory.exists(file))
             {
@@ -3720,17 +3767,21 @@ class Dialogs
           {
             TableItem tableItem = widgetFileList.getItem(index);
             File      file      = (File)tableItem.getData();
+Dprintf.dprintf("file=%s",file);
 
             if (file.isDirectory())
             {
               // set new path, clear name
-              File newPath = listDirectory.newInstance((File)widgetPath.getData(),file.getName());
+              File newPath = listDirectory.newFileInstance((File)widgetPath.getData(),file.getName());
               widgetPath.setData(newPath);
               widgetPath.setText(newPath.getAbsolutePath());
               if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.ENTRY)) widgetName.setText("");
 
               // update list
-              updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
+              updater.updateFileList(widgetFileList,
+                                     (File)widgetPath.getData(),
+                                     (widgetName != null) ? widgetName.getText() : null
+                                    );
             }
 
             // enable/disable done button
@@ -3774,15 +3825,18 @@ class Dialogs
             File file = (File)tableItems[0].getData();
             if (file.isDirectory())
             {
-              updater.updateFileList(widgetFileList,file.getAbsolutePath(),(widgetName != null) ? widgetName.getText() : null);
+              updater.updateFileList(widgetFileList,
+                                     file,
+                                     (widgetName != null) ? widgetName.getText() : null
+                                    );
             }
             else
             {
               fileGeometry = dialog.getSize();
               close(dialog,
                     (widgetName != null)
-                      ? listDirectory.newInstance(widgetPath.getText(),widgetName.getText()).getAbsolutePath()
-                      : listDirectory.newInstance(widgetPath.getText()).getAbsolutePath()
+                      ? listDirectory.newFileInstance(widgetPath.getText(),widgetName.getText()).getAbsolutePath()
+                      : listDirectory.newFileInstance(widgetPath.getText()).getAbsolutePath()
                    );
             }
           }
@@ -3809,22 +3863,31 @@ class Dialogs
               widgetFilter.setText(fileExtensions[index*2+1]);
 
               updater.setFileFilter(widgetFilter.getText());
-              updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
+              updater.updateFileList(widgetFileList,
+                                     (File)widgetPath.getData(),
+                                     (widgetName != null) ? widgetName.getText() : null
+                                    );
             }
           }
         });
       }
-      widgetShowHidden.addSelectionListener(new SelectionListener()
+      if ((flags & FILE_SHOW_HIDDEN) != 0)
       {
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        widgetShowHidden.addSelectionListener(new SelectionListener()
         {
-        }
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          updater.setShowHidden(widgetShowHidden.getSelection());
-          updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
-        }
-      });
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            updater.setShowHidden(widgetShowHidden.getSelection());
+            updater.updateFileList(widgetFileList,
+                                   (File)widgetPath.getData(),
+                                   (widgetName != null) ? widgetName.getText() : null
+                                  );
+          }
+        });
+      }
       if (widgetName != null)
       {
         widgetName.addKeyListener(new KeyListener()
@@ -3856,7 +3919,7 @@ class Dialogs
           File file = (File)widgetPath.getData();
           close(dialog,
                 (widgetName != null)
-                  ? listDirectory.newInstance(file,widgetName.getText()).getAbsolutePath()
+                  ? listDirectory.newFileInstance(file,widgetName.getText()).getAbsolutePath()
                   : file.getAbsolutePath()
                );
         }
@@ -3921,6 +3984,7 @@ class Dialogs
 
       // show
       show(dialog,fileGeometry);
+      pane.setSizes(new double[]{0.25,0.75});
 
       // update shortcuts
       listDirectory.getShortcuts(shortcutList);
@@ -3929,7 +3993,7 @@ class Dialogs
       // update path, name
       if (!oldFileName.isEmpty())
       {
-        File file = listDirectory.newInstance(oldFileName);
+        File file = listDirectory.newFileInstance(oldFileName);
         if (widgetName != null)
         {
           if (file.isDirectory())
@@ -3971,7 +4035,13 @@ class Dialogs
        }
 
       // update file list
-      updater.updateFileList(widgetFileList,widgetPath.getText(),(widgetName != null) ? widgetName.getText() : null);
+      if (!widgetPath.getText().isEmpty())
+      {
+        updater.updateFileList(widgetFileList,
+                               (File)widgetPath.getData(),
+                               (widgetName != null) ? widgetName.getText() : null
+                              );
+      }
 
       // enable/disable done button
       widgetDone.setEnabled(   ((type == FileDialogTypes.OPEN     ) && !widgetName.getText().isEmpty())
@@ -4003,6 +4073,49 @@ class Dialogs
    * @param type file dialog type
    * @param title title text
    * @param fileName fileName or null
+   * @param fileExtensions array with {name,pattern} or null
+   * @param defaultFileExtension default file extension pattern or null
+   * @param listDirectory list directory handler
+   * @return file name or null
+   */
+  public static String file(Shell                 parentShell,
+                            final FileDialogTypes type,
+                            String                title,
+                            String                oldFileName,
+                            final String[]        fileExtensions,
+                            String                defaultFileExtension,
+                            final ListDirectory   listDirectory
+                           )
+  {
+    return file(parentShell,type,title,oldFileName,fileExtensions,defaultFileExtension,FILE_SHOW_HIDDEN,listDirectory);
+  }
+
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type file dialog type
+   * @param title title text
+   * @param fileName fileName or null
+   * @param flags flags; see FILE_...
+   * @param listDirectory list directory handler
+   * @return file name or null
+   */
+  public static String file(Shell               parentShell,
+                            FileDialogTypes     type,
+                            String              title,
+                            String              oldFileName,
+                            int                 flags,
+                            final ListDirectory listDirectory
+                           )
+  {
+    return file(parentShell,type,title,oldFileName,(String[])null,(String)null,flags,listDirectory);
+  }
+
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type file dialog type
+   * @param title title text
+   * @param fileName fileName or null
+   * @param listDirectory list directory handler
    * @return file name or null
    */
   public static String file(Shell               parentShell,
@@ -4012,7 +4125,7 @@ class Dialogs
                             final ListDirectory listDirectory
                            )
   {
-    return file(parentShell,type,title,oldFileName,(String[])null,(String)null,listDirectory);
+    return file(parentShell,type,title,oldFileName,FILE_NONE,listDirectory);
   }
 
   /** open a file dialog
