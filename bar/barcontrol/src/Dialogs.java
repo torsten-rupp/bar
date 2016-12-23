@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /tmp/cvs/onzen/src/Dialogs.java,v $
-* $Revision: 1868 $
+* $Revision: 1870 $
 * $Author: torsten $
 * Contents: dialog functions
 * Systems: all
@@ -3031,7 +3031,7 @@ class Dialogs
    * @param parentShell parent shell
    * @param type file dialog type
    * @param title title text
-   * @param fileName fileName or null
+   * @param oldFile old file or null
    * @param fileExtensions array with {name,pattern} or null
    * @param defaultFileExtension default file extension pattern or null
    * @param flags flags; see FILE_...
@@ -3041,7 +3041,7 @@ class Dialogs
   public static String file(Shell                 parentShell,
                             final FileDialogTypes type,
                             String                title,
-                            String                oldFileName,
+                            File                  oldFile,
                             final String[]        fileExtensions,
                             String                defaultFileExtension,
                             int                   flags,
@@ -3991,34 +3991,33 @@ Dprintf.dprintf("file=%s",file);
       updater.updateShortcutList(widgetShortcutList,shortcutList);
 
       // update path, name
-      if (!oldFileName.isEmpty())
+      if (oldFile != null)
       {
-        File file = listDirectory.newFileInstance(oldFileName);
         if (widgetName != null)
         {
-          if (file.isDirectory())
+          if (oldFile.isDirectory())
           {
-            widgetPath.setData(file);
-            widgetPath.setText(file.getAbsolutePath());
+            widgetPath.setData(oldFile);
+            widgetPath.setText(oldFile.getAbsolutePath());
             widgetName.setText("");
             widgetDone.setEnabled(false);
           }
           else
           {
-            File parentFile = file.getParentFile();
+            File parentFile = oldFile.getParentFile();
             widgetPath.setData(parentFile);
             if (parentFile != null)
             {
               widgetPath.setText(parentFile.getAbsolutePath());
             }
-            widgetName.setText(file.getName());
+            widgetName.setText(oldFile.getName());
             widgetDone.setEnabled(true);
           }
         }
         else
         {
-          widgetPath.setData(file);
-          widgetPath.setText(file.getAbsolutePath());
+          widgetPath.setData(oldFile);
+          widgetPath.setText(oldFile.getAbsolutePath());
           widgetDone.setEnabled(true);
         }
       }
@@ -4072,7 +4071,7 @@ Dprintf.dprintf("file=%s",file);
    * @param parentShell parent shell
    * @param type file dialog type
    * @param title title text
-   * @param fileName fileName or null
+   * @param oldFile old file or null
    * @param fileExtensions array with {name,pattern} or null
    * @param defaultFileExtension default file extension pattern or null
    * @param listDirectory list directory handler
@@ -4081,20 +4080,20 @@ Dprintf.dprintf("file=%s",file);
   public static String file(Shell                 parentShell,
                             final FileDialogTypes type,
                             String                title,
-                            String                oldFileName,
+                            File                  oldFile,
                             final String[]        fileExtensions,
                             String                defaultFileExtension,
                             final ListDirectory   listDirectory
                            )
   {
-    return file(parentShell,type,title,oldFileName,fileExtensions,defaultFileExtension,FILE_SHOW_HIDDEN,listDirectory);
+    return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,FILE_SHOW_HIDDEN,listDirectory);
   }
 
   /** open a file dialog
    * @param parentShell parent shell
    * @param type file dialog type
    * @param title title text
-   * @param fileName fileName or null
+   * @param oldFile old file or null
    * @param flags flags; see FILE_...
    * @param listDirectory list directory handler
    * @return file name or null
@@ -4102,30 +4101,30 @@ Dprintf.dprintf("file=%s",file);
   public static String file(Shell               parentShell,
                             FileDialogTypes     type,
                             String              title,
-                            String              oldFileName,
+                            File                oldFile,
                             int                 flags,
                             final ListDirectory listDirectory
                            )
   {
-    return file(parentShell,type,title,oldFileName,(String[])null,(String)null,flags,listDirectory);
+    return file(parentShell,type,title,oldFile,(String[])null,(String)null,flags,listDirectory);
   }
 
   /** open a file dialog
    * @param parentShell parent shell
    * @param type file dialog type
    * @param title title text
-   * @param fileName fileName or null
+   * @param oldFile old file or null
    * @param listDirectory list directory handler
    * @return file name or null
    */
   public static String file(Shell               parentShell,
                             FileDialogTypes     type,
                             String              title,
-                            String              oldFileName,
+                            File                oldFile,
                             final ListDirectory listDirectory
                            )
   {
-    return file(parentShell,type,title,oldFileName,FILE_NONE,listDirectory);
+    return file(parentShell,type,title,oldFile,FILE_NONE,listDirectory);
   }
 
   /** open a file dialog
