@@ -4071,6 +4071,30 @@ Dprintf.dprintf("file=%s",file);
    * @param parentShell parent shell
    * @param type file dialog type
    * @param title title text
+   * @param oldFileName old file name or null
+   * @param fileExtensions array with {name,pattern} or null
+   * @param defaultFileExtension default file extension pattern or null
+   * @param flags flags; see FILE_...
+   * @param listDirectory list directory handler
+   * @return file name or null
+   */
+  public static String file(Shell           parentShell,
+                            FileDialogTypes type,
+                            String          title,
+                            String          oldFileName,
+                            String[]        fileExtensions,
+                            String          defaultFileExtension,
+                            int             flags,
+                            ListDirectory   listDirectory
+                           )
+  {
+    return file(parentShell,type,title,(oldFileName != null) ? new File(oldFileName) : (File)null,fileExtensions,defaultFileExtension,flags,listDirectory);
+  }
+
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type file dialog type
+   * @param title title text
    * @param oldFile old file or null
    * @param fileExtensions array with {name,pattern} or null
    * @param defaultFileExtension default file extension pattern or null
@@ -4087,6 +4111,28 @@ Dprintf.dprintf("file=%s",file);
                            )
   {
     return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,FILE_SHOW_HIDDEN,listDirectory);
+  }
+
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type file dialog type
+   * @param title title text
+   * @param oldFileName old file name or null
+   * @param fileExtensions array with {name,pattern} or null
+   * @param defaultFileExtension default file extension pattern or null
+   * @param listDirectory list directory handler
+   * @return file name or null
+   */
+  public static String file(Shell           parentShell,
+                            FileDialogTypes type,
+                            String          title,
+                            String          oldFileName,
+                            final String[]  fileExtensions,
+                            String          defaultFileExtension,
+                            ListDirectory   listDirectory
+                           )
+  {
+    return file(parentShell,type,title,(oldFileName != null) ? new File(oldFileName) : (File)null,fileExtensions,defaultFileExtension,listDirectory);
   }
 
   /** open a file dialog
@@ -4113,6 +4159,26 @@ Dprintf.dprintf("file=%s",file);
    * @param parentShell parent shell
    * @param type file dialog type
    * @param title title text
+   * @param oldFileName old file name or null
+   * @param flags flags; see FILE_...
+   * @param listDirectory list directory handler
+   * @return file name or null
+   */
+  public static String file(Shell               parentShell,
+                            FileDialogTypes     type,
+                            String              title,
+                            String              oldFileName,
+                            int                 flags,
+                            final ListDirectory listDirectory
+                           )
+  {
+    return file(parentShell,type,title,(oldFileName != null) ? new File(oldFileName) : (File)null,flags,listDirectory);
+  }
+
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type file dialog type
+   * @param title title text
    * @param oldFile old file or null
    * @param listDirectory list directory handler
    * @return file name or null
@@ -4125,6 +4191,24 @@ Dprintf.dprintf("file=%s",file);
                            )
   {
     return file(parentShell,type,title,oldFile,FILE_NONE,listDirectory);
+  }
+
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type file dialog type
+   * @param title title text
+   * @param oldFileName old file name or null
+   * @param listDirectory list directory handler
+   * @return file name or null
+   */
+  public static String file(Shell           parentShell,
+                            FileDialogTypes type,
+                            String          title,
+                            String          oldFileName,
+                            ListDirectory   listDirectory
+                           )
+  {
+    return file(parentShell,type,title,(oldFileName != null) ? new File(oldFileName) : (File)null,listDirectory);
   }
 
   /** open a file dialog
