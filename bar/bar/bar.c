@@ -2978,7 +2978,7 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
   error = readCertificateFile(certificate,value);
   if (error != ERROR_NONE)
   {
-    stringCopy(errorMessage,Error_getText(error),errorMessageSize);
+    stringSet(errorMessage,Error_getText(error),errorMessageSize);
     return FALSE;
   }
 
@@ -3019,14 +3019,14 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
     error = File_openCString(&fileHandle,value,FILE_OPEN_READ);
     if (error != ERROR_NONE)
     {
-      stringCopy(errorMessage,Error_getText(error),errorMessageSize);
+      stringSet(errorMessage,Error_getText(error),errorMessageSize);
       String_delete(string);
       return error;
     }
     error = File_readLine(&fileHandle,string);
     if (error != ERROR_NONE)
     {
-      stringCopy(errorMessage,Error_getText(error),errorMessageSize);
+      stringSet(errorMessage,Error_getText(error),errorMessageSize);
       File_close(&fileHandle);
       String_delete(string);
       return error;
@@ -3038,7 +3038,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
     data = Password_allocSecure((size_t)dataLength);
     if (data == NULL)
     {
-      stringCopy(errorMessage,"insufficient secure memory",errorMessageSize);
+      stringSet(errorMessage,"insufficient secure memory",errorMessageSize);
       (void)File_close(&fileHandle);
       return ERROR_INSUFFICIENT_MEMORY;
     }
@@ -3046,7 +3046,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
     // decode base64
     if (Misc_base64Decode((byte*)data,dataLength,string,STRING_BEGIN) == -1)
     {
-      stringCopy(errorMessage,"decode base64 fail",errorMessageSize);
+      stringSet(errorMessage,"decode base64 fail",errorMessageSize);
       Password_freeSecure(data);
       return FALSE;
     }
@@ -3071,14 +3071,14 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
       data = Password_allocSecure(dataLength);
       if (data == NULL)
       {
-        stringCopy(errorMessage,"insufficient secure memory",errorMessageSize);
+        stringSet(errorMessage,"insufficient secure memory",errorMessageSize);
         return FALSE;
       }
 
       // decode base64
       if (Misc_base64DecodeCString((byte*)data,dataLength,&value[7]) == -1)
       {
-        stringCopy(errorMessage,"decode base64 fail",errorMessageSize);
+        stringSet(errorMessage,"decode base64 fail",errorMessageSize);
         Password_freeSecure(data);
         return FALSE;
       }
@@ -3101,7 +3101,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
       data = Password_allocSecure(dataLength);
       if (data == NULL)
       {
-        stringCopy(errorMessage,"insufficient secure memory",errorMessageSize);
+        stringSet(errorMessage,"insufficient secure memory",errorMessageSize);
         return FALSE;
       }
 
@@ -3159,7 +3159,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
                                           );
     if (error != ERROR_NONE)
     {
-      stringCopy(errorMessage,Error_getText(error),errorMessageSize);
+      stringSet(errorMessage,Error_getText(error),errorMessageSize);
       String_delete(fileName);
       return FALSE;
     }
@@ -3200,7 +3200,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
                                            );
       if (error != ERROR_NONE)
       {
-        stringCopy(errorMessage,Error_getText(error),errorMessageSize);
+        stringSet(errorMessage,Error_getText(error),errorMessageSize);
         return FALSE;
       }
 
@@ -3224,7 +3224,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
                                          );
     if (error != ERROR_NONE)
     {
-      stringCopy(errorMessage,Error_getText(error),errorMessageSize);
+      stringSet(errorMessage,Error_getText(error),errorMessageSize);
       return FALSE;
     }
   }

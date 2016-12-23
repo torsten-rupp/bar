@@ -1716,8 +1716,8 @@ static inline bool stringIsEmpty(const char *s)
 }
 
 /***********************************************************************\
-* Name   : stringCopy
-* Purpose: copy string
+* Name   : stringSet
+* Purpose: set string
 * Input  : destination - destination string
 *          source      - source string
 *          n           - size of destination string
@@ -1726,7 +1726,7 @@ static inline bool stringIsEmpty(const char *s)
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringCopy(char *destination, const char *source, size_t n)
+static inline char* stringSet(char *destination, const char *source, size_t n)
 {
   assert(n > 0);
 
@@ -1746,8 +1746,8 @@ static inline char* stringCopy(char *destination, const char *source, size_t n)
 }
 
 /***********************************************************************\
-* Name   : stringConcat
-* Purpose: concatenate string
+* Name   : stringAppend
+* Purpose: append string
 * Input  : destination - destination string
 *          source      - source string
 *          n           - size of destination string
@@ -1756,7 +1756,7 @@ static inline char* stringCopy(char *destination, const char *source, size_t n)
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringConcat(char *destination, const char *source, size_t n)
+static inline char* stringAppend(char *destination, const char *source, size_t n)
 {
   size_t m;
 
