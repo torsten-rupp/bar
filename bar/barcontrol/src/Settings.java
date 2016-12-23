@@ -529,14 +529,17 @@ public class Settings
 //TODO: preference file
   public static boolean               showEntriesMarkInfo             = true;
 
-  // debug
-  public static int                   debugLevel                      = 0;
-  public static boolean               debugQuitServerFlag             = false;
+  // role
+  public static BARControl.Roles      role                            = BARControl.Roles.BASIC;
 
   // version, help
   public static boolean               versionFlag                     = false;
   public static boolean               helpFlag                        = false;
   public static boolean               xhelpFlag                       = false;
+
+  // debug
+  public static int                   debugLevel                      = 0;
+  public static boolean               debugQuitServerFlag             = false;
 
   // server name
   public static String                serverName                      = null;
@@ -638,6 +641,33 @@ public class Settings
     {
       servers.remove(0);
     }
+  }
+
+  /** check if basic role enabled
+   * @retrue true iff basic role enabled
+   */
+  public static boolean hasBasicRole()
+  {
+    return    (role == BARControl.Roles.BASIC )
+           || (role == BARControl.Roles.NORMAL)
+           || (role == BARControl.Roles.EXPERT);
+  }
+
+  /** check if normal role enabled
+   * @retrue true iff normal role enabled
+   */
+  public static boolean hasNormalRole()
+  {
+    return    (role == BARControl.Roles.NORMAL)
+           || (role == BARControl.Roles.EXPERT);
+  }
+
+  /** check if expert role enabled
+   * @retrue true iff expert role enabled
+   */
+  public static boolean hasExpertRole()
+  {
+    return role == BARControl.Roles.EXPERT;
   }
 
   //-----------------------------------------------------------------------

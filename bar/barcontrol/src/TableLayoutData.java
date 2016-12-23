@@ -43,7 +43,7 @@ public class TableLayoutData
   public int     minHeight = SWT.DEFAULT;
   public int     maxWidth  = SWT.DEFAULT;  // max. size
   public int     maxHeight = SWT.DEFAULT;
-  public boolean hidden    = false;        // true iff widget is hidden (not drawn)
+  public boolean isVisible = true;        // true iff widget is visible (drawn)
 
   protected int row,column;
   protected int style;
@@ -61,8 +61,9 @@ public class TableLayoutData
    * @param padX,padY padding X/Z
    * @param minWidth,minHeight min. width/height
    * @param maxWidth,maxHeight max. width/height
+   * @param isVisible true iff visible
    */
-  TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, int minWidth, int minHeight, int maxWidth, int maxHeight)
+  TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, int minWidth, int minHeight, int maxWidth, int maxHeight, boolean isVisible)
   {
     this.row         = row;
     this.column      = column;
@@ -77,11 +78,59 @@ public class TableLayoutData
     this.minHeight   = minHeight;
     this.maxWidth    = maxWidth;
     this.maxHeight   = maxHeight;
+    this.isVisible   = isVisible;
   }
 
+  /** create table layout data
+   * @param row,column row/column (0..n)
+   * @param style style flags
+   * @param rowSpawn,columnSpawn row/column spawn (1..n)
+   * @param padX,padY padding X/Z
+   * @param minWidth,minHeight min. width/height
+   * @param maxWidth,maxHeight max. width/height
+   */
+  TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, int minWidth, int minHeight, int maxWidth, int maxHeight)
+  {
+    this(row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,minWidth,minHeight,maxWidth,maxHeight,true);
+  }
+
+  /** create table layout data
+   * @param row,column row/column (0..n)
+   * @param style style flags
+   * @param rowSpawn,columnSpawn row/column spawn (1..n)
+   * @param padX,padY padding X/Z
+   * @param minWidth,minHeight min. width/height
+   * @param isVisible true iff visible
+   * @param isVisible true iff visible
+   */
+  TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, int minWidth, int minHeight, boolean isVisible)
+  {
+    this(row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,minWidth,minHeight,SWT.DEFAULT,SWT.DEFAULT,isVisible);
+  }
+
+  /** create table layout data
+   * @param row,column row/column (0..n)
+   * @param style style flags
+   * @param rowSpawn,columnSpawn row/column spawn (1..n)
+   * @param padX,padY padding X/Z
+   * @param minWidth,minHeight min. width/height
+   */
   TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, int minWidth, int minHeight)
   {
-    this(row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,minWidth,minHeight,SWT.DEFAULT,SWT.DEFAULT);
+    this(row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,minWidth,minHeight,true);
+  }
+
+  /** create table layout data
+   * @param row,column row/column (0..n)
+   * @param style style flags
+   * @param rowSpawn,columnSpawn row/column spawn (1..n)
+   * @param padX,padY padding X/Z
+   * @param width,height min./max. width/height
+   * @param isVisible true iff visible
+   */
+  TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, boolean isVisible)
+  {
+    this(row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,SWT.DEFAULT,SWT.DEFAULT,isVisible);
   }
 
   /** create table layout data
@@ -93,7 +142,19 @@ public class TableLayoutData
    */
   TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height)
   {
-    this(row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,SWT.DEFAULT,SWT.DEFAULT);
+    this(row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,true);
+  }
+
+  /** create table layout data
+   * @param row,column row/column (0..n)
+   * @param style style flags
+   * @param rowSpawn,columnSpawn row/column spawn (1..n)
+   * @param padX,padY padding X/Z
+   * @param isVisible true iff visible
+   */
+  TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, boolean isVisible)
+  {
+    this(row,column,style,rowSpawn,columnSpawn,padX,padY,SWT.DEFAULT,SWT.DEFAULT,isVisible);
   }
 
   /** create table layout data
@@ -104,7 +165,19 @@ public class TableLayoutData
    */
   TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY)
   {
-    this(row,column,style,rowSpawn,columnSpawn,padX,padY,SWT.DEFAULT,SWT.DEFAULT);
+    this(row,column,style,rowSpawn,columnSpawn,padX,padY,true);
+  }
+
+  /** create table layout data
+   * @param row,column row/column (0..n)
+   * @param style style flags
+   * @param rowSpawn,columnSpawn row/column spawn (1..n)
+   * @param pad padding X/Z
+   * @param isVisible true iff visible
+   */
+  TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int pad, boolean isVisible)
+  {
+    this(row,column,style,rowSpawn,columnSpawn,pad,pad,isVisible);
   }
 
   /** create table layout data
@@ -115,7 +188,18 @@ public class TableLayoutData
    */
   TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, int pad)
   {
-    this(row,column,style,rowSpawn,columnSpawn,pad,pad);
+    this(row,column,style,rowSpawn,columnSpawn,pad,true);
+  }
+
+  /** create table layout data
+   * @param row,column row/column (0..n)
+   * @param style style flags
+   * @param rowSpawn,columnSpawn row/column spawn (1..n)
+   * @param isVisible true iff visible
+   */
+  TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn, boolean isVisible)
+  {
+    this(row,column,style,rowSpawn,columnSpawn,0,isVisible);
   }
 
   /** create table layout data
@@ -125,7 +209,17 @@ public class TableLayoutData
    */
   TableLayoutData(int row, int column, int style, int rowSpawn, int columnSpawn)
   {
-    this(row,column,style,rowSpawn,columnSpawn,0);
+    this(row,column,style,rowSpawn,columnSpawn,true);
+  }
+
+  /** create table layout data
+   * @param row,column row/column (0..n)
+   * @param style style flags
+   * @param isVisible true iff visible
+   */
+  TableLayoutData(int row, int column, int style, boolean isVisible)
+  {
+    this(row,column,style,1,1,isVisible);
   }
 
   /** create table layout data
@@ -134,7 +228,16 @@ public class TableLayoutData
    */
   TableLayoutData(int row, int column, int style)
   {
-    this(row,column,style,1,1);
+    this(row,column,style,true);
+  }
+
+  /** create table layout data
+   * @param row,column row/column (0..n)
+   * @param isVisible true iff visible
+   */
+  TableLayoutData(int row, int column, boolean isVisible)
+  {
+    this(row,column,DEFAULT,isVisible);
   }
 
   /** create table layout data
@@ -142,7 +245,7 @@ public class TableLayoutData
    */
   TableLayoutData(int row, int column)
   {
-    this(row,column,DEFAULT);
+    this(row,column,true);
   }
 
   /** convert to string

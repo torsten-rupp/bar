@@ -2778,7 +2778,7 @@ public class TabJobs
         }
       }
 
-      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Images"));
+      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Images"),Settings.hasExpertRole());
       tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
@@ -4119,12 +4119,12 @@ widgetArchivePartSize.setListVisible(true);
         Widgets.layout(composite,1,1,TableLayoutData.W);
         {
           label = Widgets.newLabel(composite,BARControl.tr("Delta")+":");
-          Widgets.layout(label,0,0,TableLayoutData.NONE);
+          Widgets.layout(label,0,0,TableLayoutData.NONE,Settings.hasExpertRole());
 
           combo = Widgets.newOptionMenu(composite);
           combo.setToolTipText(BARControl.tr("Delta compression method to use."));
           combo.setItems(new String[]{"none","xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"});
-          Widgets.layout(combo,0,1,TableLayoutData.W);
+          Widgets.layout(combo,0,1,TableLayoutData.W,Settings.hasExpertRole());
           combo.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -7793,162 +7793,165 @@ widgetArchivePartSize.setListVisible(true);
         }
       }
 
-      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Scripts"));
-      tab.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,1.0},1.0));
-      Widgets.layout(tab,0,0,TableLayoutData.NSWE);
+      if (Settings.hasExpertRole())
       {
-        // pre-script
-        label = Widgets.newLabel(tab,BARControl.tr("Pre-script")+":");
-        Widgets.layout(label,0,0,TableLayoutData.W);
-
-        composite = Widgets.newComposite(tab,SWT.NONE,4);
-        composite.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
-        Widgets.layout(composite,1,0,TableLayoutData.NSWE);
+        tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Scripts"));
+        tab.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,1.0},1.0));
+        Widgets.layout(tab,0,0,TableLayoutData.NSWE);
         {
-          styledText = Widgets.newStyledText(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-          styledText.setToolTipText(BARControl.tr("Command or script to execute before start of job.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%type - archive type\n%file - archive file name\n%directory - archive directory\n\nAdditional time macros are available."));
-          Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
-          styledText.addModifyListener(new ModifyListener()
+          // pre-script
+          label = Widgets.newLabel(tab,BARControl.tr("Pre-script")+":");
+          Widgets.layout(label,0,0,TableLayoutData.W,Settings.hasExpertRole());
+
+          composite = Widgets.newComposite(tab,SWT.NONE,4);
+          composite.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+          Widgets.layout(composite,1,0,TableLayoutData.NSWE,Settings.hasExpertRole());
           {
-            @Override
-            public void modifyText(ModifyEvent modifyEvent)
+            styledText = Widgets.newStyledText(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+            styledText.setToolTipText(BARControl.tr("Command or script to execute before start of job.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%type - archive type\n%file - archive file name\n%directory - archive directory\n\nAdditional time macros are available."));
+            Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
+            styledText.addModifyListener(new ModifyListener()
             {
-              StyledText widget = (StyledText)modifyEvent.widget;
-              String     string = widget.getText();
-              Color      color  = COLOR_MODIFIED;
+              @Override
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                StyledText widget = (StyledText)modifyEvent.widget;
+                String     string = widget.getText();
+                Color      color  = COLOR_MODIFIED;
 
-              if (preCommand.equals(string.replace(widget.getLineDelimiter(),"\n"))) color = null;
-              widget.setBackground(color);
-            }
-          });
-          styledText.addSelectionListener(new SelectionListener()
+                if (preCommand.equals(string.replace(widget.getLineDelimiter(),"\n"))) color = null;
+                widget.setBackground(color);
+              }
+            });
+            styledText.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                StyledText widget = (StyledText)selectionEvent.widget;
+                String     text   = widget.getText();
+
+                preCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+                BARServer.setJobOption(selectedJobData.uuid,preCommand);
+                widget.setBackground(null);
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            styledText.addFocusListener(new FocusListener()
+            {
+              @Override
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              @Override
+              public void focusLost(FocusEvent focusEvent)
+              {
+                StyledText widget = (StyledText)focusEvent.widget;
+                String     text   = widget.getText();
+
+                preCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+                BARServer.setJobOption(selectedJobData.uuid,preCommand);
+                widget.setBackground(null);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(styledText,preCommand));
+
+            button = Widgets.newButton(composite,BARControl.tr("Test")+"\u2026");
+            button.setToolTipText(BARControl.tr("Test script."));
+            Widgets.layout(button,1,0,TableLayoutData.E);
+            button.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                testScript(preCommand.getString());
+              }
+            });
+          }
+
+          // post-script
+          label = Widgets.newLabel(tab,BARControl.tr("Post-script")+":");
+          Widgets.layout(label,2,0,TableLayoutData.W);
+
+          composite = Widgets.newComposite(tab,SWT.NONE,4);
+          composite.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+          Widgets.layout(composite,3,0,TableLayoutData.NSWE);
           {
-            @Override
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            styledText = Widgets.newStyledText(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+            styledText.setToolTipText(BARControl.tr("Command or script to execute after termination of job.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%type - archive type\n%file - archive file name\n%directory - archive directory\n\nAdditional time macros are available."));
+            Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
+            styledText.addModifyListener(new ModifyListener()
             {
-              StyledText widget = (StyledText)selectionEvent.widget;
-              String     text   = widget.getText();
+              @Override
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                StyledText widget = (StyledText)modifyEvent.widget;
+                String     string = widget.getText();
+                Color      color  = COLOR_MODIFIED;
 
-              preCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
-              BARServer.setJobOption(selectedJobData.uuid,preCommand);
-              widget.setBackground(null);
-            }
-            @Override
-            public void widgetSelected(SelectionEvent selectionEvent)
+                if (postCommand.equals(string.replace(widget.getLineDelimiter(),"\n"))) color = null;
+                widget.setBackground(color);
+              }
+            });
+            styledText.addSelectionListener(new SelectionListener()
             {
-            }
-          });
-          styledText.addFocusListener(new FocusListener()
-          {
-            @Override
-            public void focusGained(FocusEvent focusEvent)
-            {
-            }
-            @Override
-            public void focusLost(FocusEvent focusEvent)
-            {
-              StyledText widget = (StyledText)focusEvent.widget;
-              String     text   = widget.getText();
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                StyledText widget = (StyledText)selectionEvent.widget;
+                String     text   = widget.getText();
 
-              preCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
-              BARServer.setJobOption(selectedJobData.uuid,preCommand);
-              widget.setBackground(null);
-            }
-          });
-          Widgets.addModifyListener(new WidgetModifyListener(styledText,preCommand));
+                postCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+                BARServer.setJobOption(selectedJobData.uuid,postCommand);
+                widget.setBackground(null);
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            styledText.addFocusListener(new FocusListener()
+            {
+              @Override
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              @Override
+              public void focusLost(FocusEvent focusEvent)
+              {
+                StyledText widget = (StyledText)focusEvent.widget;
+                String     text   = widget.getText();
 
-          button = Widgets.newButton(composite,BARControl.tr("Test")+"\u2026");
-          button.setToolTipText(BARControl.tr("Test script."));
-          Widgets.layout(button,1,0,TableLayoutData.E);
-          button.addSelectionListener(new SelectionListener()
-          {
-            @Override
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-            @Override
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              testScript(preCommand.getString());
-            }
-          });
-        }
+                postCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
+                BARServer.setJobOption(selectedJobData.uuid,postCommand);
+                widget.setBackground(null);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(styledText,postCommand));
 
-        // post-script
-        label = Widgets.newLabel(tab,BARControl.tr("Post-script")+":");
-        Widgets.layout(label,2,0,TableLayoutData.W);
-
-        composite = Widgets.newComposite(tab,SWT.NONE,4);
-        composite.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
-        Widgets.layout(composite,3,0,TableLayoutData.NSWE);
-        {
-          styledText = Widgets.newStyledText(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-          styledText.setToolTipText(BARControl.tr("Command or script to execute after termination of job.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%type - archive type\n%file - archive file name\n%directory - archive directory\n\nAdditional time macros are available."));
-          Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
-          styledText.addModifyListener(new ModifyListener()
-          {
-            @Override
-            public void modifyText(ModifyEvent modifyEvent)
+            button = Widgets.newButton(composite,BARControl.tr("Test")+"\u2026");
+            button.setToolTipText(BARControl.tr("Test script."));
+            Widgets.layout(button,1,0,TableLayoutData.E);
+            button.addSelectionListener(new SelectionListener()
             {
-              StyledText widget = (StyledText)modifyEvent.widget;
-              String     string = widget.getText();
-              Color      color  = COLOR_MODIFIED;
-
-              if (postCommand.equals(string.replace(widget.getLineDelimiter(),"\n"))) color = null;
-              widget.setBackground(color);
-            }
-          });
-          styledText.addSelectionListener(new SelectionListener()
-          {
-            @Override
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-              StyledText widget = (StyledText)selectionEvent.widget;
-              String     text   = widget.getText();
-
-              postCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
-              BARServer.setJobOption(selectedJobData.uuid,postCommand);
-              widget.setBackground(null);
-            }
-            @Override
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-            }
-          });
-          styledText.addFocusListener(new FocusListener()
-          {
-            @Override
-            public void focusGained(FocusEvent focusEvent)
-            {
-            }
-            @Override
-            public void focusLost(FocusEvent focusEvent)
-            {
-              StyledText widget = (StyledText)focusEvent.widget;
-              String     text   = widget.getText();
-
-              postCommand.set(text.replace(widget.getLineDelimiter(),"\n"));
-              BARServer.setJobOption(selectedJobData.uuid,postCommand);
-              widget.setBackground(null);
-            }
-          });
-          Widgets.addModifyListener(new WidgetModifyListener(styledText,postCommand));
-
-          button = Widgets.newButton(composite,BARControl.tr("Test")+"\u2026");
-          button.setToolTipText(BARControl.tr("Test script."));
-          Widgets.layout(button,1,0,TableLayoutData.E);
-          button.addSelectionListener(new SelectionListener()
-          {
-            @Override
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-            @Override
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              testScript(postCommand.getString());
-            }
-          });
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                testScript(postCommand.getString());
+              }
+            });
+          }
         }
       }
 
@@ -8299,61 +8302,64 @@ widgetArchivePartSize.setListVisible(true);
         }
       }
 
-      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Comment"));
-      tab.setLayout(new TableLayout(1.0,1.0));
-      Widgets.layout(tab,0,0,TableLayoutData.NSWE);
+      if (Settings.hasNormalRole())
       {
-        styledText = Widgets.newStyledText(tab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-        styledText.setToolTipText(BARControl.tr("Free text comment for job."));
-        Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
-        styledText.addModifyListener(new ModifyListener()
+        tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Comment"));
+        tab.setLayout(new TableLayout(1.0,1.0));
+        Widgets.layout(tab,0,0,TableLayoutData.NSWE);
         {
-          @Override
-          public void modifyText(ModifyEvent modifyEvent)
+          styledText = Widgets.newStyledText(tab,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+          styledText.setToolTipText(BARControl.tr("Free text comment for job."));
+          Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
+          styledText.addModifyListener(new ModifyListener()
           {
-            StyledText widget = (StyledText)modifyEvent.widget;
-            String     string = widget.getText();
-            Color      color  = COLOR_MODIFIED;
+            @Override
+            public void modifyText(ModifyEvent modifyEvent)
+            {
+              StyledText widget = (StyledText)modifyEvent.widget;
+              String     string = widget.getText();
+              Color      color  = COLOR_MODIFIED;
 
-            if (comment.equals(string.replace(widget.getLineDelimiter(),"\n"))) color = null;
-            widget.setBackground(color);
-          }
-        });
-        styledText.addSelectionListener(new SelectionListener()
-        {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              if (comment.equals(string.replace(widget.getLineDelimiter(),"\n"))) color = null;
+              widget.setBackground(color);
+            }
+          });
+          styledText.addSelectionListener(new SelectionListener()
           {
-            StyledText widget = (StyledText)selectionEvent.widget;
-            String     text   = widget.getText();
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+              StyledText widget = (StyledText)selectionEvent.widget;
+              String     text   = widget.getText();
 
-            comment.set(text.replace(widget.getLineDelimiter(),"\n"));
-            BARServer.setJobOption(selectedJobData.uuid,comment);
-            widget.setBackground(null);
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
+              comment.set(text.replace(widget.getLineDelimiter(),"\n"));
+              BARServer.setJobOption(selectedJobData.uuid,comment);
+              widget.setBackground(null);
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+          styledText.addFocusListener(new FocusListener()
           {
-          }
-        });
-        styledText.addFocusListener(new FocusListener()
-        {
-          @Override
-          public void focusGained(FocusEvent focusEvent)
-          {
-          }
-          @Override
-          public void focusLost(FocusEvent focusEvent)
-          {
-            StyledText widget = (StyledText)focusEvent.widget;
-            String     text   = widget.getText();
+            @Override
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            @Override
+            public void focusLost(FocusEvent focusEvent)
+            {
+              StyledText widget = (StyledText)focusEvent.widget;
+              String     text   = widget.getText();
 
-            comment.set(text.replace(widget.getLineDelimiter(),"\n"));
-            BARServer.setJobOption(selectedJobData.uuid,comment);
-            widget.setBackground(null);
-          }
-        });
-        Widgets.addModifyListener(new WidgetModifyListener(styledText,comment));
+              comment.set(text.replace(widget.getLineDelimiter(),"\n"));
+              BARServer.setJobOption(selectedJobData.uuid,comment);
+              widget.setBackground(null);
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(styledText,comment));
+        }
       }
     }
     Widgets.addEventListener(new WidgetEventListener(widgetTabFolder,selectJobEvent)

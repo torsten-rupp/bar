@@ -1443,9 +1443,19 @@ class Widgets
    * @param row,column row,column (0..n)
    * @param style SWT style flags
    */
+  public static void layout(Control control, int row, int column, int style, boolean isVisible)
+  {
+    layout(control,row,column,style,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT);
+((TableLayoutData)control.getLayoutData()).isVisible = isVisible;
+  }
+
+  /** layout widget
+   * @param control control to layout
+   * @param row,column row,column (0..n)
+   * @param style SWT style flags
+   */
   public static void layout(Control control, int row, int column, int style)
   {
-//    layout(control,row,column,style,0,0);
     layout(control,row,column,style,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT);
   }
 
@@ -2005,16 +2015,16 @@ class Widgets
 
   /** set visible
    * @param control control to make visible/invisible
-   * @param visibleFlag true to make visible, false to make invisible
+   * @param isVisible true to make visible, false to make invisible
    */
-  public static void setVisible(Control control, boolean visibleFlag)
+  public static void setVisible(Control control, boolean isVisible)
   {
     if (!control.isDisposed())
     {
       TableLayoutData tableLayoutData = (TableLayoutData)control.getLayoutData();
-      tableLayoutData.hidden = !visibleFlag;
-      control.setVisible(visibleFlag);
-      if (visibleFlag)
+      tableLayoutData.isVisible = isVisible;
+      control.setVisible(isVisible);
+      if (isVisible)
       {
         control.getParent().layout();
       }
@@ -7694,7 +7704,7 @@ private static void printTree(Tree tree)
    * @param data data element
    * @return new composite widget
    */
-  public static Composite insertTab(TabFolder tabFolder, Composite leftComposite, String title, Object data)
+  public static Composite insertTab(TabFolder tabFolder, Composite leftComposite, String title, Object data, boolean isVisible)
   {
     // get tab item index
     int index = 0;
@@ -7736,7 +7746,7 @@ private static void printTree(Tree tree)
    * @param style style
    * @return new composite widget
    */
-  public static Composite insertTab(TabFolder tabFolder, Composite leftComposite, String title, Object data, int style)
+  public static Composite insertTab(TabFolder tabFolder, Composite leftComposite, String title, Object data, int style, boolean isVisible)
   {
     final Image IMAGE_CLOSE = new Image(Display.getDefault(),IMAGE_CLOSE_DATA);
 
@@ -7782,6 +7792,8 @@ private static void printTree(Tree tree)
       tabItem.setText(title);
     }
 */
+Composite composite;
+if (isVisible) {
     TabItem tabItem = new TabItem(tabFolder,SWT.NONE,index);
     tabItem.setData(data);
     tabItem.setText(title);
@@ -7791,10 +7803,16 @@ private static void printTree(Tree tree)
     }
 
     // create composite
-    Composite composite = new Composite(tabFolder,SWT.BORDER|SWT.NONE);
+    composite = new Composite(tabFolder,SWT.BORDER|SWT.NONE);
     composite.setLayout(new TableLayout(1.0,1.0,2));
 
     tabItem.setControl(composite);
+}
+else
+{
+    composite = new Composite(tabFolder,SWT.BORDER|SWT.NONE);
+    composite.setLayout(new TableLayout(1.0,1.0,2));
+}
 
     return composite;
   }
@@ -7806,9 +7824,21 @@ private static void printTree(Tree tree)
    * @param style style
    * @return new composite widget
    */
+  public static Composite addTab(TabFolder tabFolder, String title, Object data, int style, boolean isVisible)
+  {
+    return insertTab(tabFolder,null,title,data,style,isVisible);
+  }
+
+  /** add tab widget
+   * @param tabFolder tab folder
+   * @param title title of tab
+   * @param data data element
+   * @param style style
+   * @return new composite widget
+   */
   public static Composite addTab(TabFolder tabFolder, String title, Object data, int style)
   {
-    return insertTab(tabFolder,null,title,data,style);
+    return addTab(tabFolder,title,data,style,true);
   }
 
   /** add tab widget
@@ -7817,9 +7847,9 @@ private static void printTree(Tree tree)
    * @param data data element
    * @return new composite widget
    */
-  public static Composite addTab(TabFolder tabFolder, String title, Object data)
+  public static Composite addTab(TabFolder tabFolder, String title, Object data, boolean isVisible)
   {
-    return addTab(tabFolder,title,data,SWT.NONE);
+    return addTab(tabFolder,title,data,SWT.NONE,isVisible);
   }
 
   /** add tab widget
@@ -7827,9 +7857,19 @@ private static void printTree(Tree tree)
    * @param title title of tab
    * @return new composite widget
    */
-  public static Composite addTab(TabFolder tabFolder, String title, int style)
+  public static Composite addTab(TabFolder tabFolder, String title, int style, boolean isVisible)
   {
-    return addTab(tabFolder,title,null,style);
+    return addTab(tabFolder,title,null,style,isVisible);
+  }
+
+  /** add tab widget
+   * @param tabFolder tab folder
+   * @param title title of tab
+   * @return new composite widget
+   */
+  public static Composite addTab(TabFolder tabFolder, String title, boolean isVisible)
+  {
+    return addTab(tabFolder,title,SWT.NONE,isVisible);
   }
 
   /** add tab widget
@@ -7839,7 +7879,7 @@ private static void printTree(Tree tree)
    */
   public static Composite addTab(TabFolder tabFolder, String title)
   {
-    return addTab(tabFolder,title,SWT.NONE);
+    return addTab(tabFolder,title,SWT.NONE,true);
   }
 
   /** set tab widget

@@ -545,7 +545,7 @@ if (debug) System.err.println(indent()+String.format("  %-30s: size=(%4d,%4d) ro
                                                     )
                              );
 //"  "+children[i]+" size=("+sizes[i].x+","+sizes[i].y+") row="+tableLayoutData.row+" column="+tableLayoutData.column+": "+childX+","+childY+"+"+childWidth+"x"+childHeight+" ("+childX+","+childY+")-("+(childX+childWidth)+","+(childY+childHeight)+")");
-      if (!tableLayoutData.hidden) children[i].setBounds(childX,childY,childWidth,childHeight);
+      if (tableLayoutData.isVisible) children[i].setBounds(childX,childY,childWidth,childHeight);
     }
 
     if (columnWeights != null)
@@ -634,7 +634,15 @@ if (debug) System.err.println(indent()+"initialize "+this+": children="+children
       TableLayoutData tableLayoutData = (TableLayoutData)children[i].getLayoutData();
       if (tableLayoutData == null) throw new Error("no layout data for "+children[i]+", parent "+children[i].getParent());
 
+if (tableLayoutData.isVisible)
+{
       sizes[i] = children[i].computeSize(SWT.DEFAULT,SWT.DEFAULT,true);
+}
+else
+{
+Dprintf.dprintf("xxxxxxxxxxxxx %s",children[i]);
+      sizes[i] = new Point(0,0);
+}
 
       if (tableLayoutData.width  != SWT.DEFAULT) sizes[i].x = tableLayoutData.width;
       if (tableLayoutData.height != SWT.DEFAULT) sizes[i].y = tableLayoutData.height;

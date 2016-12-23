@@ -1335,6 +1335,15 @@ public class BARControl
 
   // --------------------------- constants --------------------------------
 
+  /** roles
+   */
+  public static enum Roles
+  {
+    BASIC,
+    NORMAL,
+    EXPERT
+  };
+
   /** host system
    */
   public enum HostSystems
@@ -1401,6 +1410,13 @@ public class BARControl
     new OptionEnumeration("differential",ArchiveTypes.DIFFERENTIAL),
   };
 
+  private static final OptionEnumeration[] ROLE_ENUMERATION =
+  {
+    new OptionEnumeration("basic", Roles.BASIC),
+    new OptionEnumeration("normal",Roles.NORMAL),
+    new OptionEnumeration("expert",Roles.EXPERT),
+  };
+
   private static final Option[] OPTIONS =
   {
     new Option("--password",                    null,Options.Types.STRING,     "serverPassword"),
@@ -1432,6 +1448,8 @@ public class BARControl
     new Option("--restore",                     null,Options.Types.STRING,     "restoreStorageName"),
     new Option("--destination",                 null,Options.Types.STRING,     "destination"),
     new Option("--overwrite-entries",           null,Options.Types.BOOLEAN,    "overwriteEntriesFlag"),
+
+    new Option("--role",                        null,Options.Types.ENUMERATION,"role",ROLE_ENUMERATION),
 
     new Option("--version",                     null,Options.Types.BOOLEAN,    "versionFlag"),
     new Option("--help",                        "-h",Options.Types.BOOLEAN,    "helpFlag"),
