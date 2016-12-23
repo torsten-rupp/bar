@@ -3479,7 +3479,12 @@ throw new Error("NYI");
     private ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
     private Iterator<ValueMap>  iterator;
 
-    public RemoteFile newInstance(String name)
+    /** get new file instance
+     * @param name name
+     * @return file
+     */
+    @Override
+    public RemoteFile newFileInstance(String name)
     {
       FileTypes fileType = FileTypes.FILE;
       long      size     = 0;
@@ -3518,7 +3523,8 @@ throw new Error("NYI");
     /** get shortcut files
      * @return shortcut files
      */
-    public void getShortcuts(ArrayList<RemoteFile> shortcutList)
+    @Override
+    public void getShortcuts(List<RemoteFile> shortcutList)
     {
       final HashMap<String,RemoteFile> shortcutMap = new HashMap<String,RemoteFile>();
 
@@ -3556,6 +3562,7 @@ throw new Error("NYI");
     /** remove shortcut file
      * @param name shortcut name
      */
+    @Override
     public void addShortcut(RemoteFile shortcut)
     {
       Settings.shortcuts.add(shortcut.getAbsolutePath());
@@ -3564,6 +3571,7 @@ throw new Error("NYI");
     /** remove shortcut file
      * @param shortcut shortcut file
      */
+    @Override
     public void removeShortcut(RemoteFile shortcut)
     {
       Settings.shortcuts.remove(shortcut.getAbsolutePath());
@@ -3573,11 +3581,12 @@ throw new Error("NYI");
      * @param pathName path name
      * @return true iff open
      */
-    public boolean open(String pathName)
+    @Override
+    public boolean open(RemoteFile path)
     {
       String[] errorMessage = new String[1];
       int error = BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
-                                                               pathName
+                                                               path.getAbsolutePath()
                                                               ),
                                            1,  // debugLevel
                                            errorMessage,
@@ -3596,6 +3605,7 @@ throw new Error("NYI");
 
     /** close list files in directory
      */
+    @Override
     public void close()
     {
       iterator = null;
@@ -3604,9 +3614,10 @@ throw new Error("NYI");
     /** get next entry in directory
      * @return entry
      */
-    public File getNext()
+    @Override
+    public RemoteFile getNext()
     {
-      File file = null;
+      RemoteFile file = null;
 
       if (iterator.hasNext())
       {
