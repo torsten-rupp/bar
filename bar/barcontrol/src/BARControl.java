@@ -1277,6 +1277,7 @@ public class BARControl
     int     serverTLSPort;    // server TLS port
     boolean forceSSL;         // force SSL
     String  password;         // login password
+    Roles   role;             // role
 
     /** create login data
      * @param serverName server name
@@ -1284,8 +1285,9 @@ public class BARControl
      * @param tlsPort server TLS port
      * @param password server password
      * @param forceSSL TRUE to force SSL
+     * @param role role
      */
-    LoginData(String name, int port, int tlsPort, boolean forceSSL, String password)
+    LoginData(String name, int port, int tlsPort, boolean forceSSL, String password, Roles role)
     {
       final Settings.Server defaultServer = Settings.getLastServer();
 
@@ -1294,6 +1296,7 @@ public class BARControl
       this.serverTLSPort = (port != 0        ) ? tlsPort  : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT);
       this.forceSSL      = forceSSL;
       this.password      = !password.isEmpty() ? password : "";
+      this.role          = role;
 
       // get last used server if no name given
 //TODO
@@ -1308,20 +1311,22 @@ public class BARControl
      * @param port server port
      * @param tlsPort server TLS port
      * @param forceSSL TRUE to force SSL
+     * @param role role
      */
-    LoginData(String name, int port, int tlsPort, boolean forceSSL)
+    LoginData(String name, int port, int tlsPort, boolean forceSSL, Roles role)
     {
-      this(name,port,tlsPort,forceSSL,"");
+      this(name,port,tlsPort,forceSSL,"",role);
     }
 
     /** create login data
      * @param port server port
      * @param tlsPort server TLS port
      * @param forceSSL TRUE to force SSL
+     * @param role role
      */
-    LoginData(int port, int tlsPort, boolean forceSSL)
+    LoginData(int port, int tlsPort, boolean forceSSL, Roles role)
     {
-      this("",port,tlsPort,forceSSL);
+      this("",port,tlsPort,forceSSL,role);
     }
 
     /** convert data to string
@@ -1423,7 +1428,7 @@ public class BARControl
     new Option("--port",                        "-p",Options.Types.INTEGER,    "serverPort"),
     new Option("--tls-port",                    null,Options.Types.INTEGER,    "serverTLSPort"),
     new Option("--ca-file",                     null,Options.Types.STRING,     "serverCAFileName"),
-    new Option("--certificate-file",            null,Options.Types.STRING,     "serverCertificateFileName"),
+    new Option("--cert-file",                   null,Options.Types.STRING,     "serverCertificateFileName"),
     new Option("--key-file",                    null,Options.Types.STRING,     "serverKeyFileName"),
     new Option("--force-ssl",                   null,Options.Types.BOOLEAN,    "serverForceSSL"),
     new Option("--select-job",                  null,Options.Types.STRING,     "selectedJobName"),
@@ -1815,9 +1820,10 @@ if (false) {
 
   /** login server/password dialog
    * @param loginData server login data
+   * @param roleFlag true to select role, false otherwise
    * @return true iff login data ok, false otherwise
    */
-  private boolean getLoginData(final LoginData loginData)
+  private boolean getLoginData(final LoginData loginData, final boolean roleFlag)
   {
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
@@ -1848,6 +1854,7 @@ if (false) {
     final Spinner widgetServerPort;
     final Button  widgetForceSSL;
     final Text    widgetPassword;
+    final Button  widgetRoleBasic,widgetRoleNormal,widgetRoleExpert;
     final Button  widgetLoginButton;
     composite = new Composite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},2));
@@ -1884,6 +1891,36 @@ if (false) {
       widgetPassword = Widgets.newPassword(composite);
       if ((loginData.password != null) && !loginData.password.isEmpty()) widgetPassword.setText(loginData.password);
       Widgets.layout(widgetPassword,1,1,TableLayoutData.WE);
+
+      if (roleFlag)
+      {
+        label = Widgets.newLabel(composite);
+        label.setText(BARControl.tr("Role")+":");
+        Widgets.layout(label,2,0,TableLayoutData.W);
+
+        subComposite = new Composite(composite,SWT.NONE);
+        subComposite.setLayout(new TableLayout(null,0.0,2));
+        subComposite.setLayoutData(new TableLayoutData(2,1,TableLayoutData.WE));
+        {
+          widgetRoleBasic = Widgets.newRadio(subComposite,BARControl.tr("Basic"));
+          widgetRoleBasic.setSelection(loginData.role == Roles.BASIC);
+          Widgets.layout(widgetRoleBasic,0,0,TableLayoutData.W);
+
+          widgetRoleNormal = Widgets.newRadio(subComposite,BARControl.tr("Normal"));
+          widgetRoleNormal.setSelection(loginData.role == Roles.NORMAL);
+          Widgets.layout(widgetRoleNormal,0,1,TableLayoutData.W);
+
+          widgetRoleExpert = Widgets.newRadio(subComposite,BARControl.tr("Expert"));
+          widgetRoleExpert.setSelection(loginData.role == Roles.EXPERT);
+          Widgets.layout(widgetRoleExpert,0,2,TableLayoutData.W);
+        }
+      }
+      else
+      {
+        widgetRoleBasic  = null;
+        widgetRoleNormal = null;
+        widgetRoleExpert = null;
+      }
     }
 
     // buttons
@@ -1907,6 +1944,13 @@ if (false) {
           loginData.serverPort = widgetServerPort.getSelection();
           loginData.forceSSL   = widgetForceSSL.getSelection();
           loginData.password   = widgetPassword.getText();
+          if (roleFlag)
+          {
+            if      (widgetRoleBasic.getSelection() ) loginData.role = Roles.BASIC;
+            else if (widgetRoleNormal.getSelection()) loginData.role = Roles.NORMAL;
+            else if (widgetRoleExpert.getSelection()) loginData.role = Roles.EXPERT;
+            else                                      loginData.role = Roles.BASIC;
+          }
           Dialogs.close(dialog,true);
         }
       });
@@ -2108,7 +2152,8 @@ if (false) {
                                         (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                         (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                         Settings.forceSSL,
-                                        (!server.password.isEmpty()) ? server.password : ""
+                                        (!server.password.isEmpty()) ? server.password : "",
+                                        Settings.role
                                        );
               try
               {
@@ -2173,9 +2218,10 @@ if (false) {
               loginData = new LoginData((!server.name.isEmpty()) ? server.name : Settings.DEFAULT_SERVER_NAME,
                                         (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
                                         (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
-                                        Settings.forceSSL
+                                        Settings.forceSSL,
+                                        Settings.role
                                        );
-              if (getLoginData(loginData))
+              if (getLoginData(loginData,false))
               {
                 try
                 {
@@ -2252,9 +2298,10 @@ if (false) {
             final Settings.Server defaultServer = Settings.getLastServer();
             loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
                                       (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
-                                      Settings.forceSSL
+                                      Settings.forceSSL,
+                                      Settings.role
                                      );
-            if (getLoginData(loginData))
+            if (getLoginData(loginData,false))
             {
               try
               {
@@ -2730,7 +2777,7 @@ if (false) {
 
           // try to connect to new server
           while (   !connectOkFlag
-                 && getLoginData(loginData)
+                 && getLoginData(loginData,false)
                  && ((loginData.serverPort != 0) || (loginData.serverTLSPort != 0))
                 )
           {
@@ -2819,7 +2866,8 @@ if (false) {
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                 Settings.forceSSL,
-                                (server != null) ? server.password : ""
+                                (server != null) ? server.password : "",
+                                Settings.role
                                );
       if (Settings.serverName     != null) loginData.serverName    = Settings.serverName;
       if (Settings.serverPort     != -1  ) loginData.serverPort    = Settings.serverPort;
@@ -3694,7 +3742,7 @@ Dprintf.dprintf("still not supported");
         while (!connectOkFlag)
         {
           // get login data
-          if (!getLoginData(loginData))
+          if (!getLoginData(loginData,true))
           {
             System.exit(0);
           }
@@ -3787,6 +3835,8 @@ Dprintf.dprintf("still not supported");
             }
           }
         }
+        Settings.forceSSL = loginData.forceSSL;
+        Settings.role     = loginData.role;
 
         // open main window
         createWindow();

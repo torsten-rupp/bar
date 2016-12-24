@@ -1022,7 +1022,7 @@ public class BARServer
 
   public static char         fileSeparator;
 
-  private final static int   SOCKET_READ_TIMEOUT    = 20*1000;                       // timeout reading socket [ms]
+  private final static int   SOCKET_READ_TIMEOUT    = 30*1000;                       // timeout reading socket [ms]
   private final static int   TIMEOUT                = 120*1000;                      // global timeout [ms]
 
   private static byte[]      RANDOM_DATA = new byte[64];

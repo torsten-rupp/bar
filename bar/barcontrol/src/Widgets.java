@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Revision: 800 $
-* $Date: 2012-01-28 10:49:16 +0100 (Sat, 28 Jan 2012) $
-* $Author: trupp $
+* $Revision: 1564 $
+* $Date: 2016-12-24 16:12:38 +0100 (Sat, 24 Dec 2016) $
+* $Author: torsten $
 * Contents: simple widgets functions
 * Systems: all
 *
@@ -1334,7 +1334,40 @@ class Widgets
    */
   public static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, int minWidth, int minHeight, int maxWidth, int maxHeight)
   {
-    TableLayoutData tableLayoutData = new TableLayoutData(row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,minWidth,minHeight,maxWidth,maxHeight);
+    TableLayoutData tableLayoutData = (TableLayoutData)control.getLayoutData();
+    if (tableLayoutData != null)
+    {
+      tableLayoutData.row         = row;
+      tableLayoutData.column      = column;
+      tableLayoutData.style       = style;
+      tableLayoutData.rowSpawn    = Math.max(1,rowSpawn);
+      tableLayoutData.columnSpawn = Math.max(1,columnSpawn);
+      tableLayoutData.padX        = padX;
+      tableLayoutData.padY        = padY;
+      tableLayoutData.width       = width;
+      tableLayoutData.height      = height;
+      tableLayoutData.minWidth    = minWidth;
+      tableLayoutData.minHeight   = minHeight;
+      tableLayoutData.maxWidth    = maxWidth;
+      tableLayoutData.maxHeight   = maxHeight;
+    }
+    else
+    {
+      tableLayoutData = new TableLayoutData(row,
+                                            column,
+                                            style,
+                                            rowSpawn,
+                                            columnSpawn,
+                                            padX,
+                                            padY,
+                                            width,
+                                            height,
+                                            minWidth,
+                                            minHeight,
+                                            maxWidth,
+                                            maxHeight
+                                           );
+    }
     control.setLayoutData(tableLayoutData);
   }
 
@@ -1436,17 +1469,6 @@ class Widgets
   public static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn)
   {
     layout(control,row,column,style,rowSpawn,columnSpawn,0);
-  }
-
-  /** layout widget
-   * @param control control to layout
-   * @param row,column row,column (0..n)
-   * @param style SWT style flags
-   */
-  public static void layout(Control control, int row, int column, int style, boolean isVisible)
-  {
-    layout(control,row,column,style,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT);
-((TableLayoutData)control.getLayoutData()).isVisible = isVisible;
   }
 
   /** layout widget
@@ -2021,8 +2043,11 @@ class Widgets
   {
     if (!control.isDisposed())
     {
-      TableLayoutData tableLayoutData = (TableLayoutData)control.getLayoutData();
-      tableLayoutData.isVisible = isVisible;
+      if (control.getLayoutData() instanceof TableLayoutData)
+      {
+        TableLayoutData tableLayoutData = (TableLayoutData)control.getLayoutData();
+        tableLayoutData.isVisible = isVisible;
+      }
       control.setVisible(isVisible);
       if (isVisible)
       {
@@ -7701,46 +7726,6 @@ private static void printTree(Tree tree)
    * @param tabFolder tab folder
    * @param leftComposite left tab item composite or null
    * @param title title of tab
-   * @param data data element
-   * @return new composite widget
-   */
-  public static Composite insertTab(TabFolder tabFolder, Composite leftComposite, String title, Object data, boolean isVisible)
-  {
-    // get tab item index
-    int index = 0;
-    TabItem[] tabItems = tabFolder.getItems();
-    for (index = 0; index < tabItems.length; index++)
-    {
-      if (tabItems[index].getControl() == leftComposite)
-      {
-        index++;
-        break;
-      }
-    }
-
-    // create tab
-    TabItem tabItem = new TabItem(tabFolder,SWT.NONE,index);
-    tabItem.setData(data);
-    tabItem.setText(title);
-
-    // create composite
-    Composite composite = new Composite(tabFolder,SWT.BORDER|SWT.NONE);
-    TableLayout tableLayout = new TableLayout();
-    tableLayout.marginTop    = 2;
-    tableLayout.marginBottom = 2;
-    tableLayout.marginLeft   = 2;
-    tableLayout.marginRight  = 2;
-    composite.setLayout(tableLayout);
-
-    tabItem.setControl(composite);
-
-    return composite;
-  }
-
-  /** insert tab widget
-   * @param tabFolder tab folder
-   * @param leftComposite left tab item composite or null
-   * @param title title of tab
    * @param titleImage title image of tab
    * @param data data element
    * @param style style
@@ -7804,6 +7789,7 @@ if (isVisible) {
 
     // create composite
     composite = new Composite(tabFolder,SWT.BORDER|SWT.NONE);
+    composite.setLayoutData(new TableLayoutData(isVisible));
     composite.setLayout(new TableLayout(1.0,1.0,2));
 
     tabItem.setControl(composite);
@@ -7811,7 +7797,9 @@ if (isVisible) {
 else
 {
     composite = new Composite(tabFolder,SWT.BORDER|SWT.NONE);
+    composite.setLayoutData(new TableLayoutData(isVisible));
     composite.setLayout(new TableLayout(1.0,1.0,2));
+    composite.setVisible(false);
 }
 
     return composite;
@@ -8059,7 +8047,7 @@ else
    * @param data data element
    * @return new composite widget
    */
-  public static Composite insertTab(CTabFolder cTabFolder, Composite leftComposite, String title, Object data)
+  public static Composite insertTab(CTabFolder cTabFolder, Composite leftComposite, String title, Object data, boolean isVisible)
   {
     // get tab item index
     int index = 0;
@@ -8098,9 +8086,9 @@ else
    * @param data data element
    * @return new composite widget
    */
-  public static Composite addTab(CTabFolder cTabFolder, String title, Object data)
+  public static Composite addTab(CTabFolder cTabFolder, String title, Object data, boolean isVisible)
   {
-    return insertTab(cTabFolder,null,title,data);
+    return insertTab(cTabFolder,null,title,data,isVisible);
   }
 
   /** add tab widget
@@ -8108,9 +8096,9 @@ else
    * @param title title of tab
    * @return new composite widget
    */
-  public static Composite addTab(CTabFolder cTabFolder, String title)
+  public static Composite addTab(CTabFolder cTabFolder, String title, boolean isVisible)
   {
-    return addTab(cTabFolder,title,null);
+    return addTab(cTabFolder,title,(Object)null,isVisible);
   }
 
   /** set tab widget
@@ -9034,13 +9022,14 @@ else
    * @param margin margin or 0
    * @return new composite widget
    */
-  public static Composite newComposite(Composite composite, int style, int margin)
+  public static Composite newComposite(Composite composite, int style, int margin, boolean isVisible)
   {
     Composite childComposite;
 
     childComposite = new Composite(composite,style);
-    TableLayout tableLayout = new TableLayout(margin);
-    childComposite.setLayout(tableLayout);
+    childComposite.setLayoutData(new TableLayoutData(isVisible));
+    childComposite.setLayout(new TableLayout(margin));
+    childComposite.setVisible(isVisible);
 
     // set scrolled composite content
     if (composite instanceof ScrolledComposite)
@@ -9054,11 +9043,41 @@ else
   /** new composite widget
    * @param composite composite widget
    * @param style style
+   * @param margin margin or 0
+   * @return new composite widget
+   */
+  public static Composite newComposite(Composite composite, int style, int margin)
+  {
+    return newComposite(composite,style,margin,true);
+  }
+
+  /** new composite widget
+   * @param composite composite widget
+   * @param style style
+   * @return new composite widget
+   */
+  public static Composite newComposite(Composite composite, int style, boolean isVisible)
+  {
+    return newComposite(composite,style,0,isVisible);
+  }
+
+  /** new composite widget
+   * @param composite composite widget
+   * @param style style
    * @return new composite widget
    */
   public static Composite newComposite(Composite composite, int style)
   {
-    return newComposite(composite,style,0);
+    return newComposite(composite,style,true);
+  }
+
+  /** new composite widget
+   * @param composite composite widget
+   * @return new composite widget
+   */
+  public static Composite newComposite(Composite composite, boolean isVisible)
+  {
+    return newComposite(composite,SWT.NONE,isVisible);
   }
 
   /** new composite widget
@@ -9067,7 +9086,7 @@ else
    */
   public static Composite newComposite(Composite composite)
   {
-    return newComposite(composite,SWT.NONE);
+    return newComposite(composite,true);
   }
 
   //-----------------------------------------------------------------------

@@ -103,6 +103,8 @@ CLASSPATH          = $(subst $() $(),:,classes $(SWT_JARS) $(GETTEXT_JARS) $(BOU
 
 ENVIRONMENT        = SWT_GTK3=0
 
+BARCONTROL_OPTIONS = --port=39909 --key-file=../bar-key.pem --ca-file=../bar-ca.pem --cert-file=../bar-certificate.pem 
+
 #---------------------------------- commands----------------------------------
 
 CAT        = cat
@@ -248,10 +250,10 @@ help:
 	@$(ECHO) "  runxdebug [O|OPTIONS=<options>]"
 	@$(ECHO) "  runxxdebug [O|OPTIONS=<options>]"
 	@$(ECHO) ""
-	@$(ECHO) "  rundev [O|OPTIONS=<options>]"
-	@$(ECHO) "  rundevdebug [O|OPTIONS=<options>]"
-	@$(ECHO) "  rundevxdebug [O|OPTIONS=<options>]"
-	@$(ECHO) "  rundevxxdebug [O|OPTIONS=<options>]"
+	@$(ECHO) "  rundev[-basic|normal|expert] [O|OPTIONS=<options>]"
+	@$(ECHO) "  rundevdebug[-basic|normal|expert] [O|OPTIONS=<options>]"
+	@$(ECHO) "  rundevxdebug[-basic|normal|expert] [O|OPTIONS=<options>]"
+	@$(ECHO) "  rundevxxdebug[-basic|normal|expert] [O|OPTIONS=<options>]"
 	@$(ECHO) ""
 	@$(ECHO) "  runjar  [O|OPTIONS=<options>]"
 	@$(ECHO) ""
@@ -596,30 +598,60 @@ else
 endif
 
 .PHONY: rundev rundevdebug rundevxdebug rundevxxdebug
+.PHONY: rundev-basic rundevdebug-basic rundevxdebug-basic rundevxxdebug-basic
+.PHONY: rundev-normal rundevdebug-normal rundevxdebug-normal rundevxxdebug-normal
+.PHONY: rundev-expert rundevdebug-expert rundevxdebug-expert rundevxxdebug-expert
 rundev: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
+rundev-basic: $(OBJECTS)
+	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=basic"
+rundev-normal: $(OBJECTS)
+	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=normal"
+rundev-expert: $(OBJECTS)
+	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=expert"
+
 rundevdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug=1 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=1 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
+rundevdebug-basic: $(OBJECTS)
+	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=basic"
+rundevdebug-normal: $(OBJECTS)
+	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=normal"
+rundevdebug-expert: $(OBJECTS)
+	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=expert"
+
 rundevxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug=2 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=2 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
+rundevxdebug-basic: $(OBJECTS)
+	$(MAKE) rundevxdebug OPTIONS="$(OPTIONS) --role=basic"
+rundevxdebug-normal: $(OBJECTS)
+	$(MAKE) rundevxdebug OPTIONS="$(OPTIONS) --role=normal"
+rundevxdebug-expert: $(OBJECTS)
+	$(MAKE) rundevxdebug OPTIONS="$(OPTIONS) --role=expert"
+
 rundevxxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug=3 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=3 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
+rundevxxdebug-basic: $(OBJECTS)
+	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=basic"
+rundevxxdebug-normal: $(OBJECTS)
+	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=normal"
+rundevxxdebug-expert: $(OBJECTS)
+	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=expert"
 
 # run with jar file
 ifneq ($(JAVA),)

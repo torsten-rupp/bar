@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /tmp/cvs/onzen/src/TableLayout.java,v $
-* $Revision: 1.1 $
+* $Revision: 1564 $
 * $Author: torsten $
 * Contents:
 * Systems:
@@ -429,15 +429,30 @@ if (debug) System.err.println(indent()+"composite="+composite+" rectangle="+rect
     {
       if (columnWeights[i] == 0.0) fixedWidth += Math.max(columnSizeHints[i],columnSizeMin[i]);
 //      else                         fixedWidth += columnSizeMin[i];
-      fixedWidth += ((i < columns-1)?verticalSpacing:0);
+      fixedWidth += ((i < columns-1) ? verticalSpacing : 0);
     }
     for (int i = 0; i < rows; i++)
     {
       if (rowWeights[i] == 0.0) fixedHeight += Math.max(rowSizeHints[i],rowSizeMin[i]);
 //      else                      fixedHeight += rowSizeMin[i];
-      fixedHeight += ((i < rows-1)?horizontalSpacing:0);
+      fixedHeight += ((i < rows-1) ? horizontalSpacing : 0);
     }
 if (debug) System.err.println(indent()+"fixedWidth="+fixedWidth+" fixedHeight="+fixedHeight);
+
+    // get visible rows/columns (rows/columns which have at least one visible child)
+    boolean rowVisibleFlags[]    = new boolean[rows   ];
+    boolean columnVisibleFlags[] = new boolean[columns];
+    for (int i = 0; i < children.length; i++)
+    {
+      TableLayoutData tableLayoutData = (TableLayoutData)children[i].getLayoutData();
+      if (tableLayoutData == null) throw new Error("no layout data");
+
+      if (tableLayoutData.isVisible)
+      {
+        rowVisibleFlags   [tableLayoutData.row   ] = true;
+        columnVisibleFlags[tableLayoutData.column] = true;
+      }
+    }
 
     // calculate row/column sizes
     height       = rectangle.height-marginTop-marginBottom;
@@ -466,7 +481,7 @@ if (debug) { System.err.print(indent()+"row weights: "); if (rowWeights != null)
                               );
       }
     }
-if (debug) { System.err.print(indent()+"row sizes: ");for (int i = 0; i < rows;    i++) System.err.print(" "+rowSizes[i]   +(rowExpandFlags[i]   ?"*":""));System.err.println(); }
+if (debug) { System.err.print(indent()+"row sizes: ");for (int i = 0; i < rows;    i++) System.err.print(" "+(!rowVisibleFlags[i]?"[":"")+rowSizes[i]   +(rowExpandFlags[i]   ?"*":"")+(!rowVisibleFlags[i]?"[":""));System.err.println(); }
     width        = rectangle.width-marginLeft-marginRight;
     columnSizes  = new int[columns];
     variableSize = width-fixedWidth;
@@ -493,7 +508,7 @@ if (debug) { System.err.print(indent()+"column weights: "); if (columnWeights !=
                                  );
       }
     }
-if (debug) { System.err.print(indent()+"column size: ");for (int i = 0; i < columns; i++) System.err.print(" "+columnSizes[i]+(columnExpandFlags[i]?"*":""));System.err.println(); }
+if (debug) { System.err.print(indent()+"column size: ");for (int i = 0; i < columns; i++) System.err.print(" "+(!columnVisibleFlags[i]?"[":"")+columnSizes[i]+(columnExpandFlags[i]?"*":"")+(!columnVisibleFlags[i]?"]":""));System.err.println(); }
 
     // calculate row/column sizes sum
     rowSizesSum    = new int[rows   ];
@@ -503,7 +518,7 @@ if (debug) { System.err.print(indent()+"column size: ");for (int i = 0; i < colu
       rowSizesSum[0] = 0;
       for (int i = 1; i < rows; i++)
       {
-        rowSizesSum[i] = rowSizesSum[i-1]+rowSizes[i-1]+horizontalSpacing;
+        rowSizesSum[i] = rowSizesSum[i-1]+rowSizes[i-1]+(rowVisibleFlags[i-1]?horizontalSpacing:0);
       }
     }
     if (columns > 0)
@@ -511,7 +526,7 @@ if (debug) { System.err.print(indent()+"column size: ");for (int i = 0; i < colu
       columnSizesSum[0] = 0;
       for (int i = 1; i < columns; i++)
       {
-        columnSizesSum[i] = columnSizesSum[i-1]+columnSizes[i-1]+verticalSpacing;
+        columnSizesSum[i] = columnSizesSum[i-1]+columnSizes[i-1]+(columnVisibleFlags[i-1]?verticalSpacing:0);
       }
     }
 
@@ -532,20 +547,26 @@ if (debug) System.err.println(indent()+"layout:");
       int childHeight = Math.min(sizes[i].y,height);
       if ((tableLayoutData.style & TableLayoutData.WE) == TableLayoutData.WE) childWidth  = width;
       if ((tableLayoutData.style & TableLayoutData.NS) == TableLayoutData.NS) childHeight = height;
-      if      ((tableLayoutData.style & TableLayoutData.WE) == TableLayoutData.E) childX += (childWidth < width)?width-childWidth:0;
-      else if ((tableLayoutData.style & TableLayoutData.WE) == 0) childX += (childWidth < width)?(width-childWidth)/2:0;
-      if      ((tableLayoutData.style & TableLayoutData.NS) == TableLayoutData.S) childY += (childHeight < height)?height-childHeight:0;
-      else if ((tableLayoutData.style & TableLayoutData.NS) == 0) childY += (childHeight < height)?(height-childHeight)/2:0;
-if (debug) System.err.println(indent()+String.format("  %-30s: size=(%4d,%4d) row/col=(%2d,%2d): xy=(%4d,%4d)+wh=(%4dx%4d) = xy0=(%4d,%4d)-xy1=(%4d,%4d)",
+      if      ((tableLayoutData.style & TableLayoutData.WE) == TableLayoutData.E   ) childX += (childWidth  < width ) ? width-childWidth       : 0;
+      else if ((tableLayoutData.style & TableLayoutData.WE) == TableLayoutData.NONE) childX += (childWidth  < width ) ? (width-childWidth)/2   : 0;
+      if      ((tableLayoutData.style & TableLayoutData.NS) == TableLayoutData.S   ) childY += (childHeight < height) ? height-childHeight     : 0;
+      else if ((tableLayoutData.style & TableLayoutData.NS) == TableLayoutData.NONE) childY += (childHeight < height) ? (height-childHeight)/2 : 0;
+if (debug) System.err.println(indent()+String.format("  %-30s: size=(%4d,%4d) row/col=(%2d,%2d) visible=%s: xy=(%4d,%4d)+wh=(%4dx%4d) => (%4d,%4d)-(%4d,%4d)",
                                                      children[i],
                                                      sizes[i].x,sizes[i].y,
                                                      tableLayoutData.row,tableLayoutData.column,
-                                                     childX,childY,childWidth,childHeight,
+                                                     tableLayoutData.isVisible ? "yes" : "no ",
+                                                     childX,childY,
+                                                     childWidth,childHeight,
                                                      childX,childY,childX+childWidth,childY+childHeight
                                                     )
                              );
 //"  "+children[i]+" size=("+sizes[i].x+","+sizes[i].y+") row="+tableLayoutData.row+" column="+tableLayoutData.column+": "+childX+","+childY+"+"+childWidth+"x"+childHeight+" ("+childX+","+childY+")-("+(childX+childWidth)+","+(childY+childHeight)+")");
       if (tableLayoutData.isVisible) children[i].setBounds(childX,childY,childWidth,childHeight);
+//else {
+//Dprintf.dprintf("");
+//children[i].setBounds(0,0,0,0);
+//}
     }
 
     if (columnWeights != null)
@@ -634,23 +655,24 @@ if (debug) System.err.println(indent()+"initialize "+this+": children="+children
       TableLayoutData tableLayoutData = (TableLayoutData)children[i].getLayoutData();
       if (tableLayoutData == null) throw new Error("no layout data for "+children[i]+", parent "+children[i].getParent());
 
-if (tableLayoutData.isVisible)
-{
-      sizes[i] = children[i].computeSize(SWT.DEFAULT,SWT.DEFAULT,true);
-}
-else
-{
-Dprintf.dprintf("xxxxxxxxxxxxx %s",children[i]);
-      sizes[i] = new Point(0,0);
-}
+      if (tableLayoutData.isVisible)
+      {
+        // visible -> get size
+        sizes[i] = children[i].computeSize(SWT.DEFAULT,SWT.DEFAULT,true);
 
-      if (tableLayoutData.width  != SWT.DEFAULT) sizes[i].x = tableLayoutData.width;
-      if (tableLayoutData.height != SWT.DEFAULT) sizes[i].y = tableLayoutData.height;
+        if (tableLayoutData.width  != SWT.DEFAULT) sizes[i].x = tableLayoutData.width;
+        if (tableLayoutData.height != SWT.DEFAULT) sizes[i].y = tableLayoutData.height;
 
-      if (tableLayoutData.minWidth  != SWT.DEFAULT) sizes[i].x = Math.max(sizes[i].x,tableLayoutData.minWidth );
-      if (tableLayoutData.maxWidth  != SWT.DEFAULT) sizes[i].x = Math.min(sizes[i].x,tableLayoutData.maxWidth );
-      if (tableLayoutData.minHeight != SWT.DEFAULT) sizes[i].y = Math.max(sizes[i].y,tableLayoutData.minHeight);
-      if (tableLayoutData.maxHeight != SWT.DEFAULT) sizes[i].y = Math.min(sizes[i].y,tableLayoutData.maxHeight);
+        if (tableLayoutData.minWidth  != SWT.DEFAULT) sizes[i].x = Math.max(sizes[i].x,tableLayoutData.minWidth );
+        if (tableLayoutData.maxWidth  != SWT.DEFAULT) sizes[i].x = Math.min(sizes[i].x,tableLayoutData.maxWidth );
+        if (tableLayoutData.minHeight != SWT.DEFAULT) sizes[i].y = Math.max(sizes[i].y,tableLayoutData.minHeight);
+        if (tableLayoutData.maxHeight != SWT.DEFAULT) sizes[i].y = Math.min(sizes[i].y,tableLayoutData.maxHeight);
+      }
+      else
+      {
+        // not visible -> always size 0,0
+        sizes[i] = new Point(0,0);
+      }
     }
 if (debug) System.err.println(indent()+"sizes:");
 if (debug) for (int i = 0; i < sizes.length; i++)

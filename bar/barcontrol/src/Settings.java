@@ -492,7 +492,10 @@ public class Settings
   public static String                serverCertificateFileName       = null;
   @SettingValue
   public static String                serverKeyFileName               = null;
-  public static boolean               forceSSL                        = true;
+  @SettingValue
+  public static boolean               forceSSL                        = false;
+  @SettingValue
+  public static BARControl.Roles      role                            = BARControl.Roles.BASIC;
 
   // file requester shortcuts
   @SettingComment(text={"","Shortcuts"})
@@ -528,9 +531,6 @@ public class Settings
   public static boolean               showEntriesExceededInfo         = true;
 //TODO: preference file
   public static boolean               showEntriesMarkInfo             = true;
-
-  // role
-  public static BARControl.Roles      role                            = BARControl.Roles.BASIC;
 
   // version, help
   public static boolean               versionFlag                     = false;

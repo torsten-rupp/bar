@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /tmp/cvs/onzen/src/TableLayoutData.java,v $
-* $Revision: 1.1 $
+* $Revision: 1564 $
 * $Author: torsten $
 * Contents:
 * Systems:
@@ -246,6 +246,21 @@ public class TableLayoutData
   TableLayoutData(int row, int column)
   {
     this(row,column,true);
+  }
+
+  /** create table layout data
+   * @param isVisible true iff visible
+   */
+  TableLayoutData(boolean isVisible)
+  {
+    this(0,0,0,0,0,0,0,0,0,0,0,0,0,isVisible);
+  }
+
+  /** create table layout data
+   */
+  TableLayoutData()
+  {
+    this(0,0);
   }
 
   /** convert to string
