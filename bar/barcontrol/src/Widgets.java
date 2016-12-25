@@ -2688,9 +2688,10 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param text text
    * @param style SWT style flags
    * @param accelerator accelerator key code or SWT.NONE
+   * @param isVisible true for visible, false otherwise
    * @return new button
    */
-  public static Button newButton(Composite composite, String text, int style, int accelerator)
+  public static Button newButton(Composite composite, String text, int style, int accelerator, boolean isVisible)
   {
     Button button;
 
@@ -2708,9 +2709,34 @@ does not work on Windows? Even cursor keys trigger traversal event?
       }
     }
     button = new Button(composite,style|SWT.PUSH);
+    button.setLayoutData(new TableLayoutData(isVisible));
     button.setText(text);
 
     return button;
+  }
+
+  /** create new button
+   * @param composite composite widget
+   * @param text text
+   * @param style SWT style flags
+   * @param accelerator accelerator key code or SWT.NONE
+   * @return new button
+   */
+  public static Button newButton(Composite composite, String text, int style, int accelerator)
+  {
+    return newButton(composite,text,style,accelerator,true);
+  }
+
+  /** create new button
+   * @param composite composite widget
+   * @param text text
+   * @param style SWT style flags
+   * @param isVisible true for visible, false otherwise
+   * @return new button
+   */
+  public static Button newButton(Composite composite, String text, int style, boolean isVisible)
+  {
+    return newButton(composite,text,style,SWT.NONE,isVisible);
   }
 
   /** create new button
@@ -2721,7 +2747,19 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newButton(Composite composite, String text, int style)
   {
-    return newButton(composite,text,style,0);
+    return newButton(composite,text,style,true);
+  }
+
+  /** create new button
+   * @param composite composite widget
+   * @param text text
+   * @param style SWT style flags
+   * @param isVisible true for visible, false otherwise
+   * @return new button
+   */
+  public static Button newButton(Composite composite, String text, boolean isVisible)
+  {
+    return newButton(composite,text,SWT.NONE,isVisible);
   }
 
   /** create new button
@@ -2732,7 +2770,25 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newButton(Composite composite, String text)
   {
-    return newButton(composite,text,SWT.NONE);
+    return newButton(composite,text,true);
+  }
+
+  /** create new button with image
+   * @param composite composite widget
+   * @param image image
+   * @param style SWT style flags
+   * @param isVisible true for visible, false otherwise
+   * @return new button
+   */
+  public static Button newButton(Composite composite, Image image, int style, boolean isVisible)
+  {
+    Button button;
+
+    button = new Button(composite,style|SWT.PUSH);
+    button.setLayoutData(new TableLayoutData(isVisible));
+    button.setImage(image);
+
+    return button;
   }
 
   /** create new button with image
@@ -2743,12 +2799,18 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newButton(Composite composite, Image image, int style)
   {
-    Button button;
+    return newButton(composite,image,style,true);
+  }
 
-    button = new Button(composite,style|SWT.PUSH);
-    button.setImage(image);
-
-    return button;
+  /** create new button with image
+   * @param composite composite widget
+   * @param image image
+   * @param isVisible true for visible, false otherwise
+   * @return new button
+   */
+  public static Button newButton(Composite composite, Image image, boolean isVisible)
+  {
+    return newButton(composite,image,SWT.NONE,isVisible);
   }
 
   /** create new button with image
@@ -2758,7 +2820,27 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newButton(Composite composite, Image image)
   {
-    return newButton(composite,image,SWT.NONE);
+    return newButton(composite,image,true);
+  }
+
+  /** create new button with image
+   * @param composite composite widget
+   * @param image image
+   * @param text text
+   * @param style SWT style flags
+   * @param isVisible true for visible, false otherwise
+   * @return new button
+   */
+  public static Button newButton(Composite composite, Image image, String text, int style, boolean isVisible)
+  {
+    Button button;
+
+    button = new Button(composite,style|SWT.PUSH);
+    button.setLayoutData(new TableLayoutData(isVisible));
+    button.setImage(image);
+    button.setText(text);
+
+    return button;
   }
 
   /** create new button with image
@@ -2770,13 +2852,19 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newButton(Composite composite, Image image, String text, int style)
   {
-    Button button;
+    return newButton(composite,image,text,style,true);
+  }
 
-    button = new Button(composite,style|SWT.PUSH);
-    button.setImage(image);
-    button.setText(text);
-
-    return button;
+  /** create new button with image
+   * @param composite composite widget
+   * @param image image
+   * @param text text
+   * @param isVisible true for visible, false otherwise
+   * @return new button
+   */
+  public static Button newButton(Composite composite, Image image, String text, boolean isVisible)
+  {
+    return newButton(composite,image,text,SWT.NONE,isVisible);
   }
 
   /** create new button with image
@@ -2787,7 +2875,22 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newButton(Composite composite, Image image, String text)
   {
-    return newButton(composite,image,text,SWT.NONE);
+    return newButton(composite,image,text,true);
+  }
+
+  /** create new button
+   * @param composite composite widget
+   * @param isVisible true for visible, false otherwise
+   * @return new button
+   */
+  public static Button newButton(Composite composite, boolean isVisible)
+  {
+    Button button;
+
+    button = new Button(composite,SWT.PUSH);
+    button.setLayoutData(new TableLayoutData(isVisible));
+
+    return button;
   }
 
   /** create new button
@@ -2796,11 +2899,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newButton(Composite composite)
   {
-    Button button;
-
-    button = new Button(composite,SWT.PUSH);
-
-    return button;
+    return newButton(composite,true);
   }
 
   //-----------------------------------------------------------------------
