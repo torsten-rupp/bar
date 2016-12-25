@@ -5348,7 +5348,7 @@ Dprintf.dprintf("");
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Refresh all indizes with error")+"\u2026");
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Refresh all indizes with error")+"\u2026",Settings.hasNormalRole());
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -5362,7 +5362,7 @@ Dprintf.dprintf("");
           }
         });
 
-        widgetStorageAssignToMenu = Widgets.addMenu(menu,BARControl.tr("Assign to job")+"\u2026");
+        widgetStorageAssignToMenu = Widgets.addMenu(menu,BARControl.tr("Assign to job")+"\u2026",Settings.hasExpertRole());
         {
         }
         widgetStorageAssignToMenu.addListener(SWT.Show,new Listener()
@@ -5373,7 +5373,7 @@ Dprintf.dprintf("");
           }
         });
 
-        subMenu = Widgets.addMenu(menu,BARControl.tr("Set job type")+"\u2026");
+        subMenu = Widgets.addMenu(menu,BARControl.tr("Set job type")+"\u2026",Settings.hasExpertRole());
         {
           menuItem = Widgets.addMenuItem(subMenu,
                                          null,
@@ -5487,7 +5487,7 @@ Dprintf.dprintf("");
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove all indizes with error")+"\u2026");
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove all indizes with error")+"\u2026",Settings.hasNormalRole());
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -8731,7 +8731,7 @@ Dprintf.dprintf("");
       widgetTotal = Widgets.newLabel(composite,"-");
       Widgets.layout(widgetTotal,2,1,TableLayoutData.W);
 
-      subComposite = Widgets.newComposite(composite);
+      subComposite = Widgets.newComposite(composite,Settings.hasNormalRole());
       subComposite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
       Widgets.layout(subComposite,3,0,TableLayoutData.WE,0,2);
       {
@@ -8827,6 +8827,8 @@ Dprintf.dprintf("");
         });
       }
 
+//TODO: role
+//,Settings.hasNormalRole()
       widgetDirectoryContent = Widgets.newCheckbox(composite,BARControl.tr("Directory content"));
       widgetDirectoryContent.setToolTipText(BARControl.tr("Restore content of selected directories, too."));
       widgetDirectoryContent.setEnabled(restoreType == RestoreTypes.ENTRIES);
@@ -8853,6 +8855,8 @@ Dprintf.dprintf("");
         }
       });
 
+//TODO: role
+//,Settings.hasNormalRole()
       widgetSkipVerifySignatures = Widgets.newCheckbox(composite,BARControl.tr("Skip verify signatures"));
       widgetSkipVerifySignatures.setToolTipText(BARControl.tr("Enable this checkbox when verification of signatures should be skipped."));
       Widgets.layout(widgetSkipVerifySignatures,5,0,TableLayoutData.W,0,2);

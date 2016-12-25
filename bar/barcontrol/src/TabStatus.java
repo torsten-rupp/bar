@@ -850,7 +850,7 @@ public class TabStatus
 
       Widgets.addMenuSeparator(widgetJobTableBodyMenu);
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("New")+"\u2026");
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("New")+"\u2026",Settings.hasNormalRole());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -864,7 +864,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Clone")+"\u2026");
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -878,7 +878,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Rename")+"\u2026");
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Rename")+"\u2026",Settings.hasNormalRole());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -892,7 +892,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Delete")+"\u2026");
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Delete")+"\u2026",Settings.hasNormalRole());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -906,7 +906,7 @@ public class TabStatus
         }
       });
 
-      Widgets.addMenuSeparator(widgetJobTableBodyMenu);
+      Widgets.addMenuSeparator(widgetJobTableBodyMenu,Settings.hasNormalRole());
 
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Info")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
@@ -2165,11 +2165,11 @@ public class TabStatus
     mode = Dialogs.select(shell,
                           BARControl.tr("Confirmation"),
                           BARControl.tr("Start job ''{0}''?",selectedJobData.name),
-                          new String[]{BARControl.tr("Normal"),
+                          new String[]{Settings.hasNormalRole() ? BARControl.tr("Normal") : null,
                                        BARControl.tr("Full"),
                                        BARControl.tr("Incremental"),
-                                       BARControl.tr("Differential"),
-                                       BARControl.tr("Dry-run"),
+                                       Settings.hasExpertRole() ? BARControl.tr("Differential") : null,
+                                       Settings.hasExpertRole() ? BARControl.tr("Dry-run") : null,
                                        BARControl.tr("Cancel")
                                       },
                           new String[]{BARControl.tr("Store all files."),
