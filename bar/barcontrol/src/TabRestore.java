@@ -2288,7 +2288,6 @@ Dprintf.dprintf("cirrect?");
                 if (!treeItem.isDisposed())
                 {
                   IndexData indexData = (IndexData)treeItem.getData();
-Dprintf.dprintf("indexData=%s",indexData);
                   Widgets.removeTreeItem(widgetStorageTree,treeItem);
                   indexData.clearTreeItem();
                 }
