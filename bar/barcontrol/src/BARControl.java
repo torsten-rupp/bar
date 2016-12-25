@@ -1468,11 +1468,11 @@ public class BARControl
   };
 
   // --------------------------- variables --------------------------------
-  private static I18n    i18n;
-  private static Display display;
-  private static Shell   shell;
-  private static Cursor  waitCursor;
-  private static int     waitCursorCount = 0;
+  private static I18n     i18n;
+  private static Display  display;
+  private static Shell    shell;
+  private static Cursor   waitCursor;
+  private static int      waitCursorCount = 0;
 
   private LoginData       loginData;
   private Menu            serverMenu;
@@ -1480,6 +1480,7 @@ public class BARControl
   private TabStatus       tabStatus;
   private TabJobs         tabJobs;
   private TabRestore      tabRestore;
+  private boolean         quitFlag = false;
 
   // ------------------------ native functions ----------------------------
 
@@ -2530,6 +2531,71 @@ if (false) {
 
       Widgets.addMenuSeparator(menu);
 
+      subMenu = Widgets.addMenu(menu,BARControl.tr("Role"));
+      {
+        menuItem = Widgets.addMenuRadio(subMenu,BARControl.tr("Basic"));
+        menuItem.setSelection(Settings.role == Roles.BASIC);
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem menuItem = (MenuItem)selectionEvent.widget;
+            if (menuItem.getSelection())
+            {
+              Settings.role = Roles.BASIC;
+              shell.dispose();
+            }
+          }
+        });
+
+        menuItem = Widgets.addMenuRadio(subMenu,BARControl.tr("Normal"));
+        menuItem.setSelection(Settings.role == Roles.NORMAL);
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem menuItem = (MenuItem)selectionEvent.widget;
+            if (menuItem.getSelection())
+            {
+              Settings.role = Roles.NORMAL;
+              shell.dispose();
+            }
+          }
+        });
+
+        menuItem = Widgets.addMenuRadio(subMenu,BARControl.tr("Expert"));
+        menuItem.setSelection(Settings.role == Roles.EXPERT);
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem menuItem = (MenuItem)selectionEvent.widget;
+            if (menuItem.getSelection())
+            {
+              Settings.role = Roles.EXPERT;
+              shell.dispose();
+            }
+          }
+        });
+      }
+
+      Widgets.addMenuSeparator(menu);
+
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("Quit"),SWT.CTRL+'Q');
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -2715,6 +2781,7 @@ if (false) {
     {
       public void handleEvent(Event event)
       {
+        quitFlag = true;
         shell.dispose();
       }
     });
@@ -2763,6 +2830,7 @@ if (false) {
             {
               if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
               {
+                quitFlag = true;
                 break;
               }
             }
@@ -2770,6 +2838,7 @@ if (false) {
             {
               if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
               {
+                quitFlag = true;
                 break;
               }
             }
@@ -2803,6 +2872,7 @@ if (false) {
             {
               if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
               {
+                quitFlag = true;
                 break;
               }
             }
@@ -2810,6 +2880,7 @@ if (false) {
             {
               if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
               {
+                quitFlag = true;
                 break;
               }
             }
@@ -2819,6 +2890,7 @@ if (false) {
         // stop if not connected
         if (!connectOkFlag)
         {
+          quitFlag = true;
           break;
         }
       }
@@ -2830,6 +2902,7 @@ if (false) {
           printStackTrace(throwable);
         }
         Dialogs.error(new Shell(),BARControl.tr("Internal error"),BARControl.tr("Error: ")+throwable.getMessage(),BARControl.tr("Abort"));
+        quitFlag = true;
         break;
       }
     }
@@ -3838,14 +3911,18 @@ Dprintf.dprintf("still not supported");
         Settings.forceSSL = loginData.forceSSL;
         Settings.role     = loginData.role;
 
-        // open main window
-        createWindow();
-        createTabs(Settings.selectedJobName);
-        createMenu();
-        Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+        do
+        {
+          // open main window
+          createWindow();
+          createTabs(Settings.selectedJobName);
+          createMenu();
+          Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
 
-        // run
-        run();
+          // run
+          run();
+        }
+        while (!quitFlag);
 
         // disconnect
         BARServer.disconnect();

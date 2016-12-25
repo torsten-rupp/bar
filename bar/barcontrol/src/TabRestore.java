@@ -508,6 +508,14 @@ public class TabRestore
     }
 
     /** create index data comparator
+     * @param tree tree
+     */
+    IndexDataComparator(Tree tree)
+    {
+      this(tree,tree.getSortColumn());
+    }
+
+    /** create index data comparator
      * @param table table
      * @param sortColumn sort column
      */
@@ -518,14 +526,6 @@ public class TabRestore
       else if (table.getColumn(2) == sortColumn) this.sortMode = SortModes.CREATED_DATETIME;
       else if (table.getColumn(3) == sortColumn) this.sortMode = SortModes.STATE;
       else                                       this.sortMode = SortModes.NAME;
-    }
-
-    /** create index data comparator
-     * @param tree tree
-     */
-    IndexDataComparator(Tree tree)
-    {
-      this(tree,tree.getSortColumn());
     }
 
     /** create index data comparator
@@ -831,7 +831,7 @@ public class TabRestore
 
   /** UUID index data
    */
-  class UUIDIndexData extends IndexData
+  class UUIDIndexData extends IndexData implements Comparable
   {
     public String jobUUID;                        // job UUID
     public String scheduleUUID;                   // schedule UUID
@@ -979,6 +979,29 @@ public class TabRestore
       return String.format("#%d: %s",id,!name.isEmpty() ? name : "unknown");
     }
 
+    /** compare index data
+     * @param object index data
+     * @return -1/0/1 if less/equals/greater
+     */
+    @Override
+    public int compareTo(Object object)
+    {
+      UUIDIndexData uuidIndexData = (UUIDIndexData)object;
+      int           result;
+
+      result = name.compareTo(uuidIndexData.name);
+      if (result == 0)
+      {
+        result = jobUUID.compareTo(uuidIndexData.jobUUID);
+        if (result == 0)
+        {
+          result = scheduleUUID.compareTo(uuidIndexData.scheduleUUID);
+        }
+      }
+
+      return result;
+    }
+
     /** convert data to string
      * @return string
      */
@@ -990,7 +1013,7 @@ public class TabRestore
 
   /** entity index data
    */
-  class EntityIndexData extends IndexData implements Serializable
+  class EntityIndexData extends IndexData implements Comparable
   {
     public String       jobUUID;
     public String       scheduleUUID;
@@ -1118,6 +1141,25 @@ Dprintf.dprintf("");
     public String getInfo()
     {
       return String.format("#%d: %s",id,archiveType.toString());
+    }
+
+    /** compare index data
+     * @param object index data
+     * @return -1/0/1 if less/equals/greater
+     */
+    @Override
+    public int compareTo(Object object)
+    {
+      EntityIndexData entityIndexData = (EntityIndexData)object;
+      int             result;
+
+      result = jobUUID.compareTo(entityIndexData.jobUUID);
+      if (result == 0)
+      {
+        result = scheduleUUID.compareTo(entityIndexData.scheduleUUID);
+      }
+
+      return result;
     }
 
     /** write storage index data object to object stream
@@ -1790,8 +1832,14 @@ Dprintf.dprintf("cirrect?");
                 public void run()
                 {
                   BARControl.waitCursor();
-                  widgetStorageTree.setForeground(COLOR_MODIFIED);
-                  widgetStorageTable.setForeground(COLOR_MODIFIED);
+                  if (!widgetStorageTree.isDisposed())
+                  {
+                    widgetStorageTree.setForeground(COLOR_MODIFIED);
+                  }
+                  if (!widgetStorageTable.isDisposed())
+                  {
+                    widgetStorageTable.setForeground(COLOR_MODIFIED);
+                  }
                 }
               });
               updateIndicator = true;
@@ -1852,8 +1900,14 @@ Dprintf.dprintf("cirrect?");
               {
                 public void run()
                 {
-                  widgetStorageTree.setForeground(null);
-                  widgetStorageTable.setForeground(null);
+                  if (!widgetStorageTree.isDisposed())
+                  {
+                    widgetStorageTree.setForeground(null);
+                  }
+                  if (!widgetStorageTable.isDisposed())
+                  {
+                    widgetStorageTable.setForeground(null);
+                  }
                   BARControl.resetCursor();
                 }
               });
@@ -2083,10 +2137,13 @@ Dprintf.dprintf("cirrect?");
       {
         public void run()
         {
-          for (TreeItem treeItem : widgetStorageTree.getItems())
+          if (!widgetStorageTree.isDisposed())
           {
-            assert treeItem.getData() instanceof UUIDIndexData;
-            removeUUIDTreeItemSet.add(treeItem);
+            for (TreeItem treeItem : widgetStorageTree.getItems())
+            {
+              assert treeItem.getData() instanceof UUIDIndexData;
+              removeUUIDTreeItemSet.add(treeItem);
+            }
           }
         }
       });
@@ -2160,7 +2217,10 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            widgetStorageTree.setRedraw(false);
+            if (!widgetStorageTree.isDisposed())
+            {
+              widgetStorageTree.setRedraw(false);
+            }
           }
         });
       }
@@ -2171,42 +2231,45 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            for (final UUIDIndexData uuidIndexData : uuidIndexDataArray)
+            if (!widgetStorageTree.isDisposed())
             {
-//Dprintf.dprintf("uuidIndexData=%s",uuidIndexData);
-              TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,indexIdComperator,uuidIndexData);
-              if (uuidTreeItem == null)
+              for (final UUIDIndexData uuidIndexData : uuidIndexDataArray)
               {
-                // insert tree item
-                uuidTreeItem = Widgets.insertTreeItem(widgetStorageTree,
-                                                      findStorageTreeIndex(uuidIndexData,indexDataComparator),
-                                                      (Object)uuidIndexData,
-                                                      true,  // folderFlag
-                                                      uuidIndexData.name,
-                                                      Units.formatByteSize(uuidIndexData.totalEntrySize),
-                                                      (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
-                                                      ""
-                                                     );
+//Dprintf.dprintf("uuidIndexData=%s");
+                TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,uuidIndexComperator,uuidIndexData);
+                if (uuidTreeItem == null)
+                {
+                  // insert tree item
+                  uuidTreeItem = Widgets.insertTreeItem(widgetStorageTree,
+                                                        findStorageTreeIndex(uuidIndexData,indexDataComparator),
+                                                        (Object)uuidIndexData,
+                                                        true,  // folderFlag
+                                                        uuidIndexData.name,
+                                                        Units.formatByteSize(uuidIndexData.totalEntrySize),
+                                                        (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
+                                                        ""
+                                                       );
 //TODO
 //uuidIndexData.setTreeItem(uuidTreeItem);
-                uuidTreeItem.setChecked(checkedIndexIdSet.contains(uuidIndexData.id));
-              }
-              else
-              {
-                // update tree item
-                assert uuidTreeItem.getData() instanceof UUIDIndexData;
-                Widgets.updateTreeItem(uuidTreeItem,
-                                       (Object)uuidIndexData,
-                                       uuidIndexData.name,
-                                       Units.formatByteSize(uuidIndexData.totalEntrySize),
-                                       (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
-                                       ""
-                                      );
-                removeUUIDTreeItemSet.remove(uuidTreeItem);
-              }
-              if (uuidTreeItem.getExpanded())
-              {
-                uuidTreeItems.add(uuidTreeItem);
+                  uuidTreeItem.setChecked(checkedIndexIdSet.contains(uuidIndexData.id));
+                }
+                else
+                {
+                  // update tree item
+                  assert uuidTreeItem.getData() instanceof UUIDIndexData;
+                  Widgets.updateTreeItem(uuidTreeItem,
+                                         (Object)uuidIndexData,
+                                         uuidIndexData.name,
+                                         Units.formatByteSize(uuidIndexData.totalEntrySize),
+                                         (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
+                                         ""
+                                        );
+                  removeUUIDTreeItemSet.remove(uuidTreeItem);
+                }
+                if (uuidTreeItem.getExpanded())
+                {
+                  uuidTreeItems.add(uuidTreeItem);
+                }
               }
             }
           }
@@ -2218,13 +2281,17 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            for (TreeItem treeItem : removeUUIDTreeItemSet)
+            if (!widgetStorageTree.isDisposed())
             {
-              if (!treeItem.isDisposed())
+              for (TreeItem treeItem : removeUUIDTreeItemSet)
               {
-                IndexData indexData = (IndexData)treeItem.getData();
-                Widgets.removeTreeItem(widgetStorageTree,treeItem);
-                indexData.clearTreeItem();
+                if (!treeItem.isDisposed())
+                {
+                  IndexData indexData = (IndexData)treeItem.getData();
+Dprintf.dprintf("indexData=%s",indexData);
+                  Widgets.removeTreeItem(widgetStorageTree,treeItem);
+                  indexData.clearTreeItem();
+                }
               }
             }
           }
@@ -2237,7 +2304,10 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            widgetStorageTree.setRedraw(true);
+            if (!widgetStorageTree.isDisposed())
+            {
+              widgetStorageTree.setRedraw(true);
+            }
           }
         });
       }
@@ -2340,7 +2410,10 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            widgetStorageTree.setRedraw(false);
+            if (!widgetStorageTree.isDisposed())
+            {
+              widgetStorageTree.setRedraw(false);
+            }
           }
         });
       }
@@ -2402,18 +2475,21 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            for (TreeItem treeItem : removeEntityTreeItemSet)
+            if (!widgetStorageTree.isDisposed())
             {
-              if (!treeItem.isDisposed())
+              for (TreeItem treeItem : removeEntityTreeItemSet)
               {
-                IndexData indexData = (IndexData)treeItem.getData();
-                Widgets.removeTreeItem(widgetStorageTree,treeItem);
-
-                if (indexData != null)
+                if (!treeItem.isDisposed())
                 {
-                  setStorageList(indexData.id,false);
+                  IndexData indexData = (IndexData)treeItem.getData();
+                  Widgets.removeTreeItem(widgetStorageTree,treeItem);
+
+                  if (indexData != null)
+                  {
+                    setStorageList(indexData.id,false);
 //TODO: remove?
-                  indexData.clearTreeItem();
+                    indexData.clearTreeItem();
+                  }
                 }
               }
             }
@@ -2427,7 +2503,10 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            widgetStorageTree.setRedraw(true);
+            if (!widgetStorageTree.isDisposed())
+            {
+              widgetStorageTree.setRedraw(true);
+            }
           }
         });
       }
@@ -2549,7 +2628,10 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            widgetStorageTree.setRedraw(false);
+            if (!widgetStorageTree.isDisposed())
+            {
+              widgetStorageTree.setRedraw(false);
+            }
           }
         });
       }
@@ -2602,17 +2684,20 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            for (TreeItem treeItem : removeStorageTreeItemSet)
+            if (!widgetStorageTree.isDisposed())
             {
-              IndexData indexData = (IndexData)treeItem.getData();
-              if (indexData != null)
+              for (TreeItem treeItem : removeStorageTreeItemSet)
               {
-                setStorageList(indexData.id,false);
+                IndexData indexData = (IndexData)treeItem.getData();
+                if (indexData != null)
+                {
+                  setStorageList(indexData.id,false);
 //TODO: remove?
-                indexData.clearTreeItem();
-              }
+                  indexData.clearTreeItem();
+                }
 
-              Widgets.removeTreeItem(widgetStorageTree,treeItem);
+                Widgets.removeTreeItem(widgetStorageTree,treeItem);
+              }
             }
           }
         });
@@ -2624,7 +2709,10 @@ Dprintf.dprintf("cirrect?");
         {
           public void run()
           {
-            widgetStorageTree.setRedraw(true);
+            if (!widgetStorageTree.isDisposed())
+            {
+              widgetStorageTree.setRedraw(true);
+            }
           }
         });
       }
@@ -2670,8 +2758,11 @@ Dprintf.dprintf("cirrect?");
       {
         public void run()
         {
-          widgetStorageTabFolderTitle.setForeground(COLOR_MODIFIED);
-          widgetStorageTabFolderTitle.redraw();
+          if (!widgetStorageTabFolderTitle.isDisposed())
+          {
+            widgetStorageTabFolderTitle.setForeground(COLOR_MODIFIED);
+            widgetStorageTabFolderTitle.redraw();
+          }
         }
       });
 
@@ -2705,8 +2796,11 @@ Dprintf.dprintf("cirrect?");
       {
         public void run()
         {
-          widgetStorageTabFolderTitle.setForeground(null);
-          widgetStorageTabFolderTitle.redraw();
+          if (!widgetStorageTabFolderTitle.isDisposed())
+          {
+            widgetStorageTabFolderTitle.setForeground(null);
+            widgetStorageTabFolderTitle.redraw();
+          }
 
           if (oldStorageCount != storageCount)
           {
@@ -3039,7 +3133,7 @@ Dprintf.dprintf("cirrect?");
 
   /** entry data
    */
-  class EntryIndexData extends IndexData
+  class EntryIndexData extends IndexData implements Comparable
   {
     String        jobName;
     ArchiveTypes  archiveType;
@@ -3115,6 +3209,31 @@ Dprintf.dprintf("cirrect?");
     public void setState(RestoreStates restoreState)
     {
       this.restoreState = restoreState;
+    }
+
+    /** compare index data
+     * @param object index data
+     * @return -1/0/1 if less/equals/greater
+     */
+    @Override
+    public int compareTo(Object object)
+    {
+      EntryIndexData entryIndexData = (EntryIndexData)object;
+      int            result;
+
+      result = name.compareTo(entryIndexData.name);
+      if (result == 0)
+      {
+        if      (dateTime < entryIndexData.dateTime) result = -1;
+        else if (dateTime > entryIndexData.dateTime) result =  1;
+        if (result == 0)
+        {
+          if      (size < entryIndexData.size) result = -1;
+          else if (size > entryIndexData.size) result =  1;
+        }
+      }
+
+      return result;
     }
 
     /** convert data to string
@@ -3255,7 +3374,10 @@ Dprintf.dprintf("cirrect?");
                 public void run()
                 {
                   BARControl.waitCursor();
-                  widgetEntryTable.setForeground(COLOR_MODIFIED);
+                  if (!widgetEntryTable.isDisposed())
+                  {
+                    widgetEntryTable.setForeground(COLOR_MODIFIED);
+                  }
                 }
               });
               updateIndicator = true;
@@ -3293,7 +3415,10 @@ Dprintf.dprintf("cirrect?");
               {
                 public void run()
                 {
-                  widgetEntryTable.setForeground(null);
+                  if (!widgetEntryTable.isDisposed())
+                  {
+                    widgetEntryTable.setForeground(null);
+                  }
                   BARControl.resetCursor();
                 }
               });
@@ -3544,8 +3669,11 @@ Dprintf.dprintf("cirrect?");
       {
         public void run()
         {
-          widgetEntryTableTitle.setForeground(COLOR_MODIFIED);
-          widgetEntryTableTitle.redraw();
+          if (!widgetEntryTableTitle.isDisposed())
+          {
+            widgetEntryTableTitle.setForeground(COLOR_MODIFIED);
+            widgetEntryTableTitle.redraw();
+          }
         }
       });
 
@@ -3588,8 +3716,11 @@ Dprintf.dprintf("cirrect?");
       {
         public void run()
         {
-          widgetEntryTableTitle.setForeground(null);
-          widgetEntryTableTitle.redraw();
+          if (!widgetEntryTableTitle.isDisposed())
+          {
+            widgetEntryTableTitle.setForeground(null);
+            widgetEntryTableTitle.redraw();
+          }
 
           if (oldTotalEntryCount != totalEntryCount)
           {
@@ -4012,6 +4143,19 @@ Dprintf.dprintf("cirrect?");
     public int compare(IndexData indexData1, IndexData indexData2)
     {
       return (indexData1.id == indexData2.id) ? 0 : 1;
+    }
+  };
+
+  // UUID index data comparator
+  final Comparator<UUIDIndexData> uuidIndexComperator = new Comparator<UUIDIndexData>()
+  {
+    /** compare index data ids
+     * @param uuidIndexData1,uuidIndexData2 UUID index data
+     * @return true iff index id equals
+     */
+    public int compare(UUIDIndexData uuidIndexData1, UUIDIndexData uuidIndexData2)
+    {
+      return (uuidIndexData1.jobUUID == uuidIndexData2.jobUUID) ? 0 : 1;
     }
   };
 

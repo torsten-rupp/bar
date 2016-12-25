@@ -1489,7 +1489,6 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           jobStart();
         }
       });
@@ -1507,7 +1506,6 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           jobAbort();
         }
       });
@@ -1524,7 +1522,6 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           jobPause(60*60);
         }
       });
@@ -1541,7 +1538,6 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           jobSuspendContinue();
         }
       });
@@ -1575,9 +1571,7 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
-
-          // send close-evemnt to shell
+          // send close-event to shell
           Event event = new Event();
           shell.notifyListeners(SWT.Close,event);
         }

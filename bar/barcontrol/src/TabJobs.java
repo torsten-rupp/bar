@@ -13039,8 +13039,7 @@ Dprintf.dprintf("line=%s",line);
       label = Widgets.newLabel(composite,BARControl.tr("Interval")+":",Settings.hasExpertRole());
       Widgets.layout(label,4,0,TableLayoutData.W);
 
-//TODO: role
-      widgetInterval = Widgets.newOptionMenu(composite);
+      widgetInterval = Widgets.newOptionMenu(composite,Settings.hasExpertRole());
       widgetInterval.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
       widgetInterval.setToolTipText(BARControl.tr("Interval time for continuous storage."));
       Widgets.setOptionMenuItems(widgetInterval,new Object[]{"",        0,
@@ -13072,13 +13071,12 @@ Dprintf.dprintf("line=%s",line);
       label = Widgets.newLabel(composite,BARControl.tr("Custom text")+":",Settings.hasExpertRole());
       Widgets.layout(label,5,0,TableLayoutData.W);
 
-//TODO: role
-      widgetCustomText = Widgets.newText(composite);
+      widgetCustomText = Widgets.newText(composite,Settings.hasExpertRole());
       widgetCustomText.setToolTipText(BARControl.tr("Custom text."));
       widgetCustomText.setText(scheduleData.customText);
       Widgets.layout(widgetCustomText,5,1,TableLayoutData.WE);
 
-      label = Widgets.newLabel(composite,BARControl.tr("Keep")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Keep")+":",Settings.hasNormalRole());
       Widgets.layout(label,6,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
@@ -13087,8 +13085,7 @@ Dprintf.dprintf("line=%s",line);
         label = Widgets.newLabel(subComposite,BARControl.tr("min.")+":",Settings.hasExpertRole());
         Widgets.layout(label,0,0,TableLayoutData.W);
 
-//TODO: role
-        widgetMinKeep = Widgets.newOptionMenu(subComposite);
+        widgetMinKeep = Widgets.newOptionMenu(subComposite,Settings.hasExpertRole());
         widgetMinKeep.setToolTipText(BARControl.tr("Min. number of archives to keep."));
         Widgets.setOptionMenuItems(widgetMinKeep,new Object[]{"0",0,
                                                               "1",1,
@@ -13109,8 +13106,7 @@ Dprintf.dprintf("line=%s",line);
         label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":",Settings.hasNormalRole());
         Widgets.layout(label,0,2,TableLayoutData.W);
 
-//TODO: role
-        widgetMaxKeep = Widgets.newOptionMenu(subComposite);
+        widgetMaxKeep = Widgets.newOptionMenu(subComposite,Settings.hasNormalRole());
         widgetMaxKeep.setToolTipText(BARControl.tr("Max. number of archives to keep."));
         Widgets.setOptionMenuItems(widgetMaxKeep,new Object[]{"unlimited",0,
                                                               "1",1,
@@ -13131,8 +13127,7 @@ Dprintf.dprintf("line=%s",line);
         label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":",Settings.hasExpertRole());
         Widgets.layout(label,0,4,TableLayoutData.W);
 
-//TODO: role
-        widgetMaxAge = Widgets.newOptionMenu(subComposite);
+        widgetMaxAge = Widgets.newOptionMenu(subComposite,Settings.hasExpertRole());
         widgetMaxAge.setToolTipText(BARControl.tr("Max. age of archives to keep."));
         Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{"forever",0,
                                                              "1 day",1,
