@@ -5146,7 +5146,7 @@ Dprintf.dprintf("");
       });
 
       // list
-      tab = Widgets.addTab(widgetStorageTabFolder,BARControl.tr("List"));
+      tab = Widgets.addTab(widgetStorageTabFolder,BARControl.tr("List"),Settings.hasExpertRole());
       tab.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,2));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
 
@@ -5773,57 +5773,62 @@ Dprintf.dprintf("");
           }
         });
 
-        label = Widgets.newLabel(composite,BARControl.tr("State")+":");
-        Widgets.layout(label,0,3,TableLayoutData.W);
-
-        widgetStorageStateFilter = Widgets.newOptionMenu(composite);
-        widgetStorageStateFilter.setToolTipText(BARControl.tr("Storage states filter."));
-        widgetStorageStateFilter.setItems(new String[]{"*",
-                                                       BARControl.tr("ok"),
-                                                       BARControl.tr("error"),
-                                                       BARControl.tr("update"),
-                                                       BARControl.tr("update requested"),
-                                                       BARControl.tr("update/update requested"),
-                                                       BARControl.tr("error/update/update requested"),
-                                                       BARControl.tr("not assigned")
-                                                      }
-                                         );
-        widgetStorageStateFilter.setText("*");
-        Widgets.layout(widgetStorageStateFilter,0,4,TableLayoutData.W);
-        widgetStorageStateFilter.addSelectionListener(new SelectionListener()
+        subComposite = Widgets.newComposite(composite,Settings.hasNormalRole());
+        subComposite.setLayout(new TableLayout(null,0.0));
+        Widgets.layout(subComposite,0,3,TableLayoutData.NONE);
         {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Combo widget = (Combo)selectionEvent.widget;
+          label = Widgets.newLabel(subComposite,BARControl.tr("State")+":");
+          Widgets.layout(label,0,0,TableLayoutData.W);
 
-            IndexStateSet storageIndexStateSet;
-            EntityStates  storageEntityState;
-            switch (widget.getSelectionIndex())
+          widgetStorageStateFilter = Widgets.newOptionMenu(subComposite);
+          widgetStorageStateFilter.setToolTipText(BARControl.tr("Storage states filter."));
+          widgetStorageStateFilter.setItems(new String[]{"*",
+                                                         BARControl.tr("ok"),
+                                                         BARControl.tr("error"),
+                                                         BARControl.tr("update"),
+                                                         BARControl.tr("update requested"),
+                                                         BARControl.tr("update/update requested"),
+                                                         BARControl.tr("error/update/update requested"),
+                                                         BARControl.tr("not assigned")
+                                                        }
+                                           );
+          widgetStorageStateFilter.setText("*");
+          Widgets.layout(widgetStorageStateFilter,0,1,TableLayoutData.W);
+          widgetStorageStateFilter.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-              case 0:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.ANY;  break;
-              case 1:  storageIndexStateSet = new IndexStateSet(IndexStates.OK);                                                    storageEntityState = EntityStates.ANY;  break;
-              case 2:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR);                                                 storageEntityState = EntityStates.ANY;  break;
-              case 3:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE);                                                storageEntityState = EntityStates.ANY;  break;
-              case 4:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE_REQUESTED);                                      storageEntityState = EntityStates.ANY;  break;
-              case 5:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED);                   storageEntityState = EntityStates.ANY;  break;
-              case 6:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR,IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED); storageEntityState = EntityStates.ANY;  break;
-              case 7:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
-              default: storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               storageEntityState = EntityStates.ANY;  break;
             }
-            updateStorageTreeTableThread.triggerUpdateStorageState(storageIndexStateSet,storageEntityState);
-          }
-        });
-        updateStorageTreeTableThread.triggerUpdateStorageState(INDEX_STATE_SET_ALL,EntityStates.ANY);
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Combo widget = (Combo)selectionEvent.widget;
+
+              IndexStateSet storageIndexStateSet;
+              EntityStates  storageEntityState;
+              switch (widget.getSelectionIndex())
+              {
+                case 0:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.ANY;  break;
+                case 1:  storageIndexStateSet = new IndexStateSet(IndexStates.OK);                                                    storageEntityState = EntityStates.ANY;  break;
+                case 2:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR);                                                 storageEntityState = EntityStates.ANY;  break;
+                case 3:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE);                                                storageEntityState = EntityStates.ANY;  break;
+                case 4:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE_REQUESTED);                                      storageEntityState = EntityStates.ANY;  break;
+                case 5:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED);                   storageEntityState = EntityStates.ANY;  break;
+                case 6:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR,IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED); storageEntityState = EntityStates.ANY;  break;
+                case 7:  storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
+                default: storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               storageEntityState = EntityStates.ANY;  break;
+              }
+              updateStorageTreeTableThread.triggerUpdateStorageState(storageIndexStateSet,storageEntityState);
+            }
+          });
+          updateStorageTreeTableThread.triggerUpdateStorageState(INDEX_STATE_SET_ALL,EntityStates.ANY);
+        }
 
         button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected archives."));
         button.setEnabled(false);
-        Widgets.layout(button,0,5,TableLayoutData.DEFAULT,0,0,0,0,160,SWT.DEFAULT);
+        Widgets.layout(button,0,4,TableLayoutData.DEFAULT,0,0,0,0,160,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,checkedIndexEvent)
         {
           @Override
@@ -6270,59 +6275,64 @@ Dprintf.dprintf("remove");
           }
         });
 
-        widgetEntryTypeFilter = Widgets.newOptionMenu(composite);
-        widgetEntryTypeFilter.setToolTipText(BARControl.tr("Entry type."));
-        Widgets.setOptionMenuItems(widgetEntryTypeFilter,new Object[]{"*",                         EntryTypes.ANY,
-                                                                      BARControl.tr("files"),      EntryTypes.FILE,
-                                                                      BARControl.tr("images"),     EntryTypes.IMAGE,
-                                                                      BARControl.tr("directories"),EntryTypes.DIRECTORY,
-                                                                      BARControl.tr("links"),      EntryTypes.LINK,
-                                                                      BARControl.tr("hardlinks"),  EntryTypes.HARDLINK,
-                                                                      BARControl.tr("special"),    EntryTypes.SPECIAL
-                                                                     }
-                                  );
-        Widgets.setSelectedOptionMenuItem(widgetEntryTypeFilter,EntryTypes.ANY);
-        Widgets.layout(widgetEntryTypeFilter,0,3,TableLayoutData.W);
-        widgetEntryTypeFilter.addSelectionListener(new SelectionListener()
+        subComposite = Widgets.newComposite(composite,Settings.hasNormalRole());
+        subComposite.setLayout(new TableLayout(null,0.0));
+        Widgets.layout(subComposite,0,3,TableLayoutData.NONE);
         {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          widgetEntryTypeFilter = Widgets.newOptionMenu(subComposite);
+          widgetEntryTypeFilter.setToolTipText(BARControl.tr("Entry type."));
+          Widgets.setOptionMenuItems(widgetEntryTypeFilter,new Object[]{"*",                         EntryTypes.ANY,
+                                                                        BARControl.tr("files"),      EntryTypes.FILE,
+                                                                        BARControl.tr("images"),     EntryTypes.IMAGE,
+                                                                        BARControl.tr("directories"),EntryTypes.DIRECTORY,
+                                                                        BARControl.tr("links"),      EntryTypes.LINK,
+                                                                        BARControl.tr("hardlinks"),  EntryTypes.HARDLINK,
+                                                                        BARControl.tr("special"),    EntryTypes.SPECIAL
+                                                                       }
+                                    );
+          Widgets.setSelectedOptionMenuItem(widgetEntryTypeFilter,EntryTypes.ANY);
+          Widgets.layout(widgetEntryTypeFilter,0,0,TableLayoutData.W);
+          widgetEntryTypeFilter.addSelectionListener(new SelectionListener()
           {
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Combo      widget    = (Combo)selectionEvent.widget;
+              EntryTypes entryType = Widgets.getSelectedOptionMenuItem(widget,EntryTypes.ANY);
+
+              checkedEntryIdSet.clear();
+              checkedEntryEvent.trigger();
+
+              updateEntryTableThread.triggerUpdateEntryType(entryType);
+            }
+          });
+
+          widgetEntryNewestOnly = Widgets.newCheckbox(subComposite,BARControl.tr("newest only"));
+          widgetEntryNewestOnly.setToolTipText(BARControl.tr("When this checkbox is enabled, only show newest entry instances and hide all older entry instances."));
+          Widgets.layout(widgetEntryNewestOnly,0,1,TableLayoutData.W);
+          widgetEntryNewestOnly.addSelectionListener(new SelectionListener()
           {
-            Combo      widget    = (Combo)selectionEvent.widget;
-            EntryTypes entryType = Widgets.getSelectedOptionMenuItem(widget,EntryTypes.ANY);
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              boolean newestOnly = widget.getSelection();
 
-            checkedEntryIdSet.clear();
-            checkedEntryEvent.trigger();
+              checkedEntryIdSet.clear();
+              checkedEntryEvent.trigger();
 
-            updateEntryTableThread.triggerUpdateEntryType(entryType);
-          }
-        });
-
-        widgetEntryNewestOnly = Widgets.newCheckbox(composite,BARControl.tr("newest only"));
-        widgetEntryNewestOnly.setToolTipText(BARControl.tr("When this checkbox is enabled, only show newest entry instances and hide all older entry instances."));
-        Widgets.layout(widgetEntryNewestOnly,0,4,TableLayoutData.W);
-        widgetEntryNewestOnly.addSelectionListener(new SelectionListener()
-        {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Button widget = (Button)selectionEvent.widget;
-            boolean newestOnly = widget.getSelection();
-
-            checkedEntryIdSet.clear();
-            checkedEntryEvent.trigger();
-
-            updateEntryTableThread.triggerUpdateNewestOnly(newestOnly);
-          }
-        });
+              updateEntryTableThread.triggerUpdateNewestOnly(newestOnly);
+            }
+          });
+        }
 
         button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected entries."));

@@ -2283,7 +2283,7 @@ if (false) {
 
     menu = Widgets.addMenu(menuBar,BARControl.tr("Program"));
     {
-      serverMenu = Widgets.addMenu(menu,BARControl.tr("Connect"));
+      serverMenu = Widgets.addMenu(menu,BARControl.tr("Connect"),Settings.hasExpertRole());
       {
         menuItem = Widgets.addMenuItem(serverMenu,"\u2026",SWT.CTRL+'O');
         menuItem.addSelectionListener(new SelectionListener()
@@ -2338,7 +2338,7 @@ if (false) {
         updateServerMenu();
       }
 
-      Widgets.addMenuSeparator(menu);
+      Widgets.addMenuSeparator(menu,Settings.hasExpertRole());
 
       menuItem = Widgets.addMenuItem(menu,BARControl.tr("Start")+"\u2026",SWT.CTRL+'S');
       menuItem.addSelectionListener(new SelectionListener()
@@ -2368,7 +2368,7 @@ if (false) {
         }
       });
 
-      subMenu = Widgets.addMenu(menu,BARControl.tr("Pause"));
+      subMenu = Widgets.addMenu(menu,BARControl.tr("Pause"),Settings.hasNormalRole());
       {
         menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("10min"));
         menuItem.addSelectionListener(new SelectionListener()
@@ -2493,7 +2493,7 @@ if (false) {
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clear stored passwords on server"),SWT.NONE);
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clear stored passwords on server"),SWT.NONE,Settings.hasExpertRole());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -2512,9 +2512,9 @@ if (false) {
         }
       });
 
-      Widgets.addMenuSeparator(menu);
+      Widgets.addMenuSeparator(menu,Settings.hasExpertRole());
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Server settings")+"\u2026",SWT.CTRL+'W');
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Server settings")+"\u2026",SWT.CTRL+'W',Settings.hasExpertRole());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override

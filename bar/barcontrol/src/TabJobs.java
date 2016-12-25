@@ -1837,7 +1837,7 @@ public class TabJobs
 
     // job selector
     composite = Widgets.newComposite(widgetTab);
-    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0,0.0}));
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0,0.0,0.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
@@ -1884,6 +1884,7 @@ public class TabJobs
         }
       });
 
+//TODO: role?
       button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
       button.setToolTipText(BARControl.tr("Clone an existing job entry."));
       button.setEnabled(false);
@@ -1969,7 +1970,7 @@ public class TabJobs
       });
     }
 
-    composite = Widgets.newComposite(widgetTab);
+    composite = Widgets.newComposite(widgetTab,Settings.hasExpertRole());
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0,0.0}));
     Widgets.layout(composite,1,0,TableLayoutData.WE);
     {
