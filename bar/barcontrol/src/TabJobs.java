@@ -3871,7 +3871,7 @@ public class TabJobs
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,skipUnreadable));
 
-            button = Widgets.newCheckbox(subComposite,BARControl.tr("raw images"));
+            button = Widgets.newCheckbox(subComposite,BARControl.tr("raw images"),Settings.hasExpertRole());
             button.setToolTipText(BARControl.tr("If enabled then store all data of a device into an image.\nIf disabled try to detect file system and only store used blocks to image."));
             Widgets.layout(button,1,0,TableLayoutData.NW);
             button.addSelectionListener(new SelectionListener()
@@ -3896,7 +3896,7 @@ public class TabJobs
       }
 
       tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Storage"));
-      tab.setLayout(new TableLayout(new double[]{0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
+      tab.setLayout(new TableLayout(new double[]{0.0,0.0,0.0,Settings.hasNormalRole() ? 1.0 : 0.0,0.0,0.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
         // part size
@@ -4191,7 +4191,7 @@ widgetArchivePartSize.setListVisible(true);
         }
 
         // xdelta source
-        composite = Widgets.newComposite(tab);
+        composite = Widgets.newComposite(tab,Settings.hasExpertRole());
         composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0,0.0}));
         Widgets.layout(composite,2,1,TableLayoutData.WE);
         {
@@ -4314,9 +4314,9 @@ widgetArchivePartSize.setListVisible(true);
         }
 
         // compress exclude
-        label = Widgets.newLabel(tab,BARControl.tr("Compress exclude")+":");
+        label = Widgets.newLabel(tab,BARControl.tr("Compress exclude")+":",Settings.hasNormalRole());
         Widgets.layout(label,3,0,TableLayoutData.NW);
-        composite = Widgets.newComposite(tab);
+        composite = Widgets.newComposite(tab,Settings.hasNormalRole());
         composite.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
         Widgets.layout(composite,3,1,TableLayoutData.NSWE);
         {
@@ -4582,7 +4582,7 @@ widgetArchivePartSize.setListVisible(true);
 
         // crypt
         label = Widgets.newLabel(tab,BARControl.tr("Crypt")+":");
-        Widgets.layout(label,4,0,TableLayoutData.NW);
+        Widgets.layout(label,4,0,Settings.hasExpertRole() ? TableLayoutData.NW : TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         Widgets.layout(composite,4,1,TableLayoutData.WE);
         {
@@ -4663,7 +4663,7 @@ widgetArchivePartSize.setListVisible(true);
           }
         }
 
-        composite = Widgets.newComposite(tab);
+        composite = Widgets.newComposite(tab,Settings.hasExpertRole());
         composite.setLayout(new TableLayout(1.0,new double[]{0.0,0.0,0.0,0.0,1.0,0.0}));
         Widgets.layout(composite,5,1,TableLayoutData.WE);
         {
@@ -5142,9 +5142,9 @@ widgetArchivePartSize.setListVisible(true);
         }
 
         // archive type
-        label = Widgets.newLabel(tab,BARControl.tr("Mode")+":");
+        label = Widgets.newLabel(tab,BARControl.tr("Mode")+":",Settings.hasNormalRole());
         Widgets.layout(label,7,0,TableLayoutData.W);
-        composite = Widgets.newComposite(tab);
+        composite = Widgets.newComposite(tab,Settings.hasNormalRole());
         composite.setLayout(new TableLayout(1.0,new double[]{0.0,0.0,0.0,0.0,0.0,1.0,0.0}));
         Widgets.layout(composite,7,1,TableLayoutData.WE);
         {
@@ -5375,9 +5375,9 @@ widgetArchivePartSize.setListVisible(true);
         }
 
         // incremental file name
-        label = Widgets.newLabel(tab,BARControl.tr("Incremental file name")+":");
+        label = Widgets.newLabel(tab,BARControl.tr("Incremental file name")+":",Settings.hasExpertRole());
         Widgets.layout(label,9,0,TableLayoutData.W);
-        composite = Widgets.newComposite(tab);
+        composite = Widgets.newComposite(tab,Settings.hasExpertRole());
         composite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
         Widgets.layout(composite,9,1,TableLayoutData.WE);
         {
@@ -5510,7 +5510,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          button = Widgets.newRadio(composite,BARControl.tr("ftp"));
+          button = Widgets.newRadio(composite,BARControl.tr("ftp"),Settings.hasExpertRole());
           button.setToolTipText(BARControl.tr("Store created storage files on FTP server."));
           Widgets.layout(button,0,1,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
@@ -5535,7 +5535,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          button = Widgets.newRadio(composite,BARControl.tr("scp"));
+          button = Widgets.newRadio(composite,BARControl.tr("scp"),Settings.hasExpertRole());
           button.setToolTipText(BARControl.tr("Store created storage files on SSH server via SCP protocol."));
           Widgets.layout(button,0,2,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
@@ -5754,7 +5754,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          button = Widgets.newRadio(composite,BARControl.tr("device"));
+          button = Widgets.newRadio(composite,BARControl.tr("device"),Settings.hasExpertRole());
           button.setToolTipText(BARControl.tr("Store created storage files on device."));
           Widgets.layout(button,0,8,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
@@ -10104,10 +10104,10 @@ Dprintf.dprintf("clearJobData");
         });
       }
 
-      label = Widgets.newLabel(composite,BARControl.tr("Type")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Type")+":",Settings.hasExpertRole());
       Widgets.layout(label,1,0,TableLayoutData.W);
 
-      subComposite = Widgets.newComposite(composite);
+      subComposite = Widgets.newComposite(composite,Settings.hasExpertRole());
       subComposite.setLayout(new TableLayout(0.0,0.0));
       Widgets.layout(subComposite,1,1,TableLayoutData.WE);
       {
@@ -12899,10 +12899,10 @@ Dprintf.dprintf("line=%s",line);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Date")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Date")+":",Settings.hasNormalRole());
       Widgets.layout(label,0,0,TableLayoutData.W);
 
-      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      subComposite = Widgets.newComposite(composite,SWT.NONE,Settings.hasNormalRole());
       Widgets.layout(subComposite,0,1,TableLayoutData.WE);
       {
         widgetYear = Widgets.newOptionMenu(subComposite);
@@ -13011,7 +13011,7 @@ Dprintf.dprintf("line=%s",line);
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,3,1,TableLayoutData.WE);
       {
-        widgetTypeNormal = Widgets.newRadio(subComposite,BARControl.tr("normal"));
+        widgetTypeNormal = Widgets.newRadio(subComposite,BARControl.tr("normal"),Settings.hasNormalRole());
         widgetTypeNormal.setToolTipText(BARControl.tr("Execute job as normal backup (no incremental data)."));
         Widgets.layout(widgetTypeNormal,0,0,TableLayoutData.W);
         widgetTypeNormal.setSelection(scheduleData.archiveType == ArchiveTypes.NORMAL);
@@ -13026,20 +13026,21 @@ Dprintf.dprintf("line=%s",line);
         Widgets.layout(widgetTypeIncremental,0,2,TableLayoutData.W);
         widgetTypeIncremental.setSelection(scheduleData.archiveType == ArchiveTypes.INCREMENTAL);
 
-        widgetTypeDifferential = Widgets.newRadio(subComposite,BARControl.tr("differential"));
+        widgetTypeDifferential = Widgets.newRadio(subComposite,BARControl.tr("differential"),Settings.hasExpertRole());
         widgetTypeDifferential.setToolTipText(BARControl.tr("Execute job as differential backup."));
         Widgets.layout(widgetTypeDifferential,0,3,TableLayoutData.W);
         widgetTypeDifferential.setSelection(scheduleData.archiveType == ArchiveTypes.DIFFERENTIAL);
 
-        widgetTypeContinuous = Widgets.newRadio(subComposite,BARControl.tr("continuous"));
+        widgetTypeContinuous = Widgets.newRadio(subComposite,BARControl.tr("continuous"),Settings.hasExpertRole());
         widgetTypeContinuous.setToolTipText(BARControl.tr("Execute job as continuous backup."));
         Widgets.layout(widgetTypeContinuous,0,4,TableLayoutData.W);
         widgetTypeContinuous.setSelection(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
       }
 
-      label = Widgets.newLabel(composite,BARControl.tr("Interval")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Interval")+":",Settings.hasExpertRole());
       Widgets.layout(label,4,0,TableLayoutData.W);
 
+//TODO: role
       widgetInterval = Widgets.newOptionMenu(composite);
       widgetInterval.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
       widgetInterval.setToolTipText(BARControl.tr("Interval time for continuous storage."));
@@ -13069,9 +13070,10 @@ Dprintf.dprintf("line=%s",line);
       });
       Widgets.layout(widgetInterval,4,1,TableLayoutData.W);
 
-      label = Widgets.newLabel(composite,BARControl.tr("Custom text")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Custom text")+":",Settings.hasExpertRole());
       Widgets.layout(label,5,0,TableLayoutData.W);
 
+//TODO: role
       widgetCustomText = Widgets.newText(composite);
       widgetCustomText.setToolTipText(BARControl.tr("Custom text."));
       widgetCustomText.setText(scheduleData.customText);
@@ -13083,9 +13085,10 @@ Dprintf.dprintf("line=%s",line);
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,6,1,TableLayoutData.WE);
       {
-        label = Widgets.newLabel(subComposite,BARControl.tr("min.")+":");
+        label = Widgets.newLabel(subComposite,BARControl.tr("min.")+":",Settings.hasExpertRole());
         Widgets.layout(label,0,0,TableLayoutData.W);
 
+//TODO: role
         widgetMinKeep = Widgets.newOptionMenu(subComposite);
         widgetMinKeep.setToolTipText(BARControl.tr("Min. number of archives to keep."));
         Widgets.setOptionMenuItems(widgetMinKeep,new Object[]{"0",0,
@@ -13104,9 +13107,10 @@ Dprintf.dprintf("line=%s",line);
         Widgets.setSelectedOptionMenuItem(widgetMinKeep,scheduleData.minKeep);
         Widgets.layout(widgetMinKeep,0,1,TableLayoutData.W);
 
-        label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":");
+        label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":",Settings.hasNormalRole());
         Widgets.layout(label,0,2,TableLayoutData.W);
 
+//TODO: role
         widgetMaxKeep = Widgets.newOptionMenu(subComposite);
         widgetMaxKeep.setToolTipText(BARControl.tr("Max. number of archives to keep."));
         Widgets.setOptionMenuItems(widgetMaxKeep,new Object[]{"unlimited",0,
@@ -13125,9 +13129,10 @@ Dprintf.dprintf("line=%s",line);
         Widgets.setSelectedOptionMenuItem(widgetMaxKeep,scheduleData.maxKeep);
         Widgets.layout(widgetMaxKeep,0,3,TableLayoutData.W);
 
-        label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":");
+        label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":",Settings.hasExpertRole());
         Widgets.layout(label,0,4,TableLayoutData.W);
 
+//TODO: role
         widgetMaxAge = Widgets.newOptionMenu(subComposite);
         widgetMaxAge.setToolTipText(BARControl.tr("Max. age of archives to keep."));
         Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{"forever",0,
@@ -13156,7 +13161,7 @@ Dprintf.dprintf("line=%s",line);
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,7,1,TableLayoutData.WE);
       {
-        widgetNoStorage = Widgets.newCheckbox(subComposite,BARControl.tr("no storage"));
+        widgetNoStorage = Widgets.newCheckbox(subComposite,BARControl.tr("no storage"),Settings.hasExpertRole());
         Widgets.layout(widgetNoStorage,0,0,TableLayoutData.W);
         widgetNoStorage.setSelection(scheduleData.noStorage);
 

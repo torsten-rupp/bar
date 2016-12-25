@@ -8827,9 +8827,7 @@ Dprintf.dprintf("");
         });
       }
 
-//TODO: role
-//,Settings.hasNormalRole()
-      widgetDirectoryContent = Widgets.newCheckbox(composite,BARControl.tr("Directory content"));
+      widgetDirectoryContent = Widgets.newCheckbox(composite,BARControl.tr("Directory content"),Settings.hasNormalRole());
       widgetDirectoryContent.setToolTipText(BARControl.tr("Restore content of selected directories, too."));
       widgetDirectoryContent.setEnabled(restoreType == RestoreTypes.ENTRIES);
       Widgets.layout(widgetDirectoryContent,4,0,TableLayoutData.W,0,2);
@@ -8855,9 +8853,7 @@ Dprintf.dprintf("");
         }
       });
 
-//TODO: role
-//,Settings.hasNormalRole()
-      widgetSkipVerifySignatures = Widgets.newCheckbox(composite,BARControl.tr("Skip verify signatures"));
+      widgetSkipVerifySignatures = Widgets.newCheckbox(composite,BARControl.tr("Skip verify signatures"),Settings.hasExpertRole());
       widgetSkipVerifySignatures.setToolTipText(BARControl.tr("Enable this checkbox when verification of signatures should be skipped."));
       Widgets.layout(widgetSkipVerifySignatures,5,0,TableLayoutData.W,0,2);
 
