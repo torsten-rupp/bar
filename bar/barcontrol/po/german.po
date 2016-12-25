@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-12-25 02:22+0100\n"
+"POT-Creation-Date: 2016-12-25 02:26+0100\n"
 "PO-Revision-Date: 2016-10-13 09:04+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1410,9 +1410,10 @@ msgstr "Öffnen/Schliessen"
 msgid "Include"
 msgstr "Einschliessen"
 
-#: src/TabJobs.java:2452
-msgid "Exclude by list"
-msgstr "Ausschlossen durch Liste"
+#: src/TabJobs.java:2452 src/TabJobs.java:2687 src/TabJobs.java:2834
+#: src/TabJobs.java:2901
+msgid "Exclude"
+msgstr "Ausschliessen"
 
 #: src/TabJobs.java:2482
 msgid "Exclude by .nobackup"
@@ -1442,10 +1443,6 @@ msgstr "Verzeichnis-/Dateigröße"
 #: src/TabJobs.java:2660
 msgid "Include entry in archive."
 msgstr "Datei zu Archiv hinzufügen."
-
-#: src/TabJobs.java:2687 src/TabJobs.java:2834 src/TabJobs.java:2901
-msgid "Exclude"
-msgstr "Ausschliessen"
 
 #: src/TabJobs.java:2688
 msgid "Exclude entry from archive."
@@ -4075,6 +4072,9 @@ msgstr "Anzahl Ausführungen"
 #: src/TabStatus.java:2564
 msgid "Average execution time"
 msgstr "Durchschnittliche Ausführungszeit"
+
+#~ msgid "Exclude by list"
+#~ msgstr "Ausschlossen durch Liste"
 
 #~ msgid "Command or script to execute to get a list of include entries."
 #~ msgstr ""

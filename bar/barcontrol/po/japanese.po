@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-12-25 02:22+0100\n"
+"POT-Creation-Date: 2016-12-25 02:26+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -1480,9 +1480,10 @@ msgstr "開く/閉じる"
 msgid "Include"
 msgstr "インクルードする"
 
-#: src/TabJobs.java:2452
-msgid "Exclude by list"
-msgstr "リストによる除外"
+#: src/TabJobs.java:2452 src/TabJobs.java:2687 src/TabJobs.java:2834
+#: src/TabJobs.java:2901
+msgid "Exclude"
+msgstr "除外"
 
 #: src/TabJobs.java:2482
 msgid "Exclude by .nobackup"
@@ -1513,10 +1514,6 @@ msgstr "ディレクトリ/ファイルサイズ"
 #: src/TabJobs.java:2660
 msgid "Include entry in archive."
 msgstr "エントリをアーカイブにインクルードする。"
-
-#: src/TabJobs.java:2687 src/TabJobs.java:2834 src/TabJobs.java:2901
-msgid "Exclude"
-msgstr "除外"
 
 #: src/TabJobs.java:2688
 msgid "Exclude entry from archive."
@@ -4165,6 +4162,9 @@ msgstr "接続ミス"
 #: src/TabStatus.java:2564
 msgid "Average execution time"
 msgstr ""
+
+#~ msgid "Exclude by list"
+#~ msgstr "リストによる除外"
 
 #, fuzzy
 #~ msgid "Command or script to execute to get a list of include entries."

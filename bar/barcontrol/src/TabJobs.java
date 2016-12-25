@@ -2449,7 +2449,7 @@ public class TabJobs
             }
           });
 
-          menuItemExcludeByList = Widgets.addMenuRadio(menu,BARControl.tr("Exclude by list"));
+          menuItemExcludeByList = Widgets.addMenuRadio(menu,BARControl.tr("Exclude"));
           menuItemExcludeByList.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -2479,7 +2479,7 @@ public class TabJobs
             }
           });
 
-          menuItemExcludeByNoBackup = Widgets.addMenuRadio(menu,BARControl.tr("Exclude by .nobackup"));
+          menuItemExcludeByNoBackup = Widgets.addMenuRadio(menu,BARControl.tr("Exclude by .nobackup"),Settings.hasExpertRole());
           menuItemExcludeByNoBackup.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -2509,7 +2509,7 @@ public class TabJobs
             }
           });
 
-          menuItemExcludeByNoDump = Widgets.addMenuRadio(menu,BARControl.tr("Exclude by no dump"));
+          menuItemExcludeByNoDump = Widgets.addMenuRadio(menu,BARControl.tr("Exclude by no dump"),Settings.hasExpertRole());
           menuItemExcludeByNoDump.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -2571,7 +2571,7 @@ public class TabJobs
 
           Widgets.addMenuSeparator(menu);
 
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add mount")+"\u2026");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add mount")+"\u2026",Settings.hasExpertRole());
           menuItem.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -2591,7 +2591,7 @@ public class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove mount"));
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove mount"),Settings.hasExpertRole());
           menuItem.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -2611,7 +2611,7 @@ public class TabJobs
             }
           });
 
-          Widgets.addMenuSeparator(menu);
+          Widgets.addMenuSeparator(menu,Settings.hasExpertRole());
 
           menuItem = Widgets.addMenuItem(menu,BARControl.tr("Directory/File size"));
           menuItem.addSelectionListener(new SelectionListener()
@@ -8226,9 +8226,9 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          Widgets.addMenuSeparator(menu);
+          Widgets.addMenuSeparator(menu,Settings.hasExpertRole());
 
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Trigger now"));
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Trigger now"),Settings.hasExpertRole());
           menuItem.addSelectionListener(new SelectionListener()
           {
             @Override
