@@ -771,8 +771,9 @@ class WidgetModifyListener
         Spinner widgetSpinner = (Spinner)widget;
 
         int value = 0;
-        if      (variable.getType() == Long.class  ) value = (int)variable.getLong();
-        else if (variable.getType() == Double.class) value = (int)variable.getDouble();
+        if      (variable.getType() == Integer.class) value = variable.getInteger();
+        if      (variable.getType() == Long.class   ) value = (int)variable.getLong();
+        else if (variable.getType() == Double.class ) value = (int)variable.getDouble();
         widgetSpinner.setSelection(value);
       }
       else if (widget instanceof Slider)
