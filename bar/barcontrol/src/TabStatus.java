@@ -803,7 +803,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Pause"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Pause"),Settings.hasNormalRole());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -818,7 +818,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Continue"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Continue"),Settings.hasNormalRole());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -1512,7 +1512,7 @@ public class TabStatus
         }
       });
 
-      widgetButtonPause = Widgets.newButton(composite,null,BARControl.tr("Pause"));
+      widgetButtonPause = Widgets.newButton(composite,null,BARControl.tr("Pause"),Settings.hasNormalRole());
       widgetButtonPause.setToolTipText(BARControl.tr("Pause selected job for a specific time."));
       Widgets.layout(widgetButtonPause,0,2,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{"Puase [xxxxs]"}));
       widgetButtonPause.addSelectionListener(new SelectionListener()
@@ -1529,7 +1529,7 @@ public class TabStatus
         }
       });
 
-      widgetButtonSuspendContinue = Widgets.newButton(composite,null,BARControl.tr("Continue"));
+      widgetButtonSuspendContinue = Widgets.newButton(composite,null,BARControl.tr("Continue"),Settings.hasNormalRole());
       widgetButtonSuspendContinue.setToolTipText(BARControl.tr("Suspend selected job for an infinite time."));
       Widgets.layout(widgetButtonSuspendContinue,0,3,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{BARControl.tr("Suspend"),BARControl.tr("Continue")}));
       widgetButtonSuspendContinue.addSelectionListener(new SelectionListener()

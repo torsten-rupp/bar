@@ -1884,8 +1884,7 @@ public class TabJobs
         }
       });
 
-//TODO: role?
-      button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
+      button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
       button.setToolTipText(BARControl.tr("Clone an existing job entry."));
       button.setEnabled(false);
       Widgets.layout(button,0,3,TableLayoutData.DEFAULT);
@@ -1913,7 +1912,7 @@ public class TabJobs
         }
       });
 
-      button = Widgets.newButton(composite,BARControl.tr("Rename")+"\u2026");
+      button = Widgets.newButton(composite,BARControl.tr("Rename")+"\u2026",Settings.hasNormalRole());
       button.setToolTipText(BARControl.tr("Rename a job entry."));
       button.setEnabled(false);
       Widgets.layout(button,0,4,TableLayoutData.DEFAULT);
@@ -3044,7 +3043,7 @@ public class TabJobs
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026");
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
             menuItem.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -3123,7 +3122,7 @@ public class TabJobs
               }
             });
 
-            button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
+            button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
             button.setToolTipText(BARControl.tr("Clone entry in included list."));
             Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             button.addSelectionListener(new SelectionListener()
@@ -3249,7 +3248,7 @@ public class TabJobs
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026");
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
             menuItem.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -3329,7 +3328,7 @@ public class TabJobs
               }
             });
 
-            button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
+            button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
             button.setToolTipText(BARControl.tr("Clone entry in excluded list."));
             Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             button.addSelectionListener(new SelectionListener()
@@ -3720,7 +3719,7 @@ public class TabJobs
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026");
+            menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
             menuItem.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -3799,7 +3798,7 @@ public class TabJobs
               }
             });
 
-            button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
+            button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
             button.setToolTipText(BARControl.tr("Clone entry in mount list."));
             Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
             button.addSelectionListener(new SelectionListener()
@@ -8198,7 +8197,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026");
+          menuItem = Widgets.addMenuItem(menu,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
           menuItem.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -8281,7 +8280,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026");
+          button = Widgets.newButton(composite,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
           button.setToolTipText(BARControl.tr("Clone schedule entry."));
           Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
