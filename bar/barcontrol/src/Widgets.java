@@ -2427,9 +2427,10 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param text label text
    * @param style label style
    * @param accelerator accelerator key code or SWT.NONE
+   * @param isVisible true for visible, false otherwise
    * @return new label
    */
-  public static Label newLabel(Composite composite, String text, int style, int accelerator)
+  public static Label newLabel(Composite composite, String text, int style, int accelerator, boolean isVisible)
   {
     Label label;
 
@@ -2447,6 +2448,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
       }
     }
     label = new Label(composite,style);
+    label.setLayoutData(new TableLayoutData(isVisible));
     label.setText(text);
 
     // set scrolled composite content
@@ -2462,11 +2464,46 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param composite composite widget
    * @param text label text
    * @param style label style
+   * @param accelerator accelerator key code or SWT.NONE
+   * @return new label
+   */
+  public static Label newLabel(Composite composite, String text, int style, int accelerator)
+  {
+    return newLabel(composite,text,style,accelerator,true);
+  }
+
+  /** create new label
+   * @param composite composite widget
+   * @param text label text
+   * @param style label style
+   * @param isVisible true for visible, false otherwise
+   * @return new label
+   */
+  public static Label newLabel(Composite composite, String text, int style, boolean isVisible)
+  {
+    return newLabel(composite,text,style,SWT.NONE,isVisible);
+  }
+
+  /** create new label
+   * @param composite composite widget
+   * @param text label text
+   * @param style label style
    * @return new label
    */
   public static Label newLabel(Composite composite, String text, int style)
   {
-    return newLabel(composite,text,style,0);
+    return newLabel(composite,text,style,true);
+  }
+
+  /** create new label
+   * @param composite composite widget
+   * @param text label text
+   * @param isVisible true for visible, false otherwise
+   * @return new label
+   */
+  public static Label newLabel(Composite composite, String text, boolean isVisible)
+  {
+    return newLabel(composite,text,SWT.LEFT,isVisible);
   }
 
   /** create new label
@@ -2476,7 +2513,17 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Label newLabel(Composite composite, String text)
   {
-    return newLabel(composite,text,SWT.LEFT);
+    return newLabel(composite,text,true);
+  }
+
+  /** create new label
+   * @param composite composite widget
+   * @param isVisible true for visible, false otherwise
+   * @return new label
+   */
+  public static Label newLabel(Composite composite, boolean isVisible)
+  {
+    return newLabel(composite,"",isVisible);
   }
 
   /** create new label
@@ -2485,7 +2532,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Label newLabel(Composite composite)
   {
-    return newLabel(composite,"");
+    return newLabel(composite,true);
   }
 
   //-----------------------------------------------------------------------
@@ -2763,11 +2810,11 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param text text
    * @param data data structure to store checkbox value or null
    * @param field field name in data structure to set on selection
-   * @param value value for checkbox
    * @param accelerator accelerator key code or SWT.NONE
+   * @param isVisible true for visible, false otherwise
    * @return new checkbox button
    */
-  public static Button newCheckbox(Composite composite, String text, final Object data, final String field, boolean value, int accelerator)
+  public static Button newCheckbox(Composite composite, String text, final Object data, final String field, int accelerator, boolean isVisible)
   {
     Button button;
 
@@ -2785,6 +2832,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
       }
     }
     button = new Button(composite,SWT.CHECK);
+    button.setLayoutData(new TableLayoutData(isVisible));
     if (text != null) button.setText(text);
     button.addSelectionListener(new SelectionListener()
     {
@@ -2797,22 +2845,8 @@ does not work on Windows? Even cursor keys trigger traversal event?
       {
       }
     });
-    button.setSelection(value);
 
     return button;
-  }
-
-  /** create new checkbox
-   * @param composite composite widget
-   * @param text text
-   * @param data data structure to store checkbox value or null
-   * @param field field name in data structure to set on selection
-   * @param value value for checkbox
-   * @return new checkbox button
-   */
-  public static Button newCheckbox(Composite composite, String text, Object data, String field, boolean value)
-  {
-    return newCheckbox(composite,text,data,field,value,SWT.NONE);
   }
 
   /** create new checkbox
@@ -2825,7 +2859,20 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newCheckbox(Composite composite, String text, Object data, String field, int accelerator)
   {
-    return newCheckbox(composite,text,data,field,false,accelerator);
+    return newCheckbox(composite,text,data,field,accelerator,true);
+  }
+
+  /** create new checkbox
+   * @param composite composite widget
+   * @param text text
+   * @param data data structure to store checkbox value or null
+   * @param field field name in data structure to set on selection
+   * @param isVisible true for visible, false otherwise
+   * @return new checkbox button
+   */
+  public static Button newCheckbox(Composite composite, String text, Object data, String field, boolean isVisible)
+  {
+    return newCheckbox(composite,text,data,field,SWT.NONE,isVisible);
   }
 
   /** create new checkbox
@@ -2837,7 +2884,19 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newCheckbox(Composite composite, String text, Object data, String field)
   {
-    return newCheckbox(composite,text,data,field,SWT.NONE);
+    return newCheckbox(composite,text,data,field,true);
+  }
+
+  /** create new checkbox
+   * @param composite composite widget
+   * @param text text
+   * @param accelerator accelerator key code or SWT.NONE
+   * @param isVisible true for visible, false otherwise
+   * @return new checkbox button
+   */
+  public static Button newCheckbox(Composite composite, String text, int accelerator, boolean isVisible)
+  {
+    return newCheckbox(composite,text,(Object)null,(String)null,accelerator,isVisible);
   }
 
   /** create new checkbox
@@ -2848,7 +2907,18 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newCheckbox(Composite composite, String text, int accelerator)
   {
-    return newCheckbox(composite,text,null,null,accelerator);
+    return newCheckbox(composite,text,accelerator,true);
+  }
+
+  /** create new checkbox
+   * @param composite composite widget
+   * @param text text
+   * @param isVisible true for visible, false otherwise
+   * @return new checkbox button
+   */
+  public static Button newCheckbox(Composite composite, String text, boolean isVisible)
+  {
+    return newCheckbox(composite,text,SWT.NONE,isVisible);
   }
 
   /** create new checkbox
@@ -2858,7 +2928,17 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newCheckbox(Composite composite, String text)
   {
-    return newCheckbox(composite,text,SWT.NONE);
+    return newCheckbox(composite,text,true);
+  }
+
+  /** create new checkbox
+   * @param composite composite widget
+   * @param isVisible true for visible, false otherwise
+   * @return new checkbox button
+   */
+  public static Button newCheckbox(Composite composite, boolean isVisible)
+  {
+    return newCheckbox(composite,(String)null,isVisible);
   }
 
   /** create new checkbox
@@ -2867,7 +2947,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newCheckbox(Composite composite)
   {
-    return newCheckbox(composite,(String)null);
+    return newCheckbox(composite,true);
   }
 
   /** create new checkbox
@@ -2875,14 +2955,15 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param imageOn,imageOf on/off image
    * @param data data structure to store checkbox value or null
    * @param field field name in data structure to set on selection
-   * @param value value for checkbox
+   * @param isVisible true for visible, false otherwise
    * @return new checkbox button
    */
-  public static Button newCheckbox(Composite composite, final Image imageOn, final Image imageOff, final Object data, final String field, boolean value)
+  public static Button newCheckbox(Composite composite, final Image imageOn, final Image imageOff, final Object data, final String field, boolean isVisible)
   {
     Button button;
 
     button = new Button(composite,SWT.TOGGLE);
+    button.setLayoutData(new TableLayoutData(isVisible));
     button.setImage(imageOff);
     button.addSelectionListener(new SelectionListener()
     {
@@ -2909,7 +2990,6 @@ does not work on Windows? Even cursor keys trigger traversal event?
       {
       }
     });
-    button.setSelection(value);
 
     return button;
   }
@@ -2921,7 +3001,18 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newCheckbox(Composite composite, Image imageOff, Image imageOn, Object data, String field)
   {
-    return newCheckbox(composite,imageOff,imageOn,data,field,false);
+    return newCheckbox(composite,imageOff,imageOn,data,field,true);
+  }
+
+  /** create new checkbox
+   * @param composite composite widget
+   * @param imageOff,imageOn off/on image
+   * @param isVisible true for visible, false otherwise
+   * @return new checkbox button
+   */
+  public static Button newCheckbox(Composite composite, Image imageOff, Image imageOn, boolean isVisible)
+  {
+    return newCheckbox(composite,imageOff,imageOn,(Object)null,(String)null,isVisible);
   }
 
   /** create new checkbox
@@ -2931,7 +3022,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Button newCheckbox(Composite composite, Image imageOff, Image imageOn)
   {
-    return newCheckbox(composite,imageOff,imageOn,null,null);
+    return newCheckbox(composite,imageOff,imageOn,true);
   }
 
   //-----------------------------------------------------------------------
@@ -2942,13 +3033,15 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param data data structure to store radio value or null
    * @param field field name in data structure to set on selection
    * @param value value for radio button
+   * @param isVisible true for visible, false otherwise
    * @return new button
    */
-  public static Button newRadio(Composite composite, String text, final Object data, final String field, final Object value)
+  public static Button newRadio(Composite composite, String text, final Object data, final String field, final Object value, boolean isVisible)
   {
     Button button;
 
     button = new Button(composite,SWT.RADIO);
+    button.setLayoutData(new TableLayoutData(isVisible));
     button.setText(text);
     button.addSelectionListener(new SelectionListener()
     {
@@ -2969,11 +3062,36 @@ does not work on Windows? Even cursor keys trigger traversal event?
   /** create new radio button
    * @param composite composite widget
    * @param text text
+   * @param data data structure to store radio value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for radio button
+   * @return new button
+   */
+  public static Button newRadio(Composite composite, String text, final Object data, final String field, final Object value)
+  {
+    return newRadio(composite,text,data,field,value,true);
+  }
+
+  /** create new radio button
+   * @param composite composite widget
+   * @param text text
+   * @param isVisible true for visible, false otherwise
+   * @return new button
+   */
+  public static Button newRadio(Composite composite, String text, boolean isVisible)
+  {
+    return newRadio(composite,text,(Object)null,(String)null,(Object)null,isVisible);
+  }
+
+  /** create new radio button
+   * @param composite composite widget
+   * @param text text
+   * @param isVisible true for visible, false otherwise
    * @return new button
    */
   public static Button newRadio(Composite composite, String text)
   {
-    return newRadio(composite,text,null,null,null);
+    return newRadio(composite,text,true);
   }
 
   //-----------------------------------------------------------------------
