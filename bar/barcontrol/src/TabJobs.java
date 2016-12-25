@@ -1684,7 +1684,7 @@ public class TabJobs
 
   // BAR variables
   private WidgetVariable  remoteHostName          = new WidgetVariable<String> ("remote-host-name","");
-  private WidgetVariable  remoteHostPort          = new WidgetVariable<Long>   ("remote-host-port",0L);
+  private WidgetVariable  remoteHostPort          = new WidgetVariable<Integer>("remote-host-port",0);
   private WidgetVariable  remoteHostForceSSL      = new WidgetVariable<Boolean>("remote-host-force-ssl",false);
   private WidgetVariable  includeFileCommand      = new WidgetVariable<String> ("include-file-command","");
   private WidgetVariable  includeImageCommand     = new WidgetVariable<String> ("include-image-command","");
@@ -2063,7 +2063,7 @@ public class TabJobs
           int     n      = widget.getSelection();
           Color   color  = COLOR_MODIFIED;
 
-          if (remoteHostPort.getLong() == n) color = null;
+          if (remoteHostPort.getInteger() == n) color = null;
           widget.setBackground(color);
           widget.setData("showedErrorDialog",false);
         }
