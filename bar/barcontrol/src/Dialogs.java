@@ -2264,38 +2264,41 @@ class Dialogs
           if ((okText != null) || (cancelText != null))
           {
             Button selectedButton = null;
-            for (int z = 0; z < texts.length; z++)
+            for (int i = 0; i < texts.length; i++)
             {
-              button = new Button(subComposite,SWT.RADIO);
-              button.setEnabled((enabled == null) || enabled[z]);
-              button.setText(texts[z]);
-              button.setData(z);
-              if (   ((enabled == null) || enabled[z])
-                  && ((z == defaultValue) || (selectedButton == null))
-                 )
+              if (texts[i] != null)
               {
-                if (selectedButton != null) selectedButton.setSelection(false);
-
-                button.setSelection(true);
-                result[0] = z;
-                selectedButton = button;
-              }
-              button.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W)); row++;
-              button.addSelectionListener(new SelectionListener()
-              {
-                public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                button = new Button(subComposite,SWT.RADIO);
+                button.setEnabled((enabled == null) || enabled[i]);
+                button.setText(texts[i]);
+                button.setData(i);
+                if (   ((enabled == null) || enabled[i])
+                    && ((i == defaultValue) || (selectedButton == null))
+                   )
                 {
-                }
-                public void widgetSelected(SelectionEvent selectionEvent)
-                {
-                  Button widget = (Button)selectionEvent.widget;
+                  if (selectedButton != null) selectedButton.setSelection(false);
 
-                  result[0] = (Integer)widget.getData();
+                  button.setSelection(true);
+                  result[0] = i;
+                  selectedButton = button;
                 }
-              });
-              if ((helpTexts != null) && (z < helpTexts.length))
-              {
-                button.setToolTipText(helpTexts[z]);
+                button.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W)); row++;
+                button.addSelectionListener(new SelectionListener()
+                {
+                  public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                  {
+                  }
+                  public void widgetSelected(SelectionEvent selectionEvent)
+                  {
+                    Button widget = (Button)selectionEvent.widget;
+
+                    result[0] = (Integer)widget.getData();
+                  }
+                });
+                if ((helpTexts != null) && (i < helpTexts.length) && (helpTexts[i] != null))
+                {
+                  button.setToolTipText(helpTexts[i]);
+                }
               }
             }
           }
@@ -2349,31 +2352,38 @@ class Dialogs
           GC gc = new GC(composite);
           for (String text : texts)
           {
-            textWidth = Math.max(textWidth,gc.textExtent(text).x);
+            if (text != null)
+            {
+              textWidth = Math.max(textWidth,gc.textExtent(text).x);
+            }
           }
           gc.dispose();
 
-          for (int z = 0; z < texts.length; z++)
+          int column = 0;
+          for (int i = 0; i < texts.length; i++)
           {
-            button = new Button(composite,SWT.CENTER);
-            button.setEnabled((enabled == null) || enabled[z]);
-            button.setText(texts[z]);
-            button.setData(z);
-            if (z == defaultValue) button.setFocus();
-            button.setLayoutData(new TableLayoutData(0,z,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,textWidth+20,SWT.DEFAULT));
-            button.addSelectionListener(new SelectionListener()
+            if (texts[i] != null)
             {
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              button = new Button(composite,SWT.CENTER);
+              button.setEnabled((enabled == null) || enabled[i]);
+              button.setText(texts[i]);
+              button.setData(i);
+              if (i == defaultValue) button.setFocus();
+              button.setLayoutData(new TableLayoutData(0,column,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,textWidth+20,SWT.DEFAULT)); column++;
+              button.addSelectionListener(new SelectionListener()
               {
-              }
-              public void widgetSelected(SelectionEvent selectionEvent)
-              {
-                Button widget = (Button)selectionEvent.widget;
+                public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                {
+                }
+                public void widgetSelected(SelectionEvent selectionEvent)
+                {
+                  Button widget = (Button)selectionEvent.widget;
 
-                result[0] = (Integer)widget.getData();
-                close(dialog,true);
-              }
-            });
+                  result[0] = (Integer)widget.getData();
+                  close(dialog,true);
+                }
+              });
+            }
           }
         }
       }
@@ -4243,16 +4253,16 @@ Dprintf.dprintf("file=%s",file);
       assert (fileExtensions.length % 2) == 0;
 
       String[] fileExtensionNames = new String[fileExtensions.length/2];
-      for (int z = 0; z < fileExtensions.length/2; z++)
+      for (int i = 0; i < fileExtensions.length/2; i++)
       {
-        fileExtensionNames[z] = fileExtensions[z*2+0]+" ("+fileExtensions[z*2+1]+")";
+        fileExtensionNames[i] = fileExtensions[i*2+0]+" ("+fileExtensions[i*2+1]+")";
       }
       String[] fileExtensionPatterns = new String[(fileExtensions.length+1)/2];
       int fileExtensionIndex = 0;
-      for (int z = 0; z < fileExtensions.length/2; z++)
+      for (int i = 0; i < fileExtensions.length/2; i++)
       {
-        fileExtensionPatterns[z] = fileExtensions[z*2+1];
-        if ((defaultFileExtension != null) && defaultFileExtension.equalsIgnoreCase(fileExtensions[z*2+1])) fileExtensionIndex = z;
+        fileExtensionPatterns[i] = fileExtensions[i*2+1];
+        if ((defaultFileExtension != null) && defaultFileExtension.equalsIgnoreCase(fileExtensions[i*2+1])) fileExtensionIndex = i;
       }
       dialog.setFilterNames(fileExtensionNames);
       dialog.setFilterExtensions(fileExtensionPatterns);
