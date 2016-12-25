@@ -2043,10 +2043,14 @@ class Widgets
   {
     if (!control.isDisposed())
     {
-      if (control.getLayoutData() instanceof TableLayoutData)
+      TableLayoutData tableLayoutData = (TableLayoutData)control.getLayoutData();
+      if (tableLayoutData != null)
       {
-        TableLayoutData tableLayoutData = (TableLayoutData)control.getLayoutData();
         tableLayoutData.isVisible = isVisible;
+      }
+      else
+      {
+        control.setLayoutData(new TableLayoutData(isVisible));
       }
       control.setVisible(isVisible);
       if (isVisible)
@@ -2806,7 +2810,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param value value for checkbox
    * @return new checkbox button
    */
-  public static Button newCheckbox(Composite composite, String text, final Object data, final String field, boolean value)
+  public static Button newCheckbox(Composite composite, String text, Object data, String field, boolean value)
   {
     return newCheckbox(composite,text,data,field,value,SWT.NONE);
   }
@@ -2819,7 +2823,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param accelerator accelerator key code or SWT.NONE
    * @return new checkbox button
    */
-  public static Button newCheckbox(Composite composite, String text, final Object data, final String field, int accelerator)
+  public static Button newCheckbox(Composite composite, String text, Object data, String field, int accelerator)
   {
     return newCheckbox(composite,text,data,field,false,accelerator);
   }
@@ -2831,7 +2835,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param field field name in data structure to set on selection
    * @return new checkbox button
    */
-  public static Button newCheckbox(Composite composite, String text, final Object data, final String field)
+  public static Button newCheckbox(Composite composite, String text, Object data, String field)
   {
     return newCheckbox(composite,text,data,field,SWT.NONE);
   }
@@ -2915,7 +2919,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param accelerator accelerator key code or SWT.NONE
    * @return new checkbox button
    */
-  public static Button newCheckbox(Composite composite, Image imageOff, Image imageOn, final Object data, final String field)
+  public static Button newCheckbox(Composite composite, Image imageOff, Image imageOn, Object data, String field)
   {
     return newCheckbox(composite,imageOff,imageOn,data,field,false);
   }
@@ -3038,7 +3042,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param value value for text input field
    * @return new text widget
    */
-  public static Text newText(Composite composite, final Object data, final String field, String value)
+  public static Text newText(Composite composite, Object data, String field, String value)
   {
     return newText(composite,data,field,value,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.SINGLE);
   }
@@ -3050,7 +3054,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param style text style
    * @return new text widget
    */
-  public static Text newText(Composite composite, final Object data, final String field, int style)
+  public static Text newText(Composite composite, Object data, String field, int style)
   {
     return newText(composite,data,field,"",style);
   }
@@ -3061,7 +3065,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param field field name in data structure to set on selection
    * @return new text widget
    */
-  public static Text newText(Composite composite, final Object data, final String field)
+  public static Text newText(Composite composite, Object data, String field)
   {
     return newText(composite,data,field,"");
   }
@@ -3151,7 +3155,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param value value for text input field
    * @return new text widget
    */
-  public static StyledText newStyledText(Composite composite, final Object data, final String field, String value)
+  public static StyledText newStyledText(Composite composite, Object data, String field, String value)
   {
     return newStyledText(composite,data,field,value,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.SINGLE);
   }
@@ -3163,7 +3167,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param style text style
    * @return new text widget
    */
-  public static StyledText newStyledText(Composite composite, final Object data, final String field, int style)
+  public static StyledText newStyledText(Composite composite, Object data, String field, int style)
   {
     return newStyledText(composite,data,field,"",style);
   }
@@ -3174,7 +3178,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param field field name in data structure to set on selection
    * @return new text widget
    */
-  public static StyledText newStyledText(Composite composite, final Object data, final String field)
+  public static StyledText newStyledText(Composite composite, Object data, String field)
   {
     return newStyledText(composite,data,field,"");
   }
@@ -3271,7 +3275,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param value value for date input field
    * @return new date/time widget
    */
-  public static DateTime newDate(Composite composite, final Object data, final String field, Date value)
+  public static DateTime newDate(Composite composite, Object data, String field, Date value)
   {
     return newDate(composite,data,field,value,SWT.NONE);
   }
@@ -3283,7 +3287,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param style text style
    * @return new date/time widget
    */
-  public static DateTime newDate(Composite composite, final Object data, final String field, int style)
+  public static DateTime newDate(Composite composite, Object data, String field, int style)
   {
     return newDate(composite,data,field,null,style);
   }
@@ -3295,7 +3299,7 @@ e composite widget
    * @param field field name in data structure to set on selection
    * @return new date/time widget
    */
-  public static DateTime newDate(Composite composite, final Object data, final String field)
+  public static DateTime newDate(Composite composite, Object data, String field)
   {
     return newDate(composite,data,field,null,SWT.NONE);
   }
@@ -3403,7 +3407,7 @@ e composite widget
    * @param value value for time input field
    * @return new date/time widget
    */
-  public static DateTime newTime(Composite composite, final Object data, final String field, Date value)
+  public static DateTime newTime(Composite composite, Object data, String field, Date value)
   {
     return newTime(composite,data,field,value,SWT.NONE);
   }
@@ -3415,7 +3419,7 @@ e composite widget
    * @param style text style
    * @return new date/time widget
    */
-  public static DateTime newTime(Composite composite, final Object data, final String field, int style)
+  public static DateTime newTime(Composite composite, Object data, String field, int style)
   {
     return newTime(composite,data,field,null,style);
   }
@@ -3426,7 +3430,7 @@ e composite widget
    * @param field field name in data structure to set on selection
    * @return new date/time widget
    */
-  public static DateTime newTime(Composite composite, final Object data, final String field)
+  public static DateTime newTime(Composite composite, Object data, String field)
   {
     return newTime(composite,data,field,null,SWT.NONE);
   }
@@ -4142,7 +4146,7 @@ e composite widget
    * @param value value for combo
    * @return new combo widget
    */
-  public static Combo newCombo(Composite composite, final Object data, final String field, String value)
+  public static Combo newCombo(Composite composite, Object data, String field, String value)
   {
     return newCombo(composite,data,field,value,SWT.BORDER);
   }
@@ -4154,7 +4158,7 @@ e composite widget
    * @param style SWT style flags
    * @return new combo widget
    */
-  public static Combo newCombo(Composite composite, final Object data, final String field, int style)
+  public static Combo newCombo(Composite composite, Object data, String field, int style)
   {
     return newCombo(composite,data,field,null,style);
   }
@@ -4165,7 +4169,7 @@ e composite widget
    * @param field field name in data structure to set on selection
    * @return new combo widget
    */
-  public static Combo newCombo(Composite composite, final Object data, final String field)
+  public static Combo newCombo(Composite composite, Object data, String field)
   {
     return newCombo(composite,data,field,SWT.BORDER);
   }
@@ -5955,7 +5959,7 @@ e composite widget
    * @param table item data
    * @param fontData font data
    */
-  public static void setTableItemFont(final Table table, final Object data, final FontData fontData)
+  public static void setTableItemFont(final Table table, Object data, FontData fontData)
   {
     setTableItemFont(table,data,new Font(table.getDisplay(),fontData));
   }
@@ -5996,7 +6000,7 @@ e composite widget
    * @param columnNb column (0..n-1)
    * @param fontData font data
    */
-  public static void setTableItemFont(final Table table, final Object data, final int columnNb, final FontData fontData)
+  public static void setTableItemFont(final Table table, Object data, int columnNb, FontData fontData)
   {
     setTableItemFont(table,data,columnNb,new Font(table.getDisplay(),fontData));
   }
@@ -6554,7 +6558,7 @@ e composite widget
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  public static TreeItem insertTreeItem(final Tree tree, final int index, final Object data, final boolean folderFlag, final Object... values)
+  public static TreeItem insertTreeItem(final Tree tree, int index, Object data, boolean folderFlag, Object... values)
   {
     return insertTreeItem(tree,index,data,(Image)null,folderFlag,values);
   }
@@ -6653,7 +6657,7 @@ e composite widget
    * @param values values list
    * @return new tree item
    */
-  public static TreeItem insertTreeItem(final TreeItem parentTreeItem, final int index, final Object data, final boolean folderFlag, final Object... values)
+  public static TreeItem insertTreeItem(final TreeItem parentTreeItem, int index, Object data, boolean folderFlag, Object... values)
   {
     return insertTreeItem(parentTreeItem,index,data,null,folderFlag,values);
   }
@@ -7729,6 +7733,7 @@ private static void printTree(Tree tree)
    * @param titleImage title image of tab
    * @param data data element
    * @param style style
+   * @param isVisible true for visible, false otherwise
    * @return new composite widget
    */
   public static Composite insertTab(TabFolder tabFolder, Composite leftComposite, String title, Object data, int style, boolean isVisible)
@@ -8348,24 +8353,35 @@ else
    * @param menu menu bar
    * @param data data structure
    * @param text menu text
+   * @param isVisible true for visible, false otherwise
    * @return new menu
    */
-  public static Menu insertMenu(Menu menu, int index, final Object data, String text)
+  public static Menu insertMenu(Menu menu, int index, final Object data, String text, boolean isVisible)
   {
-    MenuItem menuItem;
-    if (index >= 0)
+    Menu subMenu;
+
+    if (isVisible)
     {
-      menuItem = new MenuItem(menu,SWT.CASCADE,index);
+      MenuItem menuItem;
+      if (index >= 0)
+      {
+        menuItem = new MenuItem(menu,SWT.CASCADE,index);
+      }
+      else
+      {
+        menuItem = new MenuItem(menu,SWT.CASCADE);
+      }
+      menuItem.setText(text);
+      menuItem.setData(data);
+      subMenu = new Menu(menu.getShell(),SWT.DROP_DOWN);
+      subMenu.setData(data);
+      menuItem.setMenu(subMenu);
     }
     else
     {
-      menuItem = new MenuItem(menu,SWT.CASCADE);
+      subMenu = new Menu(menu.getShell(),SWT.DROP_DOWN);
+      subMenu.setVisible(false);
     }
-    menuItem.setText(text);
-    menuItem.setData(data);
-    Menu subMenu = new Menu(menu.getShell(),SWT.DROP_DOWN);
-    subMenu.setData(data);
-    menuItem.setMenu(subMenu);
 
     return subMenu;
   }
@@ -8376,9 +8392,43 @@ else
    * @param text menu text
    * @return new menu
    */
-  public static Menu addMenu(Menu menu, final Object data, String text)
+  public static Menu insertMenu(Menu menu, int index, Object data, String text)
   {
-    return insertMenu(menu,-1,data,text);
+    return insertMenu(menu,index,data,text,true);
+  }
+
+  /** create new menu
+   * @param menu menu bar
+   * @param data data structure
+   * @param text menu text
+   * @param isVisible true for visible, false otherwise
+   * @return new menu
+   */
+  public static Menu addMenu(Menu menu, Object data, String text, boolean isVisible)
+  {
+    return insertMenu(menu,-1,data,text,isVisible);
+  }
+
+  /** create new menu
+   * @param menu menu bar
+   * @param data data structure
+   * @param text menu text
+   * @return new menu
+   */
+  public static Menu addMenu(Menu menu, Object data, String text)
+  {
+    return addMenu(menu,data,text,true);
+  }
+
+  /** create new menu
+   * @param menu menu bar
+   * @param text menu text
+   * @param isVisible true for visible, false otherwise
+   * @return new menu
+   */
+  public static Menu addMenu(Menu menu, String text, boolean isVisible)
+  {
+    return addMenu(menu,(Object)null,text,isVisible);
   }
 
   /** create new menu
@@ -8388,7 +8438,7 @@ else
    */
   public static Menu addMenu(Menu menu, String text)
   {
-    return addMenu(menu,null,text);
+    return addMenu(menu,text,true);
   }
 
   /** get menu item
@@ -8498,32 +8548,43 @@ else
    * @param data data structure
    * @param text menu item text
    * @param accelerator accelerator key or SWT.NONE
+   * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem insertMenuItem(Menu menu, int index, final Object data, String text, int accelerator)
+  public static MenuItem insertMenuItem(Menu menu, int index, final Object data, String text, int accelerator, boolean isVisible)
   {
-    if (accelerator != SWT.NONE)
-    {
-      char key = (char)(accelerator & SWT.KEY_MASK);
-      int acceleratorIndex = text.indexOf(key);
-      if (acceleratorIndex >= 0)
-      {
-        text = text.substring(0,acceleratorIndex)+'&'+text.substring(acceleratorIndex);
-      }
-      text = text+"\t"+menuAcceleratorToText(accelerator);
-    }
     MenuItem menuItem;
-    if (index >= 0)
+
+    if (isVisible)
     {
-      menuItem = new MenuItem(menu,SWT.DROP_DOWN,index);
+      if (accelerator != SWT.NONE)
+      {
+        char key = (char)(accelerator & SWT.KEY_MASK);
+        int acceleratorIndex = text.indexOf(key);
+        if (acceleratorIndex >= 0)
+        {
+          text = text.substring(0,acceleratorIndex)+'&'+text.substring(acceleratorIndex);
+        }
+        text = text+"\t"+menuAcceleratorToText(accelerator);
+      }
+      if (index >= 0)
+      {
+        menuItem = new MenuItem(menu,SWT.DROP_DOWN,index);
+      }
+      else
+      {
+        menuItem = new MenuItem(menu,SWT.DROP_DOWN);
+      }
+      menuItem.setData(data);
+      menuItem.setText(text);
+      if (accelerator != SWT.NONE) menuItem.setAccelerator(accelerator);
     }
     else
     {
-      menuItem = new MenuItem(menu,SWT.DROP_DOWN);
+      Menu invisibleMenu = new Menu(menu.getShell(),SWT.DROP_DOWN);
+      invisibleMenu.setVisible(false);
+      menuItem = new MenuItem(invisibleMenu,SWT.DROP_DOWN);
     }
-    menuItem.setData(data);
-    menuItem.setText(text);
-    if (accelerator != SWT.NONE) menuItem.setAccelerator(accelerator);
 
     return menuItem;
   }
@@ -8533,11 +8594,50 @@ else
    * @param index index [0..n-1] or -1
    * @param data data structure
    * @param text menu item text
+   * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
-  public static MenuItem insertMenuItem(Menu menu, int index, final Object data, String text)
+  public static MenuItem insertMenuItem(Menu menu, int index, Object data, String text, int accelerator)
   {
-    return insertMenuItem(menu,index,data,text,SWT.NONE);
+    return insertMenuItem(menu,index,data,text,accelerator,true);
+  }
+
+  /** insert new menu item
+   * @param menu menu
+   * @param index index [0..n-1] or -1
+   * @param data data structure
+   * @param text menu item text
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem insertMenuItem(Menu menu, int index, Object data, String text, boolean isVisible)
+  {
+    return insertMenuItem(menu,index,data,text,SWT.NONE,isVisible);
+  }
+
+  /** insert new menu item
+   * @param menu menu
+   * @param index index [0..n-1] or -1
+   * @param data data structure
+   * @param text menu item text
+   * @return new menu item
+   */
+  public static MenuItem insertMenuItem(Menu menu, int index, Object data, String text)
+  {
+    return insertMenuItem(menu,index,data,text,true);
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param data data structure
+   * @param text menu item text
+   * @param accelerator accelerator key or SWT.NONE
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem addMenuItem(Menu menu, Object data, String text, int accelerator, boolean isVisible)
+  {
+    return insertMenuItem(menu,-1,data,text,accelerator,isVisible);
   }
 
   /** add new menu item
@@ -8549,7 +8649,19 @@ else
    */
   public static MenuItem addMenuItem(Menu menu, Object data, String text, int accelerator)
   {
-    return insertMenuItem(menu,-1,data,text,accelerator);
+    return addMenuItem(menu,data,text,accelerator,true);
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param data data structure
+   * @param text menu item text
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem addMenuItem(Menu menu, Object data, String text, boolean isVisible)
+  {
+    return addMenuItem(menu,data,text,SWT.NONE,isVisible);
   }
 
   /** add new menu item
@@ -8560,7 +8672,18 @@ else
    */
   public static MenuItem addMenuItem(Menu menu, Object data, String text)
   {
-    return addMenuItem(menu,data,text,SWT.NONE);
+    return addMenuItem(menu,data,text,true);
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param text menu item text
+   * @param accelerator accelerator key or SWT.NONE
+   * @return new menu item
+   */
+  public static MenuItem addMenuItem(Menu menu, String text, int accelerator, boolean isVisible)
+  {
+    return addMenuItem(menu,(Object)null,text,accelerator,isVisible);
   }
 
   /** add new menu item
@@ -8571,7 +8694,18 @@ else
    */
   public static MenuItem addMenuItem(Menu menu, String text, int accelerator)
   {
-    return addMenuItem(menu,null,text,accelerator);
+    return addMenuItem(menu,text,accelerator,true);
+  }
+
+  /** add new menu item
+   * @param menu menu
+   * @param text menu item text
+   * @param accelerator accelerator key or SWT.NONE
+   * @return new menu item
+   */
+  public static MenuItem addMenuItem(Menu menu, String text, boolean isVisible)
+  {
+    return addMenuItem(menu,text,SWT.NONE,isVisible);
   }
 
   /** add new menu item
@@ -8582,10 +8716,10 @@ else
    */
   public static MenuItem addMenuItem(Menu menu, String text)
   {
-    return addMenuItem(menu,text,SWT.NONE);
+    return addMenuItem(menu,text,true);
   }
 
-  /** insert new menu item
+  /** insert new checkbox menu item
    * @param menu menu
    * @param index index [0..n-1] or -1
    * @param data data structure to store checkbox value or null
@@ -8593,66 +8727,108 @@ else
    * @param field field name in data structure to set on selection
    * @param value value for checkbox button
    * @param accelerator accelerator key or SWT.NONE
+   * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem insertMenuCheckbox(Menu menu, int index, final Object data, String text, final String field, final Object value, int accelerator)
+  public static MenuItem insertMenuCheckbox(Menu menu, int index, final Object data, String text, final String field, final Object value, int accelerator, boolean isVisible)
   {
-    if (accelerator != SWT.NONE)
-    {
-      char key = (char)(accelerator & SWT.KEY_MASK);
-      int acceleratorIndex = text.indexOf(key);
-      if (acceleratorIndex >= 0)
-      {
-        text = text.substring(0,acceleratorIndex)+'&'+text.substring(acceleratorIndex);
-      }
-      text = text+"\t"+menuAcceleratorToText(accelerator);
-    }
     MenuItem menuItem;
-    if (index >= 0)
+
+    if (isVisible)
     {
-      menuItem = new MenuItem(menu,SWT.CHECK,index);
+      if (accelerator != SWT.NONE)
+      {
+        char key = (char)(accelerator & SWT.KEY_MASK);
+        int acceleratorIndex = text.indexOf(key);
+        if (acceleratorIndex >= 0)
+        {
+          text = text.substring(0,acceleratorIndex)+'&'+text.substring(acceleratorIndex);
+        }
+        text = text+"\t"+menuAcceleratorToText(accelerator);
+      }
+      if (index >= 0)
+      {
+        menuItem = new MenuItem(menu,SWT.CHECK,index);
+      }
+      else
+      {
+        menuItem = new MenuItem(menu,SWT.CHECK);
+      }
+      menuItem.setData(data);
+      menuItem.setText(text);
+      if (data != null)
+      {
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            setField(data,field,value);
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        menuItem.setSelection((getField(data,field) == value));
+      }
+      if (accelerator != 0) menuItem.setAccelerator(accelerator);
     }
     else
     {
-      menuItem = new MenuItem(menu,SWT.CHECK);
+      Menu invisibleMenu = new Menu(menu.getShell(),SWT.DROP_DOWN);
+      invisibleMenu.setVisible(false);
+      menuItem = new MenuItem(invisibleMenu,SWT.CHECK);
     }
-    menuItem.setData(data);
-    menuItem.setText(text);
-    if (data != null)
-    {
-      menuItem.addSelectionListener(new SelectionListener()
-      {
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
-          setField(data,field,value);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-      });
-      menuItem.setSelection((getField(data,field) == value));
-    }
-    if (accelerator != 0) menuItem.setAccelerator(accelerator);
 
     return menuItem;
   }
 
-  /** insert new menu item
+  /** insert new checkbox menu item
    * @param menu menu
    * @param index index [0..n-1] or -1
    * @param data data structure to store checkbox value or null
    * @param text menu item text
    * @param field field name in data structure to set on selection
    * @param value value for checkbox button
+   * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem insertMenuCheckbox(Menu menu, int index, final Object data, String text, final String field, final Object value)
+  public static MenuItem insertMenuCheckbox(Menu menu, int index, Object data, String text, String field, Object value, boolean isVisible)
   {
-    return insertMenuCheckbox(menu,index,data,text,field,value);
+    return insertMenuCheckbox(menu,index,data,text,field,value,isVisible);
   }
 
-  /** add new menu item
+  /** insert new checkbox menu item
+   * @param menu menu
+   * @param index index [0..n-1] or -1
+   * @param data data structure to store checkbox value or null
+   * @param text menu item text
+   * @param field field name in data structure to set on selection
+   * @param value value for checkbox button
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem insertMenuCheckbox(Menu menu, int index, Object data, String text, String field, Object value)
+  {
+    return insertMenuCheckbox(menu,index,data,text,field,value,true);
+  }
+
+  /** add new checkbox menu item
+   * @param menu menu
+   * @param data data structure to store checkbox value or null
+   * @param text menu item text
+   * @param field field name in data structure to set on selection
+   * @param value value for checkbox button
+   * @param accelerator accelerator key or SWT.NONE
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem addMenuCheckbox(Menu menu, Object data, String text, String field, Object value, int accelerator, boolean isVisible)
+  {
+    return insertMenuCheckbox(menu,-1,data,text,field,value,accelerator,isVisible);
+  }
+
+  /** add new checkbox menu item
    * @param menu menu
    * @param data data structure to store checkbox value or null
    * @param text menu item text
@@ -8661,12 +8837,27 @@ else
    * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
-  public static MenuItem addMenuCheckbox(Menu menu, final Object data, String text, final String field, final Object value, int accelerator)
+  public static MenuItem addMenuCheckbox(Menu menu, Object data, String text, String field, Object value, int accelerator)
   {
-    return insertMenuCheckbox(menu,-1,data,text,field,value,accelerator);
+    return addMenuCheckbox(menu,data,text,field,value,accelerator,true);
   }
 
-  /** add new menu item
+  /** add new checkbox menu item
+   * @param menu menu
+   * @param data data structure to store checkbox value or null
+   * @param text menu item text
+   * @param field field name in data structure to set on selection
+   * @param value value for checkbox button
+   * @param accelerator accelerator key or SWT.NONE
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem addMenuCheckbox(Menu menu, Object data, String text, String field, Object value, boolean isVisible)
+  {
+    return addMenuCheckbox(menu,data,text,field,value,SWT.NONE,isVisible);
+  }
+
+  /** add new checkbox menu item
    * @param menu menu
    * @param data data structure to store checkbox value or null
    * @param text menu item text
@@ -8675,58 +8866,57 @@ else
    * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
-  public static MenuItem addMenuCheckbox(Menu menu, final Object data, String text, final String field, final Object value)
+  public static MenuItem addMenuCheckbox(Menu menu, Object data, String text, String field, Object value)
   {
-    return addMenuCheckbox(menu,data,text,field,value,SWT.NONE);
+    return addMenuCheckbox(menu,data,text,field,value,true);
   }
 
-  /** add new menu item
-   * @param menu menu
-   * @param text menu item text
-   * @param selected true iff checkbox menu item is selected
-   * @param accelerator accelerator key or SWT.NONE
-   * @return new menu item
-   */
-  public static MenuItem addMenuCheckbox(Menu menu, String text, boolean selected, int accelerator)
-  {
-    MenuItem menuItem = addMenuCheckbox(menu,null,text,null,null,accelerator);
-    menuItem.setSelection(selected);
-    return menuItem;
-  }
-
-  /** add new menu item
-   * @param menu menu
-   * @param text menu item text
-   * @param selected true iff checkbox menu item is selected
-   * @return new menu item
-   */
-  public static MenuItem addMenuCheckbox(Menu menu, String text, boolean selected)
-  {
-    return addMenuCheckbox(menu,text,selected,SWT.NONE);
-  }
-
-  /** add new menu item
+  /** add new checkbox menu item
    * @param menu menu
    * @param text menu item text
    * @param accelerator accelerator key or SWT.NONE
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem addMenuCheckbox(Menu menu, String text, int accelerator, boolean isVisible)
+  {
+    return addMenuCheckbox(menu,(Object)null,text,(String)null,(Object)null,accelerator,isVisible);
+  }
+
+  /** add new checkbox menu item
+   * @param menu menu
+   * @param text menu item text
+   * @param accelerator accelerator key or SWT.NONE
+   * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
   public static MenuItem addMenuCheckbox(Menu menu, String text, int accelerator)
   {
-    return addMenuCheckbox(menu,null,text,null,null,accelerator);
+    return addMenuCheckbox(menu,text,accelerator,true);
   }
 
-  /** add new menu item
+  /** add new checkbox menu item
+   * @param menu menu
+   * @param text menu item text
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem addMenuCheckbox(Menu menu, String text, boolean isVisible)
+  {
+    return addMenuCheckbox(menu,text,SWT.NONE,isVisible);
+  }
+
+  /** add new checkbox menu item
    * @param menu menu
    * @param text menu item text
    * @return new menu item
    */
   public static MenuItem addMenuCheckbox(Menu menu, String text)
   {
-    return addMenuCheckbox(menu,text,SWT.NONE);
+    return addMenuCheckbox(menu,text,true);
   }
 
-  /** add new menu item
+  /** add new radio menu item
    * @param menu menu
    * @param index index [0..n-1] or -1
    * @param text menu item text
@@ -8734,52 +8924,78 @@ else
    * @param field field name in data structure to set on selection
    * @param value value for radio button
    * @param accelerator accelerator key or SWT.NONE
+   * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem insertMenuRadio(Menu menu, int index, final Object data, String text, final String field, final Object value, int accelerator)
+  public static MenuItem insertMenuRadio(Menu menu, int index, final Object data, String text, final String field, final Object value, int accelerator, boolean isVisible)
   {
-    if (accelerator != SWT.NONE)
-    {
-      char key = (char)(accelerator & SWT.KEY_MASK);
-      int acceleratorIndex = text.indexOf(key);
-      if (acceleratorIndex >= 0)
-      {
-        text = text.substring(0,acceleratorIndex)+'&'+text.substring(acceleratorIndex);
-      }
-      text = text+"\t"+menuAcceleratorToText(accelerator);
-    }
     MenuItem menuItem;
-    if (index >= 0)
+
+    if (isVisible)
     {
-      menuItem = new MenuItem(menu,SWT.RADIO,index);
+      if (accelerator != SWT.NONE)
+      {
+        char key = (char)(accelerator & SWT.KEY_MASK);
+        int acceleratorIndex = text.indexOf(key);
+        if (acceleratorIndex >= 0)
+        {
+          text = text.substring(0,acceleratorIndex)+'&'+text.substring(acceleratorIndex);
+        }
+        text = text+"\t"+menuAcceleratorToText(accelerator);
+      }
+      if (index >= 0)
+      {
+        menuItem = new MenuItem(menu,SWT.RADIO,index);
+      }
+      else
+      {
+        menuItem = new MenuItem(menu,SWT.RADIO);
+      }
+      menuItem.setData(data);
+      menuItem.setText(text);
+      if (data != null)
+      {
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            setField(data,field,value);
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        menuItem.setSelection((getField(data,field) == value));
+      }
+      if (accelerator != SWT.NONE) menuItem.setAccelerator(accelerator);
     }
     else
     {
-      menuItem = new MenuItem(menu,SWT.RADIO);
+      Menu invisibleMenu = new Menu(menu.getShell(),SWT.DROP_DOWN);
+      invisibleMenu.setVisible(false);
+      menuItem = new MenuItem(invisibleMenu,SWT.RADIO);
     }
-    menuItem.setData(data);
-    menuItem.setText(text);
-    if (data != null)
-    {
-      menuItem.addSelectionListener(new SelectionListener()
-      {
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
-          setField(data,field,value);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-      });
-      menuItem.setSelection((getField(data,field) == value));
-    }
-    if (accelerator != SWT.NONE) menuItem.setAccelerator(accelerator);
 
     return menuItem;
   }
 
-  /** add new menu item
+  /** add new radio menu item
+   * @param menu menu
+   * @param index index [0..n-1] or -1
+   * @param text menu item text
+   * @param data data structure to store radio value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for radio button
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem insertMenuRadio(Menu menu, int index, Object data, String text, String field, Object value, boolean isVisible)
+  {
+    return insertMenuRadio(menu,index,data,text,field,value,SWT.NONE,isVisible);
+  }
+
+  /** add new radio menu item
    * @param menu menu
    * @param index index [0..n-1] or -1
    * @param text menu item text
@@ -8788,12 +9004,27 @@ else
    * @param value value for radio button
    * @return new menu item
    */
-  public static MenuItem insertMenuRadio(Menu menu, int index, final Object data, String text, final String field, final Object value)
+  public static MenuItem insertMenuRadio(Menu menu, int index, Object data, String text, String field, Object value)
   {
-    return insertMenuRadio(menu,index,data,text,field,value,SWT.NONE);
+    return insertMenuRadio(menu,index,data,text,field,value,true);
   }
 
-  /** add new menu item
+  /** add new radio menu item
+   * @param menu menu
+   * @param data data structure to store radio value or null
+   * @param text menu item text
+   * @param field field name in data structure to set on selection
+   * @param value value for radio button
+   * @param accelerator accelerator key or SWT.NONE
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem addMenuRadio(Menu menu, Object data, String text, String field, Object value, int accelerator, boolean isVisible)
+  {
+    return insertMenuRadio(menu,-1,data,text,field,value,accelerator,isVisible);
+  }
+
+  /** add new radio menu item
    * @param menu menu
    * @param data data structure to store radio value or null
    * @param text menu item text
@@ -8802,12 +9033,26 @@ else
    * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
-  public static MenuItem addMenuRadio(Menu menu, final Object data, String text, final String field, final Object value, int accelerator)
+  public static MenuItem addMenuRadio(Menu menu, String text, Object data, String field, Object value, int accelerator)
   {
-    return insertMenuRadio(menu,-1,data,text,field,value,accelerator);
+    return addMenuRadio(menu,data,text,field,value,accelerator,true);
   }
 
-  /** add new menu item
+  /** add new radio menu item
+   * @param menu menu
+   * @param data data structure to store radio value or null
+   * @param text menu item text
+   * @param field field name in data structure to set on selection
+   * @param value value for radio button
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem addMenuRadio(Menu menu, Object data, String text, String field, Object value, boolean isVisible)
+  {
+    return addMenuRadio(menu,data,text,field,value,SWT.NONE,isVisible);
+  }
+
+  /** add new radio menu item
    * @param menu menu
    * @param data data structure to store radio value or null
    * @param text menu item text
@@ -8815,32 +9060,51 @@ else
    * @param value value for radio button
    * @return new menu item
    */
-  public static MenuItem addMenuRadio(Menu menu, String text, final Object data, final String field, final Object value)
+  public static MenuItem addMenuRadio(Menu menu, Object data, String text, String field, Object value)
   {
-    return addMenuRadio(menu,data,text,field,value,SWT.NONE);
+    return addMenuRadio(menu,data,text,field,value,true);
   }
 
-  /** add new menu item
+  /** add new radio menu item
    * @param menu menu
    * @param text menu item text
-   * @param selected true iff radio menu item is selected
+   * @param isVisible true for visible, false otherwise
    * @return new menu item
    */
-  public static MenuItem addMenuRadio(Menu menu, String text, boolean selected)
+  public static MenuItem addMenuRadio(Menu menu, String text, boolean isVisible)
   {
-    MenuItem menuItem = addMenuRadio(menu,text,null,null,null);
-    menuItem.setSelection(selected);
-    return menuItem;
+    return addMenuRadio(menu,(Object)null,text,(String)null,(Object)null,isVisible);
   }
 
-  /** add new menu item
+  /** add new radio menu item
    * @param menu menu
    * @param text menu item text
    * @return new menu item
    */
   public static MenuItem addMenuRadio(Menu menu, String text)
   {
-    return addMenuRadio(menu,text,null,null,null);
+    return addMenuRadio(menu,text,true);
+  }
+
+  /** add new menu separator
+   * @param menu menu
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem addMenuSeparator(Menu menu, boolean isVisible)
+  {
+    MenuItem menuItem;
+
+    if (isVisible)
+    {
+      menuItem = new MenuItem(menu,SWT.SEPARATOR);
+    }
+    else
+    {
+      menuItem = null;
+    }
+
+    return menuItem;
   }
 
   /** add new menu separator
@@ -8849,9 +9113,7 @@ else
    */
   public static MenuItem addMenuSeparator(Menu menu)
   {
-    MenuItem menuItem = new MenuItem(menu,SWT.SEPARATOR);
-
-    return menuItem;
+    return addMenuSeparator(menu,true);
   }
 
   /** get menu item
