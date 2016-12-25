@@ -2659,17 +2659,39 @@ does not work on Windows? Even cursor keys trigger traversal event?
   /** create new text view
    * @param composite composite widget
    * @param style view style
+   * @param isVisible true for visible, false otherwise
    * @return new text view
    */
-  public static StyledText newTextView(Composite composite, int style)
+  public static StyledText newTextView(Composite composite, int style, boolean isVisible)
   {
     StyledText styledText;
 
     styledText = new StyledText(composite,style|SWT.READ_ONLY);
+    styledText.setLayoutData(new TableLayoutData(isVisible));
     styledText.setBackground(composite.getBackground());
     styledText.setText("");
 
     return styledText;
+  }
+
+  /** create new text view
+   * @param composite composite widget
+   * @param style view style
+   * @return new text view
+   */
+  public static StyledText newTextView(Composite composite, int style)
+  {
+    return newTextView(composite,style,true);
+  }
+
+  /** create new string view
+   * @param composite composite widget
+   * @param isVisible true for visible, false otherwise
+   * @return new view
+   */
+  public static StyledText newTextView(Composite composite, boolean isVisible)
+  {
+    return newTextView(composite,SWT.LEFT|SWT.BORDER|SWT.MULTI|SWT.H_SCROLL|SWT.V_SCROLL,isVisible);
   }
 
   /** create new string view
@@ -2678,7 +2700,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static StyledText newTextView(Composite composite)
   {
-    return newTextView(composite,SWT.LEFT|SWT.BORDER|SWT.MULTI|SWT.H_SCROLL|SWT.V_SCROLL);
+    return newTextView(composite,true);
   }
 
   //-----------------------------------------------------------------------
@@ -3201,13 +3223,15 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param field field name in data structure to set on selection
    * @param value value for text input field
    * @param style text style
+   * @param isVisible true for visible, false otherwise
    * @return new text widget
    */
-  public static Text newText(Composite composite, final Object data, final String field, String value, int style)
+  public static Text newText(Composite composite, final Object data, final String field, String value, int style, boolean isVisible)
   {
     Text text;
 
     text = new Text(composite,style);
+    text.setLayoutData(new TableLayoutData(isVisible));
     if      (value != null)
     {
       text.setText(value);
@@ -3257,11 +3281,37 @@ does not work on Windows? Even cursor keys trigger traversal event?
    * @param data data structure to store text value or null
    * @param field field name in data structure to set on selection
    * @param value value for text input field
+   * @param isVisible true for visible, false otherwise
+   * @return new text widget
+   */
+  public static Text newText(Composite composite, Object data, String field, String value, boolean isVisible)
+  {
+    return newText(composite,data,field,value,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.SINGLE,isVisible);
+  }
+
+  /** create new text input widget (single line)
+   * @param composite composite widget
+   * @param data data structure to store text value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for text input field
    * @return new text widget
    */
   public static Text newText(Composite composite, Object data, String field, String value)
   {
-    return newText(composite,data,field,value,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.SINGLE);
+    return newText(composite,data,field,value,true);
+  }
+
+  /** create new text input widget (single line)
+   * @param composite composite widget
+   * @param data data structure to store text value or null
+   * @param field field name in data structure to set on selection
+   * @param style text style
+   * @param isVisible true for visible, false otherwise
+   * @return new text widget
+   */
+  public static Text newText(Composite composite, Object data, String field, int style, boolean isVisible)
+  {
+    return newText(composite,data,field,"",style,isVisible);
   }
 
   /** create new text input widget (single line)
@@ -3273,7 +3323,19 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Text newText(Composite composite, Object data, String field, int style)
   {
-    return newText(composite,data,field,"",style);
+    return newText(composite,data,field,style,true);
+  }
+
+  /** create new text input widget (single line)
+   * @param composite composite widget
+   * @param data data structure to store text value or null
+   * @param field field name in data structure to set on selection
+   * @param isVisible true for visible, false otherwise
+   * @return new text widget
+   */
+  public static Text newText(Composite composite, Object data, String field, boolean isVisible)
+  {
+    return newText(composite,data,field,"",isVisible);
   }
 
   /** create new text input widget (single line)
@@ -3284,7 +3346,18 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Text newText(Composite composite, Object data, String field)
   {
-    return newText(composite,data,field,"");
+    return newText(composite,data,field,true);
+  }
+
+  /** create new text input widget (single line)
+   * @param composite composite widget
+   * @param style text style
+   * @param isVisible true for visible, false otherwise
+   * @return new text widget
+   */
+  public static Text newText(Composite composite, int style, boolean isVisible)
+  {
+    return newText(composite,(String)null,(String)null,style,isVisible);
   }
 
   /** create new text input widget (single line)
@@ -3294,7 +3367,17 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Text newText(Composite composite, int style)
   {
-    return newText(composite,null,null,style);
+    return newText(composite,style,true);
+  }
+
+  /** create new text input widget (single line)
+   * @param composite composite widget
+   * @param isVisible true for visible, false otherwise
+   * @return new text widget
+   */
+  public static Text newText(Composite composite, boolean isVisible)
+  {
+    return newText(composite,(String)null,(String)null,isVisible);
   }
 
   /** create new text input widget (single line)
@@ -3303,7 +3386,7 @@ does not work on Windows? Even cursor keys trigger traversal event?
    */
   public static Text newText(Composite composite)
   {
-    return newText(composite,null,null);
+    return newText(composite,true);
   }
 
   //-----------------------------------------------------------------------
@@ -4323,13 +4406,15 @@ e composite widget
    * @param field field name in data structure to set on selection
    * @param value value for checkbox
    * @param style SWT style flags
+   * @param isVisible true for visible, false otherwise
    * @return new combo widget
    */
-  public static Combo newCombo(Composite composite, final Object data, final String field, String value, int style)
+  public static Combo newCombo(Composite composite, final Object data, final String field, String value, int style, boolean isVisible)
   {
     Combo combo;
 
     combo = new Combo(composite,style);
+    combo.setLayoutData(new TableLayoutData(isVisible));
     if      (value != null)
     {
       combo.setText(value);
@@ -4360,12 +4445,51 @@ e composite widget
    * @param composite composite widget
    * @param data data structure to store combo value or null
    * @param field field name in data structure to set on selection
+   * @param value value for checkbox
+   * @param style SWT style flags
+   * @return new combo widget
+   */
+  public static Combo newCombo(Composite composite, final Object data, final String field, String value, int style)
+  {
+    return newCombo(composite,data,field,value,style,true);
+  }
+
+  /** new combo widget
+   * @param composite composite widget
+   * @param data data structure to store combo value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for combo
+   * @param isVisible true for visible, false otherwise
+   * @return new combo widget
+   */
+  public static Combo newCombo(Composite composite, Object data, String field, String value, boolean isVisible)
+  {
+    return newCombo(composite,data,field,value,SWT.BORDER,isVisible);
+  }
+
+  /** new combo widget
+   * @param composite composite widget
+   * @param data data structure to store combo value or null
+   * @param field field name in data structure to set on selection
    * @param value value for combo
    * @return new combo widget
    */
   public static Combo newCombo(Composite composite, Object data, String field, String value)
   {
-    return newCombo(composite,data,field,value,SWT.BORDER);
+    return newCombo(composite,data,field,value,true);
+  }
+
+  /** new combo widget
+   * @param composite composite widget
+   * @param data data structure to store combo value or null
+   * @param field field name in data structure to set on selection
+   * @param style SWT style flags
+   * @param isVisible true for visible, false otherwise
+   * @return new combo widget
+   */
+  public static Combo newCombo(Composite composite, Object data, String field, int style, boolean isVisible)
+  {
+    return newCombo(composite,data,field,(String)null,style,isVisible);
   }
 
   /** new combo widget
@@ -4377,7 +4501,19 @@ e composite widget
    */
   public static Combo newCombo(Composite composite, Object data, String field, int style)
   {
-    return newCombo(composite,data,field,null,style);
+    return newCombo(composite,data,field,style,true);
+  }
+
+  /** new combo widget
+   * @param composite composite widget
+   * @param data data structure to store combo value or null
+   * @param field field name in data structure to set on selection
+   * @param isVisible true for visible, false otherwise
+   * @return new combo widget
+   */
+  public static Combo newCombo(Composite composite, Object data, String field, boolean isVisible)
+  {
+    return newCombo(composite,data,field,SWT.BORDER,isVisible);
   }
 
   /** new combo widget
@@ -4388,7 +4524,18 @@ e composite widget
    */
   public static Combo newCombo(Composite composite, Object data, String field)
   {
-    return newCombo(composite,data,field,SWT.BORDER);
+    return newCombo(composite,data,field,true);
+  }
+
+  /** new combo widget
+   * @param composite composite widget
+   * @param style SWT style flags
+   * @param isVisible true for visible, false otherwise
+   * @return new combo widget
+   */
+  public static Combo newCombo(Composite composite, int style, boolean isVisible)
+  {
+    return newCombo(composite,null,null,style,isVisible);
   }
 
   /** new combo widget
@@ -4398,7 +4545,17 @@ e composite widget
    */
   public static Combo newCombo(Composite composite, int style)
   {
-    return newCombo(composite,null,null,style);
+    return newCombo(composite,null,null,style,true);
+  }
+
+  /** new combo widget
+   * @param composite composite widget
+   * @param isVisible true for visible, false otherwise
+   * @return new combo widget
+   */
+  public static Combo newCombo(Composite composite, boolean isVisible)
+  {
+    return newCombo(composite,SWT.BORDER,isVisible);
   }
 
   /** new combo widget
@@ -4407,7 +4564,7 @@ e composite widget
    */
   public static Combo newCombo(Composite composite)
   {
-    return newCombo(composite,SWT.BORDER);
+    return newCombo(composite,true);
   }
 
   /** set combo items
@@ -4853,11 +5010,37 @@ e composite widget
    * @param data data structure to store combo value or null
    * @param field field name in data structure to set on selection
    * @param value value for combo
+   * @param isVisible true for visible, false otherwise
+   * @return new option menu combo widget
+   */
+  public static Combo newOptionMenu(Composite composite, Object data, String field, String value, boolean isVisible)
+  {
+    return newCombo(composite,data,field,value,SWT.RIGHT|SWT.READ_ONLY,isVisible);
+  }
+
+  /** create new option menu
+   * @param composite composite widget
+   * @param data data structure to store combo value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for combo
    * @return new option menu combo widget
    */
   public static Combo newOptionMenu(Composite composite, Object data, String field, String value)
   {
-    return newCombo(composite,data,field,value,SWT.RIGHT|SWT.READ_ONLY);
+    return newOptionMenu(composite,data,field,value,true);
+  }
+
+  /** create new option menu
+   * @param composite composite widget
+   * @param data data structure to store combo value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for combo
+   * @param isVisible true for visible, false otherwise
+   * @return new option menu combo widget
+   */
+  public static Combo newOptionMenu(Composite composite, Object data, String field, boolean isVisible)
+  {
+    return newOptionMenu(composite,data,field,(String)null,isVisible);
   }
 
   /** create new option menu
@@ -4869,7 +5052,17 @@ e composite widget
    */
   public static Combo newOptionMenu(Composite composite, Object data, String field)
   {
-    return newOptionMenu(composite,data,field,null);
+    return newOptionMenu(composite,data,field,true);
+  }
+
+  /** create new option menu
+   * @param composite composite widget
+   * @param isVisible true for visible, false otherwise
+   * @return new option menu combo widget
+   */
+  public static Combo newOptionMenu(Composite composite, boolean isVisible)
+  {
+    return newOptionMenu(composite,(Object)null,(String)null,isVisible);
   }
 
   /** create new option menu
@@ -4878,7 +5071,7 @@ e composite widget
    */
   public static Combo newOptionMenu(Composite composite)
   {
-    return newOptionMenu(composite,null,null);
+    return newOptionMenu(composite,true);
   }
 
   /** set option menu items
@@ -5512,7 +5705,7 @@ e composite widget
     tableItems[j].setChecked(checked);
   }
 
-  /** set sort column
+  /** set sort column, toggle sort direction
    * @param table table
    * @param tableColumn table column to sort by
    */
@@ -5536,7 +5729,7 @@ e composite widget
     }
   }
 
-  /** select sort column and sort table
+  /** select sort column and sort table, toggle sort direction
    * @param table table
    * @param tableColumn table column to sort by
    * @param comparator table data comparator
@@ -5553,7 +5746,7 @@ e composite widget
     }
   }
 
-  /** select sort column and sort table
+  /** select sort column and sort table, toggle sort direction
    * @param table table
    * @param columnNb column index to sort by (0..n-1)
    * @param comparator table data comparator
@@ -5636,25 +5829,31 @@ e composite widget
   /** sort table column
    * @param table table
    * @param tableColumn table column
-   * @param sortDirection sorting direction
+   * @param sortDirection sorting direction (SWT.UP, SWT.DOWN)
    */
   public static void sortTable(Table table, TableColumn tableColumn, int sortDirection)
   {
-    Event event = new Event();
+    if (!table.isDisposed())
+    {
+      table.setSortDirection(sortDirection);
 
-    table.setSortDirection(sortDirection);
-    event.widget = tableColumn;
-    tableColumn.notifyListeners(SWT.Selection,event);
+      Event event = new Event();
+      event.widget = tableColumn;
+      tableColumn.notifyListeners(SWT.Selection,event);
+    }
   }
 
   /** sort table column
    * @param table table
    * @param columnNb column index (0..n-1)
-   * @param sortDirection sorting direction
+   * @param sortDirection sorting direction (SWT.UP, SWT.DOWN)
    */
   public static void sortTable(Table table, int columnNb, int sortDirection)
   {
-    sortTable(table,table.getColumn(columnNb),sortDirection);
+    if (!table.isDisposed())
+    {
+      sortTable(table,table.getColumn(columnNb),sortDirection);
+    }
   }
 
   /** sort table column (ascending)
@@ -7642,13 +7841,38 @@ private static void printTree(Tree tree)
 
   /** set sort tree column
    * @param tree tree
-   * @param tableColumn table column to sort by
+   * @param treeColumn tree column to sort by
+   */
+  public static void setSortTreeColumn(Tree tree, TreeColumn treeColumn, int sortDirection)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.setSortColumn(treeColumn);
+      tree.setSortDirection(sortDirection);
+    }
+  }
+
+  /** set sort tree column
+   * @param tree tree
+   * @param treeColumn tree column to sort by
+   */
+  public static void setSortTreeColumn(Tree tree, int columnNb, int sortDirection)
+  {
+    if (!tree.isDisposed())
+    {
+      setSortTreeColumn(tree,tree.getColumn(columnNb),sortDirection);
+    }
+  }
+
+  /** set sort tree column, toggle sort direction
+   * @param tree tree
+   * @param treeColumn tree column to sort by
    */
   public static void setSortTreeColumn(Tree tree, TreeColumn treeColumn)
   {
     if (!tree.isDisposed())
     {
-      // get sorting direction
+      // get/toggle sorting direction
       int sortDirection = tree.getSortDirection();
       if (sortDirection == SWT.NONE) sortDirection = SWT.UP;
       if (tree.getSortColumn() == treeColumn)
@@ -7661,8 +7885,7 @@ private static void printTree(Tree tree)
       }
 
       // set column sort indicators
-      tree.setSortColumn(treeColumn);
-      tree.setSortDirection(sortDirection);
+      setSortTreeColumn(tree,treeColumn,sortDirection);
     }
   }
 
@@ -7716,7 +7939,70 @@ private static void printTree(Tree tree)
     }
   }
 
-    /** get width of tree columns
+  /** select sort column and sort tree, toggle sort direction
+   * @param tree tree
+   * @param columnNb column index to sort by (0..n-1)
+   * @param comparator tree data comparator
+   */
+  public static void sortTreeColumn(Tree tree, int columnNb, Comparator comparator)
+  {
+    sortTreeColumn(tree,tree.getColumn(columnNb),comparator);
+  }
+
+  /** set sort tree column, toggle sort direction
+   * @param tree tree
+   * @param treeColumn table column to sort by
+   * @param sortDirection sort direction (SWT.UP, SWT.DOWN)
+   */
+  public static void sortTreeColumn(Tree tree, Comparator comparator)
+  {
+    if (!tree.isDisposed())
+    {
+Dprintf.dprintf("");
+    }
+  }
+
+  /** sort tree column
+   * @param tree tree
+   * @param treeColumn table column to sort by
+   * @param sortDirection sort direction (SWT.UP, SWT.DOWN)
+   */
+  public static void sortTree(Tree tree, TreeColumn treeColumn, int sortDirection)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.setSortDirection(sortDirection);
+
+      Event event = new Event();
+      event.widget = treeColumn;
+      treeColumn.notifyListeners(SWT.Selection,event);
+    }
+  }
+
+  /** sort tree column
+   * @param tree tree
+   * @param treeColumn tree column number to sort by [0..n-1]
+   * @param sortDirection sort direction (SWT.UP, SWT.DOWN)
+   */
+  public static void sortTree(Tree tree, int columnNb, int sortDirection)
+  {
+    if (!tree.isDisposed())
+    {
+      sortTree(tree,tree.getColumn(columnNb),sortDirection);
+    }
+  }
+
+  /** sort tree (ascending)
+   * @param table table
+   * @param columnNb column index (0..n-1)
+   */
+  public static void sortTree(Tree tree, int columnNb)
+  {
+    sortTree(tree,columnNb,SWT.UP);
+  }
+
+
+  /** get width of tree columns
    * @param tree tree
    * @return tree columns width array
    */
