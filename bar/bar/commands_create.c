@@ -971,6 +971,7 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
   maxFragmentNumber = ((globalOptions.fragmentSize > 0LL) && (size > globalOptions.fragmentSize))
                         ? (size+globalOptions.fragmentSize-1)/globalOptions.fragmentSize
                         : 0;
+  fragmentNumber    = 0;
   fragmentOffset    = 0LL;
   do
   {
@@ -1103,6 +1104,7 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
   maxFragmentNumber = ((globalOptions.fragmentSize > 0LL) && (size > globalOptions.fragmentSize))
                         ? (size+globalOptions.fragmentSize-1)/globalOptions.fragmentSize
                         : 0;
+  fragmentNumber    = 0;
   fragmentOffset    = 0LL;
   do
   {
