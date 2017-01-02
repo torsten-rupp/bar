@@ -1012,7 +1012,7 @@ class ReadThread extends Thread
 public class BARServer
 {
   // --------------------------- constants --------------------------------
-  private final static int   PROTOCOL_VERSION_MAJOR = 4;
+  private final static int   PROTOCOL_VERSION_MAJOR = 5;
   private final static int   PROTOCOL_VERSION_MINOR = 0;
 
   public final static String DEFAULT_CA_FILE_NAME          = "bar-server-cert.pem";  // default certificate authority file name

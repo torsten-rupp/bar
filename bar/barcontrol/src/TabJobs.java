@@ -8937,7 +8937,6 @@ throw new Error("NYI");
    */
   private void clearJobData()
   {
-Dprintf.dprintf("clearJobData");
     clearFileTree();
     clearDeviceList();
     clearIncludeList();
@@ -13269,7 +13268,7 @@ throw new Error("NYI");
     {
       String[] resultErrorMessage = new String[1];
       ValueMap resultMap          = new ValueMap();
-      int error = BARServer.executeCommand(StringParser.format("SCHEDULE_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
+      int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
                                                                selectedJobData.uuid,
                                                                scheduleData.getDate(),
                                                                scheduleData.getWeekDays(),
@@ -13406,7 +13405,7 @@ throw new Error("NYI");
       {
         String[] resultErrorMessage = new String[1];
         ValueMap resultMap          = new ValueMap();
-        int error = BARServer.executeCommand(StringParser.format("SCHEDULE_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
+        int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
                                                                  selectedJobData.uuid,
                                                                  newScheduleData.getDate(),
                                                                  newScheduleData.getWeekDays(),
@@ -13463,7 +13462,7 @@ throw new Error("NYI");
 
           String[] resultErrorMessage = new String[1];
           ValueMap resultMap          = new ValueMap();
-          int error = BARServer.executeCommand(StringParser.format("SCHEDULE_REMOVE jobUUID=%s scheduleUUID=%s",selectedJobData.uuid,scheduleData.uuid),0,resultErrorMessage);
+          int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_REMOVE jobUUID=%s scheduleUUID=%s",selectedJobData.uuid,scheduleData.uuid),0,resultErrorMessage);
           if (error != Errors.NONE)
           {
             Dialogs.error(shell,BARControl.tr("Cannot delete schedule:\n\n{0}",resultErrorMessage[0]));
