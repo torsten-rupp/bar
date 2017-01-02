@@ -423,7 +423,7 @@ sslFlag = TRUE;
     String_delete(line);
     return error;
   }
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx%s\n",__FILE__,__LINE__,String_cString(line));
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
 
   // add remote server
   remoteServerNode = LIST_NEW_NODE(RemoteServerNode);
@@ -441,7 +441,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx%s\n",__FILE__,__LINE__,String_cString(li
   // free resources
   String_delete(line);
 
-  printInfo(2,"Connected remote host '%s'",String_cString(remoteServerNode->hostName));
+  printInfo(2,"Connected remote host '%s:%d'\n",String_cString(remoteServerNode->hostName),remoteServerNode->hostPort);
 
   return ERROR_NONE;
 }
@@ -542,7 +542,7 @@ sslFlag = TRUE;
 
     // send command
     (void)Network_send(&remoteServerNode->socketHandle,String_cString(line),String_length(line));
-//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
+    printInfo(4,"Sent remote command: %s",String_cString(line));
 
     // wait for result
     error = Network_readLine(&remoteServerNode->socketHandle,line,30LL*1000);
@@ -552,6 +552,7 @@ sslFlag = TRUE;
       String_delete(line);
       return error;
     }
+    printInfo(4,"Received remote result: %s\n",String_cString(line));
 
     // parse result
 //fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
@@ -602,6 +603,7 @@ Errors Remote_executeCommand(const RemoteHost *remoteHost,
 }
 
 Errors Remote_jobStart(const RemoteHost                *remoteHost,
+                       ConstString                     name,
                        ConstString                     jobUUID,
                        ConstString                     scheduleUUID,
                        ConstString                     storageName,
@@ -649,9 +651,10 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
   // create temporary job
 fprintf(stderr,"%s, %d: Remote_executeCommand\n",__FILE__,__LINE__);
-  error = Remote_executeCommand(remoteHost,NULL,"JOB_NEW uuid=%S name=%'S master=%'S",jobUUID,jobUUID/*TODO name*/,Network_getHostName(s));
+  error = Remote_executeCommand(remoteHost,NULL,"JOB_NEW name=%'S jobUUID=%S master=%'S",name,jobUUID,Network_getHostName(s));
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
 
@@ -724,7 +727,6 @@ fprintf(stderr,"%s, %d: Remote_executeCommand\n",__FILE__,__LINE__);
                                                                );
   if (error == ERROR_NONE) error = Remote_setJobOptionBoolean  (remoteHost,jobUUID,"overwrite-files",        jobOptions->overwriteEntriesFlag        );
   if (error == ERROR_NONE) error = Remote_setJobOptionBoolean  (remoteHost,jobUUID,"wait-first-volume",      jobOptions->waitFirstVolumeFlag         );
-fprintf(stderr,"%s, %d: %d: Remote_jobStart %s\n",__FILE__,__LINE__,error,Error_getText(error));
 
   if (error == ERROR_NONE) error = Remote_executeCommand(remoteHost,NULL,"INCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(includeEntryList,entryNode)
@@ -799,6 +801,7 @@ fprintf(stderr,"%s, %d: %d: Remote_jobStart %s\n",__FILE__,__LINE__,error,Error_
     String_delete(s);
     return error;
   }
+fprintf(stderr,"%s, %d: %d: Remote_jobStart %s\n",__FILE__,__LINE__,error,Error_getText(error));
 
 //exit(123);
   // start execute job

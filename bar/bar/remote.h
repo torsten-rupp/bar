@@ -140,27 +140,29 @@ Errors Remote_executeCommand(const RemoteHost *remoteHost,
 /***********************************************************************\
 * Name   : Remote_jobStart
 * Purpose: start job on remote host
-* Input  : remoteHost  - remote host
-*          jobUUID
-*          scheduleUUID
-*          storageName
-*          includeEntryList
-*          excludePatternList
-*          mountList
-*          compressExcludePatternList
-*          deltaSourceList
-*          jobOptions
-*          archiveType
-*          scheduleTitle
-*          scheduleCustomText
-*          storageRequestVolumeFunction
-*          storageRequestVolumeUserData
+* Input  : remoteHost                   - remote host
+*          name                         - job name
+*          jobUUID                      - job UUID
+*          scheduleUUID                 - schedule UUID
+*          storageName                  - storage name
+*          includeEntryList             - include entry list
+*          excludePatternList           - exclude pattern list 
+*          mountList                    - mount list
+*          compressExcludePatternList   - compress exclude list
+*          deltaSourceList              - delta source list
+*          jobOptions                   - job options
+*          archiveType                  - archive type to create
+*          scheduleTitle                - schedule title
+*          scheduleCustomText           - schedule custom text
+*          storageRequestVolumeFunction - 
+*          storageRequestVolumeUserData -
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Remote_jobStart(const RemoteHost                *remoteHost,
+                       ConstString                     name,
                        ConstString                     jobUUID,
                        ConstString                     scheduleUUID,
                        ConstString                     storageName,
