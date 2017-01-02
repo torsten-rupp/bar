@@ -3,13 +3,13 @@
 * $Revision: 4135 $
 * $Date: 2015-09-19 11:03:57 +0200 (Sat, 19 Sep 2015) $
 * $Author: torsten $
-* Contents: Backup ARchiver remote functions
+* Contents: Backup ARchiver slave functions
 * Systems: all
 *
 \***********************************************************************/
 
-#ifndef __REMOTE__
-#define __REMOTE__
+#ifndef __SLAVE__
+#define __SLAVE__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
@@ -29,13 +29,13 @@
 
 /***************************** Variables *******************************/
 
-// remote host
+// slave host
 typedef struct
 {
-  String name;                               // name of remote host where job should run
-  uint   port;                               // port of remote host where job should run or 0 for default
-  bool   forceSSL;                           // force SSL connection to remote hose
-} RemoteHost;
+  String name;                               // name of slave host where job should run
+  uint   port;                               // port of slave host where job should run or 0 for default
+  bool   forceSSL;                           // force SSL connection to slave hose
+} SlaveHost;
 
 /****************************** Macros *********************************/
 
@@ -48,105 +48,105 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Remote_initHost
-* Purpose: init remote host info
-* Input  : remoteHost  - remote host variable
+* Name   : Slave_initHost
+* Purpose: init slave host info
+* Input  : slaveHost   - slave host variable
 *          defaultPort - default port
-* Output : remoteHost - remote host
+* Output : slaveHost - slave host
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Remote_initHost(RemoteHost *remoteHost, uint defaultPort);
+void Slave_initHost(SlaveHost *slaveHost, uint defaultPort);
 
 /***********************************************************************\
-* Name   : Remote_doneHost
-* Purpose: done remote host info
-* Input  : remoteHost - remote host
+* Name   : Slave_doneHost
+* Purpose: done slave host info
+* Input  : slaveHost - slave host
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Remote_doneHost(RemoteHost *remoteHost);
+void Slave_doneHost(SlaveHost *slaveHost);
 
 /***********************************************************************\
-* Name   : Remote_copyHost
-* Purpose: copy remote host info
-* Input  : toRemoteHost   - remote host variable
-*          fromRemoteHost - from remote host
+* Name   : Slave_copyHost
+* Purpose: copy slave host info
+* Input  : toSlaveHost   - slave host variable
+*          fromSlaveHost - from slave host
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Remote_copyHost(RemoteHost *toRemoteHost, const RemoteHost *fromRemoteHost);
+void Slave_copyHost(SlaveHost *toSlaveHost, const SlaveHost *fromSlaveHost);
 
 /***********************************************************************\
-* Name   : Remote_duplicateHost
-* Purpose: duplicate remote host info
-* Input  : toRemoteHost   - remote host variable
-*          fromRemoteHost - from remote host
+* Name   : Slave_duplicateHost
+* Purpose: duplicate slave host info
+* Input  : toSlaveHost   - slave host variable
+*          fromSlaveHost - from slave host
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Remote_duplicateHost(RemoteHost *toRemoteHost, const RemoteHost *fromRemoteHost);
+void Slave_duplicateHost(SlaveHost *toSlaveHost, const SlaveHost *fromSlaveHost);
 
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : Remote_connect
-* Purpose: connect to remote host
-* Input  : remoteHost - remote host
+* Name   : Slave_connect
+* Purpose: connect to slave host
+* Input  : slaveHost - slave host
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Remote_connect(const RemoteHost *remoteHost);
+Errors Slave_connect(const SlaveHost *slaveHost);
 
 /***********************************************************************\
-* Name   : Remote_isConnected
-* Purpose: check if remote host is connected
-* Input  : remoteHost - remote host
+* Name   : Slave_isConnected
+* Purpose: check if slave host is connected
+* Input  : slaveHost - slave host
 * Output : -
 * Return : TRUE iff connected
 * Notes  : -
 \***********************************************************************/
 
-bool Remote_isConnected(const RemoteHost *remoteHost);
+bool Slave_isConnected(const SlaveHost *slaveHost);
 
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : Remote_executeCommand
-* Purpose: execute command on remote host
-* Input  : remoteHost - remote host
-*          format     - command
-*          ...        - optional command arguments
+* Name   : Slave_executeCommand
+* Purpose: execute command on slave host
+* Input  : slaveHost - slave host
+*          format    - command
+*          ...       - optional command arguments
 * Output : resultMap - result map
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Remote_executeCommand(const RemoteHost *remoteHost,
-                             StringMap        resultMap,
-                             const char       *format,
-                             ...
-                            );
+Errors Slave_executeCommand(const SlaveHost *slaveHost,
+                            StringMap       resultMap,
+                            const char      *format,
+                            ...
+                           );
 
 /***********************************************************************\
-* Name   : Remote_jobStart
-* Purpose: start job on remote host
-* Input  : remoteHost                   - remote host
+* Name   : Slave_jobStart
+* Purpose: start job on slave host
+* Input  : slaveHost                    - slave host
 *          name                         - job name
 *          jobUUID                      - job UUID
 *          scheduleUUID                 - schedule UUID
 *          storageName                  - storage name
 *          includeEntryList             - include entry list
-*          excludePatternList           - exclude pattern list 
+*          excludePatternList           - exclude pattern list
 *          mountList                    - mount list
 *          compressExcludePatternList   - compress exclude list
 *          deltaSourceList              - delta source list
@@ -154,52 +154,52 @@ Errors Remote_executeCommand(const RemoteHost *remoteHost,
 *          archiveType                  - archive type to create
 *          scheduleTitle                - schedule title
 *          scheduleCustomText           - schedule custom text
-*          storageRequestVolumeFunction - 
+*          storageRequestVolumeFunction -
 *          storageRequestVolumeUserData -
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Remote_jobStart(const RemoteHost                *remoteHost,
-                       ConstString                     name,
-                       ConstString                     jobUUID,
-                       ConstString                     scheduleUUID,
-                       ConstString                     storageName,
-                       const EntryList                 *includeEntryList,
-                       const PatternList               *excludePatternList,
-                       MountList                       *mountList,
-                       const PatternList               *compressExcludePatternList,
-                       DeltaSourceList                 *deltaSourceList,
-                       JobOptions                      *jobOptions,
-                       ArchiveTypes                    archiveType,
-                       ConstString                     scheduleTitle,
-                       ConstString                     scheduleCustomText,
-  //                     GetPasswordFunction getPasswordFunction,
-  //                     void                            *getPasswordUserData,
-  //                     CreateStatusInfoFunction        createStatusInfoFunction,
-  //                     void                            *createStatusInfoUserData,
-                       StorageRequestVolumeFunction    storageRequestVolumeFunction,
-                       void                            *storageRequestVolumeUserData
-                      );
+Errors Slave_jobStart(const SlaveHost                 *slaveHost,
+                      ConstString                     name,
+                      ConstString                     jobUUID,
+                      ConstString                     scheduleUUID,
+                      ConstString                     storageName,
+                      const EntryList                 *includeEntryList,
+                      const PatternList               *excludePatternList,
+                      MountList                       *mountList,
+                      const PatternList               *compressExcludePatternList,
+                      DeltaSourceList                 *deltaSourceList,
+                      JobOptions                      *jobOptions,
+                      ArchiveTypes                    archiveType,
+                      ConstString                     scheduleTitle,
+                      ConstString                     scheduleCustomText,
+ //                     GetPasswordFunction getPasswordFunction,
+ //                     void                            *getPasswordUserData,
+ //                     CreateStatusInfoFunction        createStatusInfoFunction,
+ //                     void                            *createStatusInfoUserData,
+                      StorageRequestVolumeFunction    storageRequestVolumeFunction,
+                      void                            *storageRequestVolumeUserData
+                     );
 
 /***********************************************************************\
-* Name   : Remote_jobAbort
-* Purpose: abort job on remote host
-* Input  : remoteHost - remote host
+* Name   : Slave_jobAbort
+* Purpose: abort job on slave host
+* Input  : slaveHost - slave host
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Remote_jobAbort(const RemoteHost *remoteHost,
-                       ConstString      jobUUID
-                      );
+Errors Slave_jobAbort(const SlaveHost *slaveHost,
+                      ConstString     jobUUID
+                     );
 
 #ifdef __cplusplus
   }
 #endif
 
-#endif /* __REMOTE__ */
+#endif /* __SLAVE__ */
 
 /* end of file */

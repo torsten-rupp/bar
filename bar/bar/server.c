@@ -48,7 +48,7 @@
 
 #include "commands_create.h"
 #include "commands_restore.h"
-#include "remote.h"
+#include "slave.h"
 
 #include "server.h"
 
@@ -71,8 +71,9 @@
 #define MAX_ABORT_COMMAND_IDS               512     // max. aborted command ids history
 
 // sleep times [s]
-//#define SLEEP_TIME_REMOTE_THREAD            ( 1*60)
-#define SLEEP_TIME_REMOTE_THREAD            (   20)
+//#define SLEEP_TIME_SLAVE_THREAD            ( 1*60)
+#define SLEEP_TIME_SLAVE_CONNECT_THREAD     (   60)
+#define SLEEP_TIME_SLAVE_THREAD             (    1)
 #define SLEEP_TIME_SCHEDULER_THREAD         ( 1*60)
 #define SLEEP_TIME_PAUSE_THREAD             ( 1*60)
 #define SLEEP_TIME_INDEX_THREAD             ( 1*60)
@@ -173,7 +174,7 @@ typedef struct JobNode
   String          uuid;                                 // unique id
   JobTypes        jobType;                              // job type: backup, restore
   String          name;                                 // name of job
-  RemoteHost      remoteHost;                           // remote host
+  SlaveHost       slaveHost;                            // slave host
   String          archiveName;                          // archive name
   EntryList       includeEntryList;                     // included entries
   String          includeFileCommand;                   // include file command
@@ -485,9 +486,9 @@ LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, co
 LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
   CONFIG_STRUCT_VALUE_STRING    ("UUID",                    JobNode,uuid                                    ),
-  CONFIG_STRUCT_VALUE_STRING    ("remote-host-name",        JobNode,remoteHost.name                         ),
-  CONFIG_STRUCT_VALUE_INTEGER   ("remote-host-port",        JobNode,remoteHost.port,                        0,65535,NULL),
-  CONFIG_STRUCT_VALUE_BOOLEAN   ("remote-host-force-ssl",   JobNode,remoteHost.forceSSL                     ),
+  CONFIG_STRUCT_VALUE_STRING    ("slave-host-name",         JobNode,slaveHost.name                          ),
+  CONFIG_STRUCT_VALUE_INTEGER   ("slave-host-port",         JobNode,slaveHost.port,                         0,65535,NULL),
+  CONFIG_STRUCT_VALUE_BOOLEAN   ("slave-host-force-ssl",    JobNode,slaveHost.forceSSL                      ),
   CONFIG_STRUCT_VALUE_STRING    ("archive-name",            JobNode,archiveName                             ),
   CONFIG_STRUCT_VALUE_SELECT    ("archive-type",            JobNode,jobOptions.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
 
@@ -592,8 +593,8 @@ LOCAL Semaphore             jobStatusLock;          // job status update lock
 LOCAL Thread                jobThread;              // thread executing jobs create/restore
 LOCAL Thread                schedulerThread;        // thread scheduling jobs
 LOCAL Thread                pauseThread;
-LOCAL Thread                remoteConnectThread;    // thread to connect remote BAR instances
-LOCAL Thread                remoteThread;           // thread to execute remote jobs
+LOCAL Thread                slaveConnectThread;     // thread to connect slave BAR instances
+LOCAL Thread                slaveThread;            // thread to update slave jobs status
 LOCAL Semaphore             indexThreadTrigger;
 LOCAL Thread                indexThread;            // thread to add/update index
 LOCAL Thread                autoIndexThread;        // thread to collect BAR files for auto-index
@@ -1814,7 +1815,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   String_delete(jobNode->includeFileCommand);
   EntryList_done(&jobNode->includeEntryList);
   String_delete(jobNode->archiveName);
-  Remote_doneHost(&jobNode->remoteHost);
+  Slave_doneHost(&jobNode->slaveHost);
   String_delete(jobNode->name);
   String_delete(jobNode->uuid);
   String_delete(jobNode->fileName);
@@ -1857,7 +1858,7 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
     Misc_getUUID(jobNode->uuid);
   }
   jobNode->name                           = File_getFileBaseName(String_new(),fileName);
-  Remote_initHost(&jobNode->remoteHost,serverPort);
+  Slave_initHost(&jobNode->slaveHost,serverPort);
   jobNode->archiveName                    = String_new();
   EntryList_init(&jobNode->includeEntryList);
   jobNode->includeFileCommand             = String_new();
@@ -1945,7 +1946,7 @@ LOCAL JobNode *copyJob(JobNode     *jobNode,
   newJobNode->uuid                           = String_new();
   newJobNode->jobType                        = jobNode->jobType;
   newJobNode->name                           = File_getFileBaseName(String_new(),fileName);
-  Remote_duplicateHost(&newJobNode->remoteHost,&jobNode->remoteHost);
+  Slave_duplicateHost(&newJobNode->slaveHost,&jobNode->slaveHost);
   newJobNode->archiveName                    = String_duplicate(jobNode->archiveName);
   EntryList_initDuplicate(&newJobNode->includeEntryList,
                           &jobNode->includeEntryList,
@@ -2057,23 +2058,23 @@ LOCAL_INLINE bool isJobLocal(const JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
-  return String_isEmpty(jobNode->remoteHost.name);
+  return String_isEmpty(jobNode->slaveHost.name);
 }
 
 /***********************************************************************\
-* Name   : isJobRemote
-* Purpose: check if a remote job
+* Name   : isSlaveJob
+* Purpose: check if a slave job
 * Input  : jobNode - job node
 * Output : -
-* Return : TRUE iff remote job
+* Return : TRUE iff slave job
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE bool isJobRemote(const JobNode *jobNode)
+LOCAL_INLINE bool isSlaveJob(const JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
-  return !String_isEmpty(jobNode->remoteHost.name);
+  return !String_isEmpty(jobNode->slaveHost.name);
 }
 
 /***********************************************************************\
@@ -2286,28 +2287,28 @@ LOCAL void triggerJob(JobNode      *jobNode,
   resetJobRunningInfo(jobNode);
 
 //TODO
-//fprintf(stderr,"%s, %d: isJobRemote=%d\n",__FILE__,__LINE__,isJobRemote(jobNode));
-  if (isJobRemote(jobNode))
+//fprintf(stderr,"%s, %d: isSlaveJob=%d\n",__FILE__,__LINE__,isSlaveJob(jobNode));
+  if (isSlaveJob(jobNode))
   {
-     // start remote create job
-     jobNode->runningInfo.error = Remote_jobStart(&jobNode->remoteHost,
-                                                  jobNode->name,
-                                                  jobNode->uuid,
-                                                  NULL,  // scheduleUUID
-                                                  jobNode->archiveName,
-                                                  &jobNode->includeEntryList,
-                                                  &jobNode->excludePatternList,
-                                                  &jobNode->mountList,
-                                                  &jobNode->compressExcludePatternList,
-                                                  &jobNode->deltaSourceList,
-                                                  &jobNode->jobOptions,
-                                                  archiveType,
-                                                  NULL,  // scheduleTitle,
-                                                  NULL,  // scheduleCustomText,
+     // start slave create job
+     jobNode->runningInfo.error = Slave_jobStart(&jobNode->slaveHost,
+                                                 jobNode->name,
+                                                 jobNode->uuid,
+                                                 NULL,  // scheduleUUID
+                                                 jobNode->archiveName,
+                                                 &jobNode->includeEntryList,
+                                                 &jobNode->excludePatternList,
+                                                 &jobNode->mountList,
+                                                 &jobNode->compressExcludePatternList,
+                                                 &jobNode->deltaSourceList,
+                                                 &jobNode->jobOptions,
+                                                 archiveType,
+                                                 NULL,  // scheduleTitle,
+                                                 NULL,  // scheduleCustomText,
 //                                                      CALLBACK(getCryptPassword,jobNode),
 //                                                      CALLBACK(updateCreateStatusInfo,jobNode),
-                                                  CALLBACK(storageRequestVolume,jobNode)
-                                                 );
+                                                 CALLBACK(storageRequestVolume,jobNode)
+                                                );
   }
 }
 
@@ -3519,7 +3520,7 @@ LOCAL void jobThreadCode(void)
   LogHandle        logHandle;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   String           hostName;
-  RemoteHost       remoteHost;
+  SlaveHost        slaveHost;
   EntryList        includeEntryList;
   PatternList      excludePatternList;
   MountList        mountList;
@@ -3548,7 +3549,7 @@ LOCAL void jobThreadCode(void)
   storageName                            = String_new();
   directory                              = String_new();
   hostName                               = String_new();
-  Remote_initHost(&remoteHost,serverPort);
+  Slave_initHost(&slaveHost,serverPort);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   List_init(&mountList);
@@ -3568,7 +3569,7 @@ LOCAL void jobThreadCode(void)
   {
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      // wait for and get next job to execute
+      // wait and get next job to execute
       do
       {
         // first check for a continuous job
@@ -3576,7 +3577,7 @@ LOCAL void jobThreadCode(void)
         while (   !quitFlag
                && (jobNode != NULL)
                && (   (jobNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
-                   || (isJobRemote(jobNode) || (jobNode->state != JOB_STATE_WAITING))
+                   || (isSlaveJob(jobNode) || (jobNode->state != JOB_STATE_WAITING))
                   )
               )
         {
@@ -3589,7 +3590,7 @@ LOCAL void jobThreadCode(void)
           jobNode = jobList.head;
           while (   !quitFlag
                  && (jobNode != NULL)
-                 && (isJobRemote(jobNode) || (jobNode->state != JOB_STATE_WAITING))
+                 && (isSlaveJob(jobNode) || (jobNode->state != JOB_STATE_WAITING))
                 )
           {
             jobNode = jobNode->next;
@@ -3615,7 +3616,7 @@ LOCAL void jobThreadCode(void)
       String_set(storageName,jobNode->archiveName);
       String_set(jobUUID,jobNode->uuid);
       Network_getHostName(hostName);
-      Remote_copyHost(&remoteHost,&jobNode->remoteHost);
+      Slave_copyHost(&slaveHost,&jobNode->slaveHost);
       EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList,CALLBACK(NULL,NULL));
       PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList,CALLBACK(NULL,NULL));
       List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL)); List_copy(&jobNode->mountList,&mountList,NULL,NULL,NULL,CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL));
@@ -3645,422 +3646,428 @@ LOCAL void jobThreadCode(void)
 
     // Note: job is now protected by running state from being deleted
 
-    // get start date/time
-    startDateTime = Misc_getCurrentDateTime();
+    if (!isSlaveJob(jobNode))
+    {
+      // get start date/time
+      startDateTime = Misc_getCurrentDateTime();
 
-    // init log
-    initLog(&logHandle);
-    String_clear(s);
-    if (jobOptions.dryRunFlag || jobOptions.noStorageFlag)
-    {
-      String_appendCString(s," (");
-      n = 0;
-      if (jobOptions.dryRunFlag)
+      // init log
+      initLog(&logHandle);
+      String_clear(s);
+      if (jobOptions.dryRunFlag || jobOptions.noStorageFlag)
       {
-        if (n > 0) String_appendCString(s,", ");
-        String_appendCString(s,"dry-run");
-        n++;
-      }
-      if (jobOptions.noStorageFlag)
-      {
-        if (n > 0) String_appendCString(s,", ");
-        String_appendCString(s,"no-storage");
-        n++;
-      }
-      String_appendCString(s,")");
-    }
-    switch (jobNode->jobType)
-    {
-      case JOB_TYPE_CREATE:
-        logMessage(&logHandle,
-                   LOG_TYPE_ALWAYS,
-                   "Started job '%s'%s %s%s%s\n",
-                   String_cString(jobName),
-                   !String_isEmpty(s) ? String_cString(s) : "",
-                   getArchiveTypeName(archiveType),
-                   !String_isEmpty(byName) ? " by " : "",
-                   String_cString(byName)
-                  );
-        break;
-      case JOB_TYPE_RESTORE:
-        logMessage(&logHandle,
-                   LOG_TYPE_ALWAYS,
-                   "Started restore%s%s%s\n",
-                   !String_isEmpty(s) ? String_cString(s) : "",
-                   !String_isEmpty(byName) ? " by " : "",
-                   String_cString(byName)
-                  );
-        break;
-    }
-
-    // parse storage name
-    if (jobNode->runningInfo.error == ERROR_NONE)
-    {
-      jobNode->runningInfo.error = Storage_parseName(&storageSpecifier,storageName);
-      if (jobNode->runningInfo.error != ERROR_NONE)
-      {
-        logMessage(&logHandle,
-                   LOG_TYPE_ALWAYS,
-                   "Aborted job '%s': invalid storage '%s' (error: %s)\n",
-                   String_cString(jobName),
-                   String_cString(storageName),
-                   Error_getText(jobNode->runningInfo.error)
-                  );
-      }
-    }
-
-    // get include/excluded entries from commands
-    if (!String_isEmpty(jobNode->includeFileCommand))
-    {
-      if (jobNode->runningInfo.error == ERROR_NONE)
-      {
-        jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->includeFileCommand));
-      }
-    }
-    if (!String_isEmpty(jobNode->includeImageCommand))
-    {
-      if (jobNode->runningInfo.error == ERROR_NONE)
-      {
-        jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->includeImageCommand));
-      }
-    }
-    if (!String_isEmpty(jobNode->excludeCommand))
-    {
-      if (jobNode->runningInfo.error == ERROR_NONE)
-      {
-        jobNode->runningInfo.error = addExcludeListCommand(&excludePatternList,String_cString(jobNode->excludeCommand));
-      }
-    }
-
-    // pre-process command
-    if (jobNode->runningInfo.error == ERROR_NONE)
-    {
-      if (jobNode->jobOptions.preProcessScript != NULL)
-      {
-        // get script
-        TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
-        TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-        TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeName(archiveType),NULL);
-        TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
-        TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
-        script = expandTemplate(String_cString(jobNode->jobOptions.preProcessScript),
-                                EXPAND_MACRO_MODE_STRING,
-                                startDateTime,
-                                TRUE,
-                                textMacros,
-                                SIZE_OF_ARRAY(textMacros)
-                               );
-        if (script != NULL)
+        String_appendCString(s," (");
+        n = 0;
+        if (jobOptions.dryRunFlag)
         {
-          // execute script
-          jobNode->runningInfo.error = Misc_executeScript(String_cString(script),
-                                                          CALLBACK(executeIOOutput,NULL),
-                                                          CALLBACK(executeIOOutput,NULL)
-                                                         );
-          String_delete(script);
+          if (n > 0) String_appendCString(s,", ");
+          String_appendCString(s,"dry-run");
+          n++;
         }
-        else
+        if (jobOptions.noStorageFlag)
         {
-          jobNode->runningInfo.error = ERROR_EXPAND_TEMPLATE;
+          if (n > 0) String_appendCString(s,", ");
+          String_appendCString(s,"no-storage");
+          n++;
         }
+        String_appendCString(s,")");
+      }
+      switch (jobNode->jobType)
+      {
+        case JOB_TYPE_CREATE:
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Started job '%s'%s %s%s%s\n",
+                     String_cString(jobName),
+                     !String_isEmpty(s) ? String_cString(s) : "",
+                     getArchiveTypeName(archiveType),
+                     !String_isEmpty(byName) ? " by " : "",
+                     String_cString(byName)
+                    );
+          break;
+        case JOB_TYPE_RESTORE:
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Started restore%s%s%s\n",
+                     !String_isEmpty(s) ? String_cString(s) : "",
+                     !String_isEmpty(byName) ? " by " : "",
+                     String_cString(byName)
+                    );
+          break;
+      }
 
+      // parse storage name
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        jobNode->runningInfo.error = Storage_parseName(&storageSpecifier,storageName);
         if (jobNode->runningInfo.error != ERROR_NONE)
         {
           logMessage(&logHandle,
                      LOG_TYPE_ALWAYS,
-                     "Aborted job '%s': pre-command fail (error: %s)\n",
+                     "Aborted job '%s': invalid storage '%s' (error: %s)\n",
                      String_cString(jobName),
+                     String_cString(storageName),
                      Error_getText(jobNode->runningInfo.error)
                     );
         }
       }
-    }
 
-    // run job
-    if (jobNode->runningInfo.error == ERROR_NONE)
-    {
-      #ifdef SIMULATOR
+      // get include/excluded entries from commands
+      if (!String_isEmpty(jobNode->includeFileCommand))
+      {
+        if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          int z;
+          jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->includeFileCommand));
+        }
+      }
+      if (!String_isEmpty(jobNode->includeImageCommand))
+      {
+        if (jobNode->runningInfo.error == ERROR_NONE)
+        {
+          jobNode->runningInfo.error = addIncludeListCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->includeImageCommand));
+        }
+      }
+      if (!String_isEmpty(jobNode->excludeCommand))
+      {
+        if (jobNode->runningInfo.error == ERROR_NONE)
+        {
+          jobNode->runningInfo.error = addExcludeListCommand(&excludePatternList,String_cString(jobNode->excludeCommand));
+        }
+      }
 
-          jobNode->runningInfo.estimatedRestTime=120;
-
-          jobNode->runningInfo.totalEntryCount += 60;
-          jobNode->runningInfo.totalEntrySize += 6000;
-
-          for (z=0;z<120;z++)
+      // pre-process command
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        if (jobNode->jobOptions.preProcessScript != NULL)
+        {
+          // get script
+          TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
+          TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
+          TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeName(archiveType),NULL);
+          TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
+          TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
+          script = expandTemplate(String_cString(jobNode->jobOptions.preProcessScript),
+                                  EXPAND_MACRO_MODE_STRING,
+                                  startDateTime,
+                                  TRUE,
+                                  textMacros,
+                                  SIZE_OF_ARRAY(textMacros)
+                                 );
+          if (script != NULL)
           {
-            extern void sleep(int);
-            if (jobNode->requestedAbortFlag) break;
+            // execute script
+            jobNode->runningInfo.error = Misc_executeScript(String_cString(script),
+                                                            CALLBACK(executeIOOutput,NULL),
+                                                            CALLBACK(executeIOOutput,NULL)
+                                                           );
+            String_delete(script);
+          }
+          else
+          {
+            jobNode->runningInfo.error = ERROR_EXPAND_TEMPLATE;
+          }
 
-            sleep(1);
-
-            if (z==40) {
-              jobNode->runningInfo.totalEntryCount += 80;
-              jobNode->runningInfo.totalEntrySize += 8000;
-            }
-
-            jobNode->runningInfo.doneCount++;
-            jobNode->runningInfo.doneSize += 100;
-//            jobNode->runningInfo.totalEntryCount += 3;
-//            jobNode->runningInfo.totalEntrySize += 181;
-            jobNode->runningInfo.estimatedRestTime=120-z;
-            String_clear(jobNode->runningInfo.fileName);String_format(jobNode->runningInfo.fileName,"file %d",z);
-            String_clear(jobNode->runningInfo.storageName);String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
+          if (jobNode->runningInfo.error != ERROR_NONE)
+          {
+            logMessage(&logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Aborted job '%s': pre-command fail (error: %s)\n",
+                       String_cString(jobName),
+                       Error_getText(jobNode->runningInfo.error)
+                      );
           }
         }
-      #else
-        switch (jobNode->jobType)
-        {
-          case JOB_TYPE_CREATE:
-            // create archive
-            jobNode->runningInfo.error = Command_create(jobUUID,
-                                                        scheduleUUID,
-                                                        storageName,
-                                                        &includeEntryList,
-                                                        &excludePatternList,
-                                                        &mountList,
-                                                        &compressExcludePatternList,
-                                                        &deltaSourceList,
-                                                        &jobOptions,
-                                                        archiveType,
-NULL,//                                                        scheduleTitle,
-                                                        scheduleCustomText,
-                                                        CALLBACK(getCryptPassword,jobNode),
-                                                        CALLBACK(updateCreateStatusInfo,jobNode),
-                                                        CALLBACK(storageRequestVolume,jobNode),
-                                                        &pauseFlags.create,
-                                                        &pauseFlags.storage,
-//TODO access jobNode?
-                                                        &jobNode->requestedAbortFlag,
-                                                        &logHandle
-                                                       );
+      }
 
-            // get end date/time
-            endDateTime = Misc_getCurrentDateTime();
-
-            if (jobNode->requestedAbortFlag)
-            {
-              // aborted
-              logMessage(&logHandle,
-                         LOG_TYPE_ALWAYS,
-                         "Aborted job '%s'\n",
-                         String_cString(jobName)
-                        );
-
-              // create history entry
-              if (indexHandle != NULL)
-              {
-                error = Index_newHistory(indexHandle,
-                                         jobUUID,
-                                         scheduleUUID,
-                                         hostName,
-                                         archiveType,
-                                         Misc_getTimestamp(),
-                                         "aborted",
-                                         endDateTime-startDateTime,
-                                         jobNode->runningInfo.totalEntryCount,
-                                         jobNode->runningInfo.totalEntrySize,
-                                         jobNode->runningInfo.skippedEntryCount,
-                                         jobNode->runningInfo.skippedEntrySize,
-                                         jobNode->runningInfo.errorEntryCount,
-                                         jobNode->runningInfo.errorEntrySize,
-                                         NULL  // historyId
-                                        );
-                if (error != ERROR_NONE)
-                {
-                  logMessage(&logHandle,
-                             LOG_TYPE_ALWAYS,
-                             "Cannot insert history information for '%s' (error: %s)\n",
-                             String_cString(jobName),
-                             Error_getText(error)
-                            );
-                }
-              }
-            }
-            else if (jobNode->runningInfo.error != ERROR_NONE)
-            {
-              // error
-              logMessage(&logHandle,
-                         LOG_TYPE_ALWAYS,
-                         "Done job '%s' (error: %s)\n",
-                         String_cString(jobName),
-                         Error_getText(jobNode->runningInfo.error)
-                        );
-
-              // create history entry
-              if (indexHandle != NULL)
-              {
-                error = Index_newHistory(indexHandle,
-                                         jobUUID,
-                                         scheduleUUID,
-                                         hostName,
-                                         archiveType,
-                                         Misc_getTimestamp(),
-                                         Error_getText(jobNode->runningInfo.error),
-                                         endDateTime-startDateTime,
-                                         jobNode->runningInfo.totalEntryCount,
-                                         jobNode->runningInfo.totalEntrySize,
-                                         jobNode->runningInfo.skippedEntryCount,
-                                         jobNode->runningInfo.skippedEntrySize,
-                                         jobNode->runningInfo.errorEntryCount,
-                                         jobNode->runningInfo.errorEntrySize,
-                                         NULL  // historyId
-                                        );
-                if (error != ERROR_NONE)
-                {
-                  logMessage(&logHandle,
-                             LOG_TYPE_ALWAYS,
-                             "Cannot insert history information for '%s' (error: %s)\n",
-                             String_cString(jobName),
-                             Error_getText(error)
-                            );
-                }
-              }
-            }
-            else
-            {
-              // success
-              logMessage(&logHandle,
-                         LOG_TYPE_ALWAYS,
-                         "Done job '%s' (duration: %llumin:%02us)\n",
-                         String_cString(jobName),
-                         (endDateTime-startDateTime) / 60,
-                         (uint)((endDateTime-startDateTime) % 60)
-                        );
-
-              // create history entry
-              if (indexHandle != NULL)
-              {
-                error = Index_newHistory(indexHandle,
-                                         jobUUID,
-                                         scheduleUUID,
-                                         hostName,
-                                         archiveType,
-                                         Misc_getTimestamp(),
-                                         NULL,  // errorMessage
-                                         endDateTime-startDateTime,
-                                         jobNode->runningInfo.totalEntryCount,
-                                         jobNode->runningInfo.totalEntrySize,
-                                         jobNode->runningInfo.skippedEntryCount,
-                                         jobNode->runningInfo.skippedEntrySize,
-                                         jobNode->runningInfo.errorEntryCount,
-                                         jobNode->runningInfo.errorEntrySize,
-                                         NULL  // historyId
-                                        );
-                if (error != ERROR_NONE)
-                {
-                  logMessage(&logHandle,
-                             LOG_TYPE_ALWAYS,
-                             "Cannot insert history information for '%s' (error: %s)\n",
-                             String_cString(jobName),
-                             Error_getText(error)
-                            );
-                }
-              }
-            }
-            break;
-          case JOB_TYPE_RESTORE:
-            // restore archive
-            StringList_init(&storageNameList);
-            StringList_append(&storageNameList,storageName);
-            jobNode->runningInfo.error = Command_restore(&storageNameList,
-                                                         &includeEntryList,
-                                                         &excludePatternList,
-                                                         &deltaSourceList,
-                                                         &jobOptions,
-                                                         CALLBACK(restoreUpdateStatusInfo,jobNode),
-                                                         CALLBACK(NULL,NULL),  // restoreHandleError
-                                                         CALLBACK(getCryptPassword,jobNode),
-                                                         CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
-                                                         CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
-                                                         &logHandle
-                                                        );
-            StringList_done(&storageNameList);
-
-            // get end date/time
-            endDateTime = Misc_getCurrentDateTime();
-
-            if (jobNode->runningInfo.error != ERROR_NONE)
-            {
-              logMessage(&logHandle,
-                         LOG_TYPE_ALWAYS,
-                         "Done restore archive (error: %s)\n",
-                         Error_getText(jobNode->runningInfo.error)
-                        );
-            }
-            else
-            {
-              logMessage(&logHandle,
-                         LOG_TYPE_ALWAYS,
-                         "Done restore archive\n"
-                        );
-            }
-            break;
-          #ifndef NDEBUG
-            default:
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break;
-          #endif /* NDEBUG */
-        }
-      #endif /* SIMULATOR */
-
-      logPostProcess(&logHandle,jobName,&jobNode->jobOptions,archiveType,scheduleCustomText);
-    }
-
-    // post-process command
-    if (jobNode->runningInfo.error == ERROR_NONE)
-    {
-      if (jobNode->jobOptions.postProcessScript != NULL)
+      // run job
+      if (jobNode->runningInfo.error == ERROR_NONE)
       {
-        // get script
-        TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
-        TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-        TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeName(archiveType),NULL);
-        TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
-        TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
-        script = expandTemplate(String_cString(jobNode->jobOptions.postProcessScript),
-                                EXPAND_MACRO_MODE_STRING,
-                                startDateTime,
-                                TRUE,
-                                textMacros,
-                                SIZE_OF_ARRAY(textMacros)
-                               );
-        if (script != NULL)
-        {
-          // execute script
-          jobNode->runningInfo.error = Misc_executeScript(String_cString(script),
-                                                          CALLBACK(executeIOOutput,NULL),
-                                                          CALLBACK(executeIOOutput,NULL)
-                                                         );
-          String_delete(script);
-        }
-        else
-        {
-          jobNode->runningInfo.error = ERROR_EXPAND_TEMPLATE;
-        }
+        #ifdef SIMULATOR
+          {
+            int z;
 
-        if (jobNode->runningInfo.error != ERROR_NONE)
+            jobNode->runningInfo.estimatedRestTime=120;
+
+            jobNode->runningInfo.totalEntryCount += 60;
+            jobNode->runningInfo.totalEntrySize += 6000;
+
+            for (z=0;z<120;z++)
+            {
+              extern void sleep(int);
+              if (jobNode->requestedAbortFlag) break;
+
+              sleep(1);
+
+              if (z==40) {
+                jobNode->runningInfo.totalEntryCount += 80;
+                jobNode->runningInfo.totalEntrySize += 8000;
+              }
+
+              jobNode->runningInfo.doneCount++;
+              jobNode->runningInfo.doneSize += 100;
+  //            jobNode->runningInfo.totalEntryCount += 3;
+  //            jobNode->runningInfo.totalEntrySize += 181;
+              jobNode->runningInfo.estimatedRestTime=120-z;
+              String_clear(jobNode->runningInfo.fileName);String_format(jobNode->runningInfo.fileName,"file %d",z);
+              String_clear(jobNode->runningInfo.storageName);String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
+            }
+          }
+        #else
+          switch (jobNode->jobType)
+          {
+            case JOB_TYPE_CREATE:
+              // create archive
+              jobNode->runningInfo.error = Command_create(jobUUID,
+                                                          scheduleUUID,
+                                                          storageName,
+                                                          &includeEntryList,
+                                                          &excludePatternList,
+                                                          &mountList,
+                                                          &compressExcludePatternList,
+                                                          &deltaSourceList,
+                                                          &jobOptions,
+                                                          archiveType,
+  NULL,//                                                        scheduleTitle,
+                                                          scheduleCustomText,
+                                                          CALLBACK(getCryptPassword,jobNode),
+                                                          CALLBACK(updateCreateStatusInfo,jobNode),
+                                                          CALLBACK(storageRequestVolume,jobNode),
+                                                          &pauseFlags.create,
+                                                          &pauseFlags.storage,
+  //TODO access jobNode?
+                                                          &jobNode->requestedAbortFlag,
+                                                          &logHandle
+                                                         );
+
+              // get end date/time
+              endDateTime = Misc_getCurrentDateTime();
+
+              if (jobNode->requestedAbortFlag)
+              {
+                // aborted
+                logMessage(&logHandle,
+                           LOG_TYPE_ALWAYS,
+                           "Aborted job '%s'\n",
+                           String_cString(jobName)
+                          );
+
+                // create history entry
+                if (indexHandle != NULL)
+                {
+                  error = Index_newHistory(indexHandle,
+                                           jobUUID,
+                                           scheduleUUID,
+                                           hostName,
+                                           archiveType,
+                                           Misc_getTimestamp(),
+                                           "aborted",
+                                           endDateTime-startDateTime,
+                                           jobNode->runningInfo.totalEntryCount,
+                                           jobNode->runningInfo.totalEntrySize,
+                                           jobNode->runningInfo.skippedEntryCount,
+                                           jobNode->runningInfo.skippedEntrySize,
+                                           jobNode->runningInfo.errorEntryCount,
+                                           jobNode->runningInfo.errorEntrySize,
+                                           NULL  // historyId
+                                          );
+                  if (error != ERROR_NONE)
+                  {
+                    logMessage(&logHandle,
+                               LOG_TYPE_ALWAYS,
+                               "Cannot insert history information for '%s' (error: %s)\n",
+                               String_cString(jobName),
+                               Error_getText(error)
+                              );
+                  }
+                }
+              }
+              else if (jobNode->runningInfo.error != ERROR_NONE)
+              {
+                // error
+                logMessage(&logHandle,
+                           LOG_TYPE_ALWAYS,
+                           "Done job '%s' (error: %s)\n",
+                           String_cString(jobName),
+                           Error_getText(jobNode->runningInfo.error)
+                          );
+
+                // create history entry
+                if (indexHandle != NULL)
+                {
+                  error = Index_newHistory(indexHandle,
+                                           jobUUID,
+                                           scheduleUUID,
+                                           hostName,
+                                           archiveType,
+                                           Misc_getTimestamp(),
+                                           Error_getText(jobNode->runningInfo.error),
+                                           endDateTime-startDateTime,
+                                           jobNode->runningInfo.totalEntryCount,
+                                           jobNode->runningInfo.totalEntrySize,
+                                           jobNode->runningInfo.skippedEntryCount,
+                                           jobNode->runningInfo.skippedEntrySize,
+                                           jobNode->runningInfo.errorEntryCount,
+                                           jobNode->runningInfo.errorEntrySize,
+                                           NULL  // historyId
+                                          );
+                  if (error != ERROR_NONE)
+                  {
+                    logMessage(&logHandle,
+                               LOG_TYPE_ALWAYS,
+                               "Cannot insert history information for '%s' (error: %s)\n",
+                               String_cString(jobName),
+                               Error_getText(error)
+                              );
+                  }
+                }
+              }
+              else
+              {
+                // success
+                logMessage(&logHandle,
+                           LOG_TYPE_ALWAYS,
+                           "Done job '%s' (duration: %llumin:%02us)\n",
+                           String_cString(jobName),
+                           (endDateTime-startDateTime) / 60,
+                           (uint)((endDateTime-startDateTime) % 60)
+                          );
+
+                // create history entry
+                if (indexHandle != NULL)
+                {
+                  error = Index_newHistory(indexHandle,
+                                           jobUUID,
+                                           scheduleUUID,
+                                           hostName,
+                                           archiveType,
+                                           Misc_getTimestamp(),
+                                           NULL,  // errorMessage
+                                           endDateTime-startDateTime,
+                                           jobNode->runningInfo.totalEntryCount,
+                                           jobNode->runningInfo.totalEntrySize,
+                                           jobNode->runningInfo.skippedEntryCount,
+                                           jobNode->runningInfo.skippedEntrySize,
+                                           jobNode->runningInfo.errorEntryCount,
+                                           jobNode->runningInfo.errorEntrySize,
+                                           NULL  // historyId
+                                          );
+                  if (error != ERROR_NONE)
+                  {
+                    logMessage(&logHandle,
+                               LOG_TYPE_ALWAYS,
+                               "Cannot insert history information for '%s' (error: %s)\n",
+                               String_cString(jobName),
+                               Error_getText(error)
+                              );
+                  }
+                }
+              }
+              break;
+            case JOB_TYPE_RESTORE:
+              // restore archive
+              StringList_init(&storageNameList);
+              StringList_append(&storageNameList,storageName);
+              jobNode->runningInfo.error = Command_restore(&storageNameList,
+                                                           &includeEntryList,
+                                                           &excludePatternList,
+                                                           &deltaSourceList,
+                                                           &jobOptions,
+                                                           CALLBACK(restoreUpdateStatusInfo,jobNode),
+                                                           CALLBACK(NULL,NULL),  // restoreHandleError
+                                                           CALLBACK(getCryptPassword,jobNode),
+                                                           CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
+                                                           CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
+                                                           &logHandle
+                                                          );
+              StringList_done(&storageNameList);
+
+              // get end date/time
+              endDateTime = Misc_getCurrentDateTime();
+
+              if (jobNode->runningInfo.error != ERROR_NONE)
+              {
+                logMessage(&logHandle,
+                           LOG_TYPE_ALWAYS,
+                           "Done restore archive (error: %s)\n",
+                           Error_getText(jobNode->runningInfo.error)
+                          );
+              }
+              else
+              {
+                logMessage(&logHandle,
+                           LOG_TYPE_ALWAYS,
+                           "Done restore archive\n"
+                          );
+              }
+              break;
+            #ifndef NDEBUG
+              default:
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                break;
+            #endif /* NDEBUG */
+          }
+        #endif /* SIMULATOR */
+
+        logPostProcess(&logHandle,jobName,&jobNode->jobOptions,archiveType,scheduleCustomText);
+      }
+
+      // post-process command
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        if (jobNode->jobOptions.postProcessScript != NULL)
         {
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Aborted job '%s': post-command fail (error: %s)\n",
-                     String_cString(jobName),
-                     Error_getText(jobNode->runningInfo.error)
-                    );
+          // get script
+          TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
+          TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
+          TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeName(archiveType),NULL);
+          TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
+          TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
+          script = expandTemplate(String_cString(jobNode->jobOptions.postProcessScript),
+                                  EXPAND_MACRO_MODE_STRING,
+                                  startDateTime,
+                                  TRUE,
+                                  textMacros,
+                                  SIZE_OF_ARRAY(textMacros)
+                                 );
+          if (script != NULL)
+          {
+            // execute script
+            jobNode->runningInfo.error = Misc_executeScript(String_cString(script),
+                                                            CALLBACK(executeIOOutput,NULL),
+                                                            CALLBACK(executeIOOutput,NULL)
+                                                           );
+            String_delete(script);
+          }
+          else
+          {
+            jobNode->runningInfo.error = ERROR_EXPAND_TEMPLATE;
+          }
+
+          if (jobNode->runningInfo.error != ERROR_NONE)
+          {
+            logMessage(&logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Aborted job '%s': post-command fail (error: %s)\n",
+                       String_cString(jobName),
+                       Error_getText(jobNode->runningInfo.error)
+                      );
+          }
         }
       }
-    }
 
-    // get error message
-    if (jobNode->runningInfo.error != ERROR_NONE)
+      // get error message
+      if (jobNode->runningInfo.error != ERROR_NONE)
+      {
+        String_setCString(jobNode->runningInfo.message,Error_getText(jobNode->runningInfo.error));
+      }
+
+      // done log
+      doneLog(&logHandle);
+    }
+    else
     {
-      String_setCString(jobNode->runningInfo.message,Error_getText(jobNode->runningInfo.error));
+      // slave job
     }
-
-    // done log
-    doneLog(&logHandle);
-
 
     // get job executaion date/time, aggregate info
     lastExecutedDateTime = Misc_getCurrentDateTime();
@@ -4130,7 +4137,7 @@ NULL,//                                                        scheduleTitle,
   List_done(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
-  Remote_doneHost(&remoteHost);
+  Slave_doneHost(&slaveHost);
   String_delete(hostName);
   String_delete(directory);
   String_delete(storageName);
@@ -4141,20 +4148,20 @@ NULL,//                                                        scheduleTitle,
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : delayRemoteConnectThread
-* Purpose: delay remote connect thread code
+* Name   : delaySlaveConnectThread
+* Purpose: delay slave connect thread code
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void delayRemoteConnectThread(void)
+LOCAL void delaySlaveConnectThread(void)
 {
   uint sleepTime;
 
   sleepTime = 0;
-  while (!quitFlag && (sleepTime < SLEEP_TIME_REMOTE_THREAD))
+  while (!quitFlag && (sleepTime < SLEEP_TIME_SLAVE_CONNECT_THREAD))
   {
     Misc_udelay(10LL*US_PER_SECOND);
     sleepTime += 10;
@@ -4162,85 +4169,84 @@ LOCAL void delayRemoteConnectThread(void)
 }
 
 /***********************************************************************\
-* Name   : remoteConnectThreadCode
-* Purpose: connect remote instances thread code
+* Name   : slaveConnectThreadCode
+* Purpose: connect slave instances thread code
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void remoteConnectThreadCode(void)
+LOCAL void slaveConnectThreadCode(void)
 {
-  typedef struct RemoteJobInfoNode
+  typedef struct SlaveJobInfoNode
   {
-    LIST_NODE_HEADER(struct RemoteJobInfoNode);
+    LIST_NODE_HEADER(struct SlaveJobInfoNode);
 
-    String     jobUUID;
-    RemoteHost remoteHost;
-  } RemoteJobInfoNode;
+    String    jobUUID;
+    SlaveHost slaveHost;
+  } SlaveJobInfoNode;
 
   typedef struct
   {
-    LIST_HEADER(RemoteJobInfoNode);
-  } RemoteJobInfoList;
+    LIST_HEADER(SlaveJobInfoNode);
+  } SlaveJobInfoList;
 
-  StringList        jobUUIDList;
-  StaticString      (jobUUID,MISC_UUID_STRING_LENGTH);
-  RemoteHost        remoteHost;
-  bool              tryConnectFlag;
-  SemaphoreLock     semaphoreLock;
+  StringList       jobUUIDList;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  SlaveHost        slaveHost;
+  bool             tryConnectFlag;
+  SemaphoreLock    semaphoreLock;
 
-  RemoteJobInfoList remoteJobInfoList;
-  RemoteJobInfoList newRemoteJobInfoList;
-  JobNode           *jobNode;
-  RemoteJobInfoNode *remoteJobInfoNode;
-  Errors            error;
-//  double            entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
-//  ulong             restFiles;
-//  uint64            restBytes;
-//  uint64            restStorageBytes;
-//  ulong             estimatedRestTime;
+  SlaveJobInfoList slaveJobInfoList;
+  JobNode          *jobNode;
+  SlaveJobInfoNode *slaveJobInfoNode;
+  Errors           error;
+//  double           entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
+//  ulong            restFiles;
+//  uint64           restBytes;
+//  uint64           restStorageBytes;
+//  ulong            estimatedRestTime;
 
   /***********************************************************************\
-  * Name   : freeRemoteJobInfoNode
-  * Purpose: free remote info node
-  * Input  : remoteJobInfoNode - remote job info node
-  *          userData          - not used
+  * Name   : freeSlaveJobInfoNode
+  * Purpose: free slave info node
+  * Input  : slaveJobInfoNode - slave job info node
+  *          userData         - not used
   * Output : -
   * Return : -
   * Notes  : -
   \***********************************************************************/
 
-  void freeRemoteJobInfoNode(RemoteJobInfoNode *remoteJobInfoNode, void *userData)
+  void freeSlaveJobInfoNode(SlaveJobInfoNode *slaveJobInfoNode, void *userData)
   {
-    assert(remoteJobInfoNode != NULL);
-    assert(remoteJobInfoNode->jobUUID != NULL);
-    assert(remoteJobInfoNode->remoteHost.name != NULL);
+    assert(slaveJobInfoNode != NULL);
+    assert(slaveJobInfoNode->jobUUID != NULL);
+    assert(slaveJobInfoNode->slaveHost.name != NULL);
 
     UNUSED_VARIABLE(userData);
 
-    String_delete(remoteJobInfoNode->remoteHost.name);
+    String_delete(slaveJobInfoNode->slaveHost.name);
   }
 
   /***********************************************************************\
-  * Name   : findRemoteJobInfoByUUID
-  * Purpose: find remote job info by UUID
+  * Name   : findSlaveJobInfoByUUID
+  * Purpose: find slave job info by UUID
   * Input  : jobUUID - job UUID
   * Output : -
-  * Return : remote job info node or NULL if not found
+  * Return : slave job info node or NULL if not found
   * Notes  : -
   \***********************************************************************/
 
-  RemoteJobInfoNode *findRemoteJobInfoByUUID(ConstString jobUUID)
+  SlaveJobInfoNode *findSlaveJobInfoByUUID(ConstString jobUUID)
   {
-    RemoteJobInfoNode *remoteJobInfoNode;
+    SlaveJobInfoNode *slaveJobInfoNode;
 
-    LIST_ITERATE(&remoteJobInfoList,remoteJobInfoNode)
+    LIST_ITERATE(&slaveJobInfoList,slaveJobInfoNode)
     {
-      if (String_equals(remoteJobInfoNode->jobUUID,jobUUID))
+      if (String_equals(slaveJobInfoNode->jobUUID,jobUUID))
       {
-        return remoteJobInfoNode;
+        return slaveJobInfoNode;
       }
     }
 
@@ -4249,32 +4255,30 @@ LOCAL void remoteConnectThreadCode(void)
 
   // init variables
   StringList_init(&jobUUIDList);
-  List_init(&remoteJobInfoList);
-  List_init(&newRemoteJobInfoList);
-  Remote_initHost(&remoteHost,serverPort);
+  List_init(&slaveJobInfoList);
+  Slave_initHost(&slaveHost,serverPort);
 
-fprintf(stderr,"%s, %d:+++++++++++++ \n",__FILE__,__LINE__);
   while (!quitFlag)
   {
     // get job UUIDs
     getAllJobUUIDs(&jobUUIDList);
 
-    // connect all remote instances
+    // connect all slave instances
     while (!StringList_isEmpty(&jobUUIDList))
     {
       StringList_removeFirst(&jobUUIDList,jobUUID);
 
-      // check if remote job and is currently not connected
+      // check if slave job and is currently not connected
       tryConnectFlag = FALSE;
       SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
         jobNode = findJobByUUID(jobUUID);
         if (jobNode != NULL)
         {
-fprintf(stderr,"%s, %d: id=%s %s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(jobNode->remoteHost.name));
-          if (isJobRemote(jobNode) && !Remote_isConnected(&jobNode->remoteHost))
+fprintf(stderr,"%s, %d: connect jobUUID=%s host=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(jobNode->slaveHost.name));
+          if (isSlaveJob(jobNode) && !Slave_isConnected(&jobNode->slaveHost))
           {
-            Remote_copyHost(&remoteHost,&jobNode->remoteHost);
+            Slave_copyHost(&slaveHost,&jobNode->slaveHost);
             tryConnectFlag = TRUE;
           }
         }
@@ -4283,132 +4287,86 @@ fprintf(stderr,"%s, %d: id=%s %s\n",__FILE__,__LINE__,String_cString(jobUUID),St
       // try to connect
       if (tryConnectFlag)
       {
-//        (void)Remote_connect(&remoteHost);
-        error = Remote_connect(&remoteHost);
+//        (void)Slave_connect(&slaveHost);
+        error = Slave_connect(&slaveHost);
 logMessage(NULL,  // logHandle
                  LOG_TYPE_ALWAYS,
                  "Try connnect %s: %s\n",
-                 String_cString(remoteHost.name),Error_getText(error)
+                 String_cString(slaveHost.name),Error_getText(error)
    );
       }
     }
 
-#if 0
-    // update list of all active remote jobs and remote host info
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-    {
-      LIST_ITERATE(&jobList,jobNode)
-      {
-        if (isJobRemote(jobNode) && String_isEmpty(jobNode->master) && isJobActive(jobNode))
-        {
-          remoteJobInfoNode = findRemoteJobInfoByUUID(jobNode->uuid);
-          if (remoteJobInfoNode != NULL)
-          {
-//fprintf(stderr,"%s, %d: update remoteJobInfoNode %s\n",__FILE__,__LINE__,String_cString(jobNode->name));
-            List_remove(&remoteJobInfoList,remoteJobInfoNode);
-            Remote_copyHost(&remoteJobInfoNode->remoteHost,&jobNode->remoteHost);
-          }
-          else
-          {
-//fprintf(stderr,"%s, %d: new remoteJobInfoNode %s\n",__FILE__,__LINE__,String_cString(jobNode->name));
-            remoteJobInfoNode = LIST_NEW_NODE(RemoteJobInfoNode);
-            if (remoteJobInfoNode == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-            remoteJobInfoNode->jobUUID = String_duplicate(jobNode->uuid);
-            Remote_duplicateHost(&remoteJobInfoNode->remoteHost,&jobNode->remoteHost);
-          }
-
-          List_append(&newRemoteJobInfoList,remoteJobInfoNode);
-        }
-      }
-    }
-    List_done(&remoteJobInfoList,(ListNodeFreeFunction)freeRemoteJobInfoNode,NULL);
-    List_move(&newRemoteJobInfoList,&remoteJobInfoList,NULL,NULL,NULL);
-    assert(List_isEmpty(&newRemoteJobInfoList));
-
-    // get remote job info
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    LIST_ITERATE(&remoteJobInfoList,remoteJobInfoNode)
-    {
-      // get job info
-//      error = Remote_executeCommand(&remoteJobInfoNode->remoteHost,resultMap,"JOB_INFO jobUUID=%S",remoteJobInfoNode->jobUUID);
-      if (error == ERROR_NONE)
-      {
-      }
-    }
-#endif
-
     // sleep
-    delayRemoteConnectThread();
+    delaySlaveConnectThread();
   }
 
   // free resources
-  Remote_doneHost(&remoteHost);
-  List_done(&newRemoteJobInfoList,(ListNodeFreeFunction)freeRemoteJobInfoNode,NULL);
-  List_done(&remoteJobInfoList,(ListNodeFreeFunction)freeRemoteJobInfoNode,NULL);
+  Slave_doneHost(&slaveHost);
+  List_done(&slaveJobInfoList,(ListNodeFreeFunction)freeSlaveJobInfoNode,NULL);
   StringList_done(&jobUUIDList);
 }
 
+#if 0
+//TODO: remove
 /***********************************************************************\
-* Name   : delayRemoteThread
-* Purpose: delay remote thread code
+* Name   : delaySlaveThread
+* Purpose: delay slave thread code
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void delayRemoteThread(void)
+LOCAL void delaySlaveThread(void)
 {
   uint sleepTime;
 
   sleepTime = 0;
-  while (!quitFlag && (sleepTime < SLEEP_TIME_REMOTE_THREAD))
+  while (!quitFlag && (sleepTime < SLEEP_TIME_SLAVE_THREAD))
   {
     Misc_udelay(10LL*US_PER_SECOND);
     sleepTime += 10;
   }
 }
+#endif
 
 /***********************************************************************\
-* Name   : remoteThreadCode
-* Purpose: remote thread entry
+* Name   : slaveThreadCode
+* Purpose: slave thread entry
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void remoteThreadCode(void)
+LOCAL void slaveThreadCode(void)
 {
-  typedef struct RemoteJobInfoNode
+  typedef struct SlaveJobInfoNode
   {
-    LIST_NODE_HEADER(struct RemoteJobInfoNode);
+    LIST_NODE_HEADER(struct SlaveJobInfoNode);
 
-    String     jobUUID;
-    RemoteHost remoteHost;
-  } RemoteJobInfoNode;
+    String    jobUUID;
+    SlaveHost slaveHost;
+  } SlaveJobInfoNode;
 
   typedef struct
   {
-    LIST_HEADER(RemoteJobInfoNode);
-  } RemoteJobInfoList;
+    LIST_HEADER(SlaveJobInfoNode);
+  } SlaveJobInfoList;
 
-  RemoteJobInfoList remoteJobInfoList;
-  RemoteJobInfoList newRemoteJobInfoList;
-  StringMap         resultMap;
-  SemaphoreLock     semaphoreLock;
-  JobNode           *jobNode;
-  RemoteJobInfoNode *remoteJobInfoNode;
-//  String            jobUUID;
-  Errors            error;
-//  double            entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
-//  ulong             restFiles;
-//  uint64            restBytes;
-//  uint64            restStorageBytes;
-//  ulong             estimatedRestTime;
+  SlaveJobInfoList slaveJobInfoList;
+  StringMap        resultMap;
+  SemaphoreLock    semaphoreLock;
+  JobNode          *jobNode;
+  SlaveJobInfoNode *slaveJobInfoNode;
+//  String           jobUUID;
+  Errors           error;
+//  double           entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
+//  ulong            restFiles;
+//  uint64           restBytes;
+//  uint64           restStorageBytes;
+//  ulong            estimatedRestTime;
 
   /***********************************************************************\
   * Name   : parseJobState
@@ -4444,23 +4402,23 @@ LOCAL void remoteThreadCode(void)
   }
 
   /***********************************************************************\
-  * Name   : findRemoteJobInfoByUUID
-  * Purpose: find remote job info by UUID
+  * Name   : findSlaveJobInfoByUUID
+  * Purpose: find slave job info by UUID
   * Input  : jobUUID - job UUID
   * Output : -
-  * Return : remote job info node or NULL if not found
+  * Return : slave job info node or NULL if not found
   * Notes  : -
   \***********************************************************************/
 
-  RemoteJobInfoNode *findRemoteJobInfoByUUID(ConstString jobUUID)
+  SlaveJobInfoNode *findSlaveJobInfoByUUID(ConstString jobUUID)
   {
-    RemoteJobInfoNode *remoteJobInfoNode;
+    SlaveJobInfoNode *slaveJobInfoNode;
 
-    LIST_ITERATE(&remoteJobInfoList,remoteJobInfoNode)
+    LIST_ITERATE(&slaveJobInfoList,slaveJobInfoNode)
     {
-      if (String_equals(remoteJobInfoNode->jobUUID,jobUUID))
+      if (String_equals(slaveJobInfoNode->jobUUID,jobUUID))
       {
-        return remoteJobInfoNode;
+        return slaveJobInfoNode;
       }
     }
 
@@ -4468,46 +4426,45 @@ LOCAL void remoteThreadCode(void)
   }
 
   /***********************************************************************\
-  * Name   : freeRemoteJobInfoNode
-  * Purpose: free remote info node
-  * Input  : remoteJobInfoNode - remote job info node
-  *          userData          - not used
+  * Name   : freeSlaveJobInfoNode
+  * Purpose: free slave info node
+  * Input  : slaveJobInfoNode - slave job info node
+  *          userData         - not used
   * Output : -
   * Return : -
   * Notes  : -
   \***********************************************************************/
 
-  void freeRemoteJobInfoNode(RemoteJobInfoNode *remoteJobInfoNode, void *userData)
+  void freeSlaveJobInfoNode(SlaveJobInfoNode *slaveJobInfoNode, void *userData)
   {
-    assert(remoteJobInfoNode != NULL);
-    assert(remoteJobInfoNode->jobUUID != NULL);
-    assert(remoteJobInfoNode->remoteHost.name != NULL);
+    assert(slaveJobInfoNode != NULL);
+    assert(slaveJobInfoNode->jobUUID != NULL);
+    assert(slaveJobInfoNode->slaveHost.name != NULL);
 
     UNUSED_VARIABLE(userData);
 
-    String_delete(remoteJobInfoNode->remoteHost.name);
+    String_delete(slaveJobInfoNode->slaveHost.name);
   }
 
   /***********************************************************************\
-  * Name   : deleteRemoteJobInfoNode
-  * Purpose: delete remote info node
-  * Input  : remoteJobInfoNode - remote job info node
+  * Name   : deleteSlaveJobInfoNode
+  * Purpose: delete slave info node
+  * Input  : slaveJobInfoNode - slave job info node
   * Output : -
   * Return : -
   * Notes  : -
   \***********************************************************************/
 
-  void deleteRemoteJobInfoNode(RemoteJobInfoNode *remoteJobInfoNode)
+  void deleteSlaveJobInfoNode(SlaveJobInfoNode *slaveJobInfoNode)
   {
-    assert(remoteJobInfoNode != NULL);
+    assert(slaveJobInfoNode != NULL);
 
-    freeRemoteJobInfoNode(remoteJobInfoNode,NULL);
-    LIST_DELETE_NODE(remoteJobInfoNode);
+    freeSlaveJobInfoNode(slaveJobInfoNode,NULL);
+    LIST_DELETE_NODE(slaveJobInfoNode);
   }
 
   // init variables
-  List_init(&remoteJobInfoList);
-  List_init(&newRemoteJobInfoList);
+  List_init(&slaveJobInfoList);
   resultMap = StringMap_new();
   if (resultMap == NULL)
   {
@@ -4516,55 +4473,54 @@ LOCAL void remoteThreadCode(void)
 
   while (!quitFlag)
   {
-    // get list of all remote job and remote host info
+    // get list of all slave job and slave host info
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
-      // add new remote job infos
+      // add new slave job infos
       LIST_ITERATE(&jobList,jobNode)
       {
-        if (isJobRemote(jobNode) && String_isEmpty(jobNode->master) && isJobActive(jobNode))
+        if (isSlaveJob(jobNode) && String_isEmpty(jobNode->master) && isJobActive(jobNode))
         {
-          if (findRemoteJobInfoByUUID(jobNode->uuid) == NULL)
+          if (findSlaveJobInfoByUUID(jobNode->uuid) == NULL)
           {
-            remoteJobInfoNode = LIST_NEW_NODE(RemoteJobInfoNode);
-            if (remoteJobInfoNode == NULL)
+            slaveJobInfoNode = LIST_NEW_NODE(SlaveJobInfoNode);
+            if (slaveJobInfoNode == NULL)
             {
               HALT_INSUFFICIENT_MEMORY();
             }
-            remoteJobInfoNode->jobUUID = String_duplicate(jobNode->uuid);
-            Remote_duplicateHost(&remoteJobInfoNode->remoteHost,&jobNode->remoteHost);
-            List_append(&newRemoteJobInfoList,remoteJobInfoNode);
+            slaveJobInfoNode->jobUUID = String_duplicate(jobNode->uuid);
+            Slave_duplicateHost(&slaveJobInfoNode->slaveHost,&jobNode->slaveHost);
+            List_append(&slaveJobInfoList,slaveJobInfoNode);
           }
         }
       }
 
-      // remove not existing remote job infos
-      remoteJobInfoNode = remoteJobInfoList.head;
-      while (remoteJobInfoNode != NULL)
+      // remove not existing slave job infos
+      slaveJobInfoNode = slaveJobInfoList.head;
+      while (slaveJobInfoNode != NULL)
       {
-        if (findJobByUUID(remoteJobInfoNode->jobUUID) != NULL)
+        if (findJobByUUID(slaveJobInfoNode->jobUUID) != NULL)
         {
-          remoteJobInfoNode = remoteJobInfoNode->next;
+          slaveJobInfoNode = slaveJobInfoNode->next;
         }
         else
         {
-          remoteJobInfoNode = List_removeAndFree(&remoteJobInfoList,remoteJobInfoNode,CALLBACK((ListNodeFreeFunction)freeRemoteJobInfoNode,NULL));
+          slaveJobInfoNode = List_removeAndFree(&slaveJobInfoList,slaveJobInfoNode,CALLBACK((ListNodeFreeFunction)freeSlaveJobInfoNode,NULL));
         }
       }
     }
-fprintf(stderr,"%s, %d: count=%d\n",__FILE__,__LINE__,List_count(&remoteJobInfoList));
 
-    // get job info from remote jobs
-    LIST_ITERATE(&remoteJobInfoList,remoteJobInfoNode)
+    // get job info from slave jobs
+    LIST_ITERATE(&slaveJobInfoList,slaveJobInfoNode)
     {
       // get job info
-      error = Remote_executeCommand(&remoteJobInfoNode->remoteHost,resultMap,"JOB_INFO jobUUID=%S",remoteJobInfoNode->jobUUID);
+      error = Slave_executeCommand(&slaveJobInfoNode->slaveHost,resultMap,"JOB_STATUS jobUUID=%S",slaveJobInfoNode->jobUUID);
       if (error == ERROR_NONE)
       {
         SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
         {
           // find job
-          jobNode = findJobByUUID(remoteJobInfoNode->jobUUID);
+          jobNode = findJobByUUID(slaveJobInfoNode->jobUUID);
           if (jobNode != NULL)
           {
             // parse and store
@@ -4598,16 +4554,16 @@ fprintf(stderr,"%s, %d: count=%d\n",__FILE__,__LINE__,List_count(&remoteJobInfoL
       }
     }
 
-    // delete expired remote jobs
+//TODO
+    // delete expired slave jobs
 
     // sleep
-    delayRemoteThread();
+    Misc_udelay(1LL*US_PER_SECOND);
   }
 
   // free resources
   StringMap_delete(resultMap);
-  List_done(&newRemoteJobInfoList,CALLBACK((ListNodeFreeFunction)freeRemoteJobInfoNode,NULL));
-  List_done(&remoteJobInfoList,CALLBACK((ListNodeFreeFunction)freeRemoteJobInfoNode,NULL));
+  List_done(&slaveJobInfoList,CALLBACK((ListNodeFreeFunction)freeSlaveJobInfoNode,NULL));
 }
 
 /*---------------------------------------------------------------------*/
@@ -9626,13 +9582,13 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
     LIST_ITERATEX(&jobList,jobNode,!isCommandAborted(clientInfo,id))
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "jobUUID=%S name=%'S state=%'s remoteHostName=%'S remoteHostPort=%d remoteHostForceSSL=%y archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
+                       "jobUUID=%S name=%'S state=%'s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
                        jobNode->uuid,
                        jobNode->name,
                        getJobStateText(jobNode->state,&jobNode->jobOptions),
-                       jobNode->remoteHost.name,
-                       jobNode->remoteHost.port,
-                       jobNode->remoteHost.forceSSL,
+                       jobNode->slaveHost.name,
+                       jobNode->slaveHost.port,
+                       jobNode->slaveHost.forceSSL,
                        ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,
                                                   (   (jobNode->archiveType == ARCHIVE_TYPE_FULL        )
                                                    || (jobNode->archiveType == ARCHIVE_TYPE_INCREMENTAL )
@@ -10261,10 +10217,10 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
       }
       else
       {
-        // abort remote job
-        jobNode->runningInfo.error = Remote_jobAbort(&jobNode->remoteHost,
-                                                     jobNode->uuid
-                                                    );
+        // abort slave job
+        jobNode->runningInfo.error = Slave_jobAbort(&jobNode->slaveHost,
+                                                    jobNode->uuid
+                                                   );
 //TODO: do not call getAggregateInfo with joblist lock -> deadlock!
 #if 0
 BLOCK_DO(Semaphore_unlock(&jobList.lock),
@@ -10335,6 +10291,7 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 *            doneSize=<n [bytes]>
 *            totalEntryCount=<n>
 *            totalEntrySize=<n [bytes]>
+*            collectTotalSumDone=yes|no
 *            skippedEntryCount=<n>
 *            skippedEntrySize=<n [bytes]>
 *            errorEntryCount=<n>
@@ -10343,7 +10300,8 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 *            bytesPerSecond=<n [bytes/s]>
 *            storageBytesPerSecond=<n [bytes/s]>
 *            archiveSize=<n [bytes]>
-*            compressionRation=<ratio>
+*            compressionRatio=<ratio>
+*            estimatedRestTime=<n [s]>
 *            entryName=<name>
 *            entryBytes=<n [bytes]>
 *            entryTotalSize=<n [bytes]>
@@ -15237,8 +15195,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   /***********************************************************************\
   * Name   : freeUUIDNode
   * Purpose: free UUID node
-  * Input  : remoteJobInfoNode - UUID node
-  *          userData          - not used
+  * Input  : uuidNode - UUID node
+  *          userData - not used
   * Output : -
   * Return : -
   * Notes  : -
@@ -18911,13 +18869,13 @@ Errors Server_run(uint              port,
   {
     HALT_FATAL_ERROR("Cannot initialize pause thread!");
   }
-  if (!Thread_init(&remoteConnectThread,"BAR remote connect",globalOptions.niceLevel,remoteConnectThreadCode,NULL))
+  if (!Thread_init(&slaveConnectThread,"BAR slave connect",globalOptions.niceLevel,slaveConnectThreadCode,NULL))
   {
-    HALT_FATAL_ERROR("Cannot initialize remote thread!");
+    HALT_FATAL_ERROR("Cannot initialize slave thread!");
   }
-  if (!Thread_init(&remoteThread,"BAR remote",globalOptions.niceLevel,remoteThreadCode,NULL))
+  if (!Thread_init(&slaveThread,"BAR slave",globalOptions.niceLevel,slaveThreadCode,NULL))
   {
-    HALT_FATAL_ERROR("Cannot initialize remote thread!");
+    HALT_FATAL_ERROR("Cannot initialize slave thread!");
   }
   if (Index_isAvailable())
   {
@@ -19361,8 +19319,8 @@ Errors Server_run(uint              port,
     }
     Thread_join(&indexThread);
   }
-  Thread_join(&remoteThread);
-  Thread_join(&remoteConnectThread);
+  Thread_join(&slaveThread);
+  Thread_join(&slaveConnectThread);
   Thread_join(&pauseThread);
   Thread_join(&schedulerThread);
   Thread_join(&jobThread);
@@ -19389,8 +19347,8 @@ Errors Server_run(uint              port,
     Thread_done(&indexThread);
     Semaphore_done(&indexThreadTrigger);
   }
-  Thread_done(&remoteThread);
-  Thread_done(&remoteConnectThread);
+  Thread_done(&slaveThread);
+  Thread_done(&slaveConnectThread);
   Thread_done(&pauseThread);
   Thread_done(&schedulerThread);
   Thread_done(&jobThread);

@@ -24,7 +24,7 @@
 
 #include "passwords.h"
 
-#include "remote.h"
+#include "slave.h"
 
 /****************** Conditional compilation switches *******************/
 
