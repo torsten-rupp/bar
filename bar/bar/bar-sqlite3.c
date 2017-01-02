@@ -791,7 +791,7 @@ LOCAL void createTriggers(sqlite3 *databaseHandle)
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(columns);
 
-                                  stringCopy(name,values[0],sizeof(name));
+                                  stringSet(name,values[0],sizeof(name));
 
                                   return SQLITE_OK;
                                 },NULL),
@@ -877,7 +877,7 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
                                   UNUSED_VARIABLE(userData);
                                   UNUSED_VARIABLE(columns);
 
-                                  stringCopy(name,values[0],sizeof(name));
+                                  stringSet(name,values[0],sizeof(name));
 
                                   return SQLITE_OK;
                                 },NULL),
