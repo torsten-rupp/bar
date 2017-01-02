@@ -481,6 +481,9 @@ LOCAL void configValueFormatDoneScheduleTime(void **formatUserData, void *userDa
 LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line);
 
 // handle deprecated configuration values
+LOCAL bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedRemoteForceSSL(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
@@ -572,6 +575,9 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_STRING    ("comment",                 JobNode,jobOptions.comment                      ),
 
   // deprecated
+  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-name",        JobNode,slaveHost.name,                         configValueParseDeprecatedRemoteHost,NULL,"slave-host-name"),
+  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-port",        JobNode,slaveHost.port,                         configValueParseDeprecatedRemotePort,NULL,"slave-host-port"),
+  CONFIG_STRUCT_VALUE_DEPRECATED("remote-host-force-ssl",   JobNode,slaveHost.forceSSL,                     configValueParseDeprecatedRemoteForceSSL,NULL,"slave-host-force-ssl"),
   CONFIG_STRUCT_VALUE_DEPRECATED("mount-device",            JobNode,mountList,                              configValueParseDeprecatedMountDevice,NULL,"mount"),
   CONFIG_STRUCT_VALUE_DEPRECATED("schedule",                JobNode,scheduleList,                           configValueParseDeprecatedSchedule,NULL,"schedule section"),
 //TODO
@@ -1454,8 +1460,122 @@ if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string val
 }
 
 /***********************************************************************\
+* Name   : configValueParseDeprecatedRemoteHost
+* Purpose: config value option call back for deprecated remote host
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  String_setCString(*(String*)variable,value);
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParseDeprecatedRemotePort
+* Purpose: config value option call back for deprecated remote port
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  uint n;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if (!stringToUInt(value,&n))
+  {
+    return FALSE;
+  }
+  (*(uint*)variable) = n;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParseDeprecatedRemoteForceSSL
+* Purpose: config value option call back for deprecated remote force SSL
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseDeprecatedRemoteForceSSL(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  MountNode *mountNode;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if      (   stringEqualsIgnoreCase(value,"1")
+           || stringEqualsIgnoreCase(value,"true")
+           || stringEqualsIgnoreCase(value,"on")
+           || stringEqualsIgnoreCase(value,"yes")
+          )
+  {
+    (*(bool*)variable) = TRUE;
+  }
+  else if (   stringEqualsIgnoreCase(value,"0")
+           || stringEqualsIgnoreCase(value,"false")
+           || stringEqualsIgnoreCase(value,"off")
+           || stringEqualsIgnoreCase(value,"no")
+          )
+  {
+    (*(bool*)variable) = FALSE;
+  }
+  else
+  {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : configValueParseDeprecatedSchedule
-* Purpose: config value option call back for parsing schedule
+* Purpose: config value option call back for parsing deprecated schedule
 * Input  : userData              - user data
 *          variable              - config variable
 *          name                  - config name
