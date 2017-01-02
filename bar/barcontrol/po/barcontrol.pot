@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-01-01 14:57+0100\n"
+"POT-Creation-Date: 2017-01-02 17:07+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -42,34 +42,34 @@ msgstr ""
 msgid "continuous"
 msgstr ""
 
-#: src/BARControl.java:846 src/TabStatus.java:1023 src/TabStatus.java:1112
-#: src/TabStatus.java:1207 src/TabStatus.java:1249 src/TabStatus.java:1319
+#: src/BARControl.java:846 src/TabStatus.java:1022 src/TabStatus.java:1111
+#: src/TabStatus.java:1206 src/TabStatus.java:1248 src/TabStatus.java:1318
 msgid "TBytes"
 msgstr ""
 
-#: src/BARControl.java:847 src/TabStatus.java:1022 src/TabStatus.java:1111
-#: src/TabStatus.java:1206 src/TabStatus.java:1248 src/TabStatus.java:1318
+#: src/BARControl.java:847 src/TabStatus.java:1021 src/TabStatus.java:1110
+#: src/TabStatus.java:1205 src/TabStatus.java:1247 src/TabStatus.java:1317
 msgid "GBytes"
 msgstr ""
 
-#: src/BARControl.java:848 src/TabStatus.java:1021 src/TabStatus.java:1110
-#: src/TabStatus.java:1205 src/TabStatus.java:1247 src/TabStatus.java:1317
+#: src/BARControl.java:848 src/TabStatus.java:1020 src/TabStatus.java:1109
+#: src/TabStatus.java:1204 src/TabStatus.java:1246 src/TabStatus.java:1316
 msgid "MBytes"
 msgstr ""
 
-#: src/BARControl.java:849 src/TabStatus.java:1020 src/TabStatus.java:1109
-#: src/TabStatus.java:1204 src/TabStatus.java:1246 src/TabStatus.java:1316
+#: src/BARControl.java:849 src/TabStatus.java:1019 src/TabStatus.java:1108
+#: src/TabStatus.java:1203 src/TabStatus.java:1245 src/TabStatus.java:1315
 msgid "KBytes"
 msgstr ""
 
 #: src/BARControl.java:850 src/ServerSettings.java:461
 #: src/ServerSettings.java:487 src/TabJobs.java:4089 src/TabJobs.java:5921
-#: src/TabJobs.java:7491 src/TabJobs.java:7805 src/TabStatus.java:1005
-#: src/TabStatus.java:1018 src/TabStatus.java:1019 src/TabStatus.java:1093
-#: src/TabStatus.java:1107 src/TabStatus.java:1108 src/TabStatus.java:1189
-#: src/TabStatus.java:1202 src/TabStatus.java:1203 src/TabStatus.java:1231
-#: src/TabStatus.java:1244 src/TabStatus.java:1245 src/TabStatus.java:1291
-#: src/TabStatus.java:1314 src/TabStatus.java:1315
+#: src/TabJobs.java:7491 src/TabJobs.java:7805 src/TabStatus.java:1004
+#: src/TabStatus.java:1017 src/TabStatus.java:1018 src/TabStatus.java:1092
+#: src/TabStatus.java:1106 src/TabStatus.java:1107 src/TabStatus.java:1188
+#: src/TabStatus.java:1201 src/TabStatus.java:1202 src/TabStatus.java:1230
+#: src/TabStatus.java:1243 src/TabStatus.java:1244 src/TabStatus.java:1290
+#: src/TabStatus.java:1313 src/TabStatus.java:1314
 msgid "bytes"
 msgstr ""
 
@@ -157,7 +157,7 @@ msgstr ""
 msgid "Basic"
 msgstr ""
 
-#: src/BARControl.java:1910 src/BARControl.java:2556 src/TabStatus.java:2162
+#: src/BARControl.java:1910 src/BARControl.java:2556 src/TabStatus.java:2161
 msgid "Normal"
 msgstr ""
 
@@ -183,7 +183,7 @@ msgstr ""
 #: src/TabJobs.java:8748 src/TabJobs.java:10166 src/TabJobs.java:10496
 #: src/TabJobs.java:10854 src/TabJobs.java:11297 src/TabJobs.java:12587
 #: src/TabJobs.java:13175 src/TabRestore.java:7713 src/TabRestore.java:9036
-#: src/TabStatus.java:2167 src/TabStatus.java:2373
+#: src/TabStatus.java:2166 src/TabStatus.java:2372
 msgid "Cancel"
 msgstr ""
 
@@ -211,19 +211,19 @@ msgstr ""
 msgid "Connect"
 msgstr ""
 
-#: src/BARControl.java:2344 src/TabStatus.java:776 src/TabStatus.java:1479
+#: src/BARControl.java:2344 src/TabStatus.java:775 src/TabStatus.java:1478
 msgid "Start"
 msgstr ""
 
 #: src/BARControl.java:2358 src/BARControl.java:2904 src/BusyDialog.java:264
 #: src/Dialogs.java:163 src/TabRestore.java:8314 src/TabRestore.java:9462
-#: src/TabStatus.java:791 src/TabStatus.java:1496 src/TabStatus.java:2252
-#: src/TabStatus.java:2372
+#: src/TabStatus.java:790 src/TabStatus.java:1495 src/TabStatus.java:2251
+#: src/TabStatus.java:2371
 msgid "Abort"
 msgstr ""
 
-#: src/BARControl.java:2372 src/TabStatus.java:806 src/TabStatus.java:1513
-#: src/TabStatus.java:1897 src/TabStatus.java:1913
+#: src/BARControl.java:2372 src/TabStatus.java:805 src/TabStatus.java:1512
+#: src/TabStatus.java:1896 src/TabStatus.java:1912
 msgid "Pause"
 msgstr ""
 
@@ -273,7 +273,7 @@ msgstr ""
 msgid "Server settings"
 msgstr ""
 
-#: src/BARControl.java:2599 src/TabStatus.java:1562
+#: src/BARControl.java:2599 src/TabStatus.java:1561
 msgid "Quit"
 msgstr ""
 
@@ -320,7 +320,7 @@ msgstr ""
 #: src/TabJobs.java:8484 src/TabJobs.java:8600 src/TabJobs.java:10406
 #: src/TabRestore.java:4227 src/TabRestore.java:4531 src/TabRestore.java:4741
 #: src/TabRestore.java:4975 src/TabRestore.java:5326 src/TabRestore.java:6081
-#: src/TabRestore.java:8864 src/TabStatus.java:574 src/TabStatus.java:612
+#: src/TabRestore.java:8864 src/TabStatus.java:573 src/TabStatus.java:611
 msgid "Name"
 msgstr ""
 
@@ -407,12 +407,12 @@ msgid "No"
 msgstr ""
 
 #: src/Dialogs.java:2150 src/TabRestore.java:8312 src/TabRestore.java:9457
-#: src/TabStatus.java:2160
+#: src/TabStatus.java:2159
 msgid "Confirmation"
 msgstr ""
 
 #: src/Dialogs.java:2604 src/Dialogs.java:2787 src/Dialogs.java:3024
-#: src/Dialogs.java:4648 src/Dialogs.java:5000 src/TabStatus.java:2370
+#: src/Dialogs.java:4648 src/Dialogs.java:5000 src/TabStatus.java:2369
 msgid "OK"
 msgstr ""
 
@@ -430,7 +430,7 @@ msgstr ""
 #: src/Dialogs.java:3557 src/ServerSettings.java:605 src/TabJobs.java:10105
 #: src/TabJobs.java:13006 src/TabRestore.java:4564 src/TabRestore.java:4707
 #: src/TabRestore.java:4751 src/TabRestore.java:6084 src/TabRestore.java:8868
-#: src/TabStatus.java:583 src/TabStatus.java:661
+#: src/TabStatus.java:582 src/TabStatus.java:660
 msgid "Type"
 msgstr ""
 
@@ -1272,7 +1272,7 @@ msgstr ""
 msgid "Existing job entries."
 msgstr ""
 
-#: src/TabJobs.java:1871 src/TabStatus.java:853
+#: src/TabJobs.java:1871 src/TabStatus.java:852
 msgid "New"
 msgstr ""
 
@@ -1283,7 +1283,7 @@ msgstr ""
 #: src/TabJobs.java:1887 src/TabJobs.java:3046 src/TabJobs.java:3125
 #: src/TabJobs.java:3251 src/TabJobs.java:3331 src/TabJobs.java:3722
 #: src/TabJobs.java:3801 src/TabJobs.java:8200 src/TabJobs.java:8283
-#: src/TabJobs.java:8613 src/TabStatus.java:867
+#: src/TabJobs.java:8613 src/TabStatus.java:866
 msgid "Clone"
 msgstr ""
 
@@ -1291,7 +1291,7 @@ msgstr ""
 msgid "Clone an existing job entry."
 msgstr ""
 
-#: src/TabJobs.java:1915 src/TabJobs.java:8744 src/TabStatus.java:881
+#: src/TabJobs.java:1915 src/TabJobs.java:8744 src/TabStatus.java:880
 msgid "Rename"
 msgstr ""
 
@@ -1299,7 +1299,7 @@ msgstr ""
 msgid "Rename a job entry."
 msgstr ""
 
-#: src/TabJobs.java:1943 src/TabRestore.java:5707 src/TabStatus.java:895
+#: src/TabJobs.java:1943 src/TabRestore.java:5707 src/TabStatus.java:894
 msgid "Delete"
 msgstr ""
 
@@ -1307,13 +1307,12 @@ msgstr ""
 msgid "Delete a job entry."
 msgstr ""
 
-#: src/TabJobs.java:1976 src/TabJobs.java:6039 src/TabJobs.java:6282
-#: src/TabJobs.java:6792 src/TabStatus.java:580 src/TabStatus.java:629
-msgid "Host"
+#: src/TabJobs.java:1976 src/TabStatus.java:579 src/TabStatus.java:628
+msgid "Slave"
 msgstr ""
 
 #: src/TabJobs.java:1980
-msgid "Host to run job. Leave empty to run on local host."
+msgid "Hostname of slave to run job. Leave empty to run on local host."
 msgstr ""
 
 #: src/TabJobs.java:2044
@@ -1327,7 +1326,7 @@ msgstr ""
 
 #: src/TabJobs.java:2149 src/TabJobs.java:3380 src/TabRestore.java:4574
 #: src/TabRestore.java:6029 src/TabRestore.java:8858 src/TabRestore.java:8867
-#: src/TabStatus.java:2522
+#: src/TabStatus.java:2521
 msgid "Entries"
 msgstr ""
 
@@ -1578,15 +1577,15 @@ msgid ""
 msgstr ""
 
 #: src/TabJobs.java:3897 src/TabRestore.java:4717 src/TabRestore.java:4932
-#: src/TabStatus.java:1343
+#: src/TabStatus.java:1342
 msgid "Storage"
 msgstr ""
 
-#: src/TabJobs.java:3902 src/TabStatus.java:586 src/TabStatus.java:677
+#: src/TabJobs.java:3902 src/TabStatus.java:585 src/TabStatus.java:676
 msgid "Part size"
 msgstr ""
 
-#: src/TabJobs.java:3907 src/TabStatus.java:1731 src/TabStatus.java:1751
+#: src/TabJobs.java:3907 src/TabStatus.java:1730 src/TabStatus.java:1750
 msgid "unlimited"
 msgstr ""
 
@@ -1613,7 +1612,7 @@ msgstr ""
 msgid "Size limit for one storage file part."
 msgstr ""
 
-#: src/TabJobs.java:4121 src/TabStatus.java:589 src/TabStatus.java:693
+#: src/TabJobs.java:4121 src/TabStatus.java:588 src/TabStatus.java:692
 msgid "Compress"
 msgstr ""
 
@@ -1688,7 +1687,7 @@ msgstr ""
 msgid "Remove entry from compress exclude list."
 msgstr ""
 
-#: src/TabJobs.java:4583 src/TabStatus.java:592 src/TabStatus.java:709
+#: src/TabJobs.java:4583 src/TabStatus.java:591 src/TabStatus.java:708
 msgid "Crypt"
 msgstr ""
 
@@ -1717,7 +1716,7 @@ msgstr ""
 msgid "Public key file used for asymmetric encryption."
 msgstr ""
 
-#: src/TabJobs.java:4871 src/TabStatus.java:2186 src/TabStatus.java:2188
+#: src/TabJobs.java:4871 src/TabStatus.java:2185 src/TabStatus.java:2187
 msgid "Crypt password"
 msgstr ""
 
@@ -1972,6 +1971,10 @@ msgstr ""
 msgid ""
 "FTP server user login name. Leave it empty to use the default name from the "
 "configuration file."
+msgstr ""
+
+#: src/TabJobs.java:6039 src/TabJobs.java:6282 src/TabJobs.java:6792
+msgid "Host"
 msgstr ""
 
 #: src/TabJobs.java:6043
@@ -2697,8 +2700,8 @@ msgstr ""
 msgid "Job UUID"
 msgstr ""
 
-#: src/TabRestore.java:4260 src/TabStatus.java:595 src/TabStatus.java:725
-#: src/TabStatus.java:2538
+#: src/TabRestore.java:4260 src/TabStatus.java:594 src/TabStatus.java:724
+#: src/TabStatus.java:2537
 msgid "Last executed"
 msgstr ""
 
@@ -2707,8 +2710,8 @@ msgid "Last error"
 msgstr ""
 
 #: src/TabRestore.java:4284 src/TabRestore.java:4426 src/TabRestore.java:4578
-#: src/TabStatus.java:2500 src/TabStatus.java:2510 src/TabStatus.java:2526
-#: src/TabStatus.java:2552
+#: src/TabStatus.java:2499 src/TabStatus.java:2509 src/TabStatus.java:2525
+#: src/TabStatus.java:2551
 #, java-format
 msgid "{0}"
 msgstr ""
@@ -2727,7 +2730,7 @@ msgstr ""
 msgid "Expire at"
 msgstr ""
 
-#: src/TabRestore.java:4521 src/TabRestore.java:4697 src/TabStatus.java:2486
+#: src/TabRestore.java:4521 src/TabRestore.java:4697 src/TabStatus.java:2485
 msgid "Job"
 msgstr ""
 
@@ -2736,7 +2739,7 @@ msgid "Created"
 msgstr ""
 
 #: src/TabRestore.java:4594 src/TabRestore.java:4984 src/TabRestore.java:5335
-#: src/TabRestore.java:5923 src/TabStatus.java:577 src/TabStatus.java:645
+#: src/TabRestore.java:5923 src/TabStatus.java:576 src/TabStatus.java:644
 msgid "State"
 msgstr ""
 
@@ -2755,7 +2758,7 @@ msgid "Count: {0}"
 msgstr ""
 
 #: src/TabRestore.java:4976 src/TabRestore.java:5327 src/TabRestore.java:6082
-#: src/TabStatus.java:575
+#: src/TabStatus.java:574
 msgid "Click to sort for name."
 msgstr ""
 
@@ -2767,7 +2770,7 @@ msgstr ""
 msgid "Click to sort for modification date/time."
 msgstr ""
 
-#: src/TabRestore.java:4985 src/TabRestore.java:5336 src/TabStatus.java:578
+#: src/TabRestore.java:4985 src/TabRestore.java:5336 src/TabStatus.java:577
 msgid "Click to sort for state."
 msgstr ""
 
@@ -2811,7 +2814,7 @@ msgstr ""
 msgid "Unmark all"
 msgstr ""
 
-#: src/TabRestore.java:5723 src/TabRestore.java:6263 src/TabStatus.java:911
+#: src/TabRestore.java:5723 src/TabRestore.java:6263 src/TabStatus.java:910
 msgid "Info"
 msgstr ""
 
@@ -2873,7 +2876,7 @@ msgstr ""
 msgid "Click to sort for archive name."
 msgstr ""
 
-#: src/TabRestore.java:6085 src/TabStatus.java:584
+#: src/TabRestore.java:6085 src/TabStatus.java:583
 msgid "Click to sort for type."
 msgstr ""
 
@@ -2893,8 +2896,8 @@ msgstr ""
 msgid "Entry type."
 msgstr ""
 
-#: src/TabRestore.java:6428 src/TabStatus.java:1000 src/TabStatus.java:1184
-#: src/TabStatus.java:1226 src/TabStatus.java:1277
+#: src/TabRestore.java:6428 src/TabStatus.java:999 src/TabStatus.java:1183
+#: src/TabStatus.java:1225 src/TabStatus.java:1276
 msgid "files"
 msgstr ""
 
@@ -3190,8 +3193,8 @@ msgid ""
 "(error: {1})"
 msgstr ""
 
-#: src/TabRestore.java:8314 src/TabStatus.java:821 src/TabStatus.java:1529
-#: src/TabStatus.java:1885 src/TabStatus.java:1901
+#: src/TabRestore.java:8314 src/TabStatus.java:820 src/TabStatus.java:1528
+#: src/TabStatus.java:1884 src/TabStatus.java:1900
 msgid "Continue"
 msgstr ""
 
@@ -3209,7 +3212,7 @@ msgid ""
 "(error: {1})"
 msgstr ""
 
-#: src/TabRestore.java:8465 src/TabStatus.java:2296
+#: src/TabRestore.java:8465 src/TabStatus.java:2295
 #, java-format
 msgid ""
 "Communication error while deleting storage\n"
@@ -3237,7 +3240,7 @@ msgstr ""
 msgid "Archives"
 msgstr ""
 
-#: src/TabRestore.java:8872 src/TabStatus.java:1263
+#: src/TabRestore.java:8872 src/TabStatus.java:1262
 msgid "Total"
 msgstr ""
 
@@ -3397,142 +3400,142 @@ msgstr ""
 msgid "aborted"
 msgstr ""
 
-#: src/TabStatus.java:508
+#: src/TabStatus.java:507
 msgid "Status"
 msgstr ""
 
-#: src/TabStatus.java:523
+#: src/TabStatus.java:522
 msgid ""
 "List with job entries.\n"
 "Click to select job, right-click to open context menu."
 msgstr ""
 
-#: src/TabStatus.java:581
+#: src/TabStatus.java:580
 msgid "Click to sort for host."
 msgstr ""
 
-#: src/TabStatus.java:587
+#: src/TabStatus.java:586
 msgid "Click to sort for part size."
 msgstr ""
 
-#: src/TabStatus.java:590
+#: src/TabStatus.java:589
 msgid "Click to sort for used compress algorithm."
 msgstr ""
 
-#: src/TabStatus.java:593
+#: src/TabStatus.java:592
 msgid "Click to sort for used encryption algorithm."
 msgstr ""
 
-#: src/TabStatus.java:596
+#: src/TabStatus.java:595
 msgid "Click to sort for last date/time job was executed."
 msgstr ""
 
-#: src/TabStatus.java:598 src/TabStatus.java:741
+#: src/TabStatus.java:597 src/TabStatus.java:740
 msgid "Estimated time"
 msgstr ""
 
-#: src/TabStatus.java:599
+#: src/TabStatus.java:598
 msgid "Click to sort for estimated rest time to execute job."
 msgstr ""
 
-#: src/TabStatus.java:759
+#: src/TabStatus.java:758
 msgid "Set optimal column width"
 msgstr ""
 
-#: src/TabStatus.java:836 src/TabStatus.java:1353 src/TabStatus.java:1545
+#: src/TabStatus.java:835 src/TabStatus.java:1352 src/TabStatus.java:1544
 msgid "Volume"
 msgstr ""
 
-#: src/TabStatus.java:987 src/TabStatus.java:1829 src/TabStatus.java:1840
+#: src/TabStatus.java:986 src/TabStatus.java:1828 src/TabStatus.java:1839
 msgid "Selected"
 msgstr ""
 
-#: src/TabStatus.java:995
+#: src/TabStatus.java:994
 msgid "Done"
 msgstr ""
 
-#: src/TabStatus.java:1050
+#: src/TabStatus.java:1049
 msgid "files/s"
 msgstr ""
 
-#: src/TabStatus.java:1068 src/TabStatus.java:1069 src/TabStatus.java:1159
-#: src/TabStatus.java:1160
+#: src/TabStatus.java:1067 src/TabStatus.java:1068 src/TabStatus.java:1158
+#: src/TabStatus.java:1159
 msgid "bytes/s"
 msgstr ""
 
-#: src/TabStatus.java:1070 src/TabStatus.java:1161
+#: src/TabStatus.java:1069 src/TabStatus.java:1160
 msgid "KBytes/s"
 msgstr ""
 
-#: src/TabStatus.java:1071 src/TabStatus.java:1162
+#: src/TabStatus.java:1070 src/TabStatus.java:1161
 msgid "MBytes/s"
 msgstr ""
 
-#: src/TabStatus.java:1072 src/TabStatus.java:1163
+#: src/TabStatus.java:1071 src/TabStatus.java:1162
 msgid "GBytes/s"
 msgstr ""
 
-#: src/TabStatus.java:1073 src/TabStatus.java:1164
+#: src/TabStatus.java:1072 src/TabStatus.java:1163
 msgid "TBytes/s"
 msgstr ""
 
-#: src/TabStatus.java:1088
+#: src/TabStatus.java:1087
 msgid "Stored"
 msgstr ""
 
-#: src/TabStatus.java:1129
+#: src/TabStatus.java:1128
 msgid "Ratio"
 msgstr ""
 
-#: src/TabStatus.java:1179
+#: src/TabStatus.java:1178
 msgid "Skipped"
 msgstr ""
 
-#: src/TabStatus.java:1221
+#: src/TabStatus.java:1220
 msgid "Errors"
 msgstr ""
 
-#: src/TabStatus.java:1333
+#: src/TabStatus.java:1332
 msgid "File"
 msgstr ""
 
-#: src/TabStatus.java:1360
+#: src/TabStatus.java:1359
 msgid "Total files"
 msgstr ""
 
-#: src/TabStatus.java:1367
+#: src/TabStatus.java:1366
 msgid "Total bytes"
 msgstr ""
 
-#: src/TabStatus.java:1374
+#: src/TabStatus.java:1373
 msgid "Message"
 msgstr ""
 
-#: src/TabStatus.java:1480
+#: src/TabStatus.java:1479
 msgid "Start selected job."
 msgstr ""
 
-#: src/TabStatus.java:1497
+#: src/TabStatus.java:1496
 msgid "Abort selected job."
 msgstr ""
 
-#: src/TabStatus.java:1514
+#: src/TabStatus.java:1513
 msgid "Pause selected job for a specific time."
 msgstr ""
 
-#: src/TabStatus.java:1530
+#: src/TabStatus.java:1529
 msgid "Suspend selected job for an infinite time."
 msgstr ""
 
-#: src/TabStatus.java:1546
+#: src/TabStatus.java:1545
 msgid "Click when a new volume is available in drive."
 msgstr ""
 
-#: src/TabStatus.java:1563
+#: src/TabStatus.java:1562
 msgid "Quit BARControl program."
 msgstr ""
 
-#: src/TabStatus.java:1642 src/TabStatus.java:1803
+#: src/TabStatus.java:1641 src/TabStatus.java:1802
 #, java-format
 msgid ""
 "Cannot get job list:\n"
@@ -3540,24 +3543,24 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabStatus.java:1728 src/TabStatus.java:1748
+#: src/TabStatus.java:1727 src/TabStatus.java:1747
 msgid "suspended"
 msgstr ""
 
-#: src/TabStatus.java:1881
+#: src/TabStatus.java:1880
 msgid "Pause [%3dmin]"
 msgstr ""
 
-#: src/TabStatus.java:1917
+#: src/TabStatus.java:1916
 msgid "Suspend"
 msgstr ""
 
-#: src/TabStatus.java:2073
+#: src/TabStatus.java:2072
 #, java-format
 msgid "Please insert volume #{0}"
 msgstr ""
 
-#: src/TabStatus.java:2077
+#: src/TabStatus.java:2076
 #, java-format
 msgid ""
 "Please insert replacement volume #{0}:\n"
@@ -3565,122 +3568,122 @@ msgid ""
 "{1}"
 msgstr ""
 
-#: src/TabStatus.java:2161
+#: src/TabStatus.java:2160
 #, java-format
 msgid "Start job ''{0}''?"
 msgstr ""
 
-#: src/TabStatus.java:2163
+#: src/TabStatus.java:2162
 msgid "Full"
 msgstr ""
 
-#: src/TabStatus.java:2164
+#: src/TabStatus.java:2163
 msgid "Incremental"
 msgstr ""
 
-#: src/TabStatus.java:2165
+#: src/TabStatus.java:2164
 msgid "Differential"
 msgstr ""
 
-#: src/TabStatus.java:2166
+#: src/TabStatus.java:2165
 msgid "Dry-run"
 msgstr ""
 
-#: src/TabStatus.java:2169
+#: src/TabStatus.java:2168
 msgid "Store all files."
 msgstr ""
 
-#: src/TabStatus.java:2170
+#: src/TabStatus.java:2169
 msgid "Store all files and create incremental data file."
 msgstr ""
 
-#: src/TabStatus.java:2171
+#: src/TabStatus.java:2170
 msgid ""
 "Store changed files since last incremental or full storage and update "
 "incremental data file."
 msgstr ""
 
-#: src/TabStatus.java:2172
+#: src/TabStatus.java:2171
 msgid "Store changed files since last full storage."
 msgstr ""
 
-#: src/TabStatus.java:2173
+#: src/TabStatus.java:2172
 msgid "Collect and process all files, but do not create archives."
 msgstr ""
 
-#: src/TabStatus.java:2189
+#: src/TabStatus.java:2188
 msgid "Verify"
 msgstr ""
 
-#: src/TabStatus.java:2207
+#: src/TabStatus.java:2206
 #, java-format
 msgid "Cannot set crypt password for job ''{0}'' (error: {1})"
 msgstr ""
 
-#: src/TabStatus.java:2239
+#: src/TabStatus.java:2238
 #, java-format
 msgid "Cannot start job ''{0}'' (error: {1})"
 msgstr ""
 
-#: src/TabStatus.java:2250
+#: src/TabStatus.java:2249
 #, java-format
 msgid "Abort running job ''{0}''?"
 msgstr ""
 
-#: src/TabStatus.java:2252
+#: src/TabStatus.java:2251
 msgid "Abort job"
 msgstr ""
 
-#: src/TabStatus.java:2283
+#: src/TabStatus.java:2282
 #, java-format
 msgid "Cannot abort job (error: {0})"
 msgstr ""
 
-#: src/TabStatus.java:2335
+#: src/TabStatus.java:2334
 #, java-format
 msgid "Cannot pause job (error: {0})"
 msgstr ""
 
-#: src/TabStatus.java:2354
+#: src/TabStatus.java:2353
 #, java-format
 msgid "Cannot suspend job (error: {0})"
 msgstr ""
 
-#: src/TabStatus.java:2368
+#: src/TabStatus.java:2367
 msgid "Volume request"
 msgstr ""
 
-#: src/TabStatus.java:2369
+#: src/TabStatus.java:2368
 #, java-format
 msgid "Load volume number {0}."
 msgstr ""
 
-#: src/TabStatus.java:2371
+#: src/TabStatus.java:2370
 msgid "Unload tray"
 msgstr ""
 
-#: src/TabStatus.java:2393
+#: src/TabStatus.java:2392
 #, java-format
 msgid "Cannot change volume (error: {0})"
 msgstr ""
 
-#: src/TabStatus.java:2496
+#: src/TabStatus.java:2495
 msgid "Entities"
 msgstr ""
 
-#: src/TabStatus.java:2506
+#: src/TabStatus.java:2505
 msgid "Storages"
 msgstr ""
 
-#: src/TabStatus.java:2516 src/TabStatus.java:2532
+#: src/TabStatus.java:2515 src/TabStatus.java:2531
 #, java-format
 msgid "{0} ({1} bytes)"
 msgstr ""
 
-#: src/TabStatus.java:2548
+#: src/TabStatus.java:2547
 msgid "Execution count"
 msgstr ""
 
-#: src/TabStatus.java:2558
+#: src/TabStatus.java:2557
 msgid "Average execution time"
 msgstr ""

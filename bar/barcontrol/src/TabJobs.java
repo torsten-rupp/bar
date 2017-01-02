@@ -1683,9 +1683,9 @@ public class TabJobs
   private Button       widgetScheduleTableAdd,widgetScheduleTableEdit,widgetScheduleTableRemove;
 
   // BAR variables
-  private WidgetVariable  remoteHostName          = new WidgetVariable<String> ("remote-host-name","");
-  private WidgetVariable  remoteHostPort          = new WidgetVariable<Integer>("remote-host-port",0);
-  private WidgetVariable  remoteHostForceSSL      = new WidgetVariable<Boolean>("remote-host-force-ssl",false);
+  private WidgetVariable  slaveHostName           = new WidgetVariable<String> ("slave-host-name","");
+  private WidgetVariable  slaveHostPort           = new WidgetVariable<Integer>("slave-host-port",0);
+  private WidgetVariable  slaveHostForceSSL       = new WidgetVariable<Boolean>("slave-host-force-ssl",false);
   private WidgetVariable  includeFileCommand      = new WidgetVariable<String> ("include-file-command","");
   private WidgetVariable  includeImageCommand     = new WidgetVariable<String> ("include-image-command","");
   private WidgetVariable  excludeCommand          = new WidgetVariable<String> ("exclude-command","");
@@ -1973,11 +1973,11 @@ public class TabJobs
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0,0.0}));
     Widgets.layout(composite,1,0,TableLayoutData.WE);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Host")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Slave")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       text = Widgets.newText(composite);
-      text.setToolTipText(BARControl.tr("Host to run job. Leave empty to run on local host."));
+      text.setToolTipText(BARControl.tr("Hostname of slave to run job. Leave empty to run on local host."));
       text.setEnabled(false);
       Widgets.layout(text,0,1,TableLayoutData.WE);
       Widgets.addEventListener(new WidgetEventListener(text,selectJobEvent)
@@ -1997,7 +1997,7 @@ public class TabJobs
           String string = widget.getText().trim();
           Color  color  = COLOR_MODIFIED;
 
-          if (remoteHostName.getString().equals(string)) color = null;
+          if (slaveHostName.getString().equals(string)) color = null;
           widget.setBackground(color);
         }
       });
@@ -2009,8 +2009,8 @@ public class TabJobs
           Text   widget = (Text)selectionEvent.widget;
           String string = widget.getText().trim();
 
-          remoteHostName.set(string);
-          BARServer.setJobOption(selectedJobData.uuid,remoteHostName);
+          slaveHostName.set(string);
+          BARServer.setJobOption(selectedJobData.uuid,slaveHostName);
           widget.setBackground(null);
         }
         @Override
@@ -2030,12 +2030,12 @@ public class TabJobs
           Text   widget = (Text)focusEvent.widget;
           String string = widget.getText().trim();
 
-          remoteHostName.set(string);
-          BARServer.setJobOption(selectedJobData.uuid,remoteHostName);
+          slaveHostName.set(string);
+          BARServer.setJobOption(selectedJobData.uuid,slaveHostName);
           widget.setBackground(null);
         }
       });
-      Widgets.addModifyListener(new WidgetModifyListener(text,remoteHostName));
+      Widgets.addModifyListener(new WidgetModifyListener(text,slaveHostName));
 
       label = Widgets.newLabel(composite,BARControl.tr("Port")+":");
       Widgets.layout(label,0,2,TableLayoutData.W);
@@ -2063,7 +2063,7 @@ public class TabJobs
           int     n      = widget.getSelection();
           Color   color  = COLOR_MODIFIED;
 
-          if (remoteHostPort.getInteger() == n) color = null;
+          if (slaveHostPort.getInteger() == n) color = null;
           widget.setBackground(color);
           widget.setData("showedErrorDialog",false);
         }
@@ -2076,8 +2076,8 @@ public class TabJobs
           Spinner widget = (Spinner)selectionEvent.widget;
           int     n      = widget.getSelection();
 
-          remoteHostPort.set(n);
-          BARServer.setJobOption(selectedJobData.uuid,remoteHostPort);
+          slaveHostPort.set(n);
+          BARServer.setJobOption(selectedJobData.uuid,slaveHostPort);
           widget.setBackground(null);
         }
         @Override
@@ -2086,8 +2086,8 @@ public class TabJobs
           Spinner widget = (Spinner)selectionEvent.widget;
           int     n      = widget.getSelection();
 
-          remoteHostPort.set(n);
-          BARServer.setJobOption(selectedJobData.uuid,remoteHostPort);
+          slaveHostPort.set(n);
+          BARServer.setJobOption(selectedJobData.uuid,slaveHostPort);
           widget.setBackground(null);
         }
       });
@@ -2105,12 +2105,12 @@ public class TabJobs
           Spinner widget = (Spinner)focusEvent.widget;
           int     n      = widget.getSelection();
 
-          remoteHostPort.set(n);
-          BARServer.setJobOption(selectedJobData.uuid,remoteHostPort);
+          slaveHostPort.set(n);
+          BARServer.setJobOption(selectedJobData.uuid,slaveHostPort);
           widget.setBackground(null);
         }
       });
-      Widgets.addModifyListener(new WidgetModifyListener(spinner,remoteHostPort));
+      Widgets.addModifyListener(new WidgetModifyListener(spinner,slaveHostPort));
 
       button = Widgets.newCheckbox(composite,BARControl.tr("SSL"));
       button.setToolTipText(BARControl.tr("Enable to force SSL connection."));
@@ -2134,11 +2134,11 @@ public class TabJobs
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-          remoteHostForceSSL.set(widget.getSelection());
-          BARServer.setJobOption(selectedJobData.uuid,remoteHostForceSSL);
+          slaveHostForceSSL.set(widget.getSelection());
+          BARServer.setJobOption(selectedJobData.uuid,slaveHostForceSSL);
         }
       });
-      Widgets.addModifyListener(new WidgetModifyListener(button,remoteHostForceSSL));
+      Widgets.addModifyListener(new WidgetModifyListener(button,slaveHostForceSSL));
     }
 
     // create sub-tabs
@@ -8953,9 +8953,9 @@ throw new Error("NYI");
     if (selectedJobData != null)
     {
       // get job data
-      BARServer.getJobOption(selectedJobData.uuid,remoteHostName);
-      BARServer.getJobOption(selectedJobData.uuid,remoteHostPort);
-      BARServer.getJobOption(selectedJobData.uuid,remoteHostForceSSL);
+      BARServer.getJobOption(selectedJobData.uuid,slaveHostName);
+      BARServer.getJobOption(selectedJobData.uuid,slaveHostPort);
+      BARServer.getJobOption(selectedJobData.uuid,slaveHostForceSSL);
       BARServer.getJobOption(selectedJobData.uuid,includeFileCommand);
       BARServer.getJobOption(selectedJobData.uuid,includeImageCommand);
       BARServer.getJobOption(selectedJobData.uuid,excludeCommand);

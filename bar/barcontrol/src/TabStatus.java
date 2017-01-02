@@ -108,7 +108,7 @@ class JobData
   String       uuid;
   String       name;
   States       state;
-  String       remoteHostName;
+  String       slaveHostName;
   ArchiveTypes archiveType;
   long         archivePartSize;
   String       deltaCompressAlgorithm;
@@ -126,7 +126,7 @@ class JobData
    * @param uuid job UUID
    * @param name name
    * @param state job state
-   * @param remoteHostName remote host name
+   * @param slaveHostName slave host name
    * @param archiveType archive type
    * @param archivePartSize archive part size
    * @param deltaCompressAlgorithm delta compress algorithm
@@ -137,12 +137,12 @@ class JobData
    * @param lastExecutedDateTime last executed date/time [s]
    * @param estimatedRestTime estimated rest time [s]
    */
-  JobData(String uuid, String name, States state, String remoteHostName, ArchiveTypes archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
+  JobData(String uuid, String name, States state, String slaveHostName, ArchiveTypes archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
   {
     this.uuid                   = uuid;
     this.name                   = name;
     this.state                  = state;
-    this.remoteHostName         = remoteHostName;
+    this.slaveHostName          = slaveHostName;
     this.archiveType            = archiveType;
     this.archivePartSize        = archivePartSize;
     this.deltaCompressAlgorithm = deltaCompressAlgorithm;
@@ -230,7 +230,7 @@ class JobData
    */
   public String toString()
   {
-    return "Job {"+uuid+", "+name+", "+state+", "+remoteHostName+", "+archiveType+"}";
+    return "Job {"+uuid+", "+name+", "+state+", "+slaveHostName+", "+archiveType+"}";
   }
 };
 
@@ -366,7 +366,6 @@ public class TabStatus
           catch (ConnectionError error)
           {
             // ignored
-//Dprintf.dprintf("jjjjjjjjdfsfgf");
           }
           catch (org.eclipse.swt.SWTException exception)
           {
@@ -518,7 +517,7 @@ public class TabStatus
     });
 
     // list with jobs
-    final String COLUMN_NAMES[] = new String[]{"Name","State","Host","Type","Part size","Compress","Crypt","Last executed","Estimated time"};
+    final String COLUMN_NAMES[] = new String[]{"Name","State","Slave","Type","Part size","Compress","Crypt","Last executed","Estimated time"};
     widgetJobTable = Widgets.newTable(widgetTab,SWT.NONE);
     widgetJobTable.setToolTipText(BARControl.tr("List with job entries.\nClick to select job, right-click to open context menu."));
     widgetJobTable.setLayout(new TableLayout(null,null));
@@ -577,7 +576,7 @@ public class TabStatus
     tableColumn = Widgets.addTableColumn(widgetJobTable,1,BARControl.tr("State"),         SWT.LEFT,  90,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for state."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobTable,2,BARControl.tr("Host"),          SWT.LEFT, 130,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,2,BARControl.tr("Slave"),          SWT.LEFT, 130,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for host."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn = Widgets.addTableColumn(widgetJobTable,3,BARControl.tr("Type"),          SWT.LEFT,  90,true );
@@ -626,7 +625,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Host"));
+      menuItem = Widgets.addMenuCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Slave"));
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -1650,7 +1649,7 @@ public class TabStatus
           String         jobUUID                = resultMap.getString("jobUUID"                       );
           String         name                   = resultMap.getString("name"                          );
           JobData.States state                  = resultMap.getEnum  ("state",JobData.States.class    );
-          String         remoteHostName         = resultMap.getString("remoteHostName",""             );
+          String         slaveHostName          = resultMap.getString("slaveHostName",""              );
           ArchiveTypes   archiveType            = resultMap.getEnum  ("archiveType",ArchiveTypes.class);
           long           archivePartSize        = resultMap.getLong  ("archivePartSize"               );
           String         deltaCompressAlgorithm = resultMap.getString("deltaCompressAlgorithm"        );
@@ -1666,7 +1665,7 @@ public class TabStatus
           {
             jobData.name                   = name;
             jobData.state                  = state;
-            jobData.remoteHostName         = remoteHostName;
+            jobData.slaveHostName          = slaveHostName;
             jobData.archiveType            = archiveType;
             jobData.archivePartSize        = archivePartSize;
             jobData.deltaCompressAlgorithm = deltaCompressAlgorithm;
@@ -1682,7 +1681,7 @@ public class TabStatus
             jobData = new JobData(jobUUID,
                                   name,
                                   state,
-                                  remoteHostName,
+                                  slaveHostName,
                                   archiveType,
                                   archivePartSize,
                                   deltaCompressAlgorithm,
@@ -1726,7 +1725,7 @@ public class TabStatus
                                             jobData,
                                             jobData.name,
                                             (status == States.RUNNING) ? jobData.state.toString() : BARControl.tr("suspended"),
-                                            jobData.remoteHostName,
+                                            jobData.slaveHostName,
                                             jobData.archiveType.toString(),
                                             (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
                                             jobData.formatCompressAlgorithm(),
@@ -1746,7 +1745,7 @@ public class TabStatus
                                                         jobData,
                                                         jobData.name,
                                                         (status == States.RUNNING) ? jobData.state.toString() : BARControl.tr("suspended"),
-                                                        jobData.remoteHostName,
+                                                        jobData.slaveHostName,
                                                         jobData.archiveType.toString(),
                                                         (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
                                                         jobData.formatCompressAlgorithm(),
