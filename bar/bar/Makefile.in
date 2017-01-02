@@ -116,6 +116,7 @@ GREP           = grep
 GETFATTR       = @GETFATTR@
 INSTALL        = @INSTALL@
 KILL           = kill
+KILLALL        = killall
 LN             = ln
 LS             = ls
 MKDIR          = mkdir
@@ -127,9 +128,12 @@ READLINK       = readlink
 RMDIR          = rmdir
 RMF            = rm -f
 RMRF           = rm -rf
+SCP            = scp
 SED            = sed
 SETFATTR       = @SETFATTR@
 SLEEP          = sleep
+SSH            = ssh
+SSHPASS        = sshpass
 SORT           = sort
 STAT           = stat
 TAIL           = tail
@@ -236,14 +240,15 @@ TEST_KEY_SIGNATURE_OTHER_PRIVATE = test/key-signature-other.private
 TEST_SERVER_CONFIG               = test/bar.cfg
 TEST_SERVER_PORT                 = 39909
 TEST_SERVER_SSL_PORT             = 39910
-TEST_SERVER_PID_FILE             = test/barserver.pid
-TEST_SERVER_JOBS                 = test/jobs
-TEST_SERVER_DATABASE             = test/index.db
-TEST_SERVER_LOG_FILE             = test/bar.log
+TEST_SERVER_DIRECTORY            = test
+TEST_SERVER_PID_FILE             = $(TEST_SERVER_DIRECTORY)/barserver.pid
+TEST_SERVER_JOBS                 = $(TEST_SERVER_DIRECTORY)/jobs
+TEST_SERVER_DATABASE             = $(TEST_SERVER_DIRECTORY)/index.db
+TEST_SERVER_LOG_FILE             = $(TEST_SERVER_DIRECTORY)/bar.log
 
 # hosts, ports, passwords, keys for tests
 TEST_HOST                        ?= localhost
-TEST_PASSWORD                    ?=
+TEST_PASSWORD                    =
 
 TEST_HOST_FTP                    ?= $(TEST_HOST)
 TEST_PASSWORD_FTP                ?= $(TEST_PASSWORD)
@@ -270,6 +275,10 @@ TEST_HOST_WEBDAV                 ?= localhost/webdav
 TEST_PASSWORD_WEBDAV             ?= $(TEST_PASSWORD)
 
 TEST_PASSWORD_CRYPT              =  Franz_Kafka:Die_Verwandlung
+
+TEST_REMOTE_HOST                 =
+TEST_REMOTE_USERNAME             ?= test
+TEST_REMOTE_PASSWORD             ?= test
 
 # crypt/compress used for all-test (do not select all available compress and
 # crypt algorithms, because this would take a long time)
@@ -585,6 +594,7 @@ help:
 	@$(ECHO) "  test9[-debug|-valgrind], test_hugefiles[-debug|-valgrind]"
 	@$(ECHO) "  test10[-debug|-valgrind], test_dvd[-debug|-valgrind]"
 	@$(ECHO) "  test11[-debug|-valgrind], test_server[-debug|-valgrind]"
+	@$(ECHO) "  test12[-debug|-valgrind], test_remote[-debug|-valgrind]"
 	@$(ECHO) "  test_combined[-debug|-valgrind]"
 	@$(ECHO) "  test_parameters[-debug|-valgrind]"
 	@$(ECHO) "  test_misc[-debug|-valgrind]"
@@ -1004,6 +1014,12 @@ rundev_test: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 functionTestCheckExitcode = \
   $3 2>/dev/null; if test $$? -lt $1 -o $$? -gt $2; then false; fi
 
+# helper functions for remote tests
+functionRemoteExecute = \
+  $(SSHPASS) -p $(TEST_REMOTE_PASSWORD) $(SSH) $(TEST_REMOTE_USERNAME)@$(TEST_REMOTE_HOST) "$1"
+functionRemoteCopy = \
+  $(SSHPASS) -p $(TEST_REMOTE_PASSWORD) $(SCP) $1 $(TEST_REMOTE_USERNAME)@$(TEST_REMOTE_HOST):$2
+
 # do tests
 #
 # Tests:
@@ -1113,12 +1129,12 @@ TEST_OPTIONS = --no-default-config --config=$(CURDIR)/$(TEST_CONFIG)
 
 .PHONY: test test_win
 .PHONY: test-debug test_win-debug
-.PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11
-.PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug test10-debug test11-debug
-.PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind test10-valgrind test11-valgrind
-.PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_signatures test_split test_image test_storage test_dvd test_combined test_parameters test_misc
-.PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_signatures-debug test_split-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_parameters-debug test_misc-debug
-.PHONY: test_basic-valgrind test_compress-valgrind test_crypt-valgrind test_asymmetric_crypt-valgrind test_signatures_crypt-valgrind test_split-valgrind test_image-valgrind test_storage-valgrind test_dvd-valgrind test_combined-valgrind test_parameters-valgrind test_misc-valgrind
+.PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12
+.PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug test10-debug test11-debug test12-debug
+.PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind test10-valgrind test11-valgrind test12-valgrind
+.PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_signatures test_split test_image test_storage test_dvd test_combined test_server test_remote test_parameters test_misc
+.PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_signatures-debug test_split-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_server-debug test_remote-debug test_parameters-debug test_misc-debug
+.PHONY: test_basic-valgrind test_compress-valgrind test_crypt-valgrind test_asymmetric_crypt-valgrind test_signatures_crypt-valgrind test_split-valgrind test_image-valgrind test_storage-valgrind test_dvd-valgrind test_combined-valgrind test_server-valgrind test_remote-valgrind test_parameters-valgrind test_misc-valgrind
 .PHONY: test_storage_file test_storage_ftp test_storage_scp test_storage_sftp test_storage_webdav
 .PHONY: test_storage_file-debug test_storage_ftp-debug test_storage_scp-debug test_storage_sftp-debug test_storage_webdav-debug
 .PHONY: test_storage_file-valgrind test_storage_ftp-valgrind test_storage_scp-valgrind test_storage_sftp-valgrind test_storage_webdav-valgrind
@@ -1678,11 +1694,29 @@ test11 test_server: \
           ;
 	@$(ECHO) "ok"
 
-test11-debug test_serverd-debug:
+test11-debug test_server-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_server
 
 test11-valgrind test_server-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_server
+
+test12 test_remote: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
+	@$(ECHO_NO_LF) "Test 12: remote..."
+	$(MAKE) \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          test_remote_operations \
+          ;
+	@$(ECHO) "ok"
+
+test12-debug test_remote-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_remote
+
+test12-valgrind test_remote-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_remote
 
 test_combined: \
   $(TEST_BAR) \
@@ -3503,6 +3537,7 @@ test_server_operations_socket_server: \
 	  $(ULIMIT) -Sv $(MEMORY_LIMIT); \
           \
 	  : start server; \
+          $(INSTALL) -d $(TEST_SERVER_DIRECTORY); \
           $(INSTALL) -d $(TEST_SERVER_JOBS); \
           $(INSTALL) bar.cfg $(TEST_SERVER_CONFIG); \
           $(RMF) $(TEST_SERVER_JOBS)/__test__; \
@@ -3548,6 +3583,8 @@ test_server_operations_socket_client: \
           \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_LIST) 1>/dev/null; \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_NEW name=__test__ jobUUID=test); \
+          \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=test name=archive-part-size value=0); \
           \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INCLUDE_LIST jobUUID=test); \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MOUNT_LIST jobUUID=test); \
@@ -3658,6 +3695,98 @@ test_server_operations_batch: \
 	    --index-database=$(TEST_SERVER_DATABASE) \
 	    --server-debug; \
         ) $(if $(QUIET),</dev/null 1>/dev/null)
+
+.PHONY: test_remote_operations test_remote_operations_create
+test_remote_operations: \
+  test_remote_operations_create \
+
+test_remote_operations_create: \
+  $(TEST_BAR_DEBUG) \
+  $(TEST_CONFIG) \
+  $(TEST_FILES)
+	@$(call functionVerifyParameter,TEST_BAR_DEBUG)
+	@$(call functionVerifyParameter,BAR_FILE)
+	@$(call functionVerifyParameter,TEST_REMOTE_HOST)
+	@$(call functionVerifyParameter,TEST_REMOTE_USERNAME)
+	@$(call functionVerifyParameter,TEST_REMOTE_PASSWORD)
+	@
+	( \
+	  $(ULIMIT) -Sv $(MEMORY_LIMIT); \
+          \
+	  : start remote server; \
+          $(call functionRemoteExecute,$(KILLALL) $(TEST_BAR_DEBUG)); \
+          $(call functionRemoteCopy,$(TEST_BAR_DEBUG),$(TEST_BAR_DEBUG)); \
+          $(call functionRemoteExecute,$(INSTALL) -d $(TEST_SERVER_DIRECTORY)); \
+          $(call functionRemoteExecute,$(INSTALL) -d $(TEST_SERVER_JOBS)); \
+          $(call functionRemoteCopy,bar.cfg,$(TEST_SERVER_CONFIG)); \
+          $(call functionRemoteExecute,$(RMF) $(TEST_SERVER_JOBS)/__test__); \
+	  $(call functionRemoteExecute,DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(REMOTE_EXECUTE) $(TEST_BAR_DEBUG) \
+	    --no-default-config --config=$(TEST_SERVER_CONFIG) \
+            --daemon \
+	    --pid-file=$(TEST_SERVER_PID_FILE) \
+	    --server-port=$(TEST_SERVER_PORT) \
+	    --index-database=$(TEST_SERVER_DATABASE) \
+            --server-jobs-directory=$(TEST_SERVER_JOBS) \
+	    --server-debug \
+            --log-file=$(TEST_SERVER_LOG_FILE) \
+            --log=all \
+            --max-threads=1 \
+            $(ADDITIONAL_OPTIONS) \
+          ); \
+          if test $$? -eq 0; then \
+	    $(SLEEP) 5; \
+          else \
+            exit 1; \
+          fi; \
+        ) $(if $(QUIET),</dev/null 1>/dev/null)
+	@
+	( \
+$(call functionRemoteExecute,"ps auxw|grep bar"); \
+        ) $(if $(QUIET),</dev/null 1>/dev/null)
+	@
+	( \
+	  $(ULIMIT) -Sv $(MEMORY_LIMIT); \
+          \
+	  : start server; \
+          $(INSTALL) -d $(TEST_SERVER_DIRECTORY); \
+          $(INSTALL) -d $(TEST_SERVER_JOBS); \
+          $(INSTALL) bar.cfg $(TEST_SERVER_CONFIG); \
+          $(RMF) $(TEST_SERVER_JOBS)/__test__; \
+	  DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR_DEBUG) \
+	    $(TEST_OPTIONS) \
+            --daemon \
+	    --pid-file=$(TEST_SERVER_PID_FILE) \
+	    --server-port=$(TEST_SERVER_PORT) \
+	    --index-database=$(TEST_SERVER_DATABASE) \
+            --server-jobs-directory=$(TEST_SERVER_JOBS) \
+	    --server-debug \
+            --log-file=$(TEST_SERVER_LOG_FILE) \
+            --log=all \
+            --max-threads=1 \
+            $(ADDITIONAL_OPTIONS) \
+            ; \
+          if test $$? -eq 0; then \
+	    $(SLEEP) 5; \
+          else \
+            exit 1; \
+          fi; \
+        ) $(if $(QUIET),</dev/null 1>/dev/null)
+	@
+	( \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_NEW name=__test__ jobUUID=test); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=test name=remote-host-name value=test); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INCLUDE_LIST jobUUID=test); \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_FLUSH); \
+          \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_START jobUUID=test archiveType=NORMAL); \
+          for i in `seq 1 100`; do \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_STATUS jobUUID=test); \
+          $(SLEEP) 2; \
+          done; \
+          $(SLEEP) 60; \
+          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),QUIT); \
+        ) $(if $(QUIET),</dev/null 1>/dev/null)
+	@$(call functionRemoteExecute,"$(KILLALL) $(TEST_BAR_DEBUG)"); \
 
 # ----------------------------------------------------------------------------
 
