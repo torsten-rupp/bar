@@ -4282,7 +4282,7 @@ fprintf(stderr,"%s, %d: id=%s %s\n",__FILE__,__LINE__,String_cString(jobUUID),St
 
       // try to connect
       if (tryConnectFlag)
-      {               
+      {
 //        (void)Remote_connect(&remoteHost);
         error = Remote_connect(&remoteHost);
 logMessage(NULL,  // logHandle
@@ -4598,7 +4598,7 @@ fprintf(stderr,"%s, %d: count=%d\n",__FILE__,__LINE__,List_count(&remoteJobInfoL
       }
     }
 
-    // delete expired remote jobs 
+    // delete expired remote jobs
 
     // sleep
     delayRemoteThread();
@@ -18745,10 +18745,10 @@ Errors Server_run(uint              port,
   pauseEndDateTime        = 0LL;
   indexHandle             = NULL;
   quitFlag                = FALSE;
-  AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&jobList, { List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&jobList.lock,{ Semaphore_done(&jobList.lock); });
-  AUTOFREE_ADD(&autoFreeList,&jobStatusLock,{ Semaphore_done(&serverStateLock); });
+  AUTOFREE_ADD(&autoFreeList,&jobStatusLock,{ Semaphore_done(&jobStatusLock); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
 
   logMessage(NULL,  // logHandle,
