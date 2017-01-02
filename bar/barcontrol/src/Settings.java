@@ -119,8 +119,8 @@ public class Settings
      */
     public int[] getMap(String strings[])
     {
-      int indizes[] = new int[strings.length];
-      for (int i = 0; i < strings.length; i++)
+      int indizes[] = new int[stringArray.length];
+      for (int i = 0; i < stringArray.length; i++)
       {
         indizes[i] = i;
       }
@@ -129,7 +129,9 @@ public class Settings
         int j = StringUtils.indexOf(strings,stringArray[i]);
         if (j >= 0)
         {
+          int n = indizes[i];
           indizes[i] = j;
+          indizes[j] = n;
         }
       }
 
