@@ -1445,7 +1445,7 @@ fprintf(stderr,"%s, %d: %d raw key\n",__FILE__,__LINE__,dataLength); debugDumpMe
         Password_freeSecure(encryptedKeyInfo);
         return error;
       }
-fprintf(stderr,"%s, %d: derived key\n",__FILE__,__LINE__); debugDumpMemory(encryptKey.data,encryptKey.dataLength,FALSE);
+//fprintf(stderr,"%s, %d: derived key\n",__FILE__,__LINE__); debugDumpMemory(encryptKey.data,encryptKey.dataLength,FALSE);
       error = Crypt_init(&cryptInfo,
                          SECRET_KEY_CRYPT_ALGORITHM,
                          cryptMode,
