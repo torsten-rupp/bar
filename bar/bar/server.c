@@ -71,7 +71,8 @@
 #define MAX_ABORT_COMMAND_IDS               512     // max. aborted command ids history
 
 // sleep times [s]
-#define SLEEP_TIME_REMOTE_THREAD            ( 5*60)
+//#define SLEEP_TIME_REMOTE_THREAD            ( 1*60)
+#define SLEEP_TIME_REMOTE_THREAD            (   20)
 #define SLEEP_TIME_SCHEDULER_THREAD         ( 1*60)
 #define SLEEP_TIME_PAUSE_THREAD             ( 1*60)
 #define SLEEP_TIME_INDEX_THREAD             ( 1*60)
@@ -2290,8 +2291,9 @@ LOCAL void triggerJob(JobNode      *jobNode,
   {
      // start remote create job
      jobNode->runningInfo.error = Remote_jobStart(&jobNode->remoteHost,
+                                                  jobNode->name,
                                                   jobNode->uuid,
-                                                  NULL,
+                                                  NULL,  // scheduleUUID
                                                   jobNode->archiveName,
                                                   &jobNode->includeEntryList,
                                                   &jobNode->excludePatternList,
@@ -2446,7 +2448,7 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
 
 LOCAL void jobIncludeExcludeChanged(JobNode *jobNode)
 {
-  ScheduleNode *scheduleNode;
+  const ScheduleNode *scheduleNode;
 
   assert(Semaphore_isLocked(&jobList.lock));
 
@@ -2475,6 +2477,27 @@ LOCAL void jobIncludeExcludeChanged(JobNode *jobNode)
 }
 
 /***********************************************************************\
+* Name   : jobMountChanged
+* Purpose: called when mount lists changed
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void jobMountChanged(JobNode *jobNode)
+{
+  const MountNode *mountNode;
+
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  // check if continuous schedule exists, update continuous notifies
+  LIST_ITERATE(&jobNode->mountList,mountNode)
+  {
+  }
+}
+
+/***********************************************************************\
 * Name   : jobScheduleChanged
 * Purpose: notify schedule related actions
 * Input  : jobNode - job node
@@ -2485,7 +2508,7 @@ LOCAL void jobIncludeExcludeChanged(JobNode *jobNode)
 
 LOCAL void jobScheduleChanged(const JobNode *jobNode)
 {
-  ScheduleNode *scheduleNode;
+  const ScheduleNode *scheduleNode;
 
   assert(Semaphore_isLocked(&jobList.lock));
 
@@ -3178,6 +3201,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
 
           // notify about changes
           jobIncludeExcludeChanged(jobNode);
+          jobMountChanged(jobNode);
           jobScheduleChanged(jobNode);
         }
       }
@@ -3207,6 +3231,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
 
           // notify about changes
           jobIncludeExcludeChanged(jobNode);
+          jobMountChanged(jobNode);
           jobScheduleChanged(jobNode);
 
           // remove
@@ -3248,7 +3273,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
 /***********************************************************************\
 * Name   : getAllJobUUIDs
 * Purpose: get all job UUIDs
-* Input  : jobUUIDList - list variable
+* Input  : jobUUIDList - string list variable
 * Output : jobUUIDList - updated list
 * Return : -
 * Notes  : -
@@ -4138,7 +4163,7 @@ LOCAL void delayRemoteConnectThread(void)
 
 /***********************************************************************\
 * Name   : remoteConnectThreadCode
-* Purpose: remote connect thread entry
+* Purpose: connect remote instances thread code
 * Input  : -
 * Output : -
 * Return : -
@@ -4228,23 +4253,25 @@ LOCAL void remoteConnectThreadCode(void)
   List_init(&newRemoteJobInfoList);
   Remote_initHost(&remoteHost,serverPort);
 
+fprintf(stderr,"%s, %d:+++++++++++++ \n",__FILE__,__LINE__);
   while (!quitFlag)
   {
     // get job UUIDs
     getAllJobUUIDs(&jobUUIDList);
 
+    // connect all remote instances
     while (!StringList_isEmpty(&jobUUIDList))
     {
       StringList_removeFirst(&jobUUIDList,jobUUID);
 
-      // check if remote job and currently not connected
+      // check if remote job and is currently not connected
       tryConnectFlag = FALSE;
       SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
         jobNode = findJobByUUID(jobUUID);
         if (jobNode != NULL)
         {
-//fprintf(stderr,"%s, %d: id=%s %s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(jobNode->remoteHost.name));
+fprintf(stderr,"%s, %d: id=%s %s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(jobNode->remoteHost.name));
           if (isJobRemote(jobNode) && !Remote_isConnected(&jobNode->remoteHost))
           {
             Remote_copyHost(&remoteHost,&jobNode->remoteHost);
@@ -4255,11 +4282,18 @@ LOCAL void remoteConnectThreadCode(void)
 
       // try to connect
       if (tryConnectFlag)
-      {
-        (void)Remote_connect(&remoteHost);
+      {               
+//        (void)Remote_connect(&remoteHost);
+        error = Remote_connect(&remoteHost);
+logMessage(NULL,  // logHandle
+                 LOG_TYPE_ALWAYS,
+                 "Try connnect %s: %s\n",
+                 String_cString(remoteHost.name),Error_getText(error)
+   );
       }
     }
 
+#if 0
     // update list of all active remote jobs and remote host info
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
@@ -4285,6 +4319,7 @@ LOCAL void remoteConnectThreadCode(void)
             remoteJobInfoNode->jobUUID = String_duplicate(jobNode->uuid);
             Remote_duplicateHost(&remoteJobInfoNode->remoteHost,&jobNode->remoteHost);
           }
+
           List_append(&newRemoteJobInfoList,remoteJobInfoNode);
         }
       }
@@ -4303,6 +4338,7 @@ LOCAL void remoteConnectThreadCode(void)
       {
       }
     }
+#endif
 
     // sleep
     delayRemoteConnectThread();
@@ -4480,20 +4516,15 @@ LOCAL void remoteThreadCode(void)
 
   while (!quitFlag)
   {
-    // update list of all remote job and remote host info
+    // get list of all remote job and remote host info
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
+      // add new remote job infos
       LIST_ITERATE(&jobList,jobNode)
       {
         if (isJobRemote(jobNode) && String_isEmpty(jobNode->master) && isJobActive(jobNode))
         {
-          remoteJobInfoNode = findRemoteJobInfoByUUID(jobNode->uuid);
-          if (remoteJobInfoNode != NULL)
-          {
-            List_remove(&remoteJobInfoList,remoteJobInfoNode);
-            Remote_copyHost(&remoteJobInfoNode->remoteHost,&jobNode->remoteHost);
-          }
-          else
+          if (findRemoteJobInfoByUUID(jobNode->uuid) == NULL)
           {
             remoteJobInfoNode = LIST_NEW_NODE(RemoteJobInfoNode);
             if (remoteJobInfoNode == NULL)
@@ -4502,16 +4533,28 @@ LOCAL void remoteThreadCode(void)
             }
             remoteJobInfoNode->jobUUID = String_duplicate(jobNode->uuid);
             Remote_duplicateHost(&remoteJobInfoNode->remoteHost,&jobNode->remoteHost);
+            List_append(&newRemoteJobInfoList,remoteJobInfoNode);
           }
-          List_append(&newRemoteJobInfoList,remoteJobInfoNode);
+        }
+      }
+
+      // remove not existing remote job infos
+      remoteJobInfoNode = remoteJobInfoList.head;
+      while (remoteJobInfoNode != NULL)
+      {
+        if (findJobByUUID(remoteJobInfoNode->jobUUID) != NULL)
+        {
+          remoteJobInfoNode = remoteJobInfoNode->next;
+        }
+        else
+        {
+          remoteJobInfoNode = List_removeAndFree(&remoteJobInfoList,remoteJobInfoNode,CALLBACK((ListNodeFreeFunction)freeRemoteJobInfoNode,NULL));
         }
       }
     }
-    List_done(&remoteJobInfoList,CALLBACK((ListNodeFreeFunction)freeRemoteJobInfoNode,NULL));
-    List_exchange(&remoteJobInfoList,&newRemoteJobInfoList);
-    assert(List_isEmpty(&newRemoteJobInfoList));
+fprintf(stderr,"%s, %d: count=%d\n",__FILE__,__LINE__,List_count(&remoteJobInfoList));
 
-    // get remote job info
+    // get job info from remote jobs
     LIST_ITERATE(&remoteJobInfoList,remoteJobInfoNode)
     {
       // get job info
@@ -4554,6 +4597,8 @@ LOCAL void remoteThreadCode(void)
         }
       }
     }
+
+    // delete expired remote jobs 
 
     // sleep
     delayRemoteThread();
@@ -9716,7 +9761,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get name job UUID, master
+  // get name, job UUID, master
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
@@ -9785,6 +9830,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       // create new job
       jobNode = newJob(JOB_TYPE_CREATE,NULL,jobUUID);
       assert(jobNode != NULL);
+      String_set(jobNode->name,name);
       String_set(jobNode->master,master);
 
       // add new job to list
@@ -10245,7 +10291,7 @@ jobNode = findJobByUUID(jobUUID);
 
 /***********************************************************************\
 * Name   : serverCommand_jobFlush
-* Purpose: flush job data (write to disk)
+* Purpose: flush all job data (write to disk)
 * Input  : clientInfo    - client info
 *          indexHandle   - index handle
 *          id            - command id
@@ -11139,6 +11185,63 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
 }
 
 /***********************************************************************\
+* Name   : serverCommand_mountListClear
+* Purpose: clear job mount list
+* Input  : clientInfo    - client info
+*          indexHandle   - index handle
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    jobNode = findJobByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    // clear mount list
+    List_clear(&jobNode->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+
+    // notify about changed lists
+    jobMountChanged(jobNode);
+
+    // set modified
+    jobNode->modifiedFlag = TRUE;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
 * Name   : serverCommand_mountListAdd
 * Purpose: add entry to job mountlist
 * Input  : clientInfo    - client info
@@ -11224,6 +11327,9 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
     // get id
     mountId = mountNode->id;
 
+    // notify about changed lists
+    jobMountChanged(jobNode);
+
     // set modified
     jobNode->modifiedFlag = TRUE;
   }
@@ -11247,6 +11353,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<uuid>
+*            id=<n>
 *            name=<name>
 *            device=<name>
 *            alwaysUnmount=yes|no
@@ -11331,6 +11438,9 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     String_set(mountNode->device,device);
     mountNode->alwaysUnmount = alwaysUnmount;
 
+    // notify about changed lists
+    jobMountChanged(jobNode);
+
     // set modified
     jobNode->modifiedFlag = TRUE;
   }
@@ -11403,8 +11513,12 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
       return;
     }
 
-    // remove from mount list
+    // remove from mount list and free
     List_remove(&jobNode->mountList,mountNode);
+    deleteMountNode(mountNode);
+
+    // notify about changed lists
+    jobMountChanged(jobNode);
 
     // set modified
     jobNode->modifiedFlag = TRUE;
@@ -12249,7 +12363,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 }
 
 /***********************************************************************\
-* Name   : serverCommand_scheduleAdd
+* Name   : serverCommand_scheduleListAdd
 * Purpose: add entry to job schedule list
 * Input  : clientInfo    - client info
 *          indexHandle   - index handle
@@ -12275,7 +12389,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 *            scheduleUUID=<uuid>
 \***********************************************************************/
 
-LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        title;
@@ -12472,7 +12586,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, IndexHandle *indexH
 }
 
 /***********************************************************************\
-* Name   : serverCommand_scheduleRemove
+* Name   : serverCommand_scheduleListRemove
 * Purpose: remove entry from job schedule list
 * Input  : clientInfo    - client info
 *          indexHandle   - index handle
@@ -12487,7 +12601,7 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, IndexHandle *indexH
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_scheduleRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
@@ -17770,36 +17884,33 @@ SERVER_COMMANDS[] =
   { "JOB_OPTION_DELETE",           serverCommand_jobOptionDelete,          AUTHORIZATION_STATE_OK      },
   { "JOB_STATUS",                  serverCommand_jobStatus,                AUTHORIZATION_STATE_OK      },
   { "INCLUDE_LIST",                serverCommand_includeList,              AUTHORIZATION_STATE_OK      },
-//TODO remove
   { "INCLUDE_LIST_CLEAR",          serverCommand_includeListClear,         AUTHORIZATION_STATE_OK      },
   { "INCLUDE_LIST_ADD",            serverCommand_includeListAdd,           AUTHORIZATION_STATE_OK      },
   { "INCLUDE_LIST_UPDATE",         serverCommand_includeListUpdate,        AUTHORIZATION_STATE_OK      },
   { "INCLUDE_LIST_REMOVE",         serverCommand_includeListRemove,        AUTHORIZATION_STATE_OK      },
   { "MOUNT_LIST",                  serverCommand_mountList,                AUTHORIZATION_STATE_OK      },
+  { "MOUNT_LIST_CLEAR",            serverCommand_mountListClear,           AUTHORIZATION_STATE_OK      },
   { "MOUNT_LIST_ADD",              serverCommand_mountListAdd,             AUTHORIZATION_STATE_OK      },
   { "MOUNT_LIST_UPDATE",           serverCommand_mountListUpdate,          AUTHORIZATION_STATE_OK      },
   { "MOUNT_LIST_REMOVE",           serverCommand_mountListRemove,          AUTHORIZATION_STATE_OK      },
- { "EXCLUDE_LIST",                 serverCommand_excludeList,              AUTHORIZATION_STATE_OK      },
-//TODO remove
+  { "EXCLUDE_LIST",                serverCommand_excludeList,              AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_LIST_CLEAR",          serverCommand_excludeListClear,         AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_LIST_ADD",            serverCommand_excludeListAdd,           AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_LIST_UPDATE",         serverCommand_excludeListUpdate,        AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_LIST_REMOVE",         serverCommand_excludeListRemove,        AUTHORIZATION_STATE_OK      },
   { "SOURCE_LIST",                 serverCommand_sourceList,               AUTHORIZATION_STATE_OK      },
-//TODO remove
   { "SOURCE_LIST_CLEAR",           serverCommand_sourceListClear,          AUTHORIZATION_STATE_OK      },
   { "SOURCE_LIST_ADD",             serverCommand_sourceListAdd,            AUTHORIZATION_STATE_OK      },
   { "SOURCE_LIST_UPDATE",          serverCommand_sourceListUpdate,         AUTHORIZATION_STATE_OK      },
   { "SOURCE_LIST_REMOVE",          serverCommand_sourceListRemove,         AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_COMPRESS_LIST",       serverCommand_excludeCompressList,      AUTHORIZATION_STATE_OK      },
-//TODO remove
   { "EXCLUDE_COMPRESS_LIST_CLEAR", serverCommand_excludeCompressListClear, AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_COMPRESS_LIST_ADD",   serverCommand_excludeCompressListAdd,   AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_COMPRESS_LIST_UPDATE",serverCommand_excludeCompressListUpdate,AUTHORIZATION_STATE_OK      },
   { "EXCLUDE_COMPRESS_LIST_REMOVE",serverCommand_excludeCompressListRemove,AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_LIST",               serverCommand_scheduleList,             AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_ADD",                serverCommand_scheduleAdd,              AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_REMOVE",             serverCommand_scheduleRemove,           AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_LIST_ADD",           serverCommand_scheduleListAdd,          AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_LIST_REMOVE",        serverCommand_scheduleListRemove,       AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_OPTION_GET",         serverCommand_scheduleOptionGet,        AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_OPTION_SET",         serverCommand_scheduleOptionSet,        AUTHORIZATION_STATE_OK      },
   { "SCHEDULE_OPTION_DELETE",      serverCommand_scheduleOptionDelete,     AUTHORIZATION_STATE_OK      },
