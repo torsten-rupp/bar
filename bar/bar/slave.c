@@ -837,13 +837,6 @@ Errors Slave_jobAbort(const SlaveHost *slaveHost,
     return error;
   }
 
-  // delete temporary job
-  error = Slave_executeCommand(slaveHost,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
   // free resources
 
   return ERROR_NONE;

@@ -2198,6 +2198,22 @@ LOCAL_INLINE bool isSlaveJob(const JobNode *jobNode)
 }
 
 /***********************************************************************\
+* Name   : isJobWaiting
+* Purpose: check if job is waiting
+* Input  : jobNode - job node
+* Output : -
+* Return : TRUE iff job is waiting
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isJobWaiting(const JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  return (jobNode->state == JOB_STATE_WAITING);
+}
+
+/***********************************************************************\
 * Name   : isJobActive
 * Purpose: check if job is active (waiting/running)
 * Input  : jobNode - job node
@@ -2392,6 +2408,7 @@ LOCAL void triggerJob(JobNode      *jobNode,
 {
   assert(jobNode != NULL);
 
+  // set job state
   jobNode->state                 = JOB_STATE_WAITING;
   String_setCString(jobNode->byName,byName);
   jobNode->archiveType           = archiveType;
@@ -2404,32 +2421,9 @@ LOCAL void triggerJob(JobNode      *jobNode,
   jobNode->volumeNumber          = 0;
   String_clear(jobNode->volumeMessage);
   jobNode->volumeUnloadFlag      = FALSE;
-  resetJobRunningInfo(jobNode);
 
-//TODO
-//fprintf(stderr,"%s, %d: isSlaveJob=%d\n",__FILE__,__LINE__,isSlaveJob(jobNode));
-  if (isSlaveJob(jobNode))
-  {
-     // start slave create job
-     jobNode->runningInfo.error = Slave_jobStart(&jobNode->slaveHost,
-                                                 jobNode->name,
-                                                 jobNode->uuid,
-                                                 NULL,  // scheduleUUID
-                                                 jobNode->archiveName,
-                                                 &jobNode->includeEntryList,
-                                                 &jobNode->excludePatternList,
-                                                 &jobNode->mountList,
-                                                 &jobNode->compressExcludePatternList,
-                                                 &jobNode->deltaSourceList,
-                                                 &jobNode->jobOptions,
-                                                 archiveType,
-                                                 NULL,  // scheduleTitle,
-                                                 NULL,  // scheduleCustomText,
-//                                                      CALLBACK(getCryptPassword,jobNode),
-//                                                      CALLBACK(updateCreateStatusInfo,jobNode),
-                                                 CALLBACK(storageRequestVolume,jobNode)
-                                                );
-  }
+  // reset running info
+  resetJobRunningInfo(jobNode);
 }
 
 
@@ -2447,11 +2441,13 @@ LOCAL void startJob(JobNode *jobNode)
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
+  // set job state, reset last error
   jobNode->state             = JOB_STATE_RUNNING;
   jobNode->runningInfo.error = ERROR_NONE;
 
   // increment active counter
   jobList.activeCount++;
+fprintf(stderr,"%s, %d: start %d\n",__FILE__,__LINE__,jobList.activeCount);
 }
 
 /***********************************************************************\
@@ -2504,6 +2500,7 @@ LOCAL void doneJob(JobNode *jobNode)
   }
 
   // decrement active counter
+fprintf(stderr,"%s, %d: stop %d\n",__FILE__,__LINE__,jobList.activeCount);
   assert(jobList.activeCount > 0);
   jobList.activeCount--;
 }
@@ -3687,6 +3684,7 @@ LOCAL void jobThreadCode(void)
   archiveType = ARCHIVE_ENTRY_TYPE_UNKNOWN;
   while (!quitFlag)
   {
+    // start job
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // wait and get next job to execute
@@ -3697,7 +3695,7 @@ LOCAL void jobThreadCode(void)
         while (   !quitFlag
                && (jobNode != NULL)
                && (   (jobNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
-                   || (isSlaveJob(jobNode) || (jobNode->state != JOB_STATE_WAITING))
+                   || !isJobWaiting(jobNode)
                   )
               )
         {
@@ -3710,7 +3708,7 @@ LOCAL void jobThreadCode(void)
           jobNode = jobList.head;
           while (   !quitFlag
                  && (jobNode != NULL)
-                 && (isSlaveJob(jobNode) || (jobNode->state != JOB_STATE_WAITING))
+                 && !isJobWaiting(jobNode)
                 )
           {
             jobNode = jobNode->next;
@@ -3727,9 +3725,6 @@ LOCAL void jobThreadCode(void)
         break;
       }
       assert(jobNode != NULL);
-
-      // start job
-      startJob(jobNode);
 
       // get copy of mandatory job data
       String_set(jobName,jobNode->name);
@@ -3758,6 +3753,9 @@ LOCAL void jobThreadCode(void)
         String_clear(scheduleCustomText);
         jobOptions.noStorageFlag = FALSE;
       }
+
+      // start job
+      startJob(jobNode);
     }
     if (jobNode == NULL)
     {
@@ -3766,55 +3764,60 @@ LOCAL void jobThreadCode(void)
 
     // Note: job is now protected by running state from being deleted
 
+    // init log
+    initLog(&logHandle);
+    String_clear(s);
+    if (jobOptions.dryRunFlag || jobOptions.noStorageFlag)
+    {
+      String_appendCString(s," (");
+      n = 0;
+      if (jobOptions.dryRunFlag)
+      {
+        if (n > 0) String_appendCString(s,", ");
+        String_appendCString(s,"dry-run");
+        n++;
+      }
+      if (jobOptions.noStorageFlag)
+      {
+        if (n > 0) String_appendCString(s,", ");
+        String_appendCString(s,"no-storage");
+        n++;
+      }
+      String_appendCString(s,")");
+    }
+
+    // get start date/time
+    startDateTime = Misc_getCurrentDateTime();
+
+    // log
+    switch (jobNode->jobType)
+    {
+      case JOB_TYPE_CREATE:
+        logMessage(&logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Started job '%s'%s %s%s%s\n",
+                   String_cString(jobName),
+                   !String_isEmpty(s) ? String_cString(s) : "",
+                   getArchiveTypeName(archiveType),
+                   !String_isEmpty(byName) ? " by " : "",
+                   String_cString(byName)
+                  );
+        break;
+      case JOB_TYPE_RESTORE:
+        logMessage(&logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Started restore%s%s%s\n",
+                   !String_isEmpty(s) ? String_cString(s) : "",
+                   !String_isEmpty(byName) ? " by " : "",
+                   String_cString(byName)
+                  );
+        break;
+    }
+
+    // execute job
     if (!isSlaveJob(jobNode))
     {
-      // get start date/time
-      startDateTime = Misc_getCurrentDateTime();
-
-      // init log
-      initLog(&logHandle);
-      String_clear(s);
-      if (jobOptions.dryRunFlag || jobOptions.noStorageFlag)
-      {
-        String_appendCString(s," (");
-        n = 0;
-        if (jobOptions.dryRunFlag)
-        {
-          if (n > 0) String_appendCString(s,", ");
-          String_appendCString(s,"dry-run");
-          n++;
-        }
-        if (jobOptions.noStorageFlag)
-        {
-          if (n > 0) String_appendCString(s,", ");
-          String_appendCString(s,"no-storage");
-          n++;
-        }
-        String_appendCString(s,")");
-      }
-      switch (jobNode->jobType)
-      {
-        case JOB_TYPE_CREATE:
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Started job '%s'%s %s%s%s\n",
-                     String_cString(jobName),
-                     !String_isEmpty(s) ? String_cString(s) : "",
-                     getArchiveTypeName(archiveType),
-                     !String_isEmpty(byName) ? " by " : "",
-                     String_cString(byName)
-                    );
-          break;
-        case JOB_TYPE_RESTORE:
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Started restore%s%s%s\n",
-                     !String_isEmpty(s) ? String_cString(s) : "",
-                     !String_isEmpty(byName) ? " by " : "",
-                     String_cString(byName)
-                    );
-          break;
-      }
+      // local job -> run
 
       // parse storage name
       if (jobNode->runningInfo.error == ERROR_NONE)
@@ -3899,7 +3902,7 @@ LOCAL void jobThreadCode(void)
         }
       }
 
-      // run job
+      // create/restore operaton
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
         #ifdef SIMULATOR
@@ -4032,13 +4035,7 @@ LOCAL void jobThreadCode(void)
         }
       }
 
-      // get error message
-      if (jobNode->runningInfo.error != ERROR_NONE)
-      {
-        String_setCString(jobNode->runningInfo.message,Error_getText(jobNode->runningInfo.error));
-      }
-
-      // add index history
+      // add index history information
       switch (jobNode->jobType)
       {
         case JOB_TYPE_CREATE:
@@ -4144,76 +4141,113 @@ LOCAL void jobThreadCode(void)
             break;
         #endif /* NDEBUG */
       }
-
-      // get end date/time
-      endDateTime = Misc_getCurrentDateTime();
-
-      // log
-      switch (jobNode->jobType)
-      {
-        case JOB_TYPE_CREATE:
-          if (jobNode->requestedAbortFlag)
-          {
-            // aborted
-            logMessage(&logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Aborted job '%s'\n",
-                       String_cString(jobName)
-                      );
-          }
-          else if (jobNode->runningInfo.error != ERROR_NONE)
-          {
-            // error
-            logMessage(&logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Done job '%s' (error: %s)\n",
-                       String_cString(jobName),
-                       Error_getText(jobNode->runningInfo.error)
-                      );
-          }
-          else
-          {
-            // success
-            logMessage(&logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Done job '%s' (duration: %llumin:%02us)\n",
-                       String_cString(jobName),
-                       (endDateTime-startDateTime) / 60,
-                       (uint)((endDateTime-startDateTime) % 60)
-                      );
-          }
-          break;
-        case JOB_TYPE_RESTORE:
-          if (jobNode->runningInfo.error != ERROR_NONE)
-          {
-            logMessage(&logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Done restore archive (error: %s)\n",
-                       Error_getText(jobNode->runningInfo.error)
-                      );
-          }
-          else
-          {
-            logMessage(&logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Done restore archive\n"
-                      );
-          }
-          break;
-        #ifndef NDEBUG
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break;
-        #endif /* NDEBUG */
-      }
-
-      // done log
-      doneLog(&logHandle);
     }
     else
     {
-      // slave job
+      // start slave create job
+      jobNode->runningInfo.error = Slave_jobStart(&jobNode->slaveHost,
+                                                  jobNode->name,
+                                                  jobNode->uuid,
+                                                  NULL,  // scheduleUUID
+                                                  jobNode->archiveName,
+                                                  &jobNode->includeEntryList,
+                                                  &jobNode->excludePatternList,
+                                                  &jobNode->mountList,
+                                                  &jobNode->compressExcludePatternList,
+                                                  &jobNode->deltaSourceList,
+                                                  &jobNode->jobOptions,
+                                                  archiveType,
+                                                  NULL,  // scheduleTitle,
+                                                  NULL,  // scheduleCustomText,
+ //                                                      CALLBACK(getCryptPassword,jobNode),
+ //                                                      CALLBACK(updateCreateStatusInfo,jobNode),
+                                                  CALLBACK(storageRequestVolume,jobNode)
+                                                 );
+
+      // wait for slave job
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      {
+        while (   !quitFlag
+               && isJobRunning(jobNode)
+              )
+        {
+//TODO: signal only change of status?
+fprintf(stderr,"%s, %d: wait slave\n",__FILE__,__LINE__);
+          Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
+        }
+      }
     }
+
+    // get error message
+    if (jobNode->runningInfo.error != ERROR_NONE)
+    {
+      String_setCString(jobNode->runningInfo.message,Error_getText(jobNode->runningInfo.error));
+    }
+
+    // get end date/time
+    endDateTime = Misc_getCurrentDateTime();
+
+    // log
+    switch (jobNode->jobType)
+    {
+      case JOB_TYPE_CREATE:
+        if (jobNode->requestedAbortFlag)
+        {
+          // aborted
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Aborted job '%s'\n",
+                     String_cString(jobName)
+                    );
+        }
+        else if (jobNode->runningInfo.error != ERROR_NONE)
+        {
+          // error
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Done job '%s' (error: %s)\n",
+                     String_cString(jobName),
+                     Error_getText(jobNode->runningInfo.error)
+                    );
+        }
+        else
+        {
+          // success
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Done job '%s' (duration: %llumin:%02us)\n",
+                     String_cString(jobName),
+                     (endDateTime-startDateTime) / 60,
+                     (uint)((endDateTime-startDateTime) % 60)
+                    );
+        }
+        break;
+      case JOB_TYPE_RESTORE:
+        if (jobNode->runningInfo.error != ERROR_NONE)
+        {
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Done restore archive (error: %s)\n",
+                     Error_getText(jobNode->runningInfo.error)
+                    );
+        }
+        else
+        {
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Done restore archive\n"
+                    );
+        }
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+
+    // done log
+    doneLog(&logHandle);
 
     // get job executaion date/time, aggregate info
     lastExecutedDateTime = Misc_getCurrentDateTime();
@@ -4226,9 +4260,13 @@ LOCAL void jobThreadCode(void)
                      scheduleUUID
                     );
 
+    // done job
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      // storage executaion date/time, aggregate info
+      // done job
+      doneJob(jobNode);
+
+      // storage execution date/time, aggregate info
       jobNode->lastExecutedDateTime = lastExecutedDateTime;
       String_set(jobNode->lastErrorMessage,jobAggregateInfo.lastErrorMessage);
       jobNode->executionCount       = jobAggregateInfo.executionCount;
@@ -4258,9 +4296,6 @@ LOCAL void jobThreadCode(void)
       List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
       PatternList_clear(&excludePatternList);
       EntryList_clear(&includeEntryList);
-
-      // done job
-      doneJob(jobNode);
 
       if (!jobNode->jobOptions.dryRunFlag)
       {
@@ -10367,16 +10402,6 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
         jobNode->runningInfo.error = Slave_jobAbort(&jobNode->slaveHost,
                                                     jobNode->uuid
                                                    );
-//TODO: do not call getAggregateInfo with joblist lock -> deadlock!
-#if 0
-BLOCK_DO(Semaphore_unlock(&jobList.lock),
-         Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT),
-{
-  getAggregateInfo(jobNode,NULL);
-});
-#endif
-jobNode = findJobByUUID(jobUUID);
-        doneJob(jobNode);
       }
     }
     else if (isJobActive(jobNode))
