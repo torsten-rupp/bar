@@ -446,26 +446,58 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
   return ERROR_NONE;
 }
 
-#if 0
 void Slave_disconnect(const SlaveHost *slaveHost)
 {
-//TODO
-UNUSED_VARIABLE(slaveHost);
+  SemaphoreLock semaphoreLock;
+  SlaveNode     *slaveNode;
+
+  // find and remove slave
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    // find slave server
+    slaveNode = findSlave(slaveHost);
+
+    // disconnect
+    if (slaveNode != NULL)
+    {
+      List_remove(&slaveList,slaveNode);
+
+      Network_disconnect(&slaveNode->socketHandle);
+
+      String_delete(slaveNode->hostName);
+      LIST_DELETE_NODE(slaveNode);
+    }
+  }
 }
-#endif
 
 bool Slave_isConnected(const SlaveHost *slaveHost)
 {
-  SemaphoreLock semaphoreLock;
-//  SlaveNode     *slaveNode;
   bool          isConnected;
+  SemaphoreLock semaphoreLock;
+  SlaveNode     *slaveNode;
 
   assert(slaveHost != NULL);
 
   isConnected = FALSE;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    isConnected = (findSlave(slaveHost) != NULL);
+    slaveNode = findSlave(slaveHost);
+    if (slaveNode != NULL)
+    {
+      if (Network_isConnected(&slaveNode->socketHandle))
+      {
+        isConnected = TRUE;
+      }
+      else
+      {
+        List_remove(&slaveList,slaveNode);
+
+        Network_disconnect(&slaveNode->socketHandle);
+
+        String_delete(slaveNode->hostName);
+        LIST_DELETE_NODE(slaveNode);
+      }
+    }
   }
 
   return isConnected;

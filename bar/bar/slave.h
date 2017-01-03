@@ -108,6 +108,17 @@ void Slave_duplicateHost(SlaveHost *toSlaveHost, const SlaveHost *fromSlaveHost)
 Errors Slave_connect(const SlaveHost *slaveHost);
 
 /***********************************************************************\
+* Name   : Slave_disconnect
+* Purpose: disconnect slave
+* Input  : slaveHost - slave host
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Slave_disconnect(const SlaveHost *slaveHost);
+
+/***********************************************************************\
 * Name   : Slave_isConnected
 * Purpose: check if slave host is connected
 * Input  : slaveHost - slave host
