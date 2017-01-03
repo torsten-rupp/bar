@@ -60,25 +60,25 @@
 
 /***************************** Constants *******************************/
 
-#define SESSION_KEY_SIZE                    1024    // number of session key bits
+#define SESSION_KEY_SIZE                         1024     // number of session key bits
 
-#define MAX_NETWORK_CLIENT_THREADS          3       // number of threads for a client
-#define LOCK_TIMEOUT                        (10*60*1000)  // general lock timeout [ms]
+#define MAX_NETWORK_CLIENT_THREADS               3        // number of threads for a client
+#define LOCK_TIMEOUT                             (10*60*1000)  // general lock timeout [ms]
 
-#define AUTHORIZATION_PENALITY_TIME         500     // delay processing by failCount^2*n [ms]
-#define MAX_AUTHORIZATION_HISTORY_KEEP_TIME 30000   // max. time to keep entries in authorization fail history [ms]
-#define MAX_AUTHORIZATION_FAIL_HISTORY      64      // max. length of history of authorization fail clients
-#define MAX_ABORT_COMMAND_IDS               512     // max. aborted command ids history
+#define AUTHORIZATION_PENALITY_TIME              500      // delay processing by failCount^2*n [ms]
+#define MAX_AUTHORIZATION_HISTORY_KEEP_TIME      30000    // max. time to keep entries in authorization fail history [ms]
+#define MAX_AUTHORIZATION_FAIL_HISTORY           64       // max. length of history of authorization fail clients
+#define MAX_ABORT_COMMAND_IDS                    512      // max. aborted command ids history
 
 // sleep times [s]
-//#define SLEEP_TIME_SLAVE_CONNECT_THREAD            ( 1*60)
-#define SLEEP_TIME_SLAVE_CONNECT_THREAD     (   10)
-//#define SLEEP_TIME_SLAVE_THREAD             (    1)
-#define SLEEP_TIME_SCHEDULER_THREAD         ( 1*60)
-#define SLEEP_TIME_PAUSE_THREAD             ( 1*60)
-#define SLEEP_TIME_INDEX_THREAD             ( 1*60)
-#define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD (10*60)
-#define SLEEP_TIME_PURGE_EXPIRED_THREAD     (10*60)
+//#define SLEEP_TIME_SLAVE_CONNECT_THREAD                 ( 1*60)  // [s]
+#define SLEEP_TIME_SLAVE_CONNECT_THREAD          (   10)  // [s]
+//#define SLEEP_TIME_SLAVE_THREAD                  (    1)  // [s]
+#define SLEEP_TIME_SCHEDULER_THREAD              ( 1*60)  // [s]
+#define SLEEP_TIME_PAUSE_THREAD                  ( 1*60)  // [s]
+#define SLEEP_TIME_INDEX_THREAD                  ( 1*60)  // [s]
+#define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*60)  // [s]
+#define SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD (10*60)  // [s]
 
 /***************************** Datatypes *******************************/
 
@@ -606,7 +606,7 @@ LOCAL Thread                slaveConnectThread;     // thread to connect slave B
 LOCAL Semaphore             indexThreadTrigger;
 LOCAL Thread                indexThread;            // thread to add/update index
 LOCAL Thread                autoIndexThread;        // thread to collect BAR files for auto-index
-LOCAL Thread                purgeExpiredThread;     // thread to purge expired archive files
+LOCAL Thread                purgeExpiredEntitiesThread;  // thread to purge expired archive files
 LOCAL Semaphore             serverStateLock;
 LOCAL ServerStates          serverState;            // current server state
 LOCAL struct
@@ -2547,13 +2547,13 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
 
   // init variables
   String_clear(aggregateInfo->lastErrorMessage);
-  aggregateInfo->executionCount        = 0L;
-  aggregateInfo->averageDuration       = 0LL;
-  aggregateInfo->totalEntityCount      = 0L;
-  aggregateInfo->totalStorageCount     = 0L;
-  aggregateInfo->totalStorageSize      = 0LL;
-  aggregateInfo->totalEntryCount       = 0L;
-  aggregateInfo->totalEntrySize        = 0LL;
+  aggregateInfo->executionCount    = 0L;
+  aggregateInfo->averageDuration   = 0LL;
+  aggregateInfo->totalEntityCount  = 0L;
+  aggregateInfo->totalStorageCount = 0L;
+  aggregateInfo->totalStorageSize  = 0LL;
+  aggregateInfo->totalEntryCount   = 0L;
+  aggregateInfo->totalEntrySize    = 0LL;
 
   // update job info (if possible)
   if (indexHandle != NULL)
@@ -2768,6 +2768,7 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
   uint64     n;
 
   assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
 
   // reset variables
   jobNode->lastExecutedDateTime = 0LL;
@@ -3004,6 +3005,7 @@ LOCAL bool readJob(JobNode *jobNode)
 
   assert(jobNode != NULL);
   assert(jobNode->fileName != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
 
   // reset job values
   String_clear(jobNode->uuid);
@@ -3636,6 +3638,48 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
     jobNode->runningInfo.volumeProgress        = 0.0;
   }
 }
+
+/***********************************************************************\
+* Name   : delayThread
+* Purpose: delay thread
+* Input  : sleepTime - sleep time [s]
+*          trigger   - trigger semaphore (can be NULL)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void delayThread(uint sleepTime, Semaphore *trigger)
+{
+  SemaphoreLock semaphoreLock;
+  uint          n;
+
+  n = 0;
+  if (trigger != NULL)
+  {
+    SEMAPHORE_LOCKED_DO(semaphoreLock,trigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      while (   !quitFlag
+             && (n < sleepTime)
+             && !Semaphore_waitModified(&indexThreadTrigger,10*MS_PER_SECOND)
+            )
+      {
+        n += 10;
+      }
+    }
+  }
+  else
+  {
+    while (   !quitFlag
+           && (n < sleepTime)
+          )
+    {
+      Misc_udelay(10LL*US_PER_SECOND);
+      n += 10;
+    }
+  }
+}
+
 
 /***********************************************************************\
 * Name   : jobThreadCode
@@ -4441,27 +4485,6 @@ LOCAL void jobThreadCode(void)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : delaySlaveConnectThread
-* Purpose: delay slave connect thread code
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void delaySlaveConnectThread(void)
-{
-  uint sleepTime;
-
-  sleepTime = 0;
-  while (!quitFlag && (sleepTime < SLEEP_TIME_SLAVE_CONNECT_THREAD))
-  {
-    Misc_udelay(10LL*US_PER_SECOND);
-    sleepTime += 10;
-  }
-}
-
-/***********************************************************************\
 * Name   : slaveConnectThreadCode
 * Purpose: connect slave instances thread code
 * Input  : -
@@ -4588,7 +4611,7 @@ fprintf(stderr,"%s, %d: connect result host=%s: %s\n",__FILE__,__LINE__,String_c
     }
 
     // sleep
-    delaySlaveConnectThread();
+    delayThread(SLEEP_TIME_SLAVE_CONNECT_THREAD,NULL);
   }
 
   // free resources
@@ -4918,27 +4941,6 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
 }
 
 /***********************************************************************\
-* Name   : delayScheduleThread
-* Purpose: delay scheduler code
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void delayScheduleThread(void)
-{
-  uint sleepTime;
-
-  sleepTime = 0;
-  while (!quitFlag && (sleepTime < SLEEP_TIME_SCHEDULER_THREAD))
-  {
-    Misc_udelay(10LL*US_PER_SECOND);
-    sleepTime += 10;
-  }
-}
-
-/***********************************************************************\
 * Name   : schedulerThreadCode
 * Purpose: schedule thread entry
 * Input  : -
@@ -5095,7 +5097,7 @@ LOCAL void schedulerThreadCode(void)
     if (!pendingFlag)
     {
       // sleep
-      delayScheduleThread();
+      delayThread(SLEEP_TIME_SCHEDULER_THREAD,NULL);
     }
     else
     {
@@ -5155,28 +5157,7 @@ LOCAL void pauseThreadCode(void)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : delayPurgeExpiredThread
-* Purpose: delay purge expired code
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void delayPurgeExpiredThread(void)
-{
-  uint sleepTime;
-
-  sleepTime = 0;
-  while (!quitFlag && (sleepTime < SLEEP_TIME_PURGE_EXPIRED_THREAD))
-  {
-    Misc_udelay(10LL*US_PER_SECOND);
-    sleepTime += 10;
-  }
-}
-
-/***********************************************************************\
-* Name   : purgeExpiredThreadCode
+* Name   : purgeExpiredEntitiesThreadCode
 * Purpose: purge expired entities thread
 * Input  : -
 * Output : -
@@ -5184,7 +5165,7 @@ LOCAL void delayPurgeExpiredThread(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void purgeExpiredThreadCode(void)
+LOCAL void purgeExpiredEntitiesThreadCode(void)
 {
   String             jobName;
   String             string;
@@ -5392,7 +5373,7 @@ LOCAL void purgeExpiredThreadCode(void)
     if (error == ERROR_NONE)
     {
       // sleep
-      delayPurgeExpiredThread();
+      delayThread(SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD,NULL);
     }
     else
     {
@@ -5506,33 +5487,6 @@ LOCAL void pauseIndexUpdate(void)
         )
   {
     Misc_udelay(500L*US_PER_MS);
-  }
-}
-
-/***********************************************************************\
-* Name   : delayIndexThread
-* Purpose: delay index thread code
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void delayIndexThread(void)
-{
-  SemaphoreLock semaphoreLock;
-  uint          sleepTime;
-
-  sleepTime = 0;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&indexThreadTrigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    while (   !quitFlag
-           && (sleepTime < SLEEP_TIME_INDEX_THREAD)
-           && !Semaphore_waitModified(&indexThreadTrigger,10*MS_PER_SECOND)
-          )
-    {
-      sleepTime += 10;
-    }
   }
 }
 
@@ -5746,7 +5700,7 @@ LOCAL void indexThreadCode(void)
     }
 
     // sleep
-    delayIndexThread();
+    delayThread(SLEEP_TIME_INDEX_THREAD,&indexThreadTrigger);
   }
 
   // done index
@@ -5791,27 +5745,6 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
     }
   }
   String_delete(storagePathName);
-}
-
-/***********************************************************************\
-* Name   : delayAutoIndexThread
-* Purpose: delay auto index thread code
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void delayAutoIndexThread(void)
-{
-  uint sleepTime;
-
-  sleepTime = 0;
-  while (!quitFlag && (sleepTime < SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD))
-  {
-    Misc_udelay(10LL*US_PER_SECOND);
-    sleepTime += 10;
-  }
 }
 
 /***********************************************************************\
@@ -6118,7 +6051,7 @@ LOCAL void autoIndexThreadCode(void)
     }
 
     // sleep
-    delayAutoIndexThread();
+    delayThread(SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD,NULL);
   }
 
   // done index
@@ -18852,7 +18785,7 @@ Errors Server_run(uint              port,
         HALT_FATAL_ERROR("Cannot initialize index update thread!");
       }
     }
-    if (!Thread_init(&purgeExpiredThread,"BAR purge expired",globalOptions.niceLevel,purgeExpiredThreadCode,NULL))
+    if (!Thread_init(&purgeExpiredEntitiesThread,"BAR purge expired",globalOptions.niceLevel,purgeExpiredEntitiesThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize purge expire thread!");
     }
@@ -19269,7 +19202,7 @@ Errors Server_run(uint              port,
   Semaphore_setEnd(&jobList.lock);
   if (Index_isAvailable())
   {
-    Thread_join(&purgeExpiredThread);
+    Thread_join(&purgeExpiredEntitiesThread);
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
       Thread_join(&autoIndexThread);
@@ -19295,7 +19228,7 @@ Errors Server_run(uint              port,
   // free resources
   if (Index_isAvailable())
   {
-    Thread_done(&purgeExpiredThread);
+    Thread_done(&purgeExpiredEntitiesThread);
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
       Thread_done(&autoIndexThread);
