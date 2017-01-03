@@ -379,6 +379,23 @@ const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dat
 
 void Misc_udelay(uint64 time);
 
+/***********************************************************************\
+* Name   : Misc_mdelay
+* Purpose: delay program execution
+* Input  : time - delay time [ms]
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE void Misc_mdelay(uint64 time);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENATION__)
+INLINE void Misc_mdelay(uint64 time)
+{
+  Misc_udelay(time*US_PER_MS);
+}
+#endif /* NDEBUG || __MISC_IMPLEMENATION__ */
+
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
