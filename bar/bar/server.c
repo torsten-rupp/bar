@@ -71,9 +71,9 @@
 #define MAX_ABORT_COMMAND_IDS               512     // max. aborted command ids history
 
 // sleep times [s]
-//#define SLEEP_TIME_SLAVE_THREAD            ( 1*60)
-#define SLEEP_TIME_SLAVE_CONNECT_THREAD     (   60)
-#define SLEEP_TIME_SLAVE_THREAD             (    1)
+//#define SLEEP_TIME_SLAVE_CONNECT_THREAD            ( 1*60)
+#define SLEEP_TIME_SLAVE_CONNECT_THREAD     (   10)
+//#define SLEEP_TIME_SLAVE_THREAD             (    1)
 #define SLEEP_TIME_SCHEDULER_THREAD         ( 1*60)
 #define SLEEP_TIME_PAUSE_THREAD             ( 1*60)
 #define SLEEP_TIME_INDEX_THREAD             ( 1*60)
@@ -158,7 +158,8 @@ typedef enum
   JOB_STATE_REQUEST_VOLUME,
   JOB_STATE_DONE,
   JOB_STATE_ERROR,
-  JOB_STATE_ABORTED
+  JOB_STATE_ABORTED,
+  JOB_STATE_DISCONNECTED
 } JobStates;
 
 // job node
@@ -215,6 +216,7 @@ typedef struct JobNode
     bool          noStorage;                            // TRUE to skip storage, only create incremental data file
   } schedule;
   bool            requestedAbortFlag;                   // request abort current job execution
+  String          abortedByInfo;                        // aborted by info
   uint            requestedVolumeNumber;                // requested volume number
   uint            volumeNumber;                         // load volume number
   String          volumeMessage;                        // load volume message
@@ -600,7 +602,6 @@ LOCAL Thread                jobThread;              // thread executing jobs cre
 LOCAL Thread                schedulerThread;        // thread scheduling jobs
 LOCAL Thread                pauseThread;
 LOCAL Thread                slaveConnectThread;     // thread to connect slave BAR instances
-LOCAL Thread                slaveThread;            // thread to update slave jobs status
 LOCAL Semaphore             indexThreadTrigger;
 LOCAL Thread                indexThread;            // thread to add/update index
 LOCAL Thread                autoIndexThread;        // thread to collect BAR files for auto-index
@@ -1539,8 +1540,6 @@ bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const 
 
 bool configValueParseDeprecatedRemoteForceSSL(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  MountNode *mountNode;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -1915,6 +1914,8 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 
   String_delete(jobNode->volumeMessage);
 
+  String_delete(jobNode->abortedByInfo);
+
   String_delete(jobNode->schedule.customText);
   String_delete(jobNode->schedule.uuid);
 
@@ -2008,6 +2009,7 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
   jobNode->schedule.customText            = String_new();
   jobNode->schedule.noStorage             = FALSE;
   jobNode->requestedAbortFlag             = FALSE;
+  jobNode->abortedByInfo                  = String_new();
   jobNode->requestedVolumeNumber          = 0;
   jobNode->volumeNumber                   = 0;
   jobNode->volumeMessage                  = String_new();
@@ -2116,6 +2118,7 @@ LOCAL JobNode *copyJob(JobNode     *jobNode,
   newJobNode->schedule.customText            = String_new();
   newJobNode->schedule.noStorage             = FALSE;
   newJobNode->requestedAbortFlag             = FALSE;
+  newJobNode->abortedByInfo                  = String_new();
   newJobNode->requestedVolumeNumber          = 0;
   newJobNode->volumeNumber                   = 0;
   newJobNode->volumeMessage                  = String_new();
@@ -2226,13 +2229,14 @@ LOCAL_INLINE bool isJobActive(const JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
-  return (   (jobNode->state == JOB_STATE_WAITING) \
-          || (jobNode->state == JOB_STATE_RUNNING) \
-          || (jobNode->state == JOB_STATE_REQUEST_FTP_PASSWORD) \
-          || (jobNode->state == JOB_STATE_REQUEST_SSH_PASSWORD) \
-          || (jobNode->state == JOB_STATE_REQUEST_WEBDAV_PASSWORD) \
-          || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD) \
-          || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
+  return (   (jobNode->state == JOB_STATE_WAITING)
+          || (jobNode->state == JOB_STATE_RUNNING)
+          || (jobNode->state == JOB_STATE_REQUEST_FTP_PASSWORD)
+          || (jobNode->state == JOB_STATE_REQUEST_SSH_PASSWORD)
+          || (jobNode->state == JOB_STATE_REQUEST_WEBDAV_PASSWORD)
+          || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD)
+          || (jobNode->state == JOB_STATE_REQUEST_VOLUME)
+          || (jobNode->state == JOB_STATE_DISCONNECTED)
          );
 }
 
@@ -2263,12 +2267,13 @@ LOCAL_INLINE bool isJobRunning(const JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
-  return (   (jobNode->state == JOB_STATE_RUNNING) \
-          || (jobNode->state == JOB_STATE_REQUEST_FTP_PASSWORD) \
-          || (jobNode->state == JOB_STATE_REQUEST_SSH_PASSWORD) \
-          || (jobNode->state == JOB_STATE_REQUEST_WEBDAV_PASSWORD) \
-          || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD) \
-          || (jobNode->state == JOB_STATE_REQUEST_VOLUME) \
+  return (   (jobNode->state == JOB_STATE_RUNNING)
+          || (jobNode->state == JOB_STATE_REQUEST_FTP_PASSWORD)
+          || (jobNode->state == JOB_STATE_REQUEST_SSH_PASSWORD)
+          || (jobNode->state == JOB_STATE_REQUEST_WEBDAV_PASSWORD)
+          || (jobNode->state == JOB_STATE_REQUEST_CRYPT_PASSWORD)
+          || (jobNode->state == JOB_STATE_REQUEST_VOLUME)
+          || (jobNode->state == JOB_STATE_DISCONNECTED)
          );
 }
 
@@ -2417,6 +2422,7 @@ LOCAL void triggerJob(JobNode      *jobNode,
   String_set(jobNode->schedule.customText,scheduleCustomText);
   jobNode->schedule.noStorage    = noStorage;
   jobNode->requestedAbortFlag    = FALSE;
+  String_clear(jobNode->abortedByInfo);
   jobNode->requestedVolumeNumber = 0;
   jobNode->volumeNumber          = 0;
   String_clear(jobNode->volumeMessage);
@@ -3626,6 +3632,39 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
 
 LOCAL void jobThreadCode(void)
 {
+  /***********************************************************************\
+  * Name   : parseJobState
+  * Purpose: parse job state text
+  * Input  : stateText - job state text
+  *          jobState - job state variable
+  * Output : jobState - job state
+  * Return : always TRUE
+  * Notes  : -
+  \***********************************************************************/
+
+//TODO: replace by enum/const instead of text?
+  JobStates parseJobState(const char *stateText, uint *jobState)
+  {
+    assert(stateText != NULL);
+    assert(jobState != NULL);
+
+    if      (stringEqualsIgnoreCase(stateText,"-"                      )) (*jobState) = JOB_STATE_NONE;
+    else if (stringEqualsIgnoreCase(stateText,"waiting"                )) (*jobState) = JOB_STATE_WAITING;
+    else if (stringEqualsIgnoreCase(stateText,"dry-run"                )) (*jobState) = JOB_STATE_RUNNING;
+    else if (stringEqualsIgnoreCase(stateText,"running"                )) (*jobState) = JOB_STATE_RUNNING;
+    else if (stringEqualsIgnoreCase(stateText,"request FTP password"   )) (*jobState) = JOB_STATE_REQUEST_FTP_PASSWORD;
+    else if (stringEqualsIgnoreCase(stateText,"request SSH password"   )) (*jobState) = JOB_STATE_REQUEST_SSH_PASSWORD;
+    else if (stringEqualsIgnoreCase(stateText,"request webDAV password")) (*jobState) = JOB_STATE_REQUEST_WEBDAV_PASSWORD;
+    else if (stringEqualsIgnoreCase(stateText,"request crypt password" )) (*jobState) = JOB_STATE_REQUEST_CRYPT_PASSWORD;
+    else if (stringEqualsIgnoreCase(stateText,"request volume"         )) (*jobState) = JOB_STATE_REQUEST_VOLUME;
+    else if (stringEqualsIgnoreCase(stateText,"done"                   )) (*jobState) = JOB_STATE_DONE;
+    else if (stringEqualsIgnoreCase(stateText,"ERROR"                  )) (*jobState) = JOB_STATE_ERROR;
+    else if (stringEqualsIgnoreCase(stateText,"aborted"                )) (*jobState) = JOB_STATE_ABORTED;
+    else                                                                  (*jobState) = JOB_STATE_NONE;
+
+    return TRUE;
+  }
+
   StorageSpecifier storageSpecifier;
   String           jobName;
   String           storageName;
@@ -3657,6 +3696,7 @@ LOCAL void jobThreadCode(void)
   uint64           lastExecutedDateTime;
   AggregateInfo    jobAggregateInfo,scheduleAggregateInfo;
   ScheduleNode     *scheduleNode;
+  StringMap        resultMap;
 
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
@@ -3674,6 +3714,11 @@ LOCAL void jobThreadCode(void)
   scheduleCustomText                     = String_new();
   jobAggregateInfo.lastErrorMessage      = String_new();
   scheduleAggregateInfo.lastErrorMessage = String_new();
+  resultMap                              = StringMap_new();
+  if (resultMap == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
 
   // open index
   indexHandle = Index_open(INDEX_PRIORITY_HIGH,INDEX_TIMEOUT);
@@ -3764,6 +3809,8 @@ LOCAL void jobThreadCode(void)
 
     // init log
     initLog(&logHandle);
+
+    // get info string
     String_clear(s);
     if (jobOptions.dryRunFlag || jobOptions.noStorageFlag)
     {
@@ -4161,17 +4208,66 @@ LOCAL void jobThreadCode(void)
  //                                                      CALLBACK(updateCreateStatusInfo,jobNode),
                                                   CALLBACK(storageRequestVolume,jobNode)
                                                  );
-
-      // wait for slave job
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      if (jobNode->runningInfo.error == ERROR_NONE)
       {
+        // wait for slave job
         while (   !quitFlag
                && isJobRunning(jobNode)
               )
         {
-//TODO: signal only change of status?
-fprintf(stderr,"%s, %d: wait slave\n",__FILE__,__LINE__);
-          Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
+          // get slave job status
+          error = Slave_executeCommand(&jobNode->slaveHost,
+                                       resultMap,
+                                       "JOB_STATUS jobUUID=%S",
+                                       jobNode->uuid
+                                      );
+
+          // update job status
+          SEMAPHORE_LOCKED_DO(semaphoreLock,&jobStatusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          {
+            if (error == ERROR_NONE)
+            {
+              // parse and update job status
+              StringMap_getEnum  (resultMap,"state",                &jobNode->state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
+              StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0L);
+              StringMap_getUInt64(resultMap,"doneSize",             &jobNode->runningInfo.doneSize,0LL);
+              StringMap_getULong (resultMap,"totalEntryCount",      &jobNode->runningInfo.totalEntryCount,0L);
+              StringMap_getUInt64(resultMap,"totalEntrySize",       &jobNode->runningInfo.totalEntrySize,0LL);
+              StringMap_getBool  (resultMap,"collectTotalSumDone",  &jobNode->runningInfo.collectTotalSumDone,FALSE);
+              StringMap_getULong (resultMap,"skippedEntryCount",    &jobNode->runningInfo.skippedEntryCount,0L);
+              StringMap_getUInt64(resultMap,"skippedEntrySize",     &jobNode->runningInfo.skippedEntrySize,0LL);
+              StringMap_getULong (resultMap,"errorEntryCount",      &jobNode->runningInfo.errorEntryCount,0L);
+              StringMap_getUInt64(resultMap,"errorEntrySize",       &jobNode->runningInfo.errorEntrySize,0LL);
+              StringMap_getDouble(resultMap,"entriesPerSecond",     &jobNode->runningInfo.entriesPerSecond,0.0);
+              StringMap_getDouble(resultMap,"bytesPerSecond",       &jobNode->runningInfo.bytesPerSecond,0.0);
+              StringMap_getDouble(resultMap,"storageBytesPerSecond",&jobNode->runningInfo.storageBytesPerSecond,0.0);
+              StringMap_getUInt64(resultMap,"archiveSize",          &jobNode->runningInfo.archiveSize,0LL);
+              StringMap_getDouble(resultMap,"compressionRatio",     &jobNode->runningInfo.compressionRatio,0.0);
+              StringMap_getULong (resultMap,"estimatedRestTime",    &jobNode->runningInfo.estimatedRestTime,0L);
+              StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.entryName,NULL);
+              StringMap_getUInt64(resultMap,"entryDoneSize",        &jobNode->runningInfo.entryDoneSize,0LL);
+              StringMap_getUInt64(resultMap,"entryTotalSize",       &jobNode->runningInfo.entryTotalSize,0LL);
+              StringMap_getString(resultMap,"storageName",          jobNode->runningInfo.storageName,NULL);
+              StringMap_getUInt64(resultMap,"storageDoneSize",      &jobNode->runningInfo.storageDoneSize,0L);
+              StringMap_getUInt64(resultMap,"storageTotalSize",     &jobNode->runningInfo.storageTotalSize,0L);
+              StringMap_getUInt  (resultMap,"volumeNumber",         &jobNode->runningInfo.volumeNumber,0);
+              StringMap_getDouble(resultMap,"volumeProgress",       &jobNode->runningInfo.volumeProgress,0.0);
+              StringMap_getString(resultMap,"message",              jobNode->runningInfo.message,NULL);
+            }
+            else
+            {
+              // slave communication error
+  fprintf(stderr,"%s, %d: xxxxerror=%s\n",__FILE__,__LINE__,Error_getText(error));
+              jobNode->state             = JOB_STATE_ERROR;
+              jobNode->runningInfo.error = error;
+            }
+          }
+
+          // sleep a short time
+          if (isJobRunning(jobNode))
+          {
+            Misc_udelay(1LL*US_PER_SECOND);
+          }
         }
       }
     }
@@ -4189,13 +4285,15 @@ fprintf(stderr,"%s, %d: wait slave\n",__FILE__,__LINE__);
     switch (jobNode->jobType)
     {
       case JOB_TYPE_CREATE:
-        if (jobNode->requestedAbortFlag)
+        if      (jobNode->requestedAbortFlag)
         {
           // aborted
           logMessage(&logHandle,
                      LOG_TYPE_ALWAYS,
-                     "Aborted job '%s'\n",
-                     String_cString(jobName)
+                     "Aborted job '%s'%s%s\n",
+                     String_cString(jobName),
+                     !String_isEmpty(jobNode->abortedByInfo) ? " by " : "",
+                     String_cString(jobNode->abortedByInfo)
                     );
         }
         else if (jobNode->runningInfo.error != ERROR_NONE)
@@ -4454,9 +4552,9 @@ LOCAL void slaveConnectThreadCode(void)
         jobNode = findJobByUUID(jobUUID);
         if (jobNode != NULL)
         {
-fprintf(stderr,"%s, %d: connect jobUUID=%s host=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(jobNode->slaveHost.name));
           if (isSlaveJob(jobNode) && !Slave_isConnected(&jobNode->slaveHost))
           {
+fprintf(stderr,"%s, %d: req connect jobUUID=%s host=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(jobNode->slaveHost.name));
             Slave_copyHost(&slaveHost,&jobNode->slaveHost);
             tryConnectFlag = TRUE;
           }
@@ -4468,11 +4566,7 @@ fprintf(stderr,"%s, %d: connect jobUUID=%s host=%s\n",__FILE__,__LINE__,String_c
       {
 //        (void)Slave_connect(&slaveHost);
         error = Slave_connect(&slaveHost);
-logMessage(NULL,  // logHandle
-                 LOG_TYPE_ALWAYS,
-                 "Try connnect %s: %s\n",
-                 String_cString(slaveHost.name),Error_getText(error)
-   );
+fprintf(stderr,"%s, %d: connect result host=%s: %s\n",__FILE__,__LINE__,String_cString(slaveHost.name),Error_getText(error));
       }
     }
 
@@ -4484,278 +4578,6 @@ logMessage(NULL,  // logHandle
   Slave_doneHost(&slaveHost);
   List_done(&slaveJobInfoList,(ListNodeFreeFunction)freeSlaveJobInfoNode,NULL);
   StringList_done(&jobUUIDList);
-}
-
-#if 0
-//TODO: remove
-/***********************************************************************\
-* Name   : delaySlaveThread
-* Purpose: delay slave thread code
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void delaySlaveThread(void)
-{
-  uint sleepTime;
-
-  sleepTime = 0;
-  while (!quitFlag && (sleepTime < SLEEP_TIME_SLAVE_THREAD))
-  {
-    Misc_udelay(10LL*US_PER_SECOND);
-    sleepTime += 10;
-  }
-}
-#endif
-
-/***********************************************************************\
-* Name   : slaveThreadCode
-* Purpose: slave thread entry
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void slaveThreadCode(void)
-{
-  typedef struct SlaveJobInfoNode
-  {
-    LIST_NODE_HEADER(struct SlaveJobInfoNode);
-
-    String    jobUUID;
-    SlaveHost slaveHost;
-    bool      isActive;
-  } SlaveJobInfoNode;
-
-  typedef struct
-  {
-    LIST_HEADER(SlaveJobInfoNode);
-  } SlaveJobInfoList;
-
-  SlaveJobInfoList slaveJobInfoList;
-  StringMap        resultMap;
-  SemaphoreLock    semaphoreLock;
-  JobNode          *jobNode;
-  SlaveJobInfoNode *slaveJobInfoNode;
-//  String           jobUUID;
-  Errors           error;
-//  double           entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
-//  ulong            restFiles;
-//  uint64           restBytes;
-//  uint64           restStorageBytes;
-//  ulong            estimatedRestTime;
-
-  /***********************************************************************\
-  * Name   : parseJobState
-  * Purpose: parse job state text
-  * Input  : stateText - job state text
-  *          jobState - job state variable
-  * Output : jobState - job state
-  * Return : always TRUE
-  * Notes  : -
-  \***********************************************************************/
-
-//TODO: replace by enum/const instead of text?
-  JobStates parseJobState(const char *stateText, uint *jobState)
-  {
-    assert(stateText != NULL);
-    assert(jobState != NULL);
-
-    if      (stringEqualsIgnoreCase(stateText,"-"                      )) (*jobState) = JOB_STATE_NONE;
-    else if (stringEqualsIgnoreCase(stateText,"waiting"                )) (*jobState) = JOB_STATE_WAITING;
-    else if (stringEqualsIgnoreCase(stateText,"dry-run"                )) (*jobState) = JOB_STATE_RUNNING;
-    else if (stringEqualsIgnoreCase(stateText,"running"                )) (*jobState) = JOB_STATE_RUNNING;
-    else if (stringEqualsIgnoreCase(stateText,"request FTP password"   )) (*jobState) = JOB_STATE_REQUEST_FTP_PASSWORD;
-    else if (stringEqualsIgnoreCase(stateText,"request SSH password"   )) (*jobState) = JOB_STATE_REQUEST_SSH_PASSWORD;
-    else if (stringEqualsIgnoreCase(stateText,"request webDAV password")) (*jobState) = JOB_STATE_REQUEST_WEBDAV_PASSWORD;
-    else if (stringEqualsIgnoreCase(stateText,"request crypt password" )) (*jobState) = JOB_STATE_REQUEST_CRYPT_PASSWORD;
-    else if (stringEqualsIgnoreCase(stateText,"request volume"         )) (*jobState) = JOB_STATE_REQUEST_VOLUME;
-    else if (stringEqualsIgnoreCase(stateText,"done"                   )) (*jobState) = JOB_STATE_DONE;
-    else if (stringEqualsIgnoreCase(stateText,"ERROR"                  )) (*jobState) = JOB_STATE_ERROR;
-    else if (stringEqualsIgnoreCase(stateText,"aborted"                )) (*jobState) = JOB_STATE_ABORTED;
-    else                                                                  (*jobState) = JOB_STATE_NONE;
-
-    return TRUE;
-  }
-
-  /***********************************************************************\
-  * Name   : findSlaveJobInfoByUUID
-  * Purpose: find slave job info by UUID
-  * Input  : jobUUID - job UUID
-  * Output : -
-  * Return : slave job info node or NULL if not found
-  * Notes  : -
-  \***********************************************************************/
-
-  SlaveJobInfoNode *findSlaveJobInfoByUUID(ConstString jobUUID)
-  {
-    SlaveJobInfoNode *slaveJobInfoNode;
-
-    LIST_ITERATE(&slaveJobInfoList,slaveJobInfoNode)
-    {
-      if (String_equals(slaveJobInfoNode->jobUUID,jobUUID))
-      {
-        return slaveJobInfoNode;
-      }
-    }
-
-    return NULL;
-  }
-
-  /***********************************************************************\
-  * Name   : freeSlaveJobInfoNode
-  * Purpose: free slave info node
-  * Input  : slaveJobInfoNode - slave job info node
-  *          userData         - not used
-  * Output : -
-  * Return : -
-  * Notes  : -
-  \***********************************************************************/
-
-  void freeSlaveJobInfoNode(SlaveJobInfoNode *slaveJobInfoNode, void *userData)
-  {
-    assert(slaveJobInfoNode != NULL);
-    assert(slaveJobInfoNode->jobUUID != NULL);
-    assert(slaveJobInfoNode->slaveHost.name != NULL);
-
-    UNUSED_VARIABLE(userData);
-
-    String_delete(slaveJobInfoNode->slaveHost.name);
-  }
-
-  /***********************************************************************\
-  * Name   : deleteSlaveJobInfoNode
-  * Purpose: delete slave info node
-  * Input  : slaveJobInfoNode - slave job info node
-  * Output : -
-  * Return : -
-  * Notes  : -
-  \***********************************************************************/
-
-  void deleteSlaveJobInfoNode(SlaveJobInfoNode *slaveJobInfoNode)
-  {
-    assert(slaveJobInfoNode != NULL);
-
-    freeSlaveJobInfoNode(slaveJobInfoNode,NULL);
-    LIST_DELETE_NODE(slaveJobInfoNode);
-  }
-
-  // init variables
-  List_init(&slaveJobInfoList);
-  resultMap = StringMap_new();
-  if (resultMap == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-
-  while (!quitFlag)
-  {
-    // get list of all slave job and slave host info
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-    {
-      // add new slave job infos
-      LIST_ITERATE(&jobList,jobNode)
-      {
-        if (isSlaveJob(jobNode) && String_isEmpty(jobNode->master))
-        {
-          // add slave job info
-          slaveJobInfoNode = findSlaveJobInfoByUUID(jobNode->uuid);
-          if (slaveJobInfoNode == NULL)
-          {
-            slaveJobInfoNode = LIST_NEW_NODE(SlaveJobInfoNode);
-            if (slaveJobInfoNode == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-            slaveJobInfoNode->jobUUID = String_duplicate(jobNode->uuid);
-            Slave_duplicateHost(&slaveJobInfoNode->slaveHost,&jobNode->slaveHost);
-            List_append(&slaveJobInfoList,slaveJobInfoNode);
-          }
-          assert(slaveJobInfoNode != NULL);
-
-          // check if active
-          slaveJobInfoNode->isActive = isJobActive(jobNode);
-        }
-      }
-
-      // remove not existing slave job infos
-      slaveJobInfoNode = slaveJobInfoList.head;
-      while (slaveJobInfoNode != NULL)
-      {
-        if (findJobByUUID(slaveJobInfoNode->jobUUID) != NULL)
-        {
-          slaveJobInfoNode = slaveJobInfoNode->next;
-        }
-        else
-        {
-          slaveJobInfoNode = List_removeAndFree(&slaveJobInfoList,
-                                                slaveJobInfoNode,
-                                                CALLBACK((ListNodeFreeFunction)freeSlaveJobInfoNode,NULL)
-                                               );
-        }
-      }
-    }
-
-    // get job info from slave jobs
-    LIST_ITERATE(&slaveJobInfoList,slaveJobInfoNode)
-    {
-      if (slaveJobInfoNode->isActive)
-      {
-        // get job info
-        error = Slave_executeCommand(&slaveJobInfoNode->slaveHost,resultMap,"JOB_STATUS jobUUID=%S",slaveJobInfoNode->jobUUID);
-        if (error == ERROR_NONE)
-        {
-          SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-          {
-            // find job
-            jobNode = findJobByUUID(slaveJobInfoNode->jobUUID);
-            if (jobNode != NULL)
-            {
-              // parse and store
-              StringMap_getEnum  (resultMap,"state",                &jobNode->state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
-              StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0L);
-              StringMap_getUInt64(resultMap,"doneSize",             &jobNode->runningInfo.doneSize,0LL);
-              StringMap_getULong (resultMap,"totalEntryCount",      &jobNode->runningInfo.totalEntryCount,0L);
-              StringMap_getUInt64(resultMap,"totalEntrySize",       &jobNode->runningInfo.totalEntrySize,0LL);
-              StringMap_getBool  (resultMap,"collectTotalSumDone",  &jobNode->runningInfo.collectTotalSumDone,FALSE);
-              StringMap_getULong (resultMap,"skippedEntryCount",    &jobNode->runningInfo.skippedEntryCount,0L);
-              StringMap_getUInt64(resultMap,"skippedEntrySize",     &jobNode->runningInfo.skippedEntrySize,0LL);
-              StringMap_getULong (resultMap,"errorEntryCount",      &jobNode->runningInfo.errorEntryCount,0L);
-              StringMap_getUInt64(resultMap,"errorEntrySize",       &jobNode->runningInfo.errorEntrySize,0LL);
-              StringMap_getDouble(resultMap,"entriesPerSecond",     &jobNode->runningInfo.entriesPerSecond,0.0);
-              StringMap_getDouble(resultMap,"bytesPerSecond",       &jobNode->runningInfo.bytesPerSecond,0.0);
-              StringMap_getDouble(resultMap,"storageBytesPerSecond",&jobNode->runningInfo.storageBytesPerSecond,0.0);
-              StringMap_getUInt64(resultMap,"archiveSize",          &jobNode->runningInfo.archiveSize,0LL);
-              StringMap_getDouble(resultMap,"compressionRatio",     &jobNode->runningInfo.compressionRatio,0.0);
-              StringMap_getULong (resultMap,"estimatedRestTime",    &jobNode->runningInfo.estimatedRestTime,0L);
-              StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.entryName,NULL);
-              StringMap_getUInt64(resultMap,"entryDoneSize",        &jobNode->runningInfo.entryDoneSize,0LL);
-              StringMap_getUInt64(resultMap,"entryTotalSize",       &jobNode->runningInfo.entryTotalSize,0LL);
-              StringMap_getString(resultMap,"storageName",          jobNode->runningInfo.storageName,NULL);
-              StringMap_getUInt64(resultMap,"storageDoneSize",      &jobNode->runningInfo.storageDoneSize,0L);
-              StringMap_getUInt64(resultMap,"storageTotalSize",     &jobNode->runningInfo.storageTotalSize,0L);
-              StringMap_getUInt  (resultMap,"volumeNumber",         &jobNode->runningInfo.volumeNumber,0);
-              StringMap_getDouble(resultMap,"volumeProgress",       &jobNode->runningInfo.volumeProgress,0.0);
-              StringMap_getString(resultMap,"message",              jobNode->runningInfo.message,NULL);
-            }
-          }
-        }
-      }
-    }
-
-//TODO
-    // delete expired slave jobs
-
-    // sleep
-    Misc_udelay(1LL*US_PER_SECOND);
-  }
-
-  // free resources
-  StringMap_delete(resultMap);
-  List_done(&slaveJobInfoList,CALLBACK((ListNodeFreeFunction)freeSlaveJobInfoNode,NULL));
 }
 
 /*---------------------------------------------------------------------*/
@@ -6788,6 +6610,9 @@ LOCAL const char *getJobStateText(JobStates jobState, const JobOptions *jobOptio
       break;
     case JOB_STATE_ABORTED:
       stateText = "ABORTED";
+      break;
+    case JOB_STATE_DISCONNECTED:
+      stateText = "DISCONNECTED";
       break;
     #ifndef NDEBUG
       default:
@@ -10368,6 +10193,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
+  char          buffer[64];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -10397,6 +10223,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     {
       // request abort job
       jobNode->requestedAbortFlag = TRUE;
+      String_setCString(jobNode->abortedByInfo,getClientInfo(clientInfo,buffer,sizeof(buffer)));
       Semaphore_signalModified(&jobStatusLock);
 
       if (isJobLocal(jobNode))
@@ -19055,10 +18882,6 @@ Errors Server_run(uint              port,
   {
     HALT_FATAL_ERROR("Cannot initialize slave thread!");
   }
-  if (!Thread_init(&slaveThread,"BAR slave",globalOptions.niceLevel,slaveThreadCode,NULL))
-  {
-    HALT_FATAL_ERROR("Cannot initialize slave thread!");
-  }
   if (Index_isAvailable())
   {
 //TODO: required?
@@ -19501,7 +19324,6 @@ Errors Server_run(uint              port,
     }
     Thread_join(&indexThread);
   }
-  Thread_join(&slaveThread);
   Thread_join(&slaveConnectThread);
   Thread_join(&pauseThread);
   Thread_join(&schedulerThread);
@@ -19529,7 +19351,6 @@ Errors Server_run(uint              port,
     Thread_done(&indexThread);
     Semaphore_done(&indexThreadTrigger);
   }
-  Thread_done(&slaveThread);
   Thread_done(&slaveConnectThread);
   Thread_done(&pauseThread);
   Thread_done(&schedulerThread);
