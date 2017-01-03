@@ -38,6 +38,7 @@
 
 #define SOCKET_FLAG_NONE         0
 #define SOCKET_FLAG_NON_BLOCKING (1 << 0)
+#define SOCKET_FLAG_KEEP_ALIVE   (1 << 1)
 
 /***************************** Datatypes *******************************/
 typedef enum
@@ -52,6 +53,7 @@ typedef struct
   SocketTypes type;
   int         handle;
   uint        flags;
+  bool        isConnected;                   // TRUE iff connected
   union
   {
     #ifdef HAVE_FTP
@@ -226,6 +228,25 @@ Errors Network_connect(SocketHandle *socketHandle,
 \***********************************************************************/
 
 void Network_disconnect(SocketHandle *socketHandle);
+
+/***********************************************************************\
+* Name   : Network_isConnected
+* Purpose: check if connected
+* Input  : socketHandle - socket handle
+* Output : -
+* Return : TRUE iff connected
+* Notes  : connection state is only updated by calling Network_receive()!
+\***********************************************************************/
+
+INLINE bool Network_isConnected(SocketHandle *socketHandle);
+#if defined(NDEBUG) || defined(__NETWORK_IMPLEMENATION__)
+INLINE bool Network_isConnected(SocketHandle *socketHandle)
+{
+  assert(socketHandle != NULL);
+
+  return socketHandle->isConnected;
+}
+#endif /* NDEBUG || __NETWORK_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Network_getSocket

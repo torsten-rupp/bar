@@ -541,8 +541,9 @@ Errors Network_connect(SocketHandle *socketHandle,
   assert(hostName != NULL);
 
   // initialize variables
-  socketHandle->type  = socketType;
-  socketHandle->flags = flags;
+  socketHandle->type        = socketType;
+  socketHandle->flags       = flags;
+  socketHandle->isConnected = FALSE;
 
   switch (socketType)
   {
@@ -550,6 +551,7 @@ Errors Network_connect(SocketHandle *socketHandle,
       {
         #if  defined(PLATFORM_LINUX)
           long   socketFlags;
+          int    n;
         #elif defined(PLATFORM_WINDOWS)
           u_long n;
         #endif /* PLATFORM_... */
@@ -610,15 +612,31 @@ Errors Network_connect(SocketHandle *socketHandle,
           return error;
         }
 
-        if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+        if (flags != SOCKET_FLAG_NONE)
         {
           // enable non-blocking
           #if  defined(PLATFORM_LINUX)
-            socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-            fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            {
+              socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
+              fcntl(socketHandle->handle,F_SETFL,socketFlags = O_NONBLOCK);
+            }
+            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
+            }
           #elif defined(PLATFORM_WINDOWS)
-            n = 1;
-            ioctlsocket(socketHandle->handle,FIONBIO,&n);
+            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            {
+              n = 1;
+              ioctlsocket(socketHandle->handle,FIONBIO,&n);
+            }
+            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(char*)&n,sizeof(int));
+            }
           #endif /* PLATFORM_... */
         }
       }
@@ -632,6 +650,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         const char *plainPassword;
         #if  defined(PLATFORM_LINUX)
           long       socketFlags;
+          int        n;
         #elif defined(PLATFORM_WINDOWS)
           u_long     n;
         #endif /* PLATFORM_... */
@@ -802,15 +821,31 @@ Errors Network_connect(SocketHandle *socketHandle,
           return error;
         }
 #endif /* 0 */
-        if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+        if (flags != SOCKET_FLAG_NONE)
         {
           // enable non-blocking
           #if  defined(PLATFORM_LINUX)
-            socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-            fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            {
+              socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
+              fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+            }
+            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
+            }
           #elif defined(PLATFORM_WINDOWS)
-            n = 1;
-            ioctlsocket(socketHandle->handle,FIONBIO,&n);
+            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            {
+              n = 1;
+              ioctlsocket(socketHandle->handle,FIONBIO,&n);
+            }
+            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(char*)&n,sizeof(int));
+            }
           #endif /* PLATFORM_... */
         }
       }
@@ -833,6 +868,8 @@ Errors Network_connect(SocketHandle *socketHandle,
     #endif /* NDEBUG */
   }
 
+  socketHandle->isConnected = TRUE;
+
   return ERROR_NONE;
 }
 
@@ -841,6 +878,7 @@ void Network_disconnect(SocketHandle *socketHandle)
   assert(socketHandle != NULL);
   assert(socketHandle->handle >= 0);
 
+  socketHandle->isConnected = TRUE;
   switch (socketHandle->type)
   {
     case SOCKET_TYPE_PLAIN:
@@ -1003,15 +1041,20 @@ Errors Network_receive(SocketHandle *socketHandle,
         pollTimeout.tv_nsec = (timeout%1000L)*1000000L;
         pollfds[0].fd     = socketHandle->handle;
         pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
-        if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) == -1)
-            || ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
+        if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) > 0)
+            || ((pollfds[0].revents & (POLLERR|POLLNVAL)) == 0)
            )
         {
-          break;
-        }
+          // receive
+          n = recv(socketHandle->handle,buffer,maxLength,0);
 
-        // receive
-        n = recv(socketHandle->handle,buffer,maxLength,0);
+          // check if disconected
+          socketHandle->isConnected = (n > 0);
+        }
+        else
+        {
+          socketHandle->isConnected = FALSE;
+        }
       }
       break;
     case SOCKET_TYPE_TLS:
@@ -1030,15 +1073,21 @@ Errors Network_receive(SocketHandle *socketHandle,
           // wait for data
           pollfds[0].fd     = socketHandle->handle;
           pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
-          if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) == -1)
-              || ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
+          if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) > 0)
+              && ((pollfds[0].revents & (POLLERR|POLLNVAL)) == 0)
              )
           {
-            break;
-          }
+            // receive
+            n = gnutls_record_recv(socketHandle->gnuTLS.session,buffer,maxLength);
 
-          // receive
-          n = gnutls_record_recv(socketHandle->gnuTLS.session,buffer,maxLength);
+            // check if disconected
+            socketHandle->isConnected = (n > 0);
+          }
+          else
+          {
+            // disconnected
+            socketHandle->isConnected = FALSE;
+          }
         }
       #else /* not HAVE_GNU_TLS */
       #endif /* HAVE_GNU_TLS */
