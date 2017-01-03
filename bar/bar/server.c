@@ -2447,7 +2447,6 @@ LOCAL void startJob(JobNode *jobNode)
 
   // increment active counter
   jobList.activeCount++;
-fprintf(stderr,"%s, %d: start %d\n",__FILE__,__LINE__,jobList.activeCount);
 }
 
 /***********************************************************************\
@@ -2500,7 +2499,6 @@ LOCAL void doneJob(JobNode *jobNode)
   }
 
   // decrement active counter
-fprintf(stderr,"%s, %d: stop %d\n",__FILE__,__LINE__,jobList.activeCount);
   assert(jobList.activeCount > 0);
   jobList.activeCount--;
 }
@@ -4529,6 +4527,7 @@ LOCAL void slaveThreadCode(void)
 
     String    jobUUID;
     SlaveHost slaveHost;
+    bool      isActive;
   } SlaveJobInfoNode;
 
   typedef struct
@@ -4660,9 +4659,11 @@ LOCAL void slaveThreadCode(void)
       // add new slave job infos
       LIST_ITERATE(&jobList,jobNode)
       {
-        if (isSlaveJob(jobNode) && String_isEmpty(jobNode->master) && isJobActive(jobNode))
+        if (isSlaveJob(jobNode) && String_isEmpty(jobNode->master))
         {
-          if (findSlaveJobInfoByUUID(jobNode->uuid) == NULL)
+          // add slave job info
+          slaveJobInfoNode = findSlaveJobInfoByUUID(jobNode->uuid);
+          if (slaveJobInfoNode == NULL)
           {
             slaveJobInfoNode = LIST_NEW_NODE(SlaveJobInfoNode);
             if (slaveJobInfoNode == NULL)
@@ -4673,6 +4674,10 @@ LOCAL void slaveThreadCode(void)
             Slave_duplicateHost(&slaveJobInfoNode->slaveHost,&jobNode->slaveHost);
             List_append(&slaveJobInfoList,slaveJobInfoNode);
           }
+          assert(slaveJobInfoNode != NULL);
+
+          // check if active
+          slaveJobInfoNode->isActive = isJobActive(jobNode);
         }
       }
 
@@ -4686,7 +4691,10 @@ LOCAL void slaveThreadCode(void)
         }
         else
         {
-          slaveJobInfoNode = List_removeAndFree(&slaveJobInfoList,slaveJobInfoNode,CALLBACK((ListNodeFreeFunction)freeSlaveJobInfoNode,NULL));
+          slaveJobInfoNode = List_removeAndFree(&slaveJobInfoList,
+                                                slaveJobInfoNode,
+                                                CALLBACK((ListNodeFreeFunction)freeSlaveJobInfoNode,NULL)
+                                               );
         }
       }
     }
@@ -4694,42 +4702,45 @@ LOCAL void slaveThreadCode(void)
     // get job info from slave jobs
     LIST_ITERATE(&slaveJobInfoList,slaveJobInfoNode)
     {
-      // get job info
-      error = Slave_executeCommand(&slaveJobInfoNode->slaveHost,resultMap,"JOB_STATUS jobUUID=%S",slaveJobInfoNode->jobUUID);
-      if (error == ERROR_NONE)
+      if (slaveJobInfoNode->isActive)
       {
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+        // get job info
+        error = Slave_executeCommand(&slaveJobInfoNode->slaveHost,resultMap,"JOB_STATUS jobUUID=%S",slaveJobInfoNode->jobUUID);
+        if (error == ERROR_NONE)
         {
-          // find job
-          jobNode = findJobByUUID(slaveJobInfoNode->jobUUID);
-          if (jobNode != NULL)
+          SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
           {
-            // parse and store
-            StringMap_getEnum  (resultMap,"state",                &jobNode->state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
-            StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0L);
-            StringMap_getUInt64(resultMap,"doneSize",             &jobNode->runningInfo.doneSize,0LL);
-            StringMap_getULong (resultMap,"totalEntryCount",      &jobNode->runningInfo.totalEntryCount,0L);
-            StringMap_getUInt64(resultMap,"totalEntrySize",       &jobNode->runningInfo.totalEntrySize,0LL);
-            StringMap_getBool  (resultMap,"collectTotalSumDone",  &jobNode->runningInfo.collectTotalSumDone,FALSE);
-            StringMap_getULong (resultMap,"skippedEntryCount",    &jobNode->runningInfo.skippedEntryCount,0L);
-            StringMap_getUInt64(resultMap,"skippedEntrySize",     &jobNode->runningInfo.skippedEntrySize,0LL);
-            StringMap_getULong (resultMap,"errorEntryCount",      &jobNode->runningInfo.errorEntryCount,0L);
-            StringMap_getUInt64(resultMap,"errorEntrySize",       &jobNode->runningInfo.errorEntrySize,0LL);
-            StringMap_getDouble(resultMap,"entriesPerSecond",     &jobNode->runningInfo.entriesPerSecond,0.0);
-            StringMap_getDouble(resultMap,"bytesPerSecond",       &jobNode->runningInfo.bytesPerSecond,0.0);
-            StringMap_getDouble(resultMap,"storageBytesPerSecond",&jobNode->runningInfo.storageBytesPerSecond,0.0);
-            StringMap_getUInt64(resultMap,"archiveSize",          &jobNode->runningInfo.archiveSize,0LL);
-            StringMap_getDouble(resultMap,"compressionRatio",     &jobNode->runningInfo.compressionRatio,0.0);
-            StringMap_getULong (resultMap,"estimatedRestTime",    &jobNode->runningInfo.estimatedRestTime,0L);
-            StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.entryName,NULL);
-            StringMap_getUInt64(resultMap,"entryDoneSize",        &jobNode->runningInfo.entryDoneSize,0LL);
-            StringMap_getUInt64(resultMap,"entryTotalSize",       &jobNode->runningInfo.entryTotalSize,0LL);
-            StringMap_getString(resultMap,"storageName",          jobNode->runningInfo.storageName,NULL);
-            StringMap_getUInt64(resultMap,"storageDoneSize",      &jobNode->runningInfo.storageDoneSize,0L);
-            StringMap_getUInt64(resultMap,"storageTotalSize",     &jobNode->runningInfo.storageTotalSize,0L);
-            StringMap_getUInt  (resultMap,"volumeNumber",         &jobNode->runningInfo.volumeNumber,0);
-            StringMap_getDouble(resultMap,"volumeProgress",       &jobNode->runningInfo.volumeProgress,0.0);
-            StringMap_getString(resultMap,"message",              jobNode->runningInfo.message,NULL);
+            // find job
+            jobNode = findJobByUUID(slaveJobInfoNode->jobUUID);
+            if (jobNode != NULL)
+            {
+              // parse and store
+              StringMap_getEnum  (resultMap,"state",                &jobNode->state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
+              StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0L);
+              StringMap_getUInt64(resultMap,"doneSize",             &jobNode->runningInfo.doneSize,0LL);
+              StringMap_getULong (resultMap,"totalEntryCount",      &jobNode->runningInfo.totalEntryCount,0L);
+              StringMap_getUInt64(resultMap,"totalEntrySize",       &jobNode->runningInfo.totalEntrySize,0LL);
+              StringMap_getBool  (resultMap,"collectTotalSumDone",  &jobNode->runningInfo.collectTotalSumDone,FALSE);
+              StringMap_getULong (resultMap,"skippedEntryCount",    &jobNode->runningInfo.skippedEntryCount,0L);
+              StringMap_getUInt64(resultMap,"skippedEntrySize",     &jobNode->runningInfo.skippedEntrySize,0LL);
+              StringMap_getULong (resultMap,"errorEntryCount",      &jobNode->runningInfo.errorEntryCount,0L);
+              StringMap_getUInt64(resultMap,"errorEntrySize",       &jobNode->runningInfo.errorEntrySize,0LL);
+              StringMap_getDouble(resultMap,"entriesPerSecond",     &jobNode->runningInfo.entriesPerSecond,0.0);
+              StringMap_getDouble(resultMap,"bytesPerSecond",       &jobNode->runningInfo.bytesPerSecond,0.0);
+              StringMap_getDouble(resultMap,"storageBytesPerSecond",&jobNode->runningInfo.storageBytesPerSecond,0.0);
+              StringMap_getUInt64(resultMap,"archiveSize",          &jobNode->runningInfo.archiveSize,0LL);
+              StringMap_getDouble(resultMap,"compressionRatio",     &jobNode->runningInfo.compressionRatio,0.0);
+              StringMap_getULong (resultMap,"estimatedRestTime",    &jobNode->runningInfo.estimatedRestTime,0L);
+              StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.entryName,NULL);
+              StringMap_getUInt64(resultMap,"entryDoneSize",        &jobNode->runningInfo.entryDoneSize,0LL);
+              StringMap_getUInt64(resultMap,"entryTotalSize",       &jobNode->runningInfo.entryTotalSize,0LL);
+              StringMap_getString(resultMap,"storageName",          jobNode->runningInfo.storageName,NULL);
+              StringMap_getUInt64(resultMap,"storageDoneSize",      &jobNode->runningInfo.storageDoneSize,0L);
+              StringMap_getUInt64(resultMap,"storageTotalSize",     &jobNode->runningInfo.storageTotalSize,0L);
+              StringMap_getUInt  (resultMap,"volumeNumber",         &jobNode->runningInfo.volumeNumber,0);
+              StringMap_getDouble(resultMap,"volumeProgress",       &jobNode->runningInfo.volumeProgress,0.0);
+              StringMap_getString(resultMap,"message",              jobNode->runningInfo.message,NULL);
+            }
           }
         }
       }
