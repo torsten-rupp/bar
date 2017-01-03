@@ -167,6 +167,8 @@ typedef struct JobNode
 {
   LIST_NODE_HEADER(struct JobNode);
 
+  Semaphore       lock;
+
   // job file
   String          fileName;                             // file name
   uint64          fileModified;                         // file modified date/time (timestamp)
@@ -597,7 +599,6 @@ LOCAL const Password        *serverPassword;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
 LOCAL JobList               jobList;                // job list
-LOCAL Semaphore             jobStatusLock;          // job status update lock
 LOCAL Thread                jobThread;              // thread executing jobs create/restore
 LOCAL Thread                schedulerThread;        // thread scheduling jobs
 LOCAL Thread                pauseThread;
@@ -1799,20 +1800,20 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 
   storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_NONE;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobStatusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobNode->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // request volume, set job state
     assert(jobNode->state == JOB_STATE_RUNNING);
     jobNode->requestedVolumeNumber = volumeNumber;
     String_setCString(jobNode->runningInfo.message,message);
     jobNode->state = JOB_STATE_REQUEST_VOLUME;
-    Semaphore_signalModified(&jobStatusLock);
+    Semaphore_signalModified(&jobNode->lock);
 
     // wait until volume is available or job is aborted
     storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_NONE;
     do
     {
-      Semaphore_waitModified(&jobStatusLock,LOCK_TIMEOUT);
+      Semaphore_waitModified(&jobNode->lock,LOCK_TIMEOUT);
 
       if      (jobNode->requestedAbortFlag)
       {
@@ -1835,6 +1836,7 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
     // clear request volume, reset job state
     String_clear(jobNode->runningInfo.message);
     jobNode->state = JOB_STATE_RUNNING;
+    Semaphore_signalModified(&jobNode->lock);
   }
 
   return storageRequestVolumeResult;
@@ -1940,6 +1942,8 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   String_delete(jobNode->name);
   String_delete(jobNode->uuid);
   String_delete(jobNode->fileName);
+
+  Semaphore_done(&jobNode->lock);
 }
 
 /***********************************************************************\
@@ -1965,7 +1969,8 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
   }
 
   // init job node
-  jobNode->jobType                        = jobType;
+  Semaphore_init(&jobNode->lock);
+
   jobNode->fileName                       = String_duplicate(fileName);
   jobNode->fileModified                   = 0LL;
 
@@ -1978,6 +1983,7 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
   {
     Misc_getUUID(jobNode->uuid);
   }
+  jobNode->jobType                        = jobType;
   jobNode->name                           = File_getFileBaseName(String_new(),fileName);
   Slave_initHost(&jobNode->slaveHost,serverPort);
   jobNode->archiveName                    = String_new();
@@ -2062,6 +2068,8 @@ LOCAL JobNode *copyJob(JobNode     *jobNode,
   }
 
   // init job node
+  Semaphore_init(&jobNode->lock);
+
   newJobNode->fileName                       = String_duplicate(fileName);
   newJobNode->fileModified                   = 0LL;
 
@@ -2411,26 +2419,34 @@ LOCAL void triggerJob(JobNode      *jobNode,
                       bool         noStorage
                      )
 {
+  SemaphoreLock semaphoreLock;
+
   assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList));
 
-  // set job state
-  jobNode->state                 = JOB_STATE_WAITING;
-  String_setCString(jobNode->byName,byName);
-  jobNode->archiveType           = archiveType;
-  jobNode->dryRun                = dryRun;
-  String_set(jobNode->schedule.uuid,scheduleUUID);
-  String_set(jobNode->schedule.customText,scheduleCustomText);
-  jobNode->schedule.noStorage    = noStorage;
-  jobNode->requestedAbortFlag    = FALSE;
-  String_clear(jobNode->abortedByInfo);
-  jobNode->requestedVolumeNumber = 0;
-  jobNode->volumeNumber          = 0;
-  String_clear(jobNode->volumeMessage);
-  jobNode->volumeUnloadFlag      = FALSE;
+//TODO
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobNode->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    // set job state
+    jobNode->state                 = JOB_STATE_WAITING;
+    String_setCString(jobNode->byName,byName);
+    jobNode->archiveType           = archiveType;
+    jobNode->dryRun                = dryRun;
+    String_set(jobNode->schedule.uuid,scheduleUUID);
+    String_set(jobNode->schedule.customText,scheduleCustomText);
+    jobNode->schedule.noStorage    = noStorage;
+    jobNode->requestedAbortFlag    = FALSE;
+    String_clear(jobNode->abortedByInfo);
+    jobNode->requestedVolumeNumber = 0;
+    jobNode->volumeNumber          = 0;
+    String_clear(jobNode->volumeMessage);
+    jobNode->volumeUnloadFlag      = FALSE;
 
-  // reset running info
-  resetJobRunningInfo(jobNode);
+    // reset running info
+    resetJobRunningInfo(jobNode);
+  }
 }
+
 
 
 /***********************************************************************\
@@ -3404,11 +3420,11 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
 LOCAL void getAllJobUUIDs(StringList *jobUUIDList)
 {
   SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  const JobNode *jobNode;
 
   assert(jobUUIDList != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -3497,7 +3513,7 @@ LOCAL void updateCreateStatusInfo(Errors                 error,
   assert(createStatusInfo->storageName != NULL);
 
   // Note: only try for 2s
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobStatusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*1000L)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobNode->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*1000L)
   {
     // calculate statics values
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     createStatusInfo->doneCount);
@@ -3583,7 +3599,7 @@ LOCAL void restoreUpdateStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
   assert(restoreStatusInfo->storageName != NULL);
   assert(restoreStatusInfo->entryName != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobStatusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*1000L)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobNode->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*1000L)
   {
     // calculate estimated rest time
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     restoreStatusInfo->doneCount);
@@ -3727,7 +3743,7 @@ LOCAL void jobThreadCode(void)
   archiveType = ARCHIVE_ENTRY_TYPE_UNKNOWN;
   while (!quitFlag)
   {
-    // start job
+    // start next job
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // wait and get next job to execute
@@ -4223,7 +4239,7 @@ LOCAL void jobThreadCode(void)
                                       );
 
           // update job status
-          SEMAPHORE_LOCKED_DO(semaphoreLock,&jobStatusLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          SEMAPHORE_LOCKED_DO(semaphoreLock,&jobNode->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
             if (error == ERROR_NONE)
             {
@@ -4543,9 +4559,10 @@ LOCAL void slaveConnectThreadCode(void)
     // connect all slave instances
     while (!StringList_isEmpty(&jobUUIDList))
     {
+//TODO: use static list?
       StringList_removeFirst(&jobUUIDList,jobUUID);
 
-      // check if slave job and is currently not connected
+      // check if job for slave and slave is currently not connected
       tryConnectFlag = FALSE;
       SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
@@ -5160,7 +5177,7 @@ LOCAL void delayPurgeExpiredThread(void)
 
 /***********************************************************************\
 * Name   : purgeExpiredThreadCode
-* Purpose: purge expired thread
+* Purpose: purge expired entities thread
 * Input  : -
 * Output : -
 * Return : -
@@ -5540,7 +5557,7 @@ LOCAL void indexThreadCode(void)
   JobOptions             jobOptions;
   uint64                 startTimestamp,endTimestamp;
   Errors                 error;
-  JobNode                *jobNode;
+  const JobNode          *jobNode;
   IndexCryptPasswordNode *indexCryptPasswordNode;
   uint64                 totalTimeLastChanged;
   uint64                 totalEntryCount,totalEntrySize;
@@ -5755,7 +5772,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 {
   String        storagePathName;
   SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  const JobNode *jobNode;
 
   // collect storage locations to check for BAR files
   storagePathName = String_new();
@@ -8789,99 +8806,77 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobUUID=<uuid>
-*            attribute=NOBACKUP|NODUMP
 *            name=<name>
+*            attribute=NOBACKUP|NODUMP
 *          Result:
 *            value=<value>
 \***********************************************************************/
 
 LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        attribute;
-  String        name;
-  SemaphoreLock semaphoreLock;
-  const JobNode *jobNode;
-  String        noBackupFileName;
-  bool          noBackupExists;
-  Errors        error;
-  FileInfo      fileInfo;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  String       name;
+  String       attribute;
+  String       noBackupFileName;
+  bool         noBackupExists;
+  Errors       error;
+  FileInfo     fileInfo;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get job UUID, name
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  // get name, attribute
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
   attribute = String_new();
   if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
-    return;
-  }
-  name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
-    String_delete(attribute);
+    String_delete(name);
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  // send attribute value
+  if      (String_equalsCString(attribute,"NOBACKUP"))
   {
-    // find job
-    jobNode = findJobByUUID(jobUUID);
-    if (jobNode == NULL)
+    noBackupFileName = String_new();
+
+    noBackupExists = FALSE;
+    if (File_isDirectory(name))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
-      Semaphore_unlock(&jobList.lock);
-      String_delete(name);
-      String_delete(attribute);
-      return;
+      if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup"));
+      if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
     }
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%y",FALSE);
 
-    // send attribute value
-    if      (String_equalsCString(attribute,"NOBACKUP"))
+    String_delete(noBackupFileName);
+  }
+  else if (String_equalsCString(attribute,"NODUMP"))
+  {
+    error = File_getFileInfo(name,&fileInfo);
+    if (error == ERROR_NONE)
     {
-      noBackupFileName = String_new();
-
-      noBackupExists = FALSE;
-      if (File_isDirectory(name))
-      {
-        if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup"));
-        if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
-      }
-      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%y",FALSE);
-
-      String_delete(noBackupFileName);
-    }
-    else if (String_equalsCString(attribute,"NODUMP"))
-    {
-      error = File_getFileInfo(name,&fileInfo);
-      if (error == ERROR_NONE)
-      {
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%y",(fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP);
-      }
-      else
-      {
-        sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"get file info fail for '%S': %s",attribute,name,Error_getText(error));
-      }
+      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%y",(fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP);
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute %S for '%S'",attribute,name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"get file info fail for '%S': %s",attribute,name,Error_getText(error));
     }
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute %S for '%S'",attribute,name);
   }
 
   // free resources
-  String_delete(name);
   String_delete(attribute);
+  String_delete(name);
 }
 
 /***********************************************************************\
@@ -8895,47 +8890,39 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobUUID=<uuid>
-*            attribute=NOBACKUP|NODUMP
 *            name=<name>
+*            attribute=NOBACKUP|NODUMP
 *            value=<value>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        attribute;
-  String        name;
-  String        value;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  String        noBackupFileName;
-  Errors        error;
-  FileInfo      fileInfo;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  String       name;
+  String       attribute;
+  String       value;
+  String       noBackupFileName;
+  Errors       error;
+  FileInfo     fileInfo;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get job UUID, name, value
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  // get name, value
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
   attribute = String_new();
   if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
-    return;
-  }
-  name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
-    String_delete(attribute);
+    String_delete(name);
     return;
   }
   value = String_new();
@@ -8943,90 +8930,71 @@ LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *i
 //TODO: value still not used
 UNUSED_VARIABLE(value);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  // set attribute
+  if      (String_equalsCString(attribute,"NOBACKUP"))
   {
-    // find job
-    jobNode = findJobByUUID(jobUUID);
-    if (jobNode == NULL)
+    if (!File_isDirectory(name))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
-      Semaphore_unlock(&jobList.lock);
+      sendClientResult(clientInfo,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
       String_delete(value);
-      String_delete(name);
       String_delete(attribute);
+      String_delete(name);
       return;
     }
 
-    // set attribute
-    if      (String_equalsCString(attribute,"NOBACKUP"))
+    noBackupFileName = String_new();
+    File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup");
+    if (!File_exists(noBackupFileName))
     {
-      if (!File_isDirectory(name))
-      {
-        sendClientResult(clientInfo,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
-        Semaphore_unlock(&jobList.lock);
-        String_delete(value);
-        String_delete(name);
-        String_delete(attribute);
-        return;
-      }
-
-      noBackupFileName = String_new();
-      File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup");
-      if (!File_exists(noBackupFileName))
-      {
-        error = File_touch(noBackupFileName);
-        if (error != ERROR_NONE)
-        {
-          String_delete(noBackupFileName);
-          sendClientResult(clientInfo,id,TRUE,error,"Cannot create .nobackup file: %s",Error_getText(error));
-          Semaphore_unlock(&jobList.lock);
-          String_delete(value);
-          String_delete(name);
-          String_delete(attribute);
-          return;
-        }
-      }
-      String_delete(noBackupFileName);
-
-      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
-    }
-    else if (String_equalsCString(attribute,"NODUMP"))
-    {
-      error = File_getFileInfo(name,&fileInfo);
+      error = File_touch(noBackupFileName);
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
-        Semaphore_unlock(&jobList.lock);
+        String_delete(noBackupFileName);
+        sendClientResult(clientInfo,id,TRUE,error,"Cannot create .nobackup file: %s",Error_getText(error));
         String_delete(value);
-        String_delete(name);
         String_delete(attribute);
+        String_delete(name);
         return;
       }
-
-      fileInfo.attributes |= FILE_ATTRIBUTE_NO_DUMP;
-      error = File_setFileInfo(name,&fileInfo);
-      if (error != ERROR_NONE)
-      {
-        sendClientResult(clientInfo,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
-        Semaphore_unlock(&jobList.lock);
-        String_delete(value);
-        String_delete(name);
-        String_delete(attribute);
-        return;
-      }
-
-      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
     }
-    else
+    String_delete(noBackupFileName);
+
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else if (String_equalsCString(attribute,"NODUMP"))
+  {
+    error = File_getFileInfo(name,&fileInfo);
+    if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute %S for '%S'",attribute,name);
+      sendClientResult(clientInfo,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
+      String_delete(value);
+      String_delete(attribute);
+      String_delete(name);
+      return;
     }
+
+    fileInfo.attributes |= FILE_ATTRIBUTE_NO_DUMP;
+    error = File_setFileInfo(name,&fileInfo);
+    if (error != ERROR_NONE)
+    {
+      sendClientResult(clientInfo,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
+      String_delete(value);
+      String_delete(attribute);
+      String_delete(name);
+      return;
+    }
+
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute %S for '%S'",attribute,name);
   }
 
   // free resources
   String_delete(value);
-  String_delete(name);
   String_delete(attribute);
+  String_delete(name);
 }
 
 /***********************************************************************\
@@ -9048,121 +9016,96 @@ UNUSED_VARIABLE(value);
 
 LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        attribute;
-  String        name;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  String        noBackupFileName;
-  Errors        error;
-  FileInfo      fileInfo;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  String       name;
+  String       attribute;
+  String       noBackupFileName;
+  Errors       error;
+  FileInfo     fileInfo;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get job UUID, name
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  // get name, attribute
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
   attribute = String_new();
   if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
-    return;
-  }
-  name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,NULL))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
-    String_delete(attribute);
+    String_delete(name);
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  // clear attribute
+  if      (String_equalsCString(attribute,"NOBACKUP"))
   {
-    // find job
-    jobNode = findJobByUUID(jobUUID);
-    if (jobNode == NULL)
+    if (!File_isDirectory(name))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
-      Semaphore_unlock(&jobList.lock);
-      String_delete(name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
       String_delete(attribute);
+      String_delete(name);
       return;
     }
 
-    // clear attribute
-    if      (String_equalsCString(attribute,"NOBACKUP"))
+    noBackupFileName = String_new();
+    File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup");
+    if (File_exists(noBackupFileName))
     {
-      if (!File_isDirectory(name))
-      {
-        sendClientResult(clientInfo,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
-        Semaphore_unlock(&jobList.lock);
-        String_delete(name);
-        String_delete(attribute);
-        return;
-      }
-
-      noBackupFileName = String_new();
-      File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup");
-      if (File_exists(noBackupFileName))
-      {
-        error = File_delete(noBackupFileName,FALSE);
-        if (error != ERROR_NONE)
-        {
-          String_delete(noBackupFileName);
-          sendClientResult(clientInfo,id,TRUE,error,"Cannot delete .nobackup file: %s",Error_getText(error));
-          Semaphore_unlock(&jobList.lock);
-          String_delete(name);
-          String_delete(attribute);
-          return;
-        }
-      }
-      String_delete(noBackupFileName);
-
-      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
-    }
-    else if (String_equalsCString(attribute,"NODUMP"))
-    {
-      error = File_getFileInfo(name,&fileInfo);
+      error = File_delete(noBackupFileName,FALSE);
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
-        Semaphore_unlock(&jobList.lock);
-        String_delete(name);
+        String_delete(noBackupFileName);
+        sendClientResult(clientInfo,id,TRUE,error,"Cannot delete .nobackup file: %s",Error_getText(error));
         String_delete(attribute);
+        String_delete(name);
         return;
       }
-
-      if ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-      {
-        fileInfo.attributes &= ~FILE_ATTRIBUTE_NO_DUMP;
-        error = File_setFileInfo(name,&fileInfo);
-        if (error != ERROR_NONE)
-        {
-          sendClientResult(clientInfo,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
-          Semaphore_unlock(&jobList.lock);
-          String_delete(name);
-          String_delete(attribute);
-          return;
-        }
-      }
-
-      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
     }
-    else
+    String_delete(noBackupFileName);
+
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else if (String_equalsCString(attribute,"NODUMP"))
+  {
+    error = File_getFileInfo(name,&fileInfo);
+    if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute %S for '%S'",attribute,name);
+      sendClientResult(clientInfo,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
+      String_delete(attribute);
+      String_delete(name);
+      return;
     }
+
+    if ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+    {
+      fileInfo.attributes &= ~FILE_ATTRIBUTE_NO_DUMP;
+      error = File_setFileInfo(name,&fileInfo);
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
+        String_delete(attribute);
+        String_delete(name);
+        return;
+      }
+    }
+
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute %S for '%S'",attribute,name);
   }
 
   // free resources
-  String_delete(name);
   String_delete(attribute);
+  String_delete(name);
 }
 
 /***********************************************************************\
@@ -9840,7 +9783,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        name;
   SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  const JobNode *jobNode;
   String        fileName;
   FileHandle    fileHandle;
   Errors        error;
@@ -9909,7 +9852,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     String_delete(fileName);
 
     // write job to file
-    error = writeJob(jobNode);
+    error = writeJob(newJobNode);
     if (error != ERROR_NONE)
     {
       printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
@@ -10207,6 +10150,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
 
+//TODO: lock jobNode?
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
@@ -10221,25 +10165,28 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     // abort job
     if      (isJobRunning(jobNode))
     {
-      // request abort job
-      jobNode->requestedAbortFlag = TRUE;
-      String_setCString(jobNode->abortedByInfo,getClientInfo(clientInfo,buffer,sizeof(buffer)));
-      Semaphore_signalModified(&jobStatusLock);
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobNode->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        // request abort job
+        jobNode->requestedAbortFlag = TRUE;
+        String_setCString(jobNode->abortedByInfo,getClientInfo(clientInfo,buffer,sizeof(buffer)));
+        Semaphore_signalModified(&jobNode->lock);
 
-      if (isJobLocal(jobNode))
-      {
-        // wait until local job terminated
-        while (isJobRunning(jobNode))
+        if (isJobLocal(jobNode))
         {
-          Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
+          // wait until local job terminated
+          while (isJobRunning(jobNode))
+          {
+            Semaphore_waitModified(&jobNode->lock,LOCK_TIMEOUT);
+          }
         }
-      }
-      else
-      {
-        // abort slave job
-        jobNode->runningInfo.error = Slave_jobAbort(&jobNode->slaveHost,
-                                                    jobNode->uuid
-                                                   );
+        else
+        {
+          // abort slave job
+          jobNode->runningInfo.error = Slave_jobAbort(&jobNode->slaveHost,
+                                                      jobNode->uuid
+                                                     );
+        }
       }
     }
     else if (isJobActive(jobNode))
@@ -10406,7 +10353,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  const JobNode *jobNode;
   EntryNode     *entryNode;
 
   assert(clientInfo != NULL);
@@ -10764,7 +10711,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  const JobNode *jobNode;
   PatternNode   *patternNode;
 
   assert(clientInfo != NULL);
@@ -11109,7 +11056,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  const JobNode *jobNode;
   MountNode     *mountNode;
 
   assert(clientInfo != NULL);
@@ -11515,7 +11462,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
 {
   StaticString    (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock   semaphoreLock;
-  JobNode         *jobNode;
+  const JobNode   *jobNode;
   DeltaSourceNode *deltaSourceNode;
 
   assert(clientInfo != NULL);
@@ -11849,7 +11796,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  const JobNode *jobNode;
   PatternNode   *patternNode;
 
   assert(clientInfo != NULL);
@@ -13477,7 +13424,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          volumeNumber;
-  SemaphoreLock semaphoreLock;
+  SemaphoreLock semaphoreListLock,semaphoreNodeLock;
   JobNode       *jobNode;
 
   assert(clientInfo != NULL);
@@ -13497,7 +13444,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(semaphoreListLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -13509,8 +13456,11 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
     }
 
     // set volume number
-    jobNode->volumeNumber = volumeNumber;
-    Semaphore_signalModified(&jobStatusLock);
+    SEMAPHORE_LOCKED_DO(semaphoreNodeLock,&jobNode->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      jobNode->volumeNumber = volumeNumber;
+      Semaphore_signalModified(&jobNode->lock);
+    }
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -13534,7 +13484,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
 LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
+  SemaphoreLock semaphoreListLock,semaphoreNodeLock;
   JobNode       *jobNode;
 
   assert(clientInfo != NULL);
@@ -13549,7 +13499,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(semaphoreListLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = findJobByUUID(jobUUID);
@@ -13561,7 +13511,11 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
     }
 
     // set unload flag
-    jobNode->volumeUnloadFlag = TRUE;
+    SEMAPHORE_LOCKED_DO(semaphoreNodeLock,&jobNode->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      jobNode->volumeUnloadFlag = TRUE;
+      Semaphore_signalModified(&jobNode->lock);
+    }
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -15238,7 +15192,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   uint64           totalEntrySize;
   UUIDNode         *uuidNode;
   SemaphoreLock    semaphoreLock;
-  JobNode          *jobNode;
+  const JobNode    *jobNode;
   bool             exitsFlag;
 
   assert(clientInfo != NULL);
@@ -15650,7 +15604,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   ulong                 totalEntryCount;
   uint64                totalEntrySize;
   SemaphoreLock         semaphoreLock;
-  JobNode               *jobNode;
+  const JobNode         *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -18703,7 +18657,6 @@ Errors Server_run(uint              port,
   List_init(&jobList);
   Semaphore_init(&jobList.lock);
   jobList.activeCount     = 0;
-  Semaphore_init(&jobStatusLock);
   Semaphore_init(&serverStateLock);
   serverState             = SERVER_STATE_RUNNING;
   pauseFlags.create       = FALSE;
@@ -18715,7 +18668,6 @@ Errors Server_run(uint              port,
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&jobList, { List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&jobList.lock,{ Semaphore_done(&jobList.lock); });
-  AUTOFREE_ADD(&autoFreeList,&jobStatusLock,{ Semaphore_done(&jobStatusLock); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
 
   logMessage(NULL,  // logHandle,
@@ -19358,7 +19310,6 @@ Errors Server_run(uint              port,
   Semaphore_done(&serverStateLock);
   if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
   List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
-  Semaphore_done(&jobStatusLock);
   Semaphore_done(&jobList.lock);
   List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
   List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
