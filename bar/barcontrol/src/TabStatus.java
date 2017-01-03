@@ -78,7 +78,8 @@ class JobData
     REQUEST_VOLUME,
     DONE,
     ERROR,
-    ABORTED;
+    ABORTED,
+    DISCONNECTED;
 
     /** convert data to string
      * @return string
@@ -99,6 +100,7 @@ class JobData
         case DONE:                    return BARControl.tr("done");
         case ERROR:                   return BARControl.tr("ERROR");
         case ABORTED:                 return BARControl.tr("aborted");
+        case DISCONNECTED:            return BARControl.tr("disconnected");
       }
 
       return "";
