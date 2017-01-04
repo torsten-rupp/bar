@@ -1698,7 +1698,13 @@ test11 test_server: \
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=master --compress-algorithm=none --crypt-algorithm=none" \
+          test_server_operations \
+          ;
+	$(MAKE) \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=slave --compress-algorithm=none --crypt-algorithm=none" \
           test_server_operations \
           ;
 	@$(ECHO) "ok"
@@ -3763,6 +3769,7 @@ test_master_slave_operations_master: \
             --daemon \
             $(if $(TEST_DETACH),,-D) \
 	    --pid-file=$(TEST_SERVER_PID_FILE) \
+            --server-mode=master \
 	    --server-port=$(TEST_SERVER_PORT) \
 	    --index-database=$(TEST_SERVER_DATABASE) \
             --server-jobs-directory=$(TEST_SERVER_JOBS) \
@@ -3803,6 +3810,7 @@ test_master_slave_operations_slave: \
               --daemon \
               $(if $(TEST_DETACH),,-D) \
 	      --pid-file=$(TEST_SLAVE_PID_FILE) \
+              --server-mode=slave \
 	      --server-port=$(TEST_SLAVE_PORT) \
 	      --index-database=$(TEST_SLAVE_DATABASE) \
               --server-jobs-directory=$(TEST_SLAVE_JOBS) \
@@ -3822,6 +3830,7 @@ test_master_slave_operations_slave: \
               --daemon \
               $(if $(TEST_DETACH),,-D) \
 	      --pid-file=$(TEST_SLAVE_PID_FILE) \
+              --server-mode=slave \
 	      --server-port=$(TEST_SLAVE_PORT) \
 	      --index-database=$(TEST_SLAVE_DATABASE) \
               --server-jobs-directory=$(TEST_SLAVE_JOBS) \
