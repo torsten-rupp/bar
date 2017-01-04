@@ -53,6 +53,16 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define Password_init(...)       __Password_init      (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Password_done(...)       __Password_done      (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Password_new(...)        __Password_new       (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Password_newString(...)  __Password_newString (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Password_newCString(...) __Password_newCString(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Password_duplicate(...)  __Password_duplicate (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Password_delete(...)     __Password_delete    (__FILE__,__LINE__, ## __VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -118,7 +128,14 @@ void Password_freeSecure(void *p);
 * Notes  : -
 \***********************************************************************/
 
-void Password_init(Password *password);
+#ifdef NDEBUG
+  void Password_init(Password *password);
+#else /* not NDEBUG */
+  void __Password_init(const char *__fileName__,
+                       ulong      __lineNb__,
+                       Password   *password
+                      );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Password_done
@@ -129,10 +146,17 @@ void Password_init(Password *password);
 * Notes  : -
 \***********************************************************************/
 
-void Password_done(Password *password);
+#ifdef NDEBUG
+  void Password_done(Password *password);
+#else /* not NDEBUG */
+  void __Password_done(const char *__fileName__,
+                       ulong      __lineNb__,
+                       Password   *password
+                      );
+#endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : Password_new, Password_newCString
+* Name   : Password_new, Password_newString, Password_newCString
 * Purpose: create new password
 * Input  : s - password string
 * Output : -
@@ -140,9 +164,29 @@ void Password_done(Password *password);
 * Notes  : -
 \***********************************************************************/
 
-Password *Password_new(void);
-Password *Password_newString(const String string);
-Password *Password_newCString(const char *s);
+#ifdef NDEBUG
+  Password *Password_new(void);
+#else /* not NDEBUG */
+  Password *__Password_new(const char *__fileName__,
+                           ulong      __lineNb__
+                          );
+#endif /* NDEBUG */
+#ifdef NDEBUG
+  Password *Password_newString(const String string);
+#else /* not NDEBUG */
+  Password *__Password_newString(const char   *__fileName__,
+                                 ulong        __lineNb__,
+                                 const String string
+                                );
+#endif /* NDEBUG */
+#ifdef NDEBUG
+  Password *Password_newCString(const char *s);
+#else /* not NDEBUG */
+  Password *__Password_newCString(const char *__fileName__,
+                                  ulong      __lineNb__,
+                                  const char *s
+                                 );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Password_duplicate
@@ -153,7 +197,14 @@ Password *Password_newCString(const char *s);
 * Notes  : -
 \***********************************************************************/
 
-Password *Password_duplicate(const Password *fromPassword);
+#ifdef NDEBUG
+  Password *Password_duplicate(const Password *fromPassword);
+#else /* not NDEBUG */
+  Password *__Password_duplicate(const char     *__fileName__,
+                                 ulong          __lineNb__,
+                                 const Password *fromPassword
+                                );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Password_delete
@@ -164,7 +215,14 @@ Password *Password_duplicate(const Password *fromPassword);
 * Notes  : -
 \***********************************************************************/
 
-void Password_delete(Password *password);
+#ifdef NDEBUG
+  void Password_delete(Password *password);
+#else /* not NDEBUG */
+  void __Password_delete(const char *__fileName__,
+                         ulong      __lineNb__,
+                         Password   *password
+                        );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Password_clear
