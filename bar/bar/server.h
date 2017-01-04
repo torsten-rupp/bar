@@ -91,8 +91,9 @@ void Server_doneAll(void);
 /***********************************************************************\
 * Name   : Server_run
 * Purpose: run network server
-* Input  : serverPort            - server port (or 0 to disable)
-*          serverTLSPort         - server TLS (SSL) port (or 0 to disable)
+* Input  : mode                  - server mode; see SERVER_MODE_...
+*          port                  - server port (or 0 to disable)
+*          tlsPort               - server TLS (SSL) port (or 0 to disable)
 *          ca                    - CA data or NULL
 *          cert                  - TLS cerificate or NULL
 *          key                   - TLS key or NULL
@@ -106,8 +107,9 @@ void Server_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-Errors Server_run(uint              serverPort,
-                  uint              serverTLSPort,
+Errors Server_run(ServerModes       mode,
+                  uint              port,
+                  uint              tlsPort,
                   const Certificate *ca,
                   const Certificate *cert,
                   const Key         *key,

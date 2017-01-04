@@ -205,7 +205,7 @@ typedef struct JobNode
   Password        *cryptPassword;                       // crypt password if password mode is 'ask'
 
   // job running state
-  String          master;                               // master initiate job or NULL
+  String          master;                               // master who created job or NULL
 
   JobStates       state;                                // current state of job
   String          byName;                               // state changed by name
@@ -591,6 +591,7 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
 /***************************** Variables *******************************/
 LOCAL AuthorizationFailList authorizationFailList;  // list with failed client authorizations
+LOCAL ServerModes           serverMode;
 LOCAL uint                  serverPort;
 LOCAL const Certificate     *serverCA;
 LOCAL const Certificate     *serverCert;
@@ -9444,6 +9445,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
 * Notes  : Arguments:
 *          Result:
 *            jobUUID=<uuid> \
+*            master=<name> \
 *            name=<name> \
 *            state=<state> \
 *            hostName=<name> \
@@ -9475,8 +9477,9 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
     LIST_ITERATEX(&jobList,jobNode,!isCommandAborted(clientInfo,id))
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "jobUUID=%S name=%'S state=%'s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
+                       "jobUUID=%S master=%'S name=%'S state=%'s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
                        jobNode->uuid,
+                       jobNode->master,
                        jobNode->name,
                        getJobStateText(jobNode->state,&jobNode->jobOptions),
                        jobNode->slaveHost.name,
@@ -18070,19 +18073,21 @@ LOCAL void sendSessionId(ClientInfo *clientInfo)
   if ((n !=NULL) && (e != NULL))
   {
     s  = String_format(String_new(),
-                       "SESSION id=%S encryptTypes=%s n=%S e=%S",
+                       "SESSION id=%S encryptTypes=%s n=%S e=%S mode=%s",
                        id,
                        "RSA,NONE",
                        n,
-                       e
+                       e,
+                       (serverMode == SERVER_MODE_MASTER) ? "master" : "slave"
                       );
   }
   else
   {
     s  = String_format(String_new(),
-                       "SESSION id=%S encryptTypes=%s",
+                       "SESSION id=%S encryptTypes=%s mode=%s",
                        id,
-                       "NONE"
+                       "NONE",
+                       (serverMode == SERVER_MODE_MASTER) ? "master" : "slave"
                       );
   }
   String_appendChar(s,'\n');
@@ -18541,7 +18546,8 @@ void Server_doneAll(void)
 {
 }
 
-Errors Server_run(uint              port,
+Errors Server_run(ServerModes       mode,
+                  uint              port,
                   uint              tlsPort,
                   const Certificate *ca,
                   const Certificate *cert,
@@ -18580,6 +18586,7 @@ Errors Server_run(uint              port,
   // initialize variables
   AutoFree_init(&autoFreeList);
   List_init(&authorizationFailList);
+  serverMode              = mode;
   serverPort              = port;
   serverCA                = ca;
   serverCert              = cert;
