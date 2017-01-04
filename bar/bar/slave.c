@@ -698,14 +698,19 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   CONFIG_STRUCT_VALUE_STRING   ("ssh-private-key",         JobNode,jobOptions.sshServer.privateKeyFileName ),
 */
   if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,jobUUID,"archive-name",storageName);
+  if (error == ERROR_NONE) error = Slave_setJobOptionCString  (slaveHost,
+                                                               jobUUID,
+                                                               "archive-type",
+                                                               ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,jobOptions->archiveType,NULL)
+                                                              );
   if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,jobUUID,"incremental-list-file",  jobOptions->incrementalListFileName     );
   if (error == ERROR_NONE) error = Slave_setJobOptionInteger64(slaveHost,jobUUID,"archive-part-size",      jobOptions->archivePartSize             );
 //  if (error == ERROR_NONE) error = Slave_setJobOptionInt(slaveHost,jobUUID,"directory-strip",jobOptions->directoryStripCount);
 //  if (error == ERROR_NONE) error = Slave_setJobOptionString(slaveHost,jobUUID,"destination",jobOptions->destination);
 //  if (error == ERROR_NONE) error = Slave_setJobOptionString(slaveHost,jobUUID,"owner",jobOptions->owner);
 //  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,jobUUID,"pattern-type",           jobOptions->pattern-type                );
-  ;
-  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,jobUUID,
+  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,
+                                                               jobUUID,
                                                                "compress-algorithm",
                                                                String_format(String_clear(s),
                                                                              "%s+%s",
@@ -714,11 +719,13 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                             )
                                                               );
 //TODO
-  if (error == ERROR_NONE) error = Slave_setJobOptionCString  (slaveHost,jobUUID,
+  if (error == ERROR_NONE) error = Slave_setJobOptionCString  (slaveHost,
+                                                               jobUUID,
                                                                "crypt-algorithm",
                                                                ConfigValue_selectToString(CONFIG_VALUE_CRYPT_ALGORITHMS,jobOptions->cryptAlgorithms[0],NULL)
                                                               );
-  if (error == ERROR_NONE) error = Slave_setJobOptionCString  (slaveHost,jobUUID,
+  if (error == ERROR_NONE) error = Slave_setJobOptionCString  (slaveHost,
+                                                               jobUUID,
                                                                "crypt-type",
                                                                ConfigValue_selectToString(CONFIG_VALUE_CRYPT_TYPES,jobOptions->cryptType,NULL)
                                                               );
@@ -745,7 +752,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                 "ssh-public-key-data",
                                                                 Misc_base64Encode(s,jobOptions->sshServer.publicKey.data,jobOptions->sshServer.publicKey.length)
                                                                );
-  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,jobUUID,
+  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,
+                                                               jobUUID,
                                                                "ssh-private-key-data",
                                                                Misc_base64Encode(s,jobOptions->sshServer.privateKey.data,jobOptions->sshServer.privateKey.length)
                                                               );
@@ -835,7 +843,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
 fprintf(stderr,"%s, %d: %d: Slave_jobStart %s\n",__FILE__,__LINE__,error,Error_getText(error));
 
-//exit(123);
   // start execute job
   error = Slave_executeCommand(slaveHost,NULL,"JOB_START jobUUID=%S archiveType=%s dryRun=%y",jobUUID,"FULL"/*archiveType*/,FALSE);
   if (error != ERROR_NONE)
