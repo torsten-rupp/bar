@@ -188,7 +188,7 @@ bool AutoFree_add(AutoFreeList     *autoFreeList,
                  );
 #else /* not NDEBUG */
 bool __AutoFree_add(const char       *__fileName__,
-                    uint             __lineNb__,
+                    ulong            __lineNb__,
                     AutoFreeList     *autoFreeList,
                     const void       *resource,
                     AutoFreeFunction autoFreeFunction
@@ -211,7 +211,7 @@ void AutoFree_remove(AutoFreeList *autoFreeList,
                     );
 #else /* not NDEBUG */
 void __AutoFree_remove(const char   *__fileName__,
-                       uint         __lineNb__,
+                       ulong        __lineNb__,
                        AutoFreeList *autoFreeList,
                        const void   *resource
                       );

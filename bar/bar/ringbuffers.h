@@ -228,7 +228,7 @@ typedef void(*RingBufferElementFreeFunction)(void *data, void *userData);
 #ifdef NDEBUG
 bool RingBuffer_init(RingBuffer *ringBuffer, uint elementSize, ulong size);
 #else /* not NDEBUG */
-bool __RingBuffer_init(const char *__fileName__, uint __lineNb__, RingBuffer *ringBuffer, uint elementSize, ulong size);
+bool __RingBuffer_init(const char *__fileName__, ulong __lineNb__, RingBuffer *ringBuffer, uint elementSize, ulong size);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -246,7 +246,7 @@ bool __RingBuffer_init(const char *__fileName__, uint __lineNb__, RingBuffer *ri
 #ifdef NDEBUG
 void RingBuffer_done(RingBuffer *ringBuffer, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData);
 #else /* not NDEBUG */
-void __RingBuffer_done(const char *__fileName__, uint __lineNb__, RingBuffer *ringBuffer, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData);
+void __RingBuffer_done(const char *__fileName__, ulong __lineNb__, RingBuffer *ringBuffer, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -262,7 +262,7 @@ void __RingBuffer_done(const char *__fileName__, uint __lineNb__, RingBuffer *ri
 #ifdef NDEBUG
 RingBuffer* RingBuffer_new(uint elementSize, ulong size);
 #else /* not NDEBUG */
-RingBuffer* __RingBuffer_new(const char *__fileName__, uint __lineNb__, uint elementSize, ulong size);
+RingBuffer* __RingBuffer_new(const char *__fileName__, ulong __lineNb__, uint elementSize, ulong size);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -280,7 +280,7 @@ RingBuffer* __RingBuffer_new(const char *__fileName__, uint __lineNb__, uint ele
 #ifdef NDEBUG
 void RingBuffer_delete(RingBuffer *ringBuffer, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData);
 #else /* not NDEBUG */
-void __RingBuffer_delete(const char *__fileName__, uint __lineNb__, RingBuffer *ringBuffer, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData);
+void __RingBuffer_delete(const char *__fileName__, ulong __lineNb__, RingBuffer *ringBuffer, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData);
 #endif /* NDEBUG */
 
 /***********************************************************************\

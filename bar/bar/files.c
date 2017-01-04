@@ -280,7 +280,7 @@ LOCAL Errors initFileHandle(FileHandle  *fileHandle,
                            )
 #else /* not NDEBUG */
 LOCAL Errors initFileHandle(const char  *__fileName__,
-                            uint        __lineNb__,
+                            ulong       __lineNb__,
                             FileHandle  *fileHandle,
                             int         fileDescriptor,
                             const char  *fileName,
@@ -444,7 +444,7 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
         #endif /* HAVE_BACKTRACE */
         if (debugFileNode->fileHandle->name != NULL)
         {
-          HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %u",
+          HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %lu",
                               String_cString(debugFileNode->fileHandle->name),
                               debugFileNode->fileName,
                               debugFileNode->lineNb,
@@ -454,7 +454,7 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
         }
         else
         {
-          HALT_INTERNAL_ERROR("File %p at %s, line %lu opened again at %s, line %u",
+          HALT_INTERNAL_ERROR("File %p at %s, line %lu opened again at %s, line %lu",
                               debugFileNode->fileHandle,
                               debugFileNode->fileName,
                               debugFileNode->lineNb,
@@ -522,7 +522,7 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
 LOCAL void doneFileHandle(FileHandle *fileHandle)
 #else /* not NDEBUG */
 LOCAL void doneFileHandle(const char  *__fileName__,
-                          uint        __lineNb__,
+                          ulong       __lineNb__,
                           FileHandle  *fileHandle
                          )
 #endif /* NDEBUG */
@@ -579,7 +579,7 @@ LOCAL void doneFileHandle(const char  *__fileName__,
         #ifdef HAVE_BACKTRACE
           debugDumpCurrentStackTrace(stderr,0,0);
         #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("File '%p' not found in debug list at %s, line %u",
+        HALT_INTERNAL_ERROR("File '%p' not found in debug list at %s, line %lu",
                             fileHandle->file,
                             __fileName__,
                             __lineNb__
@@ -1231,7 +1231,7 @@ Errors File_getTmpFile(FileHandle  *fileHandle,
                       )
 #else /* not NDEBUG */
 Errors __File_getTmpFile(const char  *__fileName__,
-                         uint        __lineNb__,
+                         ulong       __lineNb__,
                          FileHandle  *fileHandle,
                          ConstString pattern,
                          ConstString directory
@@ -1252,7 +1252,7 @@ Errors File_getTmpFileCString(FileHandle  *fileHandle,
                              )
 #else /* not NDEBUG */
 Errors __File_getTmpFileCString(const char  *__fileName__,
-                                uint        __lineNb__,
+                                ulong       __lineNb__,
                                 FileHandle  *fileHandle,
                                 char const  *pattern,
                                 ConstString directory
@@ -1378,7 +1378,7 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
         #endif /* HAVE_BACKTRACE */
         if (debugFileNode->fileHandle->name != NULL)
         {
-          HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened multiple times at %s, line %u",
+          HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened multiple times at %s, line %lu",
                               String_cString(debugFileNode->fileHandle->name),
                               debugFileNode->fileName,
                               debugFileNode->lineNb,
@@ -1388,7 +1388,7 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
         }
         else
         {
-          HALT_INTERNAL_ERROR("File %p at %s, line %lu opened multiple times at %s, line %u",
+          HALT_INTERNAL_ERROR("File %p at %s, line %lu opened multiple times at %s, line %lu",
                               debugFileNode->fileHandle,
                               debugFileNode->fileName,
                               debugFileNode->lineNb,
@@ -1609,7 +1609,7 @@ Errors File_open(FileHandle   *fileHandle,
                 )
 #else /* not NDEBUG */
 Errors __File_open(const char  *__fileName__,
-                   uint        __lineNb__,
+                   ulong       __lineNb__,
                    FileHandle  *fileHandle,
                    ConstString fileName,
                    FileModes   fileMode
@@ -1638,7 +1638,7 @@ Errors File_openCString(FileHandle *fileHandle,
                        )
 #else /* not NDEBUG */
 Errors __File_openCString(const char *__fileName__,
-                          uint       __lineNb__,
+                          ulong      __lineNb__,
                           FileHandle *fileHandle,
                           const char *fileName,
                           FileModes  fileMode
@@ -1874,7 +1874,7 @@ Errors File_openDescriptor(FileHandle *fileHandle,
                           )
 #else /* not NDEBUG */
 Errors __File_openDescriptor(const char *__fileName__,
-                             uint       __lineNb__,
+                             ulong      __lineNb__,
                              FileHandle *fileHandle,
                              int        fileDescriptor,
                              FileModes  fileMode
@@ -1905,7 +1905,7 @@ Errors __File_openDescriptor(const char *__fileName__,
 Errors File_close(FileHandle *fileHandle)
 #else /* not NDEBUG */
 Errors __File_close(const char *__fileName__,
-                    uint       __lineNb__,
+                    ulong      __lineNb__,
                     FileHandle *fileHandle
                    )
 #endif /* NDEBUG */
@@ -3764,7 +3764,7 @@ Errors File_setFileInfo(ConstString    fileName,
 void File_initExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList)
 #else /* not NDEBUG */
 void __File_initExtendedAttributes(const char                *__fileName__,
-                                   uint                      __lineNb__,
+                                   ulong                     __lineNb__,
                                    FileExtendedAttributeList *fileExtendedAttributeList
                                   )
 #endif /* NDEBUG */
@@ -3784,7 +3784,7 @@ void __File_initExtendedAttributes(const char                *__fileName__,
 void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList)
 #else /* not NDEBUG */
 void __File_doneExtendedAttributes(const char                *__fileName__,
-                                   uint                      __lineNb__,
+                                   ulong                     __lineNb__,
                                    FileExtendedAttributeList *fileExtendedAttributeList
                                   )
 #endif /* NDEBUG */

@@ -140,7 +140,7 @@ void DeltaSourceList_doneAll(void)
   void DeltaSourceList_init(DeltaSourceList *deltaSourceList)
 #else /* not NDEBUG */
   void __DeltaSourceList_init(const char      *__fileName__,
-                              uint            __lineNb__,
+                              ulong           __lineNb__,
                               DeltaSourceList *deltaSourceList
                              )
 #endif /* NDEBUG */
@@ -165,7 +165,7 @@ void DeltaSourceList_doneAll(void)
                                     )
 #else /* not NDEBUG */
   void __DeltaSourceList_initDuplicate(const char        *__fileName__,
-                                       uint              __lineNb__,
+                                       ulong             __lineNb__,
                                        DeltaSourceList       *deltaSourceList,
                                        const DeltaSourceList *fromDeltaSourceList,
                                        const DeltaSourceNode *fromDeltaSourceListFromNode,
@@ -188,7 +188,7 @@ void DeltaSourceList_doneAll(void)
   void DeltaSourceList_done(DeltaSourceList *deltaSourceList)
 #else /* not NDEBUG */
   void __DeltaSourceList_done(const char      *__fileName__,
-                              uint            __lineNb__,
+                              ulong           __lineNb__,
                               DeltaSourceList *deltaSourceList
                              )
 #endif /* NDEBUG */

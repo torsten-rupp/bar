@@ -1013,7 +1013,7 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
                      )
 #else /* not NDEBUG */
   bool __CmdOption_init(const char        *__fileName__,
-                        uint              __lineNb__,
+                        ulong             __lineNb__,
                         CommandLineOption commandLineOptions[],
                         uint              commandLineOptionCount
                        )
@@ -1144,7 +1144,7 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
                      )
 #else /* not NDEBUG */
   void __CmdOption_done(const char        *__fileName__,
-                        uint              __lineNb__,
+                        ulong             __lineNb__,
                         CommandLineOption commandLineOptions[],
                         uint              commandLineOptionCount
                        )

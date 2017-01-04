@@ -217,7 +217,7 @@ LOCAL void printNotifies(void)
                              )
 #else /* not NDEBUG */
   LOCAL Errors __openContinuous(const char     *__fileName__,
-                                uint           __lineNb__,
+                                ulong          __lineNb__,
                                 DatabaseHandle *databaseHandle,
                                 const char     *databaseFileName
                                )
@@ -260,7 +260,7 @@ LOCAL void printNotifies(void)
                                )
 #else /* not NDEBUG */
   LOCAL Errors __createContinuous(const char     *__fileName__,
-                                  uint           __lineNb__,
+                                  ulong          __lineNb__,
                                   DatabaseHandle *databaseHandle,
                                   const char     *databaseFileName
                                  )
@@ -317,7 +317,7 @@ LOCAL void printNotifies(void)
   LOCAL Errors closeContinuous(DatabaseHandle *databaseHandle)
 #else /* not NDEBUG */
   LOCAL Errors __closeContinuous(const char     *__fileName__,
-                                 uint           __lineNb__,
+                                 ulong          __lineNb__,
                                  DatabaseHandle *databaseHandle
                                 )
 #endif /* NDEBUG */

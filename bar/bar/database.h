@@ -273,7 +273,7 @@ void Database_doneAll(void);
                       );
 #else /* not NDEBUG */
   Errors __Database_open(const char        *__fileName__,
-                         uint              __lineNb__,
+                         ulong             __lineNb__,
                          DatabaseHandle    *databaseHandle,
                          const char        *fileName,
                          DatabaseOpenModes databaseOpenMode,
@@ -295,7 +295,7 @@ void Database_doneAll(void);
   void Database_close(DatabaseHandle *databaseHandle);
 #else /* not NDEBUG */
   void __Database_close(const char   *__fileName__,
-                        uint         __lineNb__,
+                        ulong        __lineNb__,
                         DatabaseHandle *databaseHandle
                        );
 #endif /* NDEBUG */
@@ -372,7 +372,7 @@ void Database_yield(DatabaseHandle *databaseHandle,
   void Database_lock(DatabaseHandle *databaseHandle);
 #else /* not NDEBUG */
   void __Database_lock(const char   *__fileName__,
-                       uint         __lineNb__,
+                       ulong        __lineNb__,
                        DatabaseHandle *databaseHandle
                       );
 #endif /* NDEBUG */
@@ -390,7 +390,7 @@ void Database_yield(DatabaseHandle *databaseHandle,
   void Database_unlock(DatabaseHandle *databaseHandle);
 #else /* not NDEBUG */
   void __Database_unlock(const char   *__fileName__,
-                         uint         __lineNb__,
+                         ulong        __lineNb__,
                          DatabaseHandle *databaseHandle
                         );
 #endif /* NDEBUG */
@@ -576,7 +576,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   Errors Database_beginTransaction(DatabaseHandle *databaseHandle);
 #else /* not NDEBUG */
   Errors __Database_beginTransaction(const char     *__fileName__,
-                                     uint           __lineNb__,
+                                     ulong          __lineNb__,
                                      DatabaseHandle *databaseHandle
                                     );
 #endif /* NDEBUG */
@@ -651,7 +651,7 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
                          );
 #else /* not NDEBUG */
   Errors __Database_prepare(const char          *__fileName__,
-                            uint                __lineNb__,
+                            ulong               __lineNb__,
                             DatabaseQueryHandle *databaseQueryHandle,
                             DatabaseHandle      *databaseHandle,
                             const char          *command,
@@ -695,7 +695,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   void Database_finalize(DatabaseQueryHandle *databaseQueryHandle);
 #else /* not NDEBUG */
   void __Database_finalize(const char        *__fileName__,
-                           uint              __lineNb__,
+                           ulong             __lineNb__,
                            DatabaseQueryHandle *databaseQueryHandle
                           );
 #endif /* NDEBUG */

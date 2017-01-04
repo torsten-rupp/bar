@@ -446,7 +446,7 @@ IndexHandle *Index_open(uint priority,
                        );
 #else /* not NDEBUG */
 IndexHandle *__Index_open(const char *__fileName__,
-                          uint       __lineNb__,
+                          ulong      __lineNb__,
                           uint        priority,
                           long       timeout
                          );
@@ -488,7 +488,7 @@ void Index_interrupt(IndexHandle *indexHandle);
 Errors Index_beginTransaction(IndexHandle *indexHandle, ulong timeout);
 #else /* not NDEBUG */
 Errors __Index_beginTransaction(const char  *__fileName__,
-                                uint        __lineNb__,
+                                ulong       __lineNb__,
                                 IndexHandle *indexHandle,
                                 ulong       timeout
                                );

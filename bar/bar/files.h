@@ -573,13 +573,13 @@ const char *File_getSystemTmpDirectory(void);
                                );
 #else /* not NDEBUG */
   Errors __File_getTmpFile(const char  *__fileName__,
-                           uint        __lineNb__,
+                           ulong       __lineNb__,
                            FileHandle  *fileHandle,
                            ConstString pattern,
                            ConstString directory
                           );
   Errors __File_getTmpFileCString(const char  *__fileName__,
-                                  uint        __lineNb__,
+                                  ulong       __lineNb__,
                                   FileHandle  *fileHandle,
                                   const char  *pattern,
                                   ConstString directory
@@ -639,13 +639,13 @@ Errors File_openCString(FileHandle *fileHandle,
                        );
 #else /* not NDEBUG */
 Errors __File_open(const char  *__fileName__,
-                   uint        __lineNb__,
+                   ulong       __lineNb__,
                    FileHandle   *fileHandle,
                    ConstString fileName,
                    FileModes   fileMode
                   );
 Errors __File_openCString(const char *__fileName__,
-                          uint       __lineNb__,
+                          ulong      __lineNb__,
                           FileHandle *fileHandle,
                           const char *fileName,
                           FileModes  fileMode
@@ -670,7 +670,7 @@ Errors File_openDescriptor(FileHandle *fileHandle,
                           );
 #else /* not NDEBUG */
 Errors __File_openDescriptor(const char *__fileName__,
-                             uint       __lineNb__,
+                             ulong      __lineNb__,
                              FileHandle *fileHandle,
                              int        fileDescriptor,
                              FileModes  fileMode
@@ -690,7 +690,7 @@ Errors __File_openDescriptor(const char *__fileName__,
 Errors File_close(FileHandle *fileHandle);
 #else /* not NDEBUG */
 Errors __File_close(const char *__fileName__,
-                    uint       __lineNb__,
+                    ulong      __lineNb__,
                     FileHandle *fileHandle
                    );
 #endif /* NDEBUG */
@@ -1358,7 +1358,7 @@ INLINE bool File_haveAttributeNoDump(const FileInfo *fileInfo)
 void File_initExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList);
 #else /* not NDEBUG */
 void __File_initExtendedAttributes(const char                *__fileName__,
-                                   uint                      __lineNb__,
+                                   ulong                     __lineNb__,
                                    FileExtendedAttributeList *fileExtendedAttributeList
                                   );
 #endif /* NDEBUG */
@@ -1376,7 +1376,7 @@ void __File_initExtendedAttributes(const char                *__fileName__,
 void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList);
 #else /* not NDEBUG */
 void __File_doneExtendedAttributes(const char                *__fileName__,
-                                   uint                      __lineNb__,
+                                   ulong                     __lineNb__,
                                    FileExtendedAttributeList *fileExtendedAttributeList
                                   );
 #endif /* NDEBUG */

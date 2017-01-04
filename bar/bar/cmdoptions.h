@@ -835,7 +835,7 @@ extern "C" {
                      );
 #else /* not NDEBUG */
   bool __CmdOption_init(const char        *__fileName__,
-                        uint              __lineNb__,
+                        ulong             __lineNb__,
                         CommandLineOption commandLineOptions[],
                         uint              commandLineOptionCount
                        );
@@ -858,7 +858,7 @@ extern "C" {
                      );
 #else /* not NDEBUG */
   void __CmdOption_done(const char        *__fileName__,
-                        uint              __lineNb__,
+                        ulong             __lineNb__,
                         CommandLineOption commandLineOptions[],
                         uint              commandLineOptionCount
                        );
