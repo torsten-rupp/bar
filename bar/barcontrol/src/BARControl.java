@@ -1400,7 +1400,6 @@ public class BARControl
   final static int USER_EVENT_NEW_SERVER = 0xFFFF+0;
   final static int USER_EVENT_NEW_JOB    = 0xFFFF+1;
 
-
   // string with "all files" extension
   public static final String ALL_FILE_EXTENSION;
 
@@ -2059,7 +2058,7 @@ if (false) {
    */
   private void createTabs(String selectedJobName)
   {
-    // create tab
+    // create tabs
     tabFolder = Widgets.newTabFolder(shell);
     Widgets.layout(tabFolder,0,0,TableLayoutData.NSWE);
     tabStatus  = new TabStatus (tabFolder,SWT.F1);
@@ -2284,7 +2283,7 @@ if (false) {
 
     menu = Widgets.addMenu(menuBar,BARControl.tr("Program"));
     {
-      serverMenu = Widgets.addMenu(menu,BARControl.tr("Connect"),Settings.hasExpertRole());
+      serverMenu = Widgets.addMenu(menu,BARControl.tr("Connect"),BARServer.isMaster() && Settings.hasExpertRole());
       {
         menuItem = Widgets.addMenuItem(serverMenu,"\u2026",SWT.CTRL+'O');
         menuItem.addSelectionListener(new SelectionListener()
@@ -2341,7 +2340,7 @@ if (false) {
 
       Widgets.addMenuSeparator(menu,Settings.hasExpertRole());
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Start")+"\u2026",SWT.CTRL+'S');
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Start")+"\u2026",SWT.CTRL+'S',BARServer.isMaster());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -2354,8 +2353,20 @@ if (false) {
           Widgets.notify(tabStatus.widgetButtonStart);
         }
       });
+      tabStatus.addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+      {
+        @Override
+        public void handle(Widget widget, JobData jobData)
+        {
+          MenuItem menuItem = (MenuItem)widget;
+          menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                              && (jobData.state != JobData.States.DRY_RUNNING)
+                              && (jobData.state != JobData.States.WAITING    )
+                             );
+        }
+      });
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Abort")+"\u2026",SWT.CTRL+'A');
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Abort")+"\u2026",SWT.CTRL+'A',BARServer.isMaster());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -2368,8 +2379,21 @@ if (false) {
           Widgets.notify(tabStatus.widgetButtonAbort);
         }
       });
+      tabStatus.addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+      {
+        @Override
+        public void handle(Widget widget, JobData jobData)
+        {
+          MenuItem menuItem = (MenuItem)widget;
+          menuItem.setEnabled(   (jobData.state == JobData.States.WAITING       )
+                              || (jobData.state == JobData.States.RUNNING       )
+                              || (jobData.state == JobData.States.DRY_RUNNING   )
+                              || (jobData.state == JobData.States.REQUEST_VOLUME)
+                             );
+        }
+      });
 
-      subMenu = Widgets.addMenu(menu,BARControl.tr("Pause"),Settings.hasNormalRole());
+      subMenu = Widgets.addMenu(menu,BARControl.tr("Pause"),BARServer.isMaster() && Settings.hasNormalRole());
       {
         menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("10min"));
         menuItem.addSelectionListener(new SelectionListener()
@@ -2464,6 +2488,7 @@ if (false) {
             tabStatus.jobPause(60*60);
           }
         });
+
         menuItem = Widgets.addMenuCheckbox(subMenu,BARControl.tr("Index update operation"),Settings.pauseIndexUpdateFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
@@ -2480,7 +2505,7 @@ if (false) {
         });
       }
 
-      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Toggle suspend/continue"),SWT.CTRL+'T');
+      menuItem = Widgets.addMenuItem(menu,BARControl.tr("Toggle suspend/continue"),SWT.CTRL+'T',BARServer.isMaster());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override

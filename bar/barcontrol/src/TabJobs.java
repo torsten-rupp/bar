@@ -32,6 +32,7 @@ import java.util.LinkedList;
 import java.util.ListIterator;
 
 // graphics
+import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.dnd.ByteArrayTransfer;
@@ -1798,7 +1799,7 @@ public class TabJobs
     TableColumn tableColumn;
 
     // get shell, display
-    shell = parentTabFolder.getShell();
+    shell   = parentTabFolder.getShell();
     display = shell.getDisplay();
 
     // get colors
@@ -1831,7 +1832,7 @@ public class TabJobs
     directoryInfoThread.start();
 
     // create tab
-    widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Jobs")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
+    widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Jobs")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""),!BARServer.isSlave());
     widgetTab.setLayout(new TableLayout(new double[]{0.0,0.0,1.0,0.0},1.0,2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
 

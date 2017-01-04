@@ -108,6 +108,7 @@ class JobData
   };
 
   String       uuid;
+  String       master;
   String       name;
   States       state;
   String       slaveHostName;
@@ -126,6 +127,7 @@ class JobData
 
   /** create job data
    * @param uuid job UUID
+   * @[aram master master or ''
    * @param name name
    * @param state job state
    * @param slaveHostName slave host name
@@ -139,9 +141,10 @@ class JobData
    * @param lastExecutedDateTime last executed date/time [s]
    * @param estimatedRestTime estimated rest time [s]
    */
-  JobData(String uuid, String name, States state, String slaveHostName, ArchiveTypes archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
+  JobData(String uuid, String master, String name, States state, String slaveHostName, ArchiveTypes archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
   {
     this.uuid                   = uuid;
+    this.master                 = master;
     this.name                   = name;
     this.state                  = state;
     this.slaveHostName          = slaveHostName;
@@ -232,7 +235,7 @@ class JobData
    */
   public String toString()
   {
-    return "Job {"+uuid+", "+name+", "+state+", "+slaveHostName+", "+archiveType+"}";
+    return "Job {"+uuid+", "+master+", "+name+", "+state+", "+slaveHostName+", "+archiveType+"}";
   }
 };
 
@@ -332,6 +335,38 @@ class JobDataComparator implements Comparator<JobData>
   }
 }
 
+/** update job state listener
+ */
+abstract class UpdateJobStateListener
+{
+  private Widget widget;
+
+  /** create update job state listener
+   * @param widget widget
+   */
+  UpdateJobStateListener(Widget widget)
+  {
+    this.widget = widget;
+  }
+
+  /** call to signal job state modified
+   * @param jobData job data
+   */
+  public void modified(JobData jobData)
+  {
+    if ((widget == null) || !widget.isDisposed())
+    {
+      handle(widget,jobData);
+    }
+  }
+
+  /** handle update job state
+   * @param widget widget
+   * @param jobData job data
+   */
+  abstract void handle(Widget wddget, JobData jobData);
+}
+
 /** tab status
  */
 public class TabStatus
@@ -426,58 +461,59 @@ public class TabStatus
   private final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   // global variable references
-  private Shell                 shell;
-  private Display               display;
-  private TabStatusUpdateThread tabStatusUpdateThread;
-  private TabJobs               tabJobs;
+  private Shell                           shell;
+  private Display                         display;
+  private TabStatusUpdateThread           tabStatusUpdateThread;
+  private TabJobs                         tabJobs;
 
   // widgets
-  public  Composite   widgetTab;
-  private Table       widgetJobTable;
-  private Shell       widgetJobTableToolTip = null;
-  private Menu        widgetJobTableHeaderMenu;
-  private Menu        widgetJobTableBodyMenu;
-  private Shell       widgetMessageToolTip = null;
-  private Separator   widgetSelectedJob;
-  public  Button      widgetButtonStart;
-  public  Button      widgetButtonAbort;
-  public  Button      widgetButtonPause;
-  public  Button      widgetButtonSuspendContinue;
-  private Button      widgetButtonVolume;
-  public  Button      widgetButtonQuit;
+  public  Composite                       widgetTab;
+  private Table                           widgetJobTable;
+  private Shell                           widgetJobTableToolTip = null;
+  private Menu                            widgetJobTableHeaderMenu;
+  private Menu                            widgetJobTableBodyMenu;
+  private Shell                           widgetMessageToolTip = null;
+  private Separator                       widgetSelectedJob;
+  public  Button                          widgetButtonStart;
+  public  Button                          widgetButtonAbort;
+  public  Button                          widgetButtonPause;
+  public  Button                          widgetButtonSuspendContinue;
+  private Button                          widgetButtonVolume;
+  public  Button                          widgetButtonQuit;
 
   // BAR variables
-  private WidgetVariable doneCount             = new WidgetVariable<Long>(0L);
-  private WidgetVariable doneSize              = new WidgetVariable<Long>(0L);
-  private WidgetVariable storageTotalSize      = new WidgetVariable<Long>(0L);
-  private WidgetVariable skippedEntryCount     = new WidgetVariable<Long>(0L);
-  private WidgetVariable skippedEntrySize      = new WidgetVariable<Long>(0L);
-  private WidgetVariable errorEntryCount       = new WidgetVariable<Long>(0L);
-  private WidgetVariable errorEntrySize        = new WidgetVariable<Long>(0L);
-  private WidgetVariable totalEntryCount       = new WidgetVariable<Long>(0L);
-  private WidgetVariable totalEntrySize        = new WidgetVariable<Long>(0L);
+  private WidgetVariable                  doneCount               = new WidgetVariable<Long>(0L);
+  private WidgetVariable                  doneSize                = new WidgetVariable<Long>(0L);
+  private WidgetVariable                  storageTotalSize        = new WidgetVariable<Long>(0L);
+  private WidgetVariable                  skippedEntryCount       = new WidgetVariable<Long>(0L);
+  private WidgetVariable                  skippedEntrySize        = new WidgetVariable<Long>(0L);
+  private WidgetVariable                  errorEntryCount         = new WidgetVariable<Long>(0L);
+  private WidgetVariable                  errorEntrySize          = new WidgetVariable<Long>(0L);
+  private WidgetVariable                  totalEntryCount         = new WidgetVariable<Long>(0L);
+  private WidgetVariable                  totalEntrySize          = new WidgetVariable<Long>(0L);
 
-  private WidgetVariable filesPerSecond        = new WidgetVariable<Double>(0.0);
-  private WidgetVariable bytesPerSecond        = new WidgetVariable<Double>(0.0);
-  private WidgetVariable storageBytesPerSecond = new WidgetVariable<Double>(0.0);
-  private WidgetVariable compressionRatio      = new WidgetVariable<Double>(0.0);
+  private WidgetVariable                  filesPerSecond          = new WidgetVariable<Double>(0.0);
+  private WidgetVariable                  bytesPerSecond          = new WidgetVariable<Double>(0.0);
+  private WidgetVariable                  storageBytesPerSecond   = new WidgetVariable<Double>(0.0);
+  private WidgetVariable                  compressionRatio        = new WidgetVariable<Double>(0.0);
 
-  private WidgetVariable fileName              = new WidgetVariable<String>("");
-  private WidgetVariable fileProgress          = new WidgetVariable<Double>(0.0);
-  private WidgetVariable storageName           = new WidgetVariable<String>("");
-  private WidgetVariable storageProgress       = new WidgetVariable<Double>(0.0);
-  private WidgetVariable volumeNumber          = new WidgetVariable<Long>(0L);
-  private WidgetVariable volumeProgress        = new WidgetVariable<Double>(0.0);
-  private WidgetVariable totalEntriesProgress  = new WidgetVariable<Double>(0.0);
-  private WidgetVariable totalBytesProgress    = new WidgetVariable<Double>(0.0);
-  private WidgetVariable collectTotalSumDone   = new WidgetVariable<Boolean>(false);
-  private WidgetVariable requestedVolumeNumber = new WidgetVariable<Integer>(0);
-  private WidgetVariable message               = new WidgetVariable<String>("");
+  private WidgetVariable                  fileName                = new WidgetVariable<String>("");
+  private WidgetVariable                  fileProgress            = new WidgetVariable<Double>(0.0);
+  private WidgetVariable                  storageName             = new WidgetVariable<String>("");
+  private WidgetVariable                  storageProgress         = new WidgetVariable<Double>(0.0);
+  private WidgetVariable                  volumeNumber            = new WidgetVariable<Long>(0L);
+  private WidgetVariable                  volumeProgress          = new WidgetVariable<Double>(0.0);
+  private WidgetVariable                  totalEntriesProgress    = new WidgetVariable<Double>(0.0);
+  private WidgetVariable                  totalBytesProgress      = new WidgetVariable<Double>(0.0);
+  private WidgetVariable                  collectTotalSumDone     = new WidgetVariable<Boolean>(false);
+  private WidgetVariable                  requestedVolumeNumber   = new WidgetVariable<Integer>(0);
+  private WidgetVariable                  message                 = new WidgetVariable<String>("");
 
   // variables
-  private HashMap<String,JobData> jobDataMap      = new HashMap<String,JobData>();
-  private JobData                 selectedJobData = null;
-  private States                  status          = States.RUNNING;
+  private HashMap<String,JobData>         jobDataMap              = new HashMap<String,JobData>();
+  private HashSet<UpdateJobStateListener> updateJobStateListeners = new HashSet<UpdateJobStateListener>();
+  private JobData                         selectedJobData         = null;
+  private States                          status                  = States.RUNNING;
 
   /** create status tab
    * @param parentTabFolder parent tab folder
@@ -774,7 +810,7 @@ public class TabStatus
 
     widgetJobTableBodyMenu = Widgets.newPopupMenu(shell);
     {
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Start")+"\u2026");
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Start")+"\u2026",BARServer.isMaster());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -784,27 +820,23 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
           jobStart();
         }
       });
-
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Abort")+"\u2026");
-      menuItem.addSelectionListener(new SelectionListener()
+      addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
       {
         @Override
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        public void handle(Widget widget, JobData jobData)
         {
-        }
-        @Override
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
-          jobAbort();
+          MenuItem menuItem = (MenuItem)widget;
+          menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                              && (jobData.state != JobData.States.DRY_RUNNING)
+                              && (jobData.state != JobData.States.WAITING    )
+                             );
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Pause"),Settings.hasNormalRole());
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Abort")+"\u2026",BARServer.isMaster());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -814,12 +846,38 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
+          jobAbort();
+        }
+      });
+      addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+      {
+        @Override
+        public void handle(Widget widget, JobData jobData)
+        {
+          MenuItem menuItem = (MenuItem)widget;
+          menuItem.setEnabled(   (jobData.state == JobData.States.WAITING       )
+                              || (jobData.state == JobData.States.RUNNING       )
+                              || (jobData.state == JobData.States.DRY_RUNNING   )
+                              || (jobData.state == JobData.States.REQUEST_VOLUME)
+                             );
+        }
+      });
+
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Pause"),BARServer.isMaster() && Settings.hasNormalRole());
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
           jobPause(60*60);
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Continue"),Settings.hasNormalRole());
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Continue"),BARServer.isMaster() && Settings.hasNormalRole());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -829,12 +887,11 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
           jobSuspendContinue();
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Volume"));
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Volume"),BARServer.isMaster());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -844,14 +901,22 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
           volume();
         }
       });
+      addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+      {
+        @Override
+        public void handle(Widget widget, JobData jobData)
+        {
+          MenuItem menuItem = (MenuItem)widget;
+          menuItem.setEnabled(jobData.state == JobData.States.REQUEST_VOLUME);
+        }
+      });
 
-      Widgets.addMenuSeparator(widgetJobTableBodyMenu);
+      Widgets.addMenuSeparator(widgetJobTableBodyMenu,BARServer.isMaster());
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("New")+"\u2026",Settings.hasNormalRole());
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("New")+"\u2026",BARServer.isMaster() && Settings.hasNormalRole());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -865,7 +930,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Clone")+"\u2026",Settings.hasNormalRole());
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Clone")+"\u2026",BARServer.isMaster() && Settings.hasNormalRole());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -879,7 +944,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Rename")+"\u2026",Settings.hasNormalRole());
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Rename")+"\u2026",BARServer.isMaster() && Settings.hasNormalRole());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -893,7 +958,7 @@ public class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Delete")+"\u2026",Settings.hasNormalRole());
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Delete")+"\u2026",BARServer.isMaster() && Settings.hasNormalRole());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -907,7 +972,7 @@ public class TabStatus
         }
       });
 
-      Widgets.addMenuSeparator(widgetJobTableBodyMenu,Settings.hasNormalRole());
+      Widgets.addMenuSeparator(widgetJobTableBodyMenu,BARServer.isMaster() && Settings.hasNormalRole());
 
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Info")+"\u2026");
       menuItem.addSelectionListener(new SelectionListener()
@@ -1477,7 +1542,7 @@ public class TabStatus
     composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,1.0}));
     Widgets.layout(composite,3,0,TableLayoutData.WE);
     {
-      widgetButtonStart = Widgets.newButton(composite,null,BARControl.tr("Start")+"\u2026");
+      widgetButtonStart = Widgets.newButton(composite,null,BARControl.tr("Start")+"\u2026",BARServer.isMaster());
       widgetButtonStart.setToolTipText(BARControl.tr("Start selected job."));
       Widgets.layout(widgetButtonStart,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetButtonStart.setEnabled(false);
@@ -1493,8 +1558,20 @@ public class TabStatus
           jobStart();
         }
       });
+      addUpdateJobStateListener(new UpdateJobStateListener(widgetButtonStart)
+      {
+        @Override
+        public void handle(Widget widget, JobData jobData)
+        {
+          Button button = (Button)widget;
+          button.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                            && (jobData.state != JobData.States.DRY_RUNNING)
+                            && (jobData.state != JobData.States.WAITING    )
+                           );
+        }
+      });
 
-      widgetButtonAbort = Widgets.newButton(composite,null,BARControl.tr("Abort")+"\u2026");
+      widgetButtonAbort = Widgets.newButton(composite,null,BARControl.tr("Abort")+"\u2026",BARServer.isMaster());
       widgetButtonAbort.setToolTipText(BARControl.tr("Abort selected job."));
       Widgets.layout(widgetButtonAbort,0,1,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetButtonAbort.setEnabled(false);
@@ -1510,8 +1587,21 @@ public class TabStatus
           jobAbort();
         }
       });
+      addUpdateJobStateListener(new UpdateJobStateListener(widgetButtonAbort)
+      {
+        @Override
+        public void handle(Widget widget, JobData jobData)
+        {
+          Button button = (Button)widget;
+          button.setEnabled(   (jobData.state == JobData.States.WAITING       )
+                            || (jobData.state == JobData.States.RUNNING       )
+                            || (jobData.state == JobData.States.DRY_RUNNING   )
+                            || (jobData.state == JobData.States.REQUEST_VOLUME)
+                           );
+        }
+      });
 
-      widgetButtonPause = Widgets.newButton(composite,null,BARControl.tr("Pause"),Settings.hasNormalRole());
+      widgetButtonPause = Widgets.newButton(composite,null,BARControl.tr("Pause"),BARServer.isMaster() && Settings.hasNormalRole());
       widgetButtonPause.setToolTipText(BARControl.tr("Pause selected job for a specific time."));
       Widgets.layout(widgetButtonPause,0,2,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{"Puase [xxxxs]"}));
       widgetButtonPause.addSelectionListener(new SelectionListener()
@@ -1527,7 +1617,7 @@ public class TabStatus
         }
       });
 
-      widgetButtonSuspendContinue = Widgets.newButton(composite,null,BARControl.tr("Continue"),Settings.hasNormalRole());
+      widgetButtonSuspendContinue = Widgets.newButton(composite,null,BARControl.tr("Continue"),BARServer.isMaster() && Settings.hasNormalRole());
       widgetButtonSuspendContinue.setToolTipText(BARControl.tr("Suspend selected job for an infinite time."));
       Widgets.layout(widgetButtonSuspendContinue,0,3,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{BARControl.tr("Suspend"),BARControl.tr("Continue")}));
       widgetButtonSuspendContinue.addSelectionListener(new SelectionListener()
@@ -1543,7 +1633,7 @@ public class TabStatus
         }
       });
 
-      widgetButtonVolume = Widgets.newButton(composite,null,BARControl.tr("Volume"));
+      widgetButtonVolume = Widgets.newButton(composite,null,BARControl.tr("Volume"),BARServer.isMaster());
       widgetButtonVolume.setToolTipText(BARControl.tr("Click when a new volume is available in drive."));
       Widgets.layout(widgetButtonVolume,0,4,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetButtonVolume.setEnabled(false);
@@ -1557,6 +1647,15 @@ public class TabStatus
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           volume();
+        }
+      });
+      addUpdateJobStateListener(new UpdateJobStateListener(widgetButtonVolume)
+      {
+        @Override
+        public void handle(Widget widget, JobData jobData)
+        {
+          Button button = (Button)widget;
+          button.setEnabled(jobData.state == JobData.States.REQUEST_VOLUME);
         }
       });
 
@@ -1649,6 +1748,7 @@ public class TabStatus
         {
           // get data
           String         jobUUID                = resultMap.getString("jobUUID"                       );
+          String         master                 = resultMap.getString("master"                        );
           String         name                   = resultMap.getString("name"                          );
           JobData.States state                  = resultMap.getEnum  ("state",JobData.States.class    );
           String         slaveHostName          = resultMap.getString("slaveHostName",""              );
@@ -1666,6 +1766,7 @@ public class TabStatus
           if (jobData != null)
           {
             jobData.name                   = name;
+            jobData.master                 = master;
             jobData.state                  = state;
             jobData.slaveHostName          = slaveHostName;
             jobData.archiveType            = archiveType;
@@ -1682,6 +1783,7 @@ public class TabStatus
           {
             jobData = new JobData(jobUUID,
                                   name,
+                                  master,
                                   state,
                                   slaveHostName,
                                   archiveType,
@@ -1816,6 +1918,22 @@ public class TabStatus
 
     setSelectedJob(jobData);
     Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+  }
+
+  /** add update job state listener
+   * @param updateJobStateLister update job state listener
+   */
+  public void addUpdateJobStateListener(UpdateJobStateListener updateJobStateListener)
+  {
+    updateJobStateListeners.add(updateJobStateListener);
+  }
+
+  /** remove update job state listener
+   * @param updateJobStateLister update job state listener
+   */
+  public void removeUpdateJobStateListener(UpdateJobStateListener updateJobStateListener)
+  {
+    updateJobStateListeners.remove(updateJobStateListener);
   }
 
   //-----------------------------------------------------------------------
@@ -2031,25 +2149,11 @@ public class TabStatus
           totalBytesProgress.set   (getProgress(doneSize.getLong(),totalEntrySize.getLong()));
           requestedVolumeNumber.set(resultMap.getInt("requestedVolumeNumber"));
 
-          // enable/disable buttons
-          if (!widgetButtonStart.isDisposed())
+//store state change?
+          // trigger update job state listeners
+          for (UpdateJobStateListener updateJobStateListener : updateJobStateListeners)
           {
-            widgetButtonStart.setEnabled(   (state != JobData.States.RUNNING)
-                                         && (state != JobData.States.DRY_RUNNING)
-                                         && (state != JobData.States.WAITING)
-                                        );
-          }
-          if (!widgetButtonAbort.isDisposed())
-          {
-            widgetButtonAbort.setEnabled(   (state == JobData.States.WAITING)
-                                         || (state == JobData.States.RUNNING)
-                                         || (state == JobData.States.DRY_RUNNING)
-                                         || (state == JobData.States.REQUEST_VOLUME)
-                                        );
-          }
-          if (!widgetButtonVolume.isDisposed())
-          {
-            widgetButtonVolume.setEnabled(state == JobData.States.REQUEST_VOLUME);
+            updateJobStateListener.modified(selectedJobData);
           }
 
           // set message

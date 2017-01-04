@@ -4867,7 +4867,7 @@ Dprintf.dprintf("cirrect?");
     IMAGE_UNMARK_ALL = Widgets.loadImage(display,"unmark.png");
 
     // create tab
-    widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Restore")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
+    widgetTab = Widgets.addTab(parentTabFolder,BARControl.tr("Restore")+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""),!BARServer.isSlave());
     widgetTab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
     parentTabFolder.addSelectionListener(new SelectionListener()
