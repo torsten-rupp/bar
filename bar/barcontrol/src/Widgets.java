@@ -8286,30 +8286,31 @@ Dprintf.dprintf("");
       tabItem.setText(title);
     }
 */
-Composite composite;
-if (isVisible) {
-    TabItem tabItem = new TabItem(tabFolder,SWT.NONE,index);
-    tabItem.setData(data);
-    tabItem.setText(title);
-    if ((style & SWT.CLOSE) == SWT.CLOSE)
+    Composite composite;
+    if (isVisible)
     {
-      tabItem.setImage(IMAGE_CLOSE);
+      TabItem tabItem = new TabItem(tabFolder,SWT.NONE,index);
+      tabItem.setData(data);
+      tabItem.setText(title);
+      if ((style & SWT.CLOSE) == SWT.CLOSE)
+      {
+        tabItem.setImage(IMAGE_CLOSE);
+      }
+
+      // create composite
+      composite = new Composite(tabFolder,SWT.BORDER|SWT.NONE);
+      composite.setLayoutData(new TableLayoutData(isVisible));
+      composite.setLayout(new TableLayout(1.0,1.0,2));
+
+      tabItem.setControl(composite);
     }
-
-    // create composite
-    composite = new Composite(tabFolder,SWT.BORDER|SWT.NONE);
-    composite.setLayoutData(new TableLayoutData(isVisible));
-    composite.setLayout(new TableLayout(1.0,1.0,2));
-
-    tabItem.setControl(composite);
-}
-else
-{
-    composite = new Composite(tabFolder,SWT.BORDER|SWT.NONE);
-    composite.setLayoutData(new TableLayoutData(isVisible));
-    composite.setLayout(new TableLayout(1.0,1.0,2));
-    composite.setVisible(false);
-}
+    else
+    {
+      composite = new Composite(tabFolder,SWT.BORDER|SWT.NONE);
+      composite.setLayoutData(new TableLayoutData(isVisible));
+      composite.setLayout(new TableLayout(1.0,1.0,2));
+      composite.setVisible(false);
+    }
 
     return composite;
   }
