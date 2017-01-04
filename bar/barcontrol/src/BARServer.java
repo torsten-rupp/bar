@@ -1027,6 +1027,14 @@ public class BARServer
 
   private static byte[]      RANDOM_DATA = new byte[64];
 
+  /** modes
+   */
+  enum Modes
+  {
+    MASTER,
+    SLAVE
+  };
+
   /** file types
    */
   enum FileTypes
@@ -1050,6 +1058,7 @@ public class BARServer
   private static String                      passwordEncryptType;
   private static Cipher                      passwordCipher;
   private static Key                         passwordKey;
+  private static Modes                       mode;
 
   private static Socket                      socket;
   private static BufferedWriter              output;
@@ -1809,6 +1818,22 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         }
       }
     }
+  }
+
+  /** check if master-mode
+   * @return true iff master-mode
+   */
+  public static boolean isMaster()
+  {
+    return mode == Modes.MASTER;
+  }
+
+  /** check if slave-mode
+   * @return true iff slave-mode
+   */
+  public static boolean isSlave()
+  {
+    return mode == Modes.SLAVE;
   }
 
   /** quit BAR server (for debug only)
@@ -3814,6 +3839,7 @@ throw new Error("NYI");
     sessionId           = null;
     passwordEncryptType = null;
     passwordCipher      = null;
+    mode                = Modes.MASTER;
 
     String   line;
     String[] errorMessage = new String[1];
@@ -3833,11 +3859,12 @@ throw new Error("NYI");
       throw new CommunicationError("Invalid response from server");
     }
     if (!StringParser.parse(data[1],
+/*
                             new TypeMap("id",String.class,
                                         "encryptTypes",String.class,
                                         "n",String.class,
                                         "e",String.class
-                                       ),
+                                       ),*/
                             valueMap
                            )
        )
@@ -3894,6 +3921,9 @@ throw new Error("NYI");
     {
       throw new CommunicationError("Init password cipher fail");
     }
+
+    // get server mode
+    mode = valueMap.getEnum("mode",Modes.class,Modes.MASTER);
   }
 
   /** execute command syncronous
