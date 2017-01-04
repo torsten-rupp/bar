@@ -44,6 +44,13 @@ typedef enum
   RUN_MODE_SERVER,
 } RunModes;
 
+// server modes
+typedef enum
+{
+  SERVER_MODE_MASTER,
+  SERVER_MODE_SLAVE
+} ServerModes;
+
 // archive types
 typedef enum
 {

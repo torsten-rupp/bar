@@ -167,6 +167,7 @@ LOCAL const struct
 
 /***************************** Datatypes *******************************/
 
+// commands
 typedef enum
 {
   COMMAND_NONE,
@@ -220,6 +221,7 @@ LOCAL Server          defaultFTPServer;
 LOCAL Server          defaultSSHServer;
 LOCAL Server          defaultWebDAVServer;
 LOCAL Device          defaultDevice;
+LOCAL ServerModes     serverMode;
 LOCAL uint            serverPort;
 LOCAL uint            serverTLSPort;
 LOCAL Certificate     serverCA;
@@ -300,6 +302,12 @@ LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] = CMD_VALUE_UNIT_ARRAY
 LOCAL const CommandLineUnit COMMAND_LINE_BITS_UNITS[] = CMD_VALUE_UNIT_ARRAY
 (
   {"K",1024LL},
+);
+
+LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_SERVER_MODES[] = CMD_VALUE_SELECT_ARRAY
+(
+  {"master",SERVER_MODE_MASTER,"master"},
+  {"slave", SERVER_MODE_SLAVE, "slave" },
 );
 
 LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_PATTERN_TYPES[] = CMD_VALUE_SELECT_ARRAY
@@ -596,6 +604,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                                                                                   "run in daemon mode"                                                       ),
   CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                                                                                 "do not detach in daemon mode"                                             ),
+  CMD_OPTION_SELECT       ("server-mode",                  0,  1,1,serverMode,                                      COMMAND_LINE_OPTIONS_SERVER_MODES,                           "select server mode"                                                       ),
   CMD_OPTION_INTEGER      ("server-port",                  0,  1,1,serverPort,                                      0,65535,NULL,                                                "server port",NULL                                                         ),
   CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,1,serverTLSPort,                                   0,65535,NULL,                                                "TLS (SSL) server port",NULL                                               ),
   CMD_OPTION_SPECIAL      ("server-ca-file",               0,  1,1,&serverCA,                                       cmdOptionReadCertificateFile,NULL,                           "TLS (SSL) server certificate authority file (CA file)","file name"        ),
@@ -8526,7 +8535,8 @@ LOCAL Errors runDaemon(void)
   globalOptions.runMode = RUN_MODE_SERVER;
 
   // run server (not detached)
-  error = Server_run(serverPort,
+  error = Server_run(serverMode,
+                     serverPort,
                      serverTLSPort,
                      &serverCA,
                      &serverCert,
