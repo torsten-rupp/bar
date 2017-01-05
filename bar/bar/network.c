@@ -1041,7 +1041,7 @@ Errors Network_receive(SocketHandle *socketHandle,
         pollTimeout.tv_nsec = (timeout%1000L)*1000000L;
         pollfds[0].fd     = socketHandle->handle;
         pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
-        if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) > 0)
+        if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) >= 0)
             || ((pollfds[0].revents & (POLLERR|POLLNVAL)) == 0)
            )
         {
@@ -1073,7 +1073,7 @@ Errors Network_receive(SocketHandle *socketHandle,
           // wait for data
           pollfds[0].fd     = socketHandle->handle;
           pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
-          if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) > 0)
+          if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) >= 0)
               && ((pollfds[0].revents & (POLLERR|POLLNVAL)) == 0)
              )
           {
@@ -1232,16 +1232,16 @@ Errors Network_readLine(SocketHandle *socketHandle,
     // check eol, append to line
     if (bytesReceived > 0)
     {
-      if (ch != '\n')
+      if (ch != '\r')
       {
-        if (ch != '\r')
+        if (ch != '\n')
         {
           String_appendChar(line,ch);
         }
-      }
-      else
-      {
-        endOfLineFlag = TRUE;
+        else
+        {
+          endOfLineFlag = TRUE;
+        }
       }
     }
     else
