@@ -41,6 +41,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define READ_TIMEOUT (5LL*MS_PER_SECOND)
 
 /***************************** Datatypes *******************************/
 
@@ -451,22 +452,25 @@ void Slave_disconnect(const SlaveHost *slaveHost)
   SemaphoreLock semaphoreLock;
   SlaveNode     *slaveNode;
 
-  // find and remove slave
+  // find and remove slave from list
   SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    // find slave server
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     slaveNode = findSlave(slaveHost);
-
-    // disconnect
     if (slaveNode != NULL)
     {
       List_remove(&slaveList,slaveNode);
-
-      Network_disconnect(&slaveNode->socketHandle);
-
-      String_delete(slaveNode->hostName);
-      LIST_DELETE_NODE(slaveNode);
     }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  }
+
+  // disconnect and discard slave
+  if (slaveNode != NULL)
+  {
+    Network_disconnect(&slaveNode->socketHandle);
+
+    String_delete(slaveNode->hostName);
+    LIST_DELETE_NODE(slaveNode);
   }
 }
 
@@ -479,6 +483,8 @@ bool Slave_isConnected(const SlaveHost *slaveHost)
   assert(slaveHost != NULL);
 
   isConnected = FALSE;
+
+  // find slave and check if connected, remove from list if not connected
   SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     slaveNode = findSlave(slaveHost);
@@ -491,13 +497,17 @@ bool Slave_isConnected(const SlaveHost *slaveHost)
       else
       {
         List_remove(&slaveList,slaveNode);
-
-        Network_disconnect(&slaveNode->socketHandle);
-
-        String_delete(slaveNode->hostName);
-        LIST_DELETE_NODE(slaveNode);
       }
     }
+  }
+
+  // disconnect and discard not connected slave
+  if ((slaveNode != NULL) && !isConnected)
+  {
+    Network_disconnect(&slaveNode->socketHandle);
+
+    String_delete(slaveNode->hostName);
+    LIST_DELETE_NODE(slaveNode);
   }
 
   return isConnected;
@@ -531,7 +541,15 @@ LOCAL Errors Slave_vexecuteCommand(const SlaveHost *slaveHost,
   {
     // find slave server
     slaveNode = findSlave(slaveHost);
-
+#if 1
+    if (slaveNode == NULL)
+    {
+      Semaphore_unlock(&slaveList.lock);
+      String_delete(line);
+      return ERROR_SLAVE_DISCONNECTED;
+    }
+#else
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // check if slave server known
     if (slaveNode == NULL)
     {
@@ -559,6 +577,7 @@ sslFlag = TRUE;
       slaveNode->socketHandle = socketHandle;
       List_append(&slaveList,slaveNode);
     }
+#endif
 
     // create new command id
     slaveNode->commandId++;
@@ -575,9 +594,10 @@ sslFlag = TRUE;
     // send command
     (void)Network_send(&slaveNode->socketHandle,String_cString(line),String_length(line));
     printInfo(4,"Sent slave command: %s",String_cString(line));
+fprintf(stderr,"%s, %d: sent %s\n",__FILE__,__LINE__,String_cString(line));
 
     // wait for result
-    error = Network_readLine(&slaveNode->socketHandle,line,30LL*1000);
+    error = Network_readLine(&slaveNode->socketHandle,line,READ_TIMEOUT);
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&slaveList.lock);
@@ -585,6 +605,7 @@ sslFlag = TRUE;
       return error;
     }
     printInfo(4,"Received slave result: %s\n",String_cString(line));
+fprintf(stderr,"%s, %d: received %s\n",__FILE__,__LINE__,String_cString(line));
 
     // parse result
 //fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
@@ -682,11 +703,9 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   error = ERROR_NONE;
 
   // create temporary job
-fprintf(stderr,"%s, %d: Slave_executeCommand\n",__FILE__,__LINE__);
   error = Slave_executeCommand(slaveHost,NULL,"JOB_NEW name=%'S jobUUID=%S master=%'S",name,jobUUID,Network_getHostName(s));
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
 
