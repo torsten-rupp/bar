@@ -703,6 +703,9 @@ ERROR DATABASE_INDEX_NOT_READY         "index still not initialized"
 ERROR DATABASE_INVALID_INDEX           "invalid index"
 ERROR DATABASE_TIMEOUT                 "timeout accessing index"
 
+// --- slave ------------------------------------------------------------
+ERROR SLAVE_DISCONNECTED               "slave disconnected"
+
 // --- debugging only ---------------------------------------------------
 ERROR TESTCODE
   stringSet(errorText,"test code",sizeof(errorText));
