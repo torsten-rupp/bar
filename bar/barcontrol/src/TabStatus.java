@@ -1735,13 +1735,7 @@ public class TabStatus
                                             );
         if (error != Errors.NONE)
         {
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              Dialogs.error(shell,BARControl.tr("Cannot get job list:\n\n{0}",errorMessage[0]));
-            }
-          });
+          // ignored
           return;
         }
         for (ValueMap resultMap : resultMapList)
@@ -1903,7 +1897,7 @@ public class TabStatus
       }
       catch (CommunicationError error)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot get job list:\n\n{0}",error.getMessage()));
+        // ignored
         return;
       }
     }

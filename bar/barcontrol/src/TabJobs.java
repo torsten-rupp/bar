@@ -9451,7 +9451,7 @@ throw new Error("NYI");
       }
       else
       {
-         Dialogs.error(shell,BARControl.tr("Cannot get file list:\n\n{0}",resultErrorMessage[0]));
+         Dialogs.error(shell,BARControl.tr("Cannot get file list (error: {0})",resultErrorMessage[0]));
       }
     }
     finally
@@ -9581,7 +9581,7 @@ throw new Error("NYI");
     }
     else
     {
-      Dialogs.error(shell,BARControl.tr("Cannot get device list:\n\n{0}",resultErrorMessage[0]));
+      Dialogs.error(shell,BARControl.tr("Cannot get device list (error: {0})",resultErrorMessage[0]));
     }
   }
 
@@ -12858,7 +12858,7 @@ Dprintf.dprintf("line=%s",line);
       }
       catch (CommunicationError error)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot get schedule list:\n\n")+error.getMessage());
+        Dialogs.error(shell,BARControl.tr("Cannot get schedule list (error: {0})",error.getMessage()));
         return;
       }
     }
