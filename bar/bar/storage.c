@@ -591,6 +591,7 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 #include "storage_webdav.c"
 #include "storage_optical.c"
 #include "storage_device.c"
+#include "storage_master.c"
 
 /*---------------------------------------------------------------------*/
 
@@ -642,12 +643,17 @@ Errors Storage_initAll(void)
   {
     error = StorageDevice_initAll();
   }
+  if (error == ERROR_NONE)
+  {
+    error = StorageMaster_initAll();
+  }
 
   return error;
 }
 
 void Storage_doneAll(void)
 {
+  StorageMaster_doneAll();
   StorageDevice_doneAll();
   StorageOptical_doneAll();
   StorageWebDAV_doneAll();
@@ -812,6 +818,10 @@ bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
         break;
       case STORAGE_TYPE_DEVICE:
         result = StorageDevice_equalSpecifiers(storageSpecifier1,archiveName1,storageSpecifier2,archiveName2);
+        break;
+      case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      break;
         break;
       default:
         break;
@@ -1444,6 +1454,9 @@ String Storage_getName(StorageSpecifier *storageSpecifier,
     case STORAGE_TYPE_DEVICE:
       StorageDevice_getName(storageSpecifier,archiveName);
       break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1515,6 +1528,9 @@ String Storage_getPrintableName(String                 string,
       break;
     case STORAGE_TYPE_DEVICE:
       StorageDevice_getPrintableName(string,storageSpecifier,archiveName);
+      break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     default:
       #ifndef NDEBUG
@@ -1631,6 +1647,9 @@ String Storage_getPrintableName(String                 string,
     case STORAGE_TYPE_DEVICE:
       error = StorageDevice_init(storageInfo,storageSpecifier,jobOptions);
       break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      break;
     default:
       UNUSED_VARIABLE(maxBandWidthList);
 
@@ -1712,6 +1731,9 @@ String Storage_getPrintableName(String                 string,
     case STORAGE_TYPE_DEVICE:
       error = StorageDevice_done(storageInfo);
       break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1764,6 +1786,9 @@ bool Storage_isServerAllocationPending(StorageInfo *storageInfo)
     case STORAGE_TYPE_BD:
       break;
     case STORAGE_TYPE_DEVICE:
+      break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     default:
       #ifndef NDEBUG
@@ -1823,6 +1848,9 @@ Errors Storage_preProcess(StorageInfo *storageInfo,
     case STORAGE_TYPE_DEVICE:
       error = StorageDevice_preProcess(storageInfo,archiveName,time,initialFlag);
       break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1873,6 +1901,9 @@ Errors Storage_postProcess(StorageInfo *storageInfo,
       break;
     case STORAGE_TYPE_DEVICE:
       error = StorageDevice_postProcess(storageInfo,archiveName,time,finalFlag);
+      break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     default:
       #ifndef NDEBUG
@@ -1989,6 +2020,9 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
     case STORAGE_TYPE_DEVICE:
       existsFlag = StorageDevice_exists(storageInfo,archiveName);
       break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -2060,6 +2094,9 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
       break;
     case STORAGE_TYPE_DEVICE:
       error = StorageDevice_create(storageHandle,archiveName,archiveSize);
+      break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     default:
       #ifndef NDEBUG
@@ -2143,6 +2180,9 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
     case STORAGE_TYPE_DEVICE:
       error = StorageDevice_open(storageHandle,archiveName);
       break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -2207,6 +2247,9 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
     case STORAGE_TYPE_DEVICE:
       StorageDevice_close(storageHandle);
       break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -2263,6 +2306,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_DEVICE:
       return StorageDevice_eof(storageHandle);
+      break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     default:
       #ifndef NDEBUG
@@ -2321,6 +2367,9 @@ Errors Storage_read(StorageHandle *storageHandle,
     case STORAGE_TYPE_DEVICE:
       error = StorageDevice_read(storageHandle,buffer,bufferSize,bytesRead);
       break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -2376,6 +2425,9 @@ Errors Storage_write(StorageHandle *storageHandle,
       break;
     case STORAGE_TYPE_DEVICE:
       error = StorageDevice_write(storageHandle,buffer,bufferLength);
+      break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     default:
       #ifndef NDEBUG
@@ -2438,6 +2490,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       error = StorageDevice_tell(storageHandle,offset);
 
       break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -2495,6 +2550,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     case STORAGE_TYPE_DEVICE:
       error = StorageDevice_seek(storageHandle,offset);
       break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -2548,6 +2606,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_DEVICE:
       size = StorageDevice_getSize(storageHandle);
+      break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     default:
       #ifndef NDEBUG
@@ -2606,6 +2667,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_DEVICE:
       error = StorageDevice_delete(storageInfo,archiveName);
+      break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     default:
       #ifndef NDEBUG
@@ -2684,6 +2748,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           case STORAGE_TYPE_DEVICE:
             error = StorageDevice_delete(storageInfo,name);
             break;
+          case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+            break;
           default:
             #ifndef NDEBUG
               HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -2754,6 +2821,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_DEVICE:
       errors = StorageDevice_getFileInfo(storageInfo,archiveName,fileInfo);
+      break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     default:
       #ifndef NDEBUG
@@ -2832,6 +2902,9 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
     case STORAGE_TYPE_DEVICE:
       error = StorageDevice_openDirectoryList(storageDirectoryListHandle,storageSpecifier,archiveName,jobOptions,serverConnectionPriority);
       break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -2888,6 +2961,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     case STORAGE_TYPE_DEVICE:
       StorageDevice_closeDirectoryList(storageDirectoryListHandle);
       break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -2937,6 +3013,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_DEVICE:
       endOfDirectoryFlag = StorageDevice_endOfDirectoryList(storageDirectoryListHandle);
+      break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     default:
       #ifndef NDEBUG
@@ -2988,6 +3067,9 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
       break;
     case STORAGE_TYPE_DEVICE:
       error = StorageDevice_readDirectoryList(storageDirectoryListHandle,fileName,fileInfo);
+      break;
+    case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     default:
       #ifndef NDEBUG
