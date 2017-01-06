@@ -2621,7 +2621,6 @@ LOCAL void jobMountChanged(JobNode *jobNode)
 
   assert(Semaphore_isLocked(&jobList.lock));
 
-  // check if continuous schedule exists, update continuous notifies
   LIST_ITERATE(&jobNode->mountList,mountNode)
   {
   }
