@@ -662,10 +662,10 @@ Errors Slave_jobStart(const SlaveHost                 *slaveHost,
                       ConstString                     storageName,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
-                      MountList                       *mountList,
+                      const MountList                 *mountList,
                       const PatternList               *compressExcludePatternList,
-                      DeltaSourceList                 *deltaSourceList,
-                      JobOptions                      *jobOptions,
+                      const DeltaSourceList           *deltaSourceList,
+                      const JobOptions                *jobOptions,
                       ArchiveTypes                    archiveType,
                       ConstString                     scheduleTitle,
                       ConstString                     scheduleCustomText,
@@ -677,6 +677,67 @@ Errors Slave_jobStart(const SlaveHost                 *slaveHost,
                       void                            *storageRequestVolumeUserData
                      )
 {
+  #define SET_OPTION_STRING(name,value) \
+    do \
+    { \
+      if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost, \
+                                                                   jobUUID, \
+                                                                   name, \
+                                                                   value \
+                                                                  ); \
+    } \
+    while (0)
+  #define SET_OPTION_CSTRING(name,value) \
+    do \
+    { \
+      if (error == ERROR_NONE) error = Slave_setJobOptionCString  (slaveHost, \
+                                                                   jobUUID, \
+                                                                   name, \
+                                                                   value \
+                                                                  ); \
+    } \
+    while (0)
+  #define SET_OPTION_PASSWORD(name,value) \
+    do \
+    { \
+      if (error == ERROR_NONE) error = Slave_setJobOptionPassword (slaveHost, \
+                                                                   jobUUID, \
+                                                                   name, \
+                                                                   value \
+                                                                  ); \
+    } \
+    while (0)
+  #define SET_OPTION_INTEGER(name,value) \
+    do \
+    { \
+      if (error == ERROR_NONE) error = Slave_setJobOptionInteger  (slaveHost, \
+                                                                   jobUUID, \
+                                                                   name, \
+                                                                   value \
+                                                                  ); \
+    } \
+    while (0)
+  #define SET_OPTION_INTEGER64(name,value) \
+    do \
+    { \
+      if (error == ERROR_NONE) error = Slave_setJobOptionInteger64(slaveHost, \
+                                                                   jobUUID, \
+                                                                   name, \
+                                                                   value \
+                                                                  ); \
+    } \
+    while (0)
+  #define SET_OPTION_BOOLEAN(name,value) \
+    do \
+    { \
+      if (error == ERROR_NONE) error = Slave_setJobOptionBoolean  (slaveHost, \
+                                                                   jobUUID, \
+                                                                   name, \
+                                                                   value \
+                                                                  ); \
+    } \
+    while (0)
+
   String          s;
   Errors          error;
   EntryNode       *entryNode;
@@ -711,82 +772,69 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
   // set options
   error = ERROR_NONE;
-/*EntryNode
+  SET_OPTION_STRING   ("archive-name",           storageName);
+  SET_OPTION_CSTRING  ("archive-type",           ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,jobOptions->archiveType,NULL));
 
-  CONFIG_STRUCT_VALUE_STRING   ("ssh-public-key",          JobNode,jobOptions.sshServer.publicKeyFileName  ),
-  CONFIG_STRUCT_VALUE_STRING   ("ssh-private-key",         JobNode,jobOptions.sshServer.privateKeyFileName ),
-*/
-  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,jobUUID,"archive-name",storageName);
-  if (error == ERROR_NONE) error = Slave_setJobOptionCString  (slaveHost,
-                                                               jobUUID,
-                                                               "archive-type",
-                                                               ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,jobOptions->archiveType,NULL)
-                                                              );
-  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,jobUUID,"incremental-list-file",  jobOptions->incrementalListFileName     );
-  if (error == ERROR_NONE) error = Slave_setJobOptionInteger64(slaveHost,jobUUID,"archive-part-size",      jobOptions->archivePartSize             );
-//  if (error == ERROR_NONE) error = Slave_setJobOptionInt(slaveHost,jobUUID,"directory-strip",jobOptions->directoryStripCount);
-//  if (error == ERROR_NONE) error = Slave_setJobOptionString(slaveHost,jobUUID,"destination",jobOptions->destination);
-//  if (error == ERROR_NONE) error = Slave_setJobOptionString(slaveHost,jobUUID,"owner",jobOptions->owner);
-//  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,jobUUID,"pattern-type",           jobOptions->pattern-type                );
-  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,
-                                                               jobUUID,
-                                                               "compress-algorithm",
-                                                               String_format(String_clear(s),
-                                                                             "%s+%s",
-                                                                             ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.delta,NULL),
-                                                                             ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.byte ,NULL)
-                                                                            )
-                                                              );
+  SET_OPTION_STRING   ("incremental-list-file",  jobOptions->incrementalListFileName);
+
+  SET_OPTION_INTEGER64("archive-part-size",      jobOptions->archivePartSize);
+
+//  SET_OPTION_INTEGER  ("directory-strip",        jobOptions->directoryStripCount);
+//  SET_OPTION_STRING   ("destination",            jobOptions->destination);
+//  SET_OPTION_STRING   ("owner",                  jobOptions->owner);
+
+  SET_OPTION_CSTRING  ("pattern-type",           ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,jobOptions->patternType,NULL));
+
+  SET_OPTION_STRING   ("compress-algorithm",     String_format(String_clear(s),
+                                                               "%s+%s",
+                                                               ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.delta,NULL),
+                                                               ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.byte ,NULL)
+                                                              )
+                      );
+  SET_OPTION_CSTRING  ("crypt-algorithm",        ConfigValue_selectToString(CONFIG_VALUE_CRYPT_ALGORITHMS,jobOptions->cryptAlgorithms[0],NULL));
+  SET_OPTION_CSTRING  ("crypt-type",             ConfigValue_selectToString(CONFIG_VALUE_CRYPT_TYPES,jobOptions->cryptType,NULL));
+  SET_OPTION_CSTRING  ("crypt-password-mode",    ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobOptions->cryptPasswordMode,NULL));
+  SET_OPTION_PASSWORD ("crypt-password",         jobOptions->cryptPassword               );
+  SET_OPTION_STRING   ("crypt-public-key",       Misc_base64Encode(s,jobOptions->cryptPublicKey.data,jobOptions->cryptPublicKey.length      ));
+
+  SET_OPTION_STRING   ("pre-command",            jobOptions->preProcessScript            );
+  SET_OPTION_STRING   ("post-command",           jobOptions->postProcessScript           );
+
+  SET_OPTION_STRING   ("ftp-login-name",         jobOptions->ftpServer.loginName         );
+  SET_OPTION_PASSWORD ("ftp-password",           jobOptions->ftpServer.password          );
+
+  SET_OPTION_INTEGER  ("ssh-port",               jobOptions->sshServer.port              );
+  SET_OPTION_STRING   ("ssh-login-name",         jobOptions->sshServer.loginName         );
+  SET_OPTION_PASSWORD ("ssh-password",           jobOptions->sshServer.password          );
+  SET_OPTION_STRING   ("ssh-public-key-data",    Misc_base64Encode(s,jobOptions->sshServer.publicKey.data,jobOptions->sshServer.publicKey.length));
+  SET_OPTION_STRING   ("ssh-private-key-data",   Misc_base64Encode(s,jobOptions->sshServer.privateKey.data,jobOptions->sshServer.privateKey.length));
+
+//  SET_OPTION_STRING   ("include-file-command",   includeFileCommand);
+//  SET_OPTION_STRING   ("include-image-command",  includeImageCommand);
+//  SET_OPTION_STRING   ("exclude-command",        excludeCommand);
+
+  SET_OPTION_INTEGER64("max-storage-size",       jobOptions->maxStorageSize);
+
 //TODO
-  if (error == ERROR_NONE) error = Slave_setJobOptionCString  (slaveHost,
-                                                               jobUUID,
-                                                               "crypt-algorithm",
-                                                               ConfigValue_selectToString(CONFIG_VALUE_CRYPT_ALGORITHMS,jobOptions->cryptAlgorithms[0],NULL)
-                                                              );
-  if (error == ERROR_NONE) error = Slave_setJobOptionCString  (slaveHost,
-                                                               jobUUID,
-                                                               "crypt-type",
-                                                               ConfigValue_selectToString(CONFIG_VALUE_CRYPT_TYPES,jobOptions->cryptType,NULL)
-                                                              );
-  if (error == ERROR_NONE) error = Slave_setJobOptionCString  (slaveHost,
-                                                               jobUUID,
-                                                               "crypt-password-mode",
-                                                               ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobOptions->cryptPasswordMode,NULL)
-                                                              );
-  if (error == ERROR_NONE) error = Slave_setJobOptionPassword (slaveHost,jobUUID,"crypt-password",         jobOptions->cryptPassword               );
-//TODO
-#ifndef WERROR
-#warning TODO
+#if 0
+  SET_OPTION_INTEGER  ("min-keep",               jobOptions->minKeep);
+  SET_OPTION_INTEGER  ("max-keep",               jobOptions->maxKeep);
+  SET_OPTION_INTEGER  ("max-age",                jobOptions->maxAge);
 #endif
-//  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,jobUUID,"crypt-public-key",       jobOptions->cryptPublicKeyFileName      );
-  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,jobUUID,"pre-command",            jobOptions->preProcessScript            );
-  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,jobUUID,"post-command",           jobOptions->postProcessScript           );
-  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,jobUUID,"ftp-login-name",         jobOptions->ftpServer.loginName         );
-  if (error == ERROR_NONE) error = Slave_setJobOptionPassword (slaveHost,jobUUID,"ftp-password",           jobOptions->ftpServer.password          );
-  if (error == ERROR_NONE) error = Slave_setJobOptionInteger  (slaveHost,jobUUID,"ssh-port",               jobOptions->sshServer.port              );
-  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,jobUUID,"ssh-login-name",         jobOptions->sshServer.loginName         );
-  if (error == ERROR_NONE) error = Slave_setJobOptionPassword (slaveHost,jobUUID,"ssh-password",           jobOptions->sshServer.password          );
-  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,
-                                                                jobUUID,
-                                                                "ssh-public-key-data",
-                                                                Misc_base64Encode(s,jobOptions->sshServer.publicKey.data,jobOptions->sshServer.publicKey.length)
-                                                               );
-  if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost,
-                                                               jobUUID,
-                                                               "ssh-private-key-data",
-                                                               Misc_base64Encode(s,jobOptions->sshServer.privateKey.data,jobOptions->sshServer.privateKey.length)
-                                                              );
-  if (error == ERROR_NONE) error = Slave_setJobOptionInteger64(slaveHost,jobUUID,"volume-size",            jobOptions->volumeSize                  );
-  if (error == ERROR_NONE) error = Slave_setJobOptionBoolean  (slaveHost,jobUUID,"ecc",                    jobOptions->errorCorrectionCodesFlag    );
-  if (error == ERROR_NONE) error = Slave_setJobOptionBoolean  (slaveHost,jobUUID,"skip-unreadable",        jobOptions->skipUnreadableFlag          );
-  if (error == ERROR_NONE) error = Slave_setJobOptionBoolean  (slaveHost,jobUUID,"raw-images",             jobOptions->rawImagesFlag               );
-  if (error == ERROR_NONE) error = Slave_setJobOptionCString  (slaveHost,jobUUID,
-                                                               "archive-file-mode",
-                                                               ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_FILE_MODES,jobOptions->archiveFileMode,NULL)
-                                                              );
-  if (error == ERROR_NONE) error = Slave_setJobOptionBoolean  (slaveHost,jobUUID,"overwrite-files",        jobOptions->overwriteEntriesFlag        );
-  if (error == ERROR_NONE) error = Slave_setJobOptionBoolean  (slaveHost,jobUUID,"wait-first-volume",      jobOptions->waitFirstVolumeFlag         );
 
+  SET_OPTION_INTEGER64("volume-size",            jobOptions->volumeSize                  );
+  SET_OPTION_BOOLEAN  ("ecc",                    jobOptions->errorCorrectionCodesFlag);
+  SET_OPTION_BOOLEAN  ("blank",                  jobOptions->blankFlag);
+
+  SET_OPTION_BOOLEAN  ("skip-unreadable",        jobOptions->skipUnreadableFlag);
+  SET_OPTION_BOOLEAN  ("raw-images",             jobOptions->rawImagesFlag);
+  SET_OPTION_CSTRING  ("archive-file-mode",      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_FILE_MODES,jobOptions->archiveFileMode,NULL));
+  SET_OPTION_BOOLEAN  ("overwrite-files",        jobOptions->overwriteEntriesFlag        );
+  SET_OPTION_BOOLEAN  ("wait-first-volume",      jobOptions->waitFirstVolumeFlag         );
+
+  SET_OPTION_STRING   ("comment",                jobOptions->comment                     );
+
+  // set lists
   if (error == ERROR_NONE) error = Slave_executeCommand(slaveHost,NULL,"INCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(includeEntryList,entryNode)
   {
@@ -875,6 +923,13 @@ fprintf(stderr,"%s, %d: %d: Slave_jobStart %s\n",__FILE__,__LINE__,error,Error_g
   String_delete(s);
 
   return ERROR_NONE;
+
+  #undef SET_OPTION_BOOLEAN(name,value)
+  #undef SET_OPTION_INTEGER64(name,value)
+  #undef SET_OPTION_INTEGER(name,value)
+  #undef SET_OPTION_PASSWORD(name,value)
+  #undef SET_OPTION_CSTRING(name,value)
+  #undef SET_OPTION_STRING(name,value)
 }
 
 Errors Slave_jobAbort(const SlaveHost *slaveHost,
