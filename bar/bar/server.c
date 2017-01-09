@@ -204,6 +204,7 @@ typedef struct JobNode
 
   // job running state
   String          master;                               // master who created job or NULL
+  bool            isConnected;                          // TRUE if slave connected
 
   JobStates       state;                                // current state of job
   String          byName;                               // state changed by name
@@ -2415,7 +2416,7 @@ LOCAL void triggerJob(JobNode      *jobNode,
   SemaphoreLock semaphoreLock;
 
   assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList));
+  assert(Semaphore_isLocked(&jobList.lock));
 
   // set job state
   jobNode->state                 = JOB_STATE_WAITING;
@@ -3640,7 +3641,7 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateConnectStatusInfo(bool isConnected
+LOCAL void updateConnectStatusInfo(bool isConnected,
                                    void *userData
                                   )
 {
@@ -3652,7 +3653,7 @@ LOCAL void updateConnectStatusInfo(bool isConnected
   // Note: only try for 2s
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
-    jobNode->runningInfo.isConnected = isConnected;
+    jobNode->isConnected = isConnected;
   }
 }
 
@@ -4618,9 +4619,9 @@ fprintf(stderr,"%s, %d: req connect jobUUID=%s host=%s\n",__FILE__,__LINE__,Stri
       // try to connect
       if (tryConnectFlag)
       {
-//        (void)Slave_connect(&slaveHost);
+//        (void)Slave_connect(&slaveHost,CALLBACK(updateConnectStatusInfo,NULL));
 fprintf(stderr,"%s, %d: tyr connect\n",__FILE__,__LINE__);
-        error = Slave_connect(&slaveHost);
+        error = Slave_connect(&slaveHost,CALLBACK(updateConnectStatusInfo,NULL));
 fprintf(stderr,"%s, %d: connect result host=%s: %s\n",__FILE__,__LINE__,String_cString(slaveHost.name),Error_getText(error));
       }
     }
