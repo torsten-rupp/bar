@@ -1715,7 +1715,7 @@ test11-debug test_server-debug:
 test11-valgrind test_server-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_server
 
-test12 test_slave: \
+test12: \
   $(TEST_BAR) \
   $(TEST_CONFIG)
 	@$(ECHO_NO_LF) "Test 12: slave..."
@@ -1727,10 +1727,10 @@ test12 test_slave: \
           ;
 	@$(ECHO) "ok"
 
-test12-debug test_slave-debug:
+test12-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_slave
 
-test12-valgrind test_slave-valgrind:
+test12-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_slave
 
 test12_master test_master: \
@@ -1751,7 +1751,7 @@ test12_master-debug test_master-debug:
 test12_master-valgrind test_master-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_master
 
-test12_client test_slave: \
+test12_slave test_slave: \
   $(TEST_BAR) \
   $(TEST_CONFIG)
 	@$(ECHO_NO_LF) "Test 12: slave..."
