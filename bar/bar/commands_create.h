@@ -60,9 +60,9 @@ typedef struct
 /***********************************************************************\
 * Name   : CreateStatusInfoFunction
 * Purpose: create status info call-back
-* Input  : userData         - user data
-*          error            - error code
+* Input  : error            - error code
 *          createStatusInfo - create status info
+*          userData         - user data
 * Output : -
 * Return : -
 * Notes  : -
