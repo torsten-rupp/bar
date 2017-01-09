@@ -3506,7 +3506,7 @@ LOCAL void updateCreateStatusInfo(Errors                 error,
   assert(createStatusInfo->storageName != NULL);
 
   // Note: only try for 2s
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*1000L)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
     // calculate statics values
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     createStatusInfo->doneCount);
@@ -3592,7 +3592,7 @@ LOCAL void restoreUpdateStatusInfo(const RestoreStatusInfo *restoreStatusInfo,
   assert(restoreStatusInfo->storageName != NULL);
   assert(restoreStatusInfo->entryName != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*1000L)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
     // calculate estimated rest time
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     restoreStatusInfo->doneCount);
@@ -3627,6 +3627,32 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
     jobNode->runningInfo.storageTotalSize      = restoreStatusInfo->storageTotalSize;
     jobNode->runningInfo.volumeNumber          = 0;
     jobNode->runningInfo.volumeProgress        = 0.0;
+  }
+}
+
+/***********************************************************************\
+* Name   : updateConnectStatusInfo
+* Purpose: update connect status info
+* Input  : isConnected      - TRUE iff connected
+*          userData         - user data: job node
+* Output : -
+* Return :
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void updateConnectStatusInfo(bool isConnected
+                                   void *userData
+                                  )
+{
+  JobNode       *jobNode = (JobNode*)userData;
+  SemaphoreLock semaphoreLock;
+
+  assert(jobNode != NULL);
+
+  // Note: only try for 2s
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
+  {
+    jobNode->runningInfo.isConnected = isConnected;
   }
 }
 
@@ -5776,7 +5802,7 @@ LOCAL void autoIndexThreadCode(void)
   storageName          = String_new();
 
   // init index (Note: timeout not important; auto-index should not block)
-  indexHandle = Index_open(INDEX_PRIORITY_MEDIUM,5L*1000L);
+  indexHandle = Index_open(INDEX_PRIORITY_MEDIUM,5L*MS_PER_SECOND);
   if (indexHandle == NULL)
   {
     String_delete(storageName);
