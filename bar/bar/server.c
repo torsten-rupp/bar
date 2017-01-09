@@ -6971,10 +6971,13 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 *          Result:
 *            major=<major version>
 *            minor=<minor version>
+*            mode=MASTER|SLAVE
 \***********************************************************************/
 
 LOCAL void serverCommand_version(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  const char *s;
+
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
   assert(argumentMap != NULL);
@@ -6982,7 +6985,25 @@ LOCAL void serverCommand_version(ClientInfo *clientInfo, IndexHandle *indexHandl
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"major=%d minor=%d",SERVER_PROTOCOL_VERSION_MAJOR,SERVER_PROTOCOL_VERSION_MINOR);
+  switch (serverMode)
+  {
+    case SERVER_MODE_MASTER: s = "MASTER"; break;
+    case SERVER_MODE_SLAVE:  s = "SLAVE";  break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+  sendClientResult(clientInfo,
+                   id,
+                   TRUE,
+                   ERROR_NONE,
+                   "major=%d minor=%d mode=%s",
+                   SERVER_PROTOCOL_VERSION_MAJOR,
+                   SERVER_PROTOCOL_VERSION_MINOR,
+                   s
+                  );
 }
 
 /***********************************************************************\
@@ -18033,7 +18054,12 @@ LOCAL void doneSession(ClientInfo *clientInfo)
 * Input  : clientInfo - client info
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : Arguments:
+*          Result:
+*            id=<id>
+*            encryptTypes=<types>
+*            n=<n>
+*            e=<n>
 \***********************************************************************/
 
 LOCAL void sendSessionId(ClientInfo *clientInfo)
@@ -18051,21 +18077,19 @@ LOCAL void sendSessionId(ClientInfo *clientInfo)
   if ((n !=NULL) && (e != NULL))
   {
     s  = String_format(String_new(),
-                       "SESSION id=%S encryptTypes=%s n=%S e=%S mode=%s",
+                       "SESSION id=%S encryptTypes=%s n=%S e=%S",
                        id,
                        "RSA,NONE",
                        n,
-                       e,
-                       (serverMode == SERVER_MODE_MASTER) ? "master" : "slave"
+                       e
                       );
   }
   else
   {
     s  = String_format(String_new(),
-                       "SESSION id=%S encryptTypes=%s mode=%s",
+                       "SESSION id=%S encryptTypes=%s",
                        id,
-                       "NONE",
-                       (serverMode == SERVER_MODE_MASTER) ? "master" : "slave"
+                       "NONE"
                       );
   }
   String_appendChar(s,'\n');

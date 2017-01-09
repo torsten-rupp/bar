@@ -562,7 +562,6 @@ class Command
   }
 
   /** get next result
-   * @param typeMap type map
    * @param errorMessage error message
    * @param valueMap value map
    * @param timeout timeout or WAIT_FOREVER [ms]
@@ -598,7 +597,6 @@ class Command
   }
 
   /** get next result
-   * @param typeMap type map
    * @param errorMessage error message
    * @param valueMap value map
    * @return Errors.NONE or error code
@@ -609,7 +607,6 @@ class Command
   }
 
   /** get next result
-   * @param typeMap type map
    * @param errorMessage error message
    * @param valueMap value map
    * @return Errors.NONE or error code
@@ -620,7 +617,6 @@ class Command
   }
 
   /** get next result
-   * @param typeMap type map
    * @param valueMap value map
    * @return Errors.NONE or error code
    */
@@ -630,7 +626,6 @@ class Command
   }
 
   /** get result list
-   * @param typeMap type map
    * @param errorMessage error message
    * @param valueMapList value map list
    * @return Errors.NONE or error code
@@ -1663,13 +1658,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         throw new ConnectionError("Authorization fail");
       }
 
-      // get version
+      // get version, mode
       if (syncExecuteCommand(input,
                              output,
                              "VERSION",
-                             new TypeMap("major",int.class,
-                                         "minor",int.class
-                                        ),
                              errorMessage,
                              valueMap
                             ) != Errors.NONE
@@ -1685,12 +1677,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         BARControl.printWarning("Incompatible minor protocol version for '"+name+((socket.getPort() != Settings.DEFAULT_SERVER_PORT) ? ":"+socket.getPort() : "")+"': expected "+PROTOCOL_VERSION_MINOR+", got "+valueMap.getInt("minor"));
       }
+      mode = valueMap.getEnum("mode",Modes.class,Modes.MASTER);
 
       // get file separator character
       if (syncExecuteCommand(input,
                              output,
                              "GET name=FILE_SEPARATOR",
-                             new TypeMap("value",String.class),
                              errorMessage,
                              valueMap
                             ) != Errors.NONE
@@ -3858,16 +3850,7 @@ throw new Error("NYI");
     {
       throw new CommunicationError("Invalid response from server");
     }
-    if (!StringParser.parse(data[1],
-/*
-                            new TypeMap("id",String.class,
-                                        "encryptTypes",String.class,
-                                        "n",String.class,
-                                        "e",String.class
-                                       ),*/
-                            valueMap
-                           )
-       )
+    if (!StringParser.parse(data[1],valueMap))
     {
       throw new CommunicationError("Invalid response from server");
     }
@@ -3921,20 +3904,16 @@ throw new Error("NYI");
     {
       throw new CommunicationError("Init password cipher fail");
     }
-
-    // get server mode
-    mode = valueMap.getEnum("mode",Modes.class,Modes.MASTER);
   }
 
   /** execute command syncronous
    * @param input,output input/output streams
    * @param commandString command string
-   * @param typeMap types or null
    * @param errorMessage error message or ""
    * @param valueMap values or null
    * @return Errors.NONE or error code
    */
-  public static int syncExecuteCommand(BufferedReader input, BufferedWriter output, String commandString, TypeMap typeMap, String[] errorMessage, ValueMap valueMap)
+  public static int syncExecuteCommand(BufferedReader input, BufferedWriter output, String commandString, String[] errorMessage, ValueMap valueMap)
     throws IOException
   {
     int errorCode;
@@ -3983,7 +3962,7 @@ throw new Error("NYI");
         if (valueMap != null)
         {
           valueMap.clear();
-          if (!StringParser.parse(data[3],typeMap,valueMap))
+          if (!StringParser.parse(data[3],valueMap))
           {
             throw new CommunicationError("Invalid response from server");
           }
@@ -4001,15 +3980,14 @@ throw new Error("NYI");
 
   /** execute command syncronous
    * @param commandString command string
-   * @param typeMap types or null
    * @param errorMessage error message or ""
    * @param valueMap values or null
    * @return Errors.NONE or error code
    */
-  public static int syncExecuteCommand(String commandString, TypeMap typeMap, String[] errorMessage, ValueMap valueMap)
+  public static int syncExecuteCommand(String commandString, String[] errorMessage, ValueMap valueMap)
     throws IOException
   {
-    return syncExecuteCommand(input,output,commandString,typeMap,errorMessage,valueMap);
+    return syncExecuteCommand(input,output,commandString,errorMessage,valueMap);
   }
 
   /** execute command syncronous
@@ -4021,7 +3999,7 @@ throw new Error("NYI");
   public static int syncExecuteCommand(BufferedReader input, BufferedWriter output, String commandString, String[] errorMessage)
     throws IOException
   {
-    return syncExecuteCommand(input,output,commandString,(TypeMap)null,errorMessage,(ValueMap)null);
+    return syncExecuteCommand(input,output,commandString,errorMessage,(ValueMap)null);
   }
 
   /** execute command syncronous
@@ -4032,7 +4010,7 @@ throw new Error("NYI");
   public static int syncExecuteCommand(String commandString, String[] errorMessage)
     throws IOException
   {
-    return syncExecuteCommand(commandString,(TypeMap)null,errorMessage,(ValueMap)null);
+    return syncExecuteCommand(commandString,errorMessage,(ValueMap)null);
   }
 
   /** execute command syncronous
