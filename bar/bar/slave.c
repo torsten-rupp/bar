@@ -50,16 +50,18 @@ typedef struct SlaveNode
 {
   LIST_NODE_HEADER(struct SlaveNode);
 
-  String       hostName;
-  uint         hostPort;
-  bool         sslFlag;
+  String                         hostName;
+  uint                           hostPort;
+  bool                           sslFlag;
+  SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction;
+  void                           *slaveConnectStatusInfoUserData;
 
-  SessionId    sessionId;
-  CryptKey     publicKey,secretKey;
+  SessionId                      sessionId;
+  CryptKey                       publicKey,secretKey;
 
-  uint         commandId;
+  uint                           commandId;
 
-  SocketHandle socketHandle;
+  SocketHandle                   socketHandle;
 } SlaveNode;
 
 typedef struct
@@ -376,7 +378,10 @@ void Slave_duplicateHost(SlaveHost *toSlaveHost, const SlaveHost *fromSlaveHost)
   Slave_copyHost(toSlaveHost,fromSlaveHost);
 }
 
-Errors Slave_connect(const SlaveHost *slaveHost)
+Errors Slave_connect(const SlaveHost                *slaveHost,
+                     SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction,
+                     void                           *slaveConnectStatusInfoUserData
+                    )
 {
   String       line;
   SocketHandle socketHandle;
@@ -432,11 +437,13 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  slaveNode->hostName     = String_duplicate(slaveHost->name);
-  slaveNode->hostPort     = slaveHost->port;
-  slaveNode->sslFlag      = sslFlag;
-  slaveNode->commandId    = 0;
-  slaveNode->socketHandle = socketHandle;
+  slaveNode->hostName                       = String_duplicate(slaveHost->name);
+  slaveNode->hostPort                       = slaveHost->port;
+  slaveNode->sslFlag                        = sslFlag;
+  slaveNode->slaveConnectStatusInfoFunction = slaveConnectStatusInfoFunction;
+  slaveNode->slaveConnectStatusInfoUserData = slaveConnectStatusInfoUserData;
+  slaveNode->commandId                      = 0;
+  slaveNode->socketHandle                   = socketHandle;
   List_append(&slaveList,slaveNode);
 
   // free resources

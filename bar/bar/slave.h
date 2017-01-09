@@ -27,6 +27,20 @@
 
 /***************************** Datatypes *******************************/
 
+/***********************************************************************\
+* Name   : SlaveConnectStatusInfoFunction
+* Purpose: slave connect status info call-back
+* Input  : isConnected - TRUE iff connected
+*          userData    - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*SlaveConnectStatusInfoFunction)(bool isConnected,
+                                              void *userData
+                                             );
+
 /***************************** Variables *******************************/
 
 // slave host
@@ -99,13 +113,20 @@ void Slave_duplicateHost(SlaveHost *toSlaveHost, const SlaveHost *fromSlaveHost)
 /***********************************************************************\
 * Name   : Slave_connect
 * Purpose: connect to slave host
-* Input  : slaveHost - slave host
+* Input  : slaveHost                      - slave host
+*          slaveConnectStatusInfoFunction - status info call back
+*                                           function (can be NULL)
+*          slaveConnectStatusInfoUserData - user data for status info
+*                                           function
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Slave_connect(const SlaveHost *slaveHost);
+Errors Slave_connect(const SlaveHost                *slaveHost,
+                     SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction,
+                     void                           *slaveConnectStatusInfoUserData
+                    );
 
 /***********************************************************************\
 * Name   : Slave_disconnect
