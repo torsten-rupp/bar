@@ -6134,7 +6134,7 @@ LOCAL void sendClient(ClientInfo *clientInfo, ConstString data)
 * Input  : clientInfo   - client info
 *          id           - command id
 *          completeFlag - TRUE if command is completed, FALSE otherwise
-*          errorCode    - error code
+*          error        - ERROR_NONE or error code
 *          format       - format string
 *          ...          - optional arguments
 * Output : -
@@ -6142,7 +6142,7 @@ LOCAL void sendClient(ClientInfo *clientInfo, ConstString data)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, uint errorCode, const char *format, ...)
+LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, Errors error, const char *format, ...)
 {
   locale_t locale;
   String   result;
@@ -6152,7 +6152,7 @@ LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, 
 
   locale = uselocale(POSIXLocale);
   {
-    String_format(result,"%d %d %d ",id,completeFlag ? 1 : 0,Error_getCode(errorCode));
+    String_format(result,"%u %d %u ",id,completeFlag ? 1 : 0,Error_getCode(error));
     va_start(arguments,format);
     String_vformat(result,format,arguments);
     va_end(arguments);
@@ -6828,7 +6828,7 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, IndexHandle *indexHan
   // get error code
   if (!StringMap_getUInt64(argumentMap,"error",&n,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected errorCode=<n>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected error=<n>");
     return;
   }
   error = (Errors)n;
@@ -17905,7 +17905,7 @@ LOCAL bool parseCommand(CommandMsg  *commandMsg,
   arguments = String_new();
 
   // parse
-  if (!String_parse(string,STRING_BEGIN,"%d %S % S",NULL,&commandMsg->id,command,arguments))
+  if (!String_parse(string,STRING_BEGIN,"%u %S % S",NULL,&commandMsg->id,command,arguments))
   {
     String_delete(arguments);
     String_delete(command);
@@ -19037,7 +19037,7 @@ Errors Server_run(ServerModes       mode,
           if ((pollfds[pollfdIndex].revents & POLLIN) != 0)
           {
             // receive data from client
-            Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),WAIT_FOREVER,&receivedBytes);
+            Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
             if (receivedBytes > 0)
             {
               // received data -> process
@@ -19055,7 +19055,7 @@ Errors Server_run(ServerModes       mode,
                     String_clear(clientNode->commandString);
                   }
                 }
-                error = Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),WAIT_FOREVER,&receivedBytes);
+                error = Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
               }
               while ((error == ERROR_NONE) && (receivedBytes > 0));
             }
