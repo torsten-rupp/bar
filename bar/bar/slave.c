@@ -13,9 +13,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#ifdef HAVE_SYS_SELECT_H
-  #include <sys/select.h>
-#endif /* HAVE_SYS_SELECT_H */
+#include <poll.h>
 #include <pthread.h>
 #include <locale.h>
 #include <time.h>
@@ -41,6 +39,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define SLEEP_TIME_SLAVE_THREAD          (   10)  // [s]
 #define READ_TIMEOUT (5LL*MS_PER_SECOND)
 
 /***************************** Datatypes *******************************/
@@ -60,8 +59,10 @@ typedef struct SlaveNode
   CryptKey                       publicKey,secretKey;
 
   uint                           commandId;
+  String       commandString;
 
   SocketHandle                   socketHandle;
+  bool         isConnected;
 } SlaveNode;
 
 typedef struct
@@ -71,8 +72,28 @@ typedef struct
   Semaphore lock;
 } SlaveList;
 
+/***********************************************************************\
+* Name   : SlaveCommandFunction
+* Purpose: slave command function
+* Input  : slaveNode   - slave
+*          indexHandle - index handle or NULL
+*          id          - command id
+*          argumentMap - argument map
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*SlaveCommandFunction)(SlaveNode       *slaveNode,
+                                    IndexHandle     *indexHandle,
+                                    uint            id,
+                                    const StringMap argumentMap
+                                   );
+
 /***************************** Variables *******************************/
 LOCAL SlaveList slaveList;
+LOCAL bool      quitFlag;
+LOCAL Thread    slaveThread;
 
 /****************************** Macros *********************************/
 
@@ -113,8 +134,8 @@ LOCAL SlaveNode *findSlave(const SlaveHost *slaveHost)
 }
 
 /***********************************************************************\
-* Name   : serverConnect
-* Purpose: connect to server
+* Name   : slaveConnect
+* Purpose: connect to slave
 * Input  : socketHandle - socket handle variable
 *          hostName     - host name
 *          hostPort     - host port
@@ -124,11 +145,11 @@ LOCAL SlaveNode *findSlave(const SlaveHost *slaveHost)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors serverConnect(SocketHandle *socketHandle,
-                           ConstString  hostName,
-                           uint         hostPort,
-                           bool         hostForceSSL
-                          )
+LOCAL Errors slaveConnect(SocketHandle *socketHandle,
+                          ConstString  hostName,
+                          uint         hostPort,
+                          bool         hostForceSSL
+                         )
 {
   String line;
   Errors error;
@@ -174,15 +195,15 @@ LOCAL Errors serverConnect(SocketHandle *socketHandle,
 #if 0
 not used
 /***********************************************************************\
-* Name   : serverDisconnect
-* Purpose: disconnect from server
+* Name   : slaveDisconnect
+* Purpose: disconnect slave
 * Input  : socketHandle - socket handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void serverDisconnect(SocketHandle *socketHandle)
+LOCAL void slaveDisconnect(SocketHandle *socketHandle)
 {
   assert(socketHandle != NULL);
 
@@ -209,6 +230,294 @@ LOCAL bool parseEnumState(const char *name, uint *value)
   return TRUE;
 }
 #endif
+
+// slave commands
+const struct
+{
+  const char           *name;
+  SlaveCommandFunction slaveCommandFunction;
+}
+SLAVE_COMMANDS[] =
+{
+};
+
+LOCAL void processSlave(SlaveNode *slaveNode, String line)
+{
+  uint   commandId;
+  bool   completedFlag;
+  Errors errorCode;
+  String command;
+  String arguments;
+  uint   i;
+  SlaveCommandFunction slaveCommandFunction;
+  StringMap argumentMap;
+
+  assert(Semaphore_isLocked(&slaveList));
+
+  // init variables
+  command   = String_new();
+  arguments = String_new();
+
+  // parse
+  if      (String_parse(line,STRING_BEGIN,"%u %y %u",&index,&commandId,&completedFlag,&errorCode))
+  {
+    // result
+
+    Semaphore_signalModified(&slaveList.lock);
+  }
+  else if (!String_parse(line,STRING_BEGIN,"%d %S % S",NULL,&commandId,command,arguments))
+  {
+    // command
+
+    // find command
+    i = 0;
+    while ((i < SIZE_OF_ARRAY(SLAVE_COMMANDS)) && !String_equalsCString(command,SLAVE_COMMANDS[i].name))
+    {
+      i++;
+    }
+    if (i >= SIZE_OF_ARRAY(SLAVE_COMMANDS))
+    {
+      String_delete(arguments);
+      String_delete(command);
+      return FALSE;
+    }
+    slaveCommandFunction = SLAVE_COMMANDS[i].slaveCommandFunction;
+
+    // parse arguments
+    argumentMap = StringMap_new();
+    if (argumentMap == NULL)
+    {
+      String_delete(arguments);
+      String_delete(command);
+      return FALSE;
+    }
+    if (!StringMap_parse(argumentMap,arguments,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+    {
+      StringMap_delete(argumentMap);
+      String_delete(arguments);
+      String_delete(command);
+      return FALSE;
+    }
+  }
+  else
+  {
+    // unknown
+    return FALSE;
+  }
+
+
+  // free resources
+  String_delete(arguments);
+  String_delete(command);
+
+}
+
+/***********************************************************************\
+* Name   : slaveThreadCode
+* Purpose: slave thread code
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void slaveThreadCode(void)
+{
+  typedef struct SlaveJobInfoNode
+  {
+    LIST_NODE_HEADER(struct SlaveJobInfoNode);
+
+    String    jobUUID;
+    SlaveHost slaveHost;
+  } SlaveJobInfoNode;
+
+  typedef struct
+  {
+    LIST_HEADER(SlaveJobInfoNode);
+  } SlaveJobInfoList;
+
+  sigset_t              signalMask;
+  struct pollfd         *pollfds;
+  uint                  maxPollfdCount;
+  uint                  pollfdCount;
+
+  SemaphoreLock    semaphoreLock;
+  SlaveNode        *slaveNode;
+  SlaveHost        slaveHost;
+  struct timespec       pollTimeout;
+  uint                  pollfdIndex;
+  char                  buffer[4096];
+  ulong                 receivedBytes;
+  ulong                 i;
+  Errors                error;
+
+  // init variables
+  maxPollfdCount = 64;  // initial max. number of parallel connections
+  pollfds = (struct pollfd*)malloc(maxPollfdCount * sizeof(struct pollfd));
+  if (pollfds == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  // Note: ignore SIGALRM in ppoll()
+  sigemptyset(&signalMask);
+  sigaddset(&signalMask,SIGALRM);
+
+  // process client requests
+  while (!quitFlag)
+  {
+    // connect slaves
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+#if 0
+          if (isSlaveJob(jobNode) && !Slave_isConnected(&jobNode->slaveHost))
+          {
+fprintf(stderr,"%s, %d: req connect jobUUID=%s host=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(jobNode->slaveHost.name));
+            Slave_copyHost(&slaveHost,&jobNode->slaveHost);
+            tryConnectFlag = TRUE;
+          }
+
+      // try to connect
+      if (tryConnectFlag)
+      {
+//        (void)Slave_connect(&slaveHost);
+        error = Slave_connect(&slaveHost);
+fprintf(stderr,"%s, %d: connect result host=%s: %s\n",__FILE__,__LINE__,String_cString(slaveHost.name),Error_getText(error));
+      }
+#endif
+    }
+
+    // wait for slave requests
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      if (slaveNode->isConnected)
+      {
+        if (pollfdCount >= maxPollfdCount)
+        {
+          maxPollfdCount += 64;
+          pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
+          if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
+        }
+        pollfds[pollfdCount].fd     = Network_getSocket(&slaveNode->socketHandle);
+        pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
+        pollfdCount++;
+      }
+    }
+    pollTimeout.tv_sec  = (long)(SLEEP_TIME_SLAVE_THREAD /US_PER_SECOND);
+    pollTimeout.tv_nsec = (long)((SLEEP_TIME_SLAVE_THREAD%US_PER_SECOND)*1000LL);
+    (void)ppoll(pollfds,pollfdCount,&pollTimeout,&signalMask);
+
+    // process slave requests
+    for (pollfdIndex = 0; pollfdIndex < pollfdCount; pollfdIndex++)
+    {
+      if ((pollfds[pollfdIndex].revents & POLLIN) != 0)
+      {
+        do
+        {
+          Network_receive(&slaveNode->socketHandle,buffer,sizeof(buffer),WAIT_FOREVER,&receivedBytes);
+          if (receivedBytes > 0)
+          {
+            SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+            {
+              // find client node
+              slaveNode = LIST_FIND(&slaveList,
+                                     slaveNode,
+                                     pollfds[pollfdIndex].fd == Network_getSocket(&slaveNode->socketHandle)
+                                    );
+              if (slaveNode != NULL)
+              {
+                // received data -> process
+                for (i = 0; i < receivedBytes; i++)
+                {
+                  if (buffer[i] != '\n')
+                  {
+                    String_appendChar(slaveNode->commandString,buffer[i]);
+                  }
+                  else
+                  {
+fprintf(stderr,"%s, %d: slave %s \n",__FILE__,__LINE__,String_cString(slaveNode->commandString));
+                    processSlave(slaveNode,&slaveNode->commandString);
+                    String_clear(slaveNode->commandString);
+                  }
+                }
+              }
+            }
+          }
+          else
+          {
+            // done client and free resources
+  //              deleteClient(disconnectClientNode);
+
+            printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
+          }
+
+          error = Network_receive(&slaveNode->socketHandle,buffer,sizeof(buffer),WAIT_FOREVER,&receivedBytes);
+        }
+        while ((error == ERROR_NONE) && (receivedBytes > 0));
+      }
+      else if ((pollfds[pollfdIndex].revents & (POLLERR|POLLNVAL)) != 0)
+      {
+        // error/disconnect
+        // done client and free resources
+//            deleteClient(disconnectClientNode);
+
+        printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
+      }
+    }
+
+    // sleep
+//    delayThread(SLEEP_TIME_SLAVE_THREAD,NULL);
+Misc_udelay(SLEEP_TIME_SLAVE_THREAD*US_PER_SECOND);
+  }
+
+  // free resources
+}
+
+/***********************************************************************\
+* Name   : sendSlave
+* Purpose: send data to slave
+* Input  : slaveNode - slave
+*          data      - data string
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL uint sendSlave(SlaveNode *slaveNode, ConstString data)
+{
+  SemaphoreLock semaphoreLock;
+  uint          commandId;
+
+  assert(slaveNode != NULL);
+  assert(data != NULL);
+
+  #ifdef SLAVE_DEBUG
+    fprintf(stderr,"DEBUG: result=%s",String_cString(data));
+  #endif /* SLAVE_DEBUG */
+
+  // new command id
+  commandId = slaveNode->commandId;
+  slaveNode->commandId++;
+
+  // format command
+
+  // send data
+  if (!quitFlag)
+  {
+//    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveNode->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    {
+      (void)Network_send(&slaveNode->socketHandle,String_cString(data),String_length(data));
+    }
+  }
+  
+  return commandId;
+}
+
+LOCAL Errors waitForResult(SlaveNode *slaveNode)
+{
+
+  return ERROR_NONE;
+}
 
 /***********************************************************************\
 * Name   : Slave_setJobOptionInteger
@@ -338,6 +647,27 @@ LOCAL Errors Slave_setJobOptionPassword(const SlaveHost *slaveHost, ConstString 
 }
 
 // ----------------------------------------------------------------------
+
+Errors Slave_initAll(void)
+{
+  // init variables
+  quitFlag = FALSE;
+  
+  // start slave thread
+  if (!Thread_init(&slaveThread,"BAR slave",globalOptions.niceLevel,slaveThreadCode,NULL))
+  {
+    HALT_FATAL_ERROR("Cannot initialize slave thread!");
+  }
+
+  return ERROR_NONE;
+}
+
+Slave_doneAll(void)
+{
+  // quit slave thread
+  quitFlag = TRUE;
+  Thread_join(&slaveThread);
+}
 
 void Slave_initHost(SlaveHost *slaveHost, uint defaultPort)
 {
@@ -546,7 +876,7 @@ LOCAL Errors Slave_vexecuteCommand(const SlaveHost *slaveHost,
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    // find slave server
+    // find slave
     slaveNode = findSlave(slaveHost);
 #if 1
     if (slaveNode == NULL)
@@ -557,11 +887,11 @@ LOCAL Errors Slave_vexecuteCommand(const SlaveHost *slaveHost,
     }
 #else
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    // check if slave server known
+    // check if slave known, try to connect
     if (slaveNode == NULL)
     {
       // try to connect
-      error = serverConnect(&socketHandle,slaveHost->name,slaveHost->port,slaveHost->forceSSL);
+      error = slaveConnect(&socketHandle,slaveHost->name,slaveHost->port,slaveHost->forceSSL);
       if (error != ERROR_NONE)
       {
         Semaphore_unlock(&slaveList.lock);
@@ -577,11 +907,13 @@ sslFlag = TRUE;
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      slaveNode->hostName     = String_duplicate(slaveHost->name);
-      slaveNode->hostPort     = slaveHost->port;
-      slaveNode->sslFlag      = sslFlag;
-      slaveNode->commandId    = 0;
-      slaveNode->socketHandle = socketHandle;
+      slaveNode->hostName      = String_duplicate(slaveHost->name);
+      slaveNode->hostPort      = slaveHost->port;
+      slaveNode->sslFlag       = sslFlag;
+      slaveNode->commandId     = 0;
+      slaveNode->commandString = String_new();
+      slaveNode->socketHandle  = socketHandle;
+      slaveNode->isConnected   = TRUE;
       List_append(&slaveList,slaveNode);
     }
 #endif
@@ -604,7 +936,8 @@ sslFlag = TRUE;
 fprintf(stderr,"%s, %d: sent %s\n",__FILE__,__LINE__,String_cString(line));
 
     // wait for result
-    error = Network_readLine(&slaveNode->socketHandle,line,READ_TIMEOUT);
+    if (!Semaphore_waitModified(&slaveList.lock,30LL*1000))
+//    error = Network_readLine(&slaveNode->socketHandle,line,READ_TIMEOUT);
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&slaveList.lock);

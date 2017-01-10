@@ -62,6 +62,28 @@ typedef struct
 #endif
 
 /***********************************************************************\
+* Name   : Slave_initAll
+* Purpose: initialize slaves
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Slave_initAll(void);
+
+/***********************************************************************\
+* Name   : Slave_doneAll
+* Purpose: deinitialize slaves
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Slave_doneAll(void);
+
+/***********************************************************************\
 * Name   : Slave_initHost
 * Purpose: init slave host info
 * Input  : slaveHost   - slave host variable
