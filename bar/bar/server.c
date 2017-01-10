@@ -17892,7 +17892,7 @@ LOCAL bool parseCommand(CommandMsg  *commandMsg,
 {
   String command;
   String arguments;
-  uint   z;
+  uint   i;
 
   assert(commandMsg != NULL);
 
@@ -17913,19 +17913,19 @@ LOCAL bool parseCommand(CommandMsg  *commandMsg,
   }
 
   // find command
-  z = 0;
-  while ((z < SIZE_OF_ARRAY(SERVER_COMMANDS)) && !String_equalsCString(command,SERVER_COMMANDS[z].name))
+  i = 0;
+  while ((i < SIZE_OF_ARRAY(SERVER_COMMANDS)) && !String_equalsCString(command,SERVER_COMMANDS[i].name))
   {
-    z++;
+    i++;
   }
-  if (z >= SIZE_OF_ARRAY(SERVER_COMMANDS))
+  if (i >= SIZE_OF_ARRAY(SERVER_COMMANDS))
   {
     String_delete(arguments);
     String_delete(command);
     return FALSE;
   }
-  commandMsg->serverCommandFunction = SERVER_COMMANDS[z].serverCommandFunction;
-  commandMsg->authorizationState    = SERVER_COMMANDS[z].authorizationState;
+  commandMsg->serverCommandFunction = SERVER_COMMANDS[i].serverCommandFunction;
+  commandMsg->authorizationState    = SERVER_COMMANDS[i].authorizationState;
 
   // parse arguments
   commandMsg->argumentMap = StringMap_new();
@@ -17937,9 +17937,9 @@ LOCAL bool parseCommand(CommandMsg  *commandMsg,
   }
   if (!StringMap_parse(commandMsg->argumentMap,arguments,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
   {
+    StringMap_delete(commandMsg->argumentMap);
     String_delete(arguments);
     String_delete(command);
-    StringMap_delete(commandMsg->argumentMap);
     return FALSE;
   }
 
@@ -18801,7 +18801,7 @@ Errors Server_run(ServerModes       mode,
   }
   if (!Thread_init(&slaveConnectThread,"BAR slave connect",globalOptions.niceLevel,slaveConnectThreadCode,NULL))
   {
-    HALT_FATAL_ERROR("Cannot initialize slave thread!");
+    HALT_FATAL_ERROR("Cannot initialize slave connect thread!");
   }
   if (Index_isAvailable())
   {
@@ -18825,6 +18825,12 @@ Errors Server_run(ServerModes       mode,
     {
       HALT_FATAL_ERROR("Cannot initialize purge expire thread!");
     }
+  }
+//TODO
+  error = Slave_initAll();
+  if (error != ERROR_NONE)
+  {
+    HALT_FATAL_ERROR("Cannot initialize slaves (error: %s)!",Error_getText(error));
   }
 
   // run as server
@@ -19272,6 +19278,8 @@ Errors Server_run(ServerModes       mode,
     Thread_done(&indexThread);
     Semaphore_done(&indexThreadTrigger);
   }
+//TODO
+Slave_doneAll();
   Thread_done(&slaveConnectThread);
   Thread_done(&pauseThread);
   Thread_done(&schedulerThread);
