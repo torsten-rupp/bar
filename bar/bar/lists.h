@@ -115,14 +115,14 @@ typedef enum
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define List_init(...) __List_init(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define List_init(...)          __List_init         (__FILE__,__LINE__, ## __VA_ARGS__)
   #define List_initDuplicate(...) __List_initDuplicate(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define List_duplicate(...) __List_duplicate(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define List_newNode(...) __List_newNode(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define List_deleteNode(...) __List_deleteNode(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define List_insert(...) __List_insert(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define List_append(...) __List_append(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define List_appendUniq(...) __List_appendUniq(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define List_duplicate(...)     __List_duplicate    (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define List_newNode(...)       __List_newNode      (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define List_deleteNode(...)    __List_deleteNode   (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define List_insert(...)        __List_insert       (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define List_append(...)        __List_append       (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define List_appendUniq(...)    __List_appendUniq   (__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 #define LIST_STATIC_INIT {NULL,NULL}
