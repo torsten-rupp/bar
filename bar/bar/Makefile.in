@@ -3762,7 +3762,7 @@ test_master_slave_operations_master: \
 	  : start master server; \
           $(INSTALL) -d $(TEST_SERVER_DIRECTORY); \
           $(INSTALL) -d $(TEST_SERVER_JOBS); \
-          $(INSTALL) bar.cfg $(TEST_SERVER_CONFIG); \
+          $(INSTALL) -m 600 bar.cfg $(TEST_SERVER_CONFIG); \
           $(RMF) $(TEST_SERVER_JOBS)/__test__; \
 	  DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) \
 	    $(TEST_OPTIONS) \
@@ -3823,7 +3823,7 @@ test_master_slave_operations_slave: \
           else \
             $(INSTALL) -d $(TEST_SLAVE_DIRECTORY); \
             $(INSTALL) -d $(TEST_SLAVE_JOBS); \
-            $(INSTALL) bar.cfg $(TEST_SLAVE_CONFIG); \
+            $(INSTALL) -m 600 bar.cfg $(TEST_SLAVE_CONFIG); \
             $(RMF) $(TEST_SLAVE_JOBS)/__test__; \
 	    DISPLAY= SSH_ASKPASS= $(TEST_BAR_PREFIX) $(TEST_BAR) \
 	      --no-default-config --config=$(TEST_SLAVE_CONFIG) \
