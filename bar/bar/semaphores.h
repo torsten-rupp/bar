@@ -383,7 +383,9 @@ void Semaphore_signalModified(Semaphore *semaphore);
 *          timeout   - timeout [ms] or WAIT_FOREVER
 * Output : -
 * Return : TRUE if modified, FALSE on timeout
-* Notes  : -
+* Notes  : semaphore is signaling "modified" when:
+*            - Semaphore_signalModified() is called or
+*            - unlock of read/write lock
 \***********************************************************************/
 
 #ifdef NDEBUG
