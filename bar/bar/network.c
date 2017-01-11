@@ -621,6 +621,11 @@ Errors Network_connect(SocketHandle *socketHandle,
               socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
               fcntl(socketHandle->handle,F_SETFL,socketFlags = O_NONBLOCK);
             }
+            if ((flags & SOCKET_FLAG_NO_DELAY    ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(void*)&n,sizeof(int));
+            }
             if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
               n = 1;
@@ -631,6 +636,11 @@ Errors Network_connect(SocketHandle *socketHandle,
             {
               n = 1;
               ioctlsocket(socketHandle->handle,FIONBIO,&n);
+            }
+            if ((flags & SOCKET_FLAG_NO_DELAY    ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(char*)&n,sizeof(int));
             }
             if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {

@@ -38,7 +38,8 @@
 
 #define SOCKET_FLAG_NONE         0
 #define SOCKET_FLAG_NON_BLOCKING (1 << 0)
-#define SOCKET_FLAG_KEEP_ALIVE   (1 << 1)
+#define SOCKET_FLAG_NO_DELAY     (1 << 1)
+#define SOCKET_FLAG_KEEP_ALIVE   (1 << 2)
 
 /***************************** Datatypes *******************************/
 typedef enum
