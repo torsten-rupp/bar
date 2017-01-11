@@ -18932,7 +18932,7 @@ Errors Server_run(ServerModes       mode,
     {
       error = Network_accept(&socketHandle,
                              &serverSocketHandle,
-                             SOCKET_FLAG_NON_BLOCKING
+                             SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
                             );
       if (error == ERROR_NONE)
       {

@@ -189,7 +189,7 @@ LOCAL Errors slaveConnect(SocketHandle *socketHandle,
                           0,
                           NULL,  // sshPrivateKeyFileName
                           0,
-                          SOCKET_FLAG_NON_BLOCKING
+                          SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
                          );
   if (error != ERROR_NONE)
   {
@@ -309,10 +309,10 @@ LOCAL void processSlave(SlaveNode *slaveNode, String line)
     resultNode->commandId     = commandId;
     resultNode->error         = error;
     resultNode->completedFlag = completedFlag;
-    String_set(resultNode->data,data);
+    resultNode->data          = String_duplicate(data);
     List_append(&slaveNode->resultList,resultNode);
 
-fprintf(stderr,"%s, %d: signal commandId=%d data=%s %d\n",__FILE__,__LINE__,commandId,String_cString(data),slaveNode->resultList.count);
+fprintf(stderr,"%s, %d: %p signal commandId=%d data=%s %d\n",__FILE__,__LINE__,slaveNode,commandId,String_cString(data),slaveNode->resultList.count);
     Semaphore_signalModified(&slaveList.lock);
   }
   else if (!String_parse(line,STRING_BEGIN,"%u %S % S",NULL,&commandId,command,data))
@@ -438,8 +438,9 @@ fprintf(stderr,"%s, %d: connect result host=%s: %s\n",__FILE__,__LINE__,String_c
       }
 #endif
     }
+    if (quitFlag) break;
 
-    // wait for slave results/requests
+    // get connected slaves poll information
     pollfdCount = 0;
     SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
@@ -459,80 +460,94 @@ fprintf(stderr,"%s, %d: connect result host=%s: %s\n",__FILE__,__LINE__,String_c
         }
       }
     }
-    pollTimeout.tv_sec  = (long)(SLEEP_TIME_SLAVE_THREAD /US_PER_SECOND);
-    pollTimeout.tv_nsec = (long)((SLEEP_TIME_SLAVE_THREAD%US_PER_SECOND)*1000LL);
-    (void)ppoll(pollfds,pollfdCount,&pollTimeout,&signalMask);
-fprintf(stderr,"%s, %d: pollfdCount=%d\n",__FILE__,__LINE__,pollfdCount);
 
-    // process slave requests
-    for (pollfdIndex = 0; pollfdIndex < pollfdCount; pollfdIndex++)
+    if (pollfdCount > 0)
     {
-      if ((pollfds[pollfdIndex].revents & POLLIN) != 0)
+      // wait for slave results/requests
+      pollTimeout.tv_sec  = SLEEP_TIME_SLAVE_THREAD;
+      pollTimeout.tv_nsec = 0;
+  fprintf(stderr,"%s, %d: wait.................\n",__FILE__,__LINE__);
+      (void)ppoll(pollfds,pollfdCount,&pollTimeout,&signalMask);
+      if (quitFlag) break;
+
+      // process slave requests
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        Network_receive(&slaveNode->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
-
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        for (pollfdIndex = 0; pollfdIndex < pollfdCount; pollfdIndex++)
         {
-          // find client node
-          slaveNode = LIST_FIND(&slaveList,
-                                 slaveNode,
-                                 pollfds[pollfdIndex].fd == Network_getSocket(&slaveNode->socketHandle)
-                                );
-          if (slaveNode != NULL)
-          {
-            if (receivedBytes > 0)
-            {
-              do
-              {
-fprintf(stderr,"%s, %d: buffer=%s\n",__FILE__,__LINE__,buffer);
-                // received data -> process
-                for (i = 0; i < receivedBytes; i++)
-                {
-                  if (buffer[i] != '\n')
-                  {
-                    String_appendChar(slaveNode->line,buffer[i]);
-                  }
-                  else
-                  {
-                    processSlave(slaveNode,slaveNode->line);
-                    String_clear(slaveNode->line);
-                  }
-                }
-                error = Network_receive(&slaveNode->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
-              }
-              while ((error == ERROR_NONE) && (receivedBytes > 0));
-            }
-            else
-            {
-              // disconnect
-//              deleteClient(disconnectClientNode);
+          // find slave
+          slaveNode = LIST_FIND(&slaveList,slaveNode,pollfds[pollfdIndex].fd == Network_getSocket(&slaveNode->socketHandle));
+assert(slaveNode != NULL);
 
-              printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
+          if ((pollfds[pollfdIndex].revents & POLLIN) != 0)
+          {
+            Network_receive(&slaveNode->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+
+            SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+            {
+              // find client node
+              slaveNode = LIST_FIND(&slaveList,
+                                     slaveNode,
+                                     pollfds[pollfdIndex].fd == Network_getSocket(&slaveNode->socketHandle)
+                                    );
+              if (slaveNode != NULL)
+              {
+                if (receivedBytes > 0)
+                {
+                  do
+                  {
+                    // received data -> process
+                    for (i = 0; i < receivedBytes; i++)
+                    {
+                      if (buffer[i] != '\n')
+                      {
+                        String_appendChar(slaveNode->line,buffer[i]);
+                      }
+                      else
+                      {
+                        processSlave(slaveNode,slaveNode->line);
+                        String_clear(slaveNode->line);
+                      }
+                    }
+                    error = Network_receive(&slaveNode->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+                  }
+                  while ((error == ERROR_NONE) && (receivedBytes > 0));
+                }
+                else
+                {
+                  // disconnect
+//                  deleteClient(disconnectClientNode);
+
+                  printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
+                }
+              }
             }
           }
-        }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-      }
-      else if ((pollfds[pollfdIndex].revents & (POLLERR|POLLNVAL)) != 0)
-      {
-        // error/disconnect
-        // done client and free resources
-//            deleteClient(disconnectClientNode);
+          else if ((pollfds[pollfdIndex].revents & (POLLERR|POLLNVAL)) != 0)
+          {
+            // error/disconnect
+            // done client and free resources
+//                deleteClient(disconnectClientNode);
 fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
 
-        printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
+            printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
+          }
+        }
       }
     }
-
-    // sleep
-//    delayThread(SLEEP_TIME_SLAVE_THREAD,NULL);
-    if (pollfdCount == 0)
+    else
     {
-      Misc_udelay(SLEEP_TIME_SLAVE_THREAD*US_PER_SECOND);
+      // sleep
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        (void)Semaphore_waitModified(&slaveList.lock,SLEEP_TIME_SLAVE_THREAD*MS_PER_SECOND);
+      }
     }
+    if (quitFlag) break;
   }
 
   // free resources
+  free(pollfds);
 }
 
 /***********************************************************************\
@@ -810,7 +825,7 @@ Errors Slave_connect(const SlaveHost                *slaveHost,
                           0,
                           NULL,  // sshPrivateKey
                           0,
-                          SOCKET_FLAG_NON_BLOCKING
+                          SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
                          );
   if (error != ERROR_NONE)
   {
@@ -955,6 +970,7 @@ LOCAL Errors Slave_vexecuteCommand(const SlaveHost *slaveHost,
 
   // init variables
   line = String_new();
+  data = String_new();
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
@@ -964,6 +980,7 @@ LOCAL Errors Slave_vexecuteCommand(const SlaveHost *slaveHost,
     if (slaveNode == NULL)
     {
       Semaphore_unlock(&slaveList.lock);
+      String_delete(data);
       String_delete(line);
       return ERROR_SLAVE_DISCONNECTED;
     }
@@ -977,6 +994,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (error != ERROR_NONE)
       {
         Semaphore_unlock(&slaveList.lock);
+        String_delete(data);
         String_delete(line);
         return error;
       }
@@ -1021,12 +1039,12 @@ fprintf(stderr,"%s, %d: sent %s\n",__FILE__,__LINE__,String_cString(line));
     do
     {
       // wait
-      if (List_isEmpty(&slaveNode->resultList))
+      while (List_isEmpty(&slaveNode->resultList))
       {
-        if (!Semaphore_waitModified(&slaveList.lock,300LL*1000))
+        if (!Semaphore_waitModified(&slaveList.lock,300LL*MS_PER_SECOND))
         {
-fprintf(stderr,"%s, %d: usp\n",__FILE__,__LINE__);
           Semaphore_unlock(&slaveList.lock);
+          String_delete(data);
           String_delete(line);
           return ERROR_NETWORK_TIMEOUT;
         }
@@ -1036,19 +1054,20 @@ fprintf(stderr,"%s, %d: usp\n",__FILE__,__LINE__);
       resultNode = List_removeFirst(&slaveNode->resultList);
       if (resultNode == NULL)
       {
-fprintf(stderr,"%s, %d: usp2\n",__FILE__,__LINE__);
         Semaphore_unlock(&slaveList.lock);
+        String_delete(data);
         String_delete(line);
         return ERROR_NETWORK_TIMEOUT;
       }
       commandId = resultNode->commandId;
       error     = resultNode->error;
-      data      = resultNode->data;
+      String_set(data,resultNode->data);
+      freeResultNode(resultNode,NULL);
       LIST_DELETE_NODE(resultNode);
     }
     while (resultNode->commandId != slaveNode->commandId);
     printInfo(4,"Received slave result: error=%d completedFlag=%d result=%s\n",error,String_cString(data));
-fprintf(stderr,"%s, %d: received error=%d completedFlag=%d result=%s\n",__FILE__,__LINE__,error,String_cString(data));
+fprintf(stderr,"%s, %d: received error=%d result=%s\n",__FILE__,__LINE__,error,String_cString(data));
 
     // check error
     if (error != ERROR_NONE)
@@ -1248,12 +1267,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   SET_OPTION_INTEGER  ("ssh-port",               jobOptions->sshServer.port              );
   SET_OPTION_STRING   ("ssh-login-name",         jobOptions->sshServer.loginName         );
   SET_OPTION_PASSWORD ("ssh-password",           jobOptions->sshServer.password          );
-  SET_OPTION_STRING   ("ssh-public-key-data",    Misc_base64Encode(s,jobOptions->sshServer.publicKey.data,jobOptions->sshServer.publicKey.length));
-  SET_OPTION_STRING   ("ssh-private-key-data",   Misc_base64Encode(s,jobOptions->sshServer.privateKey.data,jobOptions->sshServer.privateKey.length));
-
-//  SET_OPTION_STRING   ("include-file-command",   includeFileCommand);
-//  SET_OPTION_STRING   ("include-image-command",  includeImageCommand);
-//  SET_OPTION_STRING   ("exclude-command",        excludeCommand);
+  SET_OPTION_STRING   ("ssh-public-key",         Misc_base64Encode(s,jobOptions->sshServer.publicKey.data,jobOptions->sshServer.publicKey.length));
+  SET_OPTION_STRING   ("ssh-private-key",        Misc_base64Encode(s,jobOptions->sshServer.privateKey.data,jobOptions->sshServer.privateKey.length));
 
   SET_OPTION_INTEGER64("max-storage-size",       jobOptions->maxStorageSize);
 
