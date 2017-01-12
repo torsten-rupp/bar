@@ -1056,7 +1056,7 @@ Errors Storage_prepare(const String     storageName,
 /***********************************************************************\
 * Name   : Storage_init
 * Purpose: init new storage
-* Input  : storage                         - storage variable
+* Input  : storageInfo                     - storage info variable
 *          storageSpecifier                - storage specifier structure
 *          jobOptions                      - job options or NULL
 *          maxBandWidthList                - list with max. band width
@@ -1198,7 +1198,7 @@ uint Storage_getVolumeNumber(const StorageInfo *storageInfo);
 /***********************************************************************\
 * Name   : Storage_setVolumeNumber
 * Purpose: set volume number
-* Input  : storage      - storage
+* Input  : storageInfo  - storage info
 *          volumeNumber - volume number
 * Output : -
 * Return : -
@@ -1223,8 +1223,8 @@ Errors Storage_unloadVolume(StorageInfo *storageInfo);
 /***********************************************************************\
 * Name   : Storage_exists
 * Purpose: check if storage file exists
-* Input  : storage     - storage
-*          archiveName - archove name (can be NULL)
+* Input  : storageInfo - storage info
+*          archiveName - archive name (can be NULL)
 * Output : -
 * Return : TRUE iff exists
 * Notes  : -
@@ -1401,8 +1401,8 @@ Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName);
 /***********************************************************************\
 * Name   : Storage_pruneDirectories
 * Purpose: delete empty directories in path
-* Input  : storage  - storage
-*          fileName - file name (can be NULL)
+* Input  : storageInfo - storage info
+*          fileName    - file name (can be NULL)
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
@@ -1415,7 +1415,7 @@ still not complete
 /***********************************************************************\
 * Name   : Storage_getFileInfo
 * Purpose: get storage file info
-* Input  : storage     - storage
+* Input  : storageInfo - storage info
 *          archiveName - archive name (can be NULL)
 *          fileInfo    - file info variable
 * Output : fileInfo - file info
