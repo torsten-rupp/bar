@@ -204,6 +204,7 @@ typedef struct JobNode
 
   // job running state
   String          master;                               // master who created job or NULL
+  uint            masterPort;                           // master port number or 0
   bool            isConnected;                          // TRUE if slave connected
 
   JobStates       state;                                // current state of job
