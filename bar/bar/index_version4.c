@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __INDEX_IMPLEMENATION__
+#define __INDEX_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
