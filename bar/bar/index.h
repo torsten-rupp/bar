@@ -526,12 +526,12 @@ Errors Index_rollbackTransaction(IndexHandle *indexHandle);
 \***********************************************************************/
 
 INLINE IndexTypes Index_getType(IndexId indexId);
-#if defined(NDEBUG) || defined(__INDEX_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__INDEX_IMPLEMENTATION__)
 INLINE IndexTypes Index_getType(IndexId indexId)
 {
   return INDEX_TYPE_(indexId);
 }
-#endif /* NDEBUG || __INDEX_IMPLEMENATION__ */
+#endif /* NDEBUG || __INDEX_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Index_containsType
@@ -559,12 +559,12 @@ bool Index_containsType(const IndexId indexIds[],
 \***********************************************************************/
 
 INLINE DatabaseId Index_getDatabaseId(IndexId indexId);
-#if defined(NDEBUG) || defined(__INDEX_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__INDEX_IMPLEMENTATION__)
 INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 {
   return INDEX_DATABASE_ID_(indexId);
 }
-#endif /* NDEBUG || __INDEX_IMPLEMENATION__ */
+#endif /* NDEBUG || __INDEX_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Index_findUUIDByJobUUID
