@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __ARCHIVE_IMPLEMENATION__
+#define __ARCHIVE_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory

@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __DATABASE_IMPLEMENATION__
+#define __DATABASE_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory

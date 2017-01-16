@@ -405,12 +405,12 @@ void Database_yield(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 INLINE bool Database_isLocked(DatabaseHandle *databaseHandle);
-#if defined(NDEBUG) || defined(__DATABASE_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__DATABASE_IMPLEMENTATION__)
 INLINE bool Database_isLocked(DatabaseHandle *databaseHandle)
 {
   return Semaphore_isLocked(&databaseHandle->lock);
 }
-#endif /* NDEBUG || __DATABASE_IMPLEMENATION__ */
+#endif /* NDEBUG || __DATABASE_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Database_setEnabledSync

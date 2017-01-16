@@ -1526,14 +1526,14 @@ Errors Archive_seek(ArchiveHandle *archiveHandle,
 \***********************************************************************/
 
 INLINE uint64 Archive_getEntries(const ArchiveHandle *archiveHandle);
-#if defined(NDEBUG) || defined(__ARCHIVE_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__ARCHIVE_IMPLEMENTATION__)
 INLINE uint64 Archive_getEntries(const ArchiveHandle *archiveHandle)
 {
   assert(archiveHandle != NULL);
 
   return archiveHandle->entries;
 }
-#endif /* NDEBUG || __ARCHIVE_IMPLEMENATION__ */
+#endif /* NDEBUG || __ARCHIVE_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Archive_getSize
