@@ -253,7 +253,7 @@ bool __Semaphore_lock(const char         *fileName,
 INLINE void Semaphore_forceLock(Semaphore          *semaphore,
                                 SemaphoreLockTypes semaphoreLockType
                                );
-#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENTATION__)
 INLINE void Semaphore_forceLock(Semaphore          *semaphore,
                                 SemaphoreLockTypes semaphoreLockType
                                )
@@ -265,14 +265,14 @@ INLINE void Semaphore_forceLock(Semaphore          *semaphore,
     HALT_INTERNAL_ERROR("Cannot lock semaphore at %s, %u",__FILE__,__LINE__);
   }
 }
-#endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
+#endif /* NDEBUG || __SEMAPHORES_IMPLEMENTATION__ */
 #else /* not NDEBUG */
 INLINE void __Semaphore_forceLock(const char         *fileName,
                                   ulong              lineNb,
                                   Semaphore          *semaphore,
                                   SemaphoreLockTypes semaphoreLockType
                                  );
-#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENTATION__)
 INLINE void __Semaphore_forceLock(const char         *fileName,
                                   ulong              lineNb,
                                   Semaphore          *semaphore,
@@ -286,7 +286,7 @@ INLINE void __Semaphore_forceLock(const char         *fileName,
     HALT_INTERNAL_ERROR("Cannot lock semaphore at %s, %lu",fileName,lineNb);
   }
 }
-#endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
+#endif /* NDEBUG || __SEMAPHORES_IMPLEMENTATION__ */
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -314,14 +314,14 @@ void __Semaphore_unlock(const char *fileName, ulong lineNb, Semaphore *semaphore
 \***********************************************************************/
 
 INLINE uint Semaphore_lockCount(Semaphore *semaphore);
-#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENTATION__)
 INLINE uint Semaphore_lockCount(Semaphore *semaphore)
 {
   assert(semaphore != NULL);
 
   return semaphore->readLockCount+semaphore->readWriteLockCount;
 }
-#endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
+#endif /* NDEBUG || __SEMAPHORES_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Semaphore_isLocked
@@ -333,14 +333,14 @@ INLINE uint Semaphore_lockCount(Semaphore *semaphore)
 \***********************************************************************/
 
 INLINE bool Semaphore_isLocked(Semaphore *semaphore);
-#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENTATION__)
 INLINE bool Semaphore_isLocked(Semaphore *semaphore)
 {
   assert(semaphore != NULL);
 
   return semaphore->lockType != SEMAPHORE_LOCK_TYPE_NONE;
 }
-#endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
+#endif /* NDEBUG || __SEMAPHORES_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Semaphore_isOwned
@@ -354,14 +354,14 @@ INLINE bool Semaphore_isLocked(Semaphore *semaphore)
 
 #ifndef NDEBUG
 INLINE bool Semaphore_isOwned(const Semaphore *semaphore);
-#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENTATION__)
 INLINE bool Semaphore_isOwned(const Semaphore *semaphore)
 {
   assert(semaphore != NULL);
 
   return (semaphore->lockedByCount > 0) && (Thread_equalThreads(semaphore->lockedBy[semaphore->lockedByCount-1].threadId,Thread_getCurrentId()) != 0);
 }
-#endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
+#endif /* NDEBUG || __SEMAPHORES_IMPLEMENTATION__ */
 #endif /* not NDEBUG */
 
 /***********************************************************************\

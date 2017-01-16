@@ -139,12 +139,12 @@ bool Thread_join(Thread *thread);
 \***********************************************************************/
 
 INLINE void Thread_yield(void);
-#if defined(NDEBUG) || defined(__THREADS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__THREADS_IMPLEMENTATION__)
 INLINE void Thread_yield(void)
 {
   sched_yield();
 }
-#endif /* NDEBUG || __THREADS_IMPLEMENATION__ */
+#endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Thread_delay
@@ -167,12 +167,12 @@ void Thread_delay(uint time);
 \***********************************************************************/
 
 INLINE ThreadId Thread_getCurrentId(void);
-#if defined(NDEBUG) || defined(__THREADS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__THREADS_IMPLEMENTATION__)
 INLINE ThreadId Thread_getCurrentId(void)
 {
   return (ThreadId)pthread_self();
 }
-#endif /* NDEBUG || __THREADS_IMPLEMENATION__ */
+#endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Thread_equalThreads
@@ -184,12 +184,12 @@ INLINE ThreadId Thread_getCurrentId(void)
 \***********************************************************************/
 
 INLINE bool Thread_equalThreads(const ThreadId threadId0, const ThreadId threadId1);
-#if defined(NDEBUG) || defined(__THREADS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__THREADS_IMPLEMENTATION__)
 INLINE bool Thread_equalThreads(const ThreadId threadId0, const ThreadId threadId1)
 {
   return pthread_equal(threadId0,threadId1) != 0;
 }
-#endif /* NDEBUG || __THREADS_IMPLEMENATION__ */
+#endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Thread_isCurrentThread
@@ -201,12 +201,12 @@ INLINE bool Thread_equalThreads(const ThreadId threadId0, const ThreadId threadI
 \***********************************************************************/
 
 INLINE bool Thread_isCurrentThread(const ThreadId threadId);
-#if defined(NDEBUG) || defined(__THREADS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__THREADS_IMPLEMENTATION__)
 INLINE bool Thread_isCurrentThread(const ThreadId threadId)
 {
   return pthread_equal(threadId,pthread_self()) != 0;
 }
-#endif /* NDEBUG || __THREADS_IMPLEMENATION__ */
+#endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Thread_getName

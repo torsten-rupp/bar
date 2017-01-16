@@ -321,7 +321,7 @@ INLINE bool Dictionary_contains(Dictionary *dictionary,
                                 const void *keyData,
                                 ulong      keyLength
                                );
-#if defined(NDEBUG) || defined(__DICTIONARY_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__DICTIONARY_IMPLEMENTATION__)
 INLINE bool Dictionary_contains(Dictionary *dictionary,
                                 const void *keyData,
                                 ulong      keyLength
@@ -331,7 +331,7 @@ INLINE bool Dictionary_contains(Dictionary *dictionary,
 
   return Dictionary_find(dictionary,keyData,keyLength,NULL,NULL);
 }
-#endif /* defined(NDEBUG) || defined(__DICTIONARY_IMPLEMENATION__) */
+#endif /* defined(NDEBUG) || defined(__DICTIONARY_IMPLEMENTATION__) */
 
 /***********************************************************************\
 * Name   : Dictionary_initIterator

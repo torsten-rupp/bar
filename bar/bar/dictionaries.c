@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __DICTIONARY_IMPLEMENATION__
+#define __DICTIONARY_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>

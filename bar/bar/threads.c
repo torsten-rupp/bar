@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __THREADS_IMPLEMENATION__
+#define __THREADS_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory

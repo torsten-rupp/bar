@@ -240,14 +240,14 @@ void Network_disconnect(SocketHandle *socketHandle);
 \***********************************************************************/
 
 INLINE bool Network_isConnected(SocketHandle *socketHandle);
-#if defined(NDEBUG) || defined(__NETWORK_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__NETWORK_IMPLEMENTATION__)
 INLINE bool Network_isConnected(SocketHandle *socketHandle)
 {
   assert(socketHandle != NULL);
 
   return socketHandle->isConnected;
 }
-#endif /* NDEBUG || __NETWORK_IMPLEMENATION__ */
+#endif /* NDEBUG || __NETWORK_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Network_getSocket
@@ -259,14 +259,14 @@ INLINE bool Network_isConnected(SocketHandle *socketHandle)
 \***********************************************************************/
 
 INLINE int Network_getSocket(const SocketHandle *socketHandle);
-#if defined(NDEBUG) || defined(__NETWORK_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__NETWORK_IMPLEMENTATION__)
 INLINE int Network_getSocket(const SocketHandle *socketHandle)
 {
   assert(socketHandle != NULL);
 
   return socketHandle->handle;
 }
-#endif /* NDEBUG || __NETWORK_IMPLEMENATION__ */
+#endif /* NDEBUG || __NETWORK_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Network_getSSHSession
@@ -279,7 +279,7 @@ INLINE int Network_getSocket(const SocketHandle *socketHandle)
 
 #ifdef HAVE_SSH2
 INLINE LIBSSH2_SESSION *Network_getSSHSession(SocketHandle *socketHandle);
-#if defined(NDEBUG) || defined(__NETWORK_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__NETWORK_IMPLEMENTATION__)
 INLINE LIBSSH2_SESSION *Network_getSSHSession(SocketHandle *socketHandle)
 {
   assert(socketHandle != NULL);
@@ -287,7 +287,7 @@ INLINE LIBSSH2_SESSION *Network_getSSHSession(SocketHandle *socketHandle)
 
   return socketHandle->ssh2.session;
 }
-#endif /* NDEBUG || __NETWORK_IMPLEMENATION__ */
+#endif /* NDEBUG || __NETWORK_IMPLEMENTATION__ */
 #endif /* HAVE_SSH2 */
 
 /***********************************************************************\
