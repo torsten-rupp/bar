@@ -293,14 +293,14 @@ void __RingBuffer_delete(const char *__fileName__, ulong __lineNb__, RingBuffer 
 \***********************************************************************/
 
 INLINE ulong RingBuffer_getSize(const RingBuffer *ringBuffer);
-#if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENTATION__)
 INLINE ulong RingBuffer_getSize(const RingBuffer *ringBuffer)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
   return (ringBuffer != NULL) ? ringBuffer->size-1 : 0L;
 }
-#endif /* NDEBUG || __RINGBUFFER_IMPLEMENATION__ */
+#endif /* NDEBUG || __RINGBUFFER_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : RingBuffer_resize
@@ -337,14 +337,14 @@ void RingBuffer_clear(RingBuffer *ringBuffer, RingBufferElementFreeFunction ring
 \***********************************************************************/
 
 INLINE ulong RingBuffer_getFree(const RingBuffer *ringBuffer);
-#if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENTATION__)
 INLINE ulong RingBuffer_getFree(const RingBuffer *ringBuffer)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
   return (ringBuffer != NULL) ? ringBuffer->size-1-ringBuffer->length : 0L;
 }
-#endif /* NDEBUG || __RINGBUFFER_IMPLEMENATION__ */
+#endif /* NDEBUG || __RINGBUFFER_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : RingBuffer_getAvailable
@@ -356,14 +356,14 @@ INLINE ulong RingBuffer_getFree(const RingBuffer *ringBuffer)
 \***********************************************************************/
 
 INLINE ulong RingBuffer_getAvailable(const RingBuffer *ringBuffer);
-#if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENTATION__)
 INLINE ulong RingBuffer_getAvailable(const RingBuffer *ringBuffer)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
   return (ringBuffer != NULL) ? ringBuffer->length : 0L;
 }
-#endif /* NDEBUG || __RINGBUFFER_IMPLEMENATION__ */
+#endif /* NDEBUG || __RINGBUFFER_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : RingBuffer_isEmpty
@@ -375,7 +375,7 @@ INLINE ulong RingBuffer_getAvailable(const RingBuffer *ringBuffer)
 \***********************************************************************/
 
 INLINE bool RingBuffer_isEmpty(const RingBuffer *ringBuffer);
-#if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENTATION__)
 INLINE bool RingBuffer_isEmpty(const RingBuffer *ringBuffer)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
@@ -383,7 +383,7 @@ INLINE bool RingBuffer_isEmpty(const RingBuffer *ringBuffer)
 //  return (ringBuffer == NULL) || (ringBuffer->nextIn == ringBuffer->nextOut);
   return (ringBuffer == NULL) || (RingBuffer_getAvailable(ringBuffer) == 0);
 }
-#endif /* NDEBUG || __RINGBUFFER_IMPLEMENATION__ */
+#endif /* NDEBUG || __RINGBUFFER_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : RingBuffer_isFull
@@ -395,14 +395,14 @@ INLINE bool RingBuffer_isEmpty(const RingBuffer *ringBuffer)
 \***********************************************************************/
 
 INLINE bool RingBuffer_isFull(const RingBuffer *ringBuffer);
-#if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENTATION__)
 INLINE bool RingBuffer_isFull(const RingBuffer *ringBuffer)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
   return (ringBuffer == NULL) || (RingBuffer_getFree(ringBuffer) == 0);
 }
-#endif /* NDEBUG || __RINGBUFFER_IMPLEMENATION__ */
+#endif /* NDEBUG || __RINGBUFFER_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : RingBuffer_put
@@ -528,14 +528,14 @@ void RingBuffer_decrement(RingBuffer *ringBuffer, ulong n);
 \***********************************************************************/
 
 INLINE const void *RingBuffer_cArray(RingBuffer *ringBuffer);
-#if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENTATION__)
 INLINE const void *RingBuffer_cArray(RingBuffer *ringBuffer)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
   return RingBuffer_cArrayOut(ringBuffer);
 }
-#endif /* NDEBUG || __RINGBUFFER_IMPLEMENATION__ */
+#endif /* NDEBUG || __RINGBUFFER_IMPLEMENTATION__ */
 
 #ifndef NDEBUG
 /***********************************************************************\

@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __RINGBUFFER_IMPLEMENATION__
+#define __RINGBUFFER_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory

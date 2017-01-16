@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __SEMAPHORES_IMPLEMENATION__
+#define __SEMAPHORES_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include "config.h"
