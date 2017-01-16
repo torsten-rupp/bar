@@ -159,8 +159,6 @@ typedef enum
   STORAGE_TYPE_BD,
   STORAGE_TYPE_DEVICE,
 
-  STORAGE_TYPE_MASTER,
-
   STORAGE_TYPE_ANY,
 
   STORAGE_TYPE_UNKNOWN
@@ -213,6 +211,7 @@ typedef struct
 typedef struct
 {
   Semaphore                       lock;
+  SocketHandle                    *masterSocketHandle;
   StorageSpecifier                storageSpecifier;          // storage specifier data
   const JobOptions                *jobOptions;
 
@@ -778,14 +777,14 @@ void Storage_doneAll(void);
 \***********************************************************************/
 
 INLINE bool Storage_isPatternSpecifier(const StorageSpecifier *storageSpecifier);
-#if defined(NDEBUG) || defined(__STORAGE_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__STORAGE_IMPLEMENTATION__)
 INLINE bool Storage_isPatternSpecifier(const StorageSpecifier *storageSpecifier)
 {
   assert(storageSpecifier != NULL);
 
   return storageSpecifier->archivePatternString != NULL;
 }
-#endif /* NDEBUG || __STORAGE_IMPLEMENATION__ */
+#endif /* NDEBUG || __STORAGE_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Storage_equalSpecifiers
@@ -814,14 +813,14 @@ bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
 \***********************************************************************/
 
 INLINE bool Storage_isInFileSystem(const StorageSpecifier *storageSpecifier);
-#if defined(NDEBUG) || defined(__STORAGE_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__STORAGE_IMPLEMENTATION__)
 INLINE bool Storage_isInFileSystem(const StorageSpecifier *storageSpecifier)
 {
   assert(storageSpecifier != NULL);
 
   return storageSpecifier->type == STORAGE_TYPE_FILESYSTEM;
 }
-#endif /* NDEBUG || __STORAGE_IMPLEMENATION__ */
+#endif /* NDEBUG || __STORAGE_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Storage_parseFTPSpecifier
@@ -1079,6 +1078,7 @@ Errors Storage_prepare(const String     storageName,
 
 #ifdef NDEBUG
   Errors Storage_init(StorageInfo                     *storageInfo,
+                      SocketHandle                    *masterSocketHandle,
                       const StorageSpecifier          *storageSpecifier,
                       const JobOptions                *jobOptions,
                       BandWidthList                   *maxBandWidthList,
@@ -1094,6 +1094,7 @@ Errors Storage_prepare(const String     storageName,
   Errors __Storage_init(const char                      *__fileName__,
                         ulong                           __lineNb__,
                         StorageInfo                     *storageInfo,
+                        SocketHandle                    *masterSocketHandle,
                         const StorageSpecifier          *storageSpecifier,
                         const JobOptions                *jobOptions,
                         BandWidthList                   *maxBandWidthList,
