@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __FILES_IMPLEMENATION__
+#define __FILES_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory

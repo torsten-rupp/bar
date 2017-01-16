@@ -1298,7 +1298,7 @@ Errors File_setFileInfo(ConstString    fileName,
 \***********************************************************************/
 
 INLINE bool File_haveAttributeCompress(const FileInfo *fileInfo);
-#if defined(NDEBUG) || defined(__FILES_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__FILES_IMPLEMENTATION__)
 INLINE bool File_haveAttributeCompress(const FileInfo *fileInfo)
 {
   assert(fileInfo != NULL);
@@ -1311,10 +1311,10 @@ INLINE bool File_haveAttributeCompress(const FileInfo *fileInfo)
     return FALSE;
   #endif
 }
-#endif /* NDEBUG || __FILES_IMPLEMENATION__ */
+#endif /* NDEBUG || __FILES_IMPLEMENTATION__ */
 
 INLINE bool File_haveAttributeNoCompress(const FileInfo *fileInfo);
-#if defined(NDEBUG) || defined(__FILES_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__FILES_IMPLEMENTATION__)
 INLINE bool File_haveAttributeNoCompress(const FileInfo *fileInfo)
 {
   assert(fileInfo != NULL);
@@ -1327,10 +1327,10 @@ INLINE bool File_haveAttributeNoCompress(const FileInfo *fileInfo)
     return FALSE;
   #endif
 }
-#endif /* NDEBUG || __FILES_IMPLEMENATION__ */
+#endif /* NDEBUG || __FILES_IMPLEMENTATION__ */
 
 INLINE bool File_haveAttributeNoDump(const FileInfo *fileInfo);
-#if defined(NDEBUG) || defined(__FILES_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__FILES_IMPLEMENTATION__)
 INLINE bool File_haveAttributeNoDump(const FileInfo *fileInfo)
 {
   assert(fileInfo != NULL);
@@ -1343,7 +1343,7 @@ INLINE bool File_haveAttributeNoDump(const FileInfo *fileInfo)
     return FALSE;
   #endif
 }
-#endif /* NDEBUG || __FILES_IMPLEMENATION__ */
+#endif /* NDEBUG || __FILES_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : File_initExtendedAttributes
@@ -1569,12 +1569,12 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
 
 
 INLINE bool File_isEqualsCast(const FileCast *fileCast0, const FileCast *fileCast1);
-#if defined(NDEBUG) || defined(__FILES_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__FILES_IMPLEMENTATION__)
 INLINE bool File_isEqualsCast(const FileCast *fileCast0, const FileCast *fileCast1)
 {
   return memcmp(fileCast0,fileCast1,sizeof(FileCast)) == 0;
 }
-#endif /* NDEBUG || __FILES_IMPLEMENATION__ */
+#endif /* NDEBUG || __FILES_IMPLEMENTATION__ */
 
 String File_castToString(String string, const FileCast *fileCast);
 
@@ -1588,14 +1588,14 @@ String File_castToString(String string, const FileCast *fileCast);
 \***********************************************************************/
 
 INLINE int File_getDescriptor(FILE *file);
-#if defined(NDEBUG) || defined(__FILES_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__FILES_IMPLEMENTATION__)
 INLINE int File_getDescriptor(FILE *file)
 {
   assert(file != NULL);
 
   return fileno(file);
 }
-#endif /* NDEBUG || __FILES_IMPLEMENATION__ */
+#endif /* NDEBUG || __FILES_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : File_isTerminal
