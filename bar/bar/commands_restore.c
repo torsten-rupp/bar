@@ -2370,6 +2370,7 @@ LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
 
   // init storage
   error = Storage_init(&storageInfo,
+NULL, // masterSocketHandle
                        storageSpecifier,
                        restoreInfo->jobOptions,
                        &globalOptions.maxBandWidthList,

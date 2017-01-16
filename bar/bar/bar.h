@@ -209,12 +209,12 @@ const char *getPasswordTypeName(PasswordTypes passwordType);
 \***********************************************************************/
 
 INLINE bool isPrintInfo(uint verboseLevel);
-#if defined(NDEBUG) || defined(__BAR_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__BAR_IMPLEMENTATION__)
 INLINE bool isPrintInfo(uint verboseLevel)
 {
   return !globalOptions.quietFlag && ((uint)globalOptions.verboseLevel >= verboseLevel);
 }
-#endif /* NDEBUG || __BAR_IMPLEMENATION__ */
+#endif /* NDEBUG || __BAR_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : lockConsole
@@ -1905,7 +1905,7 @@ bool isNoBackup(ConstString pathName);
 \***********************************************************************/
 
 INLINE bool isNoDumpAttribute(const FileInfo *fileInfo, const JobOptions *jobOptions);
-#if defined(NDEBUG) || defined(__BAR_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__BAR_IMPLEMENTATION__)
 INLINE bool isNoDumpAttribute(const FileInfo *fileInfo, const JobOptions *jobOptions)
 {
   assert(fileInfo != NULL);
@@ -1913,7 +1913,7 @@ INLINE bool isNoDumpAttribute(const FileInfo *fileInfo, const JobOptions *jobOpt
 
   return !jobOptions->ignoreNoDumpAttributeFlag && File_haveAttributeNoDump(fileInfo);
 }
-#endif /* NDEBUG || __BAR_IMPLEMENATION__ */
+#endif /* NDEBUG || __BAR_IMPLEMENTATION__ */
 
 #ifdef __cplusplus
   }

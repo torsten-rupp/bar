@@ -172,6 +172,8 @@ void Slave_disconnect(const SlaveHost *slaveHost);
 
 bool Slave_isConnected(const SlaveHost *slaveHost);
 
+SocketHandle *Slave_getSocketHandle(const SlaveHost *slaveHost);
+
 // ----------------------------------------------------------------------
 
 /***********************************************************************\

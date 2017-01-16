@@ -54,7 +54,7 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define _SERVER_DEBUG
+#define SERVER_DEBUG
 #define _NO_SESSION_ID
 #define _SIMULATOR
 
@@ -167,10 +167,6 @@ typedef struct JobNode
 {
   LIST_NODE_HEADER(struct JobNode);
 
-  // job file
-  String          fileName;                             // file name
-  uint64          fileModified;                         // file modified date/time (timestamp)
-
   // job config
   String          uuid;                                 // unique id
   JobTypes        jobType;                              // job type: backup, restore
@@ -202,9 +198,14 @@ typedef struct JobNode
   Password        *sshPassword;                         // SSH password if password mode is 'ask'
   Password        *cryptPassword;                       // crypt password if password mode is 'ask'
 
-  // job running state
+  // job file/master
+  String          fileName;                             // file name or NULL
+  uint64          fileModified;                         // file modified date/time (timestamp)
   String          master;                               // master who created job or NULL
+SocketHandle    *masterSocketHandle;
   uint            masterPort;                           // master port number or 0
+
+  // job running state
   bool            isConnected;                          // TRUE if slave connected
 
   JobStates       state;                                // current state of job
@@ -376,16 +377,20 @@ typedef struct
   Semaphore             lock;
   ClientTypes           type;
 
+  // session data
   SessionId             sessionId;
   CryptKey              publicKey,privateKey;
   AuthorizationStates   authorizationState;
   AuthorizationFailNode *authorizationFailNode;
+
   bool                  quitFlag;
 
+  // commands
   CommandInfoList       commandInfoList;                   // running command list
   RingBuffer            abortedCommandIds;                 // aborted command ids
   uint                  abortedCommandIdStart;
 
+  // action for client
   struct
   {
     Semaphore           lock;
@@ -393,6 +398,7 @@ typedef struct
     StringMap           resultMap;
   } action;
 
+  // i/o
   union
   {
     // i/o via file
@@ -416,6 +422,7 @@ typedef struct
     } network;
   };
 
+  // current list settings
   EntryList             includeEntryList;
   PatternList           excludePatternList;
   MountList             mountList;
@@ -424,6 +431,7 @@ typedef struct
   JobOptions            jobOptions;
   DirectoryInfoList     directoryInfoList;
 
+  // current index ids
   Array                 indexIdArray;                      // ids of uuid/entity/storage ids to list/restore
   Array                 entryIdArray;                      // ids of entries to restore
 } ClientInfo;
@@ -434,13 +442,15 @@ typedef struct ClientNode
   LIST_NODE_HEADER(struct ClientNode);
 
   ClientInfo clientInfo;
-  String     commandString;
+  String     commandString;                                // command buffer
 } ClientNode;
 
 // client list
 typedef struct
 {
   LIST_HEADER(ClientNode);
+  
+  Semaphore lock;
 } ClientList;
 
 /***********************************************************************\
@@ -590,7 +600,6 @@ LOCAL const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 );
 
 /***************************** Variables *******************************/
-LOCAL AuthorizationFailList authorizationFailList;  // list with failed client authorizations
 LOCAL ServerModes           serverMode;
 LOCAL uint                  serverPort;
 LOCAL const Certificate     *serverCA;
@@ -599,6 +608,8 @@ LOCAL const Key             *serverKey;
 LOCAL const Password        *serverPassword;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
+LOCAL ClientList            clientList;             // list with clients
+LOCAL AuthorizationFailList authorizationFailList;  // list with failed client authorizations
 LOCAL JobList               jobList;                // job list
 LOCAL Thread                jobThread;              // thread executing jobs create/restore
 LOCAL Thread                schedulerThread;        // thread scheduling jobs
@@ -1949,14 +1960,16 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 * Name   : newJob
 * Purpose: create new job
 * Input  : jobType  - job type
+*          name     - name
+*          uuid     - UUID or NULL for new UUID
 *          fileName - file name or NULL
-*          uuid     - UUID or NULL
+*          master   - master name or NULL
 * Output : -
 * Return : job node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
+LOCAL JobNode *newJob(JobTypes jobType, ConstString name, ConstString uuid, ConstString fileName, ConstString master)
 {
   JobNode *jobNode;
 
@@ -1968,9 +1981,6 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
   }
 
   // init job node
-  jobNode->fileName                       = String_duplicate(fileName);
-  jobNode->fileModified                   = 0LL;
-
   jobNode->uuid                           = String_new();
   if (!String_isEmpty(uuid))
   {
@@ -1981,7 +1991,7 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
     Misc_getUUID(jobNode->uuid);
   }
   jobNode->jobType                        = jobType;
-  jobNode->name                           = File_getFileBaseName(String_new(),fileName);
+  jobNode->name                           = String_duplicate(name);
   Slave_initHost(&jobNode->slaveHost,serverPort);
   jobNode->archiveName                    = String_new();
   EntryList_init(&jobNode->includeEntryList);
@@ -2003,7 +2013,10 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
   jobNode->sshPassword                    = NULL;
   jobNode->cryptPassword                  = NULL;
 
-  jobNode->master                         = String_new();
+  jobNode->fileName                       = String_duplicate(fileName);
+  jobNode->fileModified                   = 0LL;
+  jobNode->master                         = String_duplicate(master);
+
   jobNode->state                          = JOB_STATE_NONE;
   jobNode->byName                         = String_new();
   jobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
@@ -2051,8 +2064,8 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString fileName, ConstString uuid)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL JobNode *copyJob(JobNode     *jobNode,
-                       ConstString fileName
+LOCAL JobNode *copyJob(const JobNode *jobNode,
+                       ConstString   fileName
                       )
 {
   JobNode *newJobNode;
@@ -3319,7 +3332,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
         jobNode = findJobByName(baseName);
         if (jobNode == NULL)
         {
-          jobNode = newJob(JOB_TYPE_CREATE,fileName,NULL);
+          jobNode = newJob(JOB_TYPE_CREATE,baseName,NULL /* jobUUID */,fileName,NULL /* master */);
           assert(jobNode != NULL);
           Misc_getUUID(jobNode->uuid);
           List_append(&jobList,jobNode);
@@ -3941,7 +3954,7 @@ LOCAL void jobThreadCode(void)
     // execute job
     if (!isSlaveJob(jobNode))
     {
-      // local job -> run
+      // local job -> run on this machine
 
       // parse storage name
       if (jobNode->runningInfo.error == ERROR_NONE)
@@ -4064,8 +4077,10 @@ LOCAL void jobThreadCode(void)
           {
             case JOB_TYPE_CREATE:
               // create archive
-              jobNode->runningInfo.error = Command_create(jobUUID,
+              jobNode->runningInfo.error = Command_create(
+                                                          jobUUID,
                                                           scheduleUUID,
+String_isEmpty(jobNode->master) ? NULL : jobNode->masterSocketHandle,
                                                           storageName,
                                                           &includeEntryList,
                                                           &excludePatternList,
@@ -4268,7 +4283,7 @@ LOCAL void jobThreadCode(void)
     }
     else
     {
-      // start slave create job
+      // slave job -> send to slave and run on slave machine
       jobNode->runningInfo.error = Slave_jobStart(&jobNode->slaveHost,
                                                   jobNode->name,
                                                   jobNode->uuid,
@@ -4283,10 +4298,11 @@ LOCAL void jobThreadCode(void)
                                                   archiveType,
                                                   NULL,  // scheduleTitle,
                                                   NULL,  // scheduleCustomText,
- //                                                      CALLBACK(getCryptPassword,jobNode),
- //                                                      CALLBACK(updateCreateStatusInfo,jobNode),
+//                                                  CALLBACK(getCryptPassword,jobNode),
+//                                                  CALLBACK(updateCreateStatusInfo,jobNode),
                                                   CALLBACK(storageRequestVolume,jobNode)
                                                  );
+fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
         // wait for slave job
@@ -4345,6 +4361,7 @@ fprintf(stderr,"%s, %d: xxxxerror=%s\n",__FILE__,__LINE__,Error_getText(error));
             Misc_udelay(1LL*US_PER_SECOND);
           }
         }
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
       }
     }
 
@@ -4421,7 +4438,7 @@ fprintf(stderr,"%s, %d: xxxxerror=%s\n",__FILE__,__LINE__,Error_getText(error));
     // done log
     doneLog(&logHandle);
 
-    // get job executaion date/time, aggregate info
+    // get job execution date/time, aggregate info
     lastExecutedDateTime = Misc_getCurrentDateTime();
     getAggregateInfo(&jobAggregateInfo,
                      jobNode->uuid,
@@ -4608,9 +4625,8 @@ LOCAL void slaveConnectThreadCode(void)
         jobNode = findJobByUUID(jobUUID);
         if (jobNode != NULL)
         {
-          if (isSlaveJob(jobNode) && !Slave_isConnected(&jobNode->slaveHost))
+          if (isSlaveJob(jobNode))
           {
-fprintf(stderr,"%s, %d: req connect jobUUID=%s host=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(jobNode->slaveHost.name));
             Slave_copyHost(&slaveHost,&jobNode->slaveHost);
             tryConnectFlag = TRUE;
           }
@@ -4618,8 +4634,9 @@ fprintf(stderr,"%s, %d: req connect jobUUID=%s host=%s\n",__FILE__,__LINE__,Stri
       }
 
       // try to connect
-      if (tryConnectFlag)
+      if (tryConnectFlag && !Slave_isConnected(&slaveHost))
       {
+fprintf(stderr,"%s, %d: req connect jobUUID=%s host=%s:%d\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(slaveHost.name),slaveHost.port);
 //        (void)Slave_connect(&slaveHost,CALLBACK(updateConnectStatusInfo,NULL));
 fprintf(stderr,"%s, %d: tyr connect\n",__FILE__,__LINE__);
         error = Slave_connect(&slaveHost,CALLBACK(updateConnectStatusInfo,NULL));
@@ -4711,6 +4728,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
           // try to init scp-storage first with sftp
           storageSpecifier.type = STORAGE_TYPE_SFTP;
           resultError = Storage_init(&storageInfo,
+NULL, // masterSocketHandle
                                      &storageSpecifier,
                                      (jobNode != NULL) ? &jobNode->jobOptions : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
@@ -4724,6 +4742,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
             // init scp-storage
             storageSpecifier.type = STORAGE_TYPE_SCP;
             resultError = Storage_init(&storageInfo,
+NULL, // masterSocketHandle
                                        &storageSpecifier,
                                        (jobNode != NULL) ? &jobNode->jobOptions : NULL,
                                        &globalOptions.indexDatabaseMaxBandWidthList,
@@ -4738,6 +4757,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
         {
           // init other storage types
           resultError = Storage_init(&storageInfo,
+NULL, // masterSocketHandle
                                      &storageSpecifier,
                                      (jobNode != NULL) ? &jobNode->jobOptions : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
@@ -5620,6 +5640,7 @@ LOCAL void indexThreadCode(void)
         endTimestamp   = 0LL;
         initJobOptions(&jobOptions);
         error = Storage_init(&storageInfo,
+NULL, // masterSocketHandle
                              &storageSpecifier,
                              &jobOptions,
                              &globalOptions.indexDatabaseMaxBandWidthList,
@@ -6127,6 +6148,38 @@ LOCAL void sendClient(ClientInfo *clientInfo, ConstString data)
         break;
     }
   }
+}
+
+/***********************************************************************\
+* Name   : sendClientCommand
+* Purpose: send command to client
+* Input  : clientInfo - client info
+*          id         - command id
+*          format     - format string
+*          arguments  - arguments
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void sendClientCommand(ClientInfo *clientInfo, uint id, const char *format, va_list arguments)
+{
+  locale_t locale;
+  String   command;
+
+  command = String_new();
+
+  locale = uselocale(POSIXLocale);
+  {
+    String_format(command,"%u ",id);
+    String_vformat(command,format,arguments);
+    String_appendChar(command,'\n');
+  }
+  uselocale(locale);
+
+  sendClient(clientInfo,command);
+
+  String_delete(command);
 }
 
 /***********************************************************************\
@@ -7159,7 +7212,7 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, IndexHandle *indexHandle, u
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"%S",name);
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown server config '%S'",name);
   }
 
   // free resources
@@ -7206,7 +7259,7 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
   i = ConfigValue_valueIndex(CONFIG_VALUES,NULL,String_cString(name));
   if (i < 0)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown server config value '%S'",name);
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"server config '%S'",name);
     String_delete(name);
     return;
   }
@@ -7281,7 +7334,7 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
                         )
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown server config value '%S'",name);
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"server config '%S'",name);
     String_delete(value);
     String_delete(name);
     return;
@@ -8837,12 +8890,12 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"get file info fail for '%S': %s",attribute,name,Error_getText(error));
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"get file info '%S' fail: %s",attribute,name,Error_getText(error));
     }
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute %S for '%S'",attribute,name);
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
   }
 
   // free resources
@@ -8869,13 +8922,12 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  String       name;
-  String       attribute;
-  String       value;
-  String       noBackupFileName;
-  Errors       error;
-  FileInfo     fileInfo;
+  String   name;
+  String   attribute;
+  String   value;
+  String   noBackupFileName;
+  Errors   error;
+  FileInfo fileInfo;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8959,7 +9011,7 @@ UNUSED_VARIABLE(value);
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute %S for '%S'",attribute,name);
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
   }
 
   // free resources
@@ -9071,7 +9123,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute %S for '%S'",attribute,name);
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
   }
 
   // free resources
@@ -9281,7 +9333,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,NULL,String_cString(name));
     if (i < 0)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -9385,7 +9437,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"invalid job config '%S' value: '%S'",name,value);
     }
   }
 
@@ -9452,7 +9504,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,NULL,String_cString(name));
     if (i < 0)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -9485,8 +9537,9 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
 *            master=<name> \
 *            name=<name> \
 *            state=<state> \
-*            hostName=<name> \
-*            hostPort=<n> \
+*            slaveHostName=<name> \
+*            slaveHostPort=<n> \
+*            slaveHostForceSSL=yes|no
 *            archiveType=<type> \
 *            archivePartSize=<n> \
 *            deltaCompressAlgorithm=<delta compress algorithm> \
@@ -9662,10 +9715,10 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
   master = String_new();
   StringMap_getString(argumentMap,"master",master,NULL);
 
-  jobNode = NULL;
-
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
+    jobNode = NULL;
+
     if (String_isEmpty(master))
     {
       // add new job
@@ -9696,11 +9749,8 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       (void)File_setPermission(fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
 
       // create new job
-      jobNode = newJob(JOB_TYPE_CREATE,fileName,jobUUID);
+      jobNode = newJob(JOB_TYPE_CREATE,name,jobUUID,fileName,NULL /* master */);
       assert(jobNode != NULL);
-
-      // free resources
-      String_delete(fileName);
 
       // write job to file
       error = writeJob(jobNode);
@@ -9711,19 +9761,24 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
 
       // add new job to list
       List_append(&jobList,jobNode);
+
+      // free resources
+      String_delete(fileName);
     }
     else
     {
       // temporary add job from master
 
       // create new job
-      jobNode = newJob(JOB_TYPE_CREATE,NULL,jobUUID);
+      jobNode = newJob(JOB_TYPE_CREATE,name,jobUUID,NULL /* fileName */,master);
       assert(jobNode != NULL);
-      String_set(jobNode->name,name);
-      String_set(jobNode->master,master);
+//TODO: client disappear? closed?
+jobNode->masterSocketHandle = &clientInfo->network.socketHandle;
 
       // add new job to list
       List_append(&jobList,jobNode);
+
+      // free resources
     }
 
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"jobUUID=%S",jobNode->uuid);
@@ -12629,7 +12684,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
     }
     if (JOB_CONFIG_VALUES[i].name == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -12749,7 +12804,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
     }
 
     // notify about changed schedule
@@ -12846,7 +12901,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
     }
     if (JOB_CONFIG_VALUES[i].name == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -13393,7 +13448,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   uint          volumeNumber;
-  SemaphoreLock semaphoreListLock,semaphoreNodeLock;
+  SemaphoreLock semaphoreListLock;
   JobNode       *jobNode;
 
   assert(clientInfo != NULL);
@@ -13450,7 +13505,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
 LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreListLock,semaphoreNodeLock;
+  SemaphoreLock semaphoreListLock;
   JobNode       *jobNode;
 
   assert(clientInfo != NULL);
@@ -13553,6 +13608,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 
   // init storage
   error = Storage_init(&storageInfo,
+NULL, // masterSocketHandle
                        &storageSpecifier,
                        &clientInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
@@ -16229,6 +16285,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
        )
     {
       if (Storage_init(&storageInfo,
+NULL, // masterSocketHandle
                        &storageSpecifier,
                        NULL, // jobOptions
                        &globalOptions.indexDatabaseMaxBandWidthList,
@@ -18038,6 +18095,8 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   String_delete(result);
 }
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : initSession
 * Purpose: init new session
@@ -18131,6 +18190,8 @@ LOCAL void sendSessionId(ClientInfo *clientInfo)
   String_delete(n);
   String_delete(id);
 }
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : initClient
@@ -18410,6 +18471,34 @@ LOCAL void deleteClient(ClientNode *clientNode)
 }
 
 /***********************************************************************\
+* Name   : findClient
+* Purpose: find client by name, port
+* Input  : slaveHost - slave host
+* Output : -
+* Return : client info or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ClientInfo *findClient(const SlaveHost *slaveHost)
+{
+  ClientNode *clientNode;
+
+  assert(slaveHost != NULL);
+  assert(Semaphore_isLocked(&clientList.lock));
+
+  clientNode = LIST_FIND(&clientList,
+                         clientNode,
+                            (clientNode->clientInfo.type == CLIENT_TYPE_NETWORK)
+                         && (clientNode->clientInfo.network.port == slaveHost->port)
+                         && String_equals(clientNode->clientInfo.network.name,slaveHost->name)
+                        );
+
+  return (clientNode != NULL) ? &clientNode->clientInfo : NULL;
+}
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
 * Name   : freeAuthorizationFailNode
 * Purpose: free authorazation fail node
 * Input  : authorizationFailNode - authorization fail node
@@ -18472,6 +18561,8 @@ LOCAL void deleteAuthorizationFailNode(AuthorizationFailNode *authorizationFailN
   LIST_DELETE_NODE(authorizationFailNode);
 }
 #endif /* 0 */
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : processCommand
@@ -18596,6 +18687,7 @@ Errors Server_run(ServerModes       mode,
   sigset_t              signalMask;
   struct pollfd         *pollfds;
   uint                  maxPollfdCount;
+  SemaphoreLock         semaphoreLock;
   uint                  pollfdCount;
   uint                  pollServerSocketIndex,pollServerTLSSocketIndex;
   uint64                nowTimestamp,waitTimeout,nextTimestamp;  // [us]
@@ -18604,7 +18696,6 @@ Errors Server_run(ServerModes       mode,
   AuthorizationFailNode *authorizationFailNode,*oldestAuthorizationFailNode;
   ClientNode            *clientNode;
   SocketHandle          socketHandle;
-  ClientList            clientList;
   String                clientName;
   uint                  clientPort;
   uint                  pollfdIndex;
@@ -18615,7 +18706,6 @@ Errors Server_run(ServerModes       mode,
 
   // initialize variables
   AutoFree_init(&autoFreeList);
-  List_init(&authorizationFailList);
   serverMode              = mode;
   serverPort              = port;
   serverCA                = ca;
@@ -18624,8 +18714,11 @@ Errors Server_run(ServerModes       mode,
   serverPassword          = password;
   serverJobsDirectory     = jobsDirectory;
   serverDefaultJobOptions = defaultJobOptions;
-  List_init(&jobList);
+  Semaphore_init(&clientList.lock);
+  List_init(&clientList);
+  List_init(&authorizationFailList);
   Semaphore_init(&jobList.lock);
+  List_init(&jobList);
   jobList.activeCount     = 0;
   Semaphore_init(&serverStateLock);
   serverState             = SERVER_STATE_RUNNING;
@@ -18635,6 +18728,8 @@ Errors Server_run(ServerModes       mode,
   pauseEndDateTime        = 0LL;
   indexHandle             = NULL;
   quitFlag                = FALSE;
+  AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&jobList, { List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&jobList.lock,{ Semaphore_done(&jobList.lock); });
@@ -18851,64 +18946,29 @@ Errors Server_run(ServerModes       mode,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  List_init(&clientList);
   clientName               = String_new();
   pollServerSocketIndex    = 0;
   pollServerTLSSocketIndex = 0;
   while (!quitFlag)
   {
-    // wait for connect or command
+    // get active sockets to wait for
     pollfdCount = 0;
-
-    if (serverFlag    && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
     {
-      if (pollfdCount >= pollfdCount)
+      if (serverFlag    && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
       {
-        maxPollfdCount += 64;
-        pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
-        if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
-      }
-      pollfds[pollfdCount].fd     = Network_getServerSocket(&serverSocketHandle);
-      pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
-      pollServerSocketIndex = pollfdCount;
-      pollfdCount++;
-    }
-    if (serverTLSFlag && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
-    {
-      if (pollfdCount >= maxPollfdCount)
-      {
-        maxPollfdCount += 64;
-        pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
-        if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
-      }
-      pollfds[pollfdCount].fd     = Network_getServerSocket(&serverTLSSocketHandle);
-      pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
-      pollServerTLSSocketIndex = pollfdCount;
-      pollfdCount++;
-    }
-
-    nowTimestamp = Misc_getTimestamp();
-    waitTimeout  = 60LL*US_PER_MINUTE; // wait for network connection max. 60min [us]
-    LIST_ITERATE(&clientList,clientNode)
-    {
-      clientOkFlag = TRUE;
-
-      // check if client should be served now
-      if (clientNode->clientInfo.authorizationFailNode != NULL)
-      {
-        nextTimestamp = clientNode->clientInfo.authorizationFailNode->lastTimestamp+(uint64)SQUARE(clientNode->clientInfo.authorizationFailNode->count)*(uint64)AUTHORIZATION_PENALITY_TIME*US_PER_MS;
-        if (nowTimestamp <= nextTimestamp)
+        if (pollfdCount >= pollfdCount)
         {
-          clientOkFlag = FALSE;
-          if ((nextTimestamp-nowTimestamp) < waitTimeout)
-          {
-            waitTimeout = nextTimestamp-nowTimestamp;
-          }
+          maxPollfdCount += 64;
+          pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
+          if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
         }
+        pollfds[pollfdCount].fd     = Network_getServerSocket(&serverSocketHandle);
+        pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
+        pollServerSocketIndex = pollfdCount;
+        pollfdCount++;
       }
-
-      // add clients to be served to select set
-      if (clientOkFlag)
+      if (serverTLSFlag && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
       {
         if (pollfdCount >= maxPollfdCount)
         {
@@ -18916,11 +18976,49 @@ Errors Server_run(ServerModes       mode,
           pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
           if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
         }
-        pollfds[pollfdCount].fd     = Network_getSocket(&clientNode->clientInfo.network.socketHandle);
+        pollfds[pollfdCount].fd     = Network_getServerSocket(&serverTLSSocketHandle);
         pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
+        pollServerTLSSocketIndex = pollfdCount;
         pollfdCount++;
       }
+
+      nowTimestamp = Misc_getTimestamp();
+      waitTimeout  = 60LL*US_PER_MINUTE; // wait for network connection max. 60min [us]
+      LIST_ITERATE(&clientList,clientNode)
+      {
+        clientOkFlag = TRUE;
+
+        // check if client should be served now
+        if (clientNode->clientInfo.authorizationFailNode != NULL)
+        {
+          nextTimestamp = clientNode->clientInfo.authorizationFailNode->lastTimestamp+(uint64)SQUARE(clientNode->clientInfo.authorizationFailNode->count)*(uint64)AUTHORIZATION_PENALITY_TIME*US_PER_MS;
+          if (nowTimestamp <= nextTimestamp)
+          {
+            clientOkFlag = FALSE;
+            if ((nextTimestamp-nowTimestamp) < waitTimeout)
+            {
+              waitTimeout = nextTimestamp-nowTimestamp;
+            }
+          }
+        }
+
+        // add clients to be served to select set
+        if (clientOkFlag)
+        {
+          if (pollfdCount >= maxPollfdCount)
+          {
+            maxPollfdCount += 64;
+            pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
+            if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
+          }
+          pollfds[pollfdCount].fd     = Network_getSocket(&clientNode->clientInfo.network.socketHandle);
+          pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
+          pollfdCount++;
+        }
+      }
     }
+
+    // wait for connect, disconnect, command, or result
     pollTimeout.tv_sec  = (long)(waitTimeout /US_PER_SECOND);
     pollTimeout.tv_nsec = (long)((waitTimeout%US_PER_SECOND)*1000LL);
     (void)ppoll(pollfds,pollfdCount,&pollTimeout,&signalMask);
@@ -18939,23 +19037,26 @@ Errors Server_run(ServerModes       mode,
       {
         Network_getRemoteInfo(&socketHandle,clientName,&clientPort);
 
-        // initialize network for client
-        clientNode = newNetworkClient(clientName,clientPort,socketHandle);
-
-        // append to list of connected clients
-        List_append(&clientList,clientNode);
-
-        // find authorization fail node
-        LIST_ITERATE(&authorizationFailList,authorizationFailNode)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (String_equals(authorizationFailNode->clientName,clientName))
-          {
-            clientNode->clientInfo.authorizationFailNode = authorizationFailNode;
-            break;
-          }
-        }
+          // initialize network for client
+          clientNode = newNetworkClient(clientName,clientPort,socketHandle);
 
-        printInfo(1,"Connected client '%s:%u'\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
+          // append to list of connected clients
+          List_append(&clientList,clientNode);
+
+          // find authorization fail node
+          LIST_ITERATE(&authorizationFailList,authorizationFailNode)
+          {
+            if (String_equals(authorizationFailNode->clientName,clientName))
+            {
+              clientNode->clientInfo.authorizationFailNode = authorizationFailNode;
+              break;
+            }
+          }
+
+          printInfo(1,"Connected client '%s:%u'\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
+        }
       }
       else
       {
@@ -18997,23 +19098,26 @@ Errors Server_run(ServerModes       mode,
           return FALSE;
         }
 
-        // initialize network for client
-        clientNode = newNetworkClient(clientName,clientPort,socketHandle);
-
-        // append to list of connected clients
-        List_append(&clientList,clientNode);
-
-        // find authorization fail node
-        LIST_ITERATE(&authorizationFailList,authorizationFailNode)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (String_equals(authorizationFailNode->clientName,clientName))
-          {
-            clientNode->clientInfo.authorizationFailNode = authorizationFailNode;
-            break;
-          }
-        }
+          // initialize network for client
+          clientNode = newNetworkClient(clientName,clientPort,socketHandle);
 
-        printInfo(1,"Connected client '%s:%u' (TLS/SSL)\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
+          // append to list of connected clients
+          List_append(&clientList,clientNode);
+
+          // find authorization fail node
+          LIST_ITERATE(&authorizationFailList,authorizationFailNode)
+          {
+            if (String_equals(authorizationFailNode->clientName,clientName))
+            {
+              clientNode->clientInfo.authorizationFailNode = authorizationFailNode;
+              break;
+            }
+          }
+
+          printInfo(1,"Connected client '%s:%u' (TLS/SSL)\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
+        }
       }
       else
       {
@@ -19024,47 +19128,88 @@ Errors Server_run(ServerModes       mode,
     }
 
     // process client commands/disconnect clients
-    for (pollfdIndex = 0; pollfdIndex < pollfdCount; pollfdIndex++)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      if (pollfds[pollfdIndex].revents != 0)
+      for (pollfdIndex = 0; pollfdIndex < pollfdCount; pollfdIndex++)
       {
-        // find client node
-        clientNode = LIST_FIND(&clientList,
-                               clientNode,
-                               pollfds[pollfdIndex].fd == Network_getSocket(&clientNode->clientInfo.network.socketHandle)
-                              );
-        if (clientNode != NULL)
+        if (pollfds[pollfdIndex].revents != 0)
         {
-          if ((pollfds[pollfdIndex].revents & POLLIN) != 0)
+          // find client node
+          clientNode = LIST_FIND(&clientList,
+                                 clientNode,
+                                 pollfds[pollfdIndex].fd == Network_getSocket(&clientNode->clientInfo.network.socketHandle)
+                                );
+          if (clientNode != NULL)
           {
-            // receive data from client
-            Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
-            if (receivedBytes > 0)
+            if ((pollfds[pollfdIndex].revents & POLLIN) != 0)
             {
-              // received data -> process
-              do
+              // receive data from client
+              Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+              if (receivedBytes > 0)
               {
-                for (i = 0; i < receivedBytes; i++)
+                // received data -> process
+                do
                 {
-                  if (buffer[i] != '\n')
+                  for (i = 0; i < receivedBytes; i++)
                   {
-                    String_appendChar(clientNode->commandString,buffer[i]);
+                    if (buffer[i] != '\n')
+                    {
+                      String_appendChar(clientNode->commandString,buffer[i]);
+                    }
+                    else
+                    {
+                      processCommand(&clientNode->clientInfo,clientNode->commandString);
+                      String_clear(clientNode->commandString);
+                    }
                   }
-                  else
-                  {
-                    processCommand(&clientNode->clientInfo,clientNode->commandString);
-                    String_clear(clientNode->commandString);
-                  }
+                  error = Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
                 }
-                error = Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+                while ((error == ERROR_NONE) && (receivedBytes > 0));
               }
-              while ((error == ERROR_NONE) && (receivedBytes > 0));
+              else
+              {
+                // remove from client list
+                disconnectClientNode = clientNode;
+                List_remove(&clientList,disconnectClientNode);
+
+                // update authorization fail info
+                switch (disconnectClientNode->clientInfo.authorizationState)
+                {
+                  case AUTHORIZATION_STATE_WAITING:
+                    break;
+                  case AUTHORIZATION_STATE_OK:
+                    // reset authorization failure
+                    authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
+                    if (authorizationFailNode != NULL)
+                    {
+                      authorizationFailNode->count = 0;
+                      authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+                    }
+                    break;
+                  case AUTHORIZATION_STATE_FAIL:
+                    // add to/update authorization failure list
+                    authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
+                    if (authorizationFailNode == NULL)
+                    {
+                      authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.network.name);
+                      assert(authorizationFailNode != NULL);
+                      List_append(&authorizationFailList,authorizationFailNode);
+                    }
+                    authorizationFailNode->count++;
+                    authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+                    break;
+                }
+                printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.network.name),disconnectClientNode->clientInfo.network.port);
+
+                // done client and free resources
+                deleteClient(disconnectClientNode);
+              }
             }
-            else
+            else if ((pollfds[pollfdIndex].revents & (POLLERR|POLLNVAL)) != 0)
             {
-              // remove from client list
+              // error/disconnect -> remove from client list
               disconnectClientNode = clientNode;
-              List_remove(&clientList,disconnectClientNode);
+              clientNode = List_remove(&clientList,disconnectClientNode);
 
               // update authorization fail info
               switch (disconnectClientNode->clientInfo.authorizationState)
@@ -19081,7 +19226,7 @@ Errors Server_run(ServerModes       mode,
                   }
                   break;
                 case AUTHORIZATION_STATE_FAIL:
-                  // add to/update authorization failure list
+                  // add to/update authorization fail list
                   authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
                   if (authorizationFailNode == NULL)
                   {
@@ -19099,114 +19244,46 @@ Errors Server_run(ServerModes       mode,
               deleteClient(disconnectClientNode);
             }
           }
-          else if ((pollfds[pollfdIndex].revents & (POLLERR|POLLNVAL)) != 0)
-          {
-            // error/disconnect -> remove from client list
-            disconnectClientNode = clientNode;
-            clientNode = List_remove(&clientList,disconnectClientNode);
-
-            // update authorization fail info
-            switch (disconnectClientNode->clientInfo.authorizationState)
-            {
-              case AUTHORIZATION_STATE_WAITING:
-                break;
-              case AUTHORIZATION_STATE_OK:
-                // reset authorization failure
-                authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
-                if (authorizationFailNode != NULL)
-                {
-                  authorizationFailNode->count = 0;
-                  authorizationFailNode->lastTimestamp = Misc_getTimestamp();
-                }
-                break;
-              case AUTHORIZATION_STATE_FAIL:
-                // add to/update authorization fail list
-                authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
-                if (authorizationFailNode == NULL)
-                {
-                  authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.network.name);
-                  assert(authorizationFailNode != NULL);
-                  List_append(&authorizationFailList,authorizationFailNode);
-                }
-                authorizationFailNode->count++;
-                authorizationFailNode->lastTimestamp = Misc_getTimestamp();
-                break;
-            }
-            printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.network.name),disconnectClientNode->clientInfo.network.port);
-
-            // done client and free resources
-            deleteClient(disconnectClientNode);
-          }
         }
       }
-    }
 
-    // disconnect clients because of authorization failure
-    clientNode = clientList.head;
-    while (clientNode != NULL)
-    {
-      if (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_FAIL)
+      // disconnect clients because of authorization failure
+      clientNode = clientList.head;
+      while (clientNode != NULL)
       {
-        // remove from connected list
-        disconnectClientNode = clientNode;
-        clientNode = List_remove(&clientList,disconnectClientNode);
-
-        // disconnect
-        Network_disconnect(&disconnectClientNode->clientInfo.network.socketHandle);
-
-        // add to/update authorization fail list
-        authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
-        if (authorizationFailNode == NULL)
+        if (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_FAIL)
         {
-          authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.network.name);
-          assert(authorizationFailNode != NULL);
-          List_append(&authorizationFailList,authorizationFailNode);
+          // remove from connected list
+          disconnectClientNode = clientNode;
+          clientNode = List_remove(&clientList,disconnectClientNode);
+
+          // disconnect
+          Network_disconnect(&disconnectClientNode->clientInfo.network.socketHandle);
+
+          // add to/update authorization fail list
+          authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
+          if (authorizationFailNode == NULL)
+          {
+            authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.network.name);
+            assert(authorizationFailNode != NULL);
+            List_append(&authorizationFailList,authorizationFailNode);
+          }
+          authorizationFailNode->count++;
+          authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+
+          printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.network.name),disconnectClientNode->clientInfo.network.port);
         }
-        authorizationFailNode->count++;
-        authorizationFailNode->lastTimestamp = Misc_getTimestamp();
-
-        printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.network.name),disconnectClientNode->clientInfo.network.port);
+        else
+        {
+          // next client
+          clientNode = clientNode->next;
+        }
       }
-      else
-      {
-        // next client
-        clientNode = clientNode->next;
-      }
-    }
 
-    // clean-up authorization failure list
-    nowTimestamp          = Misc_getTimestamp();
-    authorizationFailNode = authorizationFailList.head;
-    while (authorizationFailNode != NULL)
-    {
-      // find client
-      clientNode = LIST_FIND(&clientList,
-                             clientNode,
-                             clientNode->clientInfo.authorizationFailNode == authorizationFailNode
-                            );
-
-      // check if authorization fail timed out for not active clients
-      if (   (clientNode == NULL)
-          && (nowTimestamp > (authorizationFailNode->lastTimestamp+(uint64)MAX_AUTHORIZATION_HISTORY_KEEP_TIME*US_PER_MS))
-         )
-      {
-        authorizationFailNode = List_removeAndFree(&authorizationFailList,
-                                                   authorizationFailNode,
-                                                   CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
-                                                  );
-      }
-      else
-      {
-        authorizationFailNode = authorizationFailNode->next;
-      }
-    }
-
-    assert(MAX_AUTHORIZATION_FAIL_HISTORY);
-    while (List_count(&authorizationFailList) > MAX_AUTHORIZATION_FAIL_HISTORY)
-    {
-      // find oldest authorization failure
-      oldestAuthorizationFailNode = authorizationFailList.head;
-      LIST_ITERATE(&authorizationFailList,authorizationFailNode)
+      // clean-up authorization failure list
+      nowTimestamp          = Misc_getTimestamp();
+      authorizationFailNode = authorizationFailList.head;
+      while (authorizationFailNode != NULL)
       {
         // find client
         clientNode = LIST_FIND(&clientList,
@@ -19214,20 +19291,50 @@ Errors Server_run(ServerModes       mode,
                                clientNode->clientInfo.authorizationFailNode == authorizationFailNode
                               );
 
-        // get oldest not active client
+        // check if authorization fail timed out for not active clients
         if (   (clientNode == NULL)
-            && (authorizationFailNode->lastTimestamp < oldestAuthorizationFailNode->lastTimestamp)
+            && (nowTimestamp > (authorizationFailNode->lastTimestamp+(uint64)MAX_AUTHORIZATION_HISTORY_KEEP_TIME*US_PER_MS))
            )
         {
-          oldestAuthorizationFailNode = authorizationFailNode;
+          authorizationFailNode = List_removeAndFree(&authorizationFailList,
+                                                     authorizationFailNode,
+                                                     CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
+                                                    );
+        }
+        else
+        {
+          authorizationFailNode = authorizationFailNode->next;
         }
       }
 
-      // remove oldest authorization failure from list
-      List_removeAndFree(&authorizationFailList,
-                         oldestAuthorizationFailNode,
-                         CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
-                        );
+      assert(MAX_AUTHORIZATION_FAIL_HISTORY);
+      while (List_count(&authorizationFailList) > MAX_AUTHORIZATION_FAIL_HISTORY)
+      {
+        // find oldest authorization failure
+        oldestAuthorizationFailNode = authorizationFailList.head;
+        LIST_ITERATE(&authorizationFailList,authorizationFailNode)
+        {
+          // find client
+          clientNode = LIST_FIND(&clientList,
+                                 clientNode,
+                                 clientNode->clientInfo.authorizationFailNode == authorizationFailNode
+                                );
+
+          // get oldest not active client
+          if (   (clientNode == NULL)
+              && (authorizationFailNode->lastTimestamp < oldestAuthorizationFailNode->lastTimestamp)
+             )
+          {
+            oldestAuthorizationFailNode = authorizationFailNode;
+          }
+        }
+
+        // remove oldest authorization failure from list
+        List_removeAndFree(&authorizationFailList,
+                           oldestAuthorizationFailNode,
+                           CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
+                          );
+      }
     }
   }
   String_delete(clientName);
@@ -19287,10 +19394,11 @@ Slave_doneAll();
   Thread_done(&jobThread);
   Semaphore_done(&serverStateLock);
   if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
-  List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
-  Semaphore_done(&jobList.lock);
   List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
+  Semaphore_done(&jobList.lock);
   List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
+  List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
+  Semaphore_done(&clientList.lock);
   AutoFree_done(&autoFreeList);
 
   logMessage(NULL,  // logHandle,
@@ -19388,6 +19496,51 @@ processCommand(&clientInfo,commandString);
   List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
 
   return ERROR_NONE;
+}
+
+Errors Server_sendMaster(const SlaveHost  *slaveHost,
+                         ServerResultList *serverResultList,
+                         const char       *format,
+                         ...
+                        )
+{
+  String        line;
+uint commandId;
+  va_list       arguments;
+  Errors        error;
+  SemaphoreLock semaphoreLock;
+  ClientInfo    *clientInfo;
+
+  assert(slaveHost != NULL);
+  assert(format != NULL);
+
+  // init variables
+  line = String_new();
+
+commandId = 0;
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    // find client node which is master
+    clientInfo = findClient(slaveHost);
+    if (clientInfo == NULL)
+    {
+      Semaphore_unlock(&clientList.lock);
+      return ERROR_MASTER_DISCONNECED;
+    }
+
+    // send command
+    va_start(arguments,format);
+    sendClientCommand(clientInfo,commandId,format,arguments);
+    va_end(arguments);
+
+    // wait for results
+  }
+
+  // free resources
+  String_delete(line);
+
+  return error;
 }
 
 #ifdef __cplusplus

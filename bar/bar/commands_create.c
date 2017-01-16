@@ -89,7 +89,6 @@ typedef struct
 typedef struct
 {
   StorageInfo                 storageInfo;                        // storage info
-//  const StorageSpecifier      *storageSpecifier;                  // storage specifier structure
   IndexHandle                 *indexHandle;
   ConstString                 jobUUID;                            // unique job id to store or NULL
   ConstString                 scheduleUUID;                       // unique schedule id to store or NULL
@@ -326,11 +325,10 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
 {
   assert(createInfo != NULL);
 
-  // init variables
+//TODO: remove?
 UNUSED_VARIABLE(storageSpecifier);
-//TODO
-//  createInfo->storageInfo                    = NULL;
-//  createInfo->storageSpecifier               = storageSpecifier;
+
+  // init variables
   createInfo->indexHandle                    = indexHandle;
   createInfo->jobUUID                        = jobUUID;
   createInfo->scheduleUUID                   = scheduleUUID;
@@ -3723,6 +3721,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
       if (error == ERROR_NONE)
       {
         error = Storage_init(&storageInfo,
+NULL, // masterSocketHandle
                              &storageSpecifier,
                              NULL,  // jobOptions
                              &globalOptions.indexDatabaseMaxBandWidthList,
@@ -3926,6 +3925,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
       if (error == ERROR_NONE)
       {
         error = Storage_init(&storageInfo,
+NULL, // masterSocketHandle
                              &storageSpecifier,
                              NULL,  // jobOptions
                              &globalOptions.indexDatabaseMaxBandWidthList,
@@ -6703,6 +6703,7 @@ Errors Command_create(ConstString                  jobUUID,
 //                      ConstString                  hostName,
 //                      uint                         hostPort,
                       ConstString                  scheduleUUID,
+                      SocketHandle                 *masterSocketHandle,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,
@@ -6831,7 +6832,9 @@ Errors Command_create(ConstString                  jobUUID,
   Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
   // init storage
+fprintf(stderr,"%s, %d: masterSocketHandle=%p\n",__FILE__,__LINE__,masterSocketHandle);
   error = Storage_init(&createInfo.storageInfo,
+masterSocketHandle, // masterSocketHandle
                        &storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,

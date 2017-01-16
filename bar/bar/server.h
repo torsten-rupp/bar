@@ -54,6 +54,20 @@ typedef struct
   SocketHandle socketHandle;
 } ServerInfo;
 
+typedef struct ServerResultNode
+{
+  LIST_NODE_HEADER(struct ServerResultNode);
+
+  uint   commandId;
+  Errors error;
+  String data;
+} ServerResultNode;
+
+typedef struct
+{
+  LIST_HEADER(ServerResultNode);
+} ServerResultList;
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -89,7 +103,21 @@ Errors Server_initAll(void);
 void Server_doneAll(void);
 
 /***********************************************************************\
-* Name   : Server_run
+* Name   : Server_runtypedef struct ResultNode
+{
+  LIST_NODE_HEADER(struct ResultNode);
+
+  uint   commandId;
+  Errors error;
+  bool   completedFlag;
+  String data;
+} ResultNode;
+
+typedef struct
+{
+  LIST_HEADER(ResultNode);
+} ResultList;
+
 * Purpose: run network server
 * Input  : mode                  - server mode; see SERVER_MODE_...
 *          port                  - server port (or 0 to disable)
@@ -157,6 +185,12 @@ Errors Server_addJob(JobTypes          jobType,
                      const JobOptions  *jobOptions
                     );
 #endif /* 0 */
+
+Errors Server_sendMaster(const SlaveHost  *slaveHost,
+                         ServerResultList *serverResultList,
+                         const char       *format,
+                         ...
+                        );
 
 #ifdef __cplusplus
   }

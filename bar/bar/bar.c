@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __BAR_IMPLEMENATION__
+#define __BAR_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
@@ -8640,6 +8640,7 @@ LOCAL Errors runJob(void)
   // create archive
   error = Command_create(NULL, // job UUID
                          NULL, // schedule UUID
+NULL, // masterSocketHandle
                          storageName,
                          &includeEntryList,
                          &excludePatternList,
@@ -8755,6 +8756,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           // create archive
           error = Command_create(NULL, // job UUID
                                  NULL, // schedule UUID
+NULL, // masterSocketHandle
                                  storageName,
                                  &includeEntryList,
                                  &excludePatternList,

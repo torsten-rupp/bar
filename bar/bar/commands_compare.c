@@ -1829,6 +1829,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
 
   // init storage
   error = Storage_init(&storageInfo,
+NULL, // masterSocketHandle
                        storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
