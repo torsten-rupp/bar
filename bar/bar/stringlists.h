@@ -289,14 +289,14 @@ void StringList_move(StringList *fromStringList, StringList *toStringList);
 \***********************************************************************/
 
 INLINE bool StringList_isEmpty(const StringList *stringList);
-#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENTATION__)
 INLINE bool StringList_isEmpty(const StringList *stringList)
 {
   assert(stringList != NULL);
 
   return List_isEmpty(stringList);
 }
-#endif /* NDEBUG || __STRINGLISTS_IMPLEMENATION__ */
+#endif /* NDEBUG || __STRINGLISTS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : StringList_count
@@ -308,14 +308,14 @@ INLINE bool StringList_isEmpty(const StringList *stringList)
 \***********************************************************************/
 
 INLINE ulong StringList_count(const StringList *stringList);
-#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENTATION__)
 INLINE ulong StringList_count(const StringList *stringList)
 {
   assert(stringList != NULL);
 
   return List_count(stringList);
 }
-#endif /* NDEBUG || __STRINGLISTS_IMPLEMENATION__ */
+#endif /* NDEBUG || __STRINGLISTS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : StringList_insert/StringList_insertCString/
@@ -392,7 +392,7 @@ StringNode *__StringList_remove(const char *__fileName__, ulong __lineNb__, Stri
 \***********************************************************************/
 
 INLINE String StringList_first(const StringList *stringList, String string);
-#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENTATION__)
 INLINE String StringList_first(const StringList *stringList, String string)
 {
   assert(stringList != NULL);
@@ -414,7 +414,7 @@ INLINE String StringList_first(const StringList *stringList, String string)
     return (stringList->head != NULL) ? stringList->head->string : NULL;
   }
 }
-#endif /* NDEBUG || __STRINGLISTS_IMPLEMENATION__ */
+#endif /* NDEBUG || __STRINGLISTS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : StringList_last
@@ -428,7 +428,7 @@ INLINE String StringList_first(const StringList *stringList, String string)
 \***********************************************************************/
 
 INLINE String StringList_last(const StringList *stringList, String string);
-#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENTATION__)
 INLINE String StringList_last(const StringList *stringList, String string)
 {
   assert(stringList != NULL);
@@ -450,7 +450,7 @@ INLINE String StringList_last(const StringList *stringList, String string)
     return (stringList->head != NULL) ? stringList->tail->string : NULL;
   }
 }
-#endif /* NDEBUG || __STRINGLISTS_IMPLEMENATION__ */
+#endif /* NDEBUG || __STRINGLISTS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : StringList_removeFirst

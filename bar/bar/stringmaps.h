@@ -309,14 +309,14 @@ uint StringMap_count(const StringMap stringMap);
 \***********************************************************************/
 
 INLINE bool StringMap_isEmpty(const StringMap stringMap);
-#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENTATION__)
 INLINE bool StringMap_isEmpty(const StringMap stringMap)
 {
   assert(stringMap != NULL);
 
   return StringMap_count(stringMap) == 0;
 }
-#endif /* NDEBUG || __STRINGLISTS_IMPLEMENATION__ */
+#endif /* NDEBUG || __STRINGLISTS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : StringMap_index
