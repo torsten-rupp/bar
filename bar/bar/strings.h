@@ -525,14 +525,14 @@ String String_joinBuffer(String string, const char *buffer, ulong bufferLength, 
 \***********************************************************************/
 
 INLINE ulong String_length(ConstString string);
-#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
 INLINE ulong String_length(ConstString string)
 {
   STRING_CHECK_VALID(string);
 
   return (string != NULL) ? string->length : 0L;
 }
-#endif /* NDEBUG || __STRINGS_IMPLEMENATION__ */
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : String_isEmpty
@@ -544,14 +544,14 @@ INLINE ulong String_length(ConstString string)
 \***********************************************************************/
 
 INLINE bool String_isEmpty(ConstString string);
-#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
 INLINE bool String_isEmpty(ConstString string)
 {
   STRING_CHECK_VALID(string);
 
   return (string != NULL) ? (string->length == 0) : TRUE;
 }
-#endif /* NDEBUG || __STRINGS_IMPLEMENATION__ */
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : String_index
@@ -565,7 +565,7 @@ INLINE bool String_isEmpty(ConstString string)
 \***********************************************************************/
 
 INLINE char String_index(ConstString string, ulong index);
-#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
 INLINE char String_index(ConstString string, ulong index)
 {
   char ch;
@@ -594,7 +594,7 @@ INLINE char String_index(ConstString string, ulong index)
 
   return ch;
 }
-#endif /* NDEBUG || __STRINGS_IMPLEMENATION__ */
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : String_cString
@@ -606,14 +606,14 @@ INLINE char String_index(ConstString string, ulong index)
 \***********************************************************************/
 
 INLINE const char *String_cString(const ConstString string);
-#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
 INLINE const char *String_cString(const ConstString string)
 {
   STRING_CHECK_VALID(string);
 
   return (string != NULL) ? &string->data[0] : NULL;
 }
-#endif /* NDEBUG || __STRINGS_IMPLEMENATION__ */
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : String_compare

@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __STRINGS_IMPLEMENATION__
+#define __STRINGS_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
