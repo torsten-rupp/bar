@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __COMPRESS_IMPLEMENATION__
+#define __COMPRESS_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory

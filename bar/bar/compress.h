@@ -367,12 +367,12 @@ bool Compress_isValidAlgorithm(uint16 n);
 \***********************************************************************/
 
 INLINE bool Compress_isCompressed(CompressAlgorithms compressAlgorithm);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE bool Compress_isCompressed(CompressAlgorithms compressAlgorithm)
 {
   return compressAlgorithm != COMPRESS_ALGORITHM_NONE;
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Compress_isZIPCompressed
@@ -384,12 +384,12 @@ INLINE bool Compress_isCompressed(CompressAlgorithms compressAlgorithm)
 \***********************************************************************/
 
 INLINE bool Compress_isZIPCompressed(CompressAlgorithms compressAlgorithm);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE bool Compress_isZIPCompressed(CompressAlgorithms compressAlgorithm)
 {
   return (COMPRESS_ALGORITHM_ZIP_0 <= compressAlgorithm) && (compressAlgorithm <= COMPRESS_ALGORITHM_ZIP_9);
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Compress_isBZIP2Compressed
@@ -401,12 +401,12 @@ INLINE bool Compress_isZIPCompressed(CompressAlgorithms compressAlgorithm)
 \***********************************************************************/
 
 INLINE bool Compress_isBZIP2Compressed(CompressAlgorithms compressAlgorithm);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE bool Compress_isBZIP2Compressed(CompressAlgorithms compressAlgorithm)
 {
   return (COMPRESS_ALGORITHM_BZIP2_1 <= compressAlgorithm) && (compressAlgorithm <= COMPRESS_ALGORITHM_BZIP2_9);
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Compress_isLZMACompressed
@@ -418,12 +418,12 @@ INLINE bool Compress_isBZIP2Compressed(CompressAlgorithms compressAlgorithm)
 \***********************************************************************/
 
 INLINE bool Compress_isLZMACompressed(CompressAlgorithms compressAlgorithm);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE bool Compress_isLZMACompressed(CompressAlgorithms compressAlgorithm)
 {
   return (COMPRESS_ALGORITHM_LZMA_1 <= compressAlgorithm) && (compressAlgorithm <= COMPRESS_ALGORITHM_LZMA_9);
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Compress_isXDeltaCompressed
@@ -435,12 +435,12 @@ INLINE bool Compress_isLZMACompressed(CompressAlgorithms compressAlgorithm)
 \***********************************************************************/
 
 INLINE bool Compress_isXDeltaCompressed(CompressAlgorithms compressAlgorithm);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE bool Compress_isXDeltaCompressed(CompressAlgorithms compressAlgorithm)
 {
   return (COMPRESS_ALGORITHM_XDELTA_1 <= compressAlgorithm) && (compressAlgorithm <= COMPRESS_ALGORITHM_XDELTA_9);
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Compress_init
@@ -558,14 +558,14 @@ Errors Compress_flush(CompressInfo *compressInfo);
 \***********************************************************************/
 
 INLINE bool Compress_isFlush(CompressInfo *compressInfo);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE bool Compress_isFlush(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
   return compressInfo->flushFlag;
 }
-#endif /* defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__) */
+#endif /* defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__) */
 
 /***********************************************************************\
 * Name   : Compress_isEndOfData
@@ -578,7 +578,7 @@ INLINE bool Compress_isFlush(CompressInfo *compressInfo)
 
 #if 0
 INLINE bool Compress_isEndOfData(CompressInfo *compressInfo);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE bool Compress_isEndOfData(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
@@ -588,7 +588,7 @@ INLINE bool Compress_isEndOfData(CompressInfo *compressInfo)
 
   return compressInfo->endOfDataFlag;
 }
-#endif /* defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__) */
+#endif /* defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__) */
 #else
 bool Compress_isEndOfData(CompressInfo *compressInfo);
 #endif
@@ -626,14 +626,14 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo);
 \***********************************************************************/
 
 INLINE ulong Compress_getFreeDataSpace(const CompressInfo *compressInfo);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE ulong Compress_getFreeDataSpace(const CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
   return RingBuffer_getFree(&compressInfo->dataRingBuffer);
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Compress_getFreeCompressSpace
@@ -645,14 +645,14 @@ INLINE ulong Compress_getFreeDataSpace(const CompressInfo *compressInfo)
 \***********************************************************************/
 
 INLINE ulong Compress_getFreeCompressSpace(const CompressInfo *compressInfo);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE ulong Compress_getFreeCompressSpace(const CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
   return RingBuffer_getFree(&compressInfo->compressRingBuffer);
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Compress_isFreeDataSpace
@@ -664,14 +664,14 @@ INLINE ulong Compress_getFreeCompressSpace(const CompressInfo *compressInfo)
 \***********************************************************************/
 
 INLINE bool Compress_isFreeDataSpace(const CompressInfo *compressInfo);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE bool Compress_isFreeDataSpace(const CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
   return !RingBuffer_isFull(&compressInfo->dataRingBuffer);
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Compress_isFreeCompressSpace
@@ -683,14 +683,14 @@ INLINE bool Compress_isFreeDataSpace(const CompressInfo *compressInfo)
 \***********************************************************************/
 
 INLINE bool Compress_isFreeCompressSpace(const CompressInfo *compressInfo);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE bool Compress_isFreeCompressSpace(const CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
   return !RingBuffer_isFull(&compressInfo->compressRingBuffer);
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Compress_getAvailableDecompressedBytes
