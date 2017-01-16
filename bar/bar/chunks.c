@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __CHUNKS_IMPLEMENATION__
+#define __CHUNKS_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory

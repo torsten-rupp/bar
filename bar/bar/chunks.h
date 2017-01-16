@@ -333,7 +333,7 @@ Errors Chunk_skip(const ChunkIO     *chunkIO,
 INLINE bool Chunk_eof(const ChunkIO *chunkIO,
                       void          *chunkIOUserData
                      );
-#if defined(NDEBUG) || defined(__CHUNKS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__CHUNKS_IMPLEMENTATION__)
 INLINE bool Chunk_eof(const ChunkIO *chunkIO,
                       void          *chunkIOUserData
                      )
@@ -343,7 +343,7 @@ INLINE bool Chunk_eof(const ChunkIO *chunkIO,
 
   return chunkIO->eof(chunkIOUserData);
 }
-#endif /* NDEBUG || __CHUNKS_IMPLEMENATION__ */
+#endif /* NDEBUG || __CHUNKS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Chunk_startOffset
@@ -355,7 +355,7 @@ INLINE bool Chunk_eof(const ChunkIO *chunkIO,
 \***********************************************************************/
 
 INLINE uint64 Chunk_startOffset(const ChunkInfo *chunkInfo);
-#if defined(NDEBUG) || defined(__CHUNKS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__CHUNKS_IMPLEMENTATION__)
 INLINE uint64 Chunk_startOffset(const ChunkInfo *chunkInfo)
 {
   assert(chunkInfo != NULL);
@@ -363,7 +363,7 @@ INLINE uint64 Chunk_startOffset(const ChunkInfo *chunkInfo)
 
   return chunkInfo->offset-CHUNK_HEADER_SIZE;
 }
-#endif /* NDEBUG || __CHUNKS_IMPLEMENATION__ */
+#endif /* NDEBUG || __CHUNKS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Chunk_endOffset
@@ -375,7 +375,7 @@ INLINE uint64 Chunk_startOffset(const ChunkInfo *chunkInfo)
 \***********************************************************************/
 
 INLINE uint64 Chunk_endOffset(const ChunkInfo *chunkInfo);
-#if defined(NDEBUG) || defined(__CHUNKS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__CHUNKS_IMPLEMENTATION__)
 INLINE uint64 Chunk_endOffset(const ChunkInfo *chunkInfo)
 {
   assert(chunkInfo != NULL);
@@ -383,7 +383,7 @@ INLINE uint64 Chunk_endOffset(const ChunkInfo *chunkInfo)
 
   return CHUNK_HEADER_SIZE+chunkInfo->offset+chunkInfo->size;
 }
-#endif /* NDEBUG || __CHUNKS_IMPLEMENATION__ */
+#endif /* NDEBUG || __CHUNKS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Chunk_tell
@@ -502,14 +502,14 @@ Errors Chunk_skipSub(ChunkInfo         *chunkInfo,
 \***********************************************************************/
 
 INLINE bool Chunk_eofSub(ChunkInfo *chunkInfo);
-#if defined(NDEBUG) || defined(__CHUNKS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__CHUNKS_IMPLEMENTATION__)
 INLINE bool Chunk_eofSub(ChunkInfo *chunkInfo)
 {
   assert(chunkInfo != NULL);
 
   return chunkInfo->index >= chunkInfo->size;
 }
-#endif /* NDEBUG || __CHUNKS_IMPLEMENATION__ */
+#endif /* NDEBUG || __CHUNKS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Chunk_update
