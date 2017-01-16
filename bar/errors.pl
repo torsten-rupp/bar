@@ -169,12 +169,16 @@ const char *Error_getCodeText(Errors error)
 
 const char *Error_getLineNbText(Errors error)
 {
-  static char lineNbText[$ERROR_MAX_TEXT_LENGTH];
+  #ifndef NDEBUG
+    static char lineNbText[$ERROR_MAX_TEXT_LENGTH];
 
-  snprintf(lineNbText,sizeof(lineNbText)-1,\"%d\",ERROR_GET_LINENB(error));
-  lineNbText[sizeof(lineNbText)-1] = '\\0';
+    snprintf(lineNbText,sizeof(lineNbText)-1,\"%d\",ERROR_GET_LINENB(error));
+    lineNbText[sizeof(lineNbText)-1] = '\\0';
 
-  return lineNbText;
+    return lineNbText;
+  #else
+    return NULL;
+  #endif
 }
 
 const char *Error_getErrnoText(Errors error)
@@ -389,7 +393,8 @@ GetOptions("c=s" => \$cFileName,
 if ($cFileName ne "")
 {
   open(CFILE_HANDLE,"> $cFileName");
-  print CFILE_HANDLE "\
+  print CFILE_HANDLE "#define __ERROR_IMPLEMENTATION__
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -507,6 +512,8 @@ if ($hFileName ne "")
 #ifndef __ERRORS__
 #define __ERRORS__
 
+#include \"global.h\"
+
 /***********************************************************************\
 * Name   : ERROR_
 * Purpose: create error
@@ -517,19 +524,7 @@ if ($hFileName ne "")
 * Notes  : -
 \***********************************************************************/
 
-#ifndef NDEBUG
-  #define ERROR_(code,errno)             ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
-                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,NULL) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
-                                                   | (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
-                                                  ) \\
-                                         )
-#else
-  #define ERROR_(code,errno)             ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
-                                                   | ((_Error_dataToIndex(NULL) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
-                                                   | (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
-                                                  ) \\
-                                         )
-#endif
+#define ERROR_(code,errno) Error_((ERROR_ ## code),errno)
 
 /***********************************************************************\
 * Name   : ERRORX_
@@ -543,19 +538,7 @@ if ($hFileName ne "")
 * Notes  : -
 \***********************************************************************/
 
-#ifndef NDEBUG
-  #define ERRORX_(code,errno,format,...) ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
-                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,format, ## __VA_ARGS__) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
-                                                   | (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
-                                                  ) \\
-                                         )
-#else
-  #define ERRORX_(code,errno,format,...) ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
-                                                   | ((_Error_dataToIndex(format, ## __VA_ARGS__) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
-                                                   | (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
-                                                  ) \\
-                                         )
-#endif
+#define ERRORX_(code,errno,format,...) Errorx_((ERROR_ ## code),errno,format, ## __VA_ARGS__)
 
 /***********************************************************************\
 * Name   : ERRORF_
@@ -576,6 +559,56 @@ if ($hFileName ne "")
 #else
   #define ERRORF_(error,format,...)      ((Errors)(  ((error) & ($ERROR_CODE_MASK|$ERROR_ERRNO_MASK)) \\
                                                    | ((_Error_dataToIndex(format, ## __VA_ARGS__) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
+                                                  ) \\
+                                         )
+#endif
+
+/***********************************************************************\
+* Name   : Error_
+* Purpose: create error
+* Input  : code  - error code; see ERROR_...
+*          errno - errno or 0
+* Output : -
+* Return : error
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+  #define Error_(code,errno)             ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
+                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,NULL) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
+                                                   | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
+                                                  ) \\
+                                         )
+#else
+  #define Error_(code,errno)             ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
+                                                   | ((_Error_dataToIndex(NULL) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
+                                                   | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
+                                                  ) \\
+                                         )
+#endif
+
+/***********************************************************************\
+* Name   : Errorx_
+* Purpose: create extended error
+* Input  : code   - error code; see ERROR_...
+*          errno  - errno or 0
+*          format - format string (like printf)
+*          ...    - optional arguments for format string
+* Output : -
+* Return : error
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+  #define Errorx_(code,errno,format,...) ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
+                                                   | ((_Error_dataToIndex(__FILE__,__LINE__,format, ## __VA_ARGS__) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
+                                                   | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
+                                                  ) \\
+                                         )
+#else
+  #define Errorx_(code,errno,format,...) ((Errors)(  (((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) \\
+                                                   | ((_Error_dataToIndex(format, ## __VA_ARGS__) << $ERROR_DATAINDEX_SHIFT) & $ERROR_DATAINDEX_MASK) \\
+                                                   | (((code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK) \\
                                                   ) \\
                                          )
 #endif

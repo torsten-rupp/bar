@@ -638,13 +638,32 @@ ERROR EXEC_FAIL
 // --- BARControl protocol ----------------------------------------------
 ERROR PARSING                          "error parsing data"
 ERROR EXPECTED_PARAMETER               "expected parameter"
-ERROR UNKNOWN_VALUE                    "unknown value"
+ERROR UNKNOWN_VALUE
+  if (!stringIsEmpty(ERROR_TEXT))
+  {
+    stringSet(errorText,ERROR_TEXT,sizeof(errorText));
+  }
+  else
+  {
+    stringSet(errorText,"unknown value",sizeof(errorText));
+  }
+
+ERROR INVALID_VALUE
+  stringSet(errorText,"invalid value",sizeof(errorText));
+  if (!stringIsEmpty(ERROR_TEXT))
+  {
+    stringAppend(errorText," '",sizeof(errorText));
+    stringAppend(errorText,ERROR_TEXT,sizeof(errorText));
+    stringAppend(errorText,"'",sizeof(errorText));
+  }
+
 ERROR AUTHORIZATION                    "authorization error"
 ERROR JOB_NOT_FOUND                    "job not found"
 ERROR JOB                              "job error"
 
 // --- index database (SQLite3) -----------------------------------------
 ERROR DATABASE
+  stringSet(errorText,"database error",sizeof(errorText));
   if (!stringIsEmpty(ERROR_TEXT))
   {
     stringAppend(errorText,": ",sizeof(errorText));
@@ -703,7 +722,8 @@ ERROR DATABASE_INDEX_NOT_READY         "index still not initialized"
 ERROR DATABASE_INVALID_INDEX           "invalid index"
 ERROR DATABASE_TIMEOUT                 "timeout accessing index"
 
-// --- slave ------------------------------------------------------------
+// --- mastesr/slave ----------------------------------------------------
+ERROR MASTER_DISCONNECED               "master disconnected"
 ERROR SLAVE_DISCONNECTED               "slave disconnected"
 
 // --- debugging only ---------------------------------------------------
