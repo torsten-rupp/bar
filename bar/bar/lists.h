@@ -566,7 +566,7 @@ void List_exchange(void *list1,
 \***********************************************************************/
 
 INLINE bool List_isEmpty(const void *list);
-#if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__LISTS_IMPLEMENTATION__)
 INLINE bool List_isEmpty(const void *list)
 {
   assert(list != NULL);
@@ -576,7 +576,7 @@ INLINE bool List_isEmpty(const void *list)
 
   return (((List*)list)->count == 0);
 }
-#endif /* NDEBUG || __LISTS_IMPLEMENATION__ */
+#endif /* NDEBUG || __LISTS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : List_count
@@ -588,7 +588,7 @@ INLINE bool List_isEmpty(const void *list)
 \***********************************************************************/
 
 INLINE unsigned long List_count(const void *list);
-#if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__LISTS_IMPLEMENTATION__)
 INLINE unsigned long List_count(const void *list)
 {
   assert(list != NULL);
@@ -598,7 +598,7 @@ INLINE unsigned long List_count(const void *list)
 
   return ((List*)list)->count;
 }
-#endif /* NDEBUG || __LISTS_IMPLEMENATION__ */
+#endif /* NDEBUG || __LISTS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : List_insert
@@ -717,7 +717,7 @@ void *List_removeAndFree(void                 *list,
 \***********************************************************************/
 
 INLINE Node *List_first(const void *list);
-#if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__LISTS_IMPLEMENTATION__)
 INLINE Node *List_first(const void *list)
 {
   assert(list != NULL);
@@ -727,7 +727,7 @@ INLINE Node *List_first(const void *list)
 
   return ((List*)list)->head;
 }
-#endif /* NDEBUG || __LISTS_IMPLEMENATION__ */
+#endif /* NDEBUG || __LISTS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : List_last
@@ -739,7 +739,7 @@ INLINE Node *List_first(const void *list)
 \***********************************************************************/
 
 INLINE Node *List_last(const void *list);
-#if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__LISTS_IMPLEMENTATION__)
 INLINE Node *List_last(const void *list)
 {
   assert(list != NULL);
@@ -749,7 +749,7 @@ INLINE Node *List_last(const void *list)
 
   return ((List*)list)->tail;
 }
-#endif /* NDEBUG || __LISTS_IMPLEMENATION__ */
+#endif /* NDEBUG || __LISTS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : List_removeFirst
@@ -806,7 +806,7 @@ INLINE void *List_find(const void             *list,
                        ListNodeEqualsFunction listNodeEqualsFunction,
                        void                   *listNodeEqualsUserData
                       );
-#if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__LISTS_IMPLEMENTATION__)
 INLINE void *List_find(const void             *list,
                        ListNodeEqualsFunction listNodeEqualsFunction,
                        void                   *listNodeEqualsUserData
@@ -825,7 +825,7 @@ INLINE void *List_find(const void             *list,
 
   return node;
 }
-#endif /* NDEBUG || __LISTS_IMPLEMENATION__ */
+#endif /* NDEBUG || __LISTS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : List_findFirst

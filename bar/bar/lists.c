@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __LISTS_IMPLEMENATION__
+#define __LISTS_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
