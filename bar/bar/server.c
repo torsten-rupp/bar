@@ -418,7 +418,7 @@ typedef struct
       // threads
       Semaphore    writeLock;                              // write synchronization lock
       Thread       threads[MAX_NETWORK_CLIENT_THREADS];    // command processing threads
-      MsgQueue     commandMsgQueue;                        // commands send by client
+      MsgQueue     commandQueue;                           // commands send by client
     } network;
   };
 
@@ -449,7 +449,7 @@ typedef struct ClientNode
 typedef struct
 {
   LIST_HEADER(ClientNode);
-  
+
   Semaphore lock;
 } ClientList;
 
@@ -478,7 +478,7 @@ typedef struct
   AuthorizationStates   authorizationState;
   uint                  id;
   StringMap             argumentMap;
-} CommandMsg;
+} Command;
 
 // parse special options
 LOCAL bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
@@ -4305,11 +4305,20 @@ String_isEmpty(jobNode->master) ? NULL : jobNode->masterSocketHandle,
 fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
+String commandLine = String_new();
+
         // wait for slave job
         while (   !quitFlag
                && isJobRunning(jobNode)
               )
         {
+fprintf(stderr,"%s, %d: fafasdfasdfsdasdadf\n",__FILE__,__LINE__);
+          error = Slave_getCommand(&jobNode->slaveHost,
+                                   commandLine,
+                                   1*MS_PER_SECOND
+                                  );
+fprintf(stderr,"%s, %d: commandLine=%s\n",__FILE__,__LINE__,String_cString(commandLine));
+
           // get slave job status
           error = Slave_executeCommand(&jobNode->slaveHost,
                                        resultMap,
@@ -17917,93 +17926,93 @@ SERVER_COMMANDS[] =
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : freeCommandMsg
-* Purpose: free command msg
-* Input  : commandMsg - command message
-*          userData   - user data (ignored)
+* Name   : freeCommand
+* Purpose: free command
+* Input  : command  - command
+*          userData - user data (ignored)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeCommandMsg(CommandMsg *commandMsg, void *userData)
+LOCAL void freeCommand(Command *command, void *userData)
 {
-  assert(commandMsg != NULL);
+  assert(command != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  StringMap_delete(commandMsg->argumentMap);
+  StringMap_delete(command->argumentMap);
 }
 
 /***********************************************************************\
 * Name   : parseCommand
 * Purpose: parse command
 * Input  : string - command
-* Output : commandMsg - command message
+* Output : command - command
 * Return : TRUE if no error, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool parseCommand(CommandMsg  *commandMsg,
+LOCAL bool parseCommand(Command     *command,
                         ConstString string
                        )
 {
-  String command;
+  String name;
   String arguments;
   uint   i;
 
-  assert(commandMsg != NULL);
+  assert(command != NULL);
 
   // initialize variables
-  commandMsg->serverCommandFunction = NULL;
-  commandMsg->authorizationState    = AUTHORIZATION_STATE_WAITING;
-  commandMsg->id                    = 0;
-  commandMsg->argumentMap           = NULL;
-  command   = String_new();
+  command->serverCommandFunction = NULL;
+  command->authorizationState    = AUTHORIZATION_STATE_WAITING;
+  command->id                    = 0;
+  command->argumentMap           = NULL;
+  name      = String_new();
   arguments = String_new();
 
   // parse
-  if (!String_parse(string,STRING_BEGIN,"%u %S % S",NULL,&commandMsg->id,command,arguments))
+  if (!String_parse(string,STRING_BEGIN,"%u %S % S",NULL,&command->id,name,arguments))
   {
     String_delete(arguments);
-    String_delete(command);
+    String_delete(name);
     return FALSE;
   }
 
-  // find command
+  // find command by name
   i = 0;
-  while ((i < SIZE_OF_ARRAY(SERVER_COMMANDS)) && !String_equalsCString(command,SERVER_COMMANDS[i].name))
+  while ((i < SIZE_OF_ARRAY(SERVER_COMMANDS)) && !String_equalsCString(name,SERVER_COMMANDS[i].name))
   {
     i++;
   }
   if (i >= SIZE_OF_ARRAY(SERVER_COMMANDS))
   {
     String_delete(arguments);
-    String_delete(command);
+    String_delete(name);
     return FALSE;
   }
-  commandMsg->serverCommandFunction = SERVER_COMMANDS[i].serverCommandFunction;
-  commandMsg->authorizationState    = SERVER_COMMANDS[i].authorizationState;
+  command->serverCommandFunction = SERVER_COMMANDS[i].serverCommandFunction;
+  command->authorizationState    = SERVER_COMMANDS[i].authorizationState;
 
   // parse arguments
-  commandMsg->argumentMap = StringMap_new();
-  if (commandMsg->argumentMap == NULL)
+  command->argumentMap = StringMap_new();
+  if (command->argumentMap == NULL)
   {
     String_delete(arguments);
-    String_delete(command);
+    String_delete(name);
     return FALSE;
   }
-  if (!StringMap_parse(commandMsg->argumentMap,arguments,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+  if (!StringMap_parse(command->argumentMap,arguments,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
   {
-    StringMap_delete(commandMsg->argumentMap);
+    StringMap_delete(command->argumentMap);
     String_delete(arguments);
-    String_delete(command);
+    String_delete(name);
     return FALSE;
   }
 
   // free resources
   String_delete(arguments);
-  String_delete(command);
+  String_delete(name);
 
   return TRUE;
 }
@@ -18023,7 +18032,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   SemaphoreLock   semaphoreLock;
   CommandInfoNode *commandInfoNode;
   String          result;
-  CommandMsg      commandMsg;
+  Command         command;
   #ifdef SERVER_DEBUG
     uint64 t0,t1;
   #endif /* SERVER_DEBUG */
@@ -18037,11 +18046,11 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
 
   while (   !clientInfo->quitFlag
-         && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg),WAIT_FOREVER)
+         && MsgQueue_get(&clientInfo->network.commandQueue,&command,NULL,sizeof(command),WAIT_FOREVER)
         )
   {
     // check authorization (if not in server debug mode)
-    if (globalOptions.serverDebugFlag || (commandMsg.authorizationState == clientInfo->authorizationState))
+    if (globalOptions.serverDebugFlag || (command.authorizationState == clientInfo->authorizationState))
     {
       // add command info
       commandInfoNode = NULL;
@@ -18052,7 +18061,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
         {
           HALT_INSUFFICIENT_MEMORY();
         }
-        commandInfoNode->id          = commandMsg.id;
+        commandInfoNode->id          = command.id;
         commandInfoNode->indexHandle = indexHandle;
         List_append(&clientInfo->commandInfoList,commandInfoNode);
       }
@@ -18061,11 +18070,11 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
       #ifdef SERVER_DEBUG
         t0 = Misc_getTimestamp();
       #endif /* SERVER_DEBUG */
-      commandMsg.serverCommandFunction(clientInfo,
-                                       indexHandle,
-                                       commandMsg.id,
-                                       commandMsg.argumentMap
-                                      );
+      command.serverCommandFunction(clientInfo,
+                                    indexHandle,
+                                    command.id,
+                                    command.argumentMap
+                                   );
       #ifdef SERVER_DEBUG
         t1 = Misc_getTimestamp();
         fprintf(stderr,"DEBUG: command time=%llums\n",(t1-t0)/US_PER_MS);
@@ -18081,11 +18090,11 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
     {
       // authorization failure -> mark for disconnect
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
-      sendClientResult(clientInfo,commandMsg.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+      sendClientResult(clientInfo,command.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
     }
 
     // free resources
-    freeCommandMsg(&commandMsg,NULL);
+    freeCommand(&command,NULL);
   }
 
   // done index
@@ -18287,7 +18296,7 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   clientInfo->network.port         = port;
   clientInfo->network.socketHandle = socketHandle;
 
-  if (!MsgQueue_init(&clientInfo->network.commandMsgQueue,0))
+  if (!MsgQueue_init(&clientInfo->network.commandQueue,0))
   {
     HALT_FATAL_ERROR("Cannot initialize client command message queue!");
   }
@@ -18338,7 +18347,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
     case CLIENT_TYPE_NETWORK:
       // stop client threads
       Semaphore_setEnd(&clientInfo->action.lock);
-      MsgQueue_setEndOfMsg(&clientInfo->network.commandMsgQueue);
+      MsgQueue_setEndOfMsg(&clientInfo->network.commandQueue);
       for (z = MAX_NETWORK_CLIENT_THREADS-1; z >= 0; z--)
       {
         if (!Thread_join(&clientInfo->network.threads[z]))
@@ -18357,7 +18366,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
         Thread_done(&clientInfo->network.threads[z]);
       }
       Semaphore_done(&clientInfo->network.writeLock);
-      MsgQueue_done(&clientInfo->network.commandMsgQueue,CALLBACK((MsgQueueMsgFreeFunction)freeCommandMsg,NULL));
+      MsgQueue_done(&clientInfo->network.commandQueue,CALLBACK((MsgQueueMsgFreeFunction)freeCommand,NULL));
       String_delete(clientInfo->network.name);
       break;
     default:
@@ -18567,27 +18576,27 @@ LOCAL void deleteAuthorizationFailNode(AuthorizationFailNode *authorizationFailN
 /***********************************************************************\
 * Name   : processCommand
 * Purpose: process client command
-* Input  : clientNode - client node
-*          command    - command to process
+* Input  : clientInfo  - client info
+*          commandLine - command line to process
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void processCommand(ClientInfo *clientInfo, ConstString command)
+LOCAL void processCommand(ClientInfo *clientInfo, ConstString commandLine)
 {
-  CommandMsg commandMsg;
+  Command command;
 
   assert(clientInfo != NULL);
 
   #ifdef SERVER_DEBUG
-    fprintf(stderr,"DEBUG: process command=%s\n",String_cString(command));
+    fprintf(stderr,"DEBUG: process command=%s\n",String_cString(commandLine));
   #endif // SERVER_DEBUG
 
   // parse command
-  if (!parseCommand(&commandMsg,command))
+  if (!parseCommand(&command,commandLine))
   {
-    sendClientResult(clientInfo,commandMsg.id,TRUE,ERROR_PARSING,"parse error '%S'",command);
+    sendClientResult(clientInfo,command.id,TRUE,ERROR_PARSING,"parse error '%S'",commandLine);
     return;
   }
 
@@ -18595,52 +18604,52 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString command)
   {
     case CLIENT_TYPE_BATCH:
       // check authorization (if not in server debug mode)
-      if (globalOptions.serverDebugFlag || (commandMsg.authorizationState == clientInfo->authorizationState))
+      if (globalOptions.serverDebugFlag || (command.authorizationState == clientInfo->authorizationState))
       {
         // execute
-        commandMsg.serverCommandFunction(clientInfo,
-                                         indexHandle,
-                                         commandMsg.id,
-                                         commandMsg.argumentMap
-                                        );
+        command.serverCommandFunction(clientInfo,
+                                      indexHandle,
+                                      command.id,
+                                      command.argumentMap
+                                     );
       }
       else
       {
         // authorization failure -> mark for disconnect
         clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
-        sendClientResult(clientInfo,commandMsg.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+        sendClientResult(clientInfo,command.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
       }
 
       // free resources
-      freeCommandMsg(&commandMsg,NULL);
+      freeCommand(&command,NULL);
       break;
     case CLIENT_TYPE_NETWORK:
       switch (clientInfo->authorizationState)
       {
         case AUTHORIZATION_STATE_WAITING:
           // check authorization (if not in server debug mode)
-          if (globalOptions.serverDebugFlag || (commandMsg.authorizationState == AUTHORIZATION_STATE_WAITING))
+          if (globalOptions.serverDebugFlag || (command.authorizationState == AUTHORIZATION_STATE_WAITING))
           {
             // execute command
-            commandMsg.serverCommandFunction(clientInfo,
-                                             indexHandle,
-                                             commandMsg.id,
-                                             commandMsg.argumentMap
-                                            );
+            command.serverCommandFunction(clientInfo,
+                                          indexHandle,
+                                          command.id,
+                                          command.argumentMap
+                                         );
           }
           else
           {
             // authorization failure -> mark for disconnect
             clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
-            sendClientResult(clientInfo,commandMsg.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+            sendClientResult(clientInfo,command.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
           }
 
           // free resources
-          freeCommandMsg(&commandMsg,NULL);
+          freeCommand(&command,NULL);
           break;
         case AUTHORIZATION_STATE_OK:
           // send command to client thread for asynchronous processing
-          (void)MsgQueue_put(&clientInfo->network.commandMsgQueue,&commandMsg,sizeof(commandMsg));
+          (void)MsgQueue_put(&clientInfo->network.commandQueue,&command,sizeof(Command));
           break;
         case AUTHORIZATION_STATE_FAIL:
           break;
@@ -18648,12 +18657,50 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString command)
       break;
     default:
       // free resources
-      freeCommandMsg(&commandMsg,NULL);
+      freeCommand(&command,NULL);
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
       #endif /* NDEBUG */
       break;
   }
+}
+
+/***********************************************************************\
+* Name   : processSlaveCommand
+* Purpose: process slave command
+* Input  : clientInfo  - client info
+*          commandLine - command line to process
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void processSlaveCommand(ClientInfo *clientInfo, ConstString commandLine)
+{
+  Command command;
+
+  assert(clientInfo != NULL);
+
+  #ifdef SERVER_DEBUG
+    fprintf(stderr,"DEBUG: process slave command=%s\n",String_cString(commandLine));
+  #endif // SERVER_DEBUG
+
+  // parse command
+  if (!parseCommand(&command,commandLine))
+  {
+    sendClientResult(clientInfo,command.id,TRUE,ERROR_PARSING,"parse error '%S'",commandLine);
+    return;
+  }
+
+  // execute command
+  command.serverCommandFunction(clientInfo,
+                                indexHandle,
+                                command.id,
+                                command.argumentMap
+                               );
+
+  // free resources
+  freeCommand(&command,NULL);
 }
 
 /*---------------------------------------------------------------------*/
