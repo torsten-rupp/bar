@@ -386,7 +386,7 @@ StringNode *__StringList_remove(const char *__fileName__, ulong __lineNb__, Stri
 * Input  : stringList - string list
 *          string     - string variable (can be NULL)
 * Output : -
-* Return : string or NULL if no string list is empty
+* Return : string or NULL if string list is empty
 * Notes  : if no string variable is supplied, the string from the list
 *          is returned directly and must not be freed!
 \***********************************************************************/
