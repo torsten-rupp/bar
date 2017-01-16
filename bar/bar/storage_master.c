@@ -8,7 +8,7 @@
 *
 \***********************************************************************/
 
-#define __STORAGE_IMPLEMENATION__
+#define __STORAGE_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
@@ -147,7 +147,8 @@ LOCAL void StorageMaster_getPrintableName(String                 printableStorag
 
 LOCAL Errors StorageMaster_init(StorageInfo            *storageInfo,
                                 const StorageSpecifier *storageSpecifier,
-                                const JobOptions       *jobOptions
+                                const JobOptions       *jobOptions,
+                                SocketHandle           *masterSocketHandle
                                )
 {
   assert(storageInfo != NULL);
