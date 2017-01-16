@@ -389,12 +389,12 @@ void Misc_udelay(uint64 time);
 \***********************************************************************/
 
 INLINE void Misc_mdelay(uint64 time);
-#if defined(NDEBUG) || defined(__MISC_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
 INLINE void Misc_mdelay(uint64 time)
 {
   Misc_udelay(time*US_PER_MS);
 }
-#endif /* NDEBUG || __MISC_IMPLEMENATION__ */
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
 /*---------------------------------------------------------------------*/
 
@@ -424,12 +424,12 @@ uint Misc_getId(void);
 
 /***********************************************************************\
 * Name   : Misc_getUUID, Misc_getUUIDCString
-* Purpose: get universally unique identifier (DCE 1.1)
+* Purpose: get new universally unique identifier (DCE 1.1)
 * Input  : string     - string variable
 *          buffer     - buffer
 *          bufferSize - buffer size
 * Output : -
-* Return : universally unique identifier
+* Return : new universally unique identifier
 * Notes  : -
 \***********************************************************************/
 
@@ -565,7 +565,7 @@ void Misc_getConsoleSize(uint *rows, uint *columns);
 \***********************************************************************/
 
 INLINE uint Misc_getConsoleRows(void);
-#if defined(NDEBUG) || defined(__MISC_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
 INLINE uint Misc_getConsoleRows(void)
 {
   uint n;
@@ -574,7 +574,7 @@ INLINE uint Misc_getConsoleRows(void)
 
   return n;
 }
-#endif /* NDEBUG || __MISC_IMPLEMENATION__ */
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Misc_getConsoleColumns
@@ -586,7 +586,7 @@ INLINE uint Misc_getConsoleRows(void)
 \***********************************************************************/
 
 INLINE uint Misc_getConsoleColumns(void);
-#if defined(NDEBUG) || defined(__MISC_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
 INLINE uint Misc_getConsoleColumns(void)
 {
   uint n;
@@ -595,7 +595,7 @@ INLINE uint Misc_getConsoleColumns(void)
 
   return n;
 }
-#endif /* NDEBUG || __MISC_IMPLEMENATION__ */
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
 /*---------------------------------------------------------------------*/
 
