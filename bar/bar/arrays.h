@@ -289,12 +289,12 @@ void Array_clear(Array *array);
 \***********************************************************************/
 
 INLINE ulong Array_length(const Array *array);
-#if defined(NDEBUG) || defined(__ARRAYS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__ARRAYS_IMPLEMENTATION__)
 INLINE ulong Array_length(const Array *array)
 {
   return (array != NULL) ? array->length : 0;
 }
-#endif // defined(NDEBUG) || defined(__ARRAYS_IMPLEMENATION__)
+#endif // defined(NDEBUG) || defined(__ARRAYS_IMPLEMENTATION__)
 
 /***********************************************************************\
 * Name   : Array_isEmpty
@@ -306,12 +306,12 @@ INLINE ulong Array_length(const Array *array)
 \***********************************************************************/
 
 INLINE bool Array_isEmpty(const Array *array);
-#if defined(NDEBUG) || defined(__ARRAYS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__ARRAYS_IMPLEMENTATION__)
 INLINE bool Array_isEmpty(const Array *array)
 {
   return (array != NULL) ? (array->length == 0) : TRUE;
 }
-#endif // defined(NDEBUG) || defined(__ARRAYS_IMPLEMENATION__)
+#endif // defined(NDEBUG) || defined(__ARRAYS_IMPLEMENTATION__)
 
 /***********************************************************************\
 * Name   : Array_put
@@ -481,12 +481,12 @@ void Array_sort(Array                *array,
 \***********************************************************************/
 
 INLINE const void *Array_cArray(const Array *array);
-#if defined(NDEBUG) || defined(__ARRAYS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__ARRAYS_IMPLEMENTATION__)
 INLINE const void *Array_cArray(const Array *array)
 {
   return (array != NULL) ? array->data : NULL;
 }
-#endif // defined(NDEBUG) || defined(__ARRAYS_IMPLEMENATION__)
+#endif // defined(NDEBUG) || defined(__ARRAYS_IMPLEMENTATION__)
 
 #ifndef NDEBUG
 /***********************************************************************\

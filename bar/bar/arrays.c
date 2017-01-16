@@ -7,7 +7,7 @@
 * Systems: all
 *
 \***********************************************************************/
-#define __ARRAYS_IMPLEMENATION__
+#define __ARRAYS_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
