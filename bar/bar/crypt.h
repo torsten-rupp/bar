@@ -308,7 +308,7 @@ void Crypt_doneAll(void);
 \***********************************************************************/
 
 INLINE bool Crypt_isSymmetricSupported(void);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE bool Crypt_isSymmetricSupported(void)
 {
   #ifdef HAVE_GCRYPT
@@ -317,7 +317,7 @@ INLINE bool Crypt_isSymmetricSupported(void)
     return FALSE;
   #endif /* HAVE_GCRYPT */
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_isValidAlgorithm
@@ -362,13 +362,13 @@ bool Crypt_isValidMACAlgorithm(uint16 n);
 \***********************************************************************/
 
 INLINE bool Crypt_isValidSignatureState(CryptSignatureStates cryptSignatureState);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE bool Crypt_isValidSignatureState(CryptSignatureStates cryptSignatureState)
 {
   return    (cryptSignatureState == CRYPT_SIGNATURE_STATE_NONE)
          || (cryptSignatureState == CRYPT_SIGNATURE_STATE_OK  );
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_algorithmToString
@@ -460,12 +460,12 @@ const char *Crypt_typeToString(CryptTypes cryptType);
 \***********************************************************************/
 
 INLINE bool Crypt_isEncrypted(CryptAlgorithms cryptAlgorithm);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE bool Crypt_isEncrypted(CryptAlgorithms cryptAlgorithm)
 {
   return cryptAlgorithm != CRYPT_ALGORITHM_NONE;
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_randomize
@@ -646,7 +646,7 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
 \***********************************************************************/
 
 INLINE bool Crypt_isAsymmetricSupported(void);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
  INLINE bool Crypt_isAsymmetricSupported(void)
 {
   #ifdef HAVE_GCRYPT
@@ -655,7 +655,7 @@ INLINE bool Crypt_isAsymmetricSupported(void);
     return FALSE;
   #endif /* HAVE_GCRYPT */
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_initKey
@@ -692,12 +692,12 @@ void Crypt_doneKey(CryptKey *cryptKey);
 \***********************************************************************/
 
 INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
 INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey)
 {
   return cryptKey->key != NULL;
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_deriveKey
