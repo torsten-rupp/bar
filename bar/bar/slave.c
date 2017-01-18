@@ -44,6 +44,22 @@
 
 /***************************** Datatypes *******************************/
 
+typedef struct CommandNode
+{
+  LIST_NODE_HEADER(struct CommandNode);
+
+  uint   commandId;
+  String name;
+  String data;
+} CommandNode;
+
+typedef struct
+{
+  LIST_HEADER(CommandNode);
+
+  Semaphore lock;
+} CommandList;
+
 typedef struct ResultNode
 {
   LIST_NODE_HEADER(struct ResultNode);
@@ -57,6 +73,8 @@ typedef struct ResultNode
 typedef struct
 {
   LIST_HEADER(ResultNode);
+
+  Semaphore lock;
 } ResultList;
 
 // list with slaves
@@ -78,7 +96,7 @@ typedef struct SlaveNode
 
   String                         line;
 
-  StringList                     commandList;
+  CommandList                    commandList;
   ResultList                     resultList;
 
   SocketHandle                   socketHandle;
@@ -281,8 +299,10 @@ LOCAL void processSlave(SlaveNode *slaveNode, ConstString line)
   bool                 completedFlag;
   Errors               error;
   String               name;
-  String               arguments;
+  String               data;
   ResultNode           *resultNode;
+  CommandNode          *commandNode;
+  SemaphoreLock        semaphoreLock;
   uint                 i;
   SlaveCommandFunction slaveCommandFunction;
   StringMap            argumentMap;
@@ -290,32 +310,44 @@ LOCAL void processSlave(SlaveNode *slaveNode, ConstString line)
   assert(Semaphore_isLocked(&slaveList));
 
   // init variables
-  name      = String_new();
-  arguments = String_new();
+  name = String_new();
+  data = String_new();
 
   // parse
-  if      (String_parse(line,STRING_BEGIN,"%u %y %u % S",NULL,&commandId,&completedFlag,&error,arguments))
+  if      (String_parse(line,STRING_BEGIN,"%u %y %u % S",NULL,&commandId,&completedFlag,&error,data))
   {
-    // result
+    // init result
     resultNode = LIST_NEW_NODE(ResultNode);
     if (resultNode == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
     resultNode->commandId     = commandId;
-    resultNode->error         = (error != ERROR_NONE) ? Errorx_(error,0,"%s",String_cString(arguments)) : ERROR_NONE;
+    resultNode->error         = (error != ERROR_NONE) ? Errorx_(error,0,"%s",String_cString(data)) : ERROR_NONE;
     resultNode->completedFlag = completedFlag;
-    resultNode->data          = String_duplicate(arguments);
-    List_append(&slaveNode->resultList,resultNode);
+    resultNode->data          = String_duplicate(data);
 
-fprintf(stderr,"%s, %d: %p signal result commandId=%d arguments=%s %d\n",__FILE__,__LINE__,slaveNode,commandId,String_cString(arguments),slaveNode->resultList.count);
-    Semaphore_signalModified(&slaveList.lock);
+    // add result
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveNode->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      List_append(&slaveNode->resultList,resultNode);
+    }
+fprintf(stderr,"%s, %d: %p added result commandId=%d data=%s %d\n",__FILE__,__LINE__,slaveNode,commandId,String_cString(data),slaveNode->resultList.count);
+//    Semaphore_signalModified(&slaveList.lock);
   }
-  else if (!String_parse(line,STRING_BEGIN,"%u %S % S",NULL,&commandId,name,arguments))
+  else if (!String_parse(line,STRING_BEGIN,"%u %S % S",NULL,&commandId,name,data))
   {
-    // command
+    // init command
+    resultNode = LIST_NEW_NODE(ResultNode);
+    if (resultNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    commandNode->commandId = commandId;
+    commandNode->name      = String_duplicate(name);
+    commandNode->data      = String_duplicate(data);
+
 #if 0
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // parse arguments
     argumentMap = StringMap_new();
     if (argumentMap == NULL)
@@ -327,16 +359,19 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     if (!StringMap_parse(argumentMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
     {
       StringMap_delete(argumentMap);
-      String_delete(arguments);
+      String_delete(name);
       String_delete(name);
       return;
     }
-#else
-    StringList_append(&slaveNode->commandList,line);
-
-fprintf(stderr,"%s, %d: %p signal command %s %d\n",__FILE__,__LINE__,slaveNode,commandId,String_cString(line),slaveNode->commandList.count);
-    Semaphore_signalModified(&slaveList.lock);
 #endif
+
+    // add command
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveNode->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      List_append(&slaveNode->commandList,commandNode);
+    }
+fprintf(stderr,"%s, %d: %p added command %s %d\n",__FILE__,__LINE__,slaveNode,commandId,String_cString(line),slaveNode->commandList.count);
+//    Semaphore_signalModified(&slaveList.lock);
   }
   else
   {
@@ -345,8 +380,97 @@ fprintf(stderr,"%s, %d: unkown %s\n",__FILE__,__LINE__,String_cString(line));
   }
 
   // free resources
-  String_delete(arguments);
+  String_delete(data);
   String_delete(name);
+}
+
+LOCAL bool slaveWait2(SlaveNode *slaveNode, long timeout)
+{
+  struct pollfd   pollfds[1];
+  struct timespec pollTimeout;
+  sigset_t        signalMask;
+  char            buffer[4096];
+  ulong           receivedBytes;
+  ulong           i;
+  Errors          error;
+
+  assert(slaveNode != NULL);
+  assert(Semaphore_isLocked(&slaveList.lock));
+
+  if (slaveNode->isConnected)
+  {
+    // wait for data from slave
+    pollfds[0].fd     = Network_getSocket(&slaveNode->socketHandle);
+    pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
+  }
+  else
+  {
+    // slave not connected
+fprintf(stderr,"%s, %d: disconnected????\n",__FILE__,__LINE__);
+    return FALSE;
+  }
+
+  // wait for data from slave
+  pollTimeout.tv_sec  = timeout/MS_PER_SECOND;
+  pollTimeout.tv_nsec = (timeout%MS_PER_SECOND)*NS_PER_MS;
+  if (ppoll(pollfds,1,&pollTimeout,&signalMask) <= 0)
+  {
+fprintf(stderr,"%s, %d: poll fail\n",__FILE__,__LINE__);
+return FALSE;
+  }
+
+  // process slave results/commands
+  if ((pollfds[0].revents & POLLIN) != 0)
+  {
+    // received data
+    Network_receive(&slaveNode->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+//fprintf(stderr,"%s, %d: buffer=%s\n",__FILE__,__LINE__,buffer);
+    if (receivedBytes > 0)
+    {
+      do
+      {
+        // received data -> process
+        for (i = 0; i < receivedBytes; i++)
+        {
+          if (buffer[i] != '\n')
+          {
+            String_appendChar(slaveNode->line,buffer[i]);
+          }
+          else
+          {
+//fprintf(stderr,"%s, %d: process %s \n",__FILE__,__LINE__,String_cString(slaveNode->line));
+            processSlave(slaveNode,slaveNode->line);
+//fprintf(stderr,"%s, %d: process done\n",__FILE__,__LINE__);
+            String_clear(slaveNode->line);
+          }
+        }
+        error = Network_receive(&slaveNode->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+      }
+      while ((error == ERROR_NONE) && (receivedBytes > 0));
+    }
+    else
+    {
+      // disconnect
+//                  deleteClient(disconnectClientNode);
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+      slaveNode->isConnected = FALSE;
+
+      printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
+    }
+  }
+  else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
+  {
+    // error/disconnect
+
+    // done client and free resources
+//                deleteClient(disconnectClientNode);
+fprintf(stderr,"%s, %d: xxxxerrr\n",__FILE__,__LINE__);
+    slaveNode->isConnected = FALSE;
+
+    printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
+  }
+
+  return TRUE;
 }
 
 LOCAL bool slaveWait(const SlaveHost *slaveHost, long timeout)
@@ -361,30 +485,29 @@ LOCAL bool slaveWait(const SlaveHost *slaveHost, long timeout)
   ulong           i;
   Errors          error;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  assert(Semaphore_isLocked(&slaveList.lock));
+
+  slaveNode = findSlave(slaveHost);
+  if (slaveNode != NULL)
   {
-    slaveNode = findSlave(slaveHost);
-    if (slaveNode != NULL)
+    if (slaveNode->isConnected)
     {
-      if (slaveNode->isConnected)
-      {
-        // wait for data from slave
-        pollfds[0].fd     = Network_getSocket(&slaveNode->socketHandle);
-        pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
-      }
-      else
-      {
-        // slave not connected
-        Semaphore_unlock(&slaveList.lock);
-        return FALSE;
-      }
+      // wait for data from slave
+      pollfds[0].fd     = Network_getSocket(&slaveNode->socketHandle);
+      pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
     }
     else
     {
-      // slave not found
+      // slave not connected
       Semaphore_unlock(&slaveList.lock);
       return FALSE;
     }
+  }
+  else
+  {
+    // slave not found
+    Semaphore_unlock(&slaveList.lock);
+    return FALSE;
   }
 
   // wait for data from slave
@@ -458,11 +581,93 @@ fprintf(stderr,"%s, %d: xxxxerrr\n",__FILE__,__LINE__);
   return TRUE;
 }
 
+LOCAL CommandNode *slaveWaitCommand(SlaveNode *slaveNode, long timeout)
+{
+  CommandNode   *commandNode;
+  SemaphoreLock semaphoreLock;
+
+  assert(slaveNode != NULL);
+  assert(Semaphore_isLocked(&slaveList.lock));
+
+  commandNode = NULL;
+
+fprintf(stderr,"%s, %d: slaveWaitCommand\n",__FILE__,__LINE__);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveNode->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    // wait for some result
+    while (List_isEmpty(&slaveNode->commandList))
+    {
+      if (!slaveWait2(slaveNode,timeout))
+      {
+fprintf(stderr,"%s, %d: slaveWaitCommand timeout %ld\n",__FILE__,__LINE__,timeout);
+        Semaphore_unlock(&slaveNode->commandList.lock);
+        return NULL;
+      }
+    }
+
+    // get next command
+    commandNode = List_removeFirst(&slaveNode->commandList);
+  }
+
+  return commandNode;
+}
+
+LOCAL ResultNode *slaveWaitResult(SlaveNode *slaveNode, long timeout)
+{
+  ResultNode    *resultNode;
+  SemaphoreLock semaphoreLock;
+
+  assert(slaveNode != NULL);
+  assert(Semaphore_isLocked(&slaveList.lock));
+
+  resultNode = NULL;
+
+fprintf(stderr,"%s, %d: slaveWaitResult\n",__FILE__,__LINE__);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveNode->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    // wait for some result
+    while (List_isEmpty(&slaveNode->resultList))
+    {
+      if (!slaveWait2(slaveNode,timeout))
+      {
+fprintf(stderr,"%s, %d: slaveWaitResult timeout %ld\n",__FILE__,__LINE__,timeout);
+        Semaphore_unlock(&slaveNode->resultList.lock);
+        return NULL;
+      }
+    }
+
+    // get next result
+    resultNode = List_removeFirst(&slaveNode->resultList);
+  }
+
+  return resultNode;
+}
+
+/***********************************************************************\
+* Name   : freeCommandNode
+* Purpose: free command node
+* Input  : commandNode - command node
+*          userData    - not used
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeCommandNode(CommandNode *commandNode, void *userData)
+{
+  assert(commandNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(commandNode->data);
+  String_delete(commandNode->name);
+}
+
 /***********************************************************************\
 * Name   : freeResultNode
 * Purpose: free result node
-* Input  : scheduleNode - schedule node
-*          userData     - not used
+* Input  : resultNode - result node
+*          userData   - not used
 * Output : -
 * Return : -
 * Notes  : -
@@ -857,11 +1062,14 @@ Errors Slave_initAll(void)
   Semaphore_init(&slaveList.lock);
   List_init(&slaveList);
 
+//TODO
+#if 0
   // start slave thread
   if (!Thread_init(&slaveThread,"BAR slave",globalOptions.niceLevel,slaveThreadCode,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialize slave thread!");
   }
+#endif
 
   return ERROR_NONE;
 }
@@ -870,7 +1078,8 @@ Slave_doneAll(void)
 {
   // quit slave thread
   quitFlag = TRUE;
-  Thread_join(&slaveThread);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//  Thread_join(&slaveThread);
 
 //TODO
 //  List_done(&slaveList,
@@ -986,13 +1195,16 @@ fprintf(stderr,"%s, %d: first line=%s\n",__FILE__,__LINE__,String_cString(line))
   slaveNode->slaveConnectStatusInfoUserData = slaveConnectStatusInfoUserData;
   slaveNode->line                           = String_new();
   slaveNode->commandId                      = 0;
-  StringList_init(&slaveNode->commandList);
+  Semaphore_init(&slaveNode->commandList.lock);
+  List_init(&slaveNode->commandList);
+  Semaphore_init(&slaveNode->resultList.lock);
   List_init(&slaveNode->resultList);
   slaveNode->socketHandle                   = socketHandle;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     List_append(&slaveList,slaveNode);
   }
+fprintf(stderr,"%s, %d: added %s:%d\n",__FILE__,__LINE__,String_cString(slaveNode->hostName),slaveNode->hostPort);
 
   // free resources
   String_delete(line);
@@ -1025,7 +1237,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     Network_disconnect(&slaveNode->socketHandle);
 
     List_done(&slaveNode->resultList,CALLBACK(freeResultNode,NULL));
-    StringList_done(&slaveNode->commandList);
+    Semaphore_done(&slaveNode->resultList.lock);
+    List_done(&slaveNode->commandList,CALLBACK(freeCommandNode,NULL));
+    Semaphore_done(&slaveNode->commandList.lock);
     String_delete(slaveNode->line);
     String_delete(slaveNode->hostName);
     LIST_DELETE_NODE(slaveNode);
@@ -1077,48 +1291,51 @@ bool Slave_isConnected(const SlaveHost *slaveHost)
 }
 
 Errors Slave_getCommand(const SlaveHost *slaveHost,
-                        String          commandLine,
+                        uint            *commandId,
+                        String          name,
+                        String          data,
                         long            timeout
                        )
 {
   SemaphoreLock semaphoreLock;
   SlaveNode     *slaveNode;
+  SemaphoreLock semaphoreLockCommandList;
+  CommandNode   *commandNode;
 
-  String_clear(commandLine);
+  assert(commandId != NULL);
+  assert(name != NULL);
+  assert(data != NULL);
 
-  while (String_isEmpty(commandLine))
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
-  //fprintf(stderr,"%s, %d: lock: get slaves\n",__FILE__,__LINE__);
-    // get command if available
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+    // find slave
+    slaveNode = findSlave(slaveHost);
+    if (slaveNode == NULL)
     {
-      slaveNode = findSlave(slaveHost);
-      if (slaveNode != NULL)
-      {
-        if      (!StringList_isEmpty(&slaveNode->commandList))
-        {
-          // found command
-          StringList_first(&slaveNode->commandList,commandLine);
-          Semaphore_unlock(&slaveList.lock);
-          return TRUE;
-        }
-      }
-      else
-      {
-        // slave not found
-        Semaphore_unlock(&slaveList.lock);
-        return FALSE;
-      }
+      // slave not found
+      Semaphore_unlock(&slaveList.lock);
+return ERROR_UNKNOWN;
     }
 
-    // wait for data from slave
-    if (!slaveWait(slaveHost,timeout))
+    // wait for command
+    commandNode = slaveWaitCommand(slaveNode,30LL*MS_PER_SECOND);
+    if (commandNode == NULL)
     {
-      return FALSE;
+      Semaphore_unlock(&slaveList.lock);
+      return ERROR_NETWORK_TIMEOUT;
     }
+
+    // get command
+    (*commandId) = commandNode->commandId;
+    String_set(name,commandNode->name);
+    String_set(data,commandNode->data);
+
+    // free resources
+    freeCommandNode(commandNode,NULL);
+    LIST_DELETE_NODE(commandNode);
   }
 
-return TRUE;
+  return ERROR_NONE;
 }
 
 //TODO
@@ -1212,19 +1429,7 @@ fprintf(stderr,"%s, %d: sent %s\n",__FILE__,__LINE__,String_cString(line));
     do
     {
       // wait for result
-      while (List_isEmpty(&slaveNode->resultList))
-      {
-        if (!slaveWait(slaveHost,30LL*MS_PER_SECOND))
-        {
-          Semaphore_unlock(&slaveList.lock);
-          String_delete(data);
-          String_delete(line);
-          return ERROR_NETWORK_TIMEOUT;
-        }
-      }
-
-      // get result
-      resultNode = List_removeFirst(&slaveNode->resultList);
+      resultNode = slaveWaitResult(slaveNode,30LL*MS_PER_SECOND);
       if (resultNode == NULL)
       {
         Semaphore_unlock(&slaveList.lock);
@@ -1232,17 +1437,19 @@ fprintf(stderr,"%s, %d: sent %s\n",__FILE__,__LINE__,String_cString(line));
         String_delete(line);
         return ERROR_NETWORK_TIMEOUT;
       }
+
+      // get result
       commandId = resultNode->commandId;
       error     = resultNode->error;
-      String_set(arguments,resultNode->data);
+      String_set(data,resultNode->data);
 
       // free resources
       freeResultNode(resultNode,NULL);
       LIST_DELETE_NODE(resultNode);
     }
     while (resultNode->commandId != slaveNode->commandId);
-    printInfo(4,"Received slave result: error=%d completedFlag=%d arguments=%s\n",error,String_cString(arguments));
-fprintf(stderr,"%s, %d: received error=%d/%s: arguments=%s\n",__FILE__,__LINE__,Error_getCode(error),Error_getText(error),String_cString(arguments));
+    printInfo(4,"Received slave result: error=%d completedFlag=%d data=%s\n",error,String_cString(data));
+fprintf(stderr,"%s, %d: received error=%d/%s: data=%s\n",__FILE__,__LINE__,Error_getCode(error),Error_getText(error),String_cString(data));
 
     // check error
     if (error != ERROR_NONE)
@@ -1253,11 +1460,11 @@ fprintf(stderr,"%s, %d: received error=%d/%s: arguments=%s\n",__FILE__,__LINE__,
       return error;
     }
 
-    // get result
+    // parse result
     if (resultMap != NULL)
     {
       StringMap_clear(resultMap);
-      if (!StringMap_parse(resultMap,arguments,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+      if (!StringMap_parse(resultMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
       {
         Semaphore_unlock(&slaveList.lock);
         String_delete(data);
