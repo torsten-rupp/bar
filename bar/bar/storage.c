@@ -1853,7 +1853,9 @@ Errors Storage_preProcess(StorageInfo *storageInfo,
       error = StorageDevice_preProcess(storageInfo,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+//TODO
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+error = ERROR_NONE;
       break;
     default:
       #ifndef NDEBUG
@@ -1907,7 +1909,9 @@ Errors Storage_postProcess(StorageInfo *storageInfo,
       error = StorageDevice_postProcess(storageInfo,archiveName,time,finalFlag);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+//TODO
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+error = ERROR_NONE;
       break;
     default:
       #ifndef NDEBUG
