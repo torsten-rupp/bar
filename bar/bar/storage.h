@@ -159,6 +159,8 @@ typedef enum
   STORAGE_TYPE_BD,
   STORAGE_TYPE_DEVICE,
 
+  STORAGE_TYPE_MASTER,
+
   STORAGE_TYPE_ANY,
 
   STORAGE_TYPE_UNKNOWN
@@ -211,7 +213,8 @@ typedef struct
 typedef struct
 {
   Semaphore                       lock;
-  SocketHandle                    *masterSocketHandle;
+
+  StorageTypes                    type;                      // storage type
   StorageSpecifier                storageSpecifier;          // storage specifier data
   const JobOptions                *jobOptions;
 
@@ -225,7 +228,6 @@ typedef struct
   uint                            volumeNumber;              // current loaded volume number
   uint                            requestedVolumeNumber;     // requested volume number
   StorageVolumeStates             volumeState;               // volume state
-
 
   union
   {
@@ -376,6 +378,12 @@ typedef struct
       StringList fileNameList;                               // list with file names
       uint64     totalSize;                                  // current size [bytes]
     } device;
+
+    // master
+    struct
+    {
+      SocketHandle *socketHandle;
+    } master;
   };
 
   StorageStatusInfo runningInfo;

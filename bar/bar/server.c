@@ -54,7 +54,6 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define SERVER_DEBUG
 #define _NO_SESSION_ID
 #define _SIMULATOR
 
@@ -171,7 +170,12 @@ typedef struct JobNode
   String          uuid;                                 // unique id
   JobTypes        jobType;                              // job type: backup, restore
   String          name;                                 // name of job
-  SlaveHost       slaveHost;                            // slave host
+  struct
+  {
+    String        name;
+    uint          port;
+    bool          forceSSL;
+  } slaveHost;                                          // slave host
   String          archiveName;                          // archive name
   EntryList       includeEntryList;                     // included entries
   String          includeFileCommand;                   // include file command
@@ -201,11 +205,13 @@ typedef struct JobNode
   // job file/master
   String          fileName;                             // file name or NULL
   uint64          fileModified;                         // file modified date/time (timestamp)
+
   String          master;                               // master who created job or NULL
 SocketHandle    *masterSocketHandle;
   uint            masterPort;                           // master port number or 0
 
   // job running state
+  SlaveInfo       slaveInfo;
   bool            isConnected;                          // TRUE if slave connected
 
   JobStates       state;                                // current state of job
@@ -325,14 +331,6 @@ typedef struct
   LIST_HEADER(IndexCryptPasswordNode);
 } IndexCryptPasswordList;
 
-// client types
-typedef enum
-{
-  CLIENT_TYPE_NONE,
-  CLIENT_TYPE_BATCH,
-  CLIENT_TYPE_NETWORK,
-} ClientTypes;
-
 // authorization states
 typedef enum
 {
@@ -375,7 +373,8 @@ typedef struct
 typedef struct
 {
   Semaphore             lock;
-  ClientTypes           type;
+
+//  ClientTypes           type;
 
   // session data
   SessionId             sessionId;
@@ -399,28 +398,11 @@ typedef struct
   } action;
 
   // i/o
-  union
-  {
-    // i/o via file
-    struct
-    {
-      FileHandle   *fileHandle;
-    } file;
+  ServerIO              io;
 
-    // i/o via network and separated processing thread
-    struct
-    {
-      // connection
-      String       name;
-      uint         port;
-      SocketHandle socketHandle;
-
-      // threads
-      Semaphore    writeLock;                              // write synchronization lock
-      Thread       threads[MAX_NETWORK_CLIENT_THREADS];    // command processing threads
-      MsgQueue     commandQueue;                           // commands send by client
-    } network;
-  };
+  // threads
+  Thread                threads[MAX_NETWORK_CLIENT_THREADS];    // command processing threads
+  MsgQueue              commandQueue;                           // commands send by client
 
   // current list settings
   EntryList             includeEntryList;
@@ -452,6 +434,22 @@ typedef struct
 
   Semaphore lock;
 } ClientList;
+
+// slave node
+typedef struct SlaveNode
+{
+  LIST_NODE_HEADER(struct SlaveNode);
+
+  SlaveInfo slaveInfo;
+} SlaveNode;
+
+// client list
+typedef struct
+{
+  LIST_HEADER(SlaveNode);
+
+  Semaphore lock;
+} SlaveList;
 
 /***********************************************************************\
 * Name   : ServerCommandFunction
@@ -609,6 +607,7 @@ LOCAL const Password        *serverPassword;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
 LOCAL ClientList            clientList;             // list with clients
+//LOCAL SlaveList             slaveList;              // list with slaves
 LOCAL AuthorizationFailList authorizationFailList;  // list with failed client authorizations
 LOCAL JobList               jobList;                // job list
 LOCAL Thread                jobThread;              // thread executing jobs create/restore
@@ -1762,16 +1761,16 @@ LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint buffe
 {
   assert(clientInfo != NULL);
 
-  switch (clientInfo->type)
+  switch (clientInfo->io.type)
   {
-    case CLIENT_TYPE_NONE:
-      stringClear(buffer);
-      break;
-    case CLIENT_TYPE_BATCH:
+//    case SERVER_IO_TYPE_NONE:
+//      stringClear(buffer);
+//      break;
+    case SERVER_IO_TYPE_BATCH:
       stringFormat(buffer,bufferSize,"local file");
       break;
-    case CLIENT_TYPE_NETWORK:
-      stringFormat(buffer,bufferSize,"%s:%d",String_cString(clientInfo->network.name),clientInfo->network.port);
+    case SERVER_IO_TYPE_NETWORK:
+      stringFormat(buffer,bufferSize,"%s:%d",String_cString(clientInfo->io.network.name),clientInfo->io.network.port);
       break;
     #ifndef NDEBUG
       default:
@@ -1950,7 +1949,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   String_delete(jobNode->includeFileCommand);
   EntryList_done(&jobNode->includeEntryList);
   String_delete(jobNode->archiveName);
-  Slave_doneHost(&jobNode->slaveHost);
+  String_delete(&jobNode->slaveHost.name);
   String_delete(jobNode->name);
   String_delete(jobNode->uuid);
   String_delete(jobNode->fileName);
@@ -1992,7 +1991,7 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString name, ConstString uuid, Cons
   }
   jobNode->jobType                        = jobType;
   jobNode->name                           = String_duplicate(name);
-  Slave_initHost(&jobNode->slaveHost,serverPort);
+  jobNode->slaveHost.name                 = String_new();
   jobNode->archiveName                    = String_new();
   EntryList_init(&jobNode->includeEntryList);
   jobNode->includeFileCommand             = String_new();
@@ -2084,7 +2083,9 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
   newJobNode->uuid                           = String_new();
   newJobNode->jobType                        = jobNode->jobType;
   newJobNode->name                           = File_getFileBaseName(String_new(),fileName);
-  Slave_duplicateHost(&newJobNode->slaveHost,&jobNode->slaveHost);
+  newJobNode->slaveHost.name                 = String_duplicate(jobNode->slaveHost.name);
+  newJobNode->slaveHost.port                 = jobNode->slaveHost.port;
+  newJobNode->slaveHost.forceSSL             = jobNode->slaveHost.forceSSL;
   newJobNode->archiveName                    = String_duplicate(jobNode->archiveName);
   EntryList_initDuplicate(&newJobNode->includeEntryList,
                           &jobNode->includeEntryList,
@@ -2185,7 +2186,7 @@ LOCAL void deleteJob(JobNode *jobNode)
 #endif
 
 /***********************************************************************\
-* Name   : isJobLocal
+* Name   : isLocalJob
 * Purpose: check if local job
 * Input  : jobNode - job node
 * Output : -
@@ -2193,7 +2194,7 @@ LOCAL void deleteJob(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE bool isJobLocal(const JobNode *jobNode)
+LOCAL_INLINE bool isLocalJob(const JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
@@ -2214,6 +2215,22 @@ LOCAL_INLINE bool isSlaveJob(const JobNode *jobNode)
   assert(jobNode != NULL);
 
   return !String_isEmpty(jobNode->slaveHost.name);
+}
+
+/***********************************************************************\
+* Name   : isSlaveConnected
+* Purpose: check if a slave connected
+* Input  : jobNode - job node
+* Output : -
+* Return : TRUE iff slave connected
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isSlaveConnected(const JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  return Slave_isConnected(&jobNode->slaveInfo);
 }
 
 /***********************************************************************\
@@ -3766,7 +3783,6 @@ LOCAL void jobThreadCode(void)
   LogHandle        logHandle;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   String           hostName;
-  SlaveHost        slaveHost;
   EntryList        includeEntryList;
   PatternList      excludePatternList;
   MountList        mountList;
@@ -3796,7 +3812,6 @@ LOCAL void jobThreadCode(void)
   storageName                            = String_new();
   directory                              = String_new();
   hostName                               = String_new();
-  Slave_initHost(&slaveHost,serverPort);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   List_init(&mountList);
@@ -3825,7 +3840,7 @@ LOCAL void jobThreadCode(void)
       // wait and get next job to execute
       do
       {
-        // first check for a continuous job
+        // first check for a continuous job to run
         jobNode = jobList.head;
         while (   !quitFlag
                && (jobNode != NULL)
@@ -3839,11 +3854,13 @@ LOCAL void jobThreadCode(void)
 
         if (jobNode == NULL)
         {
-          // next check for other job types
+          // next check for other job types to run
           jobNode = jobList.head;
           while (   !quitFlag
                  && (jobNode != NULL)
-                 && !isJobWaiting(jobNode)
+                 && (   !isJobWaiting(jobNode)
+                     || (isSlaveJob(jobNode) && !isSlaveConnected(jobNode))
+                    )
                 )
           {
             jobNode = jobNode->next;
@@ -3866,7 +3883,6 @@ LOCAL void jobThreadCode(void)
       String_set(storageName,jobNode->archiveName);
       String_set(jobUUID,jobNode->uuid);
       Network_getHostName(hostName);
-      Slave_copyHost(&slaveHost,&jobNode->slaveHost);
       EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList,CALLBACK(NULL,NULL));
       PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList,CALLBACK(NULL,NULL));
       List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL)); List_copy(&jobNode->mountList,&mountList,NULL,NULL,NULL,CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL));
@@ -4284,7 +4300,7 @@ String_isEmpty(jobNode->master) ? NULL : jobNode->masterSocketHandle,
     else
     {
       // slave job -> send to slave and run on slave machine
-      jobNode->runningInfo.error = Slave_jobStart(&jobNode->slaveHost,
+      jobNode->runningInfo.error = Slave_jobStart(&jobNode->slaveInfo,
                                                   jobNode->name,
                                                   jobNode->uuid,
                                                   NULL,  // scheduleUUID
@@ -4313,14 +4329,14 @@ String commandLine = String_new();
               )
         {
 fprintf(stderr,"%s, %d: fafasdfasdfsdasdadf\n",__FILE__,__LINE__);
-          error = Slave_getCommand(&jobNode->slaveHost,
+          error = Slave_getCommand(&jobNode->slaveInfo,
                                    commandLine,
                                    1*MS_PER_SECOND
                                   );
 fprintf(stderr,"%s, %d: commandLine=%s\n",__FILE__,__LINE__,String_cString(commandLine));
 
           // get slave job status
-          error = Slave_executeCommand(&jobNode->slaveHost,
+          error = Slave_executeCommand(&jobNode->slaveInfo,
                                        resultMap,
                                        "JOB_STATUS jobUUID=%S",
                                        jobNode->uuid
@@ -4516,7 +4532,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningIn
   List_done(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
-  Slave_doneHost(&slaveHost);
   String_delete(hostName);
   String_delete(directory);
   String_delete(storageName);
@@ -4537,119 +4552,37 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningIn
 
 LOCAL void slaveConnectThreadCode(void)
 {
-  typedef struct SlaveJobInfoNode
-  {
-    LIST_NODE_HEADER(struct SlaveJobInfoNode);
-
-    String    jobUUID;
-    SlaveHost slaveHost;
-  } SlaveJobInfoNode;
-
-  typedef struct
-  {
-    LIST_HEADER(SlaveJobInfoNode);
-  } SlaveJobInfoList;
-
   StringList       jobUUIDList;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  SlaveHost        slaveHost;
-  bool             tryConnectFlag;
   SemaphoreLock    semaphoreLock;
 
-  SlaveJobInfoList slaveJobInfoList;
   JobNode          *jobNode;
-  SlaveJobInfoNode *slaveJobInfoNode;
   Errors           error;
-//  double           entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
-//  ulong            restFiles;
-//  uint64           restBytes;
-//  uint64           restStorageBytes;
-//  ulong            estimatedRestTime;
-
-  /***********************************************************************\
-  * Name   : freeSlaveJobInfoNode
-  * Purpose: free slave info node
-  * Input  : slaveJobInfoNode - slave job info node
-  *          userData         - not used
-  * Output : -
-  * Return : -
-  * Notes  : -
-  \***********************************************************************/
-
-  void freeSlaveJobInfoNode(SlaveJobInfoNode *slaveJobInfoNode, void *userData)
-  {
-    assert(slaveJobInfoNode != NULL);
-    assert(slaveJobInfoNode->jobUUID != NULL);
-    assert(slaveJobInfoNode->slaveHost.name != NULL);
-
-    UNUSED_VARIABLE(userData);
-
-    String_delete(slaveJobInfoNode->slaveHost.name);
-  }
-
-  /***********************************************************************\
-  * Name   : findSlaveJobInfoByUUID
-  * Purpose: find slave job info by UUID
-  * Input  : jobUUID - job UUID
-  * Output : -
-  * Return : slave job info node or NULL if not found
-  * Notes  : -
-  \***********************************************************************/
-
-  SlaveJobInfoNode *findSlaveJobInfoByUUID(ConstString jobUUID)
-  {
-    SlaveJobInfoNode *slaveJobInfoNode;
-
-    LIST_ITERATE(&slaveJobInfoList,slaveJobInfoNode)
-    {
-      if (String_equals(slaveJobInfoNode->jobUUID,jobUUID))
-      {
-        return slaveJobInfoNode;
-      }
-    }
-
-    return NULL;
-  }
 
   // init variables
-  StringList_init(&jobUUIDList);
-  List_init(&slaveJobInfoList);
-  Slave_initHost(&slaveHost,serverPort);
 
   while (!quitFlag)
   {
     // get job UUIDs
     getAllJobUUIDs(&jobUUIDList);
 
-    // connect all slave instances
-    while (!StringList_isEmpty(&jobUUIDList))
+    // try to connect all slave instances
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-//TODO: use static list?
-      StringList_removeFirst(&jobUUIDList,jobUUID);
-
-      // check if job for slave and slave is currently not connected
-      tryConnectFlag = FALSE;
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      LIST_ITERATE(&jobList,jobNode)
       {
-        jobNode = findJobByUUID(jobUUID);
-        if (jobNode != NULL)
+        if (isSlaveJob(jobNode) && !isSlaveConnected(jobNode))
         {
-          if (isSlaveJob(jobNode))
-          {
-            Slave_copyHost(&slaveHost,&jobNode->slaveHost);
-            tryConnectFlag = TRUE;
-          }
-        }
-      }
-
-      // try to connect
-      if (tryConnectFlag && !Slave_isConnected(&slaveHost))
-      {
-fprintf(stderr,"%s, %d: req connect jobUUID=%s host=%s:%d\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(slaveHost.name),slaveHost.port);
+fprintf(stderr,"%s, %d: req connect jobUUID=%s host=%s:%d\n",__FILE__,__LINE__,String_cString(jobNode->uuid),String_cString(jobNode->slaveHost.name),jobNode->slaveHost.port);
 //        (void)Slave_connect(&slaveHost,CALLBACK(updateConnectStatusInfo,NULL));
 fprintf(stderr,"%s, %d: tyr connect\n",__FILE__,__LINE__);
-        error = Slave_connect(&slaveHost,CALLBACK(updateConnectStatusInfo,NULL));
-fprintf(stderr,"%s, %d: connect result host=%s: %s\n",__FILE__,__LINE__,String_cString(slaveHost.name),Error_getText(error));
+          error = Slave_connect(&jobNode->slaveInfo,
+                                jobNode->slaveHost.name,
+                                jobNode->slaveHost.port,
+                                CALLBACK(updateConnectStatusInfo,NULL)
+                               );
+fprintf(stderr,"%s, %d: connect result host=%s: %s\n",__FILE__,__LINE__,String_cString(jobNode->slaveHost.name),Error_getText(error));
+        }
       }
     }
 
@@ -4658,9 +4591,6 @@ fprintf(stderr,"%s, %d: connect result host=%s: %s\n",__FILE__,__LINE__,String_c
   }
 
   // free resources
-  Slave_doneHost(&slaveHost);
-  List_done(&slaveJobInfoList,(ListNodeFreeFunction)freeSlaveJobInfoNode,NULL);
-  StringList_done(&jobUUIDList);
 }
 
 /*---------------------------------------------------------------------*/
@@ -6116,6 +6046,51 @@ LOCAL void autoIndexThreadCode(void)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : sendMasterCommand
+* Purpose: send command to master
+* Input  : clientInfo - client info
+*          id         - command id
+*          format     - format string
+*          arguments  - arguments
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void sendMasterCommand(ServerIO *serverIO, uint id, const char *format, va_list arguments)
+{
+  locale_t      locale;
+  String        command;
+  SemaphoreLock semaphoreLock;
+
+  assert(serverIO != NULL);
+  assert(serverIO->type == SERVER_IO_TYPE_NETWORK);
+
+  command = String_new();
+
+  locale = uselocale(POSIXLocale);
+  {
+    String_format(command,"%u ",id);
+    String_vformat(command,format,arguments);
+    String_appendChar(command,'\n');
+  }
+  uselocale(locale);
+
+  #ifndef NDEBUG
+    if (globalOptions.serverDebugFlag)
+    {
+      fprintf(stderr,"DEBUG: send master=%s",String_cString(command));
+    }
+  #endif /* not DEBUG */
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    (void)Network_send(&serverIO->network.socketHandle,String_cString(command),String_length(command));
+  }
+
+  String_delete(command);
+}
+
+/***********************************************************************\
 * Name   : sendClient
 * Purpose: send data to client
 * Input  : clientInfo - client info
@@ -6132,63 +6107,27 @@ LOCAL void sendClient(ClientInfo *clientInfo, ConstString data)
   assert(clientInfo != NULL);
   assert(data != NULL);
 
-  #ifdef SERVER_DEBUG
-    fprintf(stderr,"DEBUG: send result=%s",String_cString(data));
-  #endif /* SERVER_DEBUG */
-
   if (!clientInfo->quitFlag)
   {
-    switch (clientInfo->type)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      case CLIENT_TYPE_BATCH:
-        (void)File_write(clientInfo->file.fileHandle,String_cString(data),String_length(data));
-        (void)File_flush(clientInfo->file.fileHandle);
-        break;
-      case CLIENT_TYPE_NETWORK:
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-        {
-          (void)Network_send(&clientInfo->network.socketHandle,String_cString(data),String_length(data));
-        }
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
+      switch (clientInfo->io.type)
+      {
+        case SERVER_IO_TYPE_BATCH:
+          (void)File_write(clientInfo->io.file.fileHandle,String_cString(data),String_length(data));
+          (void)File_flush(clientInfo->io.file.fileHandle);
+          break;
+        case SERVER_IO_TYPE_NETWORK:
+          (void)Network_send(&clientInfo->io.network.socketHandle,String_cString(data),String_length(data));
+          break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* NDEBUG */
+          break;
+      }
     }
   }
-}
-
-/***********************************************************************\
-* Name   : sendClientCommand
-* Purpose: send command to client
-* Input  : clientInfo - client info
-*          id         - command id
-*          format     - format string
-*          arguments  - arguments
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void sendClientCommand(ClientInfo *clientInfo, uint id, const char *format, va_list arguments)
-{
-  locale_t locale;
-  String   command;
-
-  command = String_new();
-
-  locale = uselocale(POSIXLocale);
-  {
-    String_format(command,"%u ",id);
-    String_vformat(command,format,arguments);
-    String_appendChar(command,'\n');
-  }
-  uselocale(locale);
-
-  sendClient(clientInfo,command);
-
-  String_delete(command);
 }
 
 /***********************************************************************\
@@ -6223,6 +6162,12 @@ LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, 
   }
   uselocale(locale);
 
+  #ifndef NDEBUG
+    if (globalOptions.serverDebugFlag)
+    {
+      fprintf(stderr,"DEBUG: send result=%s",String_cString(result));
+    }
+  #endif /* not DEBUG */
   sendClient(clientInfo,result);
 
   String_delete(result);
@@ -6271,7 +6216,16 @@ LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, 
       String_appendChar(result,'\n');
     }
     uselocale(locale);
+
+    #ifndef NDEBUG
+      if (globalOptions.serverDebugFlag)
+      {
+        fprintf(stderr,"DEBUG: sent action=%s",String_cString(result));
+      }
+    #endif /* not DEBUG */
     sendClient(clientInfo,result);
+
+    // free resources
     String_delete(result);
 
     // wait for result, timeout, or quit
@@ -6329,19 +6283,7 @@ LOCAL bool isCommandAborted(ClientInfo *clientInfo, uint commandId)
     if (!abortedFlag)
     {
       // check for quit
-      switch (clientInfo->type)
-      {
-        case CLIENT_TYPE_BATCH:
-          break;
-        case CLIENT_TYPE_NETWORK:
-          if (clientInfo->quitFlag) abortedFlag = TRUE;
-          break;
-        default:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          #endif /* NDEBUG */
-          break;
-      }
+      if (clientInfo->quitFlag) abortedFlag = TRUE;
     }
 
     if (!abortedFlag)
@@ -6951,7 +6893,7 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
 
     SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      error = Network_startSSL(&clientInfo->network.socketHandle,
+      error = Network_startSSL(&clientInfo->io.network.socketHandle,
                                serverCA->data,
                                serverCA->length,
                                serverCert->data,
@@ -6961,7 +6903,7 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
                               );
       if (error != ERROR_NONE)
       {
-        Network_disconnect(&clientInfo->network.socketHandle);
+        Network_disconnect(&clientInfo->io.network.socketHandle);
       }
     }
   #else /* not HAVE_GNU_TLS */
@@ -6993,6 +6935,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   String        encryptedPassword;
   bool          okFlag;
   SemaphoreLock semaphoreLock;
+  char          buffer[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7038,7 +6981,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     {
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
       sendClientResult(clientInfo,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
-      printInfo(1,"Client authorization failure: '%s:%u'\n",String_cString(clientInfo->network.name),clientInfo->network.port);
+      printInfo(1,"Client authorization failure: '%s'\n",getClientInfo(clientInfo,buffer,sizeof(buffer)));
     }
   }
 
@@ -9782,7 +9725,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       jobNode = newJob(JOB_TYPE_CREATE,name,jobUUID,NULL /* fileName */,master);
       assert(jobNode != NULL);
 //TODO: client disappear? closed?
-jobNode->masterSocketHandle = &clientInfo->network.socketHandle;
+jobNode->masterSocketHandle = &clientInfo->io.network.socketHandle;
 
       // add new job to list
       List_append(&jobList,jobNode);
@@ -10102,7 +10045,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
   bool          dryRun;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
-  String        byName;
+  char          buffer[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -10137,16 +10080,14 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     if  (!isJobActive(jobNode))
     {
       // trigger job
-      byName = String_format(String_new(),"%s:%u",String_cString(clientInfo->network.name),clientInfo->network.port);
       triggerJob(jobNode,
-                 String_cString(byName),
+                 getClientInfo(clientInfo,buffer,sizeof(buffer)),
                  archiveType,
                  dryRun,
                  NULL,  // scheduleUUID
                  NULL,  // scheduleCustomText
                  FALSE  // noStorage
                 );
-      String_delete(byName);
     }
   }
 
@@ -10206,7 +10147,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
       String_setCString(jobNode->abortedByInfo,getClientInfo(clientInfo,buffer,sizeof(buffer)));
       Semaphore_signalModified(&jobList.lock);
 
-      if (isJobLocal(jobNode))
+      if (isLocalJob(jobNode))
       {
         // wait until local job terminated
         while (isJobRunning(jobNode))
@@ -10217,7 +10158,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
       else
       {
         // abort slave job
-        jobNode->runningInfo.error = Slave_jobAbort(&jobNode->slaveHost,
+        jobNode->runningInfo.error = Slave_jobAbort(&jobNode->slaveInfo,
                                                     jobNode->uuid
                                                    );
       }
@@ -12953,7 +12894,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   ScheduleNode  *scheduleNode;
-  String        byName;
+  char          buffer[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13001,16 +12942,14 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // trigger job
-    byName = String_format(String_new(),"%s:%u",String_cString(clientInfo->network.name),clientInfo->network.port);
     triggerJob(jobNode,
-               String_cString(byName),
+               getClientInfo(clientInfo,buffer,sizeof(buffer)),
                scheduleNode->archiveType,
                FALSE,  // dryRun
                scheduleNode->uuid,
                scheduleNode->customText,
                scheduleNode->noStorage
               );
-    String_delete(byName);
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -15062,7 +15001,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   }
 
   // restore
-  byName = String_format(String_new(),"%s:%u",String_cString(clientInfo->network.name),clientInfo->network.port);
+  byName = String_format(String_new(),"%s:%u",String_cString(clientInfo->io.network.name),clientInfo->io.network.port);
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
              "Started restore%s%s: %d archives/%d entries\n",
@@ -18033,9 +17972,9 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   CommandInfoNode *commandInfoNode;
   String          result;
   Command         command;
-  #ifdef SERVER_DEBUG
+  #ifndef NDEBUG
     uint64 t0,t1;
-  #endif /* SERVER_DEBUG */
+  #endif /* not NDEBUG */
 
   assert(clientInfo != NULL);
 
@@ -18046,7 +17985,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
 
   while (   !clientInfo->quitFlag
-         && MsgQueue_get(&clientInfo->network.commandQueue,&command,NULL,sizeof(command),WAIT_FOREVER)
+         && MsgQueue_get(&clientInfo->commandQueue,&command,NULL,sizeof(command),WAIT_FOREVER)
         )
   {
     // check authorization (if not in server debug mode)
@@ -18067,18 +18006,24 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
       }
 
       // execute command
-      #ifdef SERVER_DEBUG
-        t0 = Misc_getTimestamp();
-      #endif /* SERVER_DEBUG */
+      #ifndef NDEBUG
+        if (globalOptions.serverDebugFlag)
+        {
+          t0 = Misc_getTimestamp();
+        }
+      #endif /* not NDEBUG */
       command.serverCommandFunction(clientInfo,
                                     indexHandle,
                                     command.id,
                                     command.argumentMap
                                    );
-      #ifdef SERVER_DEBUG
-        t1 = Misc_getTimestamp();
-        fprintf(stderr,"DEBUG: command time=%llums\n",(t1-t0)/US_PER_MS);
-      #endif /* SERVER_DEBUG */
+      #ifndef NDEBUG
+        if (globalOptions.serverDebugFlag)
+        {
+          t1 = Misc_getTimestamp();
+          fprintf(stderr,"DEBUG: command time=%llums\n",(t1-t0)/US_PER_MS);
+        }
+      #endif /* not DEBUG */
 
       // remove command info
       SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
@@ -18217,7 +18162,8 @@ LOCAL void initClient(ClientInfo *clientInfo)
 
   // initialize
   Semaphore_init(&clientInfo->lock);
-  clientInfo->type                  = CLIENT_TYPE_NONE;
+//  clientInfo->io.type               = CLIENT_TYPE_NONE;
+  Semaphore_init(&clientInfo->io.lock);
   clientInfo->authorizationState    = AUTHORIZATION_STATE_WAITING;
   clientInfo->authorizationFailNode = NULL;
   clientInfo->quitFlag              = FALSE;
@@ -18263,9 +18209,12 @@ LOCAL void initBatchClient(ClientInfo *clientInfo,
 {
   assert(clientInfo != NULL);
 
-  clientInfo->type               = CLIENT_TYPE_BATCH;
+  // initialize
+  clientInfo->io.type            = SERVER_IO_TYPE_BATCH;
+  clientInfo->io.file.fileHandle = fileHandle;
+
+  // batch client do not require authorization
   clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
-  clientInfo->file.fileHandle    = fileHandle;
 }
 
 /***********************************************************************\
@@ -18291,19 +18240,18 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   assert(clientInfo != NULL);
 
   // initialize
-  clientInfo->type                 = CLIENT_TYPE_NETWORK;
-  clientInfo->network.name         = String_duplicate(name);
-  clientInfo->network.port         = port;
-  clientInfo->network.socketHandle = socketHandle;
+  clientInfo->io.type                 = SERVER_IO_TYPE_NETWORK;
+  clientInfo->io.network.name         = String_duplicate(name);
+  clientInfo->io.network.port         = port;
+  clientInfo->io.network.socketHandle = socketHandle;
 
-  if (!MsgQueue_init(&clientInfo->network.commandQueue,0))
+  if (!MsgQueue_init(&clientInfo->commandQueue,0))
   {
     HALT_FATAL_ERROR("Cannot initialize client command message queue!");
   }
-  Semaphore_init(&clientInfo->network.writeLock);
   for (z = 0; z < MAX_NETWORK_CLIENT_THREADS; z++)
   {
-    if (!Thread_init(&clientInfo->network.threads[z],"Client",0,networkClientThreadCode,clientInfo))
+    if (!Thread_init(&clientInfo->threads[z],"Client",0,networkClientThreadCode,clientInfo))
     {
       HALT_FATAL_ERROR("Cannot initialize client thread!");
     }
@@ -18338,36 +18286,35 @@ LOCAL void doneClient(ClientInfo *clientInfo)
     Index_interrupt(commandInfoNode->indexHandle);
   }
 
-  switch (clientInfo->type)
+  switch (clientInfo->io.type)
   {
-    case CLIENT_TYPE_NONE:
+    case SERVER_IO_TYPE_NONE:
       break;
-    case CLIENT_TYPE_BATCH:
+    case SERVER_IO_TYPE_BATCH:
       break;
-    case CLIENT_TYPE_NETWORK:
-      // stop client threads
+    case SERVER_IO_TYPE_NETWORK:
+      // stop command threads
       Semaphore_setEnd(&clientInfo->action.lock);
-      MsgQueue_setEndOfMsg(&clientInfo->network.commandQueue);
+      MsgQueue_setEndOfMsg(&clientInfo->commandQueue);
       for (z = MAX_NETWORK_CLIENT_THREADS-1; z >= 0; z--)
       {
-        if (!Thread_join(&clientInfo->network.threads[z]))
+        if (!Thread_join(&clientInfo->threads[z]))
         {
-          HALT_INTERNAL_ERROR("Cannot stop client thread!");
+          HALT_INTERNAL_ERROR("Cannot stop command threads!");
         }
       }
 
       // disconnect
-      Network_disconnect(&clientInfo->network.socketHandle);
+      Network_disconnect(&clientInfo->io.network.socketHandle);
 
       // free resources
-      doneSession(clientInfo);
       for (z = MAX_NETWORK_CLIENT_THREADS-1; z >= 0; z--)
       {
-        Thread_done(&clientInfo->network.threads[z]);
+        Thread_done(&clientInfo->threads[z]);
       }
-      Semaphore_done(&clientInfo->network.writeLock);
-      MsgQueue_done(&clientInfo->network.commandQueue,CALLBACK((MsgQueueMsgFreeFunction)freeCommand,NULL));
-      String_delete(clientInfo->network.name);
+      MsgQueue_done(&clientInfo->commandQueue,CALLBACK((MsgQueueMsgFreeFunction)freeCommand,NULL));
+      doneSession(clientInfo);
+      String_delete(clientInfo->io.network.name);
       break;
     default:
       #ifndef NDEBUG
@@ -18388,6 +18335,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   StringMap_delete(clientInfo->action.resultMap);
   RingBuffer_done(&clientInfo->abortedCommandIds,CALLBACK_NULL);
   List_done(&clientInfo->commandInfoList,CALLBACK_NULL);
+  Semaphore_done(&clientInfo->io.lock);
   Semaphore_done(&clientInfo->lock);
 }
 
@@ -18479,6 +18427,7 @@ LOCAL void deleteClient(ClientNode *clientNode)
   LIST_DELETE_NODE(clientNode);
 }
 
+#if 0
 /***********************************************************************\
 * Name   : findClient
 * Purpose: find client by name, port
@@ -18497,13 +18446,14 @@ LOCAL ClientInfo *findClient(const SlaveHost *slaveHost)
 
   clientNode = LIST_FIND(&clientList,
                          clientNode,
-                            (clientNode->clientInfo.type == CLIENT_TYPE_NETWORK)
-                         && (clientNode->clientInfo.network.port == slaveHost->port)
-                         && String_equals(clientNode->clientInfo.network.name,slaveHost->name)
+                            (clientNode->clientInfo.type == SERVER_IO_TYPE_NETWORK)
+                         && (clientNode->clientInfo.io.network.port == slaveHost->port)
+                         && String_equals(clientNode->clientInfo.io.network.name,slaveHost->name)
                         );
 
   return (clientNode != NULL) ? &clientNode->clientInfo : NULL;
 }
+#endif
 
 // ----------------------------------------------------------------------
 
@@ -18589,9 +18539,12 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString commandLine)
 
   assert(clientInfo != NULL);
 
-  #ifdef SERVER_DEBUG
-    fprintf(stderr,"DEBUG: process command=%s\n",String_cString(commandLine));
-  #endif // SERVER_DEBUG
+  #ifndef NDEBUG
+    if (globalOptions.serverDebugFlag)
+    {
+      fprintf(stderr,"DEBUG: process command=%s\n",String_cString(commandLine));
+    }
+  #endif /* not NDEBUG */
 
   // parse command
   if (!parseCommand(&command,commandLine))
@@ -18600,9 +18553,9 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString commandLine)
     return;
   }
 
-  switch (clientInfo->type)
+  switch (clientInfo->io.type)
   {
-    case CLIENT_TYPE_BATCH:
+    case SERVER_IO_TYPE_BATCH:
       // check authorization (if not in server debug mode)
       if (globalOptions.serverDebugFlag || (command.authorizationState == clientInfo->authorizationState))
       {
@@ -18623,7 +18576,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString commandLine)
       // free resources
       freeCommand(&command,NULL);
       break;
-    case CLIENT_TYPE_NETWORK:
+    case SERVER_IO_TYPE_NETWORK:
       switch (clientInfo->authorizationState)
       {
         case AUTHORIZATION_STATE_WAITING:
@@ -18649,7 +18602,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString commandLine)
           break;
         case AUTHORIZATION_STATE_OK:
           // send command to client thread for asynchronous processing
-          (void)MsgQueue_put(&clientInfo->network.commandQueue,&command,sizeof(Command));
+          (void)MsgQueue_put(&clientInfo->commandQueue,&command,sizeof(Command));
           break;
         case AUTHORIZATION_STATE_FAIL:
           break;
@@ -18681,9 +18634,12 @@ LOCAL void processSlaveCommand(ClientInfo *clientInfo, ConstString commandLine)
 
   assert(clientInfo != NULL);
 
-  #ifdef SERVER_DEBUG
-    fprintf(stderr,"DEBUG: process slave command=%s\n",String_cString(commandLine));
-  #endif // SERVER_DEBUG
+  #ifndef NDEBUG
+    if (globalOptions.serverDebugFlag)
+    {
+      fprintf(stderr,"DEBUG: process slave command=%s\n",String_cString(commandLine));
+    }
+  #endif /* not NDEBUG */
 
   // parse command
   if (!parseCommand(&command,commandLine))
@@ -18763,6 +18719,8 @@ Errors Server_run(ServerModes       mode,
   serverDefaultJobOptions = defaultJobOptions;
   Semaphore_init(&clientList.lock);
   List_init(&clientList);
+//  Semaphore_init(&slaveList.lock);
+//  List_init(&slaveList);
   List_init(&authorizationFailList);
   Semaphore_init(&jobList.lock);
   List_init(&jobList);
@@ -18776,6 +18734,7 @@ Errors Server_run(ServerModes       mode,
   indexHandle             = NULL;
   quitFlag                = FALSE;
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
+//  AUTOFREE_ADD(&autoFreeList,&slaveList,{ List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&jobList, { List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL)); });
@@ -19058,7 +19017,7 @@ Errors Server_run(ServerModes       mode,
             pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
             if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
           }
-          pollfds[pollfdCount].fd     = Network_getSocket(&clientNode->clientInfo.network.socketHandle);
+          pollfds[pollfdCount].fd     = Network_getSocket(&clientNode->clientInfo.io.network.socketHandle);
           pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
           pollfdCount++;
         }
@@ -19102,7 +19061,7 @@ Errors Server_run(ServerModes       mode,
             }
           }
 
-          printInfo(1,"Connected client '%s:%u'\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
+          printInfo(1,"Connected client '%s:%u'\n",String_cString(clientNode->clientInfo.io.network.name),clientNode->clientInfo.io.network.port);
         }
       }
       else
@@ -19163,7 +19122,7 @@ Errors Server_run(ServerModes       mode,
             }
           }
 
-          printInfo(1,"Connected client '%s:%u' (TLS/SSL)\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
+          printInfo(1,"Connected client '%s:%u' (TLS/SSL)\n",String_cString(clientNode->clientInfo.io.network.name),clientNode->clientInfo.io.network.port);
         }
       }
       else
@@ -19184,14 +19143,14 @@ Errors Server_run(ServerModes       mode,
           // find client node
           clientNode = LIST_FIND(&clientList,
                                  clientNode,
-                                 pollfds[pollfdIndex].fd == Network_getSocket(&clientNode->clientInfo.network.socketHandle)
+                                 pollfds[pollfdIndex].fd == Network_getSocket(&clientNode->clientInfo.io.network.socketHandle)
                                 );
           if (clientNode != NULL)
           {
             if ((pollfds[pollfdIndex].revents & POLLIN) != 0)
             {
               // receive data from client
-              Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+              Network_receive(&clientNode->clientInfo.io.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
               if (receivedBytes > 0)
               {
                 // received data -> process
@@ -19209,7 +19168,7 @@ Errors Server_run(ServerModes       mode,
                       String_clear(clientNode->commandString);
                     }
                   }
-                  error = Network_receive(&clientNode->clientInfo.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+                  error = Network_receive(&clientNode->clientInfo.io.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
                 }
                 while ((error == ERROR_NONE) && (receivedBytes > 0));
               }
@@ -19238,7 +19197,7 @@ Errors Server_run(ServerModes       mode,
                     authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
                     if (authorizationFailNode == NULL)
                     {
-                      authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.network.name);
+                      authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.io.network.name);
                       assert(authorizationFailNode != NULL);
                       List_append(&authorizationFailList,authorizationFailNode);
                     }
@@ -19246,7 +19205,7 @@ Errors Server_run(ServerModes       mode,
                     authorizationFailNode->lastTimestamp = Misc_getTimestamp();
                     break;
                 }
-                printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.network.name),disconnectClientNode->clientInfo.network.port);
+                printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.io.network.name),disconnectClientNode->clientInfo.io.network.port);
 
                 // done client and free resources
                 deleteClient(disconnectClientNode);
@@ -19277,7 +19236,7 @@ Errors Server_run(ServerModes       mode,
                   authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
                   if (authorizationFailNode == NULL)
                   {
-                    authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.network.name);
+                    authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.io.network.name);
                     assert(authorizationFailNode != NULL);
                     List_append(&authorizationFailList,authorizationFailNode);
                   }
@@ -19285,7 +19244,7 @@ Errors Server_run(ServerModes       mode,
                   authorizationFailNode->lastTimestamp = Misc_getTimestamp();
                   break;
               }
-              printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.network.name),disconnectClientNode->clientInfo.network.port);
+              printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.io.network.name),disconnectClientNode->clientInfo.io.network.port);
 
               // done client and free resources
               deleteClient(disconnectClientNode);
@@ -19305,20 +19264,20 @@ Errors Server_run(ServerModes       mode,
           clientNode = List_remove(&clientList,disconnectClientNode);
 
           // disconnect
-          Network_disconnect(&disconnectClientNode->clientInfo.network.socketHandle);
+          Network_disconnect(&disconnectClientNode->clientInfo.io.network.socketHandle);
 
           // add to/update authorization fail list
           authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
           if (authorizationFailNode == NULL)
           {
-            authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.network.name);
+            authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.io.network.name);
             assert(authorizationFailNode != NULL);
             List_append(&authorizationFailList,authorizationFailNode);
           }
           authorizationFailNode->count++;
           authorizationFailNode->lastTimestamp = Misc_getTimestamp();
 
-          printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.network.name),disconnectClientNode->clientInfo.network.port);
+          printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.io.network.name),disconnectClientNode->clientInfo.io.network.port);
         }
         else
         {
@@ -19385,7 +19344,6 @@ Errors Server_run(ServerModes       mode,
     }
   }
   String_delete(clientName);
-  List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
   free(pollfds);
 
   // delete all clients
@@ -19444,6 +19402,8 @@ Slave_doneAll();
   List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
   Semaphore_done(&jobList.lock);
   List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
+//  List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL));
+//  Semaphore_done(&slaveList.lock);
   List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
   Semaphore_done(&clientList.lock);
   AutoFree_done(&autoFreeList);
@@ -19545,8 +19505,8 @@ processCommand(&clientInfo,commandString);
   return ERROR_NONE;
 }
 
-Errors Server_sendMaster(const SlaveHost  *slaveHost,
-                         ServerResultList *serverResultList,
+Errors Server_sendMaster(const ServerIO   *serverIO,
+                         ServerResultList *resultList,
                          const char       *format,
                          ...
                         )
@@ -19558,7 +19518,7 @@ uint commandId;
   SemaphoreLock semaphoreLock;
   ClientInfo    *clientInfo;
 
-  assert(slaveHost != NULL);
+  assert(serverIO != NULL);
   assert(format != NULL);
 
   // init variables
@@ -19566,23 +19526,13 @@ uint commandId;
 
 commandId = 0;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    // find client node which is master
-    clientInfo = findClient(slaveHost);
-    if (clientInfo == NULL)
-    {
-      Semaphore_unlock(&clientList.lock);
-      return ERROR_MASTER_DISCONNECED;
-    }
-
     // send command
     va_start(arguments,format);
-    sendClientCommand(clientInfo,commandId,format,arguments);
+    sendMasterCommand(serverIO,commandId,format,arguments);
     va_end(arguments);
 
     // wait for results
-  }
+//TODO
 
   // free resources
   String_delete(line);

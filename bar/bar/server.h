@@ -22,6 +22,7 @@
 #include "arrays.h"
 #include "stringmaps.h"
 
+#include "bar_global.h"
 #include "passwords.h"
 
 #include "slave.h"
@@ -33,12 +34,12 @@
 #define SERVER_PROTOCOL_VERSION_MAJOR 5
 #define SERVER_PROTOCOL_VERSION_MINOR 0
 
-#define SESSION_ID_LENGTH 64      // max. length of session id
+//#define SESSION_ID_LENGTH 64      // max. length of session id
 
 /***************************** Datatypes *******************************/
 
 // session id
-typedef byte SessionId[SESSION_ID_LENGTH];
+//typedef byte SessionId[SESSION_ID_LENGTH];
 
 // server info
 typedef struct
@@ -54,6 +55,23 @@ typedef struct
   SocketHandle socketHandle;
 } ServerInfo;
 
+#if 0
+typedef struct ServerCommandNode
+{
+  LIST_NODE_HEADER(struct ServerCommandNode);
+
+  uint   commandId;
+  String name;
+  String data;
+} ServerCommandNode;
+
+typedef struct
+{
+  LIST_HEADER(ServerCommandNode);
+
+  Semaphore lock;
+} ServerCommandList;
+
 typedef struct ServerResultNode
 {
   LIST_NODE_HEADER(struct ServerResultNode);
@@ -67,6 +85,7 @@ typedef struct
 {
   LIST_HEADER(ServerResultNode);
 } ServerResultList;
+#endif
 
 /***************************** Variables *******************************/
 
@@ -186,9 +205,49 @@ Errors Server_addJob(JobTypes          jobType,
                     );
 #endif /* 0 */
 
-Errors Server_sendMaster(const SlaveHost  *slaveHost,
-                         ServerResultList *serverResultList,
-                         const char       *format,
+// client types
+
+// server i/o
+typedef struct
+{
+  Semaphore        lock;
+
+  enum
+  {
+    SERVER_IO_TYPE_NONE,
+    SERVER_IO_TYPE_BATCH,
+    SERVER_IO_TYPE_NETWORK
+  }                type;
+  union
+  {
+    // i/o via file
+    struct
+    {
+      FileHandle   *fileHandle;
+    } file;
+
+    // i/o via network
+    struct
+    {
+      String       name;
+      uint         port;
+      Semaphore    lock;
+      SocketHandle socketHandle;
+    } network;
+  };
+
+  ServerResultList resultList;
+} ServerIO;
+
+typedef struct
+{
+  Semaphore    lock;
+  SocketHandle socketHandle;
+} ServerConnectInfo;
+
+Errors Server_sendMaster(const ServerIO *serverIO,
+                         ServerResultList       *resultList,
+                         const char             *format,
                          ...
                         );
 

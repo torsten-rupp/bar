@@ -30,10 +30,11 @@
 #include "errors.h"
 
 #include "errors.h"
-#include "crypt.h"
-#include "passwords.h"
+//#include "crypt.h"
+//#include "passwords.h"
 #include "misc.h"
-#include "archive.h"
+//#include "archive.h"
+#include "server.h"
 #include "bar_global.h"
 #include "bar.h"
 
@@ -147,8 +148,7 @@ LOCAL void StorageMaster_getPrintableName(String                 printableStorag
 
 LOCAL Errors StorageMaster_init(StorageInfo            *storageInfo,
                                 const StorageSpecifier *storageSpecifier,
-                                const JobOptions       *jobOptions,
-                                SocketHandle           *masterSocketHandle
+                                const JobOptions       *jobOptions
                                )
 {
   assert(storageInfo != NULL);
@@ -314,60 +314,24 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
 {
   Errors error;
   String directoryName;
+ServerResultList serverResultList;
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+//  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
   assert(!String_isEmpty(fileName));
 
   UNUSED_VARIABLE(fileSize);
+fprintf(stderr,"%s, %d: StorageMaster_create\n",__FILE__,__LINE__);
 
-  // check if archive file exists
-  if (   (storageHandle->storageInfo->jobOptions != NULL)
-      && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
-      && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
-      && !storageHandle->storageInfo->jobOptions->archiveFileModeOverwriteFlag
-      && File_exists(fileName)
-     )
-  {
-    return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(fileName));
-  }
+  error = Server_sendMaster(&storageHandle->storageInfo->master,
+                            &serverResultList,
+                            "STORAGE_CREATE name=%S size=%llu",
+                            fileName,
+                            fileSize
+                           );
 
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    // create directory if not existing
-    directoryName = File_getFilePathName(String_new(),fileName);
-    if (!String_isEmpty(directoryName) && !File_exists(directoryName))
-    {
-      error = File_makeDirectory(directoryName,
-                                 FILE_DEFAULT_USER_ID,
-                                 FILE_DEFAULT_GROUP_ID,
-                                 FILE_DEFAULT_PERMISSION
-                                );
-      if (error != ERROR_NONE)
-      {
-        String_delete(directoryName);
-        return error;
-      }
-    }
-    String_delete(directoryName);
-
-    // create/append file
-    error = File_open(&storageHandle->fileSystem.fileHandle,
-                      fileName,
-                      (   (storageHandle->storageInfo->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
-                       && !storageHandle->storageInfo->jobOptions->archiveFileModeOverwriteFlag
-                      )
-                        ? FILE_OPEN_APPEND
-                        : FILE_OPEN_CREATE
-                     );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->fileSystem,sizeof(storageHandle->fileSystem));
-  }
+  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->fileSystem,sizeof(storageHandle->fileSystem));
 
   return ERROR_NONE;
 }

@@ -77,58 +77,7 @@ typedef struct
   Semaphore lock;
 } ResultList;
 
-// list with slaves
-typedef struct SlaveNode
-{
-  LIST_NODE_HEADER(struct SlaveNode);
-
-  String                         hostName;
-  uint                           hostPort;
-  bool                           sslFlag;
-  bool                           isConnected;
-  SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction;
-  void                           *slaveConnectStatusInfoUserData;
-
-  SessionId                      sessionId;
-  CryptKey                       publicKey,secretKey;
-
-  uint                           commandId;
-
-  String                         line;
-
-  CommandList                    commandList;
-  ResultList                     resultList;
-
-  SocketHandle                   socketHandle;
-} SlaveNode;
-
-typedef struct
-{
-  LIST_HEADER(SlaveNode);
-
-  Semaphore lock;
-} SlaveList;
-
-/***********************************************************************\
-* Name   : SlaveCommandFunction
-* Purpose: slave command function
-* Input  : slaveNode   - slave
-*          indexHandle - index handle or NULL
-*          id          - command id
-*          argumentMap - argument map
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-typedef void(*SlaveCommandFunction)(SlaveNode       *slaveNode,
-                                    IndexHandle     *indexHandle,
-                                    uint            id,
-                                    const StringMap argumentMap
-                                   );
-
 /***************************** Variables *******************************/
-LOCAL SlaveList slaveList;
 LOCAL bool      quitFlag;
 LOCAL Thread    slaveThread;
 
@@ -142,27 +91,28 @@ LOCAL Thread    slaveThread;
   extern "C" {
 #endif
 
+#if 0
 /***********************************************************************\
 * Name   : findSlave
 * Purpose: find slave by name/port
-* Input  : slaveHost - slave host
+* Input  : slaveInfo - slave info
 * Output : -
 * Return : slave or NULL if not found
 * Notes  : -
 \***********************************************************************/
 
-LOCAL SlaveNode *findSlave(const SlaveHost *slaveHost)
+LOCAL SlaveNode *findSlave(const SlaveInfo *slaveInfo)
 {
   SlaveNode *slaveNode;
 
-  assert(slaveHost != NULL);
-  assert(Semaphore_isLocked(&slaveList.lock));
+  assert(slaveInfo != NULL);
+//  assert(Semaphore_isLocked(&slaveList.lock));
 
   return LIST_FIND(&slaveList,
                    slaveNode,
-                      (slaveNode->hostPort == slaveHost->port)
-                   && String_equals(slaveNode->hostName,slaveHost->name)
-                   && (!slaveHost->forceSSL || slaveNode->sslFlag)
+                      (slaveNode->hostPort == slaveInfo->port)
+                   && String_equals(slaveNode->hostName,slaveInfo->name)
+                   && (!slaveInfo->forceSSL || slaveNode->sslFlag)
                   );
 }
 
@@ -180,10 +130,11 @@ LOCAL SlaveNode *findSlaveBySocket(int fd)
   SlaveNode *slaveNode;
 
   assert(fd != -1);
-  assert(Semaphore_isLocked(&slaveList.lock));
+//  assert(Semaphore_isLocked(&slaveList.lock));
 
   return LIST_FIND(&slaveList,slaveNode,Network_getSocket(&slaveNode->socketHandle) == fd);
 }
+#endif
 
 /***********************************************************************\
 * Name   : slaveConnect
@@ -283,17 +234,7 @@ LOCAL bool parseEnumState(const char *name, uint *value)
 }
 #endif
 
-// slave commands
-const struct
-{
-  const char           *name;
-  SlaveCommandFunction slaveCommandFunction;
-}
-SLAVE_COMMANDS[] =
-{
-};
-
-LOCAL void processSlave(SlaveNode *slaveNode, ConstString line)
+LOCAL void processSlave(SlaveInfo *slaveInfo, ConstString line)
 {
   uint                 commandId;
   bool                 completedFlag;
@@ -304,10 +245,9 @@ LOCAL void processSlave(SlaveNode *slaveNode, ConstString line)
   CommandNode          *commandNode;
   SemaphoreLock        semaphoreLock;
   uint                 i;
-  SlaveCommandFunction slaveCommandFunction;
   StringMap            argumentMap;
 
-  assert(Semaphore_isLocked(&slaveList));
+//  assert(Semaphore_isLocked(&slaveList));
 
   // init variables
   name = String_new();
@@ -328,11 +268,11 @@ LOCAL void processSlave(SlaveNode *slaveNode, ConstString line)
     resultNode->data          = String_duplicate(data);
 
     // add result
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveNode->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveInfo->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      List_append(&slaveNode->resultList,resultNode);
+      List_append(&slaveInfo->resultList,resultNode);
     }
-fprintf(stderr,"%s, %d: %p added result commandId=%d data=%s %d\n",__FILE__,__LINE__,slaveNode,commandId,String_cString(data),slaveNode->resultList.count);
+fprintf(stderr,"%s, %d: %p added result commandId=%d data=%s %d\n",__FILE__,__LINE__,slaveInfo,commandId,String_cString(data),slaveInfo->resultList.count);
 //    Semaphore_signalModified(&slaveList.lock);
   }
   else if (!String_parse(line,STRING_BEGIN,"%u %S % S",NULL,&commandId,name,data))
@@ -366,11 +306,11 @@ fprintf(stderr,"%s, %d: %p added result commandId=%d data=%s %d\n",__FILE__,__LI
 #endif
 
     // add command
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveNode->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveInfo->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      List_append(&slaveNode->commandList,commandNode);
+      List_append(&slaveInfo->commandList,commandNode);
     }
-fprintf(stderr,"%s, %d: %p added command %s %d\n",__FILE__,__LINE__,slaveNode,commandId,String_cString(line),slaveNode->commandList.count);
+fprintf(stderr,"%s, %d: %p added command %s %d\n",__FILE__,__LINE__,slaveInfo,commandId,String_cString(line),slaveInfo->commandList.count);
 //    Semaphore_signalModified(&slaveList.lock);
   }
   else
@@ -384,7 +324,7 @@ fprintf(stderr,"%s, %d: unkown %s\n",__FILE__,__LINE__,String_cString(line));
   String_delete(name);
 }
 
-LOCAL bool slaveWait2(SlaveNode *slaveNode, long timeout)
+LOCAL bool slaveWait2(SlaveInfo *slaveInfo, long timeout)
 {
   struct pollfd   pollfds[1];
   struct timespec pollTimeout;
@@ -394,13 +334,13 @@ LOCAL bool slaveWait2(SlaveNode *slaveNode, long timeout)
   ulong           i;
   Errors          error;
 
-  assert(slaveNode != NULL);
-  assert(Semaphore_isLocked(&slaveList.lock));
+  assert(slaveInfo != NULL);
+//  assert(Semaphore_isLocked(&slaveList.lock));
 
-  if (slaveNode->isConnected)
+  if (slaveInfo->isConnected)
   {
     // wait for data from slave
-    pollfds[0].fd     = Network_getSocket(&slaveNode->socketHandle);
+    pollfds[0].fd     = Network_getSocket(&slaveInfo->socketHandle);
     pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
   }
   else
@@ -423,7 +363,7 @@ return FALSE;
   if ((pollfds[0].revents & POLLIN) != 0)
   {
     // received data
-    Network_receive(&slaveNode->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+    Network_receive(&slaveInfo->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
 //fprintf(stderr,"%s, %d: buffer=%s\n",__FILE__,__LINE__,buffer);
     if (receivedBytes > 0)
     {
@@ -434,17 +374,17 @@ return FALSE;
         {
           if (buffer[i] != '\n')
           {
-            String_appendChar(slaveNode->line,buffer[i]);
+            String_appendChar(slaveInfo->line,buffer[i]);
           }
           else
           {
-//fprintf(stderr,"%s, %d: process %s \n",__FILE__,__LINE__,String_cString(slaveNode->line));
-            processSlave(slaveNode,slaveNode->line);
+//fprintf(stderr,"%s, %d: process %s \n",__FILE__,__LINE__,String_cString(slaveInfo->line));
+            processSlave(slaveInfo,slaveInfo->line);
 //fprintf(stderr,"%s, %d: process done\n",__FILE__,__LINE__);
-            String_clear(slaveNode->line);
+            String_clear(slaveInfo->line);
           }
         }
-        error = Network_receive(&slaveNode->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+        error = Network_receive(&slaveInfo->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
       }
       while ((error == ERROR_NONE) && (receivedBytes > 0));
     }
@@ -453,9 +393,9 @@ return FALSE;
       // disconnect
 //                  deleteClient(disconnectClientNode);
 fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-      slaveNode->isConnected = FALSE;
+      slaveInfo->isConnected = FALSE;
 
-      printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
+      printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveInfo->name),slaveInfo->port);
     }
   }
   else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
@@ -465,19 +405,18 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
     // done client and free resources
 //                deleteClient(disconnectClientNode);
 fprintf(stderr,"%s, %d: xxxxerrr\n",__FILE__,__LINE__);
-    slaveNode->isConnected = FALSE;
+    slaveInfo->isConnected = FALSE;
 
-    printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
+    printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveInfo->name),slaveInfo->port);
   }
 
   return TRUE;
 }
 
-LOCAL bool slaveWait(const SlaveHost *slaveHost, long timeout)
+LOCAL bool slaveWait(SlaveInfo *slaveInfo, long timeout)
 {
   SemaphoreLock   semaphoreLock;
   struct pollfd   pollfds[1];
-  SlaveNode       *slaveNode;
   struct timespec pollTimeout;
   sigset_t        signalMask;
   char            buffer[4096];
@@ -485,28 +424,17 @@ LOCAL bool slaveWait(const SlaveHost *slaveHost, long timeout)
   ulong           i;
   Errors          error;
 
-  assert(Semaphore_isLocked(&slaveList.lock));
+//  assert(Semaphore_isLocked(&slaveList.lock));
 
-  slaveNode = findSlave(slaveHost);
-  if (slaveNode != NULL)
+  if (slaveInfo->isConnected)
   {
-    if (slaveNode->isConnected)
-    {
-      // wait for data from slave
-      pollfds[0].fd     = Network_getSocket(&slaveNode->socketHandle);
-      pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
-    }
-    else
-    {
-      // slave not connected
-      Semaphore_unlock(&slaveList.lock);
-      return FALSE;
-    }
+    // wait for data from slave
+    pollfds[0].fd     = Network_getSocket(&slaveInfo->socketHandle);
+    pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
   }
   else
   {
-    // slave not found
-    Semaphore_unlock(&slaveList.lock);
+    // slave not connected
     return FALSE;
   }
 
@@ -521,123 +449,116 @@ return FALSE;
 fprintf(stderr,"%s, %d: wait done -------\n",__FILE__,__LINE__);
 
   // process slave results/commands
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  if ((pollfds[0].revents & POLLIN) != 0)
   {
-    // find slave
-    slaveNode = findSlaveBySocket(pollfds[0].fd);
-assert(slaveNode != NULL);
-
-    if ((pollfds[0].revents & POLLIN) != 0)
-    {
-      // received data
-      Network_receive(&slaveNode->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+    // received data
+    Network_receive(&slaveInfo->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
 //fprintf(stderr,"%s, %d: buffer=%s\n",__FILE__,__LINE__,buffer);
-      if (receivedBytes > 0)
+    if (receivedBytes > 0)
+    {
+      do
       {
-        do
+        // received data -> process
+        for (i = 0; i < receivedBytes; i++)
         {
-          // received data -> process
-          for (i = 0; i < receivedBytes; i++)
+          if (buffer[i] != '\n')
           {
-            if (buffer[i] != '\n')
-            {
-              String_appendChar(slaveNode->line,buffer[i]);
-            }
-            else
-            {
-//fprintf(stderr,"%s, %d: process %s \n",__FILE__,__LINE__,String_cString(slaveNode->line));
-              processSlave(slaveNode,slaveNode->line);
-//fprintf(stderr,"%s, %d: process done\n",__FILE__,__LINE__);
-              String_clear(slaveNode->line);
-            }
+            String_appendChar(slaveInfo->line,buffer[i]);
           }
-          error = Network_receive(&slaveNode->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+          else
+          {
+//fprintf(stderr,"%s, %d: process %s \n",__FILE__,__LINE__,String_cString(slaveInfo->line));
+            processSlave(slaveInfo,slaveInfo->line);
+//fprintf(stderr,"%s, %d: process done\n",__FILE__,__LINE__);
+            String_clear(slaveInfo->line);
+          }
         }
-        while ((error == ERROR_NONE) && (receivedBytes > 0));
+        error = Network_receive(&slaveInfo->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
       }
-      else
-      {
-        // disconnect
+      while ((error == ERROR_NONE) && (receivedBytes > 0));
+    }
+    else
+    {
+      // disconnect
 //                  deleteClient(disconnectClientNode);
 fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-        slaveNode->isConnected = FALSE;
+      slaveInfo->isConnected = FALSE;
 
-        printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
-      }
+      printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveInfo->name),slaveInfo->port);
     }
-    else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
-    {
-      // error/disconnect
+  }
+  else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
+  {
+    // error/disconnect
 
-      // done client and free resources
+    // done client and free resources
 //                deleteClient(disconnectClientNode);
 fprintf(stderr,"%s, %d: xxxxerrr\n",__FILE__,__LINE__);
-      slaveNode->isConnected = FALSE;
+    slaveInfo->isConnected = FALSE;
 
-      printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
-    }
+    printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveInfo->name),slaveInfo->port);
   }
 
   return TRUE;
 }
 
-LOCAL CommandNode *slaveWaitCommand(SlaveNode *slaveNode, long timeout)
+LOCAL CommandNode *slaveWaitCommand(SlaveInfo *slaveInfo, long timeout)
 {
   CommandNode   *commandNode;
   SemaphoreLock semaphoreLock;
 
-  assert(slaveNode != NULL);
-  assert(Semaphore_isLocked(&slaveList.lock));
+  assert(slaveInfo != NULL);
+//  assert(Semaphore_isLocked(&slaveList.lock));
 
   commandNode = NULL;
 
 fprintf(stderr,"%s, %d: slaveWaitCommand\n",__FILE__,__LINE__);
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveNode->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveInfo->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // wait for some result
-    while (List_isEmpty(&slaveNode->commandList))
+    while (List_isEmpty(&slaveInfo->commandList))
     {
-      if (!slaveWait2(slaveNode,timeout))
+      if (!slaveWait2(slaveInfo,timeout))
       {
 fprintf(stderr,"%s, %d: slaveWaitCommand timeout %ld\n",__FILE__,__LINE__,timeout);
-        Semaphore_unlock(&slaveNode->commandList.lock);
+        Semaphore_unlock(&slaveInfo->commandList.lock);
         return NULL;
       }
     }
 
     // get next command
-    commandNode = List_removeFirst(&slaveNode->commandList);
+    commandNode = List_removeFirst(&slaveInfo->commandList);
   }
 
   return commandNode;
 }
 
-LOCAL ResultNode *slaveWaitResult(SlaveNode *slaveNode, long timeout)
+LOCAL ResultNode *slaveWaitResult(SlaveInfo *slaveInfo, long timeout)
 {
   ResultNode    *resultNode;
   SemaphoreLock semaphoreLock;
 
-  assert(slaveNode != NULL);
-  assert(Semaphore_isLocked(&slaveList.lock));
+  assert(slaveInfo != NULL);
+//  assert(Semaphore_isLocked(&slaveList.lock));
 
   resultNode = NULL;
 
-fprintf(stderr,"%s, %d: slaveWaitResult\n",__FILE__,__LINE__);
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveNode->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+fprintf(stderr,"%s, %d: slaveWaitResult timeout=%ld\n",__FILE__,__LINE__,timeout);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveInfo->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // wait for some result
-    while (List_isEmpty(&slaveNode->resultList))
+    while (List_isEmpty(&slaveInfo->resultList))
     {
-      if (!slaveWait2(slaveNode,timeout))
+      if (!slaveWait2(slaveInfo,timeout))
       {
 fprintf(stderr,"%s, %d: slaveWaitResult timeout %ld\n",__FILE__,__LINE__,timeout);
-        Semaphore_unlock(&slaveNode->resultList.lock);
+        Semaphore_unlock(&slaveInfo->resultList.lock);
         return NULL;
       }
     }
 
     // get next result
-    resultNode = List_removeFirst(&slaveNode->resultList);
+    resultNode = List_removeFirst(&slaveInfo->resultList);
   }
 
   return resultNode;
@@ -682,6 +603,7 @@ LOCAL void freeResultNode(ResultNode *resultNode, void *userData)
   String_delete(resultNode->data);
 }
 
+#if 0
 /***********************************************************************\
 * Name   : slaveThreadCode
 * Purpose: slave thread code
@@ -698,7 +620,7 @@ LOCAL void slaveThreadCode(void)
     LIST_NODE_HEADER(struct SlaveJobInfoNode);
 
     String    jobUUID;
-    SlaveHost slaveHost;
+    SlaveInfo slaveInfo;
   } SlaveJobInfoNode;
 
   typedef struct
@@ -711,8 +633,7 @@ LOCAL void slaveThreadCode(void)
   uint                  pollfdCount;
 
   SemaphoreLock    semaphoreLock;
-  SlaveNode        *slaveNode;
-  SlaveHost        slaveHost;
+  SlaveInfo        slaveInfo;
   struct timespec       pollTimeout;
   sigset_t              signalMask;
   uint                  pollfdIndex;
@@ -740,19 +661,19 @@ LOCAL void slaveThreadCode(void)
     SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
 #if 0
-          if (isSlaveJob(jobNode) && !Slave_isConnected(&jobNode->slaveHost))
+          if (isSlaveJob(jobNode) && !Slave_isConnected(&jobNode->slaveInfo))
           {
-fprintf(stderr,"%s, %d: req connect jobUUID=%s host=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(jobNode->slaveHost.name));
-            Slave_copyHost(&slaveHost,&jobNode->slaveHost);
+fprintf(stderr,"%s, %d: req connect jobUUID=%s host=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(jobNode->slaveInfo.name));
+            Slave_copyHost(&slaveInfo,&jobNode->slaveInfo);
             tryConnectFlag = TRUE;
           }
 
       // try to connect
       if (tryConnectFlag)
       {
-//        (void)Slave_connect(&slaveHost);
-        error = Slave_connect(&slaveHost);
-fprintf(stderr,"%s, %d: connect result host=%s: %s\n",__FILE__,__LINE__,String_cString(slaveHost.name),Error_getText(error));
+//        (void)Slave_connect(&slaveInfo);
+        error = Slave_connect(&slaveInfo);
+fprintf(stderr,"%s, %d: connect result host=%s: %s\n",__FILE__,__LINE__,String_cString(slaveInfo.name),Error_getText(error));
       }
 #endif
     }
@@ -842,7 +763,7 @@ assert(slaveNode != NULL);
                 {
                   // disconnect
 //                  deleteClient(disconnectClientNode);
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: ---------- DISCONNECT1\n",__FILE__,__LINE__);
                   slaveNode->isConnected = FALSE;
 
                   printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
@@ -856,7 +777,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
 
             // done client and free resources
 //                deleteClient(disconnectClientNode);
-fprintf(stderr,"%s, %d: xxxxerrr\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: ---------- DISCONNECT2\n",__FILE__,__LINE__);
             slaveNode->isConnected = FALSE;
 
             printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
@@ -878,23 +799,24 @@ fprintf(stderr,"%s, %d: xxxxerrr\n",__FILE__,__LINE__);
   // free resources
   free(pollfds);
 }
+#endif
 
 /***********************************************************************\
 * Name   : sendSlave
 * Purpose: send data to slave
-* Input  : slaveNode - slave
+* Input  : slaveInfo - slave info
 *          data      - data string
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL uint sendSlave(SlaveNode *slaveNode, ConstString data)
+LOCAL uint sendSlave(SlaveInfo *slaveInfo, ConstString data)
 {
   SemaphoreLock semaphoreLock;
   uint          commandId;
 
-  assert(slaveNode != NULL);
+  assert(slaveInfo != NULL);
   assert(data != NULL);
 
   #ifdef SLAVE_DEBUG
@@ -902,24 +824,24 @@ LOCAL uint sendSlave(SlaveNode *slaveNode, ConstString data)
   #endif /* SLAVE_DEBUG */
 
   // new command id
-  commandId = slaveNode->commandId;
-  slaveNode->commandId++;
+  commandId = slaveInfo->commandId;
+  slaveInfo->commandId++;
 
   // format command
 
   // send data
   if (!quitFlag)
   {
-//    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveNode->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+//    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      (void)Network_send(&slaveNode->socketHandle,String_cString(data),String_length(data));
+      (void)Network_send(&slaveInfo->socketHandle,String_cString(data),String_length(data));
     }
   }
 
   return commandId;
 }
 
-LOCAL Errors waitForResult(SlaveNode *slaveNode)
+LOCAL Errors waitForResult(SlaveInfo *slaveInfo)
 {
 
   return ERROR_NONE;
@@ -928,7 +850,7 @@ LOCAL Errors waitForResult(SlaveNode *slaveNode)
 /***********************************************************************\
 * Name   : Slave_setJobOptionInteger
 * Purpose: set job int value
-* Input  : slaveHost - slave host
+* Input  : slaveInfo - slave info
 *          jobUUID   - job UUID
 *          name      - value name
 *          value     - value
@@ -937,18 +859,18 @@ LOCAL Errors waitForResult(SlaveNode *slaveNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionInteger(const SlaveHost *slaveHost, ConstString jobUUID, const char *name, int value)
+LOCAL Errors Slave_setJobOptionInteger(const SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, int value)
 {
-  assert(slaveHost != NULL);
+  assert(slaveInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveHost,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%d",jobUUID,name,value);
+  return Slave_executeCommand(slaveInfo,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%d",jobUUID,name,value);
 }
 
 /***********************************************************************\
 * Name   : Slave_setJobOptionInteger64
 * Purpose: set job int64 value
-* Input  : slaveHost - slave host
+* Input  : slaveInfo - slave info
 *          jobUUID   - job UUID
 *          name      - value name
 *          value     - value
@@ -957,18 +879,18 @@ LOCAL Errors Slave_setJobOptionInteger(const SlaveHost *slaveHost, ConstString j
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionInteger64(const SlaveHost *slaveHost, ConstString jobUUID, const char *name, int64 value)
+LOCAL Errors Slave_setJobOptionInteger64(const SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, int64 value)
 {
-  assert(slaveHost != NULL);
+  assert(slaveInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveHost,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%lld",jobUUID,name,value);
+  return Slave_executeCommand(slaveInfo,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%lld",jobUUID,name,value);
 }
 
 /***********************************************************************\
 * Name   : Slave_setJobOptionBoolean
 * Purpose: set job boolean value
-* Input  : slaveHost - slave host
+* Input  : slaveInfo - slave info
 *          jobUUID   - job UUID
 *          name      - value name
 *          value     - value
@@ -977,18 +899,18 @@ LOCAL Errors Slave_setJobOptionInteger64(const SlaveHost *slaveHost, ConstString
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionBoolean(const SlaveHost *slaveHost, ConstString jobUUID, const char *name, bool value)
+LOCAL Errors Slave_setJobOptionBoolean(const SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, bool value)
 {
-  assert(slaveHost != NULL);
+  assert(slaveInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveHost,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%y",jobUUID,name,value);
+  return Slave_executeCommand(slaveInfo,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%y",jobUUID,name,value);
 }
 
 /***********************************************************************\
 * Name   : Slave_setJobOptionString
 * Purpose: set job string value
-* Input  : slaveHost - slave host
+* Input  : slaveInfo - slave info
 *          jobUUID   - job UUID
 *          name      - value name
 *          value     - value
@@ -997,18 +919,18 @@ LOCAL Errors Slave_setJobOptionBoolean(const SlaveHost *slaveHost, ConstString j
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionString(const SlaveHost *slaveHost, ConstString jobUUID, const char *name, ConstString value)
+LOCAL Errors Slave_setJobOptionString(const SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, ConstString value)
 {
-  assert(slaveHost != NULL);
+  assert(slaveInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveHost,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'S",jobUUID,name,value);
+  return Slave_executeCommand(slaveInfo,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'S",jobUUID,name,value);
 }
 
 /***********************************************************************\
 * Name   : Slave_setJobOptionCString
 * Purpose: set job c-string value
-* Input  : slaveHost - slave host
+* Input  : slaveInfo - slave info
 *          jobUUID   - job UUID
 *          name      - value name
 *          value     - value
@@ -1017,18 +939,18 @@ LOCAL Errors Slave_setJobOptionString(const SlaveHost *slaveHost, ConstString jo
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionCString(const SlaveHost *slaveHost, ConstString jobUUID, const char *name, const char *value)
+LOCAL Errors Slave_setJobOptionCString(const SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, const char *value)
 {
-  assert(slaveHost != NULL);
+  assert(slaveInfo != NULL);
   assert(name != NULL);
 
-  return Slave_executeCommand(slaveHost,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,value);
+  return Slave_executeCommand(slaveInfo,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,value);
 }
 
 /***********************************************************************\
 * Name   : Slave_setJobOptionPassword
 * Purpose: set job password option
-* Input  : slaveHost - slave host
+* Input  : slaveInfo - slave info
 *          jobUUID   - job UUID
 *          name      - value name
 *          password  - password
@@ -1037,16 +959,16 @@ LOCAL Errors Slave_setJobOptionCString(const SlaveHost *slaveHost, ConstString j
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionPassword(const SlaveHost *slaveHost, ConstString jobUUID, const char *name, Password *password)
+LOCAL Errors Slave_setJobOptionPassword(const SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, Password *password)
 {
   const char *plainPassword;
   Errors     error;
 
-  assert(slaveHost != NULL);
+  assert(slaveInfo != NULL);
   assert(name != NULL);
 
   plainPassword = Password_deploy(password);
-  error = Slave_executeCommand(slaveHost,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,plainPassword);
+  error = Slave_executeCommand(slaveInfo,NULL,"JOB_OPTION_SET jobUUID=%S name=%s value=%'s",jobUUID,name,plainPassword);
   Password_undeploy(password,plainPassword);
 
   return error;
@@ -1059,8 +981,8 @@ Errors Slave_initAll(void)
   // init variables
   quitFlag = FALSE;
 
-  Semaphore_init(&slaveList.lock);
-  List_init(&slaveList);
+//  Semaphore_init(&slaveList.lock);
+//  List_init(&slaveList);
 
 //TODO
 #if 0
@@ -1083,49 +1005,51 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
 //TODO
 //  List_done(&slaveList,
-  Semaphore_done(&slaveList.lock);
+//  Semaphore_done(&slaveList.lock);
 }
 
-void Slave_initHost(SlaveHost *slaveHost, uint defaultPort)
+void Slave_initHost(SlaveInfo *slaveInfo, uint defaultPort)
 {
-  assert(slaveHost != NULL);
+  assert(slaveInfo != NULL);
 
-  slaveHost->name     = String_new();
-  slaveHost->port     = defaultPort;
-  slaveHost->forceSSL = FALSE;
+  slaveInfo->name     = String_new();
+  slaveInfo->port     = defaultPort;
+  slaveInfo->forceSSL = FALSE;
 
-  DEBUG_ADD_RESOURCE_TRACE(slaveHost,sizeof(SlaveHost));
+  DEBUG_ADD_RESOURCE_TRACE(slaveInfo,sizeof(SlaveInfo));
 }
 
-void Slave_doneHost(SlaveHost *slaveHost)
+void Slave_doneHost(SlaveInfo *slaveInfo)
 {
-  assert(slaveHost != NULL);
+  assert(slaveInfo != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(slaveHost,sizeof(SlaveHost));
+  DEBUG_REMOVE_RESOURCE_TRACE(slaveInfo,sizeof(SlaveInfo));
 
-  String_delete(slaveHost->name);
+  String_delete(slaveInfo->name);
 }
 
-void Slave_copyHost(SlaveHost *toSlaveHost, const SlaveHost *fromSlaveHost)
+void Slave_copyHost(SlaveInfo *toSlaveInfo, const SlaveInfo *fromSlaveInfo)
 {
-  assert(toSlaveHost != NULL);
-  assert(fromSlaveHost != NULL);
+  assert(toSlaveInfo != NULL);
+  assert(fromSlaveInfo != NULL);
 
-  String_set(toSlaveHost->name,fromSlaveHost->name);
-  toSlaveHost->port     = fromSlaveHost->port;
-  toSlaveHost->forceSSL = fromSlaveHost->forceSSL;
+  String_set(toSlaveInfo->name,fromSlaveInfo->name);
+  toSlaveInfo->port     = fromSlaveInfo->port;
+  toSlaveInfo->forceSSL = fromSlaveInfo->forceSSL;
 }
 
-void Slave_duplicateHost(SlaveHost *toSlaveHost, const SlaveHost *fromSlaveHost)
+void Slave_duplicateHost(SlaveInfo *toSlaveInfo, const SlaveInfo *fromSlaveInfo)
 {
-  assert(toSlaveHost != NULL);
-  assert(fromSlaveHost != NULL);
+  assert(toSlaveInfo != NULL);
+  assert(fromSlaveInfo != NULL);
 
-  Slave_initHost(toSlaveHost,0);
-  Slave_copyHost(toSlaveHost,fromSlaveHost);
+  Slave_initHost(toSlaveInfo,0);
+  Slave_copyHost(toSlaveInfo,fromSlaveInfo);
 }
 
-Errors Slave_connect(const SlaveHost                *slaveHost,
+Errors Slave_connect(SlaveInfo                      *slaveInfo,
+                     ConstString                    hostName,
+                     uint                           hostPort,
                      SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction,
                      void                           *slaveConnectStatusInfoUserData
                     )
@@ -1134,11 +1058,10 @@ Errors Slave_connect(const SlaveHost                *slaveHost,
   SocketHandle  socketHandle;
   Errors        error;
   bool          sslFlag;
-  SlaveNode     *slaveNode;
   SemaphoreLock semaphoreLock;
 
-  assert(slaveHost != NULL);
-  assert(slaveHost->name != NULL);
+  assert(slaveInfo != NULL);
+  assert(hostName != NULL);
 
   // init variables
   line = String_new();
@@ -1148,9 +1071,10 @@ Errors Slave_connect(const SlaveHost                *slaveHost,
 
   // connect to slave host
   error = Network_connect(&socketHandle,
-                          slaveHost->forceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
-                          slaveHost->name,
-                          slaveHost->port,
+//                          forceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
+SOCKET_TYPE_PLAIN,
+                          hostName,
+                          hostPort,
 //TODO: SSL
                           NULL,  // loginName
                           NULL,  // password
@@ -1162,7 +1086,7 @@ Errors Slave_connect(const SlaveHost                *slaveHost,
                          );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: connect fial %s:%d\n",__FILE__,__LINE__,String_cString(slaveHost->name),slaveHost->port);
+fprintf(stderr,"%s, %d: connect fial %s:%d\n",__FILE__,__LINE__,String_cString(hostName),hostPort);
     String_delete(line);
     return error;
   }
@@ -1181,116 +1105,83 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
 fprintf(stderr,"%s, %d: first line=%s\n",__FILE__,__LINE__,String_cString(line));
 
-  // add slave
-  slaveNode = LIST_NEW_NODE(SlaveNode);
-  if (slaveNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  slaveNode->hostName                       = String_duplicate(slaveHost->name);
-  slaveNode->hostPort                       = slaveHost->port;
-  slaveNode->sslFlag                        = sslFlag;
-  slaveNode->isConnected                    = TRUE;
-  slaveNode->slaveConnectStatusInfoFunction = slaveConnectStatusInfoFunction;
-  slaveNode->slaveConnectStatusInfoUserData = slaveConnectStatusInfoUserData;
-  slaveNode->line                           = String_new();
-  slaveNode->commandId                      = 0;
-  Semaphore_init(&slaveNode->commandList.lock);
-  List_init(&slaveNode->commandList);
-  Semaphore_init(&slaveNode->resultList.lock);
-  List_init(&slaveNode->resultList);
-  slaveNode->socketHandle                   = socketHandle;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    List_append(&slaveList,slaveNode);
-  }
-fprintf(stderr,"%s, %d: added %s:%d\n",__FILE__,__LINE__,String_cString(slaveNode->hostName),slaveNode->hostPort);
+  slaveInfo->name                           = String_duplicate(hostName);
+  slaveInfo->port                           = hostPort;
+//  slaveInfo->sslFlag                        = sslFlag;
+  slaveInfo->isConnected                    = TRUE;
+  slaveInfo->slaveConnectStatusInfoFunction = slaveConnectStatusInfoFunction;
+  slaveInfo->slaveConnectStatusInfoUserData = slaveConnectStatusInfoUserData;
+  slaveInfo->line                           = String_new();
+  slaveInfo->commandId                      = 0;
+  Semaphore_init(&slaveInfo->commandList.lock);
+  List_init(&slaveInfo->commandList);
+  Semaphore_init(&slaveInfo->resultList.lock);
+  List_init(&slaveInfo->resultList);
+  slaveInfo->socketHandle                   = socketHandle;
+fprintf(stderr,"%s, %d: added %s:%d\n",__FILE__,__LINE__,String_cString(hostName),hostPort);
 
   // free resources
   String_delete(line);
 
-  printInfo(2,"Connected slave host '%s:%d'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
+  printInfo(2,"Connected slave host '%s:%d'\n",String_cString(hostName),hostPort);
 
   return ERROR_NONE;
 }
 
-void Slave_disconnect(const SlaveHost *slaveHost)
+void Slave_disconnect(const SlaveInfo *slaveInfo)
 {
   SemaphoreLock semaphoreLock;
-  SlaveNode     *slaveNode;
 
-  // find and remove slave from list
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    slaveNode = findSlave(slaveHost);
-    if (slaveNode != NULL)
-    {
-      List_remove(&slaveList,slaveNode);
-    }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  }
+  assert(slaveInfo != NULL);
 
   // disconnect and discard slave
-  if (slaveNode != NULL)
-  {
-    Network_disconnect(&slaveNode->socketHandle);
+  Network_disconnect(&slaveInfo->socketHandle);
 
-    List_done(&slaveNode->resultList,CALLBACK(freeResultNode,NULL));
-    Semaphore_done(&slaveNode->resultList.lock);
-    List_done(&slaveNode->commandList,CALLBACK(freeCommandNode,NULL));
-    Semaphore_done(&slaveNode->commandList.lock);
-    String_delete(slaveNode->line);
-    String_delete(slaveNode->hostName);
-    LIST_DELETE_NODE(slaveNode);
-  }
+  List_done(&slaveInfo->resultList,CALLBACK(freeResultNode,NULL));
+  Semaphore_done(&slaveInfo->resultList.lock);
+  List_done(&slaveInfo->commandList,CALLBACK(freeCommandNode,NULL));
+  Semaphore_done(&slaveInfo->commandList.lock);
+  String_delete(slaveInfo->line);
+  String_delete(slaveInfo->name);
 }
 
-bool Slave_isConnected(const SlaveHost *slaveHost)
+bool Slave_isConnected(const SlaveInfo *slaveInfo)
 {
   bool          isConnected;
   SemaphoreLock semaphoreLock;
-  SlaveNode     *slaveNode;
 
-  assert(slaveHost != NULL);
+  assert(slaveInfo != NULL);
 
   isConnected = FALSE;
 
   // find slave and check if connected, remove from list if not connected
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    slaveNode = findSlave(slaveHost);
-    if (slaveNode != NULL)
-    {
-      isConnected = slaveNode->isConnected;
+  isConnected = slaveInfo->isConnected;
 #if 0
-      if (Network_isConnected(&slaveNode->socketHandle))
+      if (Network_isConnected(&slaveInfo->socketHandle))
       {
         isConnected = TRUE;
       }
       else
       {
-        List_remove(&slaveList,slaveNode);
+        List_remove(&slaveList,slaveInfo);
       }
 #endif
-    }
-  }
 
 #if 0
   // disconnect and discard not connected slave
-  if ((slaveNode != NULL) && !isConnected)
+  if ((slaveInfo != NULL) && !isConnected)
   {
-    Network_disconnect(&slaveNode->socketHandle);
+    Network_disconnect(&slaveInfo->socketHandle);
 
-    String_delete(slaveNode->hostName);
-    LIST_DELETE_NODE(slaveNode);
+    String_delete(slaveInfo->hostName);
+    LIST_DELETE_NODE(slaveInfo);
   }
 #endif
 
   return isConnected;
 }
 
-Errors Slave_getCommand(const SlaveHost *slaveHost,
+Errors Slave_getCommand(const SlaveInfo *slaveInfo,
                         uint            *commandId,
                         String          name,
                         String          data,
@@ -1298,57 +1189,44 @@ Errors Slave_getCommand(const SlaveHost *slaveHost,
                        )
 {
   SemaphoreLock semaphoreLock;
-  SlaveNode     *slaveNode;
   SemaphoreLock semaphoreLockCommandList;
   CommandNode   *commandNode;
 
+  assert(slaveInfo != NULL);
   assert(commandId != NULL);
   assert(name != NULL);
   assert(data != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  // wait for command
+  commandNode = slaveWaitCommand(slaveInfo,30LL*MS_PER_SECOND);
+  if (commandNode == NULL)
   {
-    // find slave
-    slaveNode = findSlave(slaveHost);
-    if (slaveNode == NULL)
-    {
-      // slave not found
-      Semaphore_unlock(&slaveList.lock);
-return ERROR_UNKNOWN;
-    }
-
-    // wait for command
-    commandNode = slaveWaitCommand(slaveNode,30LL*MS_PER_SECOND);
-    if (commandNode == NULL)
-    {
-      Semaphore_unlock(&slaveList.lock);
-      return ERROR_NETWORK_TIMEOUT;
-    }
-
-    // get command
-    (*commandId) = commandNode->commandId;
-    String_set(name,commandNode->name);
-    String_set(data,commandNode->data);
-
-    // free resources
-    freeCommandNode(commandNode,NULL);
-    LIST_DELETE_NODE(commandNode);
+//    Semaphore_unlock(&slaveList.lock);
+    return ERROR_NETWORK_TIMEOUT;
   }
+
+  // get command
+  (*commandId) = commandNode->commandId;
+  String_set(name,commandNode->name);
+  String_set(data,commandNode->data);
+
+  // free resources
+  freeCommandNode(commandNode,NULL);
+  LIST_DELETE_NODE(commandNode);
 
   return ERROR_NONE;
 }
 
 //TODO
-LOCAL Errors Slave_vexecuteCommand(const SlaveHost *slaveHost,
-                                   StringMap       resultMap,
-                                   const char      *format,
-                                   va_list         arguments
+LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
+                                   StringMap  resultMap,
+                                   const char *format,
+                                   va_list    arguments
                                   )
 {
   String         line;
   String         data;
   SemaphoreLock  semaphoreLock;
-  SlaveNode      *slaveNode;
   SocketHandle   socketHandle;
   bool           sslFlag;
   locale_t       locale;
@@ -1356,102 +1234,19 @@ LOCAL Errors Slave_vexecuteCommand(const SlaveHost *slaveHost,
   uint           commandId;
   Errors         error;
 
-  assert(slaveHost != NULL);
+  assert(slaveInfo != NULL);
 
   // init variables
   line = String_new();
   data = String_new();
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    // find slave
-    slaveNode = findSlave(slaveHost);
-#if 1
-    if (slaveNode == NULL)
-    {
-      Semaphore_unlock(&slaveList.lock);
-      String_delete(data);
-      String_delete(line);
-      return ERROR_SLAVE_DISCONNECTED;
-    }
-#else
+#if 0
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    // check if slave known, try to connect
-    if (slaveNode == NULL)
-    {
-      // try to connect
-      error = slaveConnect(&socketHandle,slaveHost->name,slaveHost->port,slaveHost->forceSSL);
-      if (error != ERROR_NONE)
-      {
-        Semaphore_unlock(&slaveList.lock);
-        String_delete(data);
-        String_delete(line);
-        return error;
-      }
-//TODO
-sslFlag = TRUE;
-
-      // add slave
-      slaveNode = LIST_NEW_NODE(SlaveNode);
-      if (slaveNode == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-      slaveNode->hostName      = String_duplicate(slaveHost->name);
-      slaveNode->hostPort      = slaveHost->port;
-      slaveNode->sslFlag       = sslFlag;
-      slaveNode->commandId     = 0;
-      slaveNode->commandString = String_new();
-      slaveNode->socketHandle  = socketHandle;
-      slaveNode->isConnected   = TRUE;
-      List_append(&slaveList,slaveNode);
-    }
-#endif
-
-    // create new command id
-    slaveNode->commandId++;
-
-    // format command
-    locale = uselocale(POSIXLocale);
-    {
-      String_format(line,"%d ",slaveNode->commandId);
-      String_vformat(line,format,arguments);
-      String_appendChar(line,'\n');
-    }
-    uselocale(locale);
-
-    // send command
-    (void)Network_send(&slaveNode->socketHandle,String_cString(line),String_length(line));
-    printInfo(4,"Sent slave command: %s",String_cString(line));
-fprintf(stderr,"%s, %d: sent %s\n",__FILE__,__LINE__,String_cString(line));
-
-    // wait for result
-    do
-    {
-      // wait for result
-      resultNode = slaveWaitResult(slaveNode,30LL*MS_PER_SECOND);
-      if (resultNode == NULL)
-      {
-        Semaphore_unlock(&slaveList.lock);
-        String_delete(data);
-        String_delete(line);
-        return ERROR_NETWORK_TIMEOUT;
-      }
-
-      // get result
-      commandId = resultNode->commandId;
-      error     = resultNode->error;
-      String_set(data,resultNode->data);
-
-      // free resources
-      freeResultNode(resultNode,NULL);
-      LIST_DELETE_NODE(resultNode);
-    }
-    while (resultNode->commandId != slaveNode->commandId);
-    printInfo(4,"Received slave result: error=%d completedFlag=%d data=%s\n",error,String_cString(data));
-fprintf(stderr,"%s, %d: received error=%d/%s: data=%s\n",__FILE__,__LINE__,Error_getCode(error),Error_getText(error),String_cString(data));
-
-    // check error
+  // check if slave known, try to connect
+  if (slaveInfo == NULL)
+  {
+    // try to connect
+    error = slaveConnect(&socketHandle,slaveInfo->name,slaveInfo->port,slaveInfo->forceSSL);
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&slaveList.lock);
@@ -1459,18 +1254,86 @@ fprintf(stderr,"%s, %d: received error=%d/%s: data=%s\n",__FILE__,__LINE__,Error
       String_delete(line);
       return error;
     }
+//TODO
+sslFlag = TRUE;
 
-    // parse result
-    if (resultMap != NULL)
+    // add slave
+    slaveInfo = LIST_NEW_NODE(SlaveNode);
+    if (slaveNode == NULL)
     {
-      StringMap_clear(resultMap);
-      if (!StringMap_parse(resultMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
-      {
-        Semaphore_unlock(&slaveList.lock);
-        String_delete(data);
-        String_delete(line);
-        return ERROR_INVALID_RESPONSE;
-      }
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    slaveNode->hostName      = String_duplicate(slaveInfo->name);
+    slaveNode->hostPort      = slaveInfo->port;
+    slaveNode->sslFlag       = sslFlag;
+    slaveNode->commandId     = 0;
+    slaveNode->commandString = String_new();
+    slaveNode->socketHandle  = socketHandle;
+    slaveNode->isConnected   = TRUE;
+    List_append(&slaveList,slaveNode);
+  }
+#endif
+
+//TODO: lock
+  // create new command id
+  slaveInfo->commandId++;
+
+  // format command
+  locale = uselocale(POSIXLocale);
+  {
+    String_format(line,"%d ",slaveInfo->commandId);
+    String_vformat(line,format,arguments);
+    String_appendChar(line,'\n');
+  }
+  uselocale(locale);
+
+  // send command
+  (void)Network_send(&slaveInfo->socketHandle,String_cString(line),String_length(line));
+  printInfo(4,"Sent slave command: %s",String_cString(line));
+fprintf(stderr,"%s, %d: sent %s\n",__FILE__,__LINE__,String_cString(line));
+
+  // wait for result
+  do
+  {
+    // wait for result
+    resultNode = slaveWaitResult(slaveInfo,30LL*MS_PER_SECOND);
+    if (resultNode == NULL)
+    {
+      String_delete(data);
+      String_delete(line);
+      return ERROR_NETWORK_TIMEOUT;
+    }
+
+    // get result
+    commandId = resultNode->commandId;
+    error     = resultNode->error;
+    String_set(data,resultNode->data);
+
+    // free resources
+    freeResultNode(resultNode,NULL);
+    LIST_DELETE_NODE(resultNode);
+  }
+  while (resultNode->commandId != slaveInfo->commandId);
+  printInfo(4,"Received slave result: error=%d completedFlag=%d data=%s\n",error,String_cString(data));
+fprintf(stderr,"%s, %d: received error=%d/%s: data=%s\n",__FILE__,__LINE__,Error_getCode(error),Error_getText(error),String_cString(data));
+
+  // check error
+  if (error != ERROR_NONE)
+  {
+    String_delete(data);
+    String_delete(line);
+    return error;
+  }
+
+  // parse result
+  if (resultMap != NULL)
+  {
+    StringMap_clear(resultMap);
+    if (!StringMap_parse(resultMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+    {
+      String_delete(data);
+      String_delete(line);
+      return ERROR_INVALID_RESPONSE;
     }
   }
 
@@ -1481,7 +1344,7 @@ fprintf(stderr,"%s, %d: received error=%d/%s: data=%s\n",__FILE__,__LINE__,Error
   return ERROR_NONE;
 }
 
-Errors Slave_executeCommand(const SlaveHost *slaveHost,
+Errors Slave_executeCommand(const SlaveInfo *slaveInfo,
                             StringMap       resultMap,
                             const char      *format,
                             ...
@@ -1490,16 +1353,16 @@ Errors Slave_executeCommand(const SlaveHost *slaveHost,
   va_list  arguments;
   Errors   error;
 
-  assert(slaveHost != NULL);
+  assert(slaveInfo != NULL);
 
   va_start(arguments,format);
-  error = Slave_vexecuteCommand(slaveHost,resultMap,format,arguments);
+  error = Slave_vexecuteCommand(slaveInfo,resultMap,format,arguments);
   va_end(arguments);
 
   return error;
 }
 
-Errors Slave_jobStart(const SlaveHost                 *slaveHost,
+Errors Slave_jobStart(const SlaveInfo                 *slaveInfo,
                       ConstString                     name,
                       ConstString                     jobUUID,
                       ConstString                     scheduleUUID,
@@ -1524,7 +1387,7 @@ Errors Slave_jobStart(const SlaveHost                 *slaveHost,
   #define SET_OPTION_STRING(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveHost, \
+      if (error == ERROR_NONE) error = Slave_setJobOptionString   (slaveInfo, \
                                                                    jobUUID, \
                                                                    name, \
                                                                    value \
@@ -1534,7 +1397,7 @@ Errors Slave_jobStart(const SlaveHost                 *slaveHost,
   #define SET_OPTION_CSTRING(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Slave_setJobOptionCString  (slaveHost, \
+      if (error == ERROR_NONE) error = Slave_setJobOptionCString  (slaveInfo, \
                                                                    jobUUID, \
                                                                    name, \
                                                                    value \
@@ -1544,7 +1407,7 @@ Errors Slave_jobStart(const SlaveHost                 *slaveHost,
   #define SET_OPTION_PASSWORD(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Slave_setJobOptionPassword (slaveHost, \
+      if (error == ERROR_NONE) error = Slave_setJobOptionPassword (slaveInfo, \
                                                                    jobUUID, \
                                                                    name, \
                                                                    value \
@@ -1554,7 +1417,7 @@ Errors Slave_jobStart(const SlaveHost                 *slaveHost,
   #define SET_OPTION_INTEGER(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Slave_setJobOptionInteger  (slaveHost, \
+      if (error == ERROR_NONE) error = Slave_setJobOptionInteger  (slaveInfo, \
                                                                    jobUUID, \
                                                                    name, \
                                                                    value \
@@ -1564,7 +1427,7 @@ Errors Slave_jobStart(const SlaveHost                 *slaveHost,
   #define SET_OPTION_INTEGER64(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Slave_setJobOptionInteger64(slaveHost, \
+      if (error == ERROR_NONE) error = Slave_setJobOptionInteger64(slaveInfo, \
                                                                    jobUUID, \
                                                                    name, \
                                                                    value \
@@ -1574,7 +1437,7 @@ Errors Slave_jobStart(const SlaveHost                 *slaveHost,
   #define SET_OPTION_BOOLEAN(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Slave_setJobOptionBoolean  (slaveHost, \
+      if (error == ERROR_NONE) error = Slave_setJobOptionBoolean  (slaveInfo, \
                                                                    jobUUID, \
                                                                    name, \
                                                                    value \
@@ -1599,7 +1462,7 @@ UNUSED_VARIABLE(storageRequestVolumeFunction);
 UNUSED_VARIABLE(storageRequestVolumeUserData);
 error = ERROR_STILL_NOT_IMPLEMENTED;
 
-  assert(slaveHost != NULL);
+  assert(slaveInfo != NULL);
   assert(jobUUID != NULL);
 
   // init variables
@@ -1608,7 +1471,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   error = ERROR_NONE;
 
   // create temporary job
-  error = Slave_executeCommand(slaveHost,NULL,"JOB_NEW name=%'S jobUUID=%S master=%'S",name,jobUUID,Network_getHostName(s));
+  error = Slave_executeCommand(slaveInfo,NULL,"JOB_NEW name=%'S jobUUID=%S master=%'S",name,jobUUID,Network_getHostName(s));
   if (error != ERROR_NONE)
   {
     return error;
@@ -1676,7 +1539,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   // set lists
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveHost,NULL,"INCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,NULL,"INCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(includeEntryList,entryNode)
   {
     switch (entryNode->type)
@@ -1686,7 +1549,7 @@ fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(error));
       case ENTRY_TYPE_UNKNOWN:
       default:                 entryTypeText = "UNKNOWN"; break;
     }
-    if (error == ERROR_NONE) error = Slave_executeCommand(slaveHost,
+    if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
                                                           NULL,
                                                           "INCLUDE_LIST_ADD jobUUID=%S entryType=%s patternType=%s pattern=%'S",
                                                           jobUUID,
@@ -1696,10 +1559,10 @@ fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(error));
                                                          );
   }
 
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveHost,NULL,"EXCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,NULL,"EXCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(excludePatternList,patternNode)
   {
-    if (error == ERROR_NONE) error = Slave_executeCommand(slaveHost,
+    if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
                                                           NULL,
                                                           "EXCLUDE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
                                                           jobUUID,
@@ -1708,10 +1571,10 @@ fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(error));
                                                          );
   }
 
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveHost,NULL,"MOUNT_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,NULL,"MOUNT_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(mountList,mountNode)
   {
-    if (error == ERROR_NONE) error = Slave_executeCommand(slaveHost,
+    if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
                                                           NULL,
                                                           "MOUNT_LIST_ADD jobUUID=%S name=%'S alwaysUnmount=%y",
                                                           jobUUID,
@@ -1720,10 +1583,10 @@ fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(error));
                                                          );
   }
 
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveHost,NULL,"EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,NULL,"EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(compressExcludePatternList,patternNode)
   {
-    if (error == ERROR_NONE) error = Slave_executeCommand(slaveHost,
+    if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
                                                           NULL,
                                                           "EXCLUDE_COMPRESS_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
                                                           jobUUID,
@@ -1732,10 +1595,10 @@ fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(error));
                                                          );
   }
 
-  if (error == ERROR_NONE) error = Slave_executeCommand(slaveHost,NULL,"SOURCE_LIST_CLEAR jobUUID=%S",jobUUID);
+  if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,NULL,"SOURCE_LIST_CLEAR jobUUID=%S",jobUUID);
   LIST_ITERATE(deltaSourceList,deltaSourceNode)
   {
-    if (error == ERROR_NONE) error = Slave_executeCommand(slaveHost,
+    if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,
                                                           NULL,
                                                           "SOURCE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
                                                           jobUUID,
@@ -1745,17 +1608,17 @@ fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(error));
   }
   if (error != ERROR_NONE)
   {
-    (void)Slave_executeCommand(slaveHost,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    (void)Slave_executeCommand(slaveInfo,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
     String_delete(s);
     return error;
   }
 fprintf(stderr,"%s, %d: %d: Slave_jobStart %s\n",__FILE__,__LINE__,error,Error_getText(error));
 
   // start execute job
-  error = Slave_executeCommand(slaveHost,NULL,"JOB_START jobUUID=%S archiveType=%s dryRun=%y",jobUUID,"FULL"/*archiveType*/,FALSE);
+  error = Slave_executeCommand(slaveInfo,NULL,"JOB_START jobUUID=%S archiveType=%s dryRun=%y",jobUUID,"FULL"/*archiveType*/,FALSE);
   if (error != ERROR_NONE)
   {
-    (void)Slave_executeCommand(slaveHost,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
+    (void)Slave_executeCommand(slaveInfo,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
     String_delete(s);
     return error;
   }
@@ -1774,19 +1637,19 @@ fprintf(stderr,"%s, %d: *******************************\n",__FILE__,__LINE__);
   #undef SET_OPTION_STRING(name,value)
 }
 
-Errors Slave_jobAbort(const SlaveHost *slaveHost,
+Errors Slave_jobAbort(const SlaveInfo *slaveInfo,
                       ConstString     jobUUID
                      )
 {
   Errors error;
 
-  assert(slaveHost != NULL);
+  assert(slaveInfo != NULL);
   assert(jobUUID != NULL);
 
   error = ERROR_NONE;
 
   // abort execute job
-  error = Slave_executeCommand(slaveHost,NULL,"JOB_ABORT jobUUID=%S",jobUUID);
+  error = Slave_executeCommand(slaveInfo,NULL,"JOB_ABORT jobUUID=%S",jobUUID);
   if (error != ERROR_NONE)
   {
     return error;

@@ -21,6 +21,10 @@
 #include "global.h"
 #include "strings.h"
 
+#include "bar_global.h"
+#define SESSION_ID_LENGTH 64      // max. length of session id
+typedef byte SessionId[SESSION_ID_LENGTH];
+
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
@@ -43,13 +47,28 @@ typedef void(*SlaveConnectStatusInfoFunction)(bool isConnected,
 
 /***************************** Variables *******************************/
 
-// slave host
+// slave info
 typedef struct
 {
-  String name;                               // name of slave host where job should run
-  uint   port;                               // port of slave host where job should run or 0 for default
-  bool   forceSSL;                           // force SSL connection to slave hose
-} SlaveHost;
+  String       name;                         // name of slave host where job should run
+  uint         port;                         // port of slave host where job should run or 0 for default
+  bool         forceSSL;                     // force SSL connection to slave hose
+  bool         isConnected;
+  SocketHandle socketHandle;
+  String       line;
+
+  SessionId    sessionId;
+  CryptKey     publicKey,secretKey;
+
+  uint         commandId;
+
+  ServerCommandList  commandList;
+  ServerResultList   resultList;
+SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction;
+void                           *slaveConnectStatusInfoUserData;
+
+  SocketHandle *masterSocketHandle;
+} SlaveInfo;
 
 /****************************** Macros *********************************/
 
@@ -86,56 +105,56 @@ void Slave_doneAll(void);
 /***********************************************************************\
 * Name   : Slave_initHost
 * Purpose: init slave host info
-* Input  : slaveHost   - slave host variable
+* Input  : slaveInfo   - slave info variable
 *          defaultPort - default port
-* Output : slaveHost - slave host
+* Output : slaveInfo - slave info
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Slave_initHost(SlaveHost *slaveHost, uint defaultPort);
+void Slave_initHost(SlaveInfo *slaveInfo, uint defaultPort);
 
 /***********************************************************************\
 * Name   : Slave_doneHost
 * Purpose: done slave host info
-* Input  : slaveHost - slave host
+* Input  : slaveInfo - slave info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Slave_doneHost(SlaveHost *slaveHost);
+void Slave_doneHost(SlaveInfo *slaveInfo);
 
 /***********************************************************************\
 * Name   : Slave_copyHost
 * Purpose: copy slave host info
-* Input  : toSlaveHost   - slave host variable
-*          fromSlaveHost - from slave host
+* Input  : toSlaveInfo   - slave host variable
+*          fromSlaveInfo - from slave host
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Slave_copyHost(SlaveHost *toSlaveHost, const SlaveHost *fromSlaveHost);
+//void Slave_copyHost(SlaveInfo *toSlaveInfo, const SlaveInfo *fromSlaveInfo);
 
 /***********************************************************************\
 * Name   : Slave_duplicateHost
 * Purpose: duplicate slave host info
-* Input  : toSlaveHost   - slave host variable
-*          fromSlaveHost - from slave host
+* Input  : toSlaveInfo   - slave host variable
+*          fromSlaveInfo - from slave host
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Slave_duplicateHost(SlaveHost *toSlaveHost, const SlaveHost *fromSlaveHost);
+//void Slave_duplicateHost(SlaveInfo *toSlaveInfo, const SlaveInfo *fromSlaveInfo);
 
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : Slave_connect
 * Purpose: connect to slave host
-* Input  : slaveHost                      - slave host
+* Input  : slaveInfo                      - slave info
 *          slaveConnectStatusInfoFunction - status info call back
 *                                           function (can be NULL)
 *          slaveConnectStatusInfoUserData - user data for status info
@@ -145,7 +164,9 @@ void Slave_duplicateHost(SlaveHost *toSlaveHost, const SlaveHost *fromSlaveHost)
 * Notes  : -
 \***********************************************************************/
 
-Errors Slave_connect(const SlaveHost                *slaveHost,
+Errors Slave_connect(SlaveInfo                      *slaveInfo,
+                     ConstString                    hostName,
+                     uint                           hostPort,
                      SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction,
                      void                           *slaveConnectStatusInfoUserData
                     );
@@ -153,33 +174,33 @@ Errors Slave_connect(const SlaveHost                *slaveHost,
 /***********************************************************************\
 * Name   : Slave_disconnect
 * Purpose: disconnect slave
-* Input  : slaveHost - slave host
+* Input  : slaveInfo - slave info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Slave_disconnect(const SlaveHost *slaveHost);
+void Slave_disconnect(const SlaveInfo *slaveInfo);
 
 /***********************************************************************\
 * Name   : Slave_isConnected
 * Purpose: check if slave host is connected
-* Input  : slaveHost - slave host
+* Input  : slaveInfo - slave info
 * Output : -
 * Return : TRUE iff connected
 * Notes  : -
 \***********************************************************************/
 
-bool Slave_isConnected(const SlaveHost *slaveHost);
+bool Slave_isConnected(const SlaveInfo *slaveInfo);
 
-SocketHandle *Slave_getSocketHandle(const SlaveHost *slaveHost);
+SocketHandle *Slave_getSocketHandle(const SlaveInfo *slaveInfo);
 
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : Slave_executeCommand
 * Purpose: execute command on slave host
-* Input  : slaveHost - slave host
+* Input  : slaveInfo - slave info
 *          format    - command
 *          ...       - optional command arguments
 * Output : resultMap - result map
@@ -187,7 +208,7 @@ SocketHandle *Slave_getSocketHandle(const SlaveHost *slaveHost);
 * Notes  : -
 \***********************************************************************/
 
-Errors Slave_executeCommand(const SlaveHost *slaveHost,
+Errors Slave_executeCommand(const SlaveInfo *slaveInfo,
                             StringMap       resultMap,
                             const char      *format,
                             ...
@@ -196,7 +217,7 @@ Errors Slave_executeCommand(const SlaveHost *slaveHost,
 /***********************************************************************\
 * Name   : Slave_jobStart
 * Purpose: start job on slave host
-* Input  : slaveHost                    - slave host
+* Input  : slaveInfo                    - slave info
 *          name                         - job name
 *          jobUUID                      - job UUID
 *          scheduleUUID                 - schedule UUID
@@ -217,7 +238,7 @@ Errors Slave_executeCommand(const SlaveHost *slaveHost,
 * Notes  : -
 \***********************************************************************/
 
-Errors Slave_jobStart(const SlaveHost                 *slaveHost,
+Errors Slave_jobStart(const SlaveInfo                 *slaveInfo,
                       ConstString                     name,
                       ConstString                     jobUUID,
                       ConstString                     scheduleUUID,
@@ -242,13 +263,13 @@ Errors Slave_jobStart(const SlaveHost                 *slaveHost,
 /***********************************************************************\
 * Name   : Slave_jobAbort
 * Purpose: abort job on slave host
-* Input  : slaveHost - slave host
+* Input  : slaveInfo - slave host
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Slave_jobAbort(const SlaveHost *slaveHost,
+Errors Slave_jobAbort(const SlaveInfo *slaveInfo,
                       ConstString     jobUUID
                      );
 
