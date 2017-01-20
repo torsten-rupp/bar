@@ -811,10 +811,10 @@ typedef struct
   } \
   while (0)
 
-#define HALT_INSUFFICIENT_MEMORY(args...) \
+#define HALT_INSUFFICIENT_MEMORY() \
   do \
   { \
-     __abort(HALT_PREFIX_FATAL_ERROR,"Insufficient memory %d", ## args); \
+     __abort(HALT_PREFIX_FATAL_ERROR,"Insufficient memory"); \
   } \
  while (0)
 
