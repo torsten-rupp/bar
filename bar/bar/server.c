@@ -1936,6 +1936,9 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
   if (jobNode->ftpPassword != NULL) Password_delete(jobNode->ftpPassword);
   String_delete(jobNode->byName);
+
+  Slave_done(&jobNode->slaveInfo);
+
   String_delete(jobNode->master);
 
   doneJobOptions(&jobNode->jobOptions);
@@ -2015,6 +2018,8 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString name, ConstString uuid, Cons
   jobNode->fileName                       = String_duplicate(fileName);
   jobNode->fileModified                   = 0LL;
   jobNode->master                         = String_duplicate(master);
+
+  Slave_init(&jobNode->slaveInfo);
 
   jobNode->state                          = JOB_STATE_NONE;
   jobNode->byName                         = String_new();
@@ -2127,6 +2132,9 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
   newJobNode->cryptPassword                  = NULL;
 
   newJobNode->master                         = String_new();
+
+  Slave_duplicate(&newJobNode->slaveInfo,&jobNode->slaveInfo);
+
   newJobNode->state                          = JOB_STATE_NONE;
   newJobNode->byName                         = String_new();
   newJobNode->archiveType                    = ARCHIVE_TYPE_NORMAL;
