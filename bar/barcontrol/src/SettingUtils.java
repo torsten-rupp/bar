@@ -29,6 +29,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -405,7 +406,7 @@ class SettingValueAdapterSimpleDoubleArray extends SettingValueAdapter<String,Si
   }
 }
 
-/** string array
+/** simple string array
  */
 class SimpleStringArray
 {
@@ -662,13 +663,13 @@ public class SettingUtils
                           {
                             field.set(null,addArray((String[])field.get(null),StringUtils.unescape(string)));
                           }
-                          else if (type.isEnum())
-                          {
-                            field.set(null,addArrayUniq((Enum[])field.get(null),StringUtils.parseEnum(type,string)));
-                          }
                           else if (type == EnumSet.class)
                           {
                             field.set(null,addArrayUniq((EnumSet[])field.get(null),StringUtils.parseEnumSet(type,string)));
+                          }
+                          else if (type.isEnum())
+                          {
+                            field.set(null,addArrayUniq((Enum[])field.get(null),StringUtils.parseEnum(type,string)));
                           }
                           else
                           {
@@ -743,13 +744,20 @@ Dprintf.dprintf("field.getType()=%s",type);
                           {
                             ((Set)field.get(null)).add(StringUtils.unescape(string));
                           }
+                          else if (type == EnumSet.class)
+                          {
+                            ((Set)field.get(null)).clear();
+                            Iterator iterator = StringUtils.parseEnumSet(setType,string).iterator();
+                            while (iterator.hasNext())
+                            {
+                              ((Set)field.get(null)).add(iterator.next());
+                            }
+                          }
                           else if (setType.isEnum())
                           {
-                            ((Set)field.get(null)).add(StringUtils.parseEnum(type,string));
-                          }
-                          else if (setType == EnumSet.class)
-                          {
-                            ((Set)field.get(null)).add(StringUtils.parseEnumSet(type,string));
+//Dprintf.dprintf("type=%s",type);
+//Dprintf.dprintf("setType=%s",setType);
+                            ((Set)field.get(null)).add(StringUtils.parseEnum(setType,string));
                           }
                           else
                           {
@@ -824,13 +832,18 @@ Dprintf.dprintf("field.getType()=%s",type);
                           {
                             ((List)field.get(null)).add(StringUtils.unescape(string));
                           }
+                          else if (type == EnumSet.class)
+                          {
+                            ((Set)field.get(null)).clear();
+                            Iterator iterator = StringUtils.parseEnumSet(listType,string).iterator();
+                            while (iterator.hasNext())
+                            {
+                              ((List)field.get(null)).add(iterator.next());
+                            }
+                          }
                           else if (listType.isEnum())
                           {
                             ((List)field.get(null)).add(StringUtils.parseEnum(type,string));
-                          }
-                          else if (listType == EnumSet.class)
-                          {
-                            ((List)field.get(null)).add(StringUtils.parseEnumSet(type,string));
                           }
                           else
                           {
@@ -903,10 +916,6 @@ Dprintf.dprintf("field.getType()=%s",type);
                           {
                             field.set(null,StringUtils.unescape(string));
                           }
-                          else if (type.isEnum())
-                          {
-                            field.set(null,StringUtils.parseEnum(type,string));
-                          }
                           else if (type == EnumSet.class)
                           {
                             Class enumClass = settingValue.type();
@@ -915,6 +924,10 @@ Dprintf.dprintf("field.getType()=%s",type);
                               throw new Error(enumClass+" is not an enum class!");
                             }
                             field.set(null,StringUtils.parseEnumSet(enumClass,string));
+                          }
+                          else if (type.isEnum())
+                          {
+                            field.set(null,StringUtils.parseEnum(type,string));
                           }
                           else
                           {
@@ -1040,6 +1053,7 @@ exception.printStackTrace();
               try
               {
                 Class type = field.getType();
+//Dprintf.dprintf("field=%s type=%s",field,type);
                 if      (type.isArray())
                 {
                   // array type
@@ -1129,18 +1143,18 @@ exception.printStackTrace();
                       output.printf("%s = %s\n",name,StringUtils.escape(value));
                     }
                   }
-                  else if (type.isEnum())
-                  {
-                    for (Enum value : (Enum[])field.get(null))
-                    {
-                      output.printf("%s = %s\n",name,value.toString());
-                    }
-                  }
                   else if (type == EnumSet.class)
                   {
                     for (EnumSet enumSet : (EnumSet[])field.get(null))
                     {
                       output.printf("%s = %s\n",name,StringUtils.join(enumSet,","));
+                    }
+                  }
+                  else if (type.isEnum())
+                  {
+                    for (Enum value : (Enum[])field.get(null))
+                    {
+                      output.printf("%s = %s\n",name,value.toString());
                     }
                   }
                   else
@@ -1238,18 +1252,15 @@ Dprintf.dprintf("field.getType()=%s",type);
                       output.printf("%s = %s\n",name,StringUtils.escape((String)object));
                     }
                   }
-                  else if (settingValue.type().isEnum())
+                  else if (type == EnumSet.class)
+                  {
+                    output.printf("%s = %s\n",name,StringUtils.join((Set)field.get(null),","));
+                  }
+                  else if (setType.isEnum())
                   {
                     for (Object object : (Set)field.get(null))
                     {
                       output.printf("%s = %s\n",name,((Enum)object).toString());
-                    }
-                  }
-                  else if (setType == EnumSet.class)
-                  {
-                    for (Object object : (Set)field.get(null))
-                    {
-                      output.printf("%s = %s\n",name,StringUtils.join((EnumSet)object,","));
                     }
                   }
                   else
@@ -1347,18 +1358,18 @@ Dprintf.dprintf("field.getType()=%s",type);
                       output.printf("%s = %s\n",name,StringUtils.escape((String)object));
                     }
                   }
+                  else if (type == EnumSet.class)
+                  {
+                    for (EnumSet enumSet : (List<EnumSet>)field.get(null))
+                    {
+                      output.printf("%s = %s\n",name,StringUtils.join(enumSet,","));
+                    }
+                  }
                   else if (listType.isEnum())
                   {
                     for (Object object : (List)field.get(null))
                     {
                       output.printf("%s = %s\n",name,((Enum)object).toString());
-                    }
-                  }
-                  else if (listType == EnumSet.class)
-                  {
-                    for (Object object : (List)field.get(null))
-                    {
-                      output.printf("%s = %s\n",name,StringUtils.join((EnumSet)object,","));
                     }
                   }
                   else
@@ -1434,19 +1445,18 @@ Dprintf.dprintf("field.getType()=%s",type);
                     String value = (type != null) ? (String)field.get(null) : settingValue.defaultValue();
                     output.printf("%s = %s\n",name,StringUtils.escape(value));
                   }
+                  else if (type == EnumSet.class)
+                  {
+                    output.printf("%s = %s\n",name,StringUtils.join((EnumSet)field.get(null),","));
+                  }
                   else if (type.isEnum())
                   {
                     Enum value = (Enum)field.get(null);
                     output.printf("%s = %s\n",name,value.toString());
                   }
-                  else if (type == EnumSet.class)
-                  {
-                    EnumSet enumSet = (EnumSet)field.get(null);
-                    output.printf("%s = %s\n",name,StringUtils.join(enumSet,","));
-                  }
                   else
                   {
-Dprintf.dprintf("field.getType()=%s",type);
+//Dprintf.dprintf("field.getType()=%s",type);
                   }
                 }
               }
