@@ -1736,7 +1736,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       error = StorageDevice_done(storageInfo);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       break;
     default:
       #ifndef NDEBUG
@@ -1975,7 +1975,7 @@ Errors Storage_unloadVolume(StorageInfo *storageInfo)
       error = StorageDevice_unloadVolume(storageInfo);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       break;
     default:
       #ifndef NDEBUG
@@ -2107,7 +2107,7 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
       error = StorageDevice_create(storageHandle,archiveName,archiveSize);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+      error = StorageMaster_create(storageHandle,archiveName,archiveSize);
       break;
     default:
       #ifndef NDEBUG
@@ -2192,7 +2192,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
       error = StorageDevice_open(storageHandle,archiveName);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       break;
     default:
       #ifndef NDEBUG
@@ -2382,7 +2382,7 @@ Errors Storage_read(StorageHandle *storageHandle,
       error = StorageDevice_read(storageHandle,buffer,bufferSize,bytesRead);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       break;
     default:
       #ifndef NDEBUG
@@ -2441,7 +2441,7 @@ Errors Storage_write(StorageHandle *storageHandle,
       error = StorageDevice_write(storageHandle,buffer,bufferLength);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       break;
     default:
       #ifndef NDEBUG
@@ -2504,7 +2504,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       error = StorageDevice_tell(storageHandle,offset);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       break;
     default:
       #ifndef NDEBUG
@@ -2564,7 +2564,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       error = StorageDevice_seek(storageHandle,offset);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       break;
     default:
       #ifndef NDEBUG
@@ -2683,7 +2683,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       error = StorageDevice_delete(storageInfo,archiveName);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       break;
     default:
       #ifndef NDEBUG
@@ -2763,7 +2763,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             error = StorageDevice_delete(storageInfo,name);
             break;
           case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+error = ERROR_(STILL_NOT_IMPLEMENTED,0);
             break;
           default:
             #ifndef NDEBUG
@@ -2837,7 +2837,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       errors = StorageDevice_getFileInfo(storageInfo,archiveName,fileInfo);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       break;
     default:
       #ifndef NDEBUG
@@ -2917,7 +2917,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       error = StorageDevice_openDirectoryList(storageDirectoryListHandle,storageSpecifier,archiveName,jobOptions,serverConnectionPriority);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       break;
     default:
       #ifndef NDEBUG
@@ -3084,7 +3084,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
       error = StorageDevice_readDirectoryList(storageDirectoryListHandle,fileName,fileInfo);
       break;
     case STORAGE_TYPE_MASTER:
-error = ERROR_STILL_NOT_IMPLEMENTED;
+error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       break;
     default:
       #ifndef NDEBUG

@@ -128,7 +128,7 @@ typedef void(*CreateStatusInfoFunction)(Errors                 error,
 
 Errors Command_create(ConstString                  jobUUID,
                       ConstString                  scheduleUUID,
-                      SocketHandle                 *masterSocketHandle,
+                      ServerIO                     *masterIO,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,

@@ -3721,7 +3721,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
       if (error == ERROR_NONE)
       {
         error = Storage_init(&storageInfo,
-NULL, // masterSocketHandle
+NULL, // masterIO
                              &storageSpecifier,
                              NULL,  // jobOptions
                              &globalOptions.indexDatabaseMaxBandWidthList,
@@ -3925,7 +3925,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
       if (error == ERROR_NONE)
       {
         error = Storage_init(&storageInfo,
-NULL, // masterSocketHandle
+NULL, // masterIO
                              &storageSpecifier,
                              NULL,  // jobOptions
                              &globalOptions.indexDatabaseMaxBandWidthList,
@@ -6703,7 +6703,7 @@ Errors Command_create(ConstString                  jobUUID,
 //                      ConstString                  hostName,
 //                      uint                         hostPort,
                       ConstString                  scheduleUUID,
-                      SocketHandle                 *masterSocketHandle,
+                      ServerIO                     *masterIO,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,
@@ -6832,9 +6832,9 @@ Errors Command_create(ConstString                  jobUUID,
   Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
   // init storage
-fprintf(stderr,"%s, %d: masterSocketHandle=%p\n",__FILE__,__LINE__,masterSocketHandle);
+fprintf(stderr,"%s, %d: masterIO=%p\n",__FILE__,__LINE__,masterIO);
   error = Storage_init(&createInfo.storageInfo,
-masterSocketHandle, // masterSocketHandle
+masterIO, // masterIO
                        &storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,

@@ -102,53 +102,6 @@ Errors Slave_initAll(void);
 
 void Slave_doneAll(void);
 
-/***********************************************************************\
-* Name   : Slave_initHost
-* Purpose: init slave host info
-* Input  : slaveInfo   - slave info variable
-*          defaultPort - default port
-* Output : slaveInfo - slave info
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Slave_initHost(SlaveInfo *slaveInfo, uint defaultPort);
-
-/***********************************************************************\
-* Name   : Slave_doneHost
-* Purpose: done slave host info
-* Input  : slaveInfo - slave info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Slave_doneHost(SlaveInfo *slaveInfo);
-
-/***********************************************************************\
-* Name   : Slave_copyHost
-* Purpose: copy slave host info
-* Input  : toSlaveInfo   - slave host variable
-*          fromSlaveInfo - from slave host
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-//void Slave_copyHost(SlaveInfo *toSlaveInfo, const SlaveInfo *fromSlaveInfo);
-
-/***********************************************************************\
-* Name   : Slave_duplicateHost
-* Purpose: duplicate slave host info
-* Input  : toSlaveInfo   - slave host variable
-*          fromSlaveInfo - from slave host
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-//void Slave_duplicateHost(SlaveInfo *toSlaveInfo, const SlaveInfo *fromSlaveInfo);
-
 // ----------------------------------------------------------------------
 
 /***********************************************************************\

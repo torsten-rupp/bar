@@ -324,7 +324,7 @@ ServerResultList serverResultList;
   UNUSED_VARIABLE(fileSize);
 fprintf(stderr,"%s, %d: StorageMaster_create\n",__FILE__,__LINE__);
 
-  error = Server_sendMaster(&storageHandle->storageInfo->master,
+  error = Server_sendMaster(&storageHandle->storageInfo->io,
                             &serverResultList,
                             "STORAGE_CREATE name=%S size=%llu",
                             fileName,

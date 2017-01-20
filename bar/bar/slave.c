@@ -1005,45 +1005,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //  Semaphore_done(&slaveList.lock);
 }
 
-void Slave_initHost(SlaveInfo *slaveInfo, uint defaultPort)
-{
-  assert(slaveInfo != NULL);
-
-  slaveInfo->name     = String_new();
-  slaveInfo->port     = defaultPort;
-  slaveInfo->forceSSL = FALSE;
-
-  DEBUG_ADD_RESOURCE_TRACE(slaveInfo,sizeof(SlaveInfo));
-}
-
-void Slave_doneHost(SlaveInfo *slaveInfo)
-{
-  assert(slaveInfo != NULL);
-
-  DEBUG_REMOVE_RESOURCE_TRACE(slaveInfo,sizeof(SlaveInfo));
-
-  String_delete(slaveInfo->name);
-}
-
-void Slave_copyHost(SlaveInfo *toSlaveInfo, const SlaveInfo *fromSlaveInfo)
-{
-  assert(toSlaveInfo != NULL);
-  assert(fromSlaveInfo != NULL);
-
-  String_set(toSlaveInfo->name,fromSlaveInfo->name);
-  toSlaveInfo->port     = fromSlaveInfo->port;
-  toSlaveInfo->forceSSL = fromSlaveInfo->forceSSL;
-}
-
-void Slave_duplicateHost(SlaveInfo *toSlaveInfo, const SlaveInfo *fromSlaveInfo)
-{
-  assert(toSlaveInfo != NULL);
-  assert(fromSlaveInfo != NULL);
-
-  Slave_initHost(toSlaveInfo,0);
-  Slave_copyHost(toSlaveInfo,fromSlaveInfo);
-}
-
 void Slave_init(SlaveInfo *slaveInfo)
 {
   assert(slaveInfo != NULL);

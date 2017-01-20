@@ -207,7 +207,6 @@ typedef struct JobNode
   uint64          fileModified;                         // file modified date/time (timestamp)
 
   String          master;                               // master who created job or NULL
-SocketHandle    *masterSocketHandle;
   uint            masterPort;                           // master port number or 0
 
   // job running state
@@ -1952,7 +1951,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   String_delete(jobNode->includeFileCommand);
   EntryList_done(&jobNode->includeEntryList);
   String_delete(jobNode->archiveName);
-  String_delete(&jobNode->slaveHost.name);
+  String_delete(jobNode->slaveHost.name);
   String_delete(jobNode->name);
   String_delete(jobNode->uuid);
   String_delete(jobNode->fileName);
@@ -4104,7 +4103,7 @@ LOCAL void jobThreadCode(void)
               jobNode->runningInfo.error = Command_create(
                                                           jobUUID,
                                                           scheduleUUID,
-String_isEmpty(jobNode->master) ? NULL : jobNode->masterSocketHandle,
+String_isEmpty(jobNode->master) ? NULL : &jobNode->io,
                                                           storageName,
                                                           &includeEntryList,
                                                           &excludePatternList,
@@ -4675,7 +4674,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle, IndexId storageId)
           // try to init scp-storage first with sftp
           storageSpecifier.type = STORAGE_TYPE_SFTP;
           resultError = Storage_init(&storageInfo,
-NULL, // masterSocketHandle
+NULL, // masterIO
                                      &storageSpecifier,
                                      (jobNode != NULL) ? &jobNode->jobOptions : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
@@ -4689,7 +4688,7 @@ NULL, // masterSocketHandle
             // init scp-storage
             storageSpecifier.type = STORAGE_TYPE_SCP;
             resultError = Storage_init(&storageInfo,
-NULL, // masterSocketHandle
+NULL, // masterIO
                                        &storageSpecifier,
                                        (jobNode != NULL) ? &jobNode->jobOptions : NULL,
                                        &globalOptions.indexDatabaseMaxBandWidthList,
@@ -4704,7 +4703,7 @@ NULL, // masterSocketHandle
         {
           // init other storage types
           resultError = Storage_init(&storageInfo,
-NULL, // masterSocketHandle
+NULL, // masterIO
                                      &storageSpecifier,
                                      (jobNode != NULL) ? &jobNode->jobOptions : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
@@ -5587,7 +5586,7 @@ LOCAL void indexThreadCode(void)
         endTimestamp   = 0LL;
         initJobOptions(&jobOptions);
         error = Storage_init(&storageInfo,
-NULL, // masterSocketHandle
+NULL, // masterIO
                              &storageSpecifier,
                              &jobOptions,
                              &globalOptions.indexDatabaseMaxBandWidthList,
@@ -6072,6 +6071,7 @@ LOCAL void sendMasterCommand(ServerIO *serverIO, uint id, const char *format, va
   SemaphoreLock semaphoreLock;
 
   assert(serverIO != NULL);
+fprintf(stderr,"%s, %d: serverIO->typ=%d\n",__FILE__,__LINE__,serverIO->type);
   assert(serverIO->type == SERVER_IO_TYPE_NETWORK);
 
   command = String_new();
@@ -6173,7 +6173,7 @@ LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, 
   #ifndef NDEBUG
     if (globalOptions.serverDebugFlag)
     {
-      fprintf(stderr,"DEBUG: send result=%s",String_cString(result));
+      fprintf(stderr,"DEBUG: send result '%s'",String_cString(result));
     }
   #endif /* not DEBUG */
   sendClient(clientInfo,result);
@@ -9732,8 +9732,6 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       // create new job
       jobNode = newJob(JOB_TYPE_CREATE,name,jobUUID,NULL /* fileName */,master);
       assert(jobNode != NULL);
-//TODO: client disappear? closed?
-jobNode->masterSocketHandle = &clientInfo->io.network.socketHandle;
 
       // add new job to list
       List_append(&jobList,jobNode);
@@ -13564,7 +13562,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 
   // init storage
   error = Storage_init(&storageInfo,
-NULL, // masterSocketHandle
+NULL, // masterIO
                        &storageSpecifier,
                        &clientInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
@@ -16241,7 +16239,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
        )
     {
       if (Storage_init(&storageInfo,
-NULL, // masterSocketHandle
+NULL, // masterIO
                        &storageSpecifier,
                        NULL, // jobOptions
                        &globalOptions.indexDatabaseMaxBandWidthList,
@@ -18170,7 +18168,7 @@ LOCAL void initClient(ClientInfo *clientInfo)
 
   // initialize
   Semaphore_init(&clientInfo->lock);
-//  clientInfo->io.type               = CLIENT_TYPE_NONE;
+  clientInfo->io.type               = SERVER_IO_TYPE_NONE;
   Semaphore_init(&clientInfo->io.lock);
   clientInfo->authorizationState    = AUTHORIZATION_STATE_WAITING;
   clientInfo->authorizationFailNode = NULL;
@@ -18252,7 +18250,6 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   clientInfo->io.network.name         = String_duplicate(name);
   clientInfo->io.network.port         = port;
   clientInfo->io.network.socketHandle = socketHandle;
-
   if (!MsgQueue_init(&clientInfo->commandQueue,0))
   {
     HALT_FATAL_ERROR("Cannot initialize client command message queue!");
@@ -18550,7 +18547,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString commandLine)
   #ifndef NDEBUG
     if (globalOptions.serverDebugFlag)
     {
-      fprintf(stderr,"DEBUG: process command=%s\n",String_cString(commandLine));
+      fprintf(stderr,"DEBUG: process command '%s'\n",String_cString(commandLine));
     }
   #endif /* not NDEBUG */
 
@@ -19532,6 +19529,7 @@ uint commandId;
   // init variables
   line = String_new();
 
+error=ERROR_NONE;
 commandId = 0;
 
     // send command
