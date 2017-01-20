@@ -3211,7 +3211,6 @@ class Dialogs
       {
         if (!table.isDisposed())
         {
-Dprintf.dprintf("path=%s",path);
           table.removeAll();
 
           if (listDirectory.open(path))
@@ -3777,7 +3776,6 @@ Dprintf.dprintf("path=%s",path);
           {
             TableItem tableItem = widgetFileList.getItem(index);
             File      file      = (File)tableItem.getData();
-Dprintf.dprintf("file=%s",file);
 
             if (file.isDirectory())
             {
