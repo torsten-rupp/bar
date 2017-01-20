@@ -152,6 +152,40 @@ void Slave_doneHost(SlaveInfo *slaveInfo);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : Slave_init
+* Purpose: init slave info
+* Input  : slaveInfo - slave info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Slave_init(SlaveInfo *slaveInfo);
+
+/***********************************************************************\
+* Name   : Slave_duplicate
+* Purpose: init duplicate slave info
+* Input  : slaveInfo     - slave info
+*          fromSlaveInfo - from slave info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Slave_duplicate(SlaveInfo *slaveInfo, const SlaveInfo *fromSlaveInfo);
+
+/***********************************************************************\
+* Name   : Slave_done
+* Purpose: done slave info
+* Input  : slaveInfo - slave info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Slave_done(SlaveInfo *slaveInfo);
+
+/***********************************************************************\
 * Name   : Slave_connect
 * Purpose: connect to slave host
 * Input  : slaveInfo                      - slave info

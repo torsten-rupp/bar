@@ -137,34 +137,73 @@ LOCAL SlaveNode *findSlaveBySocket(int fd)
 #endif
 
 /***********************************************************************\
+* Name   : freeCommandNode
+* Purpose: free command node
+* Input  : commandNode - command node
+*          userData    - not used
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeCommandNode(CommandNode *commandNode, void *userData)
+{
+  assert(commandNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(commandNode->data);
+  String_delete(commandNode->name);
+}
+
+/***********************************************************************\
+* Name   : freeResultNode
+* Purpose: free result node
+* Input  : resultNode - result node
+*          userData   - not used
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeResultNode(ResultNode *resultNode, void *userData)
+{
+  assert(resultNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(resultNode->data);
+}
+
+/***********************************************************************\
 * Name   : slaveConnect
 * Purpose: connect to slave
-* Input  : socketHandle - socket handle variable
-*          hostName     - host name
-*          hostPort     - host port
-*          hostForceSSL - TRUE to force SSL
-* Output : socketHandle - socket handle
+* Input  : slaveInfo - slave info
+*          hostName  - host name
+*          hostPort  - host port
+*          forceSSL  - TRUE to force SSL
+* Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors slaveConnect(SocketHandle *socketHandle,
+LOCAL Errors slaveConnect(SlaveInfo    *slaveInfo,
                           ConstString  hostName,
-                          uint         hostPort,
-                          bool         hostForceSSL
+                          uint         hostPort
                          )
 {
   String line;
   Errors error;
 
-  assert(socketHandle != NULL);
+  assert(slaveInfo != NULL);
 
   // init variables
   line = String_new();
 
-  // connect to slave host
-  error = Network_connect(socketHandle,
-                          hostForceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
+  // connect to slave
+  error = Network_connect(&slaveInfo->socketHandle,
+//                          forceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
+SOCKET_TYPE_PLAIN,
                           hostName,
                           hostPort,
                           NULL,  // loginName
@@ -180,14 +219,19 @@ LOCAL Errors slaveConnect(SocketHandle *socketHandle,
     String_delete(line);
     return error;
   }
+  String_set(slaveInfo->name,hostName);
+  slaveInfo->port = hostPort;
 
   // authorize
-  error = Network_readLine(socketHandle,line,30LL*1000);
+  error = Network_readLine(&slaveInfo->socketHandle,line,30LL*MS_PER_SECOND);
   if (error != ERROR_NONE)
   {
     String_delete(line);
     return error;
   }
+
+  // set connected state
+  slaveInfo->isConnected = TRUE;
 
   // free resources
   String_delete(line);
@@ -195,25 +239,24 @@ LOCAL Errors slaveConnect(SocketHandle *socketHandle,
   return ERROR_NONE;
 }
 
-#if 0
-not used
 /***********************************************************************\
 * Name   : slaveDisconnect
 * Purpose: disconnect from slave
-* Input  : socketHandle - socket handle
+* Input  : slaveInfo - slave info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void slaveDisconnect(SocketHandle *socketHandle)
+LOCAL void slaveDisconnect(SlaveInfo *slaveInfo)
 {
-  assert(socketHandle != NULL);
+  assert(slaveInfo != NULL);
 
-  Network_disconnect(socketHandle);
+  Network_disconnect(&slaveInfo->socketHandle);
+  slaveInfo->isConnected = FALSE;
 }
-#endif
 
+#if 0
 /***********************************************************************\
 * Name   :
 * Purpose:
@@ -223,7 +266,6 @@ LOCAL void slaveDisconnect(SocketHandle *socketHandle)
 * Notes  : -
 \***********************************************************************/
 
-#if 0
 //typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
 LOCAL bool parseEnumState(const char *name, uint *value)
 {
@@ -391,9 +433,7 @@ return FALSE;
     else
     {
       // disconnect
-//                  deleteClient(disconnectClientNode);
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-      slaveInfo->isConnected = FALSE;
+      slaveDisconnect(slaveInfo);
 
       printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveInfo->name),slaveInfo->port);
     }
@@ -401,11 +441,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
   {
     // error/disconnect
-
-    // done client and free resources
-//                deleteClient(disconnectClientNode);
-fprintf(stderr,"%s, %d: xxxxerrr\n",__FILE__,__LINE__);
-    slaveInfo->isConnected = FALSE;
+    slaveDisconnect(slaveInfo);
 
     printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveInfo->name),slaveInfo->port);
   }
@@ -562,45 +598,6 @@ fprintf(stderr,"%s, %d: slaveWaitResult timeout %ld\n",__FILE__,__LINE__,timeout
   }
 
   return resultNode;
-}
-
-/***********************************************************************\
-* Name   : freeCommandNode
-* Purpose: free command node
-* Input  : commandNode - command node
-*          userData    - not used
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeCommandNode(CommandNode *commandNode, void *userData)
-{
-  assert(commandNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(commandNode->data);
-  String_delete(commandNode->name);
-}
-
-/***********************************************************************\
-* Name   : freeResultNode
-* Purpose: free result node
-* Input  : resultNode - result node
-*          userData   - not used
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeResultNode(ResultNode *resultNode, void *userData)
-{
-  assert(resultNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(resultNode->data);
 }
 
 #if 0
@@ -1047,6 +1044,46 @@ void Slave_duplicateHost(SlaveInfo *toSlaveInfo, const SlaveInfo *fromSlaveInfo)
   Slave_copyHost(toSlaveInfo,fromSlaveInfo);
 }
 
+void Slave_init(SlaveInfo *slaveInfo)
+{
+  assert(slaveInfo != NULL);
+
+  slaveInfo->name                           = String_new();
+  slaveInfo->port                           = 0;
+//  slaveInfo->forceSSL                        = forceSSL;
+  slaveInfo->isConnected                    = FALSE;
+  slaveInfo->slaveConnectStatusInfoFunction = NULL;
+  slaveInfo->slaveConnectStatusInfoUserData = NULL;
+  slaveInfo->line                           = String_new();
+  slaveInfo->commandId                      = 0;
+  Semaphore_init(&slaveInfo->commandList.lock);
+  List_init(&slaveInfo->commandList);
+  Semaphore_init(&slaveInfo->resultList.lock);
+  List_init(&slaveInfo->resultList);
+}
+
+void Slave_duplicate(SlaveInfo *slaveInfo, const SlaveInfo *fromSlaveInfo)
+{
+  Slave_init(slaveInfo);
+
+  String_set(slaveInfo->name,fromSlaveInfo->name);
+  slaveInfo->port                           = fromSlaveInfo->port;
+  slaveInfo->slaveConnectStatusInfoFunction = fromSlaveInfo->slaveConnectStatusInfoFunction;
+  slaveInfo->slaveConnectStatusInfoUserData = fromSlaveInfo->slaveConnectStatusInfoUserData;
+}
+
+void Slave_done(SlaveInfo *slaveInfo)
+{
+  assert(slaveInfo != NULL);
+
+  slaveInfo->isConnected = FALSE;
+  List_done(&slaveInfo->resultList,CALLBACK(freeResultNode,NULL));
+  Semaphore_done(&slaveInfo->resultList.lock);
+  List_done(&slaveInfo->commandList,CALLBACK(freeCommandNode,NULL));
+  Semaphore_done(&slaveInfo->commandList.lock);
+  String_delete(slaveInfo->name);
+}
+
 Errors Slave_connect(SlaveInfo                      *slaveInfo,
                      ConstString                    hostName,
                      uint                           hostPort,
@@ -1063,65 +1100,19 @@ Errors Slave_connect(SlaveInfo                      *slaveInfo,
   assert(slaveInfo != NULL);
   assert(hostName != NULL);
 
-  // init variables
-  line = String_new();
-
-//TODO
-  // get default ports
-
-  // connect to slave host
-  error = Network_connect(&socketHandle,
-//                          forceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
-SOCKET_TYPE_PLAIN,
-                          hostName,
-                          hostPort,
-//TODO: SSL
-                          NULL,  // loginName
-                          NULL,  // password
-                          NULL,  // sshPublicKey
-                          0,
-                          NULL,  // sshPrivateKey
-                          0,
-                          SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
-                         );
+  // slave connect
+  error = slaveConnect(slaveInfo,
+                       hostName,
+                       hostPort
+                      );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: connect fial %s:%d\n",__FILE__,__LINE__,String_cString(hostName),hostPort);
-    String_delete(line);
     return error;
   }
 
-//TODO
-sslFlag = TRUE;
-
-  // authorize
-  error = Network_readLine(&socketHandle,line,30LL*1000);
-  if (error != ERROR_NONE)
-  {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    Network_disconnect(&socketHandle);
-    String_delete(line);
-    return error;
-  }
-fprintf(stderr,"%s, %d: first line=%s\n",__FILE__,__LINE__,String_cString(line));
-
-  slaveInfo->name                           = String_duplicate(hostName);
-  slaveInfo->port                           = hostPort;
-//  slaveInfo->sslFlag                        = sslFlag;
-  slaveInfo->isConnected                    = TRUE;
+  // init callback
   slaveInfo->slaveConnectStatusInfoFunction = slaveConnectStatusInfoFunction;
   slaveInfo->slaveConnectStatusInfoUserData = slaveConnectStatusInfoUserData;
-  slaveInfo->line                           = String_new();
-  slaveInfo->commandId                      = 0;
-  Semaphore_init(&slaveInfo->commandList.lock);
-  List_init(&slaveInfo->commandList);
-  Semaphore_init(&slaveInfo->resultList.lock);
-  List_init(&slaveInfo->resultList);
-  slaveInfo->socketHandle                   = socketHandle;
-fprintf(stderr,"%s, %d: added %s:%d\n",__FILE__,__LINE__,String_cString(hostName),hostPort);
-
-  // free resources
-  String_delete(line);
 
   printInfo(2,"Connected slave host '%s:%d'\n",String_cString(hostName),hostPort);
 
@@ -1130,19 +1121,9 @@ fprintf(stderr,"%s, %d: added %s:%d\n",__FILE__,__LINE__,String_cString(hostName
 
 void Slave_disconnect(const SlaveInfo *slaveInfo)
 {
-  SemaphoreLock semaphoreLock;
-
   assert(slaveInfo != NULL);
 
-  // disconnect and discard slave
-  Network_disconnect(&slaveInfo->socketHandle);
-
-  List_done(&slaveInfo->resultList,CALLBACK(freeResultNode,NULL));
-  Semaphore_done(&slaveInfo->resultList.lock);
-  List_done(&slaveInfo->commandList,CALLBACK(freeCommandNode,NULL));
-  Semaphore_done(&slaveInfo->commandList.lock);
-  String_delete(slaveInfo->line);
-  String_delete(slaveInfo->name);
+  slaveDisconnect(slaveInfo);
 }
 
 bool Slave_isConnected(const SlaveInfo *slaveInfo)
@@ -1494,8 +1475,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
   SET_OPTION_STRING   ("compress-algorithm",     String_format(String_clear(s),
                                                                "%s+%s",
-                                                               ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.delta,NULL),
-                                                               ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.byte ,NULL)
+                                                               ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.delta,"none"),
+                                                               ConfigValue_selectToString(CONFIG_VALUE_COMPRESS_ALGORITHMS,jobOptions->compressAlgorithms.byte ,"none")
                                                               )
                       );
   SET_OPTION_CSTRING  ("crypt-algorithm",        ConfigValue_selectToString(CONFIG_VALUE_CRYPT_ALGORITHMS,jobOptions->cryptAlgorithms[0],NULL));
