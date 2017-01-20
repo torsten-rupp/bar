@@ -22,6 +22,19 @@
     obsolete
   * added option --comment
   * added option --info
+  * BARControl: added roles basic/normal/expert
+
+2016-12-11 0.20b
+  * BARControl: fixed SSL encryption. Please re-generate
+    the BAR key files with bar-keygen (generate now a
+    self-signed certificate)
+  * BARControl: fixed delete storages (possible index
+    database error when entity/storage is selected)
+  * fixed error message when mount fail
+  * BARControl: fixed possible widget dispose error
+  * fixed "archive-type" unknown error when edit schedule
+    entry
+  * build problem ICU: upgraded to 58.1
 
 2016-11-09 0.20a
   * fixed restore into original path
