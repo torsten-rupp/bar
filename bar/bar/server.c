@@ -32,23 +32,25 @@
 #include "msgqueues.h"
 #include "stringlists.h"
 #include "misc.h"
-
-#include "passwords.h"
 #include "network.h"
 #include "files.h"
 #include "devices.h"
 #include "patterns.h"
+
+#include "passwords.h"
 #include "entrylists.h"
 #include "patternlists.h"
 #include "archive.h"
 #include "storage.h"
 #include "index.h"
 #include "continuous.h"
+#include "server_io.h"
+#include "slave.h"
 #include "bar.h"
 
 #include "commands_create.h"
 #include "commands_restore.h"
-#include "slave.h"
+
 
 #include "server.h"
 
@@ -206,8 +208,7 @@ typedef struct JobNode
   String          fileName;                             // file name or NULL
   uint64          fileModified;                         // file modified date/time (timestamp)
 
-  String          master;                               // master who created job or NULL
-  uint            masterPort;                           // master port number or 0
+  ServerIO        *masterIO;                            // master i/o or NULL if not a slave job
 
   // job running state
   SlaveInfo       slaveInfo;
@@ -373,11 +374,7 @@ typedef struct
 {
   Semaphore             lock;
 
-//  ClientTypes           type;
-
-  // session data
-  SessionId             sessionId;
-  CryptKey              publicKey,privateKey;
+  // authization data
   AuthorizationStates   authorizationState;
   AuthorizationFailNode *authorizationFailNode;
 
@@ -399,9 +396,9 @@ typedef struct
   // i/o
   ServerIO              io;
 
-  // threads
-  Thread                threads[MAX_NETWORK_CLIENT_THREADS];    // command processing threads
-  MsgQueue              commandQueue;                           // commands send by client
+  // command processing
+  Thread                threads[MAX_NETWORK_CLIENT_THREADS];
+  MsgQueue              commandQueue;
 
   // current list settings
   EntryList             includeEntryList;
@@ -412,7 +409,7 @@ typedef struct
   JobOptions            jobOptions;
   DirectoryInfoList     directoryInfoList;
 
-  // current index ids
+  // current index id settings
   Array                 indexIdArray;                      // ids of uuid/entity/storage ids to list/restore
   Array                 entryIdArray;                      // ids of entries to restore
 } ClientInfo;
@@ -1762,9 +1759,6 @@ LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint buffe
 
   switch (clientInfo->io.type)
   {
-//    case SERVER_IO_TYPE_NONE:
-//      stringClear(buffer);
-//      break;
     case SERVER_IO_TYPE_BATCH:
       stringFormat(buffer,bufferSize,"local file");
       break;
@@ -1938,8 +1932,6 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 
   Slave_done(&jobNode->slaveInfo);
 
-  String_delete(jobNode->master);
-
   doneJobOptions(&jobNode->jobOptions);
   List_done(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
   DeltaSourceList_done(&jobNode->deltaSourceList);
@@ -1964,13 +1956,13 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 *          name     - name
 *          uuid     - UUID or NULL for new UUID
 *          fileName - file name or NULL
-*          master   - master name or NULL
+*          masterIO - master i/o or NULL
 * Output : -
 * Return : job node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL JobNode *newJob(JobTypes jobType, ConstString name, ConstString uuid, ConstString fileName, ConstString master)
+LOCAL JobNode *newJob(JobTypes jobType, ConstString name, ConstString uuid, ConstString fileName, ServerIO *masterIO)
 {
   JobNode *jobNode;
 
@@ -2016,7 +2008,8 @@ LOCAL JobNode *newJob(JobTypes jobType, ConstString name, ConstString uuid, Cons
 
   jobNode->fileName                       = String_duplicate(fileName);
   jobNode->fileModified                   = 0LL;
-  jobNode->master                         = String_duplicate(master);
+
+  jobNode->masterIO                       = masterIO;
 
   Slave_init(&jobNode->slaveInfo);
 
@@ -2130,7 +2123,8 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
   newJobNode->sshPassword                    = NULL;
   newJobNode->cryptPassword                  = NULL;
 
-  newJobNode->master                         = String_new();
+//  newJobNode->master                         = String_new();
+  newJobNode->masterIO                       = NULL;
 
   Slave_duplicate(&newJobNode->slaveInfo,&jobNode->slaveInfo);
 
@@ -2425,135 +2419,6 @@ LOCAL ScheduleNode *findScheduleByUUID(const JobNode *jobNode, ConstString sched
   }
 
   return scheduleNode;
-}
-
-/***********************************************************************\
-* Name   : triggerJob
-* Purpose: trogger job run
-* Input  : jobNode            - job node
-*          byName             - by name or NULL
-*          archiveType        - archive type to create
-*          dryRun             - TRUE for dry-run, FALSE otherwise
-*          scheduleUUID       - schedule UUID or NULL
-*          scheduleCustomText - schedule custom text or NULL
-*          noStorage          - TRUE for no-strage, FALSE otherwise
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void triggerJob(JobNode      *jobNode,
-                      const char   *byName,
-                      ArchiveTypes archiveType,
-                      bool         dryRun,
-                      ConstString  scheduleUUID,
-                      ConstString  scheduleCustomText,
-                      bool         noStorage
-                     )
-{
-  SemaphoreLock semaphoreLock;
-
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  // set job state
-  jobNode->state                 = JOB_STATE_WAITING;
-  String_setCString(jobNode->byName,byName);
-  jobNode->archiveType           = archiveType;
-  jobNode->dryRun                = dryRun;
-  String_set(jobNode->schedule.uuid,scheduleUUID);
-  String_set(jobNode->schedule.customText,scheduleCustomText);
-  jobNode->schedule.noStorage    = noStorage;
-  jobNode->requestedAbortFlag    = FALSE;
-  String_clear(jobNode->abortedByInfo);
-  jobNode->requestedVolumeNumber = 0;
-  jobNode->volumeNumber          = 0;
-  String_clear(jobNode->volumeMessage);
-  jobNode->volumeUnloadFlag      = FALSE;
-  Semaphore_signalModified(&jobList.lock);
-
-  // reset running info
-  resetJobRunningInfo(jobNode);
-}
-
-/***********************************************************************\
-* Name   : startJob
-* Purpose: start job (store running data)
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void startJob(JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  // set job state, reset last error
-  jobNode->state             = JOB_STATE_RUNNING;
-  jobNode->runningInfo.error = ERROR_NONE;
-  Semaphore_signalModified(&jobList.lock);
-
-  // increment active counter
-  jobList.activeCount++;
-}
-
-/***********************************************************************\
-* Name   : doneJob
-* Purpose: done job (store running data, free job data, e. g. passwords)
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void doneJob(JobNode *jobNode)
-{
-  SemaphoreLock semaphoreLock;
-
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  // clear passwords
-  if (jobNode->cryptPassword != NULL)
-  {
-    Password_delete(jobNode->cryptPassword);
-    jobNode->cryptPassword = NULL;
-  }
-  if (jobNode->cryptPassword != NULL)
-  {
-    Password_delete(jobNode->sshPassword);
-    jobNode->sshPassword = NULL;
-  }
-  if (jobNode->cryptPassword != NULL)
-  {
-    Password_delete(jobNode->ftpPassword);
-    jobNode->ftpPassword = NULL;
-  }
-
-  // clear schedule
-  String_clear(jobNode->schedule.uuid);
-  String_clear(jobNode->schedule.customText);
-
-  // set state
-  if      (jobNode->requestedAbortFlag)
-  {
-    jobNode->state = JOB_STATE_ABORTED;
-  }
-  else if (jobNode->runningInfo.error != ERROR_NONE)
-  {
-    jobNode->state = JOB_STATE_ERROR;
-  }
-  else
-  {
-    jobNode->state = JOB_STATE_DONE;
-  }
-  Semaphore_signalModified(&jobList.lock);
-
-  // decrement active counter
-  assert(jobList.activeCount > 0);
-  jobList.activeCount--;
 }
 
 /***********************************************************************\
@@ -3356,7 +3221,12 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
         jobNode = findJobByName(baseName);
         if (jobNode == NULL)
         {
-          jobNode = newJob(JOB_TYPE_CREATE,baseName,NULL /* jobUUID */,fileName,NULL /* master */);
+          jobNode = newJob(JOB_TYPE_CREATE,
+                           baseName,
+                           NULL, // jobUUID
+                           fileName,
+                           NULL // masterIO
+                          );
           assert(jobNode != NULL);
           Misc_getUUID(jobNode->uuid);
           List_append(&jobList,jobNode);
@@ -3463,6 +3333,180 @@ LOCAL void getAllJobUUIDs(StringList *jobUUIDList)
       StringList_append(jobUUIDList,jobNode->uuid);
     }
   }
+}
+
+/***********************************************************************\
+* Name   : triggerJob
+* Purpose: trogger job run
+* Input  : jobNode            - job node
+*          byName             - by name or NULL
+*          archiveType        - archive type to create
+*          dryRun             - TRUE for dry-run, FALSE otherwise
+*          scheduleUUID       - schedule UUID or NULL
+*          scheduleCustomText - schedule custom text or NULL
+*          noStorage          - TRUE for no-strage, FALSE otherwise
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void triggerJob(JobNode      *jobNode,
+                      const char   *byName,
+                      ArchiveTypes archiveType,
+                      bool         dryRun,
+                      ConstString  scheduleUUID,
+                      ConstString  scheduleCustomText,
+                      bool         noStorage
+                     )
+{
+  SemaphoreLock semaphoreLock;
+
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  // set job state
+  jobNode->state                 = JOB_STATE_WAITING;
+  String_setCString(jobNode->byName,byName);
+  jobNode->archiveType           = archiveType;
+  jobNode->dryRun                = dryRun;
+  String_set(jobNode->schedule.uuid,scheduleUUID);
+  String_set(jobNode->schedule.customText,scheduleCustomText);
+  jobNode->schedule.noStorage    = noStorage;
+  jobNode->requestedAbortFlag    = FALSE;
+  String_clear(jobNode->abortedByInfo);
+  jobNode->requestedVolumeNumber = 0;
+  jobNode->volumeNumber          = 0;
+  String_clear(jobNode->volumeMessage);
+  jobNode->volumeUnloadFlag      = FALSE;
+  Semaphore_signalModified(&jobList.lock);
+
+  // reset running info
+  resetJobRunningInfo(jobNode);
+}
+
+/***********************************************************************\
+* Name   : startJob
+* Purpose: start job (store running data)
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void startJob(JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  // set job state, reset last error
+  jobNode->state             = JOB_STATE_RUNNING;
+  jobNode->runningInfo.error = ERROR_NONE;
+  Semaphore_signalModified(&jobList.lock);
+
+  // increment active counter
+  jobList.activeCount++;
+}
+
+/***********************************************************************\
+* Name   : doneJob
+* Purpose: done job (store running data, free job data, e. g. passwords)
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneJob(JobNode *jobNode)
+{
+  SemaphoreLock semaphoreLock;
+
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  // clear passwords
+  if (jobNode->cryptPassword != NULL)
+  {
+    Password_delete(jobNode->cryptPassword);
+    jobNode->cryptPassword = NULL;
+  }
+  if (jobNode->cryptPassword != NULL)
+  {
+    Password_delete(jobNode->sshPassword);
+    jobNode->sshPassword = NULL;
+  }
+  if (jobNode->cryptPassword != NULL)
+  {
+    Password_delete(jobNode->ftpPassword);
+    jobNode->ftpPassword = NULL;
+  }
+
+  // clear schedule
+  String_clear(jobNode->schedule.uuid);
+  String_clear(jobNode->schedule.customText);
+
+  // set state
+  if      (jobNode->requestedAbortFlag)
+  {
+    jobNode->state = JOB_STATE_ABORTED;
+  }
+  else if (jobNode->runningInfo.error != ERROR_NONE)
+  {
+    jobNode->state = JOB_STATE_ERROR;
+  }
+  else
+  {
+    jobNode->state = JOB_STATE_DONE;
+  }
+  Semaphore_signalModified(&jobList.lock);
+
+  // decrement active counter
+  assert(jobList.activeCount > 0);
+  jobList.activeCount--;
+}
+
+/***********************************************************************\
+* Name   : abortJob
+* Purpose: abort job
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void abortJob(JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  if      (isJobRunning(jobNode))
+  {
+    // request abort job
+    jobNode->requestedAbortFlag = TRUE;
+    Semaphore_signalModified(&jobList.lock);
+
+    if (isLocalJob(jobNode))
+    {
+      // wait until local job terminated
+      while (isJobRunning(jobNode))
+      {
+        Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
+      }
+    }
+    else
+    {
+      // abort slave job
+      jobNode->runningInfo.error = Slave_jobAbort(&jobNode->slaveInfo,
+                                                  jobNode->uuid
+                                                 );
+    }
+  }
+  else if (isJobActive(jobNode))
+  {
+    jobNode->state = JOB_STATE_NONE;
+  }
+
+  // store schedule info
+  writeJobScheduleInfo(jobNode);
 }
 
 /*---------------------------------------------------------------------*/
@@ -4103,7 +4147,7 @@ LOCAL void jobThreadCode(void)
               jobNode->runningInfo.error = Command_create(
                                                           jobUUID,
                                                           scheduleUUID,
-String_isEmpty(jobNode->master) ? NULL : &jobNode->io,
+jobNode->masterIO,
                                                           storageName,
                                                           &includeEntryList,
                                                           &excludePatternList,
@@ -6052,52 +6096,8 @@ LOCAL void autoIndexThreadCode(void)
 
 /*---------------------------------------------------------------------*/
 
-/***********************************************************************\
-* Name   : sendMasterCommand
-* Purpose: send command to master
-* Input  : clientInfo - client info
-*          id         - command id
-*          format     - format string
-*          arguments  - arguments
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void sendMasterCommand(ServerIO *serverIO, uint id, const char *format, va_list arguments)
-{
-  locale_t      locale;
-  String        command;
-  SemaphoreLock semaphoreLock;
-
-  assert(serverIO != NULL);
-fprintf(stderr,"%s, %d: serverIO->typ=%d\n",__FILE__,__LINE__,serverIO->type);
-  assert(serverIO->type == SERVER_IO_TYPE_NETWORK);
-
-  command = String_new();
-
-  locale = uselocale(POSIXLocale);
-  {
-    String_format(command,"%u ",id);
-    String_vformat(command,format,arguments);
-    String_appendChar(command,'\n');
-  }
-  uselocale(locale);
-
-  #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
-    {
-      fprintf(stderr,"DEBUG: send master=%s",String_cString(command));
-    }
-  #endif /* not DEBUG */
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    (void)Network_send(&serverIO->network.socketHandle,String_cString(command),String_length(command));
-  }
-
-  String_delete(command);
-}
-
+//TODO: remove
+#if 0
 /***********************************************************************\
 * Name   : sendClient
 * Purpose: send data to client
@@ -6136,49 +6136,6 @@ LOCAL void sendClient(ClientInfo *clientInfo, ConstString data)
       }
     }
   }
-}
-
-/***********************************************************************\
-* Name   : sendClientResult
-* Purpose: send result to client
-* Input  : clientInfo   - client info
-*          id           - command id
-*          completeFlag - TRUE if command is completed, FALSE otherwise
-*          error        - ERROR_NONE or error code
-*          format       - format string
-*          ...          - optional arguments
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, Errors error, const char *format, ...)
-{
-  locale_t locale;
-  String   result;
-  va_list  arguments;
-
-  result = String_new();
-
-  locale = uselocale(POSIXLocale);
-  {
-    String_format(result,"%u %d %u ",id,completeFlag ? 1 : 0,Error_getCode(error));
-    va_start(arguments,format);
-    String_vformat(result,format,arguments);
-    va_end(arguments);
-    String_appendChar(result,'\n');
-  }
-  uselocale(locale);
-
-  #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
-    {
-      fprintf(stderr,"DEBUG: send result '%s'",String_cString(result));
-    }
-  #endif /* not DEBUG */
-  sendClient(clientInfo,result);
-
-  String_delete(result);
 }
 
 /***********************************************************************\
@@ -6265,6 +6222,7 @@ LOCAL Errors clientAction(ClientInfo *clientInfo, uint id, StringMap resultMap, 
 
   return error;
 }
+#endif
 
 /***********************************************************************\
 * Name   : isCommandAborted
@@ -6311,232 +6269,6 @@ LOCAL bool isCommandAborted(ClientInfo *clientInfo, uint commandId)
 }
 
 /*---------------------------------------------------------------------*/
-
-/***********************************************************************\
-* Name   : encodeHex
-* Purpose: encoded data as hex-string
-* Input  : string     - string variable
-*          data       - data to encode
-*          dataLength - length of data [bytes]
-* Output : string - string
-* Return : string
-* Notes  : -
-\***********************************************************************/
-
-LOCAL String encodeHex(String string, const byte *data, uint length)
-{
-  uint z;
-
-  assert(string != NULL);
-
-  for (z = 0; z < length; z++)
-  {
-    String_format(string,"%02x",data[z]);
-  }
-
-  return string;
-}
-
-/***********************************************************************\
-* Name   : decodeHex
-* Purpose: decode hex-string into data
-* Input  : s             - hex-string
-*          maxDataLength - max. data length  [bytes]
-* Output : data       - data
-*          dataLength - length of data [bytes]
-* Return : TRUE iff data decoded
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool decodeHex(const char *s, byte *data, uint *dataLength, uint maxDataLength)
-{
-  uint i;
-  char t[3];
-  char *w;
-
-  assert(s != NULL);
-  assert(data != NULL);
-  assert(dataLength != NULL);
-
-  i = 0;
-  while (((*s) != '\0') && (i < maxDataLength))
-  {
-    t[0] = (*s); s++;
-    if ((*s) != '\0')
-    {
-      t[1] = (*s); s++;
-      t[2] = '\0';
-
-      data[i] = (byte)strtol(t,&w,16);
-      if ((*w) != '\0') return FALSE;
-      i++;
-    }
-    else
-    {
-      return FALSE;
-    }
-  }
-  (*dataLength) = i;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : decryptPassword
-* Purpose: decrypt password from hex-string
-* Input  : password          - password
-*          clientInfo        - client info
-*          encryptType       - encrypt type
-*          encryptedPassword - encrypted password
-* Output : -
-* Return : TRUE iff encrypted password equals password
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool decryptPassword(Password *password, const ClientInfo *clientInfo, ConstString encryptType, ConstString encryptedPassword)
-{
-  byte encryptedBuffer[1024];
-  uint encryptedBufferLength;
-  byte encodedBuffer[1024];
-  uint encodedBufferLength;
-  uint i;
-
-  assert(password != NULL);
-
-  // decode hex-string
-  if (!decodeHex(String_cString(encryptedPassword),encryptedBuffer,&encryptedBufferLength,sizeof(encryptedBuffer)))
-  {
-    return FALSE;
-  }
-
-  // decrypt password
-  if      (String_equalsIgnoreCaseCString(encryptType,"RSA") && Crypt_isAsymmetricSupported())
-  {
-//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
-    Crypt_keyDecrypt(&clientInfo->privateKey,
-                     encryptedBuffer,
-                     encryptedBufferLength,
-                     encodedBuffer,
-                     &encodedBufferLength,
-                     sizeof(encodedBuffer)
-                    );
-  }
-  else if (String_equalsIgnoreCaseCString(encryptType,"NONE"))
-  {
-    memcpy(encodedBuffer,encryptedBuffer,encryptedBufferLength);
-    encodedBufferLength = encryptedBufferLength;
-  }
-  else
-  {
-    return FALSE;
-  }
-
-//fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
-
-  // decode password (XOR with session id)
-  Password_clear(password);
-  i = 0;
-  while (   (i < encodedBufferLength)
-         && ((char)(encodedBuffer[i]^clientInfo->sessionId[i]) != '\0')
-        )
-  {
-    Password_appendChar(password,(char)(encodedBuffer[i]^clientInfo->sessionId[i]));
-    i++;
-  }
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : checkPassword
-* Purpose: check password
-* Input  : clientInfo        - client info
-*          encryptType       - encrypt type
-*          encryptedPassword - encrypted password
-*          password          - password
-* Output : -
-* Return : TRUE iff encrypted password equals password
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool checkPassword(const ClientInfo *clientInfo, ConstString encryptType, ConstString encryptedPassword, const Password *password)
-{
-  byte encryptedBuffer[1024];
-  uint encryptedBufferLength;
-  byte encodedBuffer[1024];
-  uint encodedBufferLength;
-  uint n;
-  uint i;
-  bool okFlag;
-
-  // decode hex-string
-  if (!decodeHex(String_cString(encryptedPassword),encryptedBuffer,&encryptedBufferLength,sizeof(encryptedBuffer)))
-  {
-    return FALSE;
-  }
-
-  // decrypt password
-  if      (String_equalsIgnoreCaseCString(encryptType,"RSA") && Crypt_isAsymmetricSupported())
-  {
-//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
-    if (Crypt_keyDecrypt(&clientInfo->privateKey,
-                         encryptedBuffer,
-                         encryptedBufferLength,
-                         encodedBuffer,
-                         &encodedBufferLength,
-                         sizeof(encodedBuffer)
-                        ) != ERROR_NONE
-       )
-    {
-      return FALSE;
-    }
-  }
-  else if (String_equalsIgnoreCaseCString(encryptType,"NONE"))
-  {
-    memcpy(encodedBuffer,encryptedBuffer,encryptedBufferLength);
-    encodedBufferLength = encryptedBufferLength;
-  }
-  else
-  {
-    return FALSE;
-  }
-
-//fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
-
-  // check password length
-  n = 0;
-  while (   (n < encodedBufferLength)
-         && ((char)(encodedBuffer[n]^clientInfo->sessionId[n]) != '\0')
-        )
-  {
-    n++;
-  }
-  if (password != NULL)
-  {
-    if (Password_length(password) != n)
-    {
-      return FALSE;
-    }
-  }
-
-  // check encoded password
-  if (password != NULL)
-  {
-    okFlag = TRUE;
-    i = 0;
-    while ((i < Password_length(password)) && okFlag)
-    {
-      okFlag = (Password_getChar(password,i) == (encodedBuffer[i]^clientInfo->sessionId[i]));
-      i++;
-    }
-    if (!okFlag)
-    {
-      return FALSE;
-    }
-  }
-
-  return TRUE;
-}
 
 /***********************************************************************\
 * Name   : getJobStateText
@@ -6841,16 +6573,16 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, IndexHandle *indexHan
   // get error code
   if (!StringMap_getUInt64(argumentMap,"error",&n,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected error=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected error=<n>");
     return;
   }
   error = (Errors)n;
 
   // format result
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                   "errorMessage=%'s",
-                   Error_getText(error)
-                  );
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                      "errorMessage=%'s",
+                      Error_getText(error)
+                     );
 }
 
 /***********************************************************************\
@@ -6883,21 +6615,21 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
   #ifdef HAVE_GNU_TLS
     if ((serverCA == NULL) || (serverCA->data == NULL))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_NO_TLS_CA,"no server certificate authority data");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_CA,"no server certificate authority data");
       return;
     }
     if ((serverCert == NULL) || (serverCert->data == NULL))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_NO_TLS_CERTIFICATE,"no server certificate data");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_CERTIFICATE,"no server certificate data");
       return;
     }
     if ((serverKey == NULL) || (serverKey->data == NULL))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_NO_TLS_KEY,"no server key data");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_KEY,"no server key data");
       return;
     }
 
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
     SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->action.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
@@ -6915,7 +6647,7 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
       }
     }
   #else /* not HAVE_GNU_TLS */
-    sendClientResult(clientInfo,id,TRUE,ERROR_FUNCTION_NOT_SUPPORTED,"not available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_FUNCTION_NOT_SUPPORTED,"not available");
   #endif /* HAVE_GNU_TLS */
 
   // free resources
@@ -6954,13 +6686,13 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   encryptType = String_new();
   if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
     return;
   }
   encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
     String_delete(encryptedPassword);
     String_delete(encryptType);
     return;
@@ -6970,7 +6702,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   // check password
   if (!globalOptions.serverDebugFlag)
   {
-    okFlag = checkPassword(clientInfo,encryptType,encryptedPassword,serverPassword);
+    okFlag = ServerIO_checkPassword(&clientInfo->io,encryptType,encryptedPassword,serverPassword);
   }
   else
   {
@@ -6983,12 +6715,12 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     if (okFlag)
     {
       clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
-      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
     }
     else
     {
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
-      sendClientResult(clientInfo,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
       printInfo(1,"Client authorization failure: '%s'\n",getClientInfo(clientInfo,buffer,sizeof(buffer)));
     }
   }
@@ -7036,15 +6768,15 @@ LOCAL void serverCommand_version(ClientInfo *clientInfo, IndexHandle *indexHandl
         break; /* not reached */
     #endif /* NDEBUG */
   }
-  sendClientResult(clientInfo,
-                   id,
-                   TRUE,
-                   ERROR_NONE,
-                   "major=%d minor=%d mode=%s",
-                   SERVER_PROTOCOL_VERSION_MAJOR,
-                   SERVER_PROTOCOL_VERSION_MINOR,
-                   s
-                  );
+  ServerIO_sendResult(&clientInfo->io,
+                      id,
+                      TRUE,
+                      ERROR_NONE,
+                      "major=%d minor=%d mode=%s",
+                      SERVER_PROTOCOL_VERSION_MAJOR,
+                      SERVER_PROTOCOL_VERSION_MINOR,
+                      s
+                     );
 }
 
 /***********************************************************************\
@@ -7073,11 +6805,11 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
   if (globalOptions.serverDebugFlag)
   {
     quitFlag = TRUE;
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_FUNCTION_NOT_SUPPORTED,"not in debug mode");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_FUNCTION_NOT_SUPPORTED,"not in debug mode");
   }
 }
 
@@ -7129,7 +6861,7 @@ LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, IndexHandle *index
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -7161,18 +6893,18 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, IndexHandle *indexHandle, u
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
 
   // send value
   if (String_equalsCString(name,"FILE_SEPARATOR"))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%c",FILES_PATHNAME_SEPARATOR_CHAR);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%c",FILES_PATHNAME_SEPARATOR_CHAR);
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown server config '%S'",name);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown server config '%S'",name);
   }
 
   // free resources
@@ -7211,7 +6943,7 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
 
@@ -7219,7 +6951,7 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
   i = ConfigValue_valueIndex(CONFIG_VALUES,NULL,String_cString(name));
   if (i < 0)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"server config '%S'",name);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"server config '%S'",name);
     String_delete(name);
     return;
   }
@@ -7233,7 +6965,7 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
                         );
   ConfigValue_format(&configValueFormat,value);
   ConfigValue_formatDone(&configValueFormat);
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%S",value);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%S",value);
   String_delete(value);
 
   // free resources
@@ -7269,14 +7001,14 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     String_delete(name);
     return;
   }
   value = String_new();
   if (!StringMap_getString(argumentMap,"value",value,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected value=<value>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected value=<value>");
     String_delete(value);
     String_delete(name);
     return;
@@ -7294,13 +7026,13 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
                         )
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"server config '%S'",name);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"server config '%S'",name);
     String_delete(value);
     String_delete(name);
     return;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(value);
@@ -7334,11 +7066,11 @@ LOCAL void serverCommand_serverOptionFlush(ClientInfo *clientInfo, IndexHandle *
   error = updateConfig();
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"write config file fail");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
     return;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
 }
@@ -7386,47 +7118,47 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
         case SERVER_TYPE_NONE:
           break;
         case SERVER_TYPE_FILE:
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "id=%u name=%'S serverType=%s maxStorageSize=%llu",
-                           serverNode->id,
-                           serverNode->server.name,
-                           "FILE",
-                           serverNode->server.maxStorageSize
-                          );
+          ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                              "id=%u name=%'S serverType=%s maxStorageSize=%llu",
+                              serverNode->id,
+                              serverNode->server.name,
+                              "FILE",
+                              serverNode->server.maxStorageSize
+                             );
           break;
         case SERVER_TYPE_FTP:
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%llu",
-                           serverNode->id,
-                           serverNode->server.name,
-                           "FTP",
-                           serverNode->server.ftp.loginName,
-                           serverNode->server.maxConnectionCount,
-                           serverNode->server.maxStorageSize
-                          );
+          ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                              "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%llu",
+                              serverNode->id,
+                              serverNode->server.name,
+                              "FTP",
+                              serverNode->server.ftp.loginName,
+                              serverNode->server.maxConnectionCount,
+                              serverNode->server.maxStorageSize
+                             );
           break;
         case SERVER_TYPE_SSH:
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "id=%u name=%'S serverType=%s port=%d loginName=%'S maxConnectionCount=%d maxStorageSize=%llu",
-                           serverNode->id,
-                           serverNode->server.name,
-                           "SSH",
-                           serverNode->server.ssh.port,
-                           serverNode->server.ssh.loginName,
-                           serverNode->server.maxConnectionCount,
-                           serverNode->server.maxStorageSize
-                          );
+          ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                              "id=%u name=%'S serverType=%s port=%d loginName=%'S maxConnectionCount=%d maxStorageSize=%llu",
+                              serverNode->id,
+                              serverNode->server.name,
+                              "SSH",
+                              serverNode->server.ssh.port,
+                              serverNode->server.ssh.loginName,
+                              serverNode->server.maxConnectionCount,
+                              serverNode->server.maxStorageSize
+                             );
           break;
         case SERVER_TYPE_WEBDAV:
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%llu",
-                           serverNode->id,
-                           serverNode->server.name,
-                           "WEBDAV",
-                           serverNode->server.webDAV.loginName,
-                           serverNode->server.maxConnectionCount,
-                           serverNode->server.maxStorageSize
-                          );
+          ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                              "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%llu",
+                              serverNode->id,
+                              serverNode->server.name,
+                              "WEBDAV",
+                              serverNode->server.webDAV.loginName,
+                              serverNode->server.maxConnectionCount,
+                              serverNode->server.maxStorageSize
+                             );
           break;
         #ifndef NDEBUG
           default:
@@ -7437,7 +7169,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -7487,26 +7219,26 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     String_delete(name);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"serverType",&serverType,(StringMapParseEnumFunction)parseServerType,SERVER_TYPE_FILE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected serverType=<FILE|FTP|SSH|WEBDAV>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected serverType=<FILE|FTP|SSH|WEBDAV>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"port",&port,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
     String_delete(name);
     return;
   }
   loginName = String_new();
   if (!StringMap_getString(argumentMap,"loginName",loginName,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
     String_delete(loginName);
     String_delete(name);
     return;
@@ -7514,7 +7246,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   password = String_new();
   if (!StringMap_getString(argumentMap,"password",password,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password=<password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password=<password>");
     String_delete(password);
     String_delete(loginName);
     String_delete(name);
@@ -7523,7 +7255,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   publicKey = String_new();
   if (!StringMap_getString(argumentMap,"publicKey",publicKey,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected publicKey=<data>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected publicKey=<data>");
     String_delete(publicKey);
     String_delete(password);
     String_delete(loginName);
@@ -7533,7 +7265,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   privateKey = String_new();
   if (!StringMap_getString(argumentMap,"privateKey",privateKey,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected privateKey=<data>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected privateKey=<data>");
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
@@ -7543,7 +7275,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   }
   if (!StringMap_getUInt(argumentMap,"maxConnectionCount",&maxConnectionCount,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxConnectionCount=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxConnectionCount=<n>");
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
@@ -7553,7 +7285,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   }
   if (!StringMap_getUInt64(argumentMap,"maxStorageSize",&maxStorageSize,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxStorageSize=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxStorageSize=<n>");
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
@@ -7635,7 +7367,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   if (error != ERROR_NONE)
   {
     Semaphore_unlock(&globalOptions.serverList.lock);
-    sendClientResult(clientInfo,id,TRUE,error,"write config file fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail: %s",Error_getText(error));
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
@@ -7644,7 +7376,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
     return;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",serverNode->id);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",serverNode->id);
 
   // free resources
   String_delete(privateKey);
@@ -7701,32 +7433,32 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
   // get id, name, server type, login name, port, password, public/private key, max. connections, max. storage size
   if (!StringMap_getUInt(argumentMap,"id",&serverId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     String_delete(name);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"serverType",&serverType,(StringMapParseEnumFunction)parseServerType,SERVER_TYPE_FILE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected serverType=<FILE|FTP|SSH|WEBDAV>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected serverType=<FILE|FTP|SSH|WEBDAV>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"port",&port,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
     String_delete(name);
     return;
   }
   loginName = String_new();
   if (!StringMap_getString(argumentMap,"loginName",loginName,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected loginName=<name>");
     String_delete(loginName);
     String_delete(name);
     return;
@@ -7734,7 +7466,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
   password = String_new();
   if (!StringMap_getString(argumentMap,"password",password,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password=<password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password=<password>");
     String_delete(password);
     String_delete(loginName);
     String_delete(name);
@@ -7743,7 +7475,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
   publicKey = String_new();
   if (!StringMap_getString(argumentMap,"publicKey",publicKey,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected publicKey=<data>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected publicKey=<data>");
     String_delete(publicKey);
     String_delete(password);
     String_delete(loginName);
@@ -7753,7 +7485,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
   privateKey = String_new();
   if (!StringMap_getString(argumentMap,"privateKey",privateKey,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected privateKey=<data>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected privateKey=<data>");
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
@@ -7763,7 +7495,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
   }
   if (!StringMap_getUInt(argumentMap,"maxConnectionCount",&maxConnectionCount,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxConnectionCount=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxConnectionCount=<n>");
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
@@ -7773,7 +7505,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
   }
   if (!StringMap_getUInt64(argumentMap,"maxStorageSize",&maxStorageSize,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxStorageSize=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxStorageSize=<n>");
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
@@ -7789,7 +7521,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     if (serverNode == NULL)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
-      sendClientResult(clientInfo,serverId,TRUE,ERROR_JOB_NOT_FOUND,"storage server with id #%u not found",serverId);
+      ServerIO_sendResult(&clientInfo->io,serverId,TRUE,ERROR_JOB_NOT_FOUND,"storage server with id #%u not found",serverId);
       String_delete(privateKey);
       String_delete(publicKey);
       String_delete(password);
@@ -7862,7 +7594,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
-      sendClientResult(clientInfo,id,TRUE,error,"write config file fail");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
       String_delete(privateKey);
       String_delete(publicKey);
       String_delete(password);
@@ -7872,7 +7604,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(privateKey);
@@ -7912,7 +7644,7 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
   // get storage server id
   if (!StringMap_getUInt(argumentMap,"id",&serverId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
   }
 
@@ -7923,7 +7655,7 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
     if (serverNode == NULL)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
-      sendClientResult(clientInfo,serverId,TRUE,ERROR_JOB_NOT_FOUND,"storage server with id #%u not found",serverId);
+      ServerIO_sendResult(&clientInfo->io,serverId,TRUE,ERROR_JOB_NOT_FOUND,"storage server with id #%u not found",serverId);
       return;
     }
 
@@ -7935,12 +7667,12 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
-      sendClientResult(clientInfo,id,TRUE,error,"write config file fail");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
       return;
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
 }
@@ -7974,7 +7706,7 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
   // get command id
   if (!StringMap_getUInt(argumentMap,"commandId",&commandId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected commandId=<command id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected commandId=<command id>");
     return;
   }
 
@@ -8000,7 +7732,7 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
   }
 
   // format result
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -8035,14 +7767,14 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, IndexHandle *indexHandle
     switch (serverState)
     {
       case SERVER_STATE_RUNNING:
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=RUNNING");
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=RUNNING");
         break;
       case SERVER_STATE_PAUSE:
         now = Misc_getCurrentDateTime();
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=PAUSED time=%llu",(pauseEndDateTime > now) ? pauseEndDateTime-now : 0LL);
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=PAUSED time=%llu",(pauseEndDateTime > now) ? pauseEndDateTime-now : 0LL);
         break;
       case SERVER_STATE_SUSPENDED:
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"state=SUSPENDED");
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=SUSPENDED");
         break;
     }
   }
@@ -8082,13 +7814,13 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
   // get pause time
   if (!StringMap_getUInt(argumentMap,"time",&pauseTime,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected time=<time>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected time=<time>");
     return;
   }
   modeMask = String_new();
   if (!StringMap_getString(argumentMap,"modeMask",modeMask,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE|ALL");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE|ALL");
     return;
   }
 
@@ -8150,7 +7882,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
               );
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(modeMask);
@@ -8231,7 +7963,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
               );
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(modeMask);
@@ -8277,7 +8009,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
               );
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -8314,7 +8046,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
   error = Device_openDeviceList(&deviceListHandle);
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"cannot open device list: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot open device list: %s",Error_getText(error));
     return;
   }
 
@@ -8326,7 +8058,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
     error = Device_readDeviceList(&deviceListHandle,deviceName);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,error,"cannot read device list: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device list: %s",Error_getText(error));
       Device_closeDeviceList(&deviceListHandle);
       String_delete(deviceName);
       return;
@@ -8336,7 +8068,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
     error = Device_getDeviceInfo(&deviceInfo,deviceName);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,error,"cannot read device info: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device info: %s",Error_getText(error));
       Device_closeDeviceList(&deviceListHandle);
       String_delete(deviceName);
       return;
@@ -8346,13 +8078,13 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
         && (deviceInfo.size > 0)
        )
     {
-      sendClientResult(clientInfo,
-                       id,FALSE,ERROR_NONE,
-                       "name=%'S size=%lld mounted=%y",
-                       deviceName,
-                       deviceInfo.size,
-                       deviceInfo.mounted
-                      );
+      ServerIO_sendResult(&clientInfo->io,
+                          id,FALSE,ERROR_NONE,
+                          "name=%'S size=%lld mounted=%y",
+                          deviceName,
+                          deviceInfo.size,
+                          deviceInfo.mounted
+                         );
     }
   }
   String_delete(deviceName);
@@ -8360,7 +8092,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
   // close device
   Device_closeDeviceList(&deviceListHandle);
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -8396,7 +8128,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
   error = File_openRootList(&rootListHandle);
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"open root list fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"open root list fail: %s",Error_getText(error));
     return;
   }
 
@@ -8417,15 +8149,15 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
         size = 0;
       }
 
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "name=%'S size=%llu",
-                       name,
-                       size
-                      );
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                          "name=%'S size=%llu",
+                          name,
+                          size
+                         );
     }
     else
     {
-      sendClientResult(clientInfo,id,FALSE,error,"open root list fail");
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,error,"open root list fail");
     }
   }
   String_delete(name);
@@ -8433,7 +8165,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
   // close root list
   File_closeRootList(&rootListHandle);
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
 }
@@ -8479,7 +8211,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
 
@@ -8491,13 +8223,13 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
     switch (fileInfo.type)
     {
       case FILE_TYPE_FILE:
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                         "fileType=FILE name=%'S size=%llu dateTime=%llu noDump=%y",
-                         name,
-                         fileInfo.size,
-                         fileInfo.timeModified,
-                         ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                        );
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                            "fileType=FILE name=%'S size=%llu dateTime=%llu noDump=%y",
+                            name,
+                            fileInfo.size,
+                            fileInfo.timeModified,
+                            ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                           );
         break;
       case FILE_TYPE_DIRECTORY:
         // check if .nobackup exists
@@ -8505,73 +8237,73 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
         if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup"));
         if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
 
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                         "fileType=DIRECTORY name=%'S dateTime=%llu noBackup=%y noDump=%y",
-                         name,
-                         fileInfo.timeModified,
-                         noBackupExists,
-                         ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                        );
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                            "fileType=DIRECTORY name=%'S dateTime=%llu noBackup=%y noDump=%y",
+                            name,
+                            fileInfo.timeModified,
+                            noBackupExists,
+                            ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                           );
         break;
       case FILE_TYPE_LINK:
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                         "fileType=LINK name=%'S dateTime=%llu noDump=%y",
-                         name,
-                         fileInfo.timeModified,
-                         ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                        );
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                            "fileType=LINK name=%'S dateTime=%llu noDump=%y",
+                            name,
+                            fileInfo.timeModified,
+                            ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                           );
         break;
       case FILE_TYPE_HARDLINK:
-        sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                         "fileType=HARDLINK name=%'S dateTime=%llu noDump=%y",
-                         name,
-                         fileInfo.timeModified,
-                         ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                        );
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                            "fileType=HARDLINK name=%'S dateTime=%llu noDump=%y",
+                            name,
+                            fileInfo.timeModified,
+                            ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                           );
         break;
       case FILE_TYPE_SPECIAL:
         switch (fileInfo.specialType)
         {
           case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
-            sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                             "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%llu noDump=%y",
-                             name,
-                             fileInfo.timeModified,
-                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                            );
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                                "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%llu noDump=%y",
+                                name,
+                                fileInfo.timeModified,
+                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                               );
             break;
           case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
-            sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                             "fileType=SPECIAL name=%'S size=%llu specialType=DEVICE_BLOCK dateTime=%llu noDump=%y",
-                             name,
-                             fileInfo.size,
-                             fileInfo.timeModified,
-                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                            );
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                                "fileType=SPECIAL name=%'S size=%llu specialType=DEVICE_BLOCK dateTime=%llu noDump=%y",
+                                name,
+                                fileInfo.size,
+                                fileInfo.timeModified,
+                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                               );
             break;
           case FILE_SPECIAL_TYPE_FIFO:
-            sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                             "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%llu noDump=%y",
-                             name,
-                             fileInfo.timeModified,
-                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                            );
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                                "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%llu noDump=%y",
+                                name,
+                                fileInfo.timeModified,
+                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                               );
             break;
           case FILE_SPECIAL_TYPE_SOCKET:
-            sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                             "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%llu noDump=%y",
-                             name,
-                             fileInfo.timeModified,
-                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                            );
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                                "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%llu noDump=%y",
+                                name,
+                                fileInfo.timeModified,
+                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                               );
             break;
           default:
-            sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                             "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%llu noDump=%y",
-                             name,
-                             fileInfo.timeModified,
-                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                            );
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                                "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%llu noDump=%y",
+                                name,
+                                fileInfo.timeModified,
+                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                               );
             break;
         }
         break;
@@ -8582,7 +8314,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,error,"read file info fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"read file info fail: %s",Error_getText(error));
   }
   String_delete(noBackupFileName);
 
@@ -8633,7 +8365,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
   directory = String_new();
   if (!StringMap_getString(argumentMap,"directory",directory,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected directory=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected directory=<name>");
     return;
   }
 
@@ -8643,7 +8375,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                                 );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"open directory fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"open directory fail: %s",Error_getText(error));
     String_delete(directory);
     return;
   }
@@ -8662,13 +8394,13 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
         switch (fileInfo.type)
         {
           case FILE_TYPE_FILE:
-            sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                             "fileType=FILE name=%'S size=%llu dateTime=%llu noDump=%y",
-                             fileName,
-                             fileInfo.size,
-                             fileInfo.timeModified,
-                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                            );
+            ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                "fileType=FILE name=%'S size=%llu dateTime=%llu noDump=%y",
+                                fileName,
+                                fileInfo.size,
+                                fileInfo.timeModified,
+                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                               );
             break;
           case FILE_TYPE_DIRECTORY:
             // check if .nobackup exists
@@ -8676,73 +8408,73 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
             if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,fileName),".nobackup"));
             if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,fileName),".NOBACKUP"));
 
-            sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                             "fileType=DIRECTORY name=%'S dateTime=%llu noBackup=%y noDump=%y",
-                             fileName,
-                             fileInfo.timeModified,
-                             noBackupExists,
-                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                            );
+            ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                "fileType=DIRECTORY name=%'S dateTime=%llu noBackup=%y noDump=%y",
+                                fileName,
+                                fileInfo.timeModified,
+                                noBackupExists,
+                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                               );
             break;
           case FILE_TYPE_LINK:
-            sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                             "fileType=LINK name=%'S dateTime=%llu noDump=%y",
-                             fileName,
-                             fileInfo.timeModified,
-                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                            );
+            ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                "fileType=LINK name=%'S dateTime=%llu noDump=%y",
+                                fileName,
+                                fileInfo.timeModified,
+                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                               );
             break;
           case FILE_TYPE_HARDLINK:
-            sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                             "fileType=HARDLINK name=%'S dateTime=%llu noDump=%y",
-                             fileName,
-                             fileInfo.timeModified,
-                             ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                            );
+            ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                "fileType=HARDLINK name=%'S dateTime=%llu noDump=%y",
+                                fileName,
+                                fileInfo.timeModified,
+                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                               );
             break;
           case FILE_TYPE_SPECIAL:
             switch (fileInfo.specialType)
             {
               case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
-                sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                                 "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%llu noDump=%y",
-                                 fileName,
-                                 fileInfo.timeModified,
-                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                                );
+                ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                    "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%llu noDump=%y",
+                                    fileName,
+                                    fileInfo.timeModified,
+                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                   );
                 break;
               case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
-                sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                                 "fileType=SPECIAL name=%'S size=%llu specialType=DEVICE_BLOCK dateTime=%llu noDump=%y",
-                                 fileName,
-                                 fileInfo.size,
-                                 fileInfo.timeModified,
-                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                                );
+                ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                    "fileType=SPECIAL name=%'S size=%llu specialType=DEVICE_BLOCK dateTime=%llu noDump=%y",
+                                    fileName,
+                                    fileInfo.size,
+                                    fileInfo.timeModified,
+                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                   );
                 break;
               case FILE_SPECIAL_TYPE_FIFO:
-                sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                                 "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%llu noDump=%y",
-                                 fileName,
-                                 fileInfo.timeModified,
-                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                                );
+                ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                    "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%llu noDump=%y",
+                                    fileName,
+                                    fileInfo.timeModified,
+                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                   );
                 break;
               case FILE_SPECIAL_TYPE_SOCKET:
-                sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                                 "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%llu noDump=%y",
-                                 fileName,
-                                 fileInfo.timeModified,
-                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                                );
+                ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                    "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%llu noDump=%y",
+                                    fileName,
+                                    fileInfo.timeModified,
+                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                   );
                 break;
               default:
-                sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                                 "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%llu noDump=%y",
-                                 fileName,
-                                 fileInfo.timeModified,
-                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                                );
+                ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                    "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%llu noDump=%y",
+                                    fileName,
+                                    fileInfo.timeModified,
+                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                   );
                 break;
             }
             break;
@@ -8753,18 +8485,18 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
       }
       else
       {
-        sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                         "get file info fail: %s",
-                         Error_getText(error)
-                        );
+        ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                            "get file info fail: %s",
+                            Error_getText(error)
+                           );
       }
     }
     else
     {
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "read directory entry file: %s",
-                       Error_getText(error)
-                      );
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                          "read directory entry file: %s",
+                          Error_getText(error)
+                         );
     }
   }
   String_delete(noBackupFileName);
@@ -8773,7 +8505,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
   // close directory
   File_closeDirectoryList(&directoryListHandle);
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(directory);
@@ -8815,13 +8547,13 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
   attribute = String_new();
   if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
     String_delete(name);
     return;
   }
@@ -8837,7 +8569,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
       if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup"));
       if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
     }
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%y",FALSE);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",FALSE);
 
     String_delete(noBackupFileName);
   }
@@ -8846,16 +8578,16 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
     error = File_getFileInfo(name,&fileInfo);
     if (error == ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%y",(fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",(fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP);
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"get file info '%S' fail: %s",attribute,name,Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"get file info '%S' fail: %s",attribute,name,Error_getText(error));
     }
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
   }
 
   // free resources
@@ -8898,13 +8630,13 @@ LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *i
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
   attribute = String_new();
   if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
     String_delete(name);
     return;
   }
@@ -8918,7 +8650,7 @@ UNUSED_VARIABLE(value);
   {
     if (!File_isDirectory(name))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
       String_delete(value);
       String_delete(attribute);
       String_delete(name);
@@ -8933,7 +8665,7 @@ UNUSED_VARIABLE(value);
       if (error != ERROR_NONE)
       {
         String_delete(noBackupFileName);
-        sendClientResult(clientInfo,id,TRUE,error,"Cannot create .nobackup file: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot create .nobackup file: %s",Error_getText(error));
         String_delete(value);
         String_delete(attribute);
         String_delete(name);
@@ -8942,14 +8674,14 @@ UNUSED_VARIABLE(value);
     }
     String_delete(noBackupFileName);
 
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
   }
   else if (String_equalsCString(attribute,"NODUMP"))
   {
     error = File_getFileInfo(name,&fileInfo);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
       String_delete(value);
       String_delete(attribute);
       String_delete(name);
@@ -8960,18 +8692,18 @@ UNUSED_VARIABLE(value);
     error = File_setFileInfo(name,&fileInfo);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
       String_delete(value);
       String_delete(attribute);
       String_delete(name);
       return;
     }
 
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
   }
 
   // free resources
@@ -9015,13 +8747,13 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
   attribute = String_new();
   if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected attribute=<name>");
     String_delete(name);
     return;
   }
@@ -9031,7 +8763,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
   {
     if (!File_isDirectory(name))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
       String_delete(attribute);
       String_delete(name);
       return;
@@ -9045,7 +8777,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
       if (error != ERROR_NONE)
       {
         String_delete(noBackupFileName);
-        sendClientResult(clientInfo,id,TRUE,error,"Cannot delete .nobackup file: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot delete .nobackup file: %s",Error_getText(error));
         String_delete(attribute);
         String_delete(name);
         return;
@@ -9053,14 +8785,14 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
     }
     String_delete(noBackupFileName);
 
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
   }
   else if (String_equalsCString(attribute,"NODUMP"))
   {
     error = File_getFileInfo(name,&fileInfo);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
       String_delete(attribute);
       String_delete(name);
       return;
@@ -9072,18 +8804,18 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
       error = File_setFileInfo(name,&fileInfo);
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
         String_delete(attribute);
         String_delete(name);
         return;
       }
     }
 
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
   }
 
   // free resources
@@ -9128,7 +8860,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<directory name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<directory name>");
     String_delete(name);
     return;
   }
@@ -9169,7 +8901,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"count=%llu size=%llu timedOut=%y",fileCount,fileSize,timedOut);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"count=%llu size=%llu timedOut=%y",fileCount,fileSize,timedOut);
 
   // free resources
   String_delete(name);
@@ -9205,7 +8937,7 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
   script = String_new();
   if (!StringMap_getString(argumentMap,"script",script,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected script=<script>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected script=<script>");
     String_delete(script);
     return;
   }
@@ -9216,17 +8948,17 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
                              {
                                UNUSED_VARIABLE(userData);
 
-                               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"line=%'S",line);
+                               ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"line=%'S",line);
                              },NULL),
                              CALLBACK_INLINE(void,(ConstString line, void *userData),
                              {
                                UNUSED_VARIABLE(userData);
 
-                               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"line=%'S",line);
+                               ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"line=%'S",line);
                              },NULL)
                             );
 
-  sendClientResult(clientInfo,id,TRUE,error,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
 
   // free resources
   String_delete(script);
@@ -9267,13 +8999,13 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
   // get job UUID, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
 
@@ -9283,7 +9015,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -9293,7 +9025,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,NULL,String_cString(name));
     if (i < 0)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config '%S'",name);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -9308,7 +9040,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
                           );
     ConfigValue_format(&configValueFormat,s);
     ConfigValue_formatDone(&configValueFormat);
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%S",s);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%S",s);
     String_delete(s);
   }
 
@@ -9348,19 +9080,19 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
   // get job UUID, name, value
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
   value = String_new();
   if (!StringMap_getString(argumentMap,"value",value,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected value=<value>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected value=<value>");
     String_delete(name);
     return;
   }
@@ -9371,7 +9103,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(value);
       String_delete(name);
@@ -9390,14 +9122,14 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
                          )
        )
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
       // set modified
       jobNode->modifiedFlag = TRUE;
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"invalid job config '%S' value: '%S'",name,value);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"invalid job config '%S' value: '%S'",name,value);
     }
   }
 
@@ -9438,13 +9170,13 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
   // get job UUID, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
 
@@ -9454,7 +9186,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -9464,7 +9196,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
     i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,NULL,String_cString(name));
     if (i < 0)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config '%S'",name);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -9526,38 +9258,38 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
   {
     LIST_ITERATEX(&jobList,jobNode,!isCommandAborted(clientInfo,id))
     {
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "jobUUID=%S master=%'S name=%'S state=%'s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
-                       jobNode->uuid,
-                       jobNode->master,
-                       jobNode->name,
-                       getJobStateText(jobNode->state,&jobNode->jobOptions),
-                       jobNode->slaveHost.name,
-                       jobNode->slaveHost.port,
-                       jobNode->slaveHost.forceSSL,
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,
-                                                  (   (jobNode->archiveType == ARCHIVE_TYPE_FULL        )
-                                                   || (jobNode->archiveType == ARCHIVE_TYPE_INCREMENTAL )
-                                                   || (jobNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL)
-                                                  )
-                                                    ? jobNode->archiveType
-                                                    : jobNode->jobOptions.archiveType,
-                                                  NULL
-                                                 ),
-                       jobNode->jobOptions.archivePartSize,
-                       Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.delta),
-                       Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.byte),
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                          "jobUUID=%S master=%'S name=%'S state=%'s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y archiveType=%s archivePartSize=%llu deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%llu estimatedRestTime=%lu",
+                          jobNode->uuid,
+                          (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
+                          jobNode->name,
+                          getJobStateText(jobNode->state,&jobNode->jobOptions),
+                          jobNode->slaveHost.name,
+                          jobNode->slaveHost.port,
+                          jobNode->slaveHost.forceSSL,
+                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,
+                                                     (   (jobNode->archiveType == ARCHIVE_TYPE_FULL        )
+                                                      || (jobNode->archiveType == ARCHIVE_TYPE_INCREMENTAL )
+                                                      || (jobNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL)
+                                                     )
+                                                       ? jobNode->archiveType
+                                                       : jobNode->jobOptions.archiveType,
+                                                     NULL
+                                                    ),
+                          jobNode->jobOptions.archivePartSize,
+                          Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.delta),
+                          Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.byte),
 //TODO
-                       (jobNode->jobOptions.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_algorithmToString(jobNode->jobOptions.cryptAlgorithms[0],"unknown") : "none",
-                       (jobNode->jobOptions.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->jobOptions.cryptType) : "none",
-                       ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->jobOptions.cryptPasswordMode,NULL),
-                       jobNode->lastExecutedDateTime,
-                       jobNode->runningInfo.estimatedRestTime
-                      );
+                          (jobNode->jobOptions.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_algorithmToString(jobNode->jobOptions.cryptAlgorithms[0],"unknown") : "none",
+                          (jobNode->jobOptions.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->jobOptions.cryptType) : "none",
+                          ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->jobOptions.cryptPasswordMode,NULL),
+                          jobNode->lastExecutedDateTime,
+                          jobNode->runningInfo.estimatedRestTime
+                         );
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -9598,7 +9330,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -9608,24 +9340,24 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
 
     // format and send result
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                     "lastExecutedDateTime=%llu lastErrorMessage=%'S executionCount=%lu averageDuration=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
-                     jobNode->lastExecutedDateTime,
-                     jobNode->lastErrorMessage,
-                     jobNode->executionCount,
-                     jobNode->averageDuration,
-                     jobNode->totalEntityCount,
-                     jobNode->totalStorageCount,
-                     jobNode->totalStorageSize,
-                     jobNode->totalEntryCount,
-                     jobNode->totalEntrySize
-                    );
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                        "lastExecutedDateTime=%llu lastErrorMessage=%'S executionCount=%lu averageDuration=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
+                        jobNode->lastExecutedDateTime,
+                        jobNode->lastErrorMessage,
+                        jobNode->executionCount,
+                        jobNode->averageDuration,
+                        jobNode->totalEntityCount,
+                        jobNode->totalStorageCount,
+                        jobNode->totalStorageSize,
+                        jobNode->totalEntryCount,
+                        jobNode->totalEntrySize
+                       );
   }
 }
 
@@ -9667,7 +9399,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     String_delete(name);
     return;
   }
@@ -9686,7 +9418,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       // check if job already exists
       if (findJobByName(name) != NULL)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
         Semaphore_unlock(&jobList.lock);
         String_delete(master);
         String_delete(name);
@@ -9699,7 +9431,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       if (error != ERROR_NONE)
       {
         String_delete(fileName);
-        sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Error_getText(error));
         Semaphore_unlock(&jobList.lock);
         String_delete(master);
         String_delete(name);
@@ -9709,7 +9441,12 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       (void)File_setPermission(fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
 
       // create new job
-      jobNode = newJob(JOB_TYPE_CREATE,name,jobUUID,fileName,NULL /* master */);
+      jobNode = newJob(JOB_TYPE_CREATE,
+                       name,
+                       jobUUID,
+                       fileName,
+                       NULL // masterIO
+                      );
       assert(jobNode != NULL);
 
       // write job to file
@@ -9730,7 +9467,12 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       // temporary add job from master
 
       // create new job
-      jobNode = newJob(JOB_TYPE_CREATE,name,jobUUID,NULL /* fileName */,master);
+      jobNode = newJob(JOB_TYPE_CREATE,
+                       name,
+                       jobUUID,
+                       NULL, // fileName
+                       &clientInfo->io
+                      );
       assert(jobNode != NULL);
 
       // add new job to list
@@ -9739,7 +9481,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       // free resources
     }
 
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"jobUUID=%S",jobNode->uuid);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"jobUUID=%S",jobNode->uuid);
   }
 
   // free resources
@@ -9783,13 +9525,13 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     String_delete(name);
     return;
   }
@@ -9799,7 +9541,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     // check if mew job already exists
     if (findJobByName(name) != NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -9809,7 +9551,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -9821,7 +9563,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     if (error != ERROR_NONE)
     {
       String_delete(fileName);
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Error_getText(error));
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -9847,7 +9589,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     // add new job to list
     List_append(&jobList,newJobNode);
 
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"jobUUID=%S",newJobNode->uuid);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"jobUUID=%S",newJobNode->uuid);
   }
 
   // free resources
@@ -9887,13 +9629,13 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   newName = String_new();
   if (!StringMap_getString(argumentMap,"newName",newName,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newName=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newName=<name>");
     String_delete(newName);
     return;
   }
@@ -9903,7 +9645,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     // check if job already exists
     if (findJobByName(newName) != NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(newName));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(newName));
       Semaphore_unlock(&jobList.lock);
       String_delete(newName);
       return;
@@ -9913,7 +9655,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(newName);
       return;
@@ -9924,7 +9666,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     error = File_rename(jobNode->fileName,fileName,NULL);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error renaming job %S: %s",jobUUID,Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"error renaming job %S: %s",jobUUID,Error_getText(error));
       Semaphore_unlock(&jobList.lock);
       String_delete(newName);
       return;
@@ -9938,7 +9680,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     String_set(jobNode->name,newName);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(newName);
@@ -9975,7 +9717,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -9985,7 +9727,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -9993,7 +9735,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
     // remove job in list if not running or requested volume
     if (isJobRunning(jobNode))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"job %S running",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job %S running",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -10004,7 +9746,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
       error = File_delete(jobNode->fileName,FALSE);
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_JOB,"error deleting job %S: %s",jobUUID,Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"error deleting job %S: %s",jobUUID,Error_getText(error));
         Semaphore_unlock(&jobList.lock);
         return;
       }
@@ -10024,7 +9766,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
     List_removeAndFree(&jobList,jobNode,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -10061,12 +9803,12 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
   // get job UUID, archive type, dry-run
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
   }
   StringMap_getBool(argumentMap,"dryRun",&dryRun,FALSE);
@@ -10077,7 +9819,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -10097,7 +9839,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -10130,7 +9872,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -10140,45 +9882,20 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
 
     // abort job
-    if      (isJobRunning(jobNode))
+    if (isJobActive(jobNode))
     {
-      // request abort job
-      jobNode->requestedAbortFlag = TRUE;
+      abortJob(jobNode);
       String_setCString(jobNode->abortedByInfo,getClientInfo(clientInfo,buffer,sizeof(buffer)));
-      Semaphore_signalModified(&jobList.lock);
-
-      if (isLocalJob(jobNode))
-      {
-        // wait until local job terminated
-        while (isJobRunning(jobNode))
-        {
-          Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
-        }
-      }
-      else
-      {
-        // abort slave job
-        jobNode->runningInfo.error = Slave_jobAbort(&jobNode->slaveInfo,
-                                                    jobNode->uuid
-                                                   );
-      }
     }
-    else if (isJobActive(jobNode))
-    {
-      jobNode->state = JOB_STATE_NONE;
-    }
-
-    // store schedule info
-    writeJobScheduleInfo(jobNode);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -10206,7 +9923,7 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
   // write all job files
   writeModifiedJobs();
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -10264,7 +9981,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -10274,41 +9991,41 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
 
     // format and send result
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
-                     "state=%'s doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf archiveSize=%llu compressionRatio=%lf estimatedRestTime=%lu entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S",
-                     getJobStateText(jobNode->state,&jobNode->jobOptions),
-                     jobNode->runningInfo.doneCount,
-                     jobNode->runningInfo.doneSize,
-                     jobNode->runningInfo.totalEntryCount,
-                     jobNode->runningInfo.totalEntrySize,
-                     jobNode->runningInfo.collectTotalSumDone,
-                     jobNode->runningInfo.skippedEntryCount,
-                     jobNode->runningInfo.skippedEntrySize,
-                     jobNode->runningInfo.errorEntryCount,
-                     jobNode->runningInfo.errorEntrySize,
-                     jobNode->runningInfo.entriesPerSecond,
-                     jobNode->runningInfo.bytesPerSecond,
-                     jobNode->runningInfo.storageBytesPerSecond,
-                     jobNode->runningInfo.archiveSize,
-                     jobNode->runningInfo.compressionRatio,
-                     jobNode->runningInfo.estimatedRestTime,
-                     jobNode->runningInfo.entryName,
-                     jobNode->runningInfo.entryDoneSize,
-                     jobNode->runningInfo.entryTotalSize,
-                     jobNode->runningInfo.storageName,
-                     jobNode->runningInfo.storageDoneSize,
-                     jobNode->runningInfo.storageTotalSize,
-                     jobNode->runningInfo.volumeNumber,
-                     jobNode->runningInfo.volumeProgress,
-                     jobNode->requestedVolumeNumber,
-                     jobNode->runningInfo.message
-                    );
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                        "state=%'s doneCount=%lu doneSize=%llu totalEntryCount=%lu totalEntrySize=%llu collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf archiveSize=%llu compressionRatio=%lf estimatedRestTime=%lu entryName=%'S entryDoneSize=%llu entryTotalSize=%llu storageName=%'S storageDoneSize=%llu storageTotalSize=%llu volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S",
+                        getJobStateText(jobNode->state,&jobNode->jobOptions),
+                        jobNode->runningInfo.doneCount,
+                        jobNode->runningInfo.doneSize,
+                        jobNode->runningInfo.totalEntryCount,
+                        jobNode->runningInfo.totalEntrySize,
+                        jobNode->runningInfo.collectTotalSumDone,
+                        jobNode->runningInfo.skippedEntryCount,
+                        jobNode->runningInfo.skippedEntrySize,
+                        jobNode->runningInfo.errorEntryCount,
+                        jobNode->runningInfo.errorEntrySize,
+                        jobNode->runningInfo.entriesPerSecond,
+                        jobNode->runningInfo.bytesPerSecond,
+                        jobNode->runningInfo.storageBytesPerSecond,
+                        jobNode->runningInfo.archiveSize,
+                        jobNode->runningInfo.compressionRatio,
+                        jobNode->runningInfo.estimatedRestTime,
+                        jobNode->runningInfo.entryName,
+                        jobNode->runningInfo.entryDoneSize,
+                        jobNode->runningInfo.entryTotalSize,
+                        jobNode->runningInfo.storageName,
+                        jobNode->runningInfo.storageDoneSize,
+                        jobNode->runningInfo.storageTotalSize,
+                        jobNode->runningInfo.volumeNumber,
+                        jobNode->runningInfo.volumeProgress,
+                        jobNode->requestedVolumeNumber,
+                        jobNode->runningInfo.message
+                       );
   }
 }
 
@@ -10344,7 +10061,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -10354,7 +10071,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -10362,17 +10079,17 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
     // send include list
     LIST_ITERATE(&jobNode->includeEntryList,entryNode)
     {
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "id=%u entryType=%s pattern=%'S patternType=%s",
-                       entryNode->id,
-                       EntryList_entryTypeToString(entryNode->type,"unknown"),
-                       entryNode->string,
-                       Pattern_patternTypeToString(entryNode->pattern.type,"unknown")
-                      );
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                          "id=%u entryType=%s pattern=%'S patternType=%s",
+                          entryNode->id,
+                          EntryList_entryTypeToString(entryNode->type,"unknown"),
+                          entryNode->string,
+                          Pattern_patternTypeToString(entryNode->pattern.type,"unknown")
+                         );
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -10404,7 +10121,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -10414,7 +10131,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -10429,7 +10146,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -10469,18 +10186,18 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
   // get job UUID, entry type, pattern, pattern type
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,ENTRY_TYPE_UNKNOWN))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=FILE|IMAGE");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=FILE|IMAGE");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -10492,7 +10209,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(patternString);
       return;
@@ -10508,7 +10225,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",entryId);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",entryId);
 
   // free resources
   String_delete(patternString);
@@ -10551,23 +10268,23 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
   // get job UUID, id, entry type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&entryId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,ENTRY_TYPE_UNKNOWN))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=FILE|IMAGE");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=FILE|IMAGE");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -10579,7 +10296,7 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(patternString);
       return;
@@ -10595,7 +10312,7 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(patternString);
@@ -10632,12 +10349,12 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
   // get job UUID, id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&entryId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
   }
 
@@ -10647,7 +10364,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -10655,7 +10372,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
     // remove from include list
     if (!EntryList_remove(&jobNode->includeEntryList,entryId))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"entry with id #%u not found",entryId);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"entry with id #%u not found",entryId);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -10667,7 +10384,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -10702,7 +10419,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -10712,7 +10429,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -10720,16 +10437,16 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
     // send exclude list
     LIST_ITERATE(&jobNode->excludePatternList,patternNode)
     {
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "id=%u pattern=%'S patternType=%s",
-                       patternNode->id,
-                       patternNode->string,
-                       Pattern_patternTypeToString(patternNode->pattern.type,"unknown")
-                      );
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                          "id=%u pattern=%'S patternType=%s",
+                          patternNode->id,
+                          patternNode->string,
+                          Pattern_patternTypeToString(patternNode->pattern.type,"unknown")
+                         );
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -10761,7 +10478,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -10771,7 +10488,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -10786,7 +10503,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -10824,13 +10541,13 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
   // get job UUID, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -10842,7 +10559,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(patternString);
       return;
@@ -10858,7 +10575,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",patternId);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",patternId);
 
   // free resources
   String_delete(patternString);
@@ -10899,18 +10616,18 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
   // get job UUID, pattern id, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -10922,7 +10639,7 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(patternString);
       return;
@@ -10938,7 +10655,7 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(patternString);
@@ -10975,12 +10692,12 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
   // get job UUID, id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
   }
 
@@ -10990,7 +10707,7 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -10998,7 +10715,7 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
     // remove from exclude list
     if (!PatternList_remove(&jobNode->excludePatternList,patternId))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"pattern with id #%u not found",patternId);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"pattern with id #%u not found",patternId);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -11010,7 +10727,7 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
 }
@@ -11047,7 +10764,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -11057,7 +10774,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -11065,17 +10782,17 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
     // send mount list
     LIST_ITERATE(&jobNode->mountList,mountNode)
     {
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "id=%u name=%'S device=%'S alwaysUnmount=%y",
-                       mountNode->id,
-                       mountNode->name,
-                       mountNode->device,
-                       mountNode->alwaysUnmount
-                      );
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                          "id=%u name=%'S device=%'S alwaysUnmount=%y",
+                          mountNode->id,
+                          mountNode->name,
+                          mountNode->device,
+                          mountNode->alwaysUnmount
+                         );
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -11107,7 +10824,7 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -11117,7 +10834,7 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -11132,7 +10849,7 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -11173,27 +10890,27 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
   // get jobUUID, name, device, alwaysUnmount
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     String_delete(name);
     return;
   }
   device = String_new();
   if (!StringMap_getString(argumentMap,"device",device,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected device=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected device=<name>");
     String_delete(device);
     String_delete(name);
     return;
   }
   if (!StringMap_getBool(argumentMap,"alwaysUnmount",&alwaysUnmount,FALSE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected alwaysUnmount=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected alwaysUnmount=yes|no");
     String_delete(device);
     String_delete(name);
     return;
@@ -11206,7 +10923,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(device);
       String_delete(name);
@@ -11228,7 +10945,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",mountId);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",mountId);
 
   // free resources
   String_delete(device);
@@ -11273,32 +10990,32 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
   // get jobUUID, mount id, name, alwaysUnmount
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&mountId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     String_delete(name);
     return;
   }
   device = String_new();
   if (!StringMap_getString(argumentMap,"device",device,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected device=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected device=<name>");
     String_delete(device);
     String_delete(name);
     return;
   }
   if (!StringMap_getBool(argumentMap,"alwaysUnmount",&alwaysUnmount,FALSE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected alwaysUnmount=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected alwaysUnmount=yes|no");
     String_delete(device);
     String_delete(name);
     return;
@@ -11310,7 +11027,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(device);
       String_delete(name);
@@ -11321,7 +11038,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     mountNode = LIST_FIND(&jobNode->mountList,mountNode,mountNode->id == mountId);
     if (mountNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"mount %S not found",name);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"mount %S not found",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -11339,7 +11056,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(device);
@@ -11378,12 +11095,12 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
   // get job UUID, mount id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&mountId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
   }
 
@@ -11393,7 +11110,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -11402,7 +11119,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     mountNode = LIST_FIND(&jobNode->mountList,mountNode,mountNode->id == mountId);
     if (mountNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"mount with id #%u not found",mountId);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"mount with id #%u not found",mountId);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -11418,7 +11135,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -11453,7 +11170,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -11463,7 +11180,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -11471,17 +11188,17 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
     // send delta source list
     LIST_ITERATE(&jobNode->deltaSourceList,deltaSourceNode)
     {
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "id=%u pattern=%'S patternType=%s",
-                       deltaSourceNode->id,
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                          "id=%u pattern=%'S patternType=%s",
+                          deltaSourceNode->id,
 //TODO
-                       deltaSourceNode->storageName,
-                       Pattern_patternTypeToString(PATTERN_TYPE_GLOB,"unknown")
-                      );
+                          deltaSourceNode->storageName,
+                          Pattern_patternTypeToString(PATTERN_TYPE_GLOB,"unknown")
+                         );
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -11513,7 +11230,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -11523,7 +11240,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -11535,7 +11252,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -11573,13 +11290,13 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
   // get job UUID, type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -11591,7 +11308,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(patternString);
       return;
@@ -11604,7 +11321,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",deltaSourceId);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",deltaSourceId);
 
   // free resources
   String_delete(patternString);
@@ -11645,18 +11362,18 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
   // get job UUID, id, type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&deltaSourceId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -11668,7 +11385,7 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(patternString);
       return;
@@ -11681,7 +11398,7 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(patternString);
@@ -11718,12 +11435,12 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
   // get job UUID, id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&deltaSourceId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
   }
 
@@ -11733,7 +11450,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -11741,7 +11458,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
     // remove from source list
     if (!DeltaSourceList_remove(&jobNode->deltaSourceList,deltaSourceId))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"delta source with id #%u not found",deltaSourceId);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"delta source with id #%u not found",deltaSourceId);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -11750,7 +11467,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
 }
@@ -11787,7 +11504,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -11797,7 +11514,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -11805,15 +11522,15 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
     // send exclude list
     LIST_ITERATE(&jobNode->compressExcludePatternList,patternNode)
     {
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "pattern=%'S patternType=%s",
-                       patternNode->string,
-                       Pattern_patternTypeToString(patternNode->pattern.type,"unknown")
-                      );
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                          "pattern=%'S patternType=%s",
+                          patternNode->string,
+                          Pattern_patternTypeToString(patternNode->pattern.type,"unknown")
+                         );
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -11845,7 +11562,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -11855,7 +11572,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -11867,7 +11584,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -11905,13 +11622,13 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
   // get job UUID, type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -11923,7 +11640,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(patternString);
       return;
@@ -11936,7 +11653,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"id=%u",patternId);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",patternId);
 
   // free resources
   String_delete(patternString);
@@ -11977,18 +11694,18 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
   // get job UUID, id, type, pattern type, pattern
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
   }
   patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
     String_delete(patternString);
     return;
   }
@@ -12000,7 +11717,7 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(patternString);
       return;
@@ -12013,7 +11730,7 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(patternString);
@@ -12050,12 +11767,12 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
   // get job UUID, id
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected id=<n>");
     return;
   }
 
@@ -12065,7 +11782,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -12073,7 +11790,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
     // remove from exclude list
     if (!PatternList_remove(&jobNode->compressExcludePatternList,patternId))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"pattern with id #%u not found",patternId);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"pattern with id #%u not found",patternId);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -12082,7 +11799,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
     jobNode->modifiedFlag = TRUE;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
 }
@@ -12136,7 +11853,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
   // get job UUID, archive type
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_NONE);
@@ -12147,7 +11864,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -12227,25 +11944,25 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
         }
 
         // send schedule info
-        sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                         "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%llu totalEntities=%lu totalEntryCount=%lu totalEntrySize=%llu",
-                         scheduleNode->uuid,
-                         (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,scheduleNode->archiveType,NULL) : "*",
-                         date,
-                         weekDays,
-                         time,
-                         scheduleNode->interval,
-                         scheduleNode->customText,
-                         scheduleNode->minKeep,
-                         scheduleNode->maxKeep,
-                         scheduleNode->maxAge,
-                         scheduleNode->noStorage,
-                         scheduleNode->enabled,
-                         scheduleNode->lastExecutedDateTime,
-                         scheduleNode->totalEntityCount,
-                         scheduleNode->totalEntryCount,
-                         scheduleNode->totalEntrySize
-                        );
+        ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                            "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%llu totalEntities=%lu totalEntryCount=%lu totalEntrySize=%llu",
+                            scheduleNode->uuid,
+                            (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,scheduleNode->archiveType,NULL) : "*",
+                            date,
+                            weekDays,
+                            time,
+                            scheduleNode->interval,
+                            scheduleNode->customText,
+                            scheduleNode->minKeep,
+                            scheduleNode->maxKeep,
+                            scheduleNode->maxAge,
+                            scheduleNode->noStorage,
+                            scheduleNode->enabled,
+                            scheduleNode->lastExecutedDateTime,
+                            scheduleNode->totalEntityCount,
+                            scheduleNode->totalEntryCount,
+                            scheduleNode->totalEntrySize
+                           );
       }
     }
     String_delete(time);
@@ -12253,7 +11970,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
     String_delete(date);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -12309,7 +12026,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   // get job UUID, date, weekday, time, archive type, custome text, min./max keep, max. age, enabled
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   title = String_new();
@@ -12317,7 +12034,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   date = String_new();
   if (!StringMap_getString(argumentMap,"date",date,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected date=<date>|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected date=<date>|*");
     String_delete(date);
     String_delete(title);
     return;
@@ -12325,7 +12042,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   weekDays = String_new();
   if (!StringMap_getString(argumentMap,"weekDays",weekDays,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected weekDays=<name>|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected weekDays=<name>|*");
     String_delete(weekDays);
     String_delete(date);
     String_delete(title);
@@ -12334,7 +12051,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   time = String_new();
   if (!StringMap_getString(argumentMap,"time",time,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected time=<time>|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected time=<time>|*");
     String_delete(time);
     String_delete(weekDays);
     String_delete(date);
@@ -12349,7 +12066,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   {
     if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
       String_delete(time);
       String_delete(weekDays);
       String_delete(date);
@@ -12362,7 +12079,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   StringMap_getString(argumentMap,"customText",customText,NULL);
   if (!StringMap_getUInt(argumentMap,"minKeep",&minKeep,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected minKeep=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected minKeep=<n>");
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -12372,7 +12089,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   }
   if (!StringMap_getUInt(argumentMap,"maxKeep",&maxKeep,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxKeep=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxKeep=<n>");
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -12382,7 +12099,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   }
   if (!StringMap_getUInt(argumentMap,"maxAge",&maxAge,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxAge=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxAge=<n>");
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -12392,7 +12109,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   }
   if (!StringMap_getBool(argumentMap,"noStorage",&noStorage,FALSE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected noStorage=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected noStorage=yes|no");
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -12402,7 +12119,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   }
   if (!StringMap_getBool(argumentMap,"enabled",&enabled,FALSE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected enabled=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected enabled=yes|no");
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -12418,15 +12135,15 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
                                       );
   if (scheduleNode == NULL)
   {
-    sendClientResult(clientInfo,
-                     id,
-                     TRUE,
-                     ERROR_PARSING,
-                     "cannot parse schedule '%S %S %S'",
-                     date,
-                     weekDays,
-                     time
-                    );
+    ServerIO_sendResult(&clientInfo->io,
+                        id,
+                        TRUE,
+                        ERROR_PARSING,
+                        "cannot parse schedule '%S %S %S'",
+                        date,
+                        weekDays,
+                        time
+                       );
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
@@ -12449,7 +12166,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       deleteScheduleNode(scheduleNode);
       String_delete(customText);
@@ -12469,7 +12186,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     jobScheduleChanged(jobNode);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"scheduleUUID=%S",scheduleNode->uuid);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"scheduleUUID=%S",scheduleNode->uuid);
 
   // free resources
   String_delete(customText);
@@ -12511,12 +12228,12 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
   // get job UUID, schedule UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
     return;
   }
 
@@ -12526,7 +12243,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -12535,7 +12252,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -12549,7 +12266,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     jobScheduleChanged(jobNode);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -12590,18 +12307,18 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
   // get job UUID, schedule UUID, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
 
@@ -12611,7 +12328,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -12620,7 +12337,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
     scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -12640,7 +12357,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
     }
     if (JOB_CONFIG_VALUES[i].name == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -12655,7 +12372,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
                           );
     ConfigValue_format(&configValueFormat,s);
     ConfigValue_formatDone(&configValueFormat);
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"value=%S",s);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%S",s);
     String_delete(s);
   }
 
@@ -12698,24 +12415,24 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
   // get job UUID, schedule UUID, name, value
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
   value = String_new();
   if (!StringMap_getString(argumentMap,"value",value,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected value=<value>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected value=<value>");
     String_delete(name);
     return;
   }
@@ -12726,7 +12443,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -12735,7 +12452,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(value);
       String_delete(name);
@@ -12756,11 +12473,11 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     {
       jobNode->modifiedFlag         = TRUE;
       jobNode->scheduleModifiedFlag = TRUE;
-      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
     }
 
     // notify about changed schedule
@@ -12807,18 +12524,18 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
   // get job UUID, schedule UUID, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
     return;
   }
 
@@ -12828,7 +12545,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -12837,7 +12554,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
     scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -12857,7 +12574,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
     }
     if (JOB_CONFIG_VALUES[i].name == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
       Semaphore_unlock(&jobList.lock);
       String_delete(name);
       return;
@@ -12910,12 +12627,12 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
   // get job UUID, schedule UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<uuid>");
     return;
   }
 
@@ -12925,7 +12642,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -12934,7 +12651,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     scheduleNode = findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -12942,7 +12659,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     // check if active
     if (isJobActive(jobNode))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job already scheduled");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job already scheduled");
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -12958,7 +12675,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
               );
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -12986,7 +12703,7 @@ LOCAL void serverCommand_decryptPasswordsClear(ClientInfo *clientInfo, IndexHand
   // clear decrypt password list
   Archive_clearDecryptPasswords();
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -13021,13 +12738,13 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
   encryptType = String_new();
   if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
     return;
   }
   encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
     String_delete(encryptedPassword);
     String_delete(encryptType);
     return;
@@ -13035,9 +12752,9 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
 
   // decrypt password and add to list
   Password_init(&password);
-  if (!decryptPassword(&password,clientInfo,encryptType,encryptedPassword))
+  if (!ServerIO_decryptPassword(&password,&clientInfo->io,encryptType,encryptedPassword))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
     Password_done(&password);
     String_delete(encryptedPassword);
     String_delete(encryptType);
@@ -13047,7 +12764,7 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
   // add to list
   Archive_appendDecryptPassword(&password);
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   Password_done(&password);
@@ -13086,13 +12803,13 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
   encryptType = String_new();
   if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
     return;
   }
   encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
     String_delete(encryptedPassword);
     String_delete(encryptType);
     return;
@@ -13102,17 +12819,17 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     if (clientInfo->jobOptions.ftpServer.password == NULL) clientInfo->jobOptions.ftpServer.password = Password_new();
-    if (!decryptPassword(clientInfo->jobOptions.ftpServer.password,clientInfo,encryptType,encryptedPassword))
+    if (!ServerIO_decryptPassword(clientInfo->jobOptions.ftpServer.password,&clientInfo->io,encryptType,encryptedPassword))
     {
       Semaphore_unlock(&clientInfo->lock);
-      sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_FTP_PASSWORD,"");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_FTP_PASSWORD,"");
       String_delete(encryptedPassword);
       String_delete(encryptType);
       return;
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(encryptedPassword);
@@ -13150,13 +12867,13 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
   encryptType = String_new();
   if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
     return;
   }
   encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
     String_delete(encryptedPassword);
     String_delete(encryptType);
     return;
@@ -13166,17 +12883,17 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     if (clientInfo->jobOptions.sshServer.password == NULL) clientInfo->jobOptions.sshServer.password = Password_new();
-    if (!decryptPassword(clientInfo->jobOptions.sshServer.password,clientInfo,encryptType,encryptedPassword))
+    if (!ServerIO_decryptPassword(clientInfo->jobOptions.sshServer.password,&clientInfo->io,encryptType,encryptedPassword))
     {
       Semaphore_unlock(&clientInfo->lock);
-      sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_SSH_PASSWORD,"");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_SSH_PASSWORD,"");
       String_delete(encryptedPassword);
       String_delete(encryptType);
       return;
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(encryptedPassword);
@@ -13214,13 +12931,13 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
   encryptType = String_new();
   if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
     return;
   }
   encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
     String_delete(encryptedPassword);
     String_delete(encryptType);
     return;
@@ -13230,17 +12947,17 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
   SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     if (clientInfo->jobOptions.webDAVServer.password == NULL) clientInfo->jobOptions.webDAVServer.password = Password_new();
-    if (!decryptPassword(clientInfo->jobOptions.webDAVServer.password,clientInfo,encryptType,encryptedPassword))
+    if (!ServerIO_decryptPassword(clientInfo->jobOptions.webDAVServer.password,&clientInfo->io,encryptType,encryptedPassword))
     {
       Semaphore_unlock(&clientInfo->lock);
-      sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_WEBDAV_PASSWORD,"");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_WEBDAV_PASSWORD,"");
       String_delete(encryptedPassword);
       String_delete(encryptType);
       return;
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(encryptedPassword);
@@ -13280,19 +12997,19 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
   // get job UUID, get encrypt type, encrypted password
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   encryptType = String_new();
   if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
     return;
   }
   encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
     String_delete(encryptedPassword);
     String_delete(encryptType);
     return;
@@ -13306,7 +13023,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
       jobNode = findJobByUUID(jobUUID);
       if (jobNode == NULL)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
         Semaphore_unlock(&jobList.lock);
         String_delete(encryptedPassword);
         String_delete(encryptType);
@@ -13315,9 +13032,9 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
 
       // decrypt password
       if (jobNode->cryptPassword == NULL) jobNode->cryptPassword = Password_new();
-      if (!decryptPassword(jobNode->cryptPassword,clientInfo,encryptType,encryptedPassword))
+      if (!ServerIO_decryptPassword(jobNode->cryptPassword,&clientInfo->io,encryptType,encryptedPassword))
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
         Semaphore_unlock(&jobList.lock);
         String_delete(encryptedPassword);
         String_delete(encryptType);
@@ -13330,10 +13047,10 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
     // decrypt password
     SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      if (!decryptPassword(clientInfo->jobOptions.cryptPassword,clientInfo,encryptType,encryptedPassword))
+      if (!ServerIO_decryptPassword(clientInfo->jobOptions.cryptPassword,&clientInfo->io,encryptType,encryptedPassword))
       {
         Semaphore_unlock(&clientInfo->lock);
-        sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
         String_delete(encryptedPassword);
         String_delete(encryptType);
         return;
@@ -13341,7 +13058,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(encryptedPassword);
@@ -13379,7 +13096,7 @@ LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, IndexHandle *ind
     if (clientInfo->jobOptions.cryptPassword != NULL) Password_clear(clientInfo->jobOptions.cryptPassword);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -13413,12 +13130,12 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
   // get job UUID, volume number
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"volumeNumber",&volumeNumber,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected volumeNumber=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected volumeNumber=<n>");
     return;
   }
 
@@ -13428,7 +13145,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -13438,7 +13155,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
     Semaphore_signalModified(&jobList.lock);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -13470,7 +13187,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
   // get job UUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
 
@@ -13480,7 +13197,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
     jobNode = findJobByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -13490,7 +13207,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
     Semaphore_signalModified(&jobList.lock);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -13545,7 +13262,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   storageName = String_new();
   if (!StringMap_getString(argumentMap,"name",storageName,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<storage name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<storage name>");
     return;
   }
 
@@ -13554,7 +13271,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
     Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageName);
     return;
@@ -13573,7 +13290,7 @@ NULL, // masterIO
                       );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
     Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageName);
     return;
@@ -13590,7 +13307,7 @@ NULL, // masterIO
   if (error != ERROR_NONE)
   {
     Storage_doneSpecifier(&storageSpecifier);
-    sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
     Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageName);
     return;
@@ -13646,7 +13363,7 @@ NULL, // masterIO
                                          );
             if (error != ERROR_NONE)
             {
-              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
               String_delete(deltaSourceName);
               String_delete(fileName);
               break;
@@ -13657,21 +13374,21 @@ NULL, // masterIO
                 && !PatternList_match(&clientInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "fileType=FILE name=%'S size=%llu dateTime=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fragmentOffset=%llu fragmentSize=%llu",
-                               fileName,
-                               fileInfo.size,
-                               fileInfo.timeModified,
-                               archiveEntryInfo.file.chunkFileData.info.size,
-                               deltaCompressAlgorithm,
-                               byteCompressAlgorithm,
-                               cryptAlgorithm,
-                               cryptType,
-                               deltaSourceName,
-                               deltaSourceSize,
-                               fragmentOffset,
-                               fragmentSize
-                              );
+              ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                  "fileType=FILE name=%'S size=%llu dateTime=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fragmentOffset=%llu fragmentSize=%llu",
+                                  fileName,
+                                  fileInfo.size,
+                                  fileInfo.timeModified,
+                                  archiveEntryInfo.file.chunkFileData.info.size,
+                                  deltaCompressAlgorithm,
+                                  byteCompressAlgorithm,
+                                  cryptAlgorithm,
+                                  cryptType,
+                                  deltaSourceName,
+                                  deltaSourceSize,
+                                  fragmentOffset,
+                                  fragmentSize
+                                 );
             }
 
             // close archive file, free resources
@@ -13712,7 +13429,7 @@ NULL, // masterIO
                                           );
             if (error != ERROR_NONE)
             {
-              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
               String_delete(deltaSourceName);
               String_delete(imageName);
               break;
@@ -13723,22 +13440,22 @@ NULL, // masterIO
                 && !PatternList_match(&clientInfo->excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "fileType=IMAGE name=%'S size=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fileSystemType=%s blockSize=%u blockOffset=%llu blockCount=%llu",
-                               imageName,
-                               deviceInfo.size,
-                               archiveEntryInfo.image.chunkImageData.info.size,
-                               deltaCompressAlgorithm,
-                               byteCompressAlgorithm,
-                               cryptAlgorithm,
-                               cryptType,
-                               deltaSourceName,
-                               deltaSourceSize,
-                               FileSystem_getName(fileSystemType),
-                               deviceInfo.blockSize,
-                               blockOffset,
-                               blockCount
-                              );
+              ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                  "fileType=IMAGE name=%'S size=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fileSystemType=%s blockSize=%u blockOffset=%llu blockCount=%llu",
+                                  imageName,
+                                  deviceInfo.size,
+                                  archiveEntryInfo.image.chunkImageData.info.size,
+                                  deltaCompressAlgorithm,
+                                  byteCompressAlgorithm,
+                                  cryptAlgorithm,
+                                  cryptType,
+                                  deltaSourceName,
+                                  deltaSourceSize,
+                                  FileSystem_getName(fileSystemType),
+                                  deviceInfo.blockSize,
+                                  blockOffset,
+                                  blockCount
+                                 );
             }
 
             // close archive file, free resources
@@ -13766,7 +13483,7 @@ NULL, // masterIO
                                               );
             if (error != ERROR_NONE)
             {
-              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
               String_delete(directoryName);
               break;
             }
@@ -13776,13 +13493,13 @@ NULL, // masterIO
                 && !PatternList_match(&clientInfo->excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "fileType=DIRECTORY name=%'S dateTime=%llu cryptAlgorithm=%d cryptType=%d",
-                               directoryName,
-                               fileInfo.timeModified,
-                               cryptAlgorithm,
-                               cryptType
-                              );
+              ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                  "fileType=DIRECTORY name=%'S dateTime=%llu cryptAlgorithm=%d cryptType=%d",
+                                  directoryName,
+                                  fileInfo.timeModified,
+                                  cryptAlgorithm,
+                                  cryptType
+                                 );
             }
 
             // close archive file, free resources
@@ -13811,7 +13528,7 @@ NULL, // masterIO
                                          );
             if (error != ERROR_NONE)
             {
-              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
               String_delete(name);
               String_delete(linkName);
               break;
@@ -13822,13 +13539,13 @@ NULL, // masterIO
                 && !PatternList_match(&clientInfo->excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "fileType=LINK linkName=%'S name=%'S cryptAlgorithm=%d cryptType=%d",
-                               linkName,
-                               name,
-                               cryptAlgorithm,
-                               cryptType
-                              );
+              ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                  "fileType=LINK linkName=%'S name=%'S cryptAlgorithm=%d cryptType=%d",
+                                  linkName,
+                                  name,
+                                  cryptAlgorithm,
+                                  cryptType
+                                 );
             }
 
             // close archive file, free resources
@@ -13868,7 +13585,7 @@ NULL, // masterIO
                                              );
             if (error != ERROR_NONE)
             {
-              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
               String_delete(deltaSourceName);
               StringList_done(&fileNameList);
               break;
@@ -13879,21 +13596,21 @@ NULL, // masterIO
                 && !PatternList_matchStringList(&clientInfo->excludePatternList,&fileNameList,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "fileType=HARDLINK name=%'S size=%llu dateTime=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fragmentOffset=%llu fragmentSize=%llu",
-                               StringList_first(&fileNameList,NULL),
-                               fileInfo.size,
-                               fileInfo.timeModified,
-                               archiveEntryInfo.file.chunkFileData.info.size,
-                               deltaCompressAlgorithm,
-                               byteCompressAlgorithm,
-                               cryptAlgorithm,
-                               cryptType,
-                               deltaSourceName,
-                               deltaSourceSize,
-                               fragmentOffset,
-                               fragmentSize
-                              );
+              ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                  "fileType=HARDLINK name=%'S size=%llu dateTime=%llu archiveSize=%llu deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%llu fragmentOffset=%llu fragmentSize=%llu",
+                                  StringList_first(&fileNameList,NULL),
+                                  fileInfo.size,
+                                  fileInfo.timeModified,
+                                  archiveEntryInfo.file.chunkFileData.info.size,
+                                  deltaCompressAlgorithm,
+                                  byteCompressAlgorithm,
+                                  cryptAlgorithm,
+                                  cryptType,
+                                  deltaSourceName,
+                                  deltaSourceSize,
+                                  fragmentOffset,
+                                  fragmentSize
+                                 );
             }
 
             // close archive file, free resources
@@ -13921,7 +13638,7 @@ NULL, // masterIO
                                             );
             if (error != ERROR_NONE)
             {
-              sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
               String_delete(name);
               break;
             }
@@ -13931,15 +13648,15 @@ NULL, // masterIO
                 && !PatternList_match(&clientInfo->excludePatternList,name,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "fileType=SPECIAL name=%'S cryptAlgorithm=%d cryptType=%d fileSpecialType=%d major=%d minor=%d",
-                               name,
-                               cryptAlgorithm,
-                               cryptType,
-                               fileInfo.specialType,
-                               fileInfo.major,
-                               fileInfo.minor
-                              );
+              ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                                  "fileType=SPECIAL name=%'S cryptAlgorithm=%d cryptType=%d fileSpecialType=%d major=%d minor=%d",
+                                  name,
+                                  cryptAlgorithm,
+                                  cryptType,
+                                  fileInfo.specialType,
+                                  fileInfo.major,
+                                  fileInfo.minor
+                                 );
             }
 
             // close archive file, free resources
@@ -13956,12 +13673,12 @@ NULL, // masterIO
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,error,"Cannot read next entry of storage '%S': %s",storageName,Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read next entry of storage '%S': %s",storageName,Error_getText(error));
       break;
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // close archive
   Archive_close(&archiveHandle);
@@ -14025,7 +13742,7 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
   if (error != ERROR_NONE)
   {
     String_delete(storageName);
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
     return;
   }
   while (   !isCommandAborted(clientInfo,id)
@@ -14048,19 +13765,19 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
                                 )
         )
   {
-    sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "storageId=%llu name=%'S totalEntryCount=%lu totalEntrySize=%llu",
-                     storageId,
-                     storageName,
-                     totalEntryCount,
-                     totalEntrySize
-                    );
+    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                        "storageId=%llu name=%'S totalEntryCount=%lu totalEntrySize=%llu",
+                        storageId,
+                        storageName,
+                        totalEntryCount,
+                        totalEntrySize
+                       );
   }
   Index_doneList(&indexQueryHandle);
 
   String_delete(storageName);
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -14093,7 +13810,7 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, IndexHandle *i
     Array_clear(&clientInfo->indexIdArray);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -14122,14 +13839,14 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
   // get index id
   if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexId=<id>");
     return;
   }
 
   // check if index database is available
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
 
@@ -14139,7 +13856,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
     Array_append(&clientInfo->indexIdArray,&indexId);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -14168,14 +13885,14 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
   // get index id
   if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexId=<id>");
     return;
   }
 
   // check if index database is available
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
 
@@ -14185,7 +13902,7 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
     Array_removeAll(&clientInfo->indexIdArray,&indexId,CALLBACK(NULL,NULL));
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -14220,7 +13937,7 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, IndexHandle *in
   // check if index database is available
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
 
@@ -14240,11 +13957,11 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, IndexHandle *in
                                 );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"get storages info from index database fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get storages info from index database fail: %s",Error_getText(error));
     return;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",storageCount,totalEntryCount,totalEntrySize,totalEntryContentSize);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",storageCount,totalEntryCount,totalEntrySize,totalEntryContentSize);
 }
 
 /***********************************************************************\
@@ -14297,7 +14014,7 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
   if (error != ERROR_NONE)
   {
     String_delete(entryName);
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
     return;
   }
   while (   !isCommandAborted(clientInfo,id)
@@ -14340,19 +14057,19 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
         break;
     }
 
-    sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "entryId=%llu name=%'S type=%s size=%llu",
-                     entryId,
-                     entryName,
-                     type,
-                     size
-                    );
+    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                        "entryId=%llu name=%'S type=%s size=%llu",
+                        entryId,
+                        entryName,
+                        type,
+                        size
+                       );
   }
   Index_doneList(&indexQueryHandle);
 
   String_delete(entryName);
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -14384,7 +14101,7 @@ LOCAL void serverCommand_entryListClear(ClientInfo *clientInfo, IndexHandle *ind
     Array_clear(&clientInfo->entryIdArray);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -14413,14 +14130,14 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *index
   // get entry ids
   if (!StringMap_getInt64(argumentMap,"entryId",&entryId,INDEX_ID_NONE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryId=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryId=<n>");
     return;
   }
 
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
 
@@ -14430,7 +14147,7 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *index
     Array_append(&clientInfo->entryIdArray,&entryId);
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -14459,14 +14176,14 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, IndexHandle *in
   // get entry ids
   if (!StringMap_getInt64(argumentMap,"entryId",&entryId,INDEX_ID_NONE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryId=<n>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryId=<n>");
     return;
   }
 
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
 
@@ -14476,7 +14193,7 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, IndexHandle *in
     Array_removeAll(&clientInfo->entryIdArray,&entryId,CALLBACK(NULL,NULL));
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -14510,7 +14227,7 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, IndexHandle *inde
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
 
@@ -14528,11 +14245,11 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, IndexHandle *inde
                               );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"get entries info from index database fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get entries info from index database fail: %s",Error_getText(error));
     return;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",totalEntryCount,totalEntrySize,totalEntryContentSize);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",totalEntryCount,totalEntrySize,totalEntryContentSize);
 }
 
 /***********************************************************************\
@@ -14571,14 +14288,14 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
     return;
   }
 
   // check if index database is available
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
 
@@ -14588,7 +14305,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     error = deleteUUID(indexHandle,jobUUID);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
       return;
     }
   }
@@ -14599,7 +14316,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     error = deleteEntity(indexHandle,entityId);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
       return;
     }
   }
@@ -14610,12 +14327,12 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     error = deleteStorage(indexHandle,storageId);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
       return;
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -14703,19 +14420,19 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     assert(restoreStatusInfo->entryName != NULL);
     assert(restoreStatusInfo->storageName != NULL);
 
-    sendClientResult(restoreCommandInfo->clientInfo,
-                     restoreCommandInfo->id,
-                     FALSE,
-                     ERROR_NONE,
-                     "state=%s storageName=%'S storageDoneSize=%llu storageTotalSize=%llu entryName=%'S entryDoneSize=%llu entryTotalSize=%llu",
-                     "running",
-                     restoreStatusInfo->storageName,
-                     restoreStatusInfo->storageDoneSize,
-                     restoreStatusInfo->storageTotalSize,
-                     restoreStatusInfo->entryName,
-                     restoreStatusInfo->entryDoneSize,
-                     restoreStatusInfo->entryTotalSize
-                    );
+    ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
+                        restoreCommandInfo->id,
+                        FALSE,
+                        ERROR_NONE,
+                        "state=%s storageName=%'S storageDoneSize=%llu storageTotalSize=%llu entryName=%'S entryDoneSize=%llu entryTotalSize=%llu",
+                        "running",
+                        restoreStatusInfo->storageName,
+                        restoreStatusInfo->storageDoneSize,
+                        restoreStatusInfo->storageTotalSize,
+                        restoreStatusInfo->entryName,
+                        restoreStatusInfo->entryDoneSize,
+                        restoreStatusInfo->entryTotalSize
+                       );
   }
 
   /***********************************************************************\
@@ -14739,17 +14456,17 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     assert(restoreCommandInfo != NULL);
 
     // handle error
-    error = clientAction(restoreCommandInfo->clientInfo,
-                         restoreCommandInfo->id,
-                         NULL,  // resultMap
-                         "CONFIRM",
-                         60*1000,
-                         "error=%d errorMessage=%'s storage=%'S entry=%'S",
-                         error,
-                         Error_getText(error),
-                         restoreStatusInfo->storageName,
-                         restoreStatusInfo->entryName
-                        );
+    error = ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
+                                  restoreCommandInfo->id,
+                                  NULL,  // resultMap
+                                  "CONFIRM",
+                                  60*1000,
+                                  "error=%d errorMessage=%'s storage=%'S entry=%'S",
+                                  error,
+                                  Error_getText(error),
+                                  restoreStatusInfo->storageName,
+                                  restoreStatusInfo->entryName
+                                 );
 
     return error;
   }
@@ -14796,16 +14513,16 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     resultMap = StringMap_new();
 
     // request password
-    error = clientAction(restoreCommandInfo->clientInfo,
-                         restoreCommandInfo->id,
-                         resultMap,
-                         "REQUEST_PASSWORD",
-                         60*1000,
-                         "name=%'S passwordType=%'s passwordText=%'s",
-                         name,
-                         getPasswordTypeName(passwordType),
-                         text
-                        );
+    error = ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
+                                  restoreCommandInfo->id,
+                                  resultMap,
+                                  "REQUEST_PASSWORD",
+                                  60*1000,
+                                  "name=%'S passwordType=%'s passwordText=%'s",
+                                  name,
+                                  getPasswordTypeName(passwordType),
+                                  text
+                                 );
     if (error != ERROR_NONE)
     {
       StringMap_delete(resultMap);
@@ -14834,7 +14551,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
       StringMap_delete(resultMap);
       return ERROR_EXPECTED_PARAMETER;
     }
-    if (!decryptPassword(password,clientInfo,encryptType,encryptedPassword))
+    if (!ServerIO_decryptPassword(password,&clientInfo->io,encryptType,encryptedPassword))
     {
       String_delete(encryptedPassword);
       StringMap_delete(resultMap);
@@ -14862,20 +14579,20 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   // get type, destination, directory content flag, overwrite flag
   if (!StringMap_getEnum(argumentMap,"type",&type,(StringMapParseEnumFunction)parseRestoreType,UNKNOWN))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected type=ARCHIVES|ENTRIES");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected type=ARCHIVES|ENTRIES");
     return;
   }
   if (!StringMap_getString(argumentMap,"destination",clientInfo->jobOptions.destination,NULL))
   {
     String_delete(clientInfo->jobOptions.destination);
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination=<name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination=<name>");
     return;
   }
   StringMap_getBool(argumentMap,"directoryContent",&directoryContentFlag,FALSE);
   if (!StringMap_getBool(argumentMap,"overwriteEntries",&clientInfo->jobOptions.overwriteEntriesFlag,FALSE))
   {
     String_delete(clientInfo->jobOptions.destination);
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected overwriteEntries=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected overwriteEntries=yes|no");
     return;
   }
 
@@ -15002,7 +14719,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     StringList_done(&storageNameList);
     String_delete(entryName);
     String_delete(storageName);
-    sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
     return;
   }
 
@@ -15036,11 +14753,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                          );
   if (error == ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
   }
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
@@ -15081,7 +14798,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -15182,7 +14899,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
@@ -15195,7 +14912,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
     return;
   }
   name = String_new();
@@ -15204,7 +14921,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   // check if index database is available
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     String_delete(name);
     return;
   }
@@ -15227,7 +14944,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
     String_delete(lastErrorMessage);
     List_done(&uuidList,(ListNodeFreeFunction)freeUUIDNode,NULL);
 
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init uuid list fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init uuid list fail: %s",Error_getText(error));
 
     String_delete(name);
     return;
@@ -15276,16 +14993,16 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
       }
 
       // send result
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "uuidId=%llu jobUUID=%S name=%'S lastExecutedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%llu totalEntrySize=%llu",
-                       uuidNode->uuidId,
-                       uuidNode->jobUUID,
-                       name,
-                       uuidNode->lastExecutedDateTime,
-                       uuidNode->lastErrorMessage,
-                       uuidNode->totalEntryCount,
-                       uuidNode->totalEntrySize
-                      );
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                          "uuidId=%llu jobUUID=%S name=%'S lastExecutedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%llu totalEntrySize=%llu",
+                          uuidNode->uuidId,
+                          uuidNode->jobUUID,
+                          name,
+                          uuidNode->lastExecutedDateTime,
+                          uuidNode->lastErrorMessage,
+                          uuidNode->totalEntryCount,
+                          uuidNode->totalEntrySize
+                         );
     }
   }
 
@@ -15303,16 +15020,16 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 
       if (!exitsFlag)
       {
-        sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                         "uuidId=0 jobUUID=%S name=%'S lastExecutedDateTime=0 lastErrorMessage='' totalEntryCount=%llu totalEntrySize=0",
-                         jobNode->uuid,
-                         jobNode->name
-                        );
+        ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                            "uuidId=0 jobUUID=%S name=%'S lastExecutedDateTime=0 lastErrorMessage='' totalEntryCount=%llu totalEntrySize=0",
+                            jobNode->uuid,
+                            jobNode->name
+                           );
       }
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(lastErrorMessage);
@@ -15388,7 +15105,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
@@ -15401,7 +15118,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
     return;
   }
   name = String_new();
@@ -15410,7 +15127,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   // check if index database is available
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     String_delete(name);
     return;
   }
@@ -15434,7 +15151,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                                 );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init entity list fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init entity list fail: %s",Error_getText(error));
     String_delete(lastErrorMessage);
     String_delete(jobName);
     String_delete(name);
@@ -15484,24 +15201,24 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // send result
-    sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "uuid=%llu jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%lld archiveType=%s lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu expireDateTime=%llu",
-                     uuidId,
-                     jobUUID,
-                     jobName,
-                     scheduleUUID,
-                     entityId,
-                     ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
-                     createdDateTime,
-                     lastErrorMessage,
-                     totalEntryCount,
-                     totalEntrySize,
-                     expireDateTime
-                    );
+    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                        "uuid=%llu jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%lld archiveType=%s lastCreatedDateTime=%llu lastErrorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu expireDateTime=%llu",
+                        uuidId,
+                        jobUUID,
+                        jobName,
+                        scheduleUUID,
+                        entityId,
+                        ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                        createdDateTime,
+                        lastErrorMessage,
+                        totalEntryCount,
+                        totalEntrySize,
+                        expireDateTime
+                       );
   }
   Index_doneList(&indexQueryHandle);
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(lastErrorMessage);
@@ -15597,7 +15314,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
     return;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
@@ -15610,7 +15327,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
@@ -15623,7 +15340,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
     return;
   }
   name = String_new();
@@ -15636,7 +15353,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   // check if index database is available
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     String_delete(name);
     return;
   }
@@ -15666,7 +15383,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                                 );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Error_getText(error));
     String_delete(printableStorageName);
     String_delete(errorMessage);
     String_delete(storageName);
@@ -15717,29 +15434,29 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
       String_set(printableStorageName,storageName);
     }
 
-    sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                     "uuidId=%llu jobUUID=%S jobName=%'S entityId=%llu scheduleUUID=%S archiveType='%s' storageId=%llu name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu",
-                     uuidId,
-                     jobUUID,
-                     jobName,
-                     entityId,
-                     scheduleUUID,
-                     ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
-                     storageId,
-                     printableStorageName,
-                     dateTime,
-                     size,
-                     Index_stateToString(indexState,"unknown"),
-                     Index_modeToString(indexMode,"unknown"),
-                     lastCheckedDateTime,
-                     errorMessage,
-                     totalEntryCount,
-                     totalEntrySize
-                    );
+    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                        "uuidId=%llu jobUUID=%S jobName=%'S entityId=%llu scheduleUUID=%S archiveType='%s' storageId=%llu name=%'S dateTime=%llu size=%llu indexState=%'s indexMode=%'s lastCheckedDateTime=%llu errorMessage=%'S totalEntryCount=%lu totalEntrySize=%llu",
+                        uuidId,
+                        jobUUID,
+                        jobName,
+                        entityId,
+                        scheduleUUID,
+                        ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                        storageId,
+                        printableStorageName,
+                        dateTime,
+                        size,
+                        Index_stateToString(indexState,"unknown"),
+                        Index_modeToString(indexMode,"unknown"),
+                        lastCheckedDateTime,
+                        errorMessage,
+                        totalEntryCount,
+                        totalEntrySize
+                       );
   }
   Index_doneList(&indexQueryHandle);
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(printableStorageName);
@@ -15799,117 +15516,117 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   #define SEND_FILE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
     do \
     { \
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=FILE name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
-                       jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
-                       storageName, \
-                       storageDateTime, \
-                       entryId, \
-                       name, \
-                       size, \
-                       dateTime, \
-                       userId, \
-                       groupId, \
-                       permission, \
-                       fragmentOffset, \
-                       fragmentSize \
-                      ); \
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
+                          "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=FILE name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
+                          jobName, \
+                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                          storageName, \
+                          storageDateTime, \
+                          entryId, \
+                          name, \
+                          size, \
+                          dateTime, \
+                          userId, \
+                          groupId, \
+                          permission, \
+                          fragmentOffset, \
+                          fragmentSize \
+                         ); \
     } \
     while (0)
   #define SEND_IMAGE_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,fileSystemType,size,blockOffset,blockCount) \
     do \
     { \
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=IMAGE name=%'S fileSystemType=%s size=%llu blockOffset=%llu blockCount=%llu", \
-                       jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
-                       storageName, \
-                       storageDateTime, \
-                       entryId, \
-                       name, \
-                       FileSystem_getName(fileSystemType), \
-                       size, \
-                       blockOffset, \
-                       blockCount \
-                      ); \
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
+                          "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=IMAGE name=%'S fileSystemType=%s size=%llu blockOffset=%llu blockCount=%llu", \
+                          jobName, \
+                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                          storageName, \
+                          storageDateTime, \
+                          entryId, \
+                          name, \
+                          FileSystem_getName(fileSystemType), \
+                          size, \
+                          blockOffset, \
+                          blockCount \
+                         ); \
     } \
     while (0)
   #define SEND_DIRECTORY_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission) \
     do \
     { \
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=DIRECTORY name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u", \
-                       jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
-                       storageName, \
-                       storageDateTime, \
-                       entryId, \
-                       name, \
-                       size, \
-                       dateTime, \
-                       userId, \
-                       groupId, \
-                       permission \
-                      ); \
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
+                          "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=DIRECTORY name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u", \
+                          jobName, \
+                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                          storageName, \
+                          storageDateTime, \
+                          entryId, \
+                          name, \
+                          size, \
+                          dateTime, \
+                          userId, \
+                          groupId, \
+                          permission \
+                         ); \
     } \
     while (0)
   #define SEND_LINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,destinationName,dateTime,userId,groupId,permission) \
     do \
     { \
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=LINK name=%'S destinationName=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
-                       jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
-                       storageName, \
-                       storageDateTime, \
-                       entryId, \
-                       name, \
-                       destinationName, \
-                       dateTime, \
-                       userId, \
-                       groupId, \
-                       permission \
-                      ); \
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
+                          "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=LINK name=%'S destinationName=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                          jobName, \
+                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                          storageName, \
+                          storageDateTime, \
+                          entryId, \
+                          name, \
+                          destinationName, \
+                          dateTime, \
+                          userId, \
+                          groupId, \
+                          permission \
+                         ); \
     } \
     while (0)
   #define SEND_HARDLINK_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,size,dateTime,userId,groupId,permission,fragmentOffset,fragmentSize) \
     do \
     { \
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=HARDLINK name=%'S size=%lld dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
-                       jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
-                       storageName, \
-                       storageDateTime, \
-                       entryId, \
-                       name, \
-                       size, \
-                       dateTime, \
-                       userId, \
-                       groupId, \
-                       permission, \
-                       fragmentOffset, \
-                       fragmentSize \
-                      ); \
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
+                          "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=HARDLINK name=%'S size=%lld dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
+                          jobName, \
+                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                          storageName, \
+                          storageDateTime, \
+                          entryId, \
+                          name, \
+                          size, \
+                          dateTime, \
+                          userId, \
+                          groupId, \
+                          permission, \
+                          fragmentOffset, \
+                          fragmentSize \
+                         ); \
     } \
     while (0)
   #define SEND_SPECIAL_ENTRY(jobName,archiveType,storageName,storageDateTime,entryId,name,dateTime,userId,groupId,permission) \
     do \
     { \
-      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=SPECIAL name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
-                       jobName, \
-                       ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
-                       storageName, \
-                       storageDateTime, \
-                       entryId, \
-                       name, \
-                       dateTime, \
-                       userId, \
-                       groupId, \
-                       permission \
-                      ); \
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
+                          "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=SPECIAL name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
+                          jobName, \
+                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
+                          storageName, \
+                          storageDateTime, \
+                          entryId, \
+                          name, \
+                          dateTime, \
+                          userId, \
+                          groupId, \
+                          permission \
+                         ); \
     } \
     while (0)
 
@@ -15948,7 +15665,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
     String_delete(name);
     return;
   }
@@ -15962,13 +15679,13 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
     String_delete(name);
     return;
   }
   if (!StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestOnly=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestOnly=yes|no");
     String_delete(name);
     return;
   }
@@ -15980,7 +15697,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     String_delete(name);
     return;
   }
@@ -16007,7 +15724,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list entries fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list entries fail: %s",Error_getText(error));
     String_delete(destinationName);
     String_delete(entryName);
     String_delete(storageName);
@@ -16087,7 +15804,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     }
   }
   Index_doneList(&indexQueryHandle);
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(destinationName);
@@ -16131,13 +15848,13 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
   // get jobUUID, archive type
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
   }
   StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
@@ -16145,7 +15862,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
   // check if index database is available
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
 
@@ -16160,11 +15877,11 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
                          );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"add entity fail");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"add entity fail");
     return;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"entityId=%llu",entityId);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"entityId=%llu",entityId);
 
   // free resources
 }
@@ -16205,7 +15922,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   pattern = String_new();
   if (!StringMap_getString(argumentMap,"pattern",pattern,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern=<text>");
     String_delete(pattern);
     return;
   }
@@ -16215,7 +15932,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   // check if index database is available
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     String_delete(pattern);
     return;
   }
@@ -16301,10 +16018,10 @@ NULL, // masterIO
 
         if (error == ERROR_NONE)
         {
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
-                           storageId,
-                           printableStorageName
-                          );
+          ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+                              storageId,
+                              printableStorageName
+                             );
         }
 
         String_delete(printableStorageName);
@@ -16381,10 +16098,10 @@ NULL, // masterIO
                                    return error;
                                  }
 
-                                 sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
-                                                  storageId,
-                                                  printableStorageName
-                                                 );
+                                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%llu name=%'S",
+                                                     storageId,
+                                                     printableStorageName
+                                                    );
 
                                  String_delete(printableStorageName);
                                }
@@ -16397,11 +16114,11 @@ NULL, // masterIO
 
   if (error == ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
   }
 
   // free resources
@@ -16447,12 +16164,12 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
   // get jobUUID, archive type, created
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
   }
   StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
@@ -16460,7 +16177,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
   // check if index database is available
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
 
@@ -16475,11 +16192,11 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
                          );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"add entity fail");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"add entity fail");
     return;
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"entityId=%llu",entityId);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"entityId=%llu",entityId);
 
   // free resources
 }
@@ -16533,7 +16250,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       && !StringMap_getInt64(argumentMap,"toEntityId",&toEntityId,INDEX_ID_NONE)
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected toJobUUID=<uuid> or toEntityId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected toJobUUID=<uuid> or toEntityId=<id>");
     return;
   }
   StringMap_getString(argumentMap,"toScheduleUUID",toScheduleUUID,NULL);
@@ -16547,14 +16264,14 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
     return;
   }
 
   // check if index database is available
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
 
@@ -16575,7 +16292,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                             );
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
         return;
       }
     }
@@ -16592,7 +16309,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                              );
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"cannot create entity for %S: %s",toJobUUID,Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"cannot create entity for %S: %s",toJobUUID,Error_getText(error));
         return;
       }
 
@@ -16608,7 +16325,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                             );
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
         return;
       }
 
@@ -16618,7 +16335,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                                 );
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,error,"unlock entity fail");
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"unlock entity fail");
         return;
       }
     }
@@ -16641,7 +16358,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                             );
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
         return;
       }
     }
@@ -16659,7 +16376,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                             );
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
         return;
       }
     }
@@ -16682,7 +16399,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                             );
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
         return;
       }
     }
@@ -16699,7 +16416,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                              );
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"cannot create entity for %S: %s",toJobUUID,Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"cannot create entity for %S: %s",toJobUUID,Error_getText(error));
         return;
       }
 
@@ -16715,7 +16432,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                             );
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
         return;
       }
 
@@ -16725,13 +16442,13 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                                 );
       if (error != ERROR_NONE)
       {
-        sendClientResult(clientInfo,id,TRUE,error,"unlock entity fail");
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"unlock entity fail");
         return;
       }
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
 }
@@ -16786,7 +16503,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
   name = String_new();
@@ -16797,7 +16514,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
       && !StringMap_getString(argumentMap,"name",name,NULL)
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuidId=<id> or entityId=<id> or storageId=<id> or jobUUID=<uuid> or name=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected uuidId=<id> or entityId=<id> or storageId=<id> or jobUUID=<uuid> or name=<text>");
     String_delete(name);
     return;
   }
@@ -16805,7 +16522,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   // check if index database is available
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     String_delete(name);
     return;
   }
@@ -16835,7 +16552,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                   );
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
       Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
@@ -16889,7 +16606,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                   );
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
       Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
@@ -16943,7 +16660,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                   );
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
       Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
@@ -17002,7 +16719,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                   );
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
       Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
@@ -17056,7 +16773,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                   );
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
       Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
@@ -17101,7 +16818,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                           );
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"set storage state fail: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"set storage state fail: %s",Error_getText(error));
       Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
@@ -17109,7 +16826,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // trigger index thread
   Semaphore_signalModified(&indexThreadTrigger);
@@ -17164,7 +16881,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
   uuidId    = INDEX_ID_NONE;
@@ -17175,14 +16892,14 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
       && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
      )
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid> or entityId=<id> or storageId=<id>");
     return;
   }
 
   // check if index database is available
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
 
@@ -17214,7 +16931,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
                                   );
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
       String_delete(printableStorageName);
       String_delete(storageName);
       Storage_doneSpecifier(&storageSpecifier);
@@ -17257,15 +16974,15 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
         error = Index_deleteStorage(indexHandle,storageId);
         if (error == ERROR_NONE)
         {
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "storageId=%llu name=%'S",
-                           storageId,
-                           printableStorageName
-                          );
+          ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                              "storageId=%llu name=%'S",
+                              storageId,
+                              printableStorageName
+                             );
         }
         else
         {
-          sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
           Index_doneList(&indexQueryHandle);
           return;
         }
@@ -17285,7 +17002,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     error = Index_deleteUUID(indexHandle,uuidId);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
       return;
     }
   }
@@ -17296,7 +17013,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     error = Index_deleteEntity(indexHandle,entityId);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
       return;
     }
   }
@@ -17307,12 +17024,12 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     error = Index_deleteStorage(indexHandle,storageId);
     if (error != ERROR_NONE)
     {
-      sendClientResult(clientInfo,id,TRUE,error,"%s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
       return;
     }
   }
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
 }
@@ -17372,13 +17089,13 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<id>");
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
     String_delete(name);
     return;
   }
@@ -17392,7 +17109,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     String_delete(name);
     return;
   }
@@ -17406,7 +17123,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexModeSet=MANUAL|AUTO|*");
     String_delete(name);
     return;
   }
@@ -17414,7 +17131,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
   // check if index database is available
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     String_delete(name);
     return;
   }
@@ -17436,13 +17153,13 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
                                 );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"get storages info from index database fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get storages info from index database fail: %s",Error_getText(error));
     String_delete(name);
     return;
   }
 
   // send data
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",storageCount,totalEntryCount,totalEntrySize,totalEntryContentSize);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"storageCount=%lu totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",storageCount,totalEntryCount,totalEntrySize,totalEntryContentSize);
 
   // free resources
   String_delete(name);
@@ -17484,7 +17201,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<text>");
     String_delete(name);
     return;
   }
@@ -17498,13 +17215,13 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
   }
   else
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
     String_delete(name);
     return;
   }
   if (!StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestOnly=yes|no");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newestOnly=yes|no");
     String_delete(name);
     return;
   }
@@ -17512,7 +17229,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     String_delete(name);
     return;
   }
@@ -17532,13 +17249,13 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
                               );
   if (error != ERROR_NONE)
   {
-    sendClientResult(clientInfo,id,TRUE,error,"get entries info index database fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get entries info index database fail: %s",Error_getText(error));
     String_delete(name);
     return;
   }
 
   // send data
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",totalEntryCount,totalEntrySize,totalEntryContentSize);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"totalEntryCount=%lu totalEntrySize=%llu totalEntryContentSize=%llu",totalEntryCount,totalEntrySize,totalEntryContentSize);
 
   // free resources
   String_delete(name);
@@ -17571,7 +17288,7 @@ LOCAL void serverCommand_debugPrintStatistics(ClientInfo *clientInfo, IndexHandl
   String_debugPrintStatistics();
   File_debugPrintStatistics();
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -17605,7 +17322,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
                                          UNUSED_VARIABLE(lineNb);
                                          UNUSED_VARIABLE(userData);
 
-                                         sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"type=ARRAY n=%lu count=%lu",n,count);
+                                         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"type=ARRAY n=%lu count=%lu",n,count);
 
                                          return TRUE;
                                        },
@@ -17619,7 +17336,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
                                           UNUSED_VARIABLE(lineNb);
                                           UNUSED_VARIABLE(userData);
 
-                                          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"type=STRING n=%lu count=%lu",n,count);
+                                          ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"type=STRING n=%lu count=%lu",n,count);
 
                                           return TRUE;
                                         },
@@ -17633,7 +17350,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
                                         UNUSED_VARIABLE(lineNb);
                                         UNUSED_VARIABLE(userData);
 
-                                        sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"type=FILE n=%lu count=%lu",n,count);
+                                        ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"type=FILE n=%lu count=%lu",n,count);
 
                                         return TRUE;
                                       },
@@ -17641,7 +17358,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
                                      )
                      );
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -17671,7 +17388,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
   handle = fopen("bar-memory.dump","w");
   if (handle == NULL)
   {
-    sendClientResult(clientInfo,id,FALSE,ERROR_CREATE_FILE,"Cannot create 'bar-memory.dump'");
+    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_CREATE_FILE,"Cannot create 'bar-memory.dump'");
     return;
   }
 
@@ -17684,7 +17401,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                         UNUSED_VARIABLE(lineNb);
                                         UNUSED_VARIABLE(userData);
 
-                                        sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"type=ARRAY n=%lu count=%lu",n,count);
+                                        ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"type=ARRAY n=%lu count=%lu",n,count);
 
                                         return TRUE;
                                       },
@@ -17699,7 +17416,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                          UNUSED_VARIABLE(lineNb);
                                          UNUSED_VARIABLE(userData);
 
-                                         sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"type=STRING n=%lu count=%lu",n,count);
+                                         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"type=STRING n=%lu count=%lu",n,count);
 
                                          return TRUE;
                                        },
@@ -17714,7 +17431,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                        UNUSED_VARIABLE(lineNb);
                                        UNUSED_VARIABLE(userData);
 
-                                       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,"type=FILE n=%lu count=%lu",n,count);
+                                       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"type=FILE n=%lu count=%lu",n,count);
 
                                        return TRUE;
                                      },
@@ -17723,7 +17440,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                     );
   fclose(handle);
 
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
 #endif /* NDEBUG */
 
@@ -18041,7 +17758,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
     {
       // authorization failure -> mark for disconnect
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
-      sendClientResult(clientInfo,command.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+      ServerIO_sendResult(&clientInfo->io,command.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
     }
 
     // free resources
@@ -18053,102 +17770,6 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 
   // free resources
   String_delete(result);
-}
-
-// ----------------------------------------------------------------------
-
-/***********************************************************************\
-* Name   : initSession
-* Purpose: init new session
-* Input  : clientInfo - client info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void initSession(ClientInfo *clientInfo)
-{
-  assert(clientInfo != NULL);
-
-  #ifndef NO_SESSION_ID
-    Crypt_randomize(clientInfo->sessionId,sizeof(SessionId));
-  #else /* not NO_SESSION_ID */
-    memset(clientInfo->sessionId,0,sizeof(SessionId));
-  #endif /* NO_SESSION_ID */
-  (void)Crypt_createPublicPrivateKeyPair(&clientInfo->publicKey,&clientInfo->privateKey,SESSION_KEY_SIZE,CRYPT_PADDING_TYPE_PKCS1,CRYPT_KEY_MODE_TRANSIENT);
-}
-
-/***********************************************************************\
-* Name   : doneSession
-* Purpose: done session
-* Input  : clientInfo - client info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void doneSession(ClientInfo *clientInfo)
-{
-  assert(clientInfo != NULL);
-
-  Crypt_doneKey(&clientInfo->privateKey);
-  Crypt_doneKey(&clientInfo->publicKey);
-}
-
-/***********************************************************************\
-* Name   : sendSessionId
-* Purpose: send session id to client
-* Input  : clientInfo - client info
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*          Result:
-*            id=<id>
-*            encryptTypes=<types>
-*            n=<n>
-*            e=<n>
-\***********************************************************************/
-
-LOCAL void sendSessionId(ClientInfo *clientInfo)
-{
-  String id;
-  String n,e;
-  String s;
-
-  assert(clientInfo != NULL);
-
-  // format session data
-  id = encodeHex(String_new(),clientInfo->sessionId,sizeof(SessionId));
-  n  = Crypt_getPublicPrivateKeyModulus(&clientInfo->publicKey);
-  e  = Crypt_getPublicPrivateKeyExponent(&clientInfo->publicKey);
-  if ((n !=NULL) && (e != NULL))
-  {
-    s  = String_format(String_new(),
-                       "SESSION id=%S encryptTypes=%s n=%S e=%S",
-                       id,
-                       "RSA,NONE",
-                       n,
-                       e
-                      );
-  }
-  else
-  {
-    s  = String_format(String_new(),
-                       "SESSION id=%S encryptTypes=%s",
-                       id,
-                       "NONE"
-                      );
-  }
-  String_appendChar(s,'\n');
-
-  // send session data to client
-  sendClient(clientInfo,s);
-
-  // free resources
-  String_delete(s);
-  String_delete(e);
-  String_delete(n);
-  String_delete(id);
 }
 
 // ----------------------------------------------------------------------
@@ -18168,8 +17789,6 @@ LOCAL void initClient(ClientInfo *clientInfo)
 
   // initialize
   Semaphore_init(&clientInfo->lock);
-  clientInfo->io.type               = SERVER_IO_TYPE_NONE;
-  Semaphore_init(&clientInfo->io.lock);
   clientInfo->authorizationState    = AUTHORIZATION_STATE_WAITING;
   clientInfo->authorizationFailNode = NULL;
   clientInfo->quitFlag              = FALSE;
@@ -18210,14 +17829,15 @@ LOCAL void initClient(ClientInfo *clientInfo)
 \***********************************************************************/
 
 LOCAL void initBatchClient(ClientInfo *clientInfo,
-                           FileHandle *fileHandle
+                           FileHandle fileHandle
                           )
 {
   assert(clientInfo != NULL);
 
   // initialize
-  clientInfo->io.type            = SERVER_IO_TYPE_BATCH;
-  clientInfo->io.file.fileHandle = fileHandle;
+  ServerIO_initBatch(&clientInfo->io,
+                     fileHandle
+                    );
 
   // batch client do not require authorization
   clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
@@ -18246,10 +17866,11 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   assert(clientInfo != NULL);
 
   // initialize
-  clientInfo->io.type                 = SERVER_IO_TYPE_NETWORK;
-  clientInfo->io.network.name         = String_duplicate(name);
-  clientInfo->io.network.port         = port;
-  clientInfo->io.network.socketHandle = socketHandle;
+  ServerIO_initNetwork(&clientInfo->io,
+                       name,
+                       port,
+                       socketHandle
+                      );
   if (!MsgQueue_init(&clientInfo->commandQueue,0))
   {
     HALT_FATAL_ERROR("Cannot initialize client command message queue!");
@@ -18262,9 +17883,8 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
     }
   }
 
-  // init and send session id
-  initSession(clientInfo);
-  sendSessionId(clientInfo);
+  // send session id
+  ServerIO_sendSessionId(&clientInfo->io);
 }
 
 /***********************************************************************\
@@ -18278,12 +17898,26 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
 
 LOCAL void doneClient(ClientInfo *clientInfo)
 {
+  SemaphoreLock   semaphoreLock;
+  JobNode         *jobNode;
   CommandInfoNode *commandInfoNode;
-  int             z;
+  int             i;
 
   assert(clientInfo != NULL);
 
   clientInfo->quitFlag = TRUE;
+
+  // stop all master jobs
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    LIST_ITERATE(&jobList,jobNode)
+    {
+      if (jobNode->masterIO == &clientInfo->io)
+      {
+        abortJob(jobNode);
+      }
+    }
+  }
 
   // abort all running commands
   LIST_ITERATE(&clientInfo->commandInfoList,commandInfoNode)
@@ -18293,17 +17927,15 @@ LOCAL void doneClient(ClientInfo *clientInfo)
 
   switch (clientInfo->io.type)
   {
-    case SERVER_IO_TYPE_NONE:
-      break;
     case SERVER_IO_TYPE_BATCH:
       break;
     case SERVER_IO_TYPE_NETWORK:
       // stop command threads
       Semaphore_setEnd(&clientInfo->action.lock);
       MsgQueue_setEndOfMsg(&clientInfo->commandQueue);
-      for (z = MAX_NETWORK_CLIENT_THREADS-1; z >= 0; z--)
+      for (i = MAX_NETWORK_CLIENT_THREADS-1; i >= 0; i--)
       {
-        if (!Thread_join(&clientInfo->threads[z]))
+        if (!Thread_join(&clientInfo->threads[i]))
         {
           HALT_INTERNAL_ERROR("Cannot stop command threads!");
         }
@@ -18313,12 +17945,11 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       Network_disconnect(&clientInfo->io.network.socketHandle);
 
       // free resources
-      for (z = MAX_NETWORK_CLIENT_THREADS-1; z >= 0; z--)
+      for (i = MAX_NETWORK_CLIENT_THREADS-1; i >= 0; i--)
       {
-        Thread_done(&clientInfo->threads[z]);
+        Thread_done(&clientInfo->threads[i]);
       }
       MsgQueue_done(&clientInfo->commandQueue,CALLBACK((MsgQueueMsgFreeFunction)freeCommand,NULL));
-      doneSession(clientInfo);
       String_delete(clientInfo->io.network.name);
       break;
     default:
@@ -18340,7 +17971,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   StringMap_delete(clientInfo->action.resultMap);
   RingBuffer_done(&clientInfo->abortedCommandIds,CALLBACK_NULL);
   List_done(&clientInfo->commandInfoList,CALLBACK_NULL);
-  Semaphore_done(&clientInfo->io.lock);
+  ServerIO_done(&clientInfo->io);
   Semaphore_done(&clientInfo->lock);
 }
 
@@ -18554,7 +18185,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString commandLine)
   // parse command
   if (!parseCommand(&command,commandLine))
   {
-    sendClientResult(clientInfo,command.id,TRUE,ERROR_PARSING,"parse error '%S'",commandLine);
+    ServerIO_sendResult(&clientInfo->io,command.id,TRUE,ERROR_PARSING,"parse error '%S'",commandLine);
     return;
   }
 
@@ -18575,7 +18206,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString commandLine)
       {
         // authorization failure -> mark for disconnect
         clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
-        sendClientResult(clientInfo,command.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+        ServerIO_sendResult(&clientInfo->io,command.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
       }
 
       // free resources
@@ -18599,7 +18230,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString commandLine)
           {
             // authorization failure -> mark for disconnect
             clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
-            sendClientResult(clientInfo,command.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+            ServerIO_sendResult(&clientInfo->io,command.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
           }
 
           // free resources
@@ -18649,7 +18280,7 @@ LOCAL void processSlaveCommand(ClientInfo *clientInfo, ConstString commandLine)
   // parse command
   if (!parseCommand(&command,commandLine))
   {
-    sendClientResult(clientInfo,command.id,TRUE,ERROR_PARSING,"parse error '%S'",commandLine);
+    ServerIO_sendResult(&clientInfo->io,command.id,TRUE,ERROR_PARSING,"parse error '%S'",commandLine);
     return;
   }
 
@@ -19066,7 +18697,7 @@ Errors Server_run(ServerModes       mode,
             }
           }
 
-          printInfo(1,"Connected client '%s:%u'\n",String_cString(clientNode->clientInfo.io.network.name),clientNode->clientInfo.io.network.port);
+          printInfo(1,"Connected client '%s'\n",getClientInfo(&clientNode->clientInfo,buffer,sizeof(buffer)));
         }
       }
       else
@@ -19127,7 +18758,7 @@ Errors Server_run(ServerModes       mode,
             }
           }
 
-          printInfo(1,"Connected client '%s:%u' (TLS/SSL)\n",String_cString(clientNode->clientInfo.io.network.name),clientNode->clientInfo.io.network.port);
+          printInfo(1,"Connected client '%s' (TLS/SSL)\n",getClientInfo(&clientNode->clientInfo,buffer,sizeof(buffer)));
         }
       }
       else
@@ -19179,7 +18810,7 @@ Errors Server_run(ServerModes       mode,
               }
               else
               {
-                // remove from client list
+                // disconnect -> remove from client list
                 disconnectClientNode = clientNode;
                 List_remove(&clientList,disconnectClientNode);
 
@@ -19210,7 +18841,7 @@ Errors Server_run(ServerModes       mode,
                     authorizationFailNode->lastTimestamp = Misc_getTimestamp();
                     break;
                 }
-                printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.io.network.name),disconnectClientNode->clientInfo.io.network.port);
+                printInfo(1,"Disconnected client '%s'\n",getClientInfo(&disconnectClientNode->clientInfo,buffer,sizeof(buffer)));
 
                 // done client and free resources
                 deleteClient(disconnectClientNode);
@@ -19249,7 +18880,7 @@ Errors Server_run(ServerModes       mode,
                   authorizationFailNode->lastTimestamp = Misc_getTimestamp();
                   break;
               }
-              printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.io.network.name),disconnectClientNode->clientInfo.io.network.port);
+              printInfo(1,"Disconnected client '%s'\n",getClientInfo(&disconnectClientNode->clientInfo,buffer,sizeof(buffer)));
 
               // done client and free resources
               deleteClient(disconnectClientNode);
@@ -19268,9 +18899,6 @@ Errors Server_run(ServerModes       mode,
           disconnectClientNode = clientNode;
           clientNode = List_remove(&clientList,disconnectClientNode);
 
-          // disconnect
-          Network_disconnect(&disconnectClientNode->clientInfo.io.network.socketHandle);
-
           // add to/update authorization fail list
           authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
           if (authorizationFailNode == NULL)
@@ -19281,8 +18909,11 @@ Errors Server_run(ServerModes       mode,
           }
           authorizationFailNode->count++;
           authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+          
+          // done client and free resources
+          deleteClient(disconnectClientNode);
 
-          printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.io.network.name),disconnectClientNode->clientInfo.io.network.port);
+          printInfo(1,"Disconnected client '%s'\n",getClientInfo(&disconnectClientNode->clientInfo,buffer,sizeof(buffer)));
         }
         else
         {
@@ -19466,15 +19097,18 @@ Errors Server_batch(int inputDescriptor,
 
   // init client
   initClient(&clientInfo);
-  initBatchClient(&clientInfo,&outputFileHandle);
+  initBatchClient(&clientInfo,outputFileHandle);
 
   // send info
+//TODO: via server io
+#if 0
   File_printLine(&outputFileHandle,
                  "BAR VERSION %d %d\n",
                  SERVER_PROTOCOL_VERSION_MAJOR,
                  SERVER_PROTOCOL_VERSION_MINOR
                 );
   File_flush(&outputFileHandle);
+#endif
 
   // process client requests
   commandString = String_new();
@@ -19508,42 +19142,6 @@ processCommand(&clientInfo,commandString);
   List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
 
   return ERROR_NONE;
-}
-
-Errors Server_sendMaster(const ServerIO   *serverIO,
-                         ServerResultList *resultList,
-                         const char       *format,
-                         ...
-                        )
-{
-  String        line;
-uint commandId;
-  va_list       arguments;
-  Errors        error;
-  SemaphoreLock semaphoreLock;
-  ClientInfo    *clientInfo;
-
-  assert(serverIO != NULL);
-  assert(format != NULL);
-
-  // init variables
-  line = String_new();
-
-error=ERROR_NONE;
-commandId = 0;
-
-    // send command
-    va_start(arguments,format);
-    sendMasterCommand(serverIO,commandId,format,arguments);
-    va_end(arguments);
-
-    // wait for results
-//TODO
-
-  // free resources
-  String_delete(line);
-
-  return error;
 }
 
 #ifdef __cplusplus

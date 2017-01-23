@@ -34,58 +34,7 @@
 #define SERVER_PROTOCOL_VERSION_MAJOR 5
 #define SERVER_PROTOCOL_VERSION_MINOR 0
 
-//#define SESSION_ID_LENGTH 64      // max. length of session id
-
 /***************************** Datatypes *******************************/
-
-// session id
-//typedef byte SessionId[SESSION_ID_LENGTH];
-
-// server info
-typedef struct
-{
-  SessionId    sessionId;
-  CryptKey     publicKey,secretKey;
-
-  uint         commandId;
-
-  // connection
-  String       name;
-  uint         port;
-  SocketHandle socketHandle;
-} ServerInfo;
-
-#if 0
-typedef struct ServerCommandNode
-{
-  LIST_NODE_HEADER(struct ServerCommandNode);
-
-  uint   commandId;
-  String name;
-  String data;
-} ServerCommandNode;
-
-typedef struct
-{
-  LIST_HEADER(ServerCommandNode);
-
-  Semaphore lock;
-} ServerCommandList;
-
-typedef struct ServerResultNode
-{
-  LIST_NODE_HEADER(struct ServerResultNode);
-
-  uint   commandId;
-  Errors error;
-  String data;
-} ServerResultNode;
-
-typedef struct
-{
-  LIST_HEADER(ServerResultNode);
-} ServerResultList;
-#endif
 
 /***************************** Variables *******************************/
 
@@ -204,52 +153,6 @@ Errors Server_addJob(JobTypes          jobType,
                      const JobOptions  *jobOptions
                     );
 #endif /* 0 */
-
-// client types
-
-// server i/o
-typedef struct
-{
-  Semaphore        lock;
-
-  enum
-  {
-    SERVER_IO_TYPE_NONE,
-    SERVER_IO_TYPE_BATCH,
-    SERVER_IO_TYPE_NETWORK
-  }                type;
-  union
-  {
-    // i/o via file
-    struct
-    {
-      FileHandle   *fileHandle;
-    } file;
-
-    // i/o via network
-    struct
-    {
-      String       name;
-      uint         port;
-      Semaphore    lock;
-      SocketHandle socketHandle;
-    } network;
-  };
-
-  ServerResultList resultList;
-} ServerIO;
-
-typedef struct
-{
-  Semaphore    lock;
-  SocketHandle socketHandle;
-} ServerConnectInfo;
-
-Errors Server_sendMaster(const ServerIO *serverIO,
-                         ServerResultList       *resultList,
-                         const char             *format,
-                         ...
-                        );
 
 #ifdef __cplusplus
   }

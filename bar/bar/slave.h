@@ -21,9 +21,9 @@
 #include "global.h"
 #include "strings.h"
 
-#include "bar_global.h"
-#define SESSION_ID_LENGTH 64      // max. length of session id
-typedef byte SessionId[SESSION_ID_LENGTH];
+//#include "bar_global.h"
+#include "storage.h"
+#include "server_io.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -50,24 +50,18 @@ typedef void(*SlaveConnectStatusInfoFunction)(bool isConnected,
 // slave info
 typedef struct
 {
-  String       name;                         // name of slave host where job should run
-  uint         port;                         // port of slave host where job should run or 0 for default
+//  String       name;                         // name of slave host where job should run
+//  uint         port;                         // port of slave host where job should run or 0 for default
   bool         forceSSL;                     // force SSL connection to slave hose
   bool         isConnected;
   SocketHandle socketHandle;
   String       line;
 
-  SessionId    sessionId;
-  CryptKey     publicKey,secretKey;
-
-  uint         commandId;
-
-  ServerCommandList  commandList;
-  ServerResultList   resultList;
+  ServerIO     io;
+//  ServerCommandList  commandList;
+//  ServerResultList   resultList;
 SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction;
 void                           *slaveConnectStatusInfoUserData;
-
-  SocketHandle *masterSocketHandle;
 } SlaveInfo;
 
 /****************************** Macros *********************************/
