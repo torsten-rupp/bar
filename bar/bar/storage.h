@@ -65,6 +65,7 @@
 
 #include "crypt.h"
 #include "passwords.h"
+#include "server_io.h"
 #include "bar_global.h"
 
 /****************** Conditional compilation switches *******************/
@@ -382,7 +383,7 @@ typedef struct
     // master
     struct
     {
-      SocketHandle *socketHandle;
+      ServerIO   *io;
     } master;
   };
 
@@ -1086,7 +1087,7 @@ Errors Storage_prepare(const String     storageName,
 
 #ifdef NDEBUG
   Errors Storage_init(StorageInfo                     *storageInfo,
-                      SocketHandle                    *masterSocketHandle,
+                      ServerIO                        *masterIO,
                       const StorageSpecifier          *storageSpecifier,
                       const JobOptions                *jobOptions,
                       BandWidthList                   *maxBandWidthList,
@@ -1102,7 +1103,7 @@ Errors Storage_prepare(const String     storageName,
   Errors __Storage_init(const char                      *__fileName__,
                         ulong                           __lineNb__,
                         StorageInfo                     *storageInfo,
-                        SocketHandle                    *masterSocketHandle,
+                        ServerIO                        *masterIO,
                         const StorageSpecifier          *storageSpecifier,
                         const JobOptions                *jobOptions,
                         BandWidthList                   *maxBandWidthList,

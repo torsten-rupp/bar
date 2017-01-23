@@ -1534,7 +1534,7 @@ String Storage_getPrintableName(String                 string,
 
 #ifdef NDEBUG
   Errors Storage_init(StorageInfo                     *storageInfo,
-                      SocketHandle                    *masterSocketHandle,
+                      ServerIO                        *masterIO,
                       const StorageSpecifier          *storageSpecifier,
                       const JobOptions                *jobOptions,
                       BandWidthList                   *maxBandWidthList,
@@ -1550,7 +1550,7 @@ String Storage_getPrintableName(String                 string,
   Errors __Storage_init(const char                      *__fileName__,
                         ulong                           __lineNb__,
                         StorageInfo                     *storageInfo,
-                        SocketHandle                    *masterSocketHandle,
+                        ServerIO                        *masterIO,
                         const StorageSpecifier          *storageSpecifier,
                         const JobOptions                *jobOptions,
                         BandWidthList                   *maxBandWidthList,
@@ -1602,15 +1602,15 @@ String Storage_getPrintableName(String                 string,
   AUTOFREE_ADD(&autoFreeList,&storageInfo->lock,{ Semaphore_done(&storageInfo->lock); });
   AUTOFREE_ADD(&autoFreeList,&storageInfo->storageSpecifier,{ Storage_doneSpecifier(&storageInfo->storageSpecifier); });
 
-  if (masterSocketHandle != NULL)
+  if (masterIO != NULL)
   {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    storageInfo->type                = STORAGE_TYPE_MASTER;
-    storageInfo->master.socketHandle = masterSocketHandle;
+    storageInfo->type      = STORAGE_TYPE_MASTER;
+    storageInfo->master.io = masterIO;
   }
   else
   {
-    storageInfo->type                = storageInfo->storageSpecifier.type;
+    storageInfo->type      = storageInfo->storageSpecifier.type;
   }
 
   // init protocol specific values
