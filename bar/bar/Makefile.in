@@ -393,6 +393,7 @@ BAR_SOURCES          = bar.c \
                        continuous.c \
                        network.c \
                        server.c \
+                       server_io.c \
                        slave.c \
                        minidump.cpp \
                        \
