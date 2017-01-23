@@ -34,9 +34,10 @@
 //#include "passwords.h"
 #include "misc.h"
 //#include "archive.h"
-#include "server.h"
-#include "bar_global.h"
+//#include "server.h"
+//#include "bar_global.h"
 #include "bar.h"
+#include "server_io.h"
 
 #include "storage.h"
 
@@ -314,7 +315,7 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
 {
   Errors error;
   String directoryName;
-ServerResultList serverResultList;
+ServerIOResultList serverResultList;
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
@@ -324,12 +325,12 @@ ServerResultList serverResultList;
   UNUSED_VARIABLE(fileSize);
 fprintf(stderr,"%s, %d: StorageMaster_create\n",__FILE__,__LINE__);
 
-  error = Server_sendMaster(&storageHandle->storageInfo->io,
-                            &serverResultList,
-                            "STORAGE_CREATE name=%S size=%llu",
-                            fileName,
-                            fileSize
-                           );
+  error = ServerIO_sendMaster(storageHandle->storageInfo->master.io,
+                              &serverResultList,
+                              "STORAGE_CREATE name=%S size=%llu",
+                              fileName,
+                              fileSize
+                             );
 
   DEBUG_ADD_RESOURCE_TRACE(&storageHandle->fileSystem,sizeof(storageHandle->fileSystem));
 
