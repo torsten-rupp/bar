@@ -316,26 +316,47 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
   Errors error;
   String directoryName;
 ServerIOResultList serverResultList;
+  uint id;
+  StringMap resultMap;
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-//  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
   assert(!String_isEmpty(fileName));
 
   UNUSED_VARIABLE(fileSize);
-fprintf(stderr,"%s, %d: StorageMaster_create\n",__FILE__,__LINE__);
 
-  error = ServerIO_sendMaster(storageHandle->storageInfo->master.io,
-                              &serverResultList,
-                              "STORAGE_CREATE name=%S size=%llu",
-                              fileName,
-                              fileSize
+  // init variables
+  resultMap = StringMap_new();
+
+fprintf(stderr,"%s, %d: StorageMaster_create\n",__FILE__,__LINE__);
+  error = ServerIO_sendCommand(storageHandle->storageInfo->master.io,
+                               &id,
+                               "STORAGE_CREATE name=%S size=%llu",
+                               fileName,
+                               fileSize
+                              );
+  if (error != ERROR_NONE)
+  {
+    StringMap_delete(resultMap);
+    return error;
+  }
+
+  error = ServerIO_waitResult(storageHandle->storageInfo->master.io,
+                              id,
+                              30LL*MS_PER_SECOND,
+                              NULL,  // error
+                              NULL,  // completedFlag
+                              resultMap
                              );
   if (error != ERROR_NONE)
   {
+    StringMap_delete(resultMap);
     return error;
   }
-fprintf(stderr,"%s, %d: xxxxxxxxxxxx\n",__FILE__,__LINE__);
+
+  // free resources
+  StringMap_delete(resultMap);
 
   DEBUG_ADD_RESOURCE_TRACE(&storageHandle->master,sizeof(storageHandle->master));
 

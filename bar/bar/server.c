@@ -4381,8 +4381,6 @@ jobNode->masterIO,
 fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
-String commandLine = String_new();
-
         // wait for slave job
         while (   !quitFlag
                && isJobRunning(jobNode)
@@ -4395,7 +4393,20 @@ fprintf(stderr,"%s, %d: fafasdfasdfsdasdadf\n",__FILE__,__LINE__);
                                    commandName,
                                    argumentMap
                                   );
-if (error == ERROR_NONE) fprintf(stderr,"%s, %d: commandLine=%s\n",__FILE__,__LINE__,String_cString(commandLine));
+          if (error == ERROR_NONE)
+          {
+fprintf(stderr,"%s, %d: commandName=%s\n",__FILE__,__LINE__,String_cString(commandName));
+
+#if 0
+Errors Slave_sendResult(&jobNode->slaveInfo,
+                        commandId,
+                           bool       completeFlag,
+                           Errors     error,
+                           const char *format,
+                           ...
+                          );
+#endif
+          }
 
           // get slave job status
           error = Slave_executeCommand(&jobNode->slaveInfo,
@@ -17627,7 +17638,7 @@ LOCAL void freeCommand(Command *command, void *userData)
 \***********************************************************************/
 
 LOCAL bool parseCommand(Command     *command,
-                        ConstString string
+                        ConstString line
                        )
 {
   String name;
@@ -17644,8 +17655,8 @@ LOCAL bool parseCommand(Command     *command,
   name      = String_new();
   arguments = String_new();
 
-  // parse
-  if (!String_parse(string,STRING_BEGIN,"%u %S % S",NULL,&command->id,name,arguments))
+  // parse command
+  if (!String_parse(line,STRING_BEGIN,"%u %S % S",NULL,&command->id,name,arguments))
   {
     String_delete(arguments);
     String_delete(name);

@@ -314,6 +314,7 @@ LOCAL void processData(ServerIO *serverIO, ConstString line)
   // parse
   if      (String_parse(line,STRING_BEGIN,"%u %y %u % S",NULL,&id,&completedFlag,&error,data))
   {
+    // result
     #ifndef NDEBUG
       if (globalOptions.serverDebugFlag)
       {
@@ -338,8 +339,9 @@ LOCAL void processData(ServerIO *serverIO, ConstString line)
       List_append(&serverIO->resultList,resultNode);
     }
   }
-  else if (!String_parse(line,STRING_BEGIN,"%u %S % S",NULL,&id,name,data))
+  else if (String_parse(line,STRING_BEGIN,"%u %S % S",NULL,&id,name,data))
   {
+    // command
     #ifndef NDEBUG
       if (globalOptions.serverDebugFlag)
       {
@@ -348,8 +350,8 @@ LOCAL void processData(ServerIO *serverIO, ConstString line)
     #endif /* not DEBUG */
 
     // init command
-    resultNode = LIST_NEW_NODE(ServerIOResultNode);
-    if (resultNode == NULL)
+    commandNode = LIST_NEW_NODE(ServerIOCommandNode);
+    if (commandNode == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
@@ -869,6 +871,50 @@ Errors ServerIO_waitCommand(ServerIO  *serverIO,
   return ERROR_NONE;
 }
 
+Errors ServerIO_sendResult(ServerIO   *serverIO,
+                           uint       id,
+                           bool       completedFlag,
+                           Errors     error,
+                           const char *format,
+                           ...
+                          )
+{
+  String   result;
+  locale_t locale;
+  va_list  arguments;
+
+  assert(serverIO != NULL);
+  assert(format != NULL);
+
+  // init variables
+  result = String_new();
+
+  // format result
+  locale = uselocale(POSIXLocale);
+  {
+    String_format(result,"%u %d %u ",id,completedFlag ? 1 : 0,Error_getCode(error));
+    va_start(arguments,format);
+    String_vformat(result,format,arguments);
+    va_end(arguments);
+    String_appendChar(result,'\n');
+  }
+  uselocale(locale);
+
+  // send result
+  #ifndef NDEBUG
+    if (globalOptions.serverDebugFlag)
+    {
+      fprintf(stderr,"DEBUG: send result '%s'",String_cString(result));
+    }
+  #endif /* not DEBUG */
+  sendData(serverIO,result);
+
+  // free resources
+  String_delete(result);
+
+  return ERROR_NONE;
+}
+
 Errors ServerIO_waitResult(ServerIO  *serverIO,
                            uint      id,
                            long      timeout,
@@ -928,50 +974,6 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
   return ERROR_NONE;
 }
 
-Errors ServerIO_sendResult(ServerIO   *serverIO,
-                           uint       id,
-                           bool       completedFlag,
-                           Errors     error,
-                           const char *format,
-                           ...
-                          )
-{
-  String   result;
-  locale_t locale;
-  va_list  arguments;
-
-  assert(serverIO != NULL);
-  assert(format != NULL);
-
-  // init variables
-  result = String_new();
-
-  // format result
-  locale = uselocale(POSIXLocale);
-  {
-    String_format(result,"%u %d %u ",id,completedFlag ? 1 : 0,Error_getCode(error));
-    va_start(arguments,format);
-    String_vformat(result,format,arguments);
-    va_end(arguments);
-    String_appendChar(result,'\n');
-  }
-  uselocale(locale);
-
-  // send result
-  #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
-    {
-      fprintf(stderr,"DEBUG: send result '%s'",String_cString(result));
-    }
-  #endif /* not DEBUG */
-  sendData(serverIO,result);
-
-  // free resources
-  String_delete(result);
-
-  return ERROR_NONE;
-}
-
 Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
                                 StringMap  resultMap,
                                 long       timeout,
@@ -1002,7 +1004,7 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
 
   // wait for result, timeout, or quit
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
+  {    
     do
     {
       // check result
@@ -1024,7 +1026,7 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
     }
     while (resultNode == NULL);
   }
-
+    
   // get action result
   error = resultNode->error;
   if (resultMap != NULL)
@@ -1038,9 +1040,9 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
   {
 //    StringMap_clear(serverIO->action.resultMap);
   }
-
+  
   // free resources
-  deleteResultNode(resultNode);
+  deleteResultNode(resultNode);  
 
 #if 0
   // wait for result, timeout, or quit
@@ -1139,7 +1141,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
 
   // wait for result, timeout, or quit
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
+  {    
     do
     {
       // check result
@@ -1161,7 +1163,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
     }
     while (resultNode == NULL);
   }
-
+    
   // get action result
   error = resultNode->error;
   if (resultMap != NULL)
@@ -1175,9 +1177,9 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   {
 //    StringMap_clear(serverIO->action.resultMap);
   }
-
+  
   // free resources
-  deleteResultNode(resultNode);
+  deleteResultNode(resultNode);  
 
 #if 0
   // wait for result, timeout, or quit

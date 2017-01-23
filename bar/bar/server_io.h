@@ -297,6 +297,23 @@ Errors ServerIO_waitCommand(ServerIO  *serverIO,
                            );
 
 /***********************************************************************\
+* Name   : ServerIO_sendResult
+* Purpose: send client result
+* Input  : serverIO - server i/o
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors ServerIO_sendResult(ServerIO   *serverIO,
+                           uint       id,
+                           bool       completeFlag,
+                           Errors     error,
+                           const char *format,
+                           ...
+                          );
+
+/***********************************************************************\
 * Name   : ServerIO_waitResult
 * Purpose: wait for result
 * Input  : serverIO - server i/o
@@ -315,23 +332,6 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
                            Errors    *error,
                            bool      *completedFlag,
                            StringMap resultMap
-                          );
-
-/***********************************************************************\
-* Name   : ServerIO_sendResult
-* Purpose: send client result
-* Input  : serverIO - server i/o
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-Errors ServerIO_sendResult(ServerIO   *serverIO,
-                           uint       id,
-                           bool       completeFlag,
-                           Errors     error,
-                           const char *format,
-                           ...
                           );
 
 /***********************************************************************\
