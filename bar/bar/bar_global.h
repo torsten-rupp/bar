@@ -617,43 +617,6 @@ typedef bool(*IsAbortedFunction)(void *userData);
 
 /***************************** Functions *******************************/
 
-//TODO
-#define SESSION_ID_LENGTH 64      // max. length of session id
-// session id
-typedef byte SessionId[SESSION_ID_LENGTH];
-
-typedef struct ServerCommandNode
-{
-  LIST_NODE_HEADER(struct ServerCommandNode);
-
-  uint   commandId;
-  String name;
-  String data;
-} ServerCommandNode;
-
-typedef struct
-{
-  LIST_HEADER(ServerCommandNode);
-
-  Semaphore lock;
-} ServerCommandList;
-
-typedef struct ServerResultNode
-{
-  LIST_NODE_HEADER(struct ServerResultNode);
-
-  uint   commandId;
-  Errors error;
-  String data;
-} ServerResultNode;
-
-typedef struct
-{
-  LIST_HEADER(ServerResultNode);
-
-  Semaphore lock;
-} ServerResultList;
-
 #ifdef __cplusplus
   extern "C" {
 #endif
