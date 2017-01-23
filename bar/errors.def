@@ -30,6 +30,7 @@ ERROR DAEMON_FAIL                      "run as daemon fail"
 ERROR IPC                              "inter-process communication fail"
 ERROR NO_PASSWORD                      "no password given"
 ERROR INVALID_PASSWORD                 "invalid password"
+ERROR PARSE                            "parse data fail"
 
 // --- patterns ---------------------------------------------------------
 // patterns
@@ -66,7 +67,6 @@ ERROR NO_LOGIN_NAME                    "no login name given"
 ERROR NO_LOGIN_PASSWORD                "no password given"
 ERROR NETWORK_SEND                     "sending data fail"
 ERROR NETWORK_RECEIVE                  "receiving data fail"
-ERROR NETWORK_PARSE                    "parse received data fail"
 ERROR NETWORK_EXECUTE_FAIL             "execute command fail"
 ERROR NETWORK_TIMEOUT                  "timeout receive/send data"
 ERROR NO_RESPONSE                      "no response from remote program"

@@ -1299,7 +1299,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
 LOCAL Errors StorageFTP_done(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageInfo->type == STORAGE_TYPE_FTP);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   #if   defined(HAVE_CURL)
@@ -1318,7 +1318,7 @@ LOCAL bool StorageFTP_isServerAllocationPending(StorageInfo *storageInfo)
   bool serverAllocationPending;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageInfo->type == STORAGE_TYPE_FTP);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
@@ -1345,7 +1345,7 @@ LOCAL Errors StorageFTP_preProcess(StorageInfo *storageInfo,
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageInfo->type == STORAGE_TYPE_FTP);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   error = ERROR_NONE;
@@ -1415,7 +1415,7 @@ LOCAL Errors StorageFTP_postProcess(StorageInfo *storageInfo,
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageInfo->type == STORAGE_TYPE_FTP);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   error = ERROR_NONE;
@@ -1475,7 +1475,7 @@ LOCAL Errors StorageFTP_postProcess(StorageInfo *storageInfo,
 LOCAL Errors StorageFTP_unloadVolume(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageInfo->type == STORAGE_TYPE_FTP);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   UNUSED_VARIABLE(storageInfo);
@@ -1505,7 +1505,7 @@ LOCAL bool StorageFTP_exists(StorageInfo *storageInfo, ConstString archiveName)
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageInfo->type == STORAGE_TYPE_FTP);
   assert(!String_isEmpty(archiveName));
 
   existsFlag = FALSE;
@@ -1699,7 +1699,7 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FTP);
   assert(!String_isEmpty(fileName));
 
   #if   defined(HAVE_CURL)
@@ -1970,7 +1970,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FTP);
   assert(!String_isEmpty(archiveName));
 
   #if   defined(HAVE_CURL)
@@ -2308,7 +2308,7 @@ LOCAL void StorageFTP_close(StorageHandle *storageHandle)
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FTP);
 
   #if   defined(HAVE_CURL)
     assert(storageHandle->ftp.curlHandle != NULL);
@@ -2358,7 +2358,7 @@ LOCAL bool StorageFTP_eof(StorageHandle *storageHandle)
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FTP);
 
   #if defined(HAVE_CURL) || defined(HAVE_FTP)
     if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
@@ -2402,7 +2402,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FTP);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
@@ -2737,7 +2737,7 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FTP);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
@@ -2900,7 +2900,7 @@ LOCAL Errors StorageFTP_tell(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FTP);
   assert(offset != NULL);
 
   (*offset) = 0LL;
@@ -2943,7 +2943,7 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FTP);
 
   error = ERROR_NONE;
   /* ftp protocol does not support a seek-function. Thus try to
@@ -3107,7 +3107,7 @@ LOCAL uint64 StorageFTP_getSize(StorageHandle *storageHandle)
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FTP);
 
   size = 0LL;
 
@@ -3143,7 +3143,7 @@ LOCAL Errors StorageFTP_delete(StorageInfo  *storageInfo,
 
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageInfo->type == STORAGE_TYPE_FTP);
   assert(!String_isEmpty(archiveName));
 
   error = ERROR_UNKNOWN;
@@ -3267,7 +3267,7 @@ LOCAL Errors StorageFTP_getFileInfo(StorageInfo *storageInfo,
 
   assert(storageInfo != NULL);
   assert(fileInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(storageInfo->type == STORAGE_TYPE_FTP);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;

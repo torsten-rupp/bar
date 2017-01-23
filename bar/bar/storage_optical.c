@@ -313,7 +313,7 @@ LOCAL void executeIOmkisofsOutput(StorageInfo *storageInfo,
   double p;
 
   assert(storageInfo != NULL);
-  assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
   assert(line != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
@@ -393,7 +393,7 @@ LOCAL void executeIOdvdisasterOutput(StorageInfo *storageInfo,
   double p;
 
   assert(storageInfo != NULL);
-  assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
   assert(line != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
@@ -480,7 +480,7 @@ LOCAL void executeIOblankOutput(StorageInfo *storageInfo,
   double p;
 
   assert(storageInfo != NULL);
-  assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
   assert(line != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
@@ -560,7 +560,7 @@ LOCAL void executeIOgrowisofsOutput(StorageInfo *storageInfo,
   double p;
 
   assert(storageInfo != NULL);
-  assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
   assert(line != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
@@ -859,7 +859,7 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
   // get device name
   if (String_isEmpty(storageInfo->storageSpecifier.deviceName))
   {
-    switch (storageInfo->storageSpecifier.type)
+    switch (storageInfo->type)
     {
       case STORAGE_TYPE_CD:
         String_set(storageInfo->storageSpecifier.deviceName,globalOptions.cd.deviceName);
@@ -879,7 +879,7 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
   }
 
   // get cd/dvd/bd settings
-  switch (storageInfo->storageSpecifier.type)
+  switch (storageInfo->type)
   {
     case STORAGE_TYPE_CD:
       getCDSettings(jobOptions,&opticalDisk);
@@ -908,7 +908,7 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
   }
   volumeSize    = 0LL;
   maxMediumSize = 0LL;
-  switch (storageInfo->storageSpecifier.type)
+  switch (storageInfo->type)
   {
     case STORAGE_TYPE_CD:
       volumeSize = CD_VOLUME_SIZE;
@@ -1012,7 +1012,7 @@ LOCAL Errors StorageOptical_done(StorageInfo *storageInfo)
   Errors tmpError;
 
   assert(storageInfo != NULL);
-  assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
 
   error = ERROR_NONE;
 
@@ -1051,7 +1051,7 @@ LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,
   String      script;
 
   assert(storageInfo != NULL);
-  assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
 
   UNUSED_VARIABLE(initialFlag);
 
@@ -1081,7 +1081,7 @@ LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,
 
     // write pre-processing
     template = NULL;
-    switch (storageInfo->storageSpecifier.type)
+    switch (storageInfo->type)
     {
       case STORAGE_TYPE_CD:  template = globalOptions.cd.writePreProcessCommand;  break;
       case STORAGE_TYPE_DVD: template = globalOptions.dvd.writePreProcessCommand; break;
@@ -1139,7 +1139,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
   String        script;
 
   assert(storageInfo != NULL);
-  assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
 
   error = ERROR_NONE;
 
@@ -1423,7 +1423,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
     // write post-processing
     template = NULL;
-    switch (storageInfo->storageSpecifier.type)
+    switch (storageInfo->type)
     {
       case STORAGE_TYPE_CD:  template = globalOptions.cd.writePostProcessCommand;  break;
       case STORAGE_TYPE_DVD: template = globalOptions.dvd.writePostProcessCommand; break;
@@ -1477,7 +1477,7 @@ LOCAL Errors StorageOptical_unloadVolume(StorageInfo *storageInfo)
   TextMacro textMacros[1];
 
   assert(storageInfo != NULL);
-  assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
 
   error = ERROR_UNKNOWN;
 
@@ -1514,7 +1514,7 @@ LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageHandle->storageInfo->type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->type == STORAGE_TYPE_BD));
   assert(!String_isEmpty(fileName));
 
   UNUSED_VARIABLE(fileSize);
@@ -1573,7 +1573,7 @@ LOCAL Errors StorageOptical_open(StorageHandle *storageHandle,
                                 )
 {
   assert(storageHandle != NULL);
-  assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageHandle->storageInfo->type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->type == STORAGE_TYPE_BD));
   assert(!String_isEmpty(archiveName));
 
   #ifdef HAVE_ISO9660
@@ -1648,7 +1648,7 @@ LOCAL void StorageOptical_close(StorageHandle *storageHandle)
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
-  assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageHandle->storageInfo->type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->type == STORAGE_TYPE_BD));
 
   DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->opticalDisk,sizeof(storageHandle->opticalDisk));
 
@@ -1692,7 +1692,7 @@ LOCAL bool StorageOptical_eof(StorageHandle *storageHandle)
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageHandle->storageInfo->type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->type == STORAGE_TYPE_BD));
 
   #ifdef HAVE_ISO9660
     assert(storageHandle->opticalDisk.read.iso9660Handle != NULL);
@@ -1725,7 +1725,7 @@ LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageHandle->storageInfo->type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->type == STORAGE_TYPE_BD));
   assert(buffer != NULL);
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
@@ -1809,7 +1809,7 @@ LOCAL Errors StorageOptical_write(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageHandle->storageInfo->type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->type == STORAGE_TYPE_BD));
   assert(buffer != NULL);
 
   error = ERROR_NONE;
@@ -1830,7 +1830,7 @@ LOCAL Errors StorageOptical_tell(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert(storageHandle->storageInfo != NULL);
-  assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageHandle->storageInfo->type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->type == STORAGE_TYPE_BD));
   assert(offset != NULL);
 
   (*offset) = 0LL;
@@ -1873,7 +1873,7 @@ LOCAL Errors StorageOptical_seek(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert(storageHandle->storageInfo != NULL);
-  assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageHandle->storageInfo->type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->type == STORAGE_TYPE_BD));
 
   error = ERROR_NONE;
   #ifdef HAVE_ISO9660
@@ -1911,7 +1911,7 @@ LOCAL uint64 StorageOptical_getSize(StorageHandle *storageHandle)
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert(storageHandle->storageInfo != NULL);
-  assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageHandle->storageInfo->type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->type == STORAGE_TYPE_BD));
 
   size = 0LL;
   #ifdef HAVE_ISO9660
@@ -1946,7 +1946,7 @@ LOCAL Errors StorageOptical_delete(StorageInfo *storageInfo,
 {
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
-  assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
   assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(storageInfo);

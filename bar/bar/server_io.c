@@ -54,7 +54,80 @@
 #endif
 
 /***********************************************************************\
-* Name   : init
+* Name   : freeCommandNode
+* Purpose: free server i/o command node
+* Input  : commandNode - command node
+*          userData    - not used
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeCommandNode(ServerIOCommandNode *commandNode, void *userData)
+{
+  assert(commandNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(commandNode->data);
+  String_delete(commandNode->name);
+}
+
+/***********************************************************************\
+* Name   : freeResultNode
+* Purpose: free server i/o result node
+* Input  : resultNode - result node
+*          userData   - not used
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeResultNode(ServerIOResultNode *resultNode, void *userData)
+{
+  assert(resultNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(resultNode->data);
+}
+
+/***********************************************************************\
+* Name   : deleteResultNode
+* Purpose: delete result node
+* Input  : resultNode - result node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void deleteResultNode(ServerIOResultNode *resultNode)
+{
+  assert(resultNode != NULL);
+
+  freeResultNode(resultNode,NULL);
+  LIST_DELETE_NODE(resultNode);
+}
+
+/***********************************************************************\
+* Name   : deleteCommandNode
+* Purpose: delete command node
+* Input  : commandNode - command node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void deleteCommandNode(ServerIOCommandNode *commandNode)
+{
+  assert(commandNode != NULL);
+
+  freeCommandNode(commandNode,NULL);
+  LIST_DELETE_NODE(commandNode);
+}
+
+/***********************************************************************\
+* Name   : initServerIO
 * Purpose: init server i/o
 * Input  : serverIO - server i/o
 * Output : -
@@ -62,7 +135,7 @@
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void init(ServerIO *serverIO)
+LOCAL void initServerIO(ServerIO *serverIO)
 {
   assert(serverIO != NULL);
 
@@ -79,7 +152,34 @@ LOCAL void init(ServerIO *serverIO)
                                          CRYPT_KEY_MODE_TRANSIENT
                                         );
   serverIO->commandId = 0;
+  serverIO->line = String_new();
+  Semaphore_init(&serverIO->commandList.lock);
+  List_init(&serverIO->commandList);
+  Semaphore_init(&serverIO->resultList.lock);
   List_init(&serverIO->resultList);
+}
+
+/***********************************************************************\
+* Name   : doneServerIO
+* Purpose: done server i/o
+* Input  : serverIO - server i/o
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneServerIO(ServerIO *serverIO)
+{
+  assert(serverIO != NULL);
+
+  List_done(&serverIO->resultList,CALLBACK(freeResultNode,NULL));
+  Semaphore_done(&serverIO->resultList.lock);
+  List_done(&serverIO->commandList,CALLBACK(freeCommandNode,NULL));
+  Semaphore_done(&serverIO->commandList.lock);
+  String_delete(serverIO->line);
+  Crypt_doneKey(&serverIO->privateKey);
+  Crypt_doneKey(&serverIO->publicKey);
+  Semaphore_done(&serverIO->lock);
 }
 
 /***********************************************************************\
@@ -152,62 +252,6 @@ LOCAL bool decodeHex(const char *s, byte *data, uint *dataLength, uint maxDataLe
 }
 
 /***********************************************************************\
-* Name   : freeCommandNode
-* Purpose: free server i/o command node
-* Input  : commandNode - command node
-*          userData    - not used
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeCommandNode(ServerIOCommandNode *commandNode, void *userData)
-{
-  assert(commandNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(commandNode->data);
-  String_delete(commandNode->name);
-}
-
-/***********************************************************************\
-* Name   : freeResultNode
-* Purpose: free server i/o result node
-* Input  : resultNode - result node
-*          userData   - not used
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeResultNode(ServerIOResultNode *resultNode, void *userData)
-{
-  assert(resultNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(resultNode->data);
-}
-
-/***********************************************************************\
-* Name   : deleteResultNode
-* Purpose: delete result node
-* Input  : resultNode - result node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void deleteResultNode(ServerIOResultNode *resultNode)
-{
-  assert(resultNode != NULL);
-
-  freeResultNode(resultNode,NULL);
-  LIST_DELETE_NODE(resultNode);
-}
-
-/***********************************************************************\
 * Name   : sendData
 * Purpose: send data
 * Input  : serverIO - server i/o
@@ -247,100 +291,173 @@ LOCAL void sendData(ServerIO *serverIO, ConstString data)
   }
 }
 
-#if 0
-/***********************************************************************\
-* Name   : sendCommand
-* Purpose: send command
-* Input  : serverIO  - server i/o
-*          id        - command id
-*          format    - format string
-*          arguments - arguments
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void sendCommand(ServerIO *serverIO, uint id, const char *format, va_list arguments)
+LOCAL void processData(ServerIO *serverIO, ConstString line)
 {
-  locale_t      locale;
-  String        command;
-  SemaphoreLock semaphoreLock;
+  uint                 id;
+  bool                 completedFlag;
+  Errors               error;
+  String               name;
+  String               data;
+  ServerIOResultNode   *resultNode;
+  ServerIOCommandNode  *commandNode;
+  SemaphoreLock        semaphoreLock;
+  uint                 i;
+  StringMap            argumentMap;
 
   assert(serverIO != NULL);
-fprintf(stderr,"%s, %d: serverIO->typ=%d\n",__FILE__,__LINE__,serverIO->type);
-  assert(serverIO->type == SERVER_IO_TYPE_NETWORK);
-
-  command = String_new();
-
-  locale = uselocale(POSIXLocale);
-  {
-    String_format(command,"%u ",id);
-    String_vformat(command,format,arguments);
-    String_appendChar(command,'\n');
-  }
-  uselocale(locale);
-
-  #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
-    {
-      fprintf(stderr,"DEBUG: send master=%s",String_cString(command));
-    }
-  #endif /* not DEBUG */
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    (void)Network_send(&serverIO->network.socketHandle,String_cString(command),String_length(command));
-  }
-
-  String_delete(command);
-}
-
-/***********************************************************************\
-* Name   : sendClientResult
-* Purpose: send result to client
-* Input  : serverIO      - server i/o
-*          id            - command id
-*          completedFlag - TRUE if command is completed, FALSE otherwise
-*          error         - ERROR_NONE or error code
-*          format        - format string
-*          ...           - optional arguments
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void sendResult(ServerIO *serverIO, uint id, bool completedFlag, Errors error, const char *format, ...)
-{
-  String   result;
-  locale_t locale;
-  va_list  arguments;
+  assert(line != NULL);
 
   // init variables
-  result = String_new();
+  name = String_new();
+  data = String_new();
 
-  // format result
-  locale = uselocale(POSIXLocale);
+  // parse
+  if      (String_parse(line,STRING_BEGIN,"%u %y %u % S",NULL,&id,&completedFlag,&error,data))
   {
-    String_format(result,"%u %d %u ",id,completedFlag ? 1 : 0,Error_getCode(error));
-    va_start(arguments,format);
-    String_vformat(result,format,arguments);
-    va_end(arguments);
-    String_appendChar(result,'\n');
-  }
-  uselocale(locale);
+    #ifndef NDEBUG
+      if (globalOptions.serverDebugFlag)
+      {
+        fprintf(stderr,"DEBUG: receive result #%u %d %d: %s\n",id,completedFlag,error,String_cString(data));
+      }
+    #endif /* not DEBUG */
 
-  // send
-  #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
+    // init result
+    resultNode = LIST_NEW_NODE(ServerIOResultNode);
+    if (resultNode == NULL)
     {
-      fprintf(stderr,"DEBUG: send result '%s'",String_cString(result));
+      HALT_INSUFFICIENT_MEMORY();
     }
-  #endif /* not DEBUG */
-  sendData(serverIO,result);
+    resultNode->id            = id;
+    resultNode->error         = (error != ERROR_NONE) ? Errorx_(error,0,"%s",String_cString(data)) : ERROR_NONE;
+    resultNode->completedFlag = completedFlag;
+    resultNode->data          = String_duplicate(data);
+
+    // add result
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      List_append(&serverIO->resultList,resultNode);
+    }
+  }
+  else if (!String_parse(line,STRING_BEGIN,"%u %S % S",NULL,&id,name,data))
+  {
+    #ifndef NDEBUG
+      if (globalOptions.serverDebugFlag)
+      {
+        fprintf(stderr,"DEBUG: receive command #%u %s: %s\n",id,String_cString(name),String_cString(data));
+      }
+    #endif /* not DEBUG */
+
+    // init command
+    resultNode = LIST_NEW_NODE(ServerIOResultNode);
+    if (resultNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    commandNode->id   = id;
+    commandNode->name = String_duplicate(name);
+    commandNode->data = String_duplicate(data);
+
+#if 0
+    // parse arguments
+    argumentMap = StringMap_new();
+    if (argumentMap == NULL)
+    {
+      String_delete(arguments);
+      String_delete(name);
+      return;
+    }
+    if (!StringMap_parse(argumentMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+    {
+      StringMap_delete(argumentMap);
+      String_delete(name);
+      String_delete(name);
+      return;
+    }
+#endif
+
+    // add command
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      List_append(&serverIO->commandList,commandNode);
+    }
+  }
+  else
+  {
+fprintf(stderr,"%s, %d: unkown %s\n",__FILE__,__LINE__,String_cString(line));
+    // unknown
+  }
 
   // free resources
-  String_delete(result);
+  String_delete(data);
+  String_delete(name);
 }
 
+LOCAL bool receiveData(ServerIO *serverIO, long timeout)
+{
+  struct pollfd   pollfds[1];
+  struct timespec pollTimeout;
+  sigset_t        signalMask;
+  char            buffer[4096];
+  ulong           receivedBytes;
+  ulong           i;
+  Errors          error;
+
+  assert(serverIO != NULL);
+
+  // wait for data from slave
+  pollfds[0].fd       = Network_getSocket(&serverIO->network.socketHandle);
+  pollfds[0].events   = POLLIN|POLLERR|POLLNVAL;
+  pollTimeout.tv_sec  = timeout/MS_PER_SECOND;
+  pollTimeout.tv_nsec = (timeout%MS_PER_SECOND)*NS_PER_MS;
+  if (ppoll(pollfds,1,&pollTimeout,&signalMask) <= 0)
+  {
+fprintf(stderr,"%s, %d: poll fail\n",__FILE__,__LINE__);
+return FALSE;
+  }
+
+  // process data results/commands
+  if ((pollfds[0].revents & POLLIN) != 0)
+  {
+    // received data
+    Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+//fprintf(stderr,"%s, %d: buffer=%s\n",__FILE__,__LINE__,buffer);
+    if (receivedBytes > 0)
+    {
+      do
+      {
+        // received data -> process
+        for (i = 0; i < receivedBytes; i++)
+        {
+          if (buffer[i] != '\n')
+          {
+            String_appendChar(serverIO->line,buffer[i]);
+          }
+          else
+          {
+            processData(serverIO,serverIO->line);
+            String_clear(serverIO->line);
+          }
+        }
+        error = Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+      }
+      while ((error == ERROR_NONE) && (receivedBytes > 0));
+    }
+    else
+    {
+      // disconnect
+      return FALSE;
+    }
+  }
+  else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
+  {
+    // error/disconnect
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+#if 0
 /***********************************************************************\
 * Name   : clientAction
 * Purpose: execute client action
@@ -432,7 +549,7 @@ void ServerIO_initBatch(ServerIO   *serverIO,
 {
   assert(serverIO != NULL);
 
-  init(serverIO);
+  initServerIO(serverIO);
   serverIO->type            = SERVER_IO_TYPE_BATCH;
   serverIO->file.fileHandle = fileHandle;
 }
@@ -445,40 +562,18 @@ void ServerIO_initNetwork(ServerIO     *serverIO,
 {
   assert(serverIO != NULL);
 
-  init(serverIO);
+  initServerIO(serverIO);
   serverIO->type                 = SERVER_IO_TYPE_NETWORK;
   serverIO->network.name         = String_duplicate(name);
   serverIO->network.port         = port;
   serverIO->network.socketHandle = socketHandle;
 }
 
-void ServerIO_init(ServerIO *serverIO)
-{
-  assert(serverIO != NULL);
-
-  Semaphore_init(&serverIO->lock);
-  #ifndef NO_SESSION_ID
-    Crypt_randomize(serverIO->sessionId,sizeof(SessionId));
-  #else /* not NO_SESSION_ID */
-    memset(serverIO->sessionId,0,sizeof(SessionId));
-  #endif /* NO_SESSION_ID */
-  (void)Crypt_createPublicPrivateKeyPair(&serverIO->publicKey,
-                                         &serverIO->privateKey,
-                                         SESSION_KEY_SIZE,
-                                         CRYPT_PADDING_TYPE_PKCS1,
-                                         CRYPT_KEY_MODE_TRANSIENT
-                                        );
-  List_init(&serverIO->resultList);
-}
-
 void ServerIO_done(ServerIO *serverIO)
 {
   assert(serverIO != NULL);
 
-  List_done(&serverIO->resultList,CALLBACK(freeResultNode,NULL));
-  Crypt_doneKey(&serverIO->privateKey);
-  Crypt_doneKey(&serverIO->publicKey);
-  Semaphore_done(&serverIO->lock);
+  doneServerIO(serverIO);
 }
 
 void ServerIO_sendSessionId(ServerIO *serverIO)
@@ -664,6 +759,8 @@ bool ServerIO_checkPassword(const ServerIO *serverIO,
   return TRUE;
 }
 
+// ----------------------------------------------------------------------
+
 Errors ServerIO_vsendCommand(ServerIO   *serverIO,
                              uint       *id,
                              const char *format,
@@ -674,7 +771,6 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
   locale_t           locale;
   SemaphoreLock      semaphoreLock;
   ServerIOResultNode *resultNode;
-  Errors             error;
 
   assert(serverIO != NULL);
   assert(id != NULL);
@@ -696,7 +792,7 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
   #ifndef NDEBUG
     if (globalOptions.serverDebugFlag)
     {
-      fprintf(stderr,"DEBUG: sent command=%s",String_cString(command));
+      fprintf(stderr,"DEBUG: sent command '%s'",String_cString(command));
     }
   #endif /* not DEBUG */
   sendData(serverIO,command);
@@ -721,6 +817,115 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
   va_end(arguments);
 
   return error;
+}
+
+Errors ServerIO_waitCommand(ServerIO  *serverIO,
+                            long      timeout,
+                            uint      *id,
+                            String    name,
+                            StringMap argumentMap
+                           )
+{
+  SemaphoreLock       semaphoreLock;
+  ServerIOCommandNode *commandNode;
+
+  assert(serverIO != NULL);
+
+  // wait for result
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // wait for command
+    while (List_isEmpty(&serverIO->commandList))
+    {
+      // no command -> wait for data
+      BLOCK_DO(Semaphore_unlock(&serverIO->commandList.lock),
+               Semaphore_lock(&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
+      {
+        if (!receiveData(serverIO,timeout))
+        {
+          return ERROR_NETWORK_TIMEOUT;
+        }
+      });
+    }
+
+    // get command
+    commandNode = List_removeFirst(&serverIO->commandList);
+  }
+  assert(commandNode != NULL);
+
+  // get arguments
+  if (argumentMap != NULL)
+  {
+    if (!StringMap_parse(argumentMap,commandNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+    {
+      deleteCommandNode(commandNode);
+      return ERROR_PARSE;
+    }
+  }
+
+  // free resources
+  deleteCommandNode(commandNode);
+
+  return ERROR_NONE;
+}
+
+Errors ServerIO_waitResult(ServerIO  *serverIO,
+                           uint      id,
+                           long      timeout,
+                           Errors    *error,
+                           bool      *completedFlag,
+                           StringMap resultMap
+                          )
+{
+  SemaphoreLock      semaphoreLock;
+  ServerIOResultNode *resultNode;
+
+  assert(serverIO != NULL);
+
+  // wait for result
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    do
+    {
+      // find matching result
+      resultNode = LIST_FIND(&serverIO->resultList,resultNode,resultNode->id == id);
+      if (resultNode != NULL)
+      {
+        // found -> get result
+        List_remove(&serverIO->resultList,resultNode);
+      }
+      else
+      {
+        // not found -> wait for data
+        BLOCK_DO(Semaphore_unlock(&serverIO->resultList.lock),
+                 Semaphore_lock(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
+        {
+          if (!receiveData(serverIO,timeout))
+          {
+            return ERROR_NETWORK_TIMEOUT;
+          }
+        });
+      }
+    }
+    while (resultNode == NULL);
+  }
+
+  // get result
+  if (error != NULL) (*error) = resultNode->error;
+  if (completedFlag != NULL) (*completedFlag) = resultNode->completedFlag;
+  if (resultMap != NULL)
+  {
+    if (!StringMap_parse(resultMap,resultNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+    {
+      deleteResultNode(resultNode);
+      return ERROR_PARSE;
+    }
+  }
+
+  // free resources
+  deleteResultNode(resultNode);
+
+  return ERROR_NONE;
 }
 
 Errors ServerIO_sendResult(ServerIO   *serverIO,
@@ -775,8 +980,6 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
                                )
 {
   uint               id;
-  String             command;
-  locale_t           locale;
   SemaphoreLock      semaphoreLock;
   ServerIOResultNode *resultNode;
   Errors             error;
@@ -799,7 +1002,7 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
 
   // wait for result, timeout, or quit
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {    
+  {
     do
     {
       // check result
@@ -821,7 +1024,7 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
     }
     while (resultNode == NULL);
   }
-    
+
   // get action result
   error = resultNode->error;
   if (resultMap != NULL)
@@ -835,9 +1038,9 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
   {
 //    StringMap_clear(serverIO->action.resultMap);
   }
-  
+
   // free resources
-  deleteResultNode(resultNode);  
+  deleteResultNode(resultNode);
 
 #if 0
   // wait for result, timeout, or quit
@@ -936,7 +1139,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
 
   // wait for result, timeout, or quit
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {    
+  {
     do
     {
       // check result
@@ -958,7 +1161,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
     }
     while (resultNode == NULL);
   }
-    
+
   // get action result
   error = resultNode->error;
   if (resultMap != NULL)
@@ -972,9 +1175,9 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   {
 //    StringMap_clear(serverIO->action.resultMap);
   }
-  
+
   // free resources
-  deleteResultNode(resultNode);  
+  deleteResultNode(resultNode);
 
 #if 0
   // wait for result, timeout, or quit

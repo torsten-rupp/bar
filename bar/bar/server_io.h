@@ -86,19 +86,24 @@ typedef struct ServerIOResultNode
 typedef struct
 {
   LIST_HEADER(ServerIOResultNode);
+
+  Semaphore lock;
 } ServerIOResultList;
 
 // server i/o
 typedef struct
 {
   Semaphore        lock;
+
   SessionId        sessionId;
   CryptKey         publicKey,privateKey;
+
   uint             commandId;
+
+  String           line;
 
   enum
   {
-//    SERVER_IO_TYPE_NONE,
     SERVER_IO_TYPE_BATCH,
     SERVER_IO_TYPE_NETWORK
   }                type;
@@ -120,7 +125,8 @@ typedef struct
     } network;
   };
 
-  ServerIOResultList resultList;
+  ServerIOCommandList commandList;
+  ServerIOResultList  resultList;
 } ServerIO;
 
 //TODO: remove
@@ -129,7 +135,6 @@ typedef struct
   Semaphore    lock;
   SocketHandle socketHandle;
 } ServerConnectInfo;
-
 
 /***************************** Variables *******************************/
 
@@ -186,6 +191,8 @@ void ServerIO_initNetwork(ServerIO     *serverIO,
 
 void ServerIO_done(ServerIO *serverIO);
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : ServerIO_sendSessionId
 * Purpose: send session id to client
@@ -238,9 +245,11 @@ bool ServerIO_checkPassword(const ServerIO *serverIO,
                             const Password *password
                            );
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : ServerIO_vsendCommand
-* Purpose: 
+* Purpose:
 * Input  : serverIO - server i/o
 * Output : -
 * Return : -
@@ -255,7 +264,7 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
 
 /***********************************************************************\
 * Name   : ServerIO_sendCommand
-* Purpose: 
+* Purpose:
 * Input  : serverIO - server i/o
 * Output : -
 * Return : -
@@ -267,6 +276,46 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
                             const char *format,
                             ...
                            );
+
+/***********************************************************************\
+* Name   : ServerIO_waitCommand
+* Purpose: wait for command
+* Input  : serverIO - server i/o
+*          timeout  - timeout [ms] or WAIT_FOREVER
+* Output : id        - command id
+*          name      - command name
+*          arguments - command arguments (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ServerIO_waitCommand(ServerIO  *serverIO,
+                            long      timeout,
+                            uint      *id,
+                            String    name,
+                            StringMap argumentMap
+                           );
+
+/***********************************************************************\
+* Name   : ServerIO_waitResult
+* Purpose: wait for result
+* Input  : serverIO - server i/o
+*          id       - result id to wait for
+*          timeout  - timeout [ms] or WAIT_FOREVER
+* Output : error         - error code (can be NULL)
+*          completedFlag - TRUE iff completed (can be NULL)
+*          resultMap     - result map (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ServerIO_waitResult(ServerIO  *serverIO,
+                           uint      id,
+                           long      timeout,
+                           Errors    *error,
+                           bool      *completedFlag,
+                           StringMap resultMap
+                          );
 
 /***********************************************************************\
 * Name   : ServerIO_sendResult

@@ -163,7 +163,7 @@ LOCAL Errors StorageFile_init(StorageInfo            *storageInfo,
 LOCAL Errors StorageFile_done(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
   UNUSED_VARIABLE(storageInfo);
 
@@ -173,7 +173,7 @@ LOCAL Errors StorageFile_done(StorageInfo *storageInfo)
 LOCAL bool StorageFile_isServerAllocationPending(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
   UNUSED_VARIABLE(storageInfo);
 
@@ -191,7 +191,7 @@ LOCAL Errors StorageFile_preProcess(StorageInfo *storageInfo,
   Errors    error;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
   error = ERROR_NONE;
 
@@ -249,7 +249,7 @@ LOCAL Errors StorageFile_postProcess(StorageInfo *storageInfo,
   Errors    error;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
   error = ERROR_NONE;
 
@@ -316,7 +316,7 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
   assert(!String_isEmpty(fileName));
 
   UNUSED_VARIABLE(fileSize);
@@ -379,7 +379,7 @@ LOCAL Errors StorageFile_open(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
   assert(!String_isEmpty(fileName));
 
   // init variables
@@ -411,7 +411,7 @@ LOCAL void StorageFile_close(StorageHandle *storageHandle)
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
   DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->fileSystem,sizeof(storageHandle->fileSystem));
 
@@ -440,7 +440,7 @@ LOCAL bool StorageFile_eof(StorageHandle *storageHandle)
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
@@ -464,7 +464,7 @@ LOCAL Errors StorageFile_read(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
@@ -487,7 +487,7 @@ LOCAL Errors StorageFile_write(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
@@ -508,7 +508,7 @@ LOCAL Errors StorageFile_tell(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
   assert(offset != NULL);
 
   (*offset) = 0LL;
@@ -531,7 +531,7 @@ LOCAL Errors StorageFile_seek(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
   error = ERROR_NONE;
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
@@ -549,7 +549,7 @@ LOCAL uint64 StorageFile_getSize(StorageHandle *storageHandle)
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
   size = 0LL;
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
@@ -567,7 +567,7 @@ LOCAL Errors StorageFile_delete(StorageInfo *storageInfo,
   Errors error;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
   assert(!String_isEmpty(fileName));
 
   error = ERROR_NONE;
@@ -591,7 +591,7 @@ LOCAL Errors StorageFile_getFileInfo(StorageInfo *storageInfo,
 
   assert(storageInfo != NULL);
   assert(fileInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
   error = File_getFileInfo(infoFileName,fileInfo);
 

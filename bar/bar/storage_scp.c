@@ -103,7 +103,7 @@ LOCAL LIBSSH2_SEND_FUNC(scpSendCallback)
   storageHandle = *((StorageHandle**)abstract);
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   assert(storageHandle->scp.oldSendCallback != NULL);
 
@@ -137,7 +137,7 @@ LOCAL LIBSSH2_RECV_FUNC(scpReceiveCallback)
   storageHandle = *((StorageHandle**)abstract);
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   assert(storageHandle->scp.oldReceiveCallback != NULL);
 
@@ -349,7 +349,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageInfo->type == STORAGE_TYPE_SCP);
   assert(storageSpecifier != NULL);
 
   UNUSED_VARIABLE(storageSpecifier);
@@ -472,7 +472,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
 LOCAL Errors StorageSCP_done(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageInfo->type == STORAGE_TYPE_SCP);
 
   // free SSH server connection
   #ifdef HAVE_SSH2
@@ -489,7 +489,7 @@ LOCAL bool StorageSCP_isServerAllocationPending(StorageInfo *storageInfo)
   bool serverAllocationPending;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageInfo->type == STORAGE_TYPE_SCP);
 
   serverAllocationPending = FALSE;
   #if defined(HAVE_SSH2)
@@ -516,7 +516,7 @@ LOCAL Errors StorageSCP_preProcess(StorageInfo *storageInfo,
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageInfo->type == STORAGE_TYPE_SCP);
 
   error = ERROR_NONE;
 
@@ -587,7 +587,7 @@ LOCAL Errors StorageSCP_postProcess(StorageInfo *storageInfo,
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageInfo->type == STORAGE_TYPE_SCP);
 
   error = ERROR_NONE;
 
@@ -667,7 +667,7 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
   assert(!String_isEmpty(fileName));
 
   UNUSED_VARIABLE(fileSize);
@@ -771,7 +771,7 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
   assert(!String_isEmpty(archiveName));
 
   #ifdef HAVE_SSH2
@@ -866,7 +866,7 @@ LOCAL void StorageSCP_close(StorageHandle *storageHandle)
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
 
   #ifdef HAVE_SSH2
     libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
@@ -945,7 +945,7 @@ LOCAL bool StorageSCP_eof(StorageHandle *storageHandle)
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
 
   #ifdef HAVE_SSH2
     if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
@@ -985,7 +985,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
   assert(buffer != NULL);
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
@@ -1145,7 +1145,7 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
   assert(buffer != NULL);
 
   #ifdef HAVE_SSH2
@@ -1252,7 +1252,7 @@ LOCAL uint64 StorageSCP_getSize(StorageHandle *storageHandle)
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
 
   size = 0LL;
   #ifdef HAVE_SSH2
@@ -1278,7 +1278,7 @@ LOCAL Errors StorageSCP_tell(StorageHandle *storageHandle,
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
   assert(offset != NULL);
 
   (*offset) = 0LL;
@@ -1314,7 +1314,7 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
 
   #ifdef HAVE_SSH2
     /* scp protocol does not support a seek-function. Thus try to
@@ -1403,7 +1403,7 @@ LOCAL Errors StorageSCP_delete(StorageInfo *storageInfo,
   #ifdef HAVE_SSH2
     DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
   #endif /* HAVE_SSH2 */
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageInfo->type == STORAGE_TYPE_SCP);
   assert(!String_isEmpty(archiveName));
 
 //  deleteFileName = (storageFileName != NULL) ? storageFileName : storageInfo->storageSpecifier.archiveName;
@@ -1461,14 +1461,14 @@ LOCAL Errors StorageSCP_getFileInfo(StorageInfo *storageInfo,
   Errors error;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
+  assert(storageInfo->type == STORAGE_TYPE_SCP);
   assert(fileInfo != NULL);
 
   infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
   memset(fileInfo,0,sizeof(fileInfo));
 
   error = ERROR_UNKNOWN;
-  switch (storageInfo->storageSpecifier.type)
+  switch (storageInfo->type)
       error = ERROR_FUNCTION_NOT_SUPPORTED;
   assert(error != ERROR_UNKNOWN);
 

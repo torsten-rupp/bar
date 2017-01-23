@@ -338,7 +338,7 @@ LOCAL size_t curlWebDAVReadDataCallback(void   *buffer,
   assert(size > 0);
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_WEBDAV);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   assert(storageHandle->webdav.sendBuffer.data != NULL);
 
@@ -388,7 +388,7 @@ LOCAL size_t curlWebDAVWriteDataCallback(const void *buffer,
   assert(size > 0);
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_WEBDAV);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
 
 //TODO: progress callback?
@@ -762,7 +762,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
 LOCAL Errors StorageWebDAV_done(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageInfo->type == STORAGE_TYPE_WEBDAV);
 
   // free WebDAV server connection
   #ifdef HAVE_CURL
@@ -779,7 +779,7 @@ LOCAL bool StorageWebDAV_isServerAllocationPending(StorageInfo *storageInfo)
   bool serverAllocationPending;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageInfo->type == STORAGE_TYPE_WEBDAV);
 
   serverAllocationPending = FALSE;
   #ifdef HAVE_CURL
@@ -806,7 +806,7 @@ LOCAL Errors StorageWebDAV_preProcess(StorageInfo *storageInfo,
   #endif /* HAVE_CURL */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageInfo->type == STORAGE_TYPE_WEBDAV);
 
   error = ERROR_NONE;
 
@@ -875,7 +875,7 @@ LOCAL Errors StorageWebDAV_postProcess(StorageInfo *storageInfo,
   #endif /* HAVE_CURL */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageInfo->type == STORAGE_TYPE_WEBDAV);
 
   error = ERROR_NONE;
 
@@ -961,7 +961,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_WEBDAV);
   assert(!String_isEmpty(fileName));
 
   #ifdef HAVE_CURL
@@ -1255,7 +1255,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_WEBDAV);
   assert(!String_isEmpty(archiveName));
 
   #ifdef HAVE_CURL
@@ -1456,7 +1456,7 @@ LOCAL void StorageWebDAV_close(StorageHandle *storageHandle)
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_WEBDAV);
 
   #ifdef HAVE_CURL
     assert(storageHandle->webdav.curlHandle != NULL);
@@ -1481,7 +1481,7 @@ LOCAL bool StorageWebDAV_eof(StorageHandle *storageHandle)
   #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_WEBDAV);
 
   #ifdef HAVE_CURL
     if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
@@ -1520,7 +1520,7 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
   #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_WEBDAV);
   assert(buffer != NULL);
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
@@ -1687,7 +1687,7 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
   #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_WEBDAV);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
@@ -1792,7 +1792,7 @@ LOCAL uint64 StorageWebDAV_getSize(StorageHandle *storageHandle)
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_WEBDAV);
 
   size = 0LL;
   #ifdef HAVE_CURL
@@ -1818,7 +1818,7 @@ LOCAL Errors StorageWebDAV_tell(StorageHandle *storageHandle,
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_WEBDAV);
   assert(offset != NULL);
 
   (*offset) = 0LL;
@@ -1861,7 +1861,7 @@ LOCAL Errors StorageWebDAV_seek(StorageHandle *storageHandle,
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
   #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_WEBDAV);
 
   error = ERROR_NONE;
   #ifdef HAVE_CURL
@@ -2006,7 +2006,7 @@ LOCAL Errors StorageWebDAV_delete(StorageInfo *storageInfo,
 
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageInfo->type == STORAGE_TYPE_WEBDAV);
   assert(!String_isEmpty(archiveName));
 
   error = ERROR_UNKNOWN;
@@ -2144,7 +2144,7 @@ LOCAL Errors StorageWebDAV_getFileInfo(StorageInfo *storageInfo,
   #endif /* HAVE_CURL */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_WEBDAV);
+  assert(storageInfo->type == STORAGE_TYPE_WEBDAV);
   assert(fileInfo != NULL);
 
   infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;

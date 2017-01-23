@@ -554,6 +554,12 @@ typedef struct
       String     fileName;                                   // current file name
       FileHandle fileHandle;
     } device;
+
+    // master storage
+    struct
+    {
+      ServerIO   *io;
+    } master;
   };
 } StorageHandle;
 

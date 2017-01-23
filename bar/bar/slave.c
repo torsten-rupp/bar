@@ -129,7 +129,7 @@ LOCAL Errors slaveConnect(SlaveInfo    *slaveInfo,
   // init variables
   line = String_new();
 
-  // connect to slave  
+  // connect to slave
   error = Network_connect(&socketHandle,
 //                          forceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
 SOCKET_TYPE_PLAIN,
@@ -968,7 +968,7 @@ void Slave_init(SlaveInfo *slaveInfo)
 void Slave_duplicate(SlaveInfo *slaveInfo, const SlaveInfo *fromSlaveInfo)
 {
   Slave_init(slaveInfo);
-  
+
 //  String_set(slaveInfo->name,fromSlaveInfo->name);
 //  slaveInfo->port                           = fromSlaveInfo->port;
   slaveInfo->slaveConnectStatusInfoFunction = fromSlaveInfo->slaveConnectStatusInfoFunction;
@@ -1066,38 +1066,31 @@ bool Slave_isConnected(const SlaveInfo *slaveInfo)
   return isConnected;
 }
 
+// ----------------------------------------------------------------------
+
 Errors Slave_getCommand(const SlaveInfo *slaveInfo,
-                        uint            *commandId,
+                        long            timeout,
+                        uint            *id,
                         String          name,
-                        String          data,
-                        long            timeout
+                        StringMap       argumentMap
                        )
 {
-  SemaphoreLock semaphoreLock;
-  SemaphoreLock semaphoreLockCommandList;
-  ServerIOCommandNode   *commandNode;
+  Errors error;
 
   assert(slaveInfo != NULL);
-  assert(commandId != NULL);
-  assert(name != NULL);
-  assert(data != NULL);
+  assert(id != NULL);
 
   // wait for command
-  commandNode = slaveWaitCommand(slaveInfo,30LL*MS_PER_SECOND);
-  if (commandNode == NULL)
+  error = ServerIO_waitCommand(&slaveInfo->io,
+                               timeout,
+                               id,
+                               name,
+                               argumentMap
+                              );
+  if (error == NULL)
   {
-//    Semaphore_unlock(&slaveList.lock);
-    return ERROR_NETWORK_TIMEOUT;
+    return error;
   }
-
-  // get command
-  (*commandId) = commandNode->id;
-  String_set(name,commandNode->name);
-  String_set(data,commandNode->data);
-
-  // free resources
-//  freeCommandNode(commandNode,NULL);
-  LIST_DELETE_NODE(commandNode);
 
   return ERROR_NONE;
 }
@@ -1109,22 +1102,12 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
                                    va_list    arguments
                                   )
 {
-  String         line;
-  String         data;
-  uint id;
-  SemaphoreLock  semaphoreLock;
-  SocketHandle   socketHandle;
-  bool           sslFlag;
-  locale_t       locale;
-  ServerIOResultNode     *resultNode;
-  uint           commandId;
-  Errors         error;
+  uint   id;
+  Errors error;
 
   assert(slaveInfo != NULL);
 
   // init variables
-  line = String_new();
-  data = String_new();
 
 //TODO: lock
   // send command
@@ -1139,53 +1122,27 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
   }
 
   // wait for result
-  do
+  error = ServerIO_waitResult(&slaveInfo->io,
+                              id,
+                              30LL*MS_PER_SECOND,
+                              NULL,  // error,
+                              NULL,  // completedFlag,
+                              resultMap
+                             );
+  if (error != ERROR_NONE)
   {
-    // wait for result
-    resultNode = slaveWaitResult(slaveInfo,30LL*MS_PER_SECOND);
-    if (resultNode == NULL)
-    {
-      String_delete(data);
-      String_delete(line);
-      return ERROR_NETWORK_TIMEOUT;
-    }
-
-    // get result
-    commandId = resultNode->id;
-    error     = resultNode->error;
-    String_set(data,resultNode->data);
-
-    // free resources
-//    freeResultNode(resultNode,NULL);
-    LIST_DELETE_NODE(resultNode);
+    return error;
   }
-  while (id != id);
-  printInfo(4,"Received slave result: error=%d completedFlag=%d data=%s\n",error,String_cString(data));
-fprintf(stderr,"%s, %d: received error=%d/%s: data=%s\n",__FILE__,__LINE__,Error_getCode(error),Error_getText(error),String_cString(data));
+//  printInfo(4,"Received slave result: error=%d completedFlag=%d data=%s\n",error,String_cString(data));
+//fprintf(stderr,"%s, %d: received error=%d/%s: data=%s\n",__FILE__,__LINE__,Error_getCode(error),Error_getText(error),String_cString(data));
 
   // check error
   if (error != ERROR_NONE)
   {
-    String_delete(data);
-    String_delete(line);
     return error;
   }
 
-  // parse result
-  if (resultMap != NULL)
-  {
-    StringMap_clear(resultMap);
-    if (!StringMap_parse(resultMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
-    {
-      String_delete(data);
-      String_delete(line);
-      return ERROR_INVALID_RESPONSE;
-    }
-  }
-
   // free resources
-  String_delete(data);
-  String_delete(line);
 
   return ERROR_NONE;
 }

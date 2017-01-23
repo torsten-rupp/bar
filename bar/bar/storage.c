@@ -2259,7 +2259,9 @@ error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       StorageDevice_close(storageHandle);
       break;
     case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: Storage_close\n",__FILE__,__LINE__);
 //TODO
+      StorageMaster_close(storageHandle);
       break;
     default:
       #ifndef NDEBUG
@@ -2322,6 +2324,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       eofFlag = StorageDevice_eof(storageHandle);
       break;
     case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //TODO
       break;
     default:
@@ -2441,6 +2444,7 @@ Errors Storage_write(StorageHandle *storageHandle,
       error = StorageDevice_write(storageHandle,buffer,bufferLength);
       break;
     case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: Storage_write\n",__FILE__,__LINE__);
 error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       break;
     default:

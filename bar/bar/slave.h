@@ -179,6 +179,25 @@ SocketHandle *Slave_getSocketHandle(const SlaveInfo *slaveInfo);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : Slave_getCommand
+* Purpose: get command from slave to execute
+* Input  : slaveInfo - slave info
+*          timeout   - timeout [ms] or WAIT_FOREVER
+* Output : id          - command id
+*          name        - command name (can be NULL)
+*          argumentMap - argument map (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Slave_getCommand(const SlaveInfo *slaveInfo,
+                        long            timeout,
+                        uint            *id,
+                        String          name,
+                        StringMap       argumentMap
+                       );
+
+/***********************************************************************\
 * Name   : Slave_executeCommand
 * Purpose: execute command on slave host
 * Input  : slaveInfo - slave info

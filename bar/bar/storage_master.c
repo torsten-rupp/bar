@@ -75,9 +75,9 @@ LOCAL bool StorageMaster_equalSpecifiers(const StorageSpecifier *storageSpecifie
                                         )
 {
   assert(storageSpecifier1 != NULL);
-  assert(storageSpecifier1->type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageSpecifier1->type == STORAGE_TYPE_MASTER);
   assert(storageSpecifier2 != NULL);
-  assert(storageSpecifier2->type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageSpecifier2->type == STORAGE_TYPE_MASTER);
 
   if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
   if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
@@ -125,7 +125,7 @@ LOCAL void StorageMaster_getPrintableName(String                 printableStorag
 
   assert(printableStorageName != NULL);
   assert(storageSpecifier != NULL);
-  assert(storageSpecifier->type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageSpecifier->type == STORAGE_TYPE_MASTER);
 
   // get file to use
   if      (!String_isEmpty(archiveName))
@@ -165,7 +165,7 @@ LOCAL Errors StorageMaster_init(StorageInfo            *storageInfo,
 LOCAL Errors StorageMaster_done(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->type == STORAGE_TYPE_MASTER);
 
   UNUSED_VARIABLE(storageInfo);
 
@@ -175,7 +175,7 @@ LOCAL Errors StorageMaster_done(StorageInfo *storageInfo)
 LOCAL bool StorageMaster_isServerAllocationPending(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->type == STORAGE_TYPE_MASTER);
 
   UNUSED_VARIABLE(storageInfo);
 
@@ -193,7 +193,7 @@ LOCAL Errors StorageMaster_preProcess(StorageInfo *storageInfo,
   Errors    error;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->type == STORAGE_TYPE_MASTER);
 
   error = ERROR_NONE;
 
@@ -251,7 +251,7 @@ LOCAL Errors StorageMaster_postProcess(StorageInfo *storageInfo,
   Errors    error;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->type == STORAGE_TYPE_MASTER);
 
   error = ERROR_NONE;
 
@@ -319,7 +319,7 @@ ServerIOResultList serverResultList;
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-//  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+//  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
   assert(!String_isEmpty(fileName));
 
   UNUSED_VARIABLE(fileSize);
@@ -331,8 +331,13 @@ fprintf(stderr,"%s, %d: StorageMaster_create\n",__FILE__,__LINE__);
                               fileName,
                               fileSize
                              );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+fprintf(stderr,"%s, %d: xxxxxxxxxxxx\n",__FILE__,__LINE__);
 
-  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->fileSystem,sizeof(storageHandle->fileSystem));
+  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->master,sizeof(storageHandle->master));
 
   return ERROR_NONE;
 }
@@ -345,7 +350,7 @@ LOCAL Errors StorageMaster_open(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
   assert(!String_isEmpty(fileName));
 
   // init variables
@@ -358,6 +363,7 @@ LOCAL Errors StorageMaster_open(StorageHandle *storageHandle,
   }
 
   // open file
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = File_open(&storageHandle->fileSystem.fileHandle,
                     fileName,
                     FILE_OPEN_READ
@@ -367,7 +373,7 @@ LOCAL Errors StorageMaster_open(StorageHandle *storageHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->fileSystem,sizeof(storageHandle->fileSystem));
+  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->master,sizeof(storageHandle->master));
 
   return ERROR_NONE;
 }
@@ -375,22 +381,20 @@ LOCAL Errors StorageMaster_open(StorageHandle *storageHandle,
 LOCAL void StorageMaster_close(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->fileSystem,sizeof(storageHandle->fileSystem));
+fprintf(stderr,"%s, %d: StorageMaster_close\n",__FILE__,__LINE__);
+  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->master,sizeof(storageHandle->master));
 
   switch (storageHandle->mode)
   {
     case STORAGE_MODE_WRITE:
-      if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-      {
-        File_close(&storageHandle->fileSystem.fileHandle);
-      }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     case STORAGE_MODE_READ:
-      File_close(&storageHandle->fileSystem.fileHandle);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     #ifndef NDEBUG
       default:
@@ -403,10 +407,10 @@ LOCAL void StorageMaster_close(StorageHandle *storageHandle)
 LOCAL bool StorageMaster_eof(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
@@ -427,10 +431,10 @@ LOCAL Errors StorageMaster_read(StorageHandle *storageHandle,
   Errors error;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
@@ -450,10 +454,10 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
   Errors error;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
@@ -472,9 +476,9 @@ LOCAL Errors StorageMaster_tell(StorageHandle *storageHandle,
   Errors error;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
   assert(offset != NULL);
 
   (*offset) = 0LL;
@@ -495,9 +499,9 @@ LOCAL Errors StorageMaster_seek(StorageHandle *storageHandle,
   Errors error;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
   error = ERROR_NONE;
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
@@ -513,9 +517,9 @@ LOCAL uint64 StorageMaster_getSize(StorageHandle *storageHandle)
   uint64 size;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
+  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
   size = 0LL;
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
@@ -533,7 +537,7 @@ LOCAL Errors StorageMaster_delete(StorageInfo *storageInfo,
   Errors error;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->type == STORAGE_TYPE_MASTER);
   assert(!String_isEmpty(fileName));
 
   error = ERROR_NONE;
@@ -557,7 +561,7 @@ LOCAL Errors StorageMaster_getFileInfo(StorageInfo *storageInfo,
 
   assert(storageInfo != NULL);
   assert(fileInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->type == STORAGE_TYPE_MASTER);
 
   error = File_getFileInfo(infoFileName,fileInfo);
 
@@ -578,7 +582,7 @@ LOCAL Errors StorageMaster_openDirectoryList(StorageDirectoryListHandle *storage
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
-  assert(storageSpecifier->type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageSpecifier->type == STORAGE_TYPE_MASTER);
   assert(!String_isEmpty(pathName));
 
   UNUSED_VARIABLE(storageSpecifier);
@@ -586,7 +590,7 @@ LOCAL Errors StorageMaster_openDirectoryList(StorageDirectoryListHandle *storage
   UNUSED_VARIABLE(serverConnectionPriority);
 
   // init variables
-  storageDirectoryListHandle->type = STORAGE_TYPE_FILESYSTEM;
+  storageDirectoryListHandle->type = STORAGE_TYPE_MASTER;
 
   // open directory
   error = File_openDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,
@@ -603,7 +607,7 @@ LOCAL Errors StorageMaster_openDirectoryList(StorageDirectoryListHandle *storage
 LOCAL void StorageMaster_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
 {
   assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_MASTER);
 
   File_closeDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle);
 }
@@ -611,7 +615,7 @@ LOCAL void StorageMaster_closeDirectoryList(StorageDirectoryListHandle *storageD
 LOCAL bool StorageMaster_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
 {
   assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_MASTER);
 
   return File_endOfDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle);
 }
@@ -624,7 +628,7 @@ LOCAL Errors StorageMaster_readDirectoryList(StorageDirectoryListHandle *storage
   Errors error;
 
   assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_MASTER);
 
   error = File_readDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,fileName);
   if (error == ERROR_NONE)

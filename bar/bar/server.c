@@ -3855,6 +3855,9 @@ LOCAL void jobThreadCode(void)
   uint64           lastExecutedDateTime;
   AggregateInfo    jobAggregateInfo,scheduleAggregateInfo;
   ScheduleNode     *scheduleNode;
+  uint             commandId;
+  String           commandName;
+  StringMap        argumentMap;
   StringMap        resultMap;
 
   // initialize variables
@@ -3872,6 +3875,12 @@ LOCAL void jobThreadCode(void)
   scheduleCustomText                     = String_new();
   jobAggregateInfo.lastErrorMessage      = String_new();
   scheduleAggregateInfo.lastErrorMessage = String_new();
+  commandName                            = String_new();
+  argumentMap                            = StringMap_new();
+  if (argumentMap == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
   resultMap                              = StringMap_new();
   if (resultMap == NULL)
   {
@@ -4381,10 +4390,12 @@ String commandLine = String_new();
         {
 fprintf(stderr,"%s, %d: fafasdfasdfsdasdadf\n",__FILE__,__LINE__);
           error = Slave_getCommand(&jobNode->slaveInfo,
-                                   commandLine,
-                                   1*MS_PER_SECOND
+                                   1*MS_PER_SECOND,
+                                   &commandId,
+                                   commandName,
+                                   argumentMap
                                   );
-fprintf(stderr,"%s, %d: commandLine=%s\n",__FILE__,__LINE__,String_cString(commandLine));
+if (error == ERROR_NONE) fprintf(stderr,"%s, %d: commandLine=%s\n",__FILE__,__LINE__,String_cString(commandLine));
 
           // get slave job status
           error = Slave_executeCommand(&jobNode->slaveInfo,
@@ -18338,7 +18349,7 @@ Errors Server_run(ServerModes       mode,
   String                clientName;
   uint                  clientPort;
   uint                  pollfdIndex;
-  char                  buffer[2028];
+  char                  buffer[2048];
   ulong                 receivedBytes;
   ulong                 i;
   ClientNode            *disconnectClientNode;
@@ -18909,7 +18920,7 @@ Errors Server_run(ServerModes       mode,
           }
           authorizationFailNode->count++;
           authorizationFailNode->lastTimestamp = Misc_getTimestamp();
-          
+
           // done client and free resources
           deleteClient(disconnectClientNode);
 
