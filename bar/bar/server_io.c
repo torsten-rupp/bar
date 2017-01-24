@@ -127,62 +127,6 @@ LOCAL void deleteCommandNode(ServerIOCommandNode *commandNode)
 }
 
 /***********************************************************************\
-* Name   : initServerIO
-* Purpose: init server i/o
-* Input  : serverIO - server i/o
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void initServerIO(ServerIO *serverIO)
-{
-  assert(serverIO != NULL);
-
-  Semaphore_init(&serverIO->lock);
-  #ifndef NO_SESSION_ID
-    Crypt_randomize(serverIO->sessionId,sizeof(SessionId));
-  #else /* not NO_SESSION_ID */
-    memset(serverIO->sessionId,0,sizeof(SessionId));
-  #endif /* NO_SESSION_ID */
-  (void)Crypt_createPublicPrivateKeyPair(&serverIO->publicKey,
-                                         &serverIO->privateKey,
-                                         SESSION_KEY_SIZE,
-                                         CRYPT_PADDING_TYPE_PKCS1,
-                                         CRYPT_KEY_MODE_TRANSIENT
-                                        );
-  serverIO->commandId = 0;
-  serverIO->line = String_new();
-  Semaphore_init(&serverIO->commandList.lock);
-  List_init(&serverIO->commandList);
-  Semaphore_init(&serverIO->resultList.lock);
-  List_init(&serverIO->resultList);
-}
-
-/***********************************************************************\
-* Name   : doneServerIO
-* Purpose: done server i/o
-* Input  : serverIO - server i/o
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void doneServerIO(ServerIO *serverIO)
-{
-  assert(serverIO != NULL);
-
-  List_done(&serverIO->resultList,CALLBACK(freeResultNode,NULL));
-  Semaphore_done(&serverIO->resultList.lock);
-  List_done(&serverIO->commandList,CALLBACK(freeCommandNode,NULL));
-  Semaphore_done(&serverIO->commandList.lock);
-  String_delete(serverIO->line);
-  Crypt_doneKey(&serverIO->privateKey);
-  Crypt_doneKey(&serverIO->publicKey);
-  Semaphore_done(&serverIO->lock);
-}
-
-/***********************************************************************\
 * Name   : encodeHex
 * Purpose: encoded data as hex-string
 * Input  : string     - string variable
@@ -274,6 +218,8 @@ LOCAL void sendData(ServerIO *serverIO, ConstString data)
     {
       switch (serverIO->type)
       {
+        case SERVER_IO_TYPE_NONE:
+          break;
         case SERVER_IO_TYPE_BATCH:
           (void)File_write(&serverIO->file.fileHandle,String_cString(data),String_length(data));
           (void)File_flush(&serverIO->file.fileHandle);
@@ -281,11 +227,11 @@ LOCAL void sendData(ServerIO *serverIO, ConstString data)
         case SERVER_IO_TYPE_NETWORK:
           (void)Network_send(&serverIO->network.socketHandle,String_cString(data),String_length(data));
           break;
-        default:
-          #ifndef NDEBUG
+        #ifndef NDEBUG
+          default:
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          #endif /* NDEBUG */
-          break;
+            break;
+        #endif /* NDEBUG */
       }
     }
   }
@@ -496,16 +442,16 @@ LOCAL Errors sendAction(ServerIO *serverIO, uint id, StringMap resultMap, const 
     va_start(arguments,format);
     String_vformat(action,format,arguments);
     va_end(arguments);
+    #ifndef NDEBUG
+      if (globalOptions.serverDebugFlag)
+      {
+        fprintf(stderr,"DEBUG: send action '%s'\n",String_cString(action));
+      }
+    #endif /* not DEBUG */
     String_appendChar(action,'\n');
   }
   uselocale(locale);
 
-  #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
-    {
-      fprintf(stderr,"DEBUG: sent action=%s",String_cString(action));
-    }
-  #endif /* not DEBUG */
   sendData(serverIO,action);
 
   // free resources
@@ -545,37 +491,99 @@ LOCAL Errors sendAction(ServerIO *serverIO, uint id, StringMap resultMap, const 
 
 // ----------------------------------------------------------------------
 
-void ServerIO_initBatch(ServerIO   *serverIO,
-                        FileHandle fileHandle
-                       )
+void ServerIO_init(ServerIO *serverIO)
 {
   assert(serverIO != NULL);
 
-  initServerIO(serverIO);
-  serverIO->type            = SERVER_IO_TYPE_BATCH;
-  serverIO->file.fileHandle = fileHandle;
-}
-
-void ServerIO_initNetwork(ServerIO     *serverIO,
-                          ConstString  name,
-                          uint         port,
-                          SocketHandle socketHandle
-                         )
-{
-  assert(serverIO != NULL);
-
-  initServerIO(serverIO);
-  serverIO->type                 = SERVER_IO_TYPE_NETWORK;
-  serverIO->network.name         = String_duplicate(name);
-  serverIO->network.port         = port;
-  serverIO->network.socketHandle = socketHandle;
+  Semaphore_init(&serverIO->lock);
+  #ifndef NO_SESSION_ID
+    Crypt_randomize(serverIO->sessionId,sizeof(SessionId));
+  #else /* not NO_SESSION_ID */
+    memset(serverIO->sessionId,0,sizeof(SessionId));
+  #endif /* NO_SESSION_ID */
+  (void)Crypt_createPublicPrivateKeyPair(&serverIO->publicKey,
+                                         &serverIO->privateKey,
+                                         SESSION_KEY_SIZE,
+                                         CRYPT_PADDING_TYPE_PKCS1,
+                                         CRYPT_KEY_MODE_TRANSIENT
+                                        );
+  serverIO->commandId = 0;
+  serverIO->line = String_new();
+  serverIO->type = SERVER_IO_TYPE_NONE;
+  Semaphore_init(&serverIO->commandList.lock);
+  List_init(&serverIO->commandList);
+  Semaphore_init(&serverIO->resultList.lock);
+  List_init(&serverIO->resultList);
 }
 
 void ServerIO_done(ServerIO *serverIO)
 {
   assert(serverIO != NULL);
 
-  doneServerIO(serverIO);
+  List_done(&serverIO->resultList,CALLBACK(freeResultNode,NULL));
+  Semaphore_done(&serverIO->resultList.lock);
+  List_done(&serverIO->commandList,CALLBACK(freeCommandNode,NULL));
+  Semaphore_done(&serverIO->commandList.lock);
+  String_delete(serverIO->line);
+  Crypt_doneKey(&serverIO->privateKey);
+  Crypt_doneKey(&serverIO->publicKey);
+  Semaphore_done(&serverIO->lock);
+}
+
+Errors ServerIO_initBatch(ServerIO   *serverIO,
+                          FileHandle fileHandle
+                         )
+{
+  assert(serverIO != NULL);
+  assert(serverIO->type == SERVER_IO_TYPE_NONE);
+
+  serverIO->type            = SERVER_IO_TYPE_BATCH;
+  serverIO->file.fileHandle = fileHandle;
+
+  return ERROR_NONE;
+}
+
+Errors ServerIO_initNetwork(ServerIO     *serverIO,
+                            ConstString  hostName,
+                            uint         hostPort,
+                            SocketHandle socketHandle
+                           )
+{
+  assert(serverIO != NULL);
+  assert(serverIO->type == SERVER_IO_TYPE_NONE);
+
+  // inti variables
+  serverIO->type                 = SERVER_IO_TYPE_NETWORK;
+  serverIO->network.name         = String_duplicate(hostName);
+  serverIO->network.port         = hostPort;
+  serverIO->network.socketHandle = socketHandle;
+  serverIO->network.isConnected  = TRUE;
+
+  return ERROR_NONE;
+}
+
+void ServerIO_disconnect(ServerIO *serverIO)
+{
+  Errors error;
+
+  assert(serverIO != NULL);
+
+  switch (serverIO->type)
+  {
+    case SERVER_IO_TYPE_NONE:
+      break;
+    case SERVER_IO_TYPE_BATCH:
+      break;
+    case SERVER_IO_TYPE_NETWORK:
+      Network_disconnect(&serverIO->network.socketHandle);
+      serverIO->network.isConnected = FALSE;
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
 }
 
 void ServerIO_sendSessionId(ServerIO *serverIO)
@@ -787,16 +795,16 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
   {
     String_format(command,"%u ",*id);
     String_vformat(command,format,arguments);
+    #ifndef NDEBUG
+      if (globalOptions.serverDebugFlag)
+      {
+        fprintf(stderr,"DEBUG: send command '%s'\n",String_cString(command));
+      }
+    #endif /* not DEBUG */
     String_appendChar(command,'\n');
   }
   uselocale(locale);
 
-  #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
-    {
-      fprintf(stderr,"DEBUG: sent command '%s'",String_cString(command));
-    }
-  #endif /* not DEBUG */
   sendData(serverIO,command);
 
   // free resources
@@ -840,14 +848,14 @@ Errors ServerIO_waitCommand(ServerIO  *serverIO,
     while (List_isEmpty(&serverIO->commandList))
     {
       // no command -> wait for data
-      BLOCK_DO(Semaphore_unlock(&serverIO->commandList.lock),
-               Semaphore_lock(&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
+      Semaphore_unlock(&serverIO->commandList.lock);
       {
         if (!receiveData(serverIO,timeout))
         {
           return ERROR_NETWORK_TIMEOUT;
         }
-      });
+      }
+      Semaphore_lock(&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
     }
 
     // get command
@@ -896,17 +904,17 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
     va_start(arguments,format);
     String_vformat(result,format,arguments);
     va_end(arguments);
+    #ifndef NDEBUG
+      if (globalOptions.serverDebugFlag)
+      {
+        fprintf(stderr,"DEBUG: send result '%s'\n",String_cString(result));
+      }
+    #endif /* not DEBUG */
     String_appendChar(result,'\n');
   }
   uselocale(locale);
 
   // send result
-  #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
-    {
-      fprintf(stderr,"DEBUG: send result '%s'",String_cString(result));
-    }
-  #endif /* not DEBUG */
   sendData(serverIO,result);
 
   // free resources
@@ -929,7 +937,7 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
   assert(serverIO != NULL);
 
   // wait for result
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,timeout)
   {
     do
     {
@@ -943,14 +951,16 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
       else
       {
         // not found -> wait for data
-        BLOCK_DO(Semaphore_unlock(&serverIO->resultList.lock),
-                 Semaphore_lock(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
+        Semaphore_unlock(&serverIO->resultList.lock);
         {
+fprintf(stderr,"%s, %d: timeout=%ld\n",__FILE__,__LINE__,timeout);
           if (!receiveData(serverIO,timeout))
           {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             return ERROR_NETWORK_TIMEOUT;
           }
-        });
+        }
+        Semaphore_lock(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
       }
     }
     while (resultNode == NULL);
@@ -1004,7 +1014,7 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
 
   // wait for result, timeout, or quit
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {    
+  {
     do
     {
       // check result
@@ -1026,7 +1036,7 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
     }
     while (resultNode == NULL);
   }
-    
+
   // get action result
   error = resultNode->error;
   if (resultMap != NULL)
@@ -1040,9 +1050,9 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
   {
 //    StringMap_clear(serverIO->action.resultMap);
   }
-  
+
   // free resources
-  deleteResultNode(resultNode);  
+  deleteResultNode(resultNode);
 
 #if 0
   // wait for result, timeout, or quit
@@ -1116,7 +1126,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   // get new command id
   id = atomicIncrement(&serverIO->commandId,1);
 
-  // send action
+  // format action
   action = String_new();
   locale = uselocale(POSIXLocale);
   {
@@ -1124,16 +1134,17 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
     va_start(arguments,format);
     String_vformat(action,format,arguments);
     va_end(arguments);
+    #ifndef NDEBUG
+      if (globalOptions.serverDebugFlag)
+      {
+        fprintf(stderr,"DEBUG: send action '%s'\n",String_cString(action));
+      }
+    #endif /* not DEBUG */
     String_appendChar(action,'\n');
   }
   uselocale(locale);
 
-  #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
-    {
-      fprintf(stderr,"DEBUG: sent action=%s",String_cString(action));
-    }
-  #endif /* not DEBUG */
+  // send action
   sendData(serverIO,action);
 
   // free resources
@@ -1141,7 +1152,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
 
   // wait for result, timeout, or quit
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {    
+  {
     do
     {
       // check result
@@ -1163,7 +1174,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
     }
     while (resultNode == NULL);
   }
-    
+
   // get action result
   error = resultNode->error;
   if (resultMap != NULL)
@@ -1177,9 +1188,9 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   {
 //    StringMap_clear(serverIO->action.resultMap);
   }
-  
+
   // free resources
-  deleteResultNode(resultNode);  
+  deleteResultNode(resultNode);
 
 #if 0
   // wait for result, timeout, or quit

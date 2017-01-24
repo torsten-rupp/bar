@@ -39,22 +39,6 @@
 // session id
 typedef byte SessionId[SESSION_ID_LENGTH];
 
-#if 0
-// server info
-typedef struct
-{
-  SessionId    sessionId;
-  CryptKey     publicKey,secretKey;
-
-  uint         commandId;
-
-  // connection
-  String       name;
-  uint         port;
-  SocketHandle socketHandle;
-} ServerInfo;
-#endif
-
 // server command
 typedef struct ServerIOCommandNode
 {
@@ -95,15 +79,20 @@ typedef struct
 {
   Semaphore        lock;
 
+  // sessiopn
   SessionId        sessionId;
   CryptKey         publicKey,privateKey;
 
+  // command
   uint             commandId;
 
+  // input line
   String           line;
 
+  // connection
   enum
   {
+    SERVER_IO_TYPE_NONE,
     SERVER_IO_TYPE_BATCH,
     SERVER_IO_TYPE_NETWORK
   }                type;
@@ -122,9 +111,11 @@ typedef struct
       uint         port;
       Semaphore    lock;
       SocketHandle socketHandle;
+      bool         isConnected;
     } network;
   };
 
+  // commands/results list
   ServerIOCommandList commandList;
   ServerIOResultList  resultList;
 } ServerIO;
@@ -149,36 +140,15 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : ServerIO_initBatch
-* Purpose: init server batch i/o
-* Input  : serverIO   - server i/o
-*          fileHandle - file handle
+* Name   : ServerIO_init
+* Purpose: init server i/o
+* Input  : serverIO - server i/o
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void ServerIO_initBatch(ServerIO   *serverIO,
-                        FileHandle fileHandle
-                       );
-
-/***********************************************************************\
-* Name   : ServerIO_initNetwork
-* Purpose: init server network i/o
-* Input  : serverIO     - server i/o
-*          name         - remote name
-*          port         - remote port
-*          socketHandle - socket handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void ServerIO_initNetwork(ServerIO     *serverIO,
-                          ConstString  name,
-                          uint         port,
-                          SocketHandle socketHandle
-                         );
+void ServerIO_init(ServerIO *serverIO);
 
 /***********************************************************************\
 * Name   : ServerIO_done
@@ -190,6 +160,42 @@ void ServerIO_initNetwork(ServerIO     *serverIO,
 \***********************************************************************/
 
 void ServerIO_done(ServerIO *serverIO);
+
+/***********************************************************************\
+* Name   : ServerIO_initBatch
+* Purpose: init server batch i/o
+* Input  : serverIO   - server i/o
+*          fileHandle - file handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ServerIO_initBatch(ServerIO   *serverIO,
+                          FileHandle fileHandle
+                         );
+
+/***********************************************************************\
+* Name   : ServerIO_initNetwork
+* Purpose: init server network i/o
+* Input  : serverIO     - server i/o
+*          hostName     - remote name
+*          hostPort     - remote port
+*          socketHandle - socket handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ServerIO_initNetwork(ServerIO     *serverIO,
+                            ConstString  hostName,
+                            uint         hostPort,
+                            SocketHandle socketHandle
+                           );
+
+void ServerIO_disconnect(ServerIO *serverIO);
+
+bool ServerIO_isConnected(ServerIO *serverIO);
 
 // ----------------------------------------------------------------------
 

@@ -50,16 +50,10 @@ typedef void(*SlaveConnectStatusInfoFunction)(bool isConnected,
 // slave info
 typedef struct
 {
-//  String       name;                         // name of slave host where job should run
-//  uint         port;                         // port of slave host where job should run or 0 for default
-  bool         forceSSL;                     // force SSL connection to slave hose
+bool         forceSSL;                     // force SSL connection to slave hose
   bool         isConnected;
-  SocketHandle socketHandle;
-  String       line;
 
   ServerIO     io;
-//  ServerCommandList  commandList;
-//  ServerResultList   resultList;
 SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction;
 void                           *slaveConnectStatusInfoUserData;
 } SlaveInfo;
@@ -174,6 +168,17 @@ void Slave_disconnect(const SlaveInfo *slaveInfo);
 
 bool Slave_isConnected(const SlaveInfo *slaveInfo);
 
+/***********************************************************************\
+* Name   : Slave_isConnected
+* Purpose: check if slave host is connected
+* Input  : slaveInfo - slave info
+* Output : -
+* Return : TRUE iff connected
+* Notes  : -
+\***********************************************************************/
+
+bool Slave_ping(SlaveInfo *slaveInfo);
+
 SocketHandle *Slave_getSocketHandle(const SlaveInfo *slaveInfo);
 
 // ----------------------------------------------------------------------
@@ -201,6 +206,8 @@ Errors Slave_getCommand(const SlaveInfo *slaveInfo,
 * Name   : Slave_executeCommand
 * Purpose: execute command on slave host
 * Input  : slaveInfo - slave info
+*          timeout   - timeout [ms] or WAIT_FOREVER
+*          resultMap - result map (can be NULL)
 *          format    - command
 *          ...       - optional command arguments
 * Output : resultMap - result map
@@ -209,6 +216,7 @@ Errors Slave_getCommand(const SlaveInfo *slaveInfo,
 \***********************************************************************/
 
 Errors Slave_executeCommand(const SlaveInfo *slaveInfo,
+                            long            timeout,
                             StringMap       resultMap,
                             const char      *format,
                             ...

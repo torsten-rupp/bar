@@ -1669,6 +1669,40 @@ public class ServerSettings
         row++;
 
         button = BARWidgets.newCheckbox(subComposite,
+                                        BARControl.tr("Log info."),
+                                        log,
+                                        BARControl.tr("info"),
+                                        new BARWidgets.Listener()
+                                        {
+                                          public boolean getChecked(WidgetVariable widgetVariable)
+                                          {
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+
+                                            return values.contains("info");
+                                          }
+                                          public void setChecked(WidgetVariable widgetVariable, boolean checked)
+                                          {
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+
+                                            if (checked)
+                                            {
+                                              values.add("info");
+                                              values.remove("none");
+                                              values.remove("all");
+                                            }
+                                            else
+                                            {
+                                              values.remove("info");
+                                            }
+
+                                            widgetVariable.set(StringUtils.join(values,","));
+                                          }
+                                        }
+                                       );
+        Widgets.layout(button,row,0,TableLayoutData.W);
+        row++;
+
+        button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log stored/restored files."),
                                         log,
                                         BARControl.tr("ok"),

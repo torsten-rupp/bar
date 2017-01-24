@@ -448,6 +448,7 @@ LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] = CMD_VALUE_SE
   {"none",      LOG_TYPE_NONE,               "no logging"               },
   {"errors",    LOG_TYPE_ERROR,              "log errors"               },
   {"warnings",  LOG_TYPE_WARNING,            "log warnings"             },
+  {"info",      LOG_TYPE_INFO,               "log info"                 },
 
   {"ok",        LOG_TYPE_ENTRY_OK,           "log stored/restored files"},
   {"unknown",   LOG_TYPE_ENTRY_TYPE_UNKNOWN, "log unknown files"        },
@@ -919,6 +920,7 @@ const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] = CONFIG_VALUE_SET_ARRAY
   {"none",      LOG_TYPE_NONE               },
   {"errors",    LOG_TYPE_ERROR              },
   {"warnings",  LOG_TYPE_WARNING            },
+  {"info",      LOG_TYPE_INFO               },
 
   {"ok",        LOG_TYPE_ENTRY_OK           },
   {"unknown",   LOG_TYPE_ENTRY_TYPE_UNKNOWN },

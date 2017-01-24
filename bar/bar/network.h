@@ -195,7 +195,7 @@ bool Network_hostExistsCString(const char *hostName);
 *          hostName            - host name
 *          hostPort            - host port (host byte order)
 *          loginName           - login user name
-*          password            - SSH private key password
+*          password            - SSH private key password or NULL
 *          sshPublicKeyData    - SSH public key data for login or NULL
 *          sshPublicKeyLength  - SSH public key data length
 *          sshPrivateKeyData   - SSH private key data for login or NULL
@@ -218,6 +218,38 @@ Errors Network_connect(SocketHandle *socketHandle,
                        uint         sshPrivateKeyLength,
                        uint         flags
                       );
+
+/***********************************************************************\
+* Name   : Network_connectDescriptor
+* Purpose: connect to host by descriptor
+* Input  : socketType          - socket type; see SOCKET_TYPE_*
+*          hostName            - host name
+*          hostPort            - host port (host byte order)
+*          loginName           - login user name
+*          password            - SSH private key password or NULL
+*          sshPublicKeyData    - SSH public key data for login or NULL
+*          sshPublicKeyLength  - SSH public key data length
+*          sshPrivateKeyData   - SSH private key data for login or NULL
+*          sshPrivateKeyLength - SSH private key data length
+*          flags               - socket flags; see SOCKET_FLAG_*
+* Output : socketHandle - socket handle
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Network_connectDescriptor(SocketHandle *socketHandle,
+                                 int          socketDescriptor,
+                                 SocketTypes  socketType,
+                                 ConstString  hostName,
+                                 uint         hostPort,
+                                 ConstString  loginName,
+                                 Password     *password,
+                                 const void   *sshPublicKeyData,
+                                 uint         sshPublicKeyLength,
+                                 const void   *sshPrivateKeyData,
+                                 uint         sshPrivateKeyLength,
+                                 uint         flags
+                                );
 
 /***********************************************************************\
 * Name   : Network_disconnect

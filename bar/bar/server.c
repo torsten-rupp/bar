@@ -2123,7 +2123,6 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
   newJobNode->sshPassword                    = NULL;
   newJobNode->cryptPassword                  = NULL;
 
-//  newJobNode->master                         = String_new();
   newJobNode->masterIO                       = NULL;
 
   Slave_duplicate(&newJobNode->slaveInfo,&jobNode->slaveInfo);
@@ -4615,6 +4614,32 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningIn
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : getAllSlaveJobUUIDs
+* Purpose: get all slave job UUIDs
+* Input  : jobUUIDList - string list variable
+* Output : jobUUIDList - string list
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void getAllSlaveJobUUIDs(StringList *jobUUIDList)
+{
+  SemaphoreLock semaphoreLock;
+  const JobNode *jobNode;
+
+  assert(jobUUIDList != NULL);
+
+  StringList_clear(jobUUIDList);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    LIST_ITERATE(&jobList,jobNode)
+    {
+      if (isSlaveJob(jobNode)) StringList_append(jobUUIDList,jobNode->uuid);
+    }
+  }
+}
+
+/***********************************************************************\
 * Name   : slaveConnectThreadCode
 * Purpose: connect slave instances thread code
 * Input  : -
@@ -4625,8 +4650,8 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningIn
 
 LOCAL void slaveConnectThreadCode(void)
 {
-  StringList       jobUUIDList;
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  StringList       slaveJobUUIDList;
+  StaticString     (slaveJobUUID,MISC_UUID_STRING_LENGTH);
   SemaphoreLock    semaphoreLock;
 
   JobNode          *jobNode;
@@ -4636,25 +4661,54 @@ LOCAL void slaveConnectThreadCode(void)
 
   while (!quitFlag)
   {
-    // get job UUIDs
-    getAllJobUUIDs(&jobUUIDList);
+    // get slave job UUIDs
+    getAllSlaveJobUUIDs(&slaveJobUUIDList);
 
     // try to connect all slave instances
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
       LIST_ITERATE(&jobList,jobNode)
       {
-        if (isSlaveJob(jobNode) && !isSlaveConnected(jobNode))
+        if (isSlaveJob(jobNode))
         {
+fprintf(stderr,"%s, %d: xxxxx\n",__FILE__,__LINE__);
+          // ping slave
+          if (isSlaveConnected(jobNode))
+          {
+            if (!Slave_ping(&jobNode->slaveInfo))
+            {
+              Slave_disconnect(&jobNode->slaveInfo);
+              plogMessage(NULL,  // logHandle
+                          LOG_TYPE_INFO,
+                          "Slave",
+                          "Disconnected slave '%s:%u'\n",
+                          String_cString(jobNode->slaveHost.name),
+                          jobNode->slaveHost.port
+                         );
+            }
+          }
+
+          // connect slave
+          if (!isSlaveConnected(jobNode))
+          {
 fprintf(stderr,"%s, %d: req connect jobUUID=%s host=%s:%d\n",__FILE__,__LINE__,String_cString(jobNode->uuid),String_cString(jobNode->slaveHost.name),jobNode->slaveHost.port);
-//        (void)Slave_connect(&slaveHost,CALLBACK(updateConnectStatusInfo,NULL));
-fprintf(stderr,"%s, %d: tyr connect\n",__FILE__,__LINE__);
-          error = Slave_connect(&jobNode->slaveInfo,
-                                jobNode->slaveHost.name,
-                                jobNode->slaveHost.port,
-                                CALLBACK(updateConnectStatusInfo,NULL)
-                               );
-fprintf(stderr,"%s, %d: connect result host=%s: %s\n",__FILE__,__LINE__,String_cString(jobNode->slaveHost.name),Error_getText(error));
+            error = Slave_connect(&jobNode->slaveInfo,
+                                  jobNode->slaveHost.name,
+                                  jobNode->slaveHost.port,
+                                  CALLBACK(updateConnectStatusInfo,NULL)
+                                 );
+            if (error == ERROR_NONE)
+            {
+              plogMessage(NULL,  // logHandle
+                          LOG_TYPE_INFO,
+                          "Slave",
+                          "Connected slave '%s:%u'\n",
+                          String_cString(jobNode->slaveHost.name),
+                          jobNode->slaveHost.port
+                         );
+
+            }
+          }
         }
       }
     }
@@ -17813,6 +17867,7 @@ LOCAL void initClient(ClientInfo *clientInfo)
   Semaphore_init(&clientInfo->lock);
   clientInfo->authorizationState    = AUTHORIZATION_STATE_WAITING;
   clientInfo->authorizationFailNode = NULL;
+
   clientInfo->quitFlag              = FALSE;
 
   List_init(&clientInfo->commandInfoList);
@@ -17822,6 +17877,7 @@ LOCAL void initClient(ClientInfo *clientInfo)
   }
   clientInfo->abortedCommandIdStart = 0;
 
+  Semaphore_init(&clientInfo->action.lock);
   clientInfo->action.error          = ERROR_NONE;
   clientInfo->action.resultMap      = StringMap_new();
   if (clientInfo->action.resultMap == NULL)
@@ -17829,7 +17885,8 @@ LOCAL void initClient(ClientInfo *clientInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  Semaphore_init(&clientInfo->action.lock);
+  ServerIO_init(&clientInfo->io);
+
   EntryList_init(&clientInfo->includeEntryList);
   PatternList_init(&clientInfo->excludePatternList);
   PatternList_init(&clientInfo->compressExcludePatternList);
@@ -17880,6 +17937,7 @@ LOCAL void initBatchClient(ClientInfo *clientInfo,
 LOCAL void initNetworkClient(ClientInfo   *clientInfo,
                              ConstString  name,
                              uint         port,
+//TODO: pointer?
                              SocketHandle socketHandle
                             )
 {
@@ -17964,6 +18022,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       }
 
       // disconnect
+//TODO: ServerIO_disconnect();
       Network_disconnect(&clientInfo->io.network.socketHandle);
 
       // free resources
@@ -17989,11 +18048,11 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   PatternList_done(&clientInfo->compressExcludePatternList);
   PatternList_done(&clientInfo->excludePatternList);
   EntryList_done(&clientInfo->includeEntryList);
+  ServerIO_done(&clientInfo->io);
   Semaphore_done(&clientInfo->action.lock);
   StringMap_delete(clientInfo->action.resultMap);
   RingBuffer_done(&clientInfo->abortedCommandIds,CALLBACK_NULL);
   List_done(&clientInfo->commandInfoList,CALLBACK_NULL);
-  ServerIO_done(&clientInfo->io);
   Semaphore_done(&clientInfo->lock);
 }
 

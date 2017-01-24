@@ -878,6 +878,252 @@ Errors Network_connect(SocketHandle *socketHandle,
     #endif /* NDEBUG */
   }
 
+  return ERROR_NONE;
+}
+
+Errors Network_connectDescriptor(SocketHandle *socketHandle,
+                                 int          socketDescriptor,
+                                 SocketTypes  socketType,
+                                 ConstString  hostName,
+                                 uint         hostPort,
+                                 ConstString  loginName,
+                                 Password     *password,
+                                 const void   *sshPublicKeyData,
+                                 uint         sshPublicKeyLength,
+                                 const void   *sshPrivateKeyData,
+                                 uint         sshPrivateKeyLength,
+                                 uint         flags
+                                )
+{
+  #ifdef HAVE_SSH2
+    int                ssh2Error;
+    char               *ssh2ErrorText;
+  #endif /* HAVE_SSH2 */
+  Errors             error;
+
+  assert(socketHandle != NULL);
+  assert(hostName != NULL);
+
+  // initialize variables
+  socketHandle->type        = socketType;
+  socketHandle->handle      = socketDescriptor;
+  socketHandle->flags       = flags;
+  socketHandle->isConnected = FALSE;
+
+  switch (socketType)
+  {
+    case SOCKET_TYPE_PLAIN:
+      {
+        #if  defined(PLATFORM_LINUX)
+          long   socketFlags;
+          int    n;
+        #elif defined(PLATFORM_WINDOWS)
+          u_long n;
+        #endif /* PLATFORM_... */
+
+        if (flags != SOCKET_FLAG_NONE)
+        {
+          // enable non-blocking
+          #if  defined(PLATFORM_LINUX)
+            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            {
+              socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
+              fcntl(socketHandle->handle,F_SETFL,socketFlags = O_NONBLOCK);
+            }
+            if ((flags & SOCKET_FLAG_NO_DELAY    ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(void*)&n,sizeof(int));
+            }
+            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
+            }
+          #elif defined(PLATFORM_WINDOWS)
+            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            {
+              n = 1;
+              ioctlsocket(socketHandle->handle,FIONBIO,&n);
+            }
+            if ((flags & SOCKET_FLAG_NO_DELAY    ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(char*)&n,sizeof(int));
+            }
+            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(char*)&n,sizeof(int));
+            }
+          #endif /* PLATFORM_... */
+        }
+      }
+      break;
+    case SOCKET_TYPE_TLS:
+      return ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case SOCKET_TYPE_SSH:
+      #ifdef HAVE_SSH2
+      {
+        const char *plainPassword;
+        #if  defined(PLATFORM_LINUX)
+          long       socketFlags;
+          int        n;
+        #elif defined(PLATFORM_WINDOWS)
+          u_long     n;
+        #endif /* PLATFORM_... */
+        int result;
+
+        assert(loginName != NULL);
+        assert(sshPublicKeyData != NULL);
+        assert(sshPrivateKeyData != NULL);
+
+        // check login name
+        if (String_isEmpty(loginName))
+        {
+          return ERROR_NO_LOGIN_NAME;
+        }
+
+        // init SSL session
+        socketHandle->ssh2.session = libssh2_session_init();
+        if (socketHandle->ssh2.session == NULL)
+        {
+          return ERROR_SSH_SESSION_FAIL;
+        }
+        if      (globalOptions.verboseLevel >= 6) libssh2_trace(socketHandle->ssh2.session,
+                                                                  LIBSSH2_TRACE_SOCKET
+                                                                | LIBSSH2_TRACE_TRANS
+                                                                | LIBSSH2_TRACE_KEX
+                                                                | LIBSSH2_TRACE_AUTH
+                                                                | LIBSSH2_TRACE_CONN
+                                                                | LIBSSH2_TRACE_SCP
+                                                                | LIBSSH2_TRACE_SFTP
+                                                                | LIBSSH2_TRACE_ERROR
+                                                                | LIBSSH2_TRACE_PUBLICKEY
+                                                               );
+        else if (globalOptions.verboseLevel >= 5) libssh2_trace(socketHandle->ssh2.session,
+                                                                  LIBSSH2_TRACE_KEX
+                                                                | LIBSSH2_TRACE_AUTH
+                                                                | LIBSSH2_TRACE_SCP
+                                                                | LIBSSH2_TRACE_SFTP
+                                                                | LIBSSH2_TRACE_ERROR
+                                                                | LIBSSH2_TRACE_PUBLICKEY
+                                                               );
+        if (libssh2_session_startup(socketHandle->ssh2.session,
+                                    socketHandle->handle
+                                   ) != 0
+           )
+        {
+          libssh2_session_disconnect(socketHandle->ssh2.session,"");
+          libssh2_session_free(socketHandle->ssh2.session);
+          return ERROR_SSH_SESSION_FAIL;
+        }
+        #ifdef HAVE_SSH2_KEEPALIVE_CONFIG
+// NYI/???: does not work?
+//          libssh2_keepalive_config(socketHandle->ssh2.session,0,2*60);
+        #endif /* HAVE_SSH2_KEEPALIVE_CONFIG */
+
+#if 1
+        // authorize with key
+        plainPassword = Password_deploy(password);
+        result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
+                                                       String_cString(loginName),
+                                                       String_length(loginName),
+                                                       sshPublicKeyData,
+                                                       sshPublicKeyLength,
+                                                       sshPrivateKeyData,
+                                                       sshPrivateKeyLength,
+                                                       plainPassword
+                                                      );
+        if (result != 0)
+        {
+          ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
+          // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
+          if (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
+          {
+            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"Unable to initialize private key from file");
+          }
+          else
+          {
+            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s",ssh2ErrorText);
+          }
+          Password_undeploy(password,plainPassword);
+          libssh2_session_disconnect(socketHandle->ssh2.session,"");
+          libssh2_session_free(socketHandle->ssh2.session);
+          return error;
+        }
+        Password_undeploy(password,plainPassword);
+#else
+        // authorize interactive
+        if (libssh2_userauth_keyboard_interactive(socketHandle->ssh2.session,
+                                                  String_cString(loginName),
+                                                  NULL
+                                                ) != 0
+           )
+        {
+          ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
+          // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
+          if (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
+          {
+            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"Unable to initialize private key");
+          }
+          else
+          {
+            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s",ssh2ErrorText);
+          }
+          libssh2_session_disconnect(socketHandle->ssh2.session,"");
+          libssh2_session_free(socketHandle->ssh2.session);
+          return error;
+        }
+#endif /* 0 */
+        if (flags != SOCKET_FLAG_NONE)
+        {
+          // enable non-blocking
+          #if  defined(PLATFORM_LINUX)
+            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            {
+              socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
+              fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+            }
+            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
+            }
+          #elif defined(PLATFORM_WINDOWS)
+            if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+            {
+              n = 1;
+              ioctlsocket(socketHandle->handle,FIONBIO,&n);
+            }
+            if ((flags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(char*)&n,sizeof(int));
+            }
+          #endif /* PLATFORM_... */
+        }
+      }
+      #else /* not HAVE_SSH2 */
+        UNUSED_VARIABLE(loginName);
+        UNUSED_VARIABLE(password);
+        UNUSED_VARIABLE(sshPublicKeyData);
+        UNUSED_VARIABLE(sshPublicKeyLength);
+        UNUSED_VARIABLE(sshPrivateKeyData);
+        UNUSED_VARIABLE(sshPrivateKeyLength);
+
+        close(socketHandle->handle);
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
   socketHandle->isConnected = TRUE;
 
   return ERROR_NONE;
