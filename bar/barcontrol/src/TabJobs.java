@@ -1978,7 +1978,7 @@ public class TabJobs
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       text = Widgets.newText(composite);
-      text.setToolTipText(BARControl.tr("Hostname of slave to run job. Leave empty to run on local host."));
+      text.setToolTipText(BARControl.tr("Hostname of slave to run job. Leave empty to run on host where BAR is executed."));
       text.setEnabled(false);
       Widgets.layout(text,0,1,TableLayoutData.WE);
       Widgets.addEventListener(new WidgetEventListener(text,selectJobEvent)
