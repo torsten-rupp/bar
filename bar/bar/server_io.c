@@ -359,7 +359,7 @@ LOCAL bool receiveData(ServerIO *serverIO, long timeout)
   pollTimeout.tv_nsec = (timeout%MS_PER_SECOND)*NS_PER_MS;
   if (ppoll(pollfds,1,&pollTimeout,&signalMask) <= 0)
   {
-fprintf(stderr,"%s, %d: poll fail\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: poll fail %s\n",__FILE__,__LINE__,strerror(errno));
 return FALSE;
   }
 
@@ -540,6 +540,10 @@ Errors ServerIO_initBatch(ServerIO   *serverIO,
   serverIO->type            = SERVER_IO_TYPE_BATCH;
   serverIO->file.fileHandle = fileHandle;
 
+  String_clear(serverIO->line);
+  List_clear(&serverIO->commandList,CALLBACK(freeCommandNode,NULL));
+  List_clear(&serverIO->resultList,CALLBACK(freeResultNode,NULL));
+
   return ERROR_NONE;
 }
 
@@ -558,6 +562,10 @@ Errors ServerIO_initNetwork(ServerIO     *serverIO,
   serverIO->network.port         = hostPort;
   serverIO->network.socketHandle = socketHandle;
   serverIO->network.isConnected  = TRUE;
+
+  String_clear(serverIO->line);
+  List_clear(&serverIO->commandList,CALLBACK(freeCommandNode,NULL));
+  List_clear(&serverIO->resultList,CALLBACK(freeResultNode,NULL));
 
   return ERROR_NONE;
 }
@@ -584,6 +592,7 @@ void ServerIO_disconnect(ServerIO *serverIO)
         break;
     #endif /* NDEBUG */
   }
+  serverIO->type = SERVER_IO_TYPE_NONE;
 }
 
 void ServerIO_sendSessionId(ServerIO *serverIO)
@@ -953,10 +962,8 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
         // not found -> wait for data
         Semaphore_unlock(&serverIO->resultList.lock);
         {
-fprintf(stderr,"%s, %d: timeout=%ld\n",__FILE__,__LINE__,timeout);
           if (!receiveData(serverIO,timeout))
           {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             return ERROR_NETWORK_TIMEOUT;
           }
         }

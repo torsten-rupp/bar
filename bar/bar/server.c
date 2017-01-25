@@ -3826,6 +3826,8 @@ LOCAL void jobThreadCode(void)
 
   StorageSpecifier storageSpecifier;
   String           jobName;
+  String           slaveHostName;
+  uint             slaveHostPort;
   String           storageName;
   String           directory;
   SemaphoreLock    semaphoreLock;
@@ -3862,6 +3864,7 @@ LOCAL void jobThreadCode(void)
   // initialize variables
   Storage_initSpecifier(&storageSpecifier);
   jobName                                = String_new();
+  slaveHostName                          = String_new();
   storageName                            = String_new();
   directory                              = String_new();
   hostName                               = String_new();
@@ -3893,7 +3896,7 @@ LOCAL void jobThreadCode(void)
   archiveType = ARCHIVE_ENTRY_TYPE_UNKNOWN;
   while (!quitFlag)
   {
-    // start next job
+    // wait and get next job to run
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // wait and get next job to execute
@@ -3917,9 +3920,7 @@ LOCAL void jobThreadCode(void)
           jobNode = jobList.head;
           while (   !quitFlag
                  && (jobNode != NULL)
-                 && (   !isJobWaiting(jobNode)
-                     || (isSlaveJob(jobNode) && !isSlaveConnected(jobNode))
-                    )
+                 && !isJobWaiting(jobNode)
                 )
           {
             jobNode = jobNode->next;
@@ -3939,6 +3940,8 @@ LOCAL void jobThreadCode(void)
 
       // get copy of mandatory job data
       String_set(jobName,jobNode->name);
+      String_set(slaveHostName,jobNode->slaveHost.name);
+      slaveHostPort = jobNode->slaveHost.port;
       String_set(storageName,jobNode->archiveName);
       String_set(jobUUID,jobNode->uuid);
       Network_getHostName(hostName);
@@ -4359,33 +4362,51 @@ jobNode->masterIO,
     else
     {
       // slave job -> send to slave and run on slave machine
-      jobNode->runningInfo.error = Slave_jobStart(&jobNode->slaveInfo,
-                                                  jobNode->name,
-                                                  jobNode->uuid,
-                                                  NULL,  // scheduleUUID
-                                                  jobNode->archiveName,
-                                                  &jobNode->includeEntryList,
-                                                  &jobNode->excludePatternList,
-                                                  &jobNode->mountList,
-                                                  &jobNode->compressExcludePatternList,
-                                                  &jobNode->deltaSourceList,
-                                                  &jobNode->jobOptions,
-                                                  archiveType,
-                                                  NULL,  // scheduleTitle,
-                                                  NULL,  // scheduleCustomText,
-//                                                  CALLBACK(getCryptPassword,jobNode),
-//                                                  CALLBACK(updateCreateStatusInfo,jobNode),
-                                                  CALLBACK(storageRequestVolume,jobNode)
-                                                 );
+
+fprintf(stderr,"%s, %d: looooooooooooooooooooooooooos \n",__FILE__,__LINE__);
+      // connect slave
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        jobNode->runningInfo.error = Slave_connect(&jobNode->slaveInfo,
+                                                   slaveHostName,
+                                                   slaveHostPort,
+                                                   CALLBACK(updateConnectStatusInfo,NULL)
+                                                  );
+      }
+fprintf(stderr,"%s, %d: connect: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
+
+      // start job
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        jobNode->runningInfo.error = Slave_jobStart(&jobNode->slaveInfo,
+                                                    jobNode->name,
+                                                    jobNode->uuid,
+                                                    NULL,  // scheduleUUID
+                                                    jobNode->archiveName,
+                                                    &jobNode->includeEntryList,
+                                                    &jobNode->excludePatternList,
+                                                    &jobNode->mountList,
+                                                    &jobNode->compressExcludePatternList,
+                                                    &jobNode->deltaSourceList,
+                                                    &jobNode->jobOptions,
+                                                    archiveType,
+                                                    NULL,  // scheduleTitle,
+                                                    NULL,  // scheduleCustomText,
+  //                                                  CALLBACK(getCryptPassword,jobNode),
+  //                                                  CALLBACK(updateCreateStatusInfo,jobNode),
+                                                    CALLBACK(storageRequestVolume,jobNode)
+                                                   );
+      }
+fprintf(stderr,"%s, %d: start: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
+
+      // wait for slave job
 fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
-        // wait for slave job
         while (   !quitFlag
                && isJobRunning(jobNode)
               )
         {
-fprintf(stderr,"%s, %d: fafasdfasdfsdasdadf\n",__FILE__,__LINE__);
           error = Slave_getCommand(&jobNode->slaveInfo,
                                    1*MS_PER_SECOND,
                                    &commandId,
@@ -4409,6 +4430,7 @@ Errors Slave_sendResult(&jobNode->slaveInfo,
 
           // get slave job status
           error = Slave_executeCommand(&jobNode->slaveInfo,
+                                       5LL*MS_PER_SECOND,
                                        resultMap,
                                        "JOB_STATUS jobUUID=%S",
                                        jobNode->uuid
@@ -4460,6 +4482,10 @@ fprintf(stderr,"%s, %d: xxxxerror=%s\n",__FILE__,__LINE__,Error_getText(error));
         }
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
       }
+fprintf(stderr,"%s, %d: wait: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
+
+      // disconnect slave
+      Slave_disconnect(&jobNode->slaveInfo);
     }
 
     // get error message
@@ -4607,6 +4633,7 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningIn
   String_delete(hostName);
   String_delete(directory);
   String_delete(storageName);
+  String_delete(slaveHostName);
   String_delete(jobName);
   Storage_doneSpecifier(&storageSpecifier);
 }
@@ -18618,10 +18645,13 @@ Errors Server_run(ServerModes       mode,
   {
     HALT_FATAL_ERROR("Cannot initialize pause thread!");
   }
+//TODO: remove
+#if 0
   if (!Thread_init(&slaveConnectThread,"BAR slave connect",globalOptions.niceLevel,slaveConnectThreadCode,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialize slave connect thread!");
   }
+#endif
   if (Index_isAvailable())
   {
 //TODO: required?
@@ -19081,7 +19111,7 @@ Errors Server_run(ServerModes       mode,
     }
     Thread_join(&indexThread);
   }
-  Thread_join(&slaveConnectThread);
+//  Thread_join(&slaveConnectThread);
   Thread_join(&pauseThread);
   Thread_join(&schedulerThread);
   Thread_join(&jobThread);
@@ -19110,7 +19140,7 @@ Errors Server_run(ServerModes       mode,
   }
 //TODO
 Slave_doneAll();
-  Thread_done(&slaveConnectThread);
+//  Thread_done(&slaveConnectThread);
   Thread_done(&pauseThread);
   Thread_done(&schedulerThread);
   Thread_done(&jobThread);

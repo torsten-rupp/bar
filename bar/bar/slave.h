@@ -130,6 +130,8 @@ void Slave_done(SlaveInfo *slaveInfo);
 * Name   : Slave_connect
 * Purpose: connect to slave host
 * Input  : slaveInfo                      - slave info
+*          hostName                       - slave host name
+*          hostPort                       - slave host port
 *          slaveConnectStatusInfoFunction - status info call back
 *                                           function (can be NULL)
 *          slaveConnectStatusInfoUserData - user data for status info
