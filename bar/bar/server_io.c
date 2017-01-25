@@ -849,8 +849,10 @@ Errors ServerIO_waitCommand(ServerIO  *serverIO,
   ServerIOCommandNode *commandNode;
 
   assert(serverIO != NULL);
+  assert(id != NULL);
+  assert(name != NULL);
 
-  // wait for result
+  // wait for command
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // wait for command
@@ -867,12 +869,14 @@ Errors ServerIO_waitCommand(ServerIO  *serverIO,
       Semaphore_lock(&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
     }
 
-    // get command
+    // get command node
     commandNode = List_removeFirst(&serverIO->commandList);
   }
   assert(commandNode != NULL);
 
-  // get arguments
+  // get command
+  (*id) = commandNode->id;
+  String_set(name,commandNode->name);
   if (argumentMap != NULL)
   {
     if (!StringMap_parse(argumentMap,commandNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
@@ -1264,6 +1268,34 @@ commandId = 0;
   String_delete(line);
 
   return error;
+}
+
+Errors ServerIO_wait(ServerIO  *serverIO,
+                     long      timeout
+                    )
+{
+  uint64 t0,t1;
+  ulong  dt;
+
+  assert(serverIO != NULL);
+
+  while (timeout != 0)
+  {
+    t0 = Misc_getTimestamp();
+    if (!receiveData(serverIO,timeout))
+    {
+      return ERROR_NETWORK_TIMEOUT;
+    }
+    t1 = Misc_getTimestamp();
+
+    if (timeout > 0)
+    {
+      dt = (t1-t0)/US_PER_MS;
+      timeout = (timeout > dt) ? timeout-dt : 0L;
+    }
+  }
+
+  return ERROR_NONE;
 }
 
 #ifdef __cplusplus

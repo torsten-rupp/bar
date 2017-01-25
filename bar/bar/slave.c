@@ -146,7 +146,6 @@ SOCKET_TYPE_PLAIN,
                          );
   if (error != ERROR_NONE)
   {
-    String_delete(line);
     return error;
   }
 
@@ -1027,7 +1026,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
   assert(slaveInfo != NULL);
   assert(jobUUID != NULL);
-fprintf(stderr,"%s, %d: JOB_NEW\n",__FILE__,__LINE__);
 
   // init variables
   s = String_new();
@@ -1232,6 +1230,52 @@ Errors Slave_jobAbort(const SlaveInfo *slaveInfo,
   }
 
   // free resources
+
+  return ERROR_NONE;
+}
+
+Errors Slave_process(const SlaveInfo *slaveInfo,
+                     long            timeout
+                    )
+{
+  uint      id;
+  String    name;
+  StringMap argumentMap;
+  Errors    error;
+
+  assert(slaveInfo != NULL);
+
+  // init variables
+  name        = String_new();
+  argumentMap = StringMap_new();
+
+  // process commands
+  do
+  {
+    error = ServerIO_waitCommand(&slaveInfo->io,
+                                 timeout,
+                                 &id,
+                                 name,
+                                 argumentMap
+                                );
+    if (error == ERROR_NONE)
+    {
+fprintf(stderr,"%s, %d: ---------------- got command #%u: %s\n",__FILE__,__LINE__,id,String_cString(name));
+ServerIO_sendResult(&slaveInfo->io,
+                    id,
+                    TRUE,
+                    ERROR_NONE,
+                    "OK"
+                   );
+    }
+  }
+  while (error == ERROR_NONE);
+//  ServerIO_wait(&slaveInfo->io,timeout);
+
+
+  // free resources
+  StringMap_delete(argumentMap);
+  String_delete(name);
 
   return ERROR_NONE;
 }

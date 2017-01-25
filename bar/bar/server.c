@@ -609,7 +609,6 @@ LOCAL JobList               jobList;                // job list
 LOCAL Thread                jobThread;              // thread executing jobs create/restore
 LOCAL Thread                schedulerThread;        // thread scheduling jobs
 LOCAL Thread                pauseThread;
-LOCAL Thread                slaveConnectThread;     // thread to connect slave BAR instances
 LOCAL Semaphore             indexThreadTrigger;
 LOCAL Thread                indexThread;            // thread to add/update index
 LOCAL Thread                autoIndexThread;        // thread to collect BAR files for auto-index
@@ -4363,7 +4362,7 @@ jobNode->masterIO,
     {
       // slave job -> send to slave and run on slave machine
 
-fprintf(stderr,"%s, %d: looooooooooooooooooooooooooos \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: ------------------------------------------------ \n",__FILE__,__LINE__);
       // connect slave
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
@@ -4373,7 +4372,6 @@ fprintf(stderr,"%s, %d: looooooooooooooooooooooooooos \n",__FILE__,__LINE__);
                                                    CALLBACK(updateConnectStatusInfo,NULL)
                                                   );
       }
-fprintf(stderr,"%s, %d: connect: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
 
       // start job
       if (jobNode->runningInfo.error == ERROR_NONE)
@@ -4407,27 +4405,6 @@ fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(jobNode->running
                && isJobRunning(jobNode)
               )
         {
-          error = Slave_getCommand(&jobNode->slaveInfo,
-                                   1*MS_PER_SECOND,
-                                   &commandId,
-                                   commandName,
-                                   argumentMap
-                                  );
-          if (error == ERROR_NONE)
-          {
-fprintf(stderr,"%s, %d: commandName=%s\n",__FILE__,__LINE__,String_cString(commandName));
-
-#if 0
-Errors Slave_sendResult(&jobNode->slaveInfo,
-                        commandId,
-                           bool       completeFlag,
-                           Errors     error,
-                           const char *format,
-                           ...
-                          );
-#endif
-          }
-
           // get slave job status
           error = Slave_executeCommand(&jobNode->slaveInfo,
                                        5LL*MS_PER_SECOND,
@@ -4474,11 +4451,8 @@ fprintf(stderr,"%s, %d: xxxxerror=%s\n",__FILE__,__LINE__,Error_getText(error));
             jobNode->runningInfo.error = error;
           }
 
-          // sleep a short time
-          if (isJobRunning(jobNode))
-          {
-            Misc_udelay(1LL*US_PER_SECOND);
-          }
+          // process slave
+          Slave_process(&jobNode->slaveInfo,1*MS_PER_SECOND);
         }
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
       }
@@ -4636,115 +4610,6 @@ fprintf(stderr,"%s, %d: wait: %s\n",__FILE__,__LINE__,Error_getText(jobNode->run
   String_delete(slaveHostName);
   String_delete(jobName);
   Storage_doneSpecifier(&storageSpecifier);
-}
-
-/*---------------------------------------------------------------------*/
-
-/***********************************************************************\
-* Name   : getAllSlaveJobUUIDs
-* Purpose: get all slave job UUIDs
-* Input  : jobUUIDList - string list variable
-* Output : jobUUIDList - string list
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void getAllSlaveJobUUIDs(StringList *jobUUIDList)
-{
-  SemaphoreLock semaphoreLock;
-  const JobNode *jobNode;
-
-  assert(jobUUIDList != NULL);
-
-  StringList_clear(jobUUIDList);
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-  {
-    LIST_ITERATE(&jobList,jobNode)
-    {
-      if (isSlaveJob(jobNode)) StringList_append(jobUUIDList,jobNode->uuid);
-    }
-  }
-}
-
-/***********************************************************************\
-* Name   : slaveConnectThreadCode
-* Purpose: connect slave instances thread code
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void slaveConnectThreadCode(void)
-{
-  StringList       slaveJobUUIDList;
-  StaticString     (slaveJobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock    semaphoreLock;
-
-  JobNode          *jobNode;
-  Errors           error;
-
-  // init variables
-
-  while (!quitFlag)
-  {
-    // get slave job UUIDs
-    getAllSlaveJobUUIDs(&slaveJobUUIDList);
-
-    // try to connect all slave instances
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-    {
-      LIST_ITERATE(&jobList,jobNode)
-      {
-        if (isSlaveJob(jobNode))
-        {
-fprintf(stderr,"%s, %d: xxxxx\n",__FILE__,__LINE__);
-          // ping slave
-          if (isSlaveConnected(jobNode))
-          {
-            if (!Slave_ping(&jobNode->slaveInfo))
-            {
-              Slave_disconnect(&jobNode->slaveInfo);
-              plogMessage(NULL,  // logHandle
-                          LOG_TYPE_INFO,
-                          "Slave",
-                          "Disconnected slave '%s:%u'\n",
-                          String_cString(jobNode->slaveHost.name),
-                          jobNode->slaveHost.port
-                         );
-            }
-          }
-
-          // connect slave
-          if (!isSlaveConnected(jobNode))
-          {
-fprintf(stderr,"%s, %d: req connect jobUUID=%s host=%s:%d\n",__FILE__,__LINE__,String_cString(jobNode->uuid),String_cString(jobNode->slaveHost.name),jobNode->slaveHost.port);
-            error = Slave_connect(&jobNode->slaveInfo,
-                                  jobNode->slaveHost.name,
-                                  jobNode->slaveHost.port,
-                                  CALLBACK(updateConnectStatusInfo,NULL)
-                                 );
-            if (error == ERROR_NONE)
-            {
-              plogMessage(NULL,  // logHandle
-                          LOG_TYPE_INFO,
-                          "Slave",
-                          "Connected slave '%s:%u'\n",
-                          String_cString(jobNode->slaveHost.name),
-                          jobNode->slaveHost.port
-                         );
-
-            }
-          }
-        }
-      }
-    }
-
-    // sleep
-    delayThread(SLEEP_TIME_SLAVE_CONNECT_THREAD,NULL);
-  }
-
-  // free resources
 }
 
 /*---------------------------------------------------------------------*/
@@ -18645,13 +18510,6 @@ Errors Server_run(ServerModes       mode,
   {
     HALT_FATAL_ERROR("Cannot initialize pause thread!");
   }
-//TODO: remove
-#if 0
-  if (!Thread_init(&slaveConnectThread,"BAR slave connect",globalOptions.niceLevel,slaveConnectThreadCode,NULL))
-  {
-    HALT_FATAL_ERROR("Cannot initialize slave connect thread!");
-  }
-#endif
   if (Index_isAvailable())
   {
 //TODO: required?
@@ -19111,7 +18969,6 @@ Errors Server_run(ServerModes       mode,
     }
     Thread_join(&indexThread);
   }
-//  Thread_join(&slaveConnectThread);
   Thread_join(&pauseThread);
   Thread_join(&schedulerThread);
   Thread_join(&jobThread);
@@ -19140,7 +18997,6 @@ Errors Server_run(ServerModes       mode,
   }
 //TODO
 Slave_doneAll();
-//  Thread_done(&slaveConnectThread);
   Thread_done(&pauseThread);
   Thread_done(&schedulerThread);
   Thread_done(&jobThread);

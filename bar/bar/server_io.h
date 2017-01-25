@@ -373,6 +373,10 @@ Errors ServerIO_sendMaster(const ServerIO     *serverIO,
                            ...
                           );
 
+Errors ServerIO_wait(ServerIO  *serverIO,
+                     long      timeout
+                    );
+
 #ifdef __cplusplus
   }
 #endif

@@ -283,6 +283,10 @@ Errors Slave_jobAbort(const SlaveInfo *slaveInfo,
                       ConstString     jobUUID
                      );
 
+Errors Slave_process(const SlaveInfo *slaveInfo,
+                     long            timeout
+                    );
+
 #ifdef __cplusplus
   }
 #endif
