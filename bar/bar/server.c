@@ -420,7 +420,6 @@ typedef struct ClientNode
   LIST_NODE_HEADER(struct ClientNode);
 
   ClientInfo clientInfo;
-  String     commandString;                                // command buffer
 } ClientNode;
 
 // client list
@@ -439,7 +438,7 @@ typedef struct SlaveNode
   SlaveInfo slaveInfo;
 } SlaveNode;
 
-// client list
+// slave list
 typedef struct
 {
   LIST_HEADER(SlaveNode);
@@ -3309,31 +3308,6 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
 }
 
 /***********************************************************************\
-* Name   : getAllJobUUIDs
-* Purpose: get all job UUIDs
-* Input  : jobUUIDList - string list variable
-* Output : jobUUIDList - updated list
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void getAllJobUUIDs(StringList *jobUUIDList)
-{
-  SemaphoreLock semaphoreLock;
-  const JobNode *jobNode;
-
-  assert(jobUUIDList != NULL);
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-  {
-    LIST_ITERATE(&jobList,jobNode)
-    {
-      StringList_append(jobUUIDList,jobNode->uuid);
-    }
-  }
-}
-
-/***********************************************************************\
 * Name   : triggerJob
 * Purpose: trogger job run
 * Input  : jobNode            - job node
@@ -3357,8 +3331,6 @@ LOCAL void triggerJob(JobNode      *jobNode,
                       bool         noStorage
                      )
 {
-  SemaphoreLock semaphoreLock;
-
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
@@ -3416,8 +3388,6 @@ LOCAL void startJob(JobNode *jobNode)
 
 LOCAL void doneJob(JobNode *jobNode)
 {
-  SemaphoreLock semaphoreLock;
-
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
@@ -3855,9 +3825,6 @@ LOCAL void jobThreadCode(void)
   uint64           lastExecutedDateTime;
   AggregateInfo    jobAggregateInfo,scheduleAggregateInfo;
   ScheduleNode     *scheduleNode;
-  uint             commandId;
-  String           commandName;
-  StringMap        argumentMap;
   StringMap        resultMap;
 
   // initialize variables
@@ -3876,12 +3843,6 @@ LOCAL void jobThreadCode(void)
   scheduleCustomText                     = String_new();
   jobAggregateInfo.lastErrorMessage      = String_new();
   scheduleAggregateInfo.lastErrorMessage = String_new();
-  commandName                            = String_new();
-  argumentMap                            = StringMap_new();
-  if (argumentMap == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
   resultMap                              = StringMap_new();
   if (resultMap == NULL)
   {
@@ -4399,62 +4360,57 @@ fprintf(stderr,"%s, %d: start: %s\n",__FILE__,__LINE__,Error_getText(jobNode->ru
 
       // wait for slave job
 fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
-      if (jobNode->runningInfo.error == ERROR_NONE)
+      while (   !quitFlag
+             && isJobRunning(jobNode)
+             && (jobNode->runningInfo.error == ERROR_NONE)
+            )
       {
-        while (   !quitFlag
-               && isJobRunning(jobNode)
-              )
+        // get slave job status
+        jobNode->runningInfo.error = Slave_executeCommand(&jobNode->slaveInfo,
+                                                          5LL*MS_PER_SECOND,
+                                                          resultMap,
+                                                          "JOB_STATUS jobUUID=%S",
+                                                          jobNode->uuid
+                                                         );
+        if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          // get slave job status
-          error = Slave_executeCommand(&jobNode->slaveInfo,
-                                       5LL*MS_PER_SECOND,
-                                       resultMap,
-                                       "JOB_STATUS jobUUID=%S",
-                                       jobNode->uuid
-                                      );
-
-          // update job status
-          if (error == ERROR_NONE)
-          {
-            // parse and update job status
-            StringMap_getEnum  (resultMap,"state",                &jobNode->state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
-            StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0L);
-            StringMap_getUInt64(resultMap,"doneSize",             &jobNode->runningInfo.doneSize,0LL);
-            StringMap_getULong (resultMap,"totalEntryCount",      &jobNode->runningInfo.totalEntryCount,0L);
-            StringMap_getUInt64(resultMap,"totalEntrySize",       &jobNode->runningInfo.totalEntrySize,0LL);
-            StringMap_getBool  (resultMap,"collectTotalSumDone",  &jobNode->runningInfo.collectTotalSumDone,FALSE);
-            StringMap_getULong (resultMap,"skippedEntryCount",    &jobNode->runningInfo.skippedEntryCount,0L);
-            StringMap_getUInt64(resultMap,"skippedEntrySize",     &jobNode->runningInfo.skippedEntrySize,0LL);
-            StringMap_getULong (resultMap,"errorEntryCount",      &jobNode->runningInfo.errorEntryCount,0L);
-            StringMap_getUInt64(resultMap,"errorEntrySize",       &jobNode->runningInfo.errorEntrySize,0LL);
-            StringMap_getDouble(resultMap,"entriesPerSecond",     &jobNode->runningInfo.entriesPerSecond,0.0);
-            StringMap_getDouble(resultMap,"bytesPerSecond",       &jobNode->runningInfo.bytesPerSecond,0.0);
-            StringMap_getDouble(resultMap,"storageBytesPerSecond",&jobNode->runningInfo.storageBytesPerSecond,0.0);
-            StringMap_getUInt64(resultMap,"archiveSize",          &jobNode->runningInfo.archiveSize,0LL);
-            StringMap_getDouble(resultMap,"compressionRatio",     &jobNode->runningInfo.compressionRatio,0.0);
-            StringMap_getULong (resultMap,"estimatedRestTime",    &jobNode->runningInfo.estimatedRestTime,0L);
-            StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.entryName,NULL);
-            StringMap_getUInt64(resultMap,"entryDoneSize",        &jobNode->runningInfo.entryDoneSize,0LL);
-            StringMap_getUInt64(resultMap,"entryTotalSize",       &jobNode->runningInfo.entryTotalSize,0LL);
-            StringMap_getString(resultMap,"storageName",          jobNode->runningInfo.storageName,NULL);
-            StringMap_getUInt64(resultMap,"storageDoneSize",      &jobNode->runningInfo.storageDoneSize,0L);
-            StringMap_getUInt64(resultMap,"storageTotalSize",     &jobNode->runningInfo.storageTotalSize,0L);
-            StringMap_getUInt  (resultMap,"volumeNumber",         &jobNode->runningInfo.volumeNumber,0);
-            StringMap_getDouble(resultMap,"volumeProgress",       &jobNode->runningInfo.volumeProgress,0.0);
-            StringMap_getString(resultMap,"message",              jobNode->runningInfo.message,NULL);
-          }
-          else
-          {
-            // slave communication error
-fprintf(stderr,"%s, %d: xxxxerror=%s\n",__FILE__,__LINE__,Error_getText(error));
-            jobNode->state             = JOB_STATE_ERROR;
-            jobNode->runningInfo.error = error;
-          }
-
-          // process slave
-          Slave_process(&jobNode->slaveInfo,1*MS_PER_SECOND);
+          // parse and update job status
+          StringMap_getEnum  (resultMap,"state",                &jobNode->state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
+          StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0L);
+          StringMap_getUInt64(resultMap,"doneSize",             &jobNode->runningInfo.doneSize,0LL);
+          StringMap_getULong (resultMap,"totalEntryCount",      &jobNode->runningInfo.totalEntryCount,0L);
+          StringMap_getUInt64(resultMap,"totalEntrySize",       &jobNode->runningInfo.totalEntrySize,0LL);
+          StringMap_getBool  (resultMap,"collectTotalSumDone",  &jobNode->runningInfo.collectTotalSumDone,FALSE);
+          StringMap_getULong (resultMap,"skippedEntryCount",    &jobNode->runningInfo.skippedEntryCount,0L);
+          StringMap_getUInt64(resultMap,"skippedEntrySize",     &jobNode->runningInfo.skippedEntrySize,0LL);
+          StringMap_getULong (resultMap,"errorEntryCount",      &jobNode->runningInfo.errorEntryCount,0L);
+          StringMap_getUInt64(resultMap,"errorEntrySize",       &jobNode->runningInfo.errorEntrySize,0LL);
+          StringMap_getDouble(resultMap,"entriesPerSecond",     &jobNode->runningInfo.entriesPerSecond,0.0);
+          StringMap_getDouble(resultMap,"bytesPerSecond",       &jobNode->runningInfo.bytesPerSecond,0.0);
+          StringMap_getDouble(resultMap,"storageBytesPerSecond",&jobNode->runningInfo.storageBytesPerSecond,0.0);
+          StringMap_getUInt64(resultMap,"archiveSize",          &jobNode->runningInfo.archiveSize,0LL);
+          StringMap_getDouble(resultMap,"compressionRatio",     &jobNode->runningInfo.compressionRatio,0.0);
+          StringMap_getULong (resultMap,"estimatedRestTime",    &jobNode->runningInfo.estimatedRestTime,0L);
+          StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.entryName,NULL);
+          StringMap_getUInt64(resultMap,"entryDoneSize",        &jobNode->runningInfo.entryDoneSize,0LL);
+          StringMap_getUInt64(resultMap,"entryTotalSize",       &jobNode->runningInfo.entryTotalSize,0LL);
+          StringMap_getString(resultMap,"storageName",          jobNode->runningInfo.storageName,NULL);
+          StringMap_getUInt64(resultMap,"storageDoneSize",      &jobNode->runningInfo.storageDoneSize,0L);
+          StringMap_getUInt64(resultMap,"storageTotalSize",     &jobNode->runningInfo.storageTotalSize,0L);
+          StringMap_getUInt  (resultMap,"volumeNumber",         &jobNode->runningInfo.volumeNumber,0);
+          StringMap_getDouble(resultMap,"volumeProgress",       &jobNode->runningInfo.volumeProgress,0.0);
+          StringMap_getString(resultMap,"message",              jobNode->runningInfo.message,NULL);
         }
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
+        else
+        {
+          // slave communication error
+fprintf(stderr,"%s, %d: xxxxerror=%s\n",__FILE__,__LINE__,Error_getText(error));
+          jobNode->state             = JOB_STATE_ERROR;
+          jobNode->runningInfo.error = error;
+        }
+
+        // process slave
+        jobNode->runningInfo.error = Slave_process(&jobNode->slaveInfo,1*MS_PER_SECOND);
       }
 fprintf(stderr,"%s, %d: wait: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
 
@@ -8498,13 +8454,12 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  String       name;
-  String       attribute;
-  String       noBackupFileName;
-  bool         noBackupExists;
-  Errors       error;
-  FileInfo     fileInfo;
+  String   name;
+  String   attribute;
+  String   noBackupFileName;
+  bool     noBackupExists;
+  Errors   error;
+  FileInfo fileInfo;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8699,12 +8654,11 @@ UNUSED_VARIABLE(value);
 
 LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  String       name;
-  String       attribute;
-  String       noBackupFileName;
-  Errors       error;
-  FileInfo     fileInfo;
+  String   name;
+  String   attribute;
+  String   noBackupFileName;
+  Errors   error;
+  FileInfo fileInfo;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -17575,84 +17529,12 @@ LOCAL void freeCommand(Command *command, void *userData)
 }
 
 /***********************************************************************\
-* Name   : parseCommand
-* Purpose: parse command
-* Input  : string - command
-* Output : command - command
-* Return : TRUE if no error, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool parseCommand(Command     *command,
-                        ConstString line
-                       )
-{
-  String name;
-  String arguments;
-  uint   i;
-
-  assert(command != NULL);
-
-  // initialize variables
-  command->serverCommandFunction = NULL;
-  command->authorizationState    = AUTHORIZATION_STATE_WAITING;
-  command->id                    = 0;
-  command->argumentMap           = NULL;
-  name      = String_new();
-  arguments = String_new();
-
-  // parse command
-  if (!String_parse(line,STRING_BEGIN,"%u %S % S",NULL,&command->id,name,arguments))
-  {
-    String_delete(arguments);
-    String_delete(name);
-    return FALSE;
-  }
-
-  // find command by name
-  i = 0;
-  while ((i < SIZE_OF_ARRAY(SERVER_COMMANDS)) && !String_equalsCString(name,SERVER_COMMANDS[i].name))
-  {
-    i++;
-  }
-  if (i >= SIZE_OF_ARRAY(SERVER_COMMANDS))
-  {
-    String_delete(arguments);
-    String_delete(name);
-    return FALSE;
-  }
-  command->serverCommandFunction = SERVER_COMMANDS[i].serverCommandFunction;
-  command->authorizationState    = SERVER_COMMANDS[i].authorizationState;
-
-  // parse arguments
-  command->argumentMap = StringMap_new();
-  if (command->argumentMap == NULL)
-  {
-    String_delete(arguments);
-    String_delete(name);
-    return FALSE;
-  }
-  if (!StringMap_parse(command->argumentMap,arguments,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
-  {
-    StringMap_delete(command->argumentMap);
-    String_delete(arguments);
-    String_delete(name);
-    return FALSE;
-  }
-
-  // free resources
-  String_delete(arguments);
-  String_delete(name);
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : parseCommand
-* Purpose: parse command
-* Input  : string - command
-* Output : command - command
-* Return : TRUE if no error, FALSE otherwise
+* Name   : findCommand
+* Purpose: find command
+* Input  : name - command name
+* Output : serverCommandFunction - server command function
+*          authorizationState    - required authorization state
+* Return : TRUE if command found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -17661,8 +17543,7 @@ LOCAL bool findCommand(ConstString           name,
                        AuthorizationStates   *authorizationState
                       )
 {
-  String arguments;
-  uint   i;
+  uint i;
 
   assert(name != NULL);
   assert(serverCommandFunction != NULL);
@@ -17676,7 +17557,6 @@ LOCAL bool findCommand(ConstString           name,
   }
   if (i >= SIZE_OF_ARRAY(SERVER_COMMANDS))
   {
-    String_delete(arguments);
     return FALSE;
   }
   (*serverCommandFunction) = SERVER_COMMANDS[i].serverCommandFunction;
@@ -17686,8 +17566,8 @@ LOCAL bool findCommand(ConstString           name,
 }
 
 /***********************************************************************\
-* Name   : sendCommand
-* Purpose: send command to queue for asynchronous execution
+* Name   : putCommand
+* Purpose: put command into queue for asynchronous execution
 * Input  : clientInfo            - client info
 *          serverCommandFunction - server command function
 *          authorizationState    - required authorization state
@@ -17698,12 +17578,12 @@ LOCAL bool findCommand(ConstString           name,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void sendCommand(ClientInfo            *clientInfo,
-                       ServerCommandFunction serverCommandFunction,
-                       AuthorizationStates   authorizationState,
-                       uint                  id,
-                       const StringMap       argumentMap
-                      )
+LOCAL void putCommand(ClientInfo            *clientInfo,
+                      ServerCommandFunction serverCommandFunction,
+                      AuthorizationStates   authorizationState,
+                      uint                  id,
+                      const StringMap       argumentMap
+                     )
 {
   Command command;
 
@@ -17730,7 +17610,7 @@ LOCAL void sendCommand(ClientInfo            *clientInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void getCommand(ClientInfo            *clientInfo,
+LOCAL bool getCommand(ClientInfo            *clientInfo,
                       ServerCommandFunction *serverCommandFunction,
                       AuthorizationStates   *authorizationState,
                       uint                  *id,
@@ -18076,7 +17956,6 @@ LOCAL void freeClientNode(ClientNode *clientNode, void *userData)
   UNUSED_VARIABLE(userData);
 
   doneClient(&clientNode->clientInfo);
-  String_delete(clientNode->commandString);
 }
 
 /***********************************************************************\
@@ -18098,7 +17977,6 @@ LOCAL ClientNode *newClient(void)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  clientNode->commandString = String_new();
 
   // initialize node
   initClient(&clientNode->clientInfo);
@@ -18244,6 +18122,8 @@ LOCAL void deleteAuthorizationFailNode(AuthorizationFailNode *authorizationFailN
 
 // ----------------------------------------------------------------------
 
+//TODO
+#if 0
 /***********************************************************************\
 * Name   : processCommand
 * Purpose: process client command
@@ -18338,6 +18218,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString commandLine)
       break;
   }
 }
+#endif
 
 /***********************************************************************\
 * Name   : processCommand
@@ -18349,19 +18230,12 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString commandLine)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void processCommand2(ClientInfo *clientInfo, uint id, ConstString name, const StringMap argumentMap)
+LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, const StringMap argumentMap)
 {
   ServerCommandFunction serverCommandFunction;
   AuthorizationStates   authorizationState;
 
   assert(clientInfo != NULL);
-
-  #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
-    {
-//      fprintf(stderr,"DEBUG: process command '%s'\n",String_cString(commandLine));
-    }
-  #endif /* not NDEBUG */
 
   // find command
   if (!findCommand(name,&serverCommandFunction,&authorizationState))
@@ -18414,7 +18288,7 @@ LOCAL void processCommand2(ClientInfo *clientInfo, uint id, ConstString name, co
           break;
         case AUTHORIZATION_STATE_OK:
           // send command to client thread for asynchronous processing
-          sendCommand(clientInfo,serverCommandFunction,authorizationState,id,argumentMap);
+          putCommand(clientInfo,serverCommandFunction,authorizationState,id,argumentMap);
           break;
         case AUTHORIZATION_STATE_FAIL:
           break;
@@ -18429,6 +18303,8 @@ LOCAL void processCommand2(ClientInfo *clientInfo, uint id, ConstString name, co
   }
 }
 
+//TODO
+#if 0
 /***********************************************************************\
 * Name   : processSlaveCommand
 * Purpose: process slave command
@@ -18469,6 +18345,7 @@ LOCAL void processSlaveCommand(ClientInfo *clientInfo, ConstString commandLine)
   // free resources
   freeCommand(&command,NULL);
 }
+#endif
 
 /*---------------------------------------------------------------------*/
 
@@ -18513,12 +18390,10 @@ Errors Server_run(ServerModes       mode,
   String                clientName;
   uint                  clientPort;
   uint                  pollfdIndex;
-  char                  buffer[2048];
-  ulong                 receivedBytes;
-  ulong                 i;
-String name;
-uint id;
-StringMap argumentMap;
+  char                  buffer[256];
+  String                name;
+  uint                  id;
+  StringMap             argumentMap;
   ClientNode            *disconnectClientNode;
 
   // initialize variables
@@ -18765,8 +18640,8 @@ StringMap argumentMap;
   clientName               = String_new();
   pollServerSocketIndex    = 0;
   pollServerTLSSocketIndex = 0;
-name = String_new();
-argumentMap = StringMap_new();
+  name                     = String_new();
+  argumentMap              = StringMap_new();
   while (!quitFlag)
   {
     // get active sockets to wait for
@@ -18969,43 +18844,23 @@ argumentMap = StringMap_new();
             {
 #if 1
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-              if (ServerIO_receiveCommand(&clientNode->clientInfo.io,
-                                          &id,
-                                          name,
-                                          argumentMap
-                                         )
-                 )
+              if (ServerIO_receiveData(&clientNode->clientInfo.io))
               {
-                processCommand2(&clientNode->clientInfo,id,name,argumentMap);
-              }
-#else
-              // receive data from client
-              Network_receive(&clientNode->clientInfo.io.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
-              if (receivedBytes > 0)
-              {
-                // received data -> process
-                do
+                // process all commands
+                while (ServerIO_getCommand(&clientNode->clientInfo.io,
+                                           &id,
+                                           name,
+                                           argumentMap
+                                          )
+                   )
                 {
-                  for (i = 0; i < receivedBytes; i++)
-                  {
-                    if (buffer[i] != '\n')
-                    {
-                      String_appendChar(clientNode->commandString,buffer[i]);
-                    }
-                    else
-                    {
-                      processCommand(&clientNode->clientInfo,clientNode->commandString);
-                      String_clear(clientNode->commandString);
-                    }
-                  }
-                  error = Network_receive(&clientNode->clientInfo.io.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+                  processCommand(&clientNode->clientInfo,id,name,argumentMap);
                 }
-                while ((error == ERROR_NONE) && (receivedBytes > 0));
               }
-#endif
               else
               {
                 // disconnect -> remove from client list
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                 disconnectClientNode = clientNode;
                 List_remove(&clientList,disconnectClientNode);
 
@@ -19041,6 +18896,70 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 // done client and free resources
                 deleteClient(disconnectClientNode);
               }
+#else
+              // receive data from client
+              Network_receive(&clientNode->clientInfo.io.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+              if (receivedBytes > 0)
+              {
+                // received data -> process
+                do
+                {
+                  for (i = 0; i < receivedBytes; i++)
+                  {
+                    if (buffer[i] != '\n')
+                    {
+                      String_appendChar(clientNode->commandString,buffer[i]);
+                    }
+                    else
+                    {
+                      processCommand(&clientNode->clientInfo,clientNode->commandString);
+                      String_clear(clientNode->commandString);
+                    }
+                  }
+                  error = Network_receive(&clientNode->clientInfo.io.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+                }
+                while ((error == ERROR_NONE) && (receivedBytes > 0));
+              }
+              else
+              {
+                // disconnect -> remove from client list
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+                disconnectClientNode = clientNode;
+                List_remove(&clientList,disconnectClientNode);
+
+                // update authorization fail info
+                switch (disconnectClientNode->clientInfo.authorizationState)
+                {
+                  case AUTHORIZATION_STATE_WAITING:
+                    break;
+                  case AUTHORIZATION_STATE_OK:
+                    // reset authorization failure
+                    authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
+                    if (authorizationFailNode != NULL)
+                    {
+                      authorizationFailNode->count = 0;
+                      authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+                    }
+                    break;
+                  case AUTHORIZATION_STATE_FAIL:
+                    // add to/update authorization failure list
+                    authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
+                    if (authorizationFailNode == NULL)
+                    {
+                      authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.io.network.name);
+                      assert(authorizationFailNode != NULL);
+                      List_append(&authorizationFailList,authorizationFailNode);
+                    }
+                    authorizationFailNode->count++;
+                    authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+                    break;
+                }
+                printInfo(1,"Disconnected client '%s'\n",getClientInfo(&disconnectClientNode->clientInfo,buffer,sizeof(buffer)));
+
+                // done client and free resources
+                deleteClient(disconnectClientNode);
+              }
+#endif
             }
             else if ((pollfds[pollfdIndex].revents & (POLLERR|POLLNVAL)) != 0)
             {
@@ -19174,6 +19093,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
     }
   }
+  StringMap_delete(argumentMap);
+  String_delete(name);
   String_delete(clientName);
   free(pollfds);
 
@@ -19252,7 +19173,9 @@ Errors Server_batch(int inputDescriptor,
   Errors     error;
   FileHandle inputFileHandle,outputFileHandle;
   ClientInfo clientInfo;
-  String     commandString;
+  String                name;
+  uint                  id;
+  StringMap             argumentMap;
 
   // initialize variables
   List_init(&jobList);
@@ -19304,17 +19227,24 @@ Errors Server_batch(int inputDescriptor,
 #endif
 
   // process client requests
-  commandString = String_new();
+  name        = String_new();
+  argumentMap = StringMap_new();
 #if 1
   while (!quitFlag && !File_eof(&inputFileHandle))
   {
-    // read command line
-    File_readLine(&inputFileHandle,commandString);
-
-    // process
-//TODO
-    processCommand(&clientInfo,commandString);
+    if (ServerIO_waitCommand(&clientInfo.io,
+                             10L*MS_PER_SECOND,
+                             &id,
+                             name,
+                             argumentMap
+                            )
+       )
+    {
+      processCommand(&clientInfo,id,name,argumentMap);
+    }
   }
+  StringMap_delete(argumentMap);
+  String_delete(name);
 #else /* 0 */
 fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 String_setCString(commandString,"1 SET crypt-password password='muster'");processCommand(&clientInfo,commandString);
@@ -19323,7 +19253,6 @@ String_setCString(commandString,"3 ARCHIVE_LIST name=test.bar");processCommand(&
 //String_setCString(commandString,"3 ARCHIVE_LIST backup/backup-torsten-bar-000.bar");processCommand(&clientInfo,commandString);
 processCommand(&clientInfo,commandString);
 #endif /* 0 */
-  String_delete(commandString);
 
   // done index
   Index_close(indexHandle);

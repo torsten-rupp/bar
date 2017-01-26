@@ -215,8 +215,6 @@ LOCAL void processData(ServerIO *serverIO, ConstString line)
   ServerIOResultNode   *resultNode;
   ServerIOCommandNode  *commandNode;
   SemaphoreLock        semaphoreLock;
-  uint                 i;
-  StringMap            argumentMap;
 
   assert(serverIO != NULL);
   assert(line != NULL);
@@ -299,8 +297,13 @@ LOCAL void processData(ServerIO *serverIO, ConstString line)
   }
   else
   {
-fprintf(stderr,"%s, %d: unkown %s\n",__FILE__,__LINE__,String_cString(line));
     // unknown
+    #ifndef NDEBUG
+      if (globalOptions.serverDebugFlag)
+      {
+        fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(line));
+      }
+    #endif /* not DEBUG */
   }
 
   // free resources
@@ -362,39 +365,76 @@ LOCAL void sendData(ServerIO *serverIO, ConstString line)
 LOCAL bool receiveData(ServerIO *serverIO)
 {
   char   buffer[4096];
-  ulong  receivedBytes;
+  ulong  readBytes;
   ulong  i;
   Errors error;
 
   assert(serverIO != NULL);
 
-  Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
-//fprintf(stderr,"%s, %d: receivedBytes=%d buffer=%s\n",__FILE__,__LINE__,receivedBytes,buffer);
-  if (receivedBytes > 0)
+  switch (serverIO->type)
   {
-    do
-    {
-      // received data -> process
-      for (i = 0; i < receivedBytes; i++)
+    case SERVER_IO_TYPE_NONE:
+      break;
+    case SERVER_IO_TYPE_BATCH:
+      (void)File_read(&serverIO->file.fileHandle,buffer,sizeof(buffer),&readBytes);
+//fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,buffer);
+      if (readBytes > 0)
       {
-        if (buffer[i] != '\n')
+        do
         {
-          String_appendChar(serverIO->line,buffer[i]);
+          // received data -> process
+          for (i = 0; i < readBytes; i++)
+          {
+            if (buffer[i] != '\n')
+            {
+              String_appendChar(serverIO->line,buffer[i]);
+            }
+            else
+            {
+              processData(serverIO,serverIO->line);
+              String_clear(serverIO->line);
+            }
+          }
+          error = File_read(&serverIO->file.fileHandle,buffer,sizeof(buffer),&readBytes);
         }
-        else
-        {
-          processData(serverIO,serverIO->line);
-          String_clear(serverIO->line);
-        }
+        while ((error == ERROR_NONE) && (readBytes > 0));
       }
-      error = Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
-    }
-    while ((error == ERROR_NONE) && (receivedBytes > 0));
-  }
-  else
-  {
-    // disconnect
-    return FALSE;
+      else
+      {
+        // disconnect
+        return FALSE;
+      }
+      break;
+    case SERVER_IO_TYPE_NETWORK:
+      (void)Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&readBytes);
+fprintf(stderr,"%s, %d: receivedBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,buffer);
+      if (readBytes > 0)
+      {
+        do
+        {
+          // received data -> process
+          for (i = 0; i < readBytes; i++)
+          {
+            if (buffer[i] != '\n')
+            {
+              String_appendChar(serverIO->line,buffer[i]);
+            }
+            else
+            {
+              processData(serverIO,serverIO->line);
+              String_clear(serverIO->line);
+            }
+          }
+          error = Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&readBytes);
+        }
+        while ((error == ERROR_NONE) && (readBytes > 0));
+      }
+      else
+      {
+        // disconnect
+        return FALSE;
+      }
+      break;
   }
 
   return TRUE;
@@ -419,13 +459,16 @@ LOCAL bool waitData(ServerIO *serverIO, long timeout)
   assert(serverIO != NULL);
 
   // wait for data from slave
+//TODO: batch?
   pollfds[0].fd       = Network_getSocket(&serverIO->network.socketHandle);
+fprintf(stderr,"%s, %d: Network_getSocket(&serverIO->network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&serverIO->network.socketHandle));
   pollfds[0].events   = POLLIN|POLLERR|POLLNVAL;
   pollTimeout.tv_sec  = timeout/MS_PER_SECOND;
   pollTimeout.tv_nsec = (timeout%MS_PER_SECOND)*NS_PER_MS;
   if (ppoll(pollfds,1,&pollTimeout,&signalMask) <= 0)
   {
 fprintf(stderr,"%s, %d: poll fail %s\n",__FILE__,__LINE__,strerror(errno));
+Misc_udelay(10000*1000);
 return FALSE;
   }
 
@@ -562,9 +605,9 @@ void ServerIO_done(ServerIO *serverIO)
 {
   assert(serverIO != NULL);
 
-  List_done(&serverIO->resultList,CALLBACK(freeResultNode,NULL));
+  List_done(&serverIO->resultList,CALLBACK((ListNodeFreeFunction)freeResultNode,NULL));
   Semaphore_done(&serverIO->resultList.lock);
-  List_done(&serverIO->commandList,CALLBACK(freeCommandNode,NULL));
+  List_done(&serverIO->commandList,CALLBACK((ListNodeFreeFunction)freeCommandNode,NULL));
   Semaphore_done(&serverIO->commandList.lock);
   String_delete(serverIO->line);
   Crypt_doneKey(&serverIO->privateKey);
@@ -572,9 +615,9 @@ void ServerIO_done(ServerIO *serverIO)
   Semaphore_done(&serverIO->lock);
 }
 
-Errors ServerIO_initBatch(ServerIO   *serverIO,
-                          FileHandle fileHandle
-                         )
+void ServerIO_initBatch(ServerIO   *serverIO,
+                        FileHandle fileHandle
+                       )
 {
   assert(serverIO != NULL);
   assert(serverIO->type == SERVER_IO_TYPE_NONE);
@@ -583,17 +626,15 @@ Errors ServerIO_initBatch(ServerIO   *serverIO,
   serverIO->file.fileHandle = fileHandle;
 
   String_clear(serverIO->line);
-  List_clear(&serverIO->commandList,CALLBACK(freeCommandNode,NULL));
-  List_clear(&serverIO->resultList,CALLBACK(freeResultNode,NULL));
-
-  return ERROR_NONE;
+  List_clear(&serverIO->commandList,CALLBACK((ListNodeFreeFunction)freeCommandNode,NULL));
+  List_clear(&serverIO->resultList,CALLBACK((ListNodeFreeFunction)freeResultNode,NULL));
 }
 
-Errors ServerIO_initNetwork(ServerIO     *serverIO,
-                            ConstString  hostName,
-                            uint         hostPort,
-                            SocketHandle socketHandle
-                           )
+void ServerIO_initNetwork(ServerIO     *serverIO,
+                          ConstString  hostName,
+                          uint         hostPort,
+                          SocketHandle socketHandle
+                         )
 {
   assert(serverIO != NULL);
   assert(serverIO->type == SERVER_IO_TYPE_NONE);
@@ -606,16 +647,12 @@ Errors ServerIO_initNetwork(ServerIO     *serverIO,
   serverIO->network.isConnected  = TRUE;
 
   String_clear(serverIO->line);
-  List_clear(&serverIO->commandList,CALLBACK(freeCommandNode,NULL));
-  List_clear(&serverIO->resultList,CALLBACK(freeResultNode,NULL));
-
-  return ERROR_NONE;
+  List_clear(&serverIO->commandList,CALLBACK((ListNodeFreeFunction)freeCommandNode,NULL));
+  List_clear(&serverIO->resultList,CALLBACK((ListNodeFreeFunction)freeResultNode,NULL));
 }
 
 void ServerIO_disconnect(ServerIO *serverIO)
 {
-  Errors error;
-
   assert(serverIO != NULL);
 
   switch (serverIO->type)
@@ -822,16 +859,24 @@ bool ServerIO_checkPassword(const ServerIO *serverIO,
 
 // ----------------------------------------------------------------------
 
+bool ServerIO_receiveData(ServerIO *serverIO)
+{
+  SemaphoreLock semaphoreLock;
+
+  assert(serverIO != NULL);
+
+  return receiveData(serverIO);
+}
+
 Errors ServerIO_vsendCommand(ServerIO   *serverIO,
                              uint       *id,
                              const char *format,
                              va_list    arguments
                             )
 {
-  String             command;
-  locale_t           locale;
-  SemaphoreLock      semaphoreLock;
-  ServerIOResultNode *resultNode;
+  String        command;
+  locale_t      locale;
+  SemaphoreLock semaphoreLock;
 
   assert(serverIO != NULL);
   assert(id != NULL);
@@ -880,11 +925,11 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
   return error;
 }
 
-bool ServerIO_receiveCommand(ServerIO  *serverIO,
-                             uint      *id,
-                             String    name,
-                             StringMap argumentMap
-                            )
+bool ServerIO_getCommand(ServerIO  *serverIO,
+                         uint      *id,
+                         String    name,
+                         StringMap argumentMap
+                        )
 {
   SemaphoreLock       semaphoreLock;
   ServerIOCommandNode *commandNode;
@@ -894,14 +939,13 @@ bool ServerIO_receiveCommand(ServerIO  *serverIO,
   assert(name != NULL);
 
   // receive any available data
-  receiveData(serverIO);
+//  (void)receiveData(serverIO);
 
   // get next command node (if any)
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     commandNode = List_removeFirst(&serverIO->commandList);
   }
-
   if (commandNode != NULL)
   {
     // get command
@@ -1038,8 +1082,8 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
 }
 
 Errors ServerIO_waitResult(ServerIO  *serverIO,
-                           uint      id,
                            long      timeout,
+                           uint      id,
                            Errors    *error,
                            bool      *completedFlag,
                            StringMap resultMap
@@ -1067,6 +1111,7 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
         // not found -> wait for data
         Semaphore_unlock(&serverIO->resultList.lock);
         {
+fprintf(stderr,"%s, %d: wwwwwwwwwww\n",__FILE__,__LINE__);
           if (!waitData(serverIO,timeout))
           {
             return ERROR_NETWORK_TIMEOUT;
@@ -1097,8 +1142,8 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
 }
 
 Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
-                                StringMap  resultMap,
                                 long       timeout,
+                                StringMap  resultMap,
                                 const char *format,
                                 va_list    arguments
                                )
@@ -1198,8 +1243,8 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
 }
 
 Errors ServerIO_executeCommand(ServerIO   *serverIO,
-                               StringMap  resultMap,
                                long       timeout,
+                               StringMap  resultMap,
                                const char *format,
                                ...
                               )
@@ -1208,17 +1253,17 @@ Errors ServerIO_executeCommand(ServerIO   *serverIO,
   Errors  error;
 
   va_start(arguments,format);
-  error = ServerIO_vexecuteCommand(serverIO,resultMap,timeout,format,arguments);
+  error = ServerIO_vexecuteCommand(serverIO,timeout,resultMap,format,arguments);
   va_end(arguments);
 
   return error;
 }
 
 Errors ServerIO_clientAction(ServerIO   *serverIO,
+                             long       timeout,
                              uint       id,
                              StringMap  resultMap,
                              const char *actionCommand,
-                             long       timeout,
                              const char *format,
                              ...
                             )
@@ -1371,6 +1416,7 @@ commandId = 0;
   return error;
 }
 
+#if 0
 Errors ServerIO_wait(ServerIO  *serverIO,
                      long      timeout
                     )
@@ -1398,6 +1444,7 @@ Errors ServerIO_wait(ServerIO  *serverIO,
 
   return ERROR_NONE;
 }
+#endif
 
 #ifdef __cplusplus
   }

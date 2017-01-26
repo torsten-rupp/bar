@@ -155,6 +155,7 @@ SOCKET_TYPE_PLAIN,
                        hostPort,
                        socketHandle
                       );
+fprintf(stderr,"%s, %d: Network_getSocket(&slaveInfo->io.network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&slaveInfo->io.network.socketHandle));
 
   // authorize
   line = String_new();
@@ -824,12 +825,12 @@ bool Slave_ping(SlaveInfo *slaveInfo)
 
 // ----------------------------------------------------------------------
 
-Errors Slave_getCommand(const SlaveInfo *slaveInfo,
-                        long            timeout,
-                        uint            *id,
-                        String          name,
-                        StringMap       argumentMap
-                       )
+Errors Slave_waitCommand(const SlaveInfo *slaveInfo,
+                         long            timeout,
+                         uint            *id,
+                         String          name,
+                         StringMap       argumentMap
+                        )
 {
   Errors error;
 
@@ -866,6 +867,7 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
 
   // init variables
 
+#if 1
 //TODO: lock
   // send command
   error = ServerIO_vsendCommand(&slaveInfo->io,
@@ -879,10 +881,10 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
   }
 
   // wait for result
-//fprintf(stderr,"%s, %d: timeout=%ld\n",__FILE__,__LINE__,timeout);
+fprintf(stderr,"%s, %d: timeout=%ld\n",__FILE__,__LINE__,timeout);
   error = ServerIO_waitResult(&slaveInfo->io,
-                              id,
                               timeout,
+                              id,
                               NULL,  // error,
                               NULL,  // completedFlag,
                               resultMap
@@ -899,6 +901,18 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
   {
     return error;
   }
+#else
+  error = ServerIO_vexecuteCommand(&slaveInfo->io,
+                                   timeout,
+                                   NULL,  // error,
+                                   NULL,  // completedFlag,
+                                   resultMap
+                                  );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+#endif
 
   // free resources
 
@@ -1277,7 +1291,7 @@ ServerIO_sendResult(&slaveInfo->io,
   StringMap_delete(argumentMap);
   String_delete(name);
 
-  return ERROR_NONE;
+  return error;
 }
 
 #ifdef __cplusplus

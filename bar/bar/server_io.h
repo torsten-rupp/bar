@@ -120,13 +120,6 @@ typedef struct
   ServerIOResultList  resultList;
 } ServerIO;
 
-//TODO: remove
-typedef struct
-{
-  Semaphore    lock;
-  SocketHandle socketHandle;
-} ServerConnectInfo;
-
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -167,35 +160,42 @@ void ServerIO_done(ServerIO *serverIO);
 * Input  : serverIO   - server i/o
 *          fileHandle - file handle
 * Output : -
-* Return : ERROR_NONE or error code
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
-Errors ServerIO_initBatch(ServerIO   *serverIO,
-                          FileHandle fileHandle
-                         );
+void ServerIO_initBatch(ServerIO   *serverIO,
+                        FileHandle fileHandle
+                       );
 
 /***********************************************************************\
 * Name   : ServerIO_initNetwork
 * Purpose: init server network i/o
 * Input  : serverIO     - server i/o
-*          hostName     - remote name
-*          hostPort     - remote port
+*          hostName     - remote host name
+*          hostPort     - remote host port
 *          socketHandle - socket handle
 * Output : -
-* Return : ERROR_NONE or error code
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
-Errors ServerIO_initNetwork(ServerIO     *serverIO,
-                            ConstString  hostName,
-                            uint         hostPort,
-                            SocketHandle socketHandle
-                           );
+void ServerIO_initNetwork(ServerIO     *serverIO,
+                          ConstString  hostName,
+                          uint         hostPort,
+                          SocketHandle socketHandle
+                         );
+
+/***********************************************************************\
+* Name   : ServerIO_disconnect
+* Purpose: disconnect server i/o
+* Input  : serverIO - server i/o
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 void ServerIO_disconnect(ServerIO *serverIO);
-
-bool ServerIO_isConnected(ServerIO *serverIO);
 
 // ----------------------------------------------------------------------
 
@@ -254,11 +254,26 @@ bool ServerIO_checkPassword(const ServerIO *serverIO,
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : ServerIO_vsendCommand
-* Purpose:
+* Name   : ServerIO_receiveData
+* Purpose: process data
 * Input  : serverIO - server i/o
 * Output : -
-* Return : -
+* Return : TRUE if data processed, FALSE on disconnect
+* Notes  : -
+\***********************************************************************/
+
+bool ServerIO_receiveData(ServerIO *serverIO);
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : ServerIO_vsendCommand
+* Purpose: send command
+* Input  : serverIO  - server i/o
+*          format    - command format string
+*          arguments - arguments for command format string
+* Output : id - command id
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -270,10 +285,12 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
 
 /***********************************************************************\
 * Name   : ServerIO_sendCommand
-* Purpose:
+* Purpose: send command
 * Input  : serverIO - server i/o
-* Output : -
-* Return : -
+*          format   - command format string
+*          ...      - optional arguments for command format string
+* Output : id - command id
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -294,15 +311,15 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
 * Notes  : -
 \***********************************************************************/
 
-bool ServerIO_receiveCommand(ServerIO  *serverIO,
-                             uint      *id,
-                             String    name,
-                             StringMap argumentMap
-                            );
+bool ServerIO_getCommand(ServerIO  *serverIO,
+                         uint      *id,
+                         String    name,
+                         StringMap argumentMap
+                        );
 
 /***********************************************************************\
 * Name   : ServerIO_waitCommand
-* Purpose: wait for command
+* Purpose: wait for and receive command
 * Input  : serverIO - server i/o
 *          timeout  - timeout [ms] or WAIT_FOREVER
 * Output : id        - command id
@@ -319,18 +336,25 @@ bool ServerIO_waitCommand(ServerIO  *serverIO,
                           StringMap argumentMap
                          );
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : ServerIO_sendResult
 * Purpose: send client result
-* Input  : serverIO - server i/o
+* Input  : serverIO      - server i/o
+*          id            - command id
+*          completedFlag - TRUE iff completed
+*          error         - error code
+*          format        - command format string
+*          ...           - optional arguments for command format string
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors ServerIO_sendResult(ServerIO   *serverIO,
                            uint       id,
-                           bool       completeFlag,
+                           bool       completedFlag,
                            Errors     error,
                            const char *format,
                            ...
@@ -340,8 +364,8 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
 * Name   : ServerIO_waitResult
 * Purpose: wait for result
 * Input  : serverIO - server i/o
-*          id       - result id to wait for
 *          timeout  - timeout [ms] or WAIT_FOREVER
+*          id       - command id to wait for
 * Output : error         - error code (can be NULL)
 *          completedFlag - TRUE iff completed (can be NULL)
 *          resultMap     - result map (can be NULL)
@@ -350,37 +374,46 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
 \***********************************************************************/
 
 Errors ServerIO_waitResult(ServerIO  *serverIO,
-                           uint      id,
                            long      timeout,
+                           uint      id,
                            Errors    *error,
                            bool      *completedFlag,
                            StringMap resultMap
                           );
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : ServerIO_clientAction
 * Purpose: execute client action
 * Input  : serverIO - server i/o
+*          timeout  - timeout [ms] or WAIT_FOREVER
+*          id       - command id
+*          resultMap -
+*          actionCommand -
+*          format        -
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors ServerIO_clientAction(ServerIO   *serverIO,
+                             long       timeout,
                              uint       id,
                              StringMap  resultMap,
                              const char *actionCommand,
-                             long       timeout,
                              const char *format,
                              ...
                             );
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : ServerIO_sendMaster
 * Purpose: send master
 * Input  : serverIO - server i/o
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -390,9 +423,11 @@ Errors ServerIO_sendMaster(const ServerIO     *serverIO,
                            ...
                           );
 
+#if 0
 Errors ServerIO_wait(ServerIO  *serverIO,
                      long      timeout
                     );
+#endif
 
 #ifdef __cplusplus
   }
