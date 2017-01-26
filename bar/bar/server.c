@@ -17648,6 +17648,118 @@ LOCAL bool parseCommand(Command     *command,
 }
 
 /***********************************************************************\
+* Name   : parseCommand
+* Purpose: parse command
+* Input  : string - command
+* Output : command - command
+* Return : TRUE if no error, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool findCommand(ConstString           name,
+                       ServerCommandFunction *serverCommandFunction,
+                       AuthorizationStates   *authorizationState
+                      )
+{
+  String arguments;
+  uint   i;
+
+  assert(name != NULL);
+  assert(serverCommandFunction != NULL);
+  assert(authorizationState != NULL);
+
+  // find command by name
+  i = 0;
+  while ((i < SIZE_OF_ARRAY(SERVER_COMMANDS)) && !String_equalsCString(name,SERVER_COMMANDS[i].name))
+  {
+    i++;
+  }
+  if (i >= SIZE_OF_ARRAY(SERVER_COMMANDS))
+  {
+    String_delete(arguments);
+    return FALSE;
+  }
+  (*serverCommandFunction) = SERVER_COMMANDS[i].serverCommandFunction;
+  (*authorizationState   ) = SERVER_COMMANDS[i].authorizationState;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : sendCommand
+* Purpose: send command to queue for asynchronous execution
+* Input  : clientInfo            - client info
+*          serverCommandFunction - server command function
+*          authorizationState    - required authorization state
+*          id                    - command id
+*          argumentMap           - argument map
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void sendCommand(ClientInfo            *clientInfo,
+                       ServerCommandFunction serverCommandFunction,
+                       AuthorizationStates   authorizationState,
+                       uint                  id,
+                       const StringMap       argumentMap
+                      )
+{
+  Command command;
+
+  assert(clientInfo != NULL);
+  assert(serverCommandFunction != NULL);
+  assert(argumentMap != NULL);
+
+  command.serverCommandFunction = serverCommandFunction;
+  command.authorizationState    = authorizationState;
+  command.id                    = id;
+  command.argumentMap           = StringMap_duplicate(argumentMap);
+  (void)MsgQueue_put(&clientInfo->commandQueue,&command,sizeof(Command));
+}
+
+/***********************************************************************\
+* Name   : getCommand
+* Purpose: get next command to execute
+* Input  : clientInfo - client info
+* Output : serverCommandFunction - server command function
+*          authorizationState    - required authorization state
+*          id                    - command id
+*          argumentMap           - argument map
+* Return : TRUE if got command,FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void getCommand(ClientInfo            *clientInfo,
+                      ServerCommandFunction *serverCommandFunction,
+                      AuthorizationStates   *authorizationState,
+                      uint                  *id,
+                      StringMap             argumentMap
+                     )
+{
+  Command command;
+
+  assert(clientInfo != NULL);
+  assert(serverCommandFunction != NULL);
+  assert(id != NULL);
+  assert(argumentMap != NULL);
+
+  if (MsgQueue_get(&clientInfo->commandQueue,&command,NULL,sizeof(command),WAIT_FOREVER))
+  {
+    (*serverCommandFunction) = command.serverCommandFunction;
+    (*authorizationState   ) = command.authorizationState;
+    (*id                   ) = command.id;
+    StringMap_move(argumentMap,command.argumentMap);
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+/***********************************************************************\
 * Name   : networkClientThreadCode
 * Purpose: processing thread for network clients
 * Input  : clientInfo - client info
@@ -18228,6 +18340,96 @@ LOCAL void processCommand(ClientInfo *clientInfo, ConstString commandLine)
 }
 
 /***********************************************************************\
+* Name   : processCommand
+* Purpose: process client command
+* Input  : clientInfo  - client info
+*          commandLine - command line to process
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void processCommand2(ClientInfo *clientInfo, uint id, ConstString name, const StringMap argumentMap)
+{
+  ServerCommandFunction serverCommandFunction;
+  AuthorizationStates   authorizationState;
+
+  assert(clientInfo != NULL);
+
+  #ifndef NDEBUG
+    if (globalOptions.serverDebugFlag)
+    {
+//      fprintf(stderr,"DEBUG: process command '%s'\n",String_cString(commandLine));
+    }
+  #endif /* not NDEBUG */
+
+  // find command
+  if (!findCommand(name,&serverCommandFunction,&authorizationState))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PARSING,"unknown command '%S'",name);
+    return;
+  }
+  assert(serverCommandFunction != NULL);
+
+  switch (clientInfo->io.type)
+  {
+    case SERVER_IO_TYPE_BATCH:
+      // check authorization (if not in server debug mode)
+      if (globalOptions.serverDebugFlag || (authorizationState == clientInfo->authorizationState))
+      {
+        // execute
+        serverCommandFunction(clientInfo,
+                              indexHandle,
+                              id,
+                              argumentMap
+                             );
+      }
+      else
+      {
+        // authorization failure -> mark for disconnect
+        clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+      }
+      break;
+    case SERVER_IO_TYPE_NETWORK:
+      switch (clientInfo->authorizationState)
+      {
+        case AUTHORIZATION_STATE_WAITING:
+          // check authorization (if not in server debug mode)
+          if (globalOptions.serverDebugFlag || (authorizationState == AUTHORIZATION_STATE_WAITING))
+          {
+            // execute command
+            serverCommandFunction(clientInfo,
+                                  indexHandle,
+                                  id,
+                                  argumentMap
+                                 );
+          }
+          else
+          {
+            // authorization failure -> mark for disconnect
+            clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+          }
+          break;
+        case AUTHORIZATION_STATE_OK:
+          // send command to client thread for asynchronous processing
+          sendCommand(clientInfo,serverCommandFunction,authorizationState,id,argumentMap);
+          break;
+        case AUTHORIZATION_STATE_FAIL:
+          break;
+      }
+      break;
+    default:
+      // free resources
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+}
+
+/***********************************************************************\
 * Name   : processSlaveCommand
 * Purpose: process slave command
 * Input  : clientInfo  - client info
@@ -18314,6 +18516,9 @@ Errors Server_run(ServerModes       mode,
   char                  buffer[2048];
   ulong                 receivedBytes;
   ulong                 i;
+String name;
+uint id;
+StringMap argumentMap;
   ClientNode            *disconnectClientNode;
 
   // initialize variables
@@ -18560,12 +18765,15 @@ Errors Server_run(ServerModes       mode,
   clientName               = String_new();
   pollServerSocketIndex    = 0;
   pollServerTLSSocketIndex = 0;
+name = String_new();
+argumentMap = StringMap_new();
   while (!quitFlag)
   {
     // get active sockets to wait for
     pollfdCount = 0;
     SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
     {
+      // get standard port connection requests
       if (serverFlag    && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
       {
         if (pollfdCount >= pollfdCount)
@@ -18579,6 +18787,8 @@ Errors Server_run(ServerModes       mode,
         pollServerSocketIndex = pollfdCount;
         pollfdCount++;
       }
+
+      // get TLS connection requests
       if (serverTLSFlag && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
       {
         if (pollfdCount >= maxPollfdCount)
@@ -18593,6 +18803,7 @@ Errors Server_run(ServerModes       mode,
         pollfdCount++;
       }
 
+      // get client connections
       nowTimestamp = Misc_getTimestamp();
       waitTimeout  = 60LL*US_PER_MINUTE; // wait for network connection max. 60min [us]
       LIST_ITERATE(&clientList,clientNode)
@@ -18613,7 +18824,7 @@ Errors Server_run(ServerModes       mode,
           }
         }
 
-        // add clients to be served to select set
+        // add client to be served
         if (clientOkFlag)
         {
           if (pollfdCount >= maxPollfdCount)
@@ -18634,7 +18845,7 @@ Errors Server_run(ServerModes       mode,
     pollTimeout.tv_nsec = (long)((waitTimeout%US_PER_SECOND)*1000LL);
     (void)ppoll(pollfds,pollfdCount,&pollTimeout,&signalMask);
 
-    // connect new clients
+    // connect new clients via standard port
     if (   serverFlag
         && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
         && (pollfds[pollServerSocketIndex].revents == POLLIN)
@@ -18676,6 +18887,8 @@ Errors Server_run(ServerModes       mode,
                   );
       }
     }
+
+    // connect new clients via TLS port
     if (   serverTLSFlag
         && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
         && (pollfds[pollServerTLSSocketIndex].revents == POLLIN)
@@ -18738,7 +18951,7 @@ Errors Server_run(ServerModes       mode,
       }
     }
 
-    // process client commands/disconnect clients
+    // process client commands/results/disconnects
     SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       for (pollfdIndex = 0; pollfdIndex < pollfdCount; pollfdIndex++)
@@ -18754,6 +18967,18 @@ Errors Server_run(ServerModes       mode,
           {
             if ((pollfds[pollfdIndex].revents & POLLIN) != 0)
             {
+#if 1
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+              if (ServerIO_receiveCommand(&clientNode->clientInfo.io,
+                                          &id,
+                                          name,
+                                          argumentMap
+                                         )
+                 )
+              {
+                processCommand2(&clientNode->clientInfo,id,name,argumentMap);
+              }
+#else
               // receive data from client
               Network_receive(&clientNode->clientInfo.io.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
               if (receivedBytes > 0)
@@ -18777,6 +19002,7 @@ Errors Server_run(ServerModes       mode,
                 }
                 while ((error == ERROR_NONE) && (receivedBytes > 0));
               }
+#endif
               else
               {
                 // disconnect -> remove from client list

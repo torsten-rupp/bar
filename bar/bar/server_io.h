@@ -284,6 +284,23 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
                            );
 
 /***********************************************************************\
+* Name   : ServerIO_receiveCommand
+* Purpose: receive command
+* Input  : serverIO - server i/o
+* Output : id        - command id
+*          name      - command name
+*          arguments - command arguments (can be NULL)
+* Return : TRUE iff command received
+* Notes  : -
+\***********************************************************************/
+
+bool ServerIO_receiveCommand(ServerIO  *serverIO,
+                             uint      *id,
+                             String    name,
+                             StringMap argumentMap
+                            );
+
+/***********************************************************************\
 * Name   : ServerIO_waitCommand
 * Purpose: wait for command
 * Input  : serverIO - server i/o
@@ -291,16 +308,16 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
 * Output : id        - command id
 *          name      - command name
 *          arguments - command arguments (can be NULL)
-* Return : ERROR_NONE or error code
+* Return : TRUE iff command received
 * Notes  : -
 \***********************************************************************/
 
-Errors ServerIO_waitCommand(ServerIO  *serverIO,
-                            long      timeout,
-                            uint      *id,
-                            String    name,
-                            StringMap argumentMap
-                           );
+bool ServerIO_waitCommand(ServerIO  *serverIO,
+                          long      timeout,
+                          uint      *id,
+                          String    name,
+                          StringMap argumentMap
+                         );
 
 /***********************************************************************\
 * Name   : ServerIO_sendResult

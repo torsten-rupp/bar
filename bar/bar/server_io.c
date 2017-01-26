@@ -196,46 +196,14 @@ LOCAL bool decodeHex(const char *s, byte *data, uint *dataLength, uint maxDataLe
 }
 
 /***********************************************************************\
-* Name   : sendData
-* Purpose: send data
+* Name   : processData
+* Purpose: process received data line
 * Input  : serverIO - server i/o
-*          data     - data string
+*          line     - data line
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
-
-LOCAL void sendData(ServerIO *serverIO, ConstString data)
-{
-  SemaphoreLock semaphoreLock;
-
-  assert(serverIO != NULL);
-  assert(data != NULL);
-
-//  if (!serverIO->quitFlag)
-  {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-    {
-      switch (serverIO->type)
-      {
-        case SERVER_IO_TYPE_NONE:
-          break;
-        case SERVER_IO_TYPE_BATCH:
-          (void)File_write(&serverIO->file.fileHandle,String_cString(data),String_length(data));
-          (void)File_flush(&serverIO->file.fileHandle);
-          break;
-        case SERVER_IO_TYPE_NETWORK:
-          (void)Network_send(&serverIO->network.socketHandle,String_cString(data),String_length(data));
-          break;
-        #ifndef NDEBUG
-          default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break;
-        #endif /* NDEBUG */
-      }
-    }
-  }
-}
 
 LOCAL void processData(ServerIO *serverIO, ConstString line)
 {
@@ -340,15 +308,113 @@ fprintf(stderr,"%s, %d: unkown %s\n",__FILE__,__LINE__,String_cString(line));
   String_delete(name);
 }
 
-LOCAL bool receiveData(ServerIO *serverIO, long timeout)
+/***********************************************************************\
+* Name   : sendData
+* Purpose: send data
+* Input  : serverIO - server i/o
+*          line     - data line
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void sendData(ServerIO *serverIO, ConstString line)
+{
+  SemaphoreLock semaphoreLock;
+
+  assert(serverIO != NULL);
+  assert(line != NULL);
+
+//  if (!serverIO->quitFlag)
+  {
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    {
+      switch (serverIO->type)
+      {
+        case SERVER_IO_TYPE_NONE:
+          break;
+        case SERVER_IO_TYPE_BATCH:
+          (void)File_write(&serverIO->file.fileHandle,String_cString(line),String_length(line));
+          (void)File_flush(&serverIO->file.fileHandle);
+          break;
+        case SERVER_IO_TYPE_NETWORK:
+          (void)Network_send(&serverIO->network.socketHandle,String_cString(line),String_length(line));
+          break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
+      }
+    }
+  }
+}
+
+/***********************************************************************\
+* Name   : receiveData
+* Purpose: receive data
+* Input  : serverIO - server i/o
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool receiveData(ServerIO *serverIO)
+{
+  char   buffer[4096];
+  ulong  receivedBytes;
+  ulong  i;
+  Errors error;
+
+  assert(serverIO != NULL);
+
+  Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+//fprintf(stderr,"%s, %d: receivedBytes=%d buffer=%s\n",__FILE__,__LINE__,receivedBytes,buffer);
+  if (receivedBytes > 0)
+  {
+    do
+    {
+      // received data -> process
+      for (i = 0; i < receivedBytes; i++)
+      {
+        if (buffer[i] != '\n')
+        {
+          String_appendChar(serverIO->line,buffer[i]);
+        }
+        else
+        {
+          processData(serverIO,serverIO->line);
+          String_clear(serverIO->line);
+        }
+      }
+      error = Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
+    }
+    while ((error == ERROR_NONE) && (receivedBytes > 0));
+  }
+  else
+  {
+    // disconnect
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : waitData
+* Purpose: wait for and receive data
+* Input  : serverIO - server i/o
+*          timeout  - timeout [ms] or NO_WAIT, WAIT_FOREVER
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool waitData(ServerIO *serverIO, long timeout)
 {
   struct pollfd   pollfds[1];
   struct timespec pollTimeout;
   sigset_t        signalMask;
-  char            buffer[4096];
-  ulong           receivedBytes;
-  ulong           i;
-  Errors          error;
 
   assert(serverIO != NULL);
 
@@ -367,32 +433,8 @@ return FALSE;
   if ((pollfds[0].revents & POLLIN) != 0)
   {
     // received data
-    Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
-//fprintf(stderr,"%s, %d: buffer=%s\n",__FILE__,__LINE__,buffer);
-    if (receivedBytes > 0)
+    if (!receiveData(serverIO))
     {
-      do
-      {
-        // received data -> process
-        for (i = 0; i < receivedBytes; i++)
-        {
-          if (buffer[i] != '\n')
-          {
-            String_appendChar(serverIO->line,buffer[i]);
-          }
-          else
-          {
-            processData(serverIO,serverIO->line);
-            String_clear(serverIO->line);
-          }
-        }
-        error = Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
-      }
-      while ((error == ERROR_NONE) && (receivedBytes > 0));
-    }
-    else
-    {
-      // disconnect
       return FALSE;
     }
   }
@@ -838,12 +880,64 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
   return error;
 }
 
-Errors ServerIO_waitCommand(ServerIO  *serverIO,
-                            long      timeout,
-                            uint      *id,
-                            String    name,
-                            StringMap argumentMap
-                           )
+bool ServerIO_receiveCommand(ServerIO  *serverIO,
+                             uint      *id,
+                             String    name,
+                             StringMap argumentMap
+                            )
+{
+  SemaphoreLock       semaphoreLock;
+  ServerIOCommandNode *commandNode;
+
+  assert(serverIO != NULL);
+  assert(id != NULL);
+  assert(name != NULL);
+
+  // receive any available data
+  receiveData(serverIO);
+
+  // get next command node (if any)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    commandNode = List_removeFirst(&serverIO->commandList);
+  }
+
+  if (commandNode != NULL)
+  {
+    // get command
+    (*id) = commandNode->id;
+    String_set(name,commandNode->name);
+    if (argumentMap != NULL)
+    {
+//TODO: move to processData()
+//fprintf(stderr,"%s, %d: parse %s\n",__FILE__,__LINE__,String_cString(commandNode->data));
+      if (!StringMap_parse(argumentMap,commandNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+      {
+//TODO: move to processData()
+//sendData(serverIO,"%d 1 %d",commandNode->id,ERROR_PARSE);
+        deleteCommandNode(commandNode);
+        return FALSE;
+      }
+    }
+
+    // free resources
+    deleteCommandNode(commandNode);
+
+    return TRUE;
+  }
+  else
+  {
+    // no command
+    return FALSE;
+  }
+}
+
+bool ServerIO_waitCommand(ServerIO  *serverIO,
+                          long      timeout,
+                          uint      *id,
+                          String    name,
+                          StringMap argumentMap
+                         )
 {
   SemaphoreLock       semaphoreLock;
   ServerIOCommandNode *commandNode;
@@ -861,9 +955,9 @@ Errors ServerIO_waitCommand(ServerIO  *serverIO,
       // no command -> wait for data
       Semaphore_unlock(&serverIO->commandList.lock);
       {
-        if (!receiveData(serverIO,timeout))
+        if (!waitData(serverIO,timeout))
         {
-          return ERROR_NETWORK_TIMEOUT;
+          return FALSE;
         }
       }
       Semaphore_lock(&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
@@ -875,21 +969,28 @@ Errors ServerIO_waitCommand(ServerIO  *serverIO,
   assert(commandNode != NULL);
 
   // get command
-  (*id) = commandNode->id;
-  String_set(name,commandNode->name);
-  if (argumentMap != NULL)
+  if (commandNode != NULL)
   {
-    if (!StringMap_parse(argumentMap,commandNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+    (*id) = commandNode->id;
+    String_set(name,commandNode->name);
+    if (argumentMap != NULL)
     {
-      deleteCommandNode(commandNode);
-      return ERROR_PARSE;
+      if (!StringMap_parse(argumentMap,commandNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+      {
+        deleteCommandNode(commandNode);
+        return ERROR_PARSE;
+      }
     }
+
+    // free resources
+    deleteCommandNode(commandNode);
+
+    return TRUE;
   }
-
-  // free resources
-  deleteCommandNode(commandNode);
-
-  return ERROR_NONE;
+  else
+  {
+    return FALSE;
+  }
 }
 
 Errors ServerIO_sendResult(ServerIO   *serverIO,
@@ -966,7 +1067,7 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
         // not found -> wait for data
         Semaphore_unlock(&serverIO->resultList.lock);
         {
-          if (!receiveData(serverIO,timeout))
+          if (!waitData(serverIO,timeout))
           {
             return ERROR_NETWORK_TIMEOUT;
           }
@@ -1282,7 +1383,7 @@ Errors ServerIO_wait(ServerIO  *serverIO,
   while (timeout != 0)
   {
     t0 = Misc_getTimestamp();
-    if (!receiveData(serverIO,timeout))
+    if (!waitData(serverIO,timeout))
     {
       return ERROR_NETWORK_TIMEOUT;
     }
