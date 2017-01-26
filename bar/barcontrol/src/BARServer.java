@@ -799,7 +799,7 @@ class ReadThread extends Thread
                       else
                       {
                         // parse error
-                        errorCode    = Errors.NETWORK_PARSE;
+                        errorCode    = Errors.PARSE;
                         errorMessage = "parse '"+data+"' fail";
                       }
                     }
@@ -850,7 +850,7 @@ class ReadThread extends Thread
                   else
                   {
                     // parse error
-                    errorCode    = Errors.NETWORK_PARSE;
+                    errorCode    = Errors.PARSE;
                     errorMessage = "parse '"+data+"' fail";
                   }
                 }
@@ -2551,7 +2551,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       else if (clazz == String.class)
       {
-        data = (T)resultMap.get("value");
+        data = (T)resultMap.getString("value","");
       }
     }
 
