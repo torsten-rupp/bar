@@ -15,6 +15,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #if defined(HAVE_PCRE)
   #include <pcreposix.h>
 #elif defined(HAVE_REGEX_H)
@@ -37,6 +38,23 @@
 #define STRINGMAP_DELTA_SIZE 16   // string map delta increasing size
 
 const StringMapValue STRINGMAP_VALUE_NONE = {NULL,{0}};
+
+#ifndef NDEBUG
+const char *STRING_MAP_TYPE_NAMES[] =
+{
+  [STRINGMAP_TYPE_NONE   ] = "none",
+  [STRINGMAP_TYPE_INT    ] = "int",
+  [STRINGMAP_TYPE_INT64  ] = "int64",
+  [STRINGMAP_TYPE_UINT   ] = "uint",
+  [STRINGMAP_TYPE_UINT64 ] = "uint64",
+  [STRINGMAP_TYPE_DOUBLE ] = "double",
+  [STRINGMAP_TYPE_BOOL   ] = "bool",
+  [STRINGMAP_TYPE_CHAR   ] = "char",
+  [STRINGMAP_TYPE_CSTRING] = "c-string",
+  [STRINGMAP_TYPE_STRING ] = "string",
+  [STRINGMAP_TYPE_DATA   ] = "data"
+};
+#endif /* not NDEBUG */
 
 /***************************** Datatypes *******************************/
 
@@ -302,14 +320,7 @@ StringMap __StringMap_new(const char *__fileName__,
   }
   for (i = 0; i < STRINGMAP_START_SIZE; i++)
   {
-    stringMap->entries[i].name         = NULL;
-    stringMap->entries[i].type         = STRINGMAP_TYPE_NONE;
-    stringMap->entries[i].value.text   = NULL;
-    stringMap->entries[i].value.data.p = NULL;
-    #ifndef NDEBUG
-      stringMap->entries[i].fileName = NULL;
-      stringMap->entries[i].lineNb   = 0L;
-    #endif /* NDEBUG */
+    stringMap->entries[i].name = NULL;
   }
 
   #ifdef NDEBUG
@@ -379,32 +390,39 @@ StringMap StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
   // copy entries
   for (i = 0; i < fromStringMap->size; i++)
   {
-    entries[i].name       = strdup(fromStringMap->entries[i].name);
-    entries[i].type       = fromStringMap->entries[i].type;
-    entries[i].value.text = String_duplicate(fromStringMap->entries[i].value.text);
-    switch (fromStringMap->entries[i].type)
+    if (fromStringMap->entries[i].name != NULL)
     {
-      case STRINGMAP_TYPE_NONE:    break;
-      case STRINGMAP_TYPE_INT:     stringMap->entries[i].value.data.i      = fromStringMap->entries[i].value.data.i; break;
-      case STRINGMAP_TYPE_INT64:   stringMap->entries[i].value.data.l      = fromStringMap->entries[i].value.data.l; break;
-      case STRINGMAP_TYPE_UINT:    stringMap->entries[i].value.data.ui     = fromStringMap->entries[i].value.data.ui; break;
-      case STRINGMAP_TYPE_UINT64:  stringMap->entries[i].value.data.ul     = fromStringMap->entries[i].value.data.ul; break;
-      case STRINGMAP_TYPE_DOUBLE:  stringMap->entries[i].value.data.d      = fromStringMap->entries[i].value.data.d; break;
-      case STRINGMAP_TYPE_BOOL:    stringMap->entries[i].value.data.b      = fromStringMap->entries[i].value.data.b; break;
-      case STRINGMAP_TYPE_CHAR:    stringMap->entries[i].value.data.c      = fromStringMap->entries[i].value.data.c; break;
-      case STRINGMAP_TYPE_CSTRING: stringMap->entries[i].value.data.s      = strdup(fromStringMap->entries[i].value.data.s); break;
-      case STRINGMAP_TYPE_STRING:  stringMap->entries[i].value.data.string = String_duplicate(fromStringMap->entries[i].value.data.string); break;
-      case STRINGMAP_TYPE_DATA:    stringMap->entries[i].value.data.p      = fromStringMap->entries[i].value.data.p; break;
+      stringMap->entries[i].name       = strdup(fromStringMap->entries[i].name);
+      stringMap->entries[i].type       = fromStringMap->entries[i].type;
+      stringMap->entries[i].value.text = String_duplicate(fromStringMap->entries[i].value.text);
+      switch (fromStringMap->entries[i].type)
+      {
+        case STRINGMAP_TYPE_NONE:                                                                                                             break;
+        case STRINGMAP_TYPE_INT:     stringMap->entries[i].value.data.i      = fromStringMap->entries[i].value.data.i;                        break;
+        case STRINGMAP_TYPE_INT64:   stringMap->entries[i].value.data.l      = fromStringMap->entries[i].value.data.l;                        break;
+        case STRINGMAP_TYPE_UINT:    stringMap->entries[i].value.data.ui     = fromStringMap->entries[i].value.data.ui;                       break;
+        case STRINGMAP_TYPE_UINT64:  stringMap->entries[i].value.data.ul     = fromStringMap->entries[i].value.data.ul;                       break;
+        case STRINGMAP_TYPE_DOUBLE:  stringMap->entries[i].value.data.d      = fromStringMap->entries[i].value.data.d;                        break;
+        case STRINGMAP_TYPE_BOOL:    stringMap->entries[i].value.data.b      = fromStringMap->entries[i].value.data.b;                        break;
+        case STRINGMAP_TYPE_CHAR:    stringMap->entries[i].value.data.c      = fromStringMap->entries[i].value.data.c;                        break;
+        case STRINGMAP_TYPE_CSTRING: stringMap->entries[i].value.data.s      = strdup(fromStringMap->entries[i].value.data.s);                break;
+        case STRINGMAP_TYPE_STRING:  stringMap->entries[i].value.data.string = String_duplicate(fromStringMap->entries[i].value.data.string); break;
+        case STRINGMAP_TYPE_DATA:    stringMap->entries[i].value.data.p      = fromStringMap->entries[i].value.data.p;                        break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
+      }
       #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
+        stringMap->entries[i].fileName = fromStringMap->entries[i].fileName;
+        stringMap->entries[i].lineNb   = fromStringMap->entries[i].lineNb;
       #endif /* NDEBUG */
     }
-    #ifndef NDEBUG
-      stringMap->entries[i].fileName = fromStringMap->entries[i].fileName;
-      stringMap->entries[i].lineNb   = fromStringMap->entries[i].lineNb;
-    #endif /* NDEBUG */
+    else
+    {
+      stringMap->entries[i].name = NULL;
+    }
   }
 
   return stringMap;
@@ -439,9 +457,9 @@ StringMap StringMap_move(StringMap stringMap, StringMap fromStringMap)
   // move entries
   for (i = 0; i < fromStringMap->size; i++)
   {
-    entries[i].name = fromStringMap->entries[i].name;
-    entries[i].type = fromStringMap->entries[i].type;
-    entries[i].value.text = fromStringMap->entries[i].value.text;
+    stringMap->entries[i].name       = fromStringMap->entries[i].name;
+    stringMap->entries[i].type       = fromStringMap->entries[i].type;
+    stringMap->entries[i].value.text = fromStringMap->entries[i].value.text;
     switch (fromStringMap->entries[i].type)
     {
       case STRINGMAP_TYPE_NONE:    break;
@@ -616,7 +634,7 @@ void __StringMap_putText(const char *__fileName__, ulong __lineNb__, StringMap s
 
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type       = STRINGMAP_TYPE_STRING;
+    stringMapEntry->type       = STRINGMAP_TYPE_NONE;
     stringMapEntry->value.text = String_duplicate(text);
   }
 }
@@ -640,7 +658,7 @@ void __StringMap_putTextCString(const char *__fileName__, ulong __lineNb__, Stri
 
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type       = STRINGMAP_TYPE_STRING;
+    stringMapEntry->type       = STRINGMAP_TYPE_NONE;
     stringMapEntry->value.text = String_newCString(text);
   }
 }
@@ -1475,6 +1493,9 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *assi
   assert(stringMap != NULL);
   assert(s != NULL);
 
+  // clear map
+  StringMap_clear(stringMap);
+
   // parse
   length = strlen(s);
   name   = String_new();
@@ -1671,7 +1692,15 @@ void StringMap_debugDump(FILE *handle, const StringMap stringMap)
   {
     if (stringMap->entries[i].name != NULL)
     {
-      fprintf(handle,"DEBUG %u: %s = %lx\n",i,stringMap->entries[i].name,(unsigned long)stringMap->entries[i].value.data.p);
+      assert(stringMap->entries[i].type < SIZE_OF_ARRAY(STRING_MAP_TYPE_NAMES));
+      fprintf(handle,
+              "DEBUG string map #%3u (%-8s): %s = '%s' (0x%"PRIuPTR")\n",
+              i,
+              STRING_MAP_TYPE_NAMES[stringMap->entries[i].type],
+              stringMap->entries[i].name,
+              String_cString(stringMap->entries[i].value.text),
+              (unsigned long)stringMap->entries[i].value.data.p
+             );
     }
   }
 }
