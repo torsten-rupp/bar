@@ -1178,8 +1178,8 @@ Errors Slave_jobAbort(const SlaveInfo *slaveInfo,
   return ERROR_NONE;
 }
 
-Errors Slave_process(const SlaveInfo *slaveInfo,
-                     long            timeout
+Errors Slave_process(SlaveInfo *slaveInfo,
+                     long      timeout
                     )
 {
   uint      id;
