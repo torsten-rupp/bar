@@ -83,10 +83,9 @@ typedef struct
   SessionId        sessionId;
   CryptKey         publicKey,privateKey;
 
-  // command
-  uint             commandId;
-
-  // input line
+  // output buffer/input line
+  char             *outputBuffer;
+  uint             outputBufferSize;
   String           line;
 
   // connection
@@ -114,6 +113,9 @@ typedef struct
     } network;
   };
   bool             isConnected;
+
+  // command
+  uint             commandId;
 
   // commands/results list
   ServerIOCommandList commandList;
