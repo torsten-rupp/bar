@@ -1754,6 +1754,8 @@ LOCAL_INLINE bool isServerRunning(void)
 LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint bufferSize)
 {
   assert(clientInfo != NULL);
+  assert(buffer != NULL);
+  assert(bufferSize > 0);
 
   switch (clientInfo->io.type)
   {
@@ -17599,6 +17601,7 @@ LOCAL void putCommand(ClientInfo            *clientInfo,
   command.authorizationState    = authorizationState;
   command.id                    = id;
   command.argumentMap           = StringMap_duplicate(argumentMap);
+fprintf(stderr,"%s, %d: dup map %p\n",__FILE__,__LINE__,command.argumentMap);
   (void)MsgQueue_put(&clientInfo->commandQueue,&command,sizeof(Command));
 }
 
@@ -18849,7 +18852,6 @@ Errors Server_run(ServerModes       mode,
             if ((pollfds[pollfdIndex].revents & POLLIN) != 0)
             {
 #if 1
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               if (ServerIO_receiveData(&clientNode->clientInfo.io))
               {
                 // process all commands
@@ -18866,7 +18868,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               else
               {
                 // disconnect -> remove from client list
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                 disconnectClientNode = clientNode;
                 List_remove(&clientList,disconnectClientNode);
 
