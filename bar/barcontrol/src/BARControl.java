@@ -2073,7 +2073,7 @@ if (false) {
     // pre-select job
     if (selectedJobName != null)
     {
-      tabStatus.selectJob(selectedJobName);
+      tabStatus.setSelectedJob(selectedJobName);
     }
 
     // add tab listener

@@ -820,7 +820,10 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          jobStart();
+          if (selectedJobData != null)
+          {
+            jobStart();
+          }
         }
       });
       addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
@@ -846,7 +849,10 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          jobAbort();
+          if (selectedJobData != null)
+          {
+            jobAbort();
+          }
         }
       });
       addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
@@ -901,7 +907,10 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          volume();
+          if (selectedJobData != null)
+          {
+            volume();
+          }
         }
       });
       addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
@@ -940,7 +949,10 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          jobClone();
+          if (selectedJobData != null)
+          {
+            jobClone();
+          }
         }
       });
 
@@ -954,7 +966,10 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          jobRename();
+          if (selectedJobData != null)
+          {
+            jobRename();
+          }
         }
       });
 
@@ -968,7 +983,10 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          jobDelete();
+          if (selectedJobData != null)
+          {
+            jobDelete();
+          }
         }
       });
 
@@ -1555,7 +1573,10 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          jobStart();
+          if (selectedJobData != null)
+          {
+            jobStart();
+          }
         }
       });
       addUpdateJobStateListener(new UpdateJobStateListener(widgetButtonStart)
@@ -1584,7 +1605,10 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          jobAbort();
+          if (selectedJobData != null)
+          {
+            jobAbort();
+          }
         }
       });
       addUpdateJobStateListener(new UpdateJobStateListener(widgetButtonAbort)
@@ -1646,7 +1670,10 @@ public class TabStatus
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          volume();
+          if (selectedJobData != null)
+          {
+            volume();
+          }
         }
       });
       addUpdateJobStateListener(new UpdateJobStateListener(widgetButtonVolume)
@@ -1903,15 +1930,21 @@ public class TabStatus
     }
   }
 
-  /** select job by UUID
+  /** set selected job by UUID
    * @param uuid job UUID
    */
-  public void selectJob(String uuid)
+  public void setSelectedJob(String uuid)
   {
     JobData jobData = jobDataMap.get(uuid);
 
-    setSelectedJob(jobData);
     Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+  }
+
+  /** clear selected job
+   */
+  public void clearSelectedJob()
+  {
+    Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,(JobData)null);
   }
 
   /** add update job state listener
@@ -1932,16 +1965,6 @@ public class TabStatus
 
   //-----------------------------------------------------------------------
 
-  /** clear selected job
-   */
-  private void clearSelectedJob()
-  {
-    selectedJobData = null;
-
-    Widgets.clearSelectedTableItem(widgetJobTable);
-    widgetSelectedJob.setText(BARControl.tr("Selected")+" ''");
-  }
-
   /** set selected job
    * @param jobData job data
    */
@@ -1949,7 +1972,14 @@ public class TabStatus
   {
     selectedJobData = jobData;
 
-    Widgets.setSelectedTableItem(widgetJobTable,selectedJobData);
+    if (selectedJobData != null)
+    {
+      Widgets.setSelectedTableItem(widgetJobTable,selectedJobData);
+    }
+    else
+    {
+      Widgets.clearSelectedTableItem(widgetJobTable);
+    }
     widgetSelectedJob.setText(BARControl.tr("Selected")+" '"+((selectedJobData != null)
                                                                 ? selectedJobData.name.replaceAll("&","&&")
                                                                 : ""
@@ -2252,91 +2282,92 @@ public class TabStatus
     int      error;
     String[] resultErrorMessage = new String[1];
 
-    assert selectedJobData != null;
-
-    // get job mode
-    mode = Dialogs.select(shell,
-                          BARControl.tr("Confirmation"),
-                          BARControl.tr("Start job ''{0}''?",selectedJobData.name),
-                          new String[]{Settings.hasNormalRole() ? BARControl.tr("Normal") : null,
-                                       BARControl.tr("Full"),
-                                       BARControl.tr("Incremental"),
-                                       Settings.hasExpertRole() ? BARControl.tr("Differential") : null,
-                                       Settings.hasExpertRole() ? BARControl.tr("Dry-run") : null,
-                                       BARControl.tr("Cancel")
-                                      },
-                          new String[]{BARControl.tr("Store all files."),
-                                       BARControl.tr("Store all files and create incremental data file."),
-                                       BARControl.tr("Store changed files since last incremental or full storage and update incremental data file."),
-                                       BARControl.tr("Store changed files since last full storage."),
-                                       BARControl.tr("Collect and process all files, but do not create archives.")
-                                      },
-                          4
-                         );
-    if ((mode != 0) && (mode != 1) && (mode != 2) && (mode != 3) && (mode != 4))
+    if (selectedJobData != null)
     {
-      return;
-    }
-
-    if (selectedJobData.cryptPasswordMode.equals("ask"))
-    {
-      // get crypt password
-      String password = Dialogs.password(shell,
-                                         BARControl.tr("Crypt password"),
-                                         null,
-                                         BARControl.tr("Crypt password")+":",
-                                         BARControl.tr("Verify")+":"
-                                        );
-      if (password == null)
+      // get job mode
+      mode = Dialogs.select(shell,
+                            BARControl.tr("Confirmation"),
+                            BARControl.tr("Start job ''{0}''?",selectedJobData.name),
+                            new String[]{Settings.hasNormalRole() ? BARControl.tr("Normal") : null,
+                                         BARControl.tr("Full"),
+                                         BARControl.tr("Incremental"),
+                                         Settings.hasExpertRole() ? BARControl.tr("Differential") : null,
+                                         Settings.hasExpertRole() ? BARControl.tr("Dry-run") : null,
+                                         BARControl.tr("Cancel")
+                                        },
+                            new String[]{BARControl.tr("Store all files."),
+                                         BARControl.tr("Store all files and create incremental data file."),
+                                         BARControl.tr("Store changed files since last incremental or full storage and update incremental data file."),
+                                         BARControl.tr("Store changed files since last full storage."),
+                                         BARControl.tr("Collect and process all files, but do not create archives.")
+                                        },
+                            4
+                           );
+      if ((mode != 0) && (mode != 1) && (mode != 2) && (mode != 3) && (mode != 4))
       {
         return;
       }
 
-      // set crypt password
-      error = BARServer.executeCommand(StringParser.format("CRYPT_PASSWORD jobUUID=%s encryptType=%s encryptedPassword=%S",
-                                                            selectedJobData.uuid,
-                                                            BARServer.getPasswordEncryptType(),
-                                                            BARServer.encryptPassword(password)
-                                                           ),
-                                       0,  // debugLevel
-                                       resultErrorMessage
-                                      );
+      if (selectedJobData.cryptPasswordMode.equals("ask"))
+      {
+        // get crypt password
+        String password = Dialogs.password(shell,
+                                           BARControl.tr("Crypt password"),
+                                           null,
+                                           BARControl.tr("Crypt password")+":",
+                                           BARControl.tr("Verify")+":"
+                                          );
+        if (password == null)
+        {
+          return;
+        }
+
+        // set crypt password
+        error = BARServer.executeCommand(StringParser.format("CRYPT_PASSWORD jobUUID=%s encryptType=%s encryptedPassword=%S",
+                                                              selectedJobData.uuid,
+                                                              BARServer.getPasswordEncryptType(),
+                                                              BARServer.encryptPassword(password)
+                                                             ),
+                                         0,  // debugLevel
+                                         resultErrorMessage
+                                        );
+        if (error != Errors.NONE)
+        {
+          Dialogs.error(shell,BARControl.tr("Cannot set crypt password for job ''{0}'' (error: {1})",selectedJobData.name,resultErrorMessage[0]));
+          return;
+        }
+      }
+
+      // start
+      switch (mode)
+      {
+        case 0:
+          error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
+          break;
+        case 1:
+          error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=full dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
+          break;
+        case 2:
+          error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=incremental dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
+          break;
+        case 3:
+          error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=differential dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
+          break;
+        case 4:
+          error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=yes",selectedJobData.uuid),0,resultErrorMessage);
+          break;
+        case 5:
+          error = Errors.NONE;
+          break;
+        default:
+          error = Errors.NONE;
+          break;
+      }
       if (error != Errors.NONE)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot set crypt password for job ''{0}'' (error: {1})",selectedJobData.name,resultErrorMessage[0]));
+        Dialogs.error(shell,BARControl.tr("Cannot start job ''{0}'' (error: {1})",selectedJobData.name,resultErrorMessage[0]));
         return;
       }
-    }
-
-    // start
-    switch (mode)
-    {
-      case 0:
-        error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
-        break;
-      case 1:
-        error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=full dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
-        break;
-      case 2:
-        error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=incremental dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
-        break;
-      case 3:
-        error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=differential dryRun=no",selectedJobData.uuid),0,resultErrorMessage);
-        break;
-      case 4:
-        error = BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=yes",selectedJobData.uuid),0,resultErrorMessage);
-        break;
-      case 5:
-        error = Errors.NONE;
-        break;
-      default:
-        error = Errors.NONE;
-        break;
-    }
-    if (error != Errors.NONE)
-    {
-      Dialogs.error(shell,BARControl.tr("Cannot start job ''{0}'' (error: {1})",selectedJobData.name,resultErrorMessage[0]));
-      return;
     }
   }
 
@@ -2531,8 +2562,11 @@ public class TabStatus
 
     if (selectedJobData.state != JobData.States.RUNNING)
     {
-      tabJobs.jobDelete(selectedJobData);
-      updateJobList();
+      if (tabJobs.jobDelete(selectedJobData))
+      {
+        clearSelectedJob();
+        updateJobList();
+      }
     }
   }
 

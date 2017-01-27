@@ -1862,9 +1862,6 @@ public class TabJobs
           {
             selectedJobData = Widgets.getSelectedOptionMenuItem(widgetJobList,null);
             Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,selectedJobData);
-            update();
-
-            selectJobEvent.trigger();
           }
         }
       });
@@ -8456,12 +8453,19 @@ widgetArchivePartSize.setListVisible(true);
     });
   }
 
-  /** select job by UUID
+  /** set selected job by UUID
    * @param uuid job UUID
    */
-  public void selectJob(String uuid)
+  public void setSelectedJob(String uuid)
   {
-    tabStatus.selectJob(uuid);
+    tabStatus.setSelectedJob(uuid);
+  }
+
+  /** clear selected
+   */
+  public void clearSelectedJob()
+  {
+    tabStatus.clearSelectedJob();
   }
 
   /** create new job
@@ -8552,9 +8556,8 @@ throw new Error("NYI");
             if (error == Errors.NONE)
             {
               String newJobUUID = resultMap.getString("jobUUID");
-
               updateJobList();
-              selectJob(newJobUUID);
+              setSelectedJob(newJobUUID);
             }
             else
             {
@@ -8679,15 +8682,18 @@ throw new Error("NYI");
                                                  resultErrorMessage,
                                                  resultMap
                                                 );
-            if (error != Errors.NONE)
+            if (error == Errors.NONE)
+            {
+              String newJobUUID = resultMap.getString("jobUUID");
+              updateJobList();
+              setSelectedJob(newJobUUID);
+            }
+            else
             {
               Dialogs.error(shell,BARControl.tr("Cannot clone job ''{0}'':\n\n{1}",jobData.name,resultErrorMessage[0]));
               return;
             }
 
-            String newJobUUID = resultMap.getString("jobUUID");
-            updateJobList();
-            selectJob(newJobUUID);
           }
           catch (CommunicationError error)
           {
@@ -8811,7 +8817,7 @@ throw new Error("NYI");
             if (error == Errors.NONE)
             {
               updateJobList();
-              selectJob(jobData.uuid);
+              setSelectedJob(jobData.uuid);
             }
             else
             {
@@ -8929,7 +8935,15 @@ throw new Error("NYI");
   private void setSelectedJob(JobData jobData)
   {
     selectedJobData = jobData;
-    Widgets.setSelectedOptionMenuItem(widgetJobList,selectedJobData);
+
+    if (selectedJobData != null)
+    {
+      Widgets.setSelectedOptionMenuItem(widgetJobList,selectedJobData);
+    }
+    else
+    {
+      Widgets.clearSelectedOptionMenuItem(widgetJobList);
+    }
     update();
     selectJobEvent.trigger();
   }
@@ -8951,55 +8965,57 @@ throw new Error("NYI");
    */
   private void updateJobData()
   {
-    if (selectedJobData != null)
+    JobData jobData = selectedJobData;
+
+    if (jobData != null)
     {
       // get job data
-      BARServer.getJobOption(selectedJobData.uuid,slaveHostName);
-      BARServer.getJobOption(selectedJobData.uuid,slaveHostPort);
-      BARServer.getJobOption(selectedJobData.uuid,slaveHostForceSSL);
-      BARServer.getJobOption(selectedJobData.uuid,includeFileCommand);
-      BARServer.getJobOption(selectedJobData.uuid,includeImageCommand);
-      BARServer.getJobOption(selectedJobData.uuid,excludeCommand);
-      parseArchiveName(BARServer.getStringJobOption(selectedJobData.uuid,"archive-name"));
-      archiveType.set(BARServer.getStringJobOption(selectedJobData.uuid,"archive-type"));
-      archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"archive-part-size"),0));
+      BARServer.getJobOption(jobData.uuid,slaveHostName);
+      BARServer.getJobOption(jobData.uuid,slaveHostPort);
+      BARServer.getJobOption(jobData.uuid,slaveHostForceSSL);
+      BARServer.getJobOption(jobData.uuid,includeFileCommand);
+      BARServer.getJobOption(jobData.uuid,includeImageCommand);
+      BARServer.getJobOption(jobData.uuid,excludeCommand);
+      parseArchiveName(BARServer.getStringJobOption(jobData.uuid,"archive-name"));
+      archiveType.set(BARServer.getStringJobOption(jobData.uuid,"archive-type"));
+      archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"archive-part-size"),0));
       archivePartSizeFlag.set(archivePartSize.getLong() > 0);
 
-      String[] compressAlgorithms = StringUtils.split(BARServer.getStringJobOption(selectedJobData.uuid,"compress-algorithm"),"+");
+      String[] compressAlgorithms = StringUtils.split(BARServer.getStringJobOption(jobData.uuid,"compress-algorithm"),"+");
       deltaCompressAlgorithm.set((compressAlgorithms.length >= 1) ? compressAlgorithms[0] : "");
       byteCompressAlgorithm.set((compressAlgorithms.length >= 2) ? compressAlgorithms[1] : "");
-      cryptAlgorithm.set(BARServer.getStringJobOption(selectedJobData.uuid,"crypt-algorithm"));
-      cryptType.set(BARServer.getStringJobOption(selectedJobData.uuid,"crypt-type"));
-      BARServer.getJobOption(selectedJobData.uuid,cryptPublicKeyFileName);
-      cryptPasswordMode.set(BARServer.getStringJobOption(selectedJobData.uuid,"crypt-password-mode"));
-      BARServer.getJobOption(selectedJobData.uuid,cryptPassword);
-      BARServer.getJobOption(selectedJobData.uuid,incrementalListFileName);
-      archiveFileMode.set(BARServer.getStringJobOption(selectedJobData.uuid,"archive-file-mode"));
-      BARServer.getJobOption(selectedJobData.uuid,sshPublicKeyFileName);
-      BARServer.getJobOption(selectedJobData.uuid,sshPrivateKeyFileName);
+      cryptAlgorithm.set(BARServer.getStringJobOption(jobData.uuid,"crypt-algorithm"));
+      cryptType.set(BARServer.getStringJobOption(jobData.uuid,"crypt-type"));
+      BARServer.getJobOption(jobData.uuid,cryptPublicKeyFileName);
+      cryptPasswordMode.set(BARServer.getStringJobOption(jobData.uuid,"crypt-password-mode"));
+      BARServer.getJobOption(jobData.uuid,cryptPassword);
+      BARServer.getJobOption(jobData.uuid,incrementalListFileName);
+      archiveFileMode.set(BARServer.getStringJobOption(jobData.uuid,"archive-file-mode"));
+      BARServer.getJobOption(jobData.uuid,sshPublicKeyFileName);
+      BARServer.getJobOption(jobData.uuid,sshPrivateKeyFileName);
 /* NYI ???
-      maxBandWidth.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"max-band-width")));
+      maxBandWidth.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-band-width")));
       maxBandWidthFlag.set(maxBandWidth.getLongOption() > 0);
 */
-      volumeSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"volume-size"),0));
-      BARServer.getJobOption(selectedJobData.uuid,ecc);
-      BARServer.getJobOption(selectedJobData.uuid,blank);
-      BARServer.getJobOption(selectedJobData.uuid,waitFirstVolume);
-      BARServer.getJobOption(selectedJobData.uuid,skipUnreadable);
-      BARServer.getJobOption(selectedJobData.uuid,rawImages);
-      BARServer.getJobOption(selectedJobData.uuid,overwriteFiles);
-      BARServer.getJobOption(selectedJobData.uuid,preCommand);
-      BARServer.getJobOption(selectedJobData.uuid,postCommand);
-      maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(selectedJobData.uuid,"max-storage-size"),0));
-      BARServer.getJobOption(selectedJobData.uuid,comment);
+      volumeSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"volume-size"),0));
+      BARServer.getJobOption(jobData.uuid,ecc);
+      BARServer.getJobOption(jobData.uuid,blank);
+      BARServer.getJobOption(jobData.uuid,waitFirstVolume);
+      BARServer.getJobOption(jobData.uuid,skipUnreadable);
+      BARServer.getJobOption(jobData.uuid,rawImages);
+      BARServer.getJobOption(jobData.uuid,overwriteFiles);
+      BARServer.getJobOption(jobData.uuid,preCommand);
+      BARServer.getJobOption(jobData.uuid,postCommand);
+      maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-storage-size"),0));
+      BARServer.getJobOption(jobData.uuid,comment);
 
       // update trees/tables
-      updateIncludeList();
-      updateExcludeList();
-      updateMountList();
-      updateSourceList();
-      updateCompressExcludeList();
-      updateScheduleTable();
+      updateIncludeList(jobData);
+      updateExcludeList(jobData);
+      updateMountList(jobData);
+      updateSourceList(jobData);
+      updateCompressExcludeList(jobData);
+      updateScheduleTable(jobData);
 
       // update images
       updateFileTreeImages();
@@ -9064,7 +9080,11 @@ throw new Error("NYI");
   {
     assert selectedJobData != null;
 
-    jobDelete(selectedJobData);
+    if (jobDelete(selectedJobData))
+    {
+      selectedJobData = null;
+      clearSelectedJob();
+    }
   }
 
   //-----------------------------------------------------------------------
@@ -9727,17 +9747,16 @@ throw new Error("NYI");
   }
 
   /** update include list
+   * @param jobData job data
    */
-  private void updateIncludeList()
+  private void updateIncludeList(JobData jobData)
   {
-    assert selectedJobData != null;
-
     if (!widgetIncludeTable.isDisposed())
     {
       String[]            resultErrorMessage = new String[1];
       ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
       int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST jobUUID=%s",
-                                                               selectedJobData.uuid
+                                                               jobData.uuid
                                                               ),
                                            0,  // debugLevel
                                            resultErrorMessage,
@@ -9794,17 +9813,16 @@ throw new Error("NYI");
   }
 
   /** update exclude list
+   * @param jobData job data
    */
-  private void updateExcludeList()
+  private void updateExcludeList(JobData jobData)
   {
-    assert selectedJobData != null;
-
     if (!widgetExcludeList.isDisposed())
     {
       String[]            resultErrorMessage = new String[1];
       ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
       int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST jobUUID=%s",
-                                                               selectedJobData.uuid
+                                                               jobData.uuid
                                                               ),
                                            0,  // debugLevel
                                            resultErrorMessage,
@@ -9848,17 +9866,16 @@ throw new Error("NYI");
   }
 
   /** update mount list
+   * @param jobData job data
    */
-  private void updateMountList()
+  private void updateMountList(JobData jobData)
   {
-    assert selectedJobData != null;
-
     if (!widgetMountTable.isDisposed())
     {
       String[]            resultErrorMessage = new String[1];
       ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
       int error = BARServer.executeCommand(StringParser.format("MOUNT_LIST jobUUID=%s",
-                                                               selectedJobData.uuid
+                                                               jobData.uuid
                                                               ),
                                            0,  // debugLevel
                                            resultErrorMessage,
@@ -9911,16 +9928,15 @@ throw new Error("NYI");
   }
 
   /** update source list
+   * @param jobData job data
    * Note: currently not a list. Show only first source pattern.
    */
-  private void updateSourceList()
+  private void updateSourceList(JobData jobData)
   {
-    assert selectedJobData != null;
-
     String[]            resultErrorMessage  = new String[1];
     ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
     int error = BARServer.executeCommand(StringParser.format("SOURCE_LIST jobUUID=%s",
-                                                             selectedJobData.uuid
+                                                             jobData.uuid
                                                             ),
                                          0,  // debugLevel
                                          resultErrorMessage,
@@ -9970,17 +9986,16 @@ throw new Error("NYI");
   }
 
   /** update compress exclude list
+   * @param jobData job data
    */
-  private void updateCompressExcludeList()
+  private void updateCompressExcludeList(JobData jobData)
   {
-    assert selectedJobData != null;
-
     if (!widgetCompressExcludeList.isDisposed())
     {
       String[]            resultErrorMessage  = new String[1];
       ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
       int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST jobUUID=%s",
-                                                               selectedJobData.uuid
+                                                               jobData.uuid
                                                               ),
                                            0,  // debugLevel
                                            resultErrorMessage,
@@ -10035,8 +10050,6 @@ throw new Error("NYI");
     Composite composite,subComposite;
     Label     label;
     Button    button;
-
-    assert selectedJobData != null;
 
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,title,300,70,new double[]{1.0,0.0},1.0);
@@ -12711,8 +12724,9 @@ Dprintf.dprintf("line=%s",line);
   }
 
   /** update schedule table
+   * @param jobData job data
    */
-  private void updateScheduleTable()
+  private void updateScheduleTable(JobData jobData)
   {
     if (!widgetScheduleTable.isDisposed())
     {
@@ -12722,7 +12736,9 @@ Dprintf.dprintf("line=%s",line);
         HashMap<String,ScheduleData> newScheduleDataMap = new HashMap<String,ScheduleData>();
         String[]            resultErrorMessage  = new String[1];
         ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
-        int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",selectedJobData.uuid),
+        int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
+                                                                 jobData.uuid
+                                                                ),
                                              0,  // debugLevel
                                              resultErrorMessage,
                                              resultMapList
