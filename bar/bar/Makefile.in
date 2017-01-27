@@ -654,7 +654,7 @@ help:
 .PHONY: depend
 depend: Makefile.depend
 
-Makefile.depend:
+Makefile.depend: Makefile.in
 	$(MAKE) NO_DEPEND=1 $(INTERMEDIATE)
 	$(ECHO) >Makefile.depend
 	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_SQLITE3_SOURCES); do \
