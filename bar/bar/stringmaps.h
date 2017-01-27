@@ -227,7 +227,7 @@ StringMap __StringMap_new(const char *__fileName__,
 \***********************************************************************/
 
 #ifdef NDEBUG
-StringMap stringMap_duplicate(const StringMap stringMap);
+StringMap StringMap_duplicate(const StringMap stringMap);
 #else /* not NDEBUG */
 StringMap __StringMap_duplicate(const char      *__fileName__,
                                 ulong           __lineNb__,
