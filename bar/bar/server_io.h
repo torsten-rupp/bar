@@ -79,7 +79,7 @@ typedef struct
 {
   Semaphore        lock;
 
-  // sessiopn
+  // session
   SessionId        sessionId;
   CryptKey         publicKey,privateKey;
 
@@ -111,9 +111,9 @@ typedef struct
       uint         port;
       Semaphore    lock;
       SocketHandle socketHandle;
-      bool         isConnected;
     } network;
   };
+  bool             isConnected;
 
   // commands/results list
   ServerIOCommandList commandList;
@@ -155,8 +155,8 @@ void ServerIO_init(ServerIO *serverIO);
 void ServerIO_done(ServerIO *serverIO);
 
 /***********************************************************************\
-* Name   : ServerIO_initBatch
-* Purpose: init server batch i/o
+* Name   : ServerIO_connectBatch
+* Purpose: connect server batch i/o
 * Input  : serverIO   - server i/o
 *          fileHandle - file handle
 * Output : -
@@ -164,13 +164,13 @@ void ServerIO_done(ServerIO *serverIO);
 * Notes  : -
 \***********************************************************************/
 
-void ServerIO_initBatch(ServerIO   *serverIO,
-                        FileHandle fileHandle
-                       );
+void ServerIO_connectBatch(ServerIO   *serverIO,
+                           FileHandle fileHandle
+                          );
 
 /***********************************************************************\
-* Name   : ServerIO_initNetwork
-* Purpose: init server network i/o
+* Name   : ServerIO_connectNetwork
+* Purpose: connect server network i/o
 * Input  : serverIO     - server i/o
 *          hostName     - remote host name
 *          hostPort     - remote host port
@@ -180,11 +180,11 @@ void ServerIO_initBatch(ServerIO   *serverIO,
 * Notes  : -
 \***********************************************************************/
 
-void ServerIO_initNetwork(ServerIO     *serverIO,
-                          ConstString  hostName,
-                          uint         hostPort,
-                          SocketHandle socketHandle
-                         );
+void ServerIO_connectNetwork(ServerIO     *serverIO,
+                             ConstString  hostName,
+                             uint         hostPort,
+                             SocketHandle socketHandle
+                            );
 
 /***********************************************************************\
 * Name   : ServerIO_disconnect
@@ -196,6 +196,25 @@ void ServerIO_initNetwork(ServerIO     *serverIO,
 \***********************************************************************/
 
 void ServerIO_disconnect(ServerIO *serverIO);
+
+/***********************************************************************\
+* Name   : ServerIO_disconnect
+* Purpose: check if connected
+* Input  : serverIO - server i/o
+* Output : -
+* Return : TRUE iff connected
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool ServerIO_isConnected(ServerIO *serverIO);
+#if defined(NDEBUG) || defined(__SERVER_IO_IMPLEMENTATION__)
+INLINE bool ServerIO_isConnected(ServerIO *serverIO)
+{
+  assert(serverIO != NULL);
+
+  return serverIO->isConnected;
+}
+#endif /* NDEBUG || __SERVER_IO_IMPLEMENTATION__ */
 
 // ----------------------------------------------------------------------
 

@@ -8,6 +8,8 @@
 *
 \***********************************************************************/
 
+#define __SLAVE_IMPLEMENTATION__
+
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
@@ -149,12 +151,12 @@ SOCKET_TYPE_PLAIN,
     return error;
   }
 
-  // init server i/o
-  ServerIO_initNetwork(&slaveInfo->io,
-                       hostName,
-                       hostPort,
-                       socketHandle
-                      );
+  // connect network server i/o
+  ServerIO_connectNetwork(&slaveInfo->io,
+                          hostName,
+                          hostPort,
+                          socketHandle
+                         );
 fprintf(stderr,"%s, %d: Network_getSocket(&slaveInfo->io.network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&slaveInfo->io.network.socketHandle));
 
   // authorize
@@ -166,9 +168,6 @@ fprintf(stderr,"%s, %d: Network_getSocket(&slaveInfo->io.network.socketHandle)=%
     return error;
   }
   String_delete(line);
-
-  // set connected state
-  slaveInfo->isConnected = TRUE;
 
   // free resources
 
@@ -189,7 +188,6 @@ LOCAL void slaveDisconnect(SlaveInfo *slaveInfo)
   assert(slaveInfo != NULL);
 
   ServerIO_disconnect(&slaveInfo->io);
-  slaveInfo->isConnected = FALSE;
 }
 
 LOCAL void processSlave(SlaveInfo *slaveInfo, ConstString line)
@@ -696,17 +694,11 @@ void Slave_init(SlaveInfo *slaveInfo)
 {
   assert(slaveInfo != NULL);
 
+//TODO: remove
 //  slaveInfo->forceSSL                        = forceSSL;
   ServerIO_init(&slaveInfo->io);
-  slaveInfo->isConnected                    = FALSE;
   slaveInfo->slaveConnectStatusInfoFunction = NULL;
   slaveInfo->slaveConnectStatusInfoUserData = NULL;
-//TODO: remove
-//  slaveInfo->commandId                      = 0;
-//  Semaphore_init(&slaveInfo->commandList.lock);
-//  List_init(&slaveInfo->commandList);
-//  Semaphore_init(&slaveInfo->resultList.lock);
-//  List_init(&slaveInfo->resultList);
 }
 
 void Slave_duplicate(SlaveInfo *slaveInfo, const SlaveInfo *fromSlaveInfo)
@@ -723,7 +715,6 @@ void Slave_done(SlaveInfo *slaveInfo)
 {
   assert(slaveInfo != NULL);
 
-  slaveInfo->isConnected = FALSE;
 //TODO: remove
 //  List_done(&slaveInfo->resultList,CALLBACK(freeResultNode,NULL));
 //  Semaphore_done(&slaveInfo->resultList.lock);
@@ -763,93 +754,32 @@ Errors Slave_connect(SlaveInfo                      *slaveInfo,
   return ERROR_NONE;
 }
 
-void Slave_disconnect(const SlaveInfo *slaveInfo)
+void Slave_disconnect(SlaveInfo *slaveInfo)
 {
   assert(slaveInfo != NULL);
 
   slaveDisconnect(slaveInfo);
 }
 
-bool Slave_isConnected(const SlaveInfo *slaveInfo)
-{
-  bool          isConnected;
-  SemaphoreLock semaphoreLock;
-
-  assert(slaveInfo != NULL);
-
-  isConnected = FALSE;
-
-  // find slave and check if connected, remove from list if not connected
-  isConnected = slaveInfo->isConnected;
-#if 0
-      if (Network_isConnected(&slaveInfo->socketHandle))
-      {
-        isConnected = TRUE;
-      }
-      else
-      {
-        List_remove(&slaveList,slaveInfo);
-      }
-#endif
-
-#if 0
-  // disconnect and discard not connected slave
-  if ((slaveInfo != NULL) && !isConnected)
-  {
-    Network_disconnect(&slaveInfo->socketHandle);
-
-    String_delete(slaveInfo->hostName);
-    LIST_DELETE_NODE(slaveInfo);
-  }
-#endif
-
-  return isConnected;
-}
-
-bool Slave_ping(SlaveInfo *slaveInfo)
-{
-  assert(slaveInfo != NULL);
-
-  if (Slave_executeCommand(slaveInfo,
-                           2*MS_PER_SECOND,
-                           NULL,  // resultMap
-                           "STATUS"
-                          ) != ERROR_NONE
-     )
-  {
-    slaveInfo->isConnected = FALSE;
-  }
-
-  return (slaveInfo->isConnected == TRUE);
-}
-
 // ----------------------------------------------------------------------
 
-Errors Slave_waitCommand(const SlaveInfo *slaveInfo,
-                         long            timeout,
-                         uint            *id,
-                         String          name,
-                         StringMap       argumentMap
-                        )
+bool Slave_waitCommand(const SlaveInfo *slaveInfo,
+                       long            timeout,
+                       uint            *id,
+                       String          name,
+                       StringMap       argumentMap
+                      )
 {
-  Errors error;
-
   assert(slaveInfo != NULL);
   assert(id != NULL);
+  assert(name != NULL);
 
-  // wait for command
-  error = ServerIO_waitCommand(&slaveInfo->io,
-                               timeout,
-                               id,
-                               name,
-                               argumentMap
-                              );
-  if (error == NULL)
-  {
-    return error;
-  }
-
-  return ERROR_NONE;
+  return ServerIO_waitCommand(&slaveInfo->io,
+                              timeout,
+                              id,
+                              name,
+                              argumentMap
+                             );
 }
 
 //TODO
@@ -1266,13 +1196,13 @@ Errors Slave_process(const SlaveInfo *slaveInfo,
   // process commands
   do
   {
-    error = ServerIO_waitCommand(&slaveInfo->io,
-                                 timeout,
-                                 &id,
-                                 name,
-                                 argumentMap
-                                );
-    if (error == ERROR_NONE)
+    if (ServerIO_waitCommand(&slaveInfo->io,
+                             timeout,
+                             &id,
+                             name,
+                             argumentMap
+                            )
+       )
     {
 fprintf(stderr,"%s, %d: ---------------- got command #%u: %s\n",__FILE__,__LINE__,id,String_cString(name));
 ServerIO_sendResult(&slaveInfo->io,

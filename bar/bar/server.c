@@ -1757,8 +1757,11 @@ LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint buffe
 
   switch (clientInfo->io.type)
   {
+    case SERVER_IO_TYPE_NONE:
+      stringFormat(buffer,bufferSize,"not connected");
+      break;
     case SERVER_IO_TYPE_BATCH:
-      stringFormat(buffer,bufferSize,"local file");
+      stringFormat(buffer,bufferSize,"batch");
       break;
     case SERVER_IO_TYPE_NETWORK:
       stringFormat(buffer,bufferSize,"%s:%d",String_cString(clientInfo->io.network.name),clientInfo->io.network.port);
@@ -4363,6 +4366,7 @@ fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(jobNode->running
       while (   !quitFlag
              && isJobRunning(jobNode)
              && (jobNode->runningInfo.error == ERROR_NONE)
+             && Slave_isConnected(&jobNode->slaveInfo)
             )
       {
         // get slave job status
@@ -17797,10 +17801,10 @@ LOCAL void initBatchClient(ClientInfo *clientInfo,
 {
   assert(clientInfo != NULL);
 
-  // initialize
-  ServerIO_initBatch(&clientInfo->io,
-                     fileHandle
-                    );
+  // connect batch server i/o
+  ServerIO_connectBatch(&clientInfo->io,
+                        fileHandle
+                       );
 
   // batch client do not require authorization
   clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
@@ -17829,12 +17833,12 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
 
   assert(clientInfo != NULL);
 
-  // initialize
-  ServerIO_initNetwork(&clientInfo->io,
-                       name,
-                       port,
-                       socketHandle
-                      );
+  // connect network server i/o
+  ServerIO_connectNetwork(&clientInfo->io,
+                          name,
+                          port,
+                          socketHandle
+                         );
   if (!MsgQueue_init(&clientInfo->commandQueue,0))
   {
     HALT_FATAL_ERROR("Cannot initialize client command message queue!");
@@ -17891,7 +17895,10 @@ LOCAL void doneClient(ClientInfo *clientInfo)
 
   switch (clientInfo->io.type)
   {
+    case SERVER_IO_TYPE_NONE:
+      break;
     case SERVER_IO_TYPE_BATCH:
+//TODO
       break;
     case SERVER_IO_TYPE_NETWORK:
       // stop command threads
@@ -17906,8 +17913,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       }
 
       // disconnect
-//TODO: ServerIO_disconnect();
-      Network_disconnect(&clientInfo->io.network.socketHandle);
+      ServerIO_disconnect(&clientInfo->io);
 
       // free resources
       for (i = MAX_NETWORK_CLIENT_THREADS-1; i >= 0; i--)
@@ -18700,7 +18706,7 @@ Errors Server_run(ServerModes       mode,
         }
 
         // add client to be served
-        if (clientOkFlag)
+        if (clientOkFlag && ServerIO_isConnected(&clientNode->clientInfo.io))
         {
           if (pollfdCount >= maxPollfdCount)
           {

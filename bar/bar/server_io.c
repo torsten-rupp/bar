@@ -8,6 +8,8 @@
 *
 \***********************************************************************/
 
+#define __SERVER_IO_IMPLEMENTATION__
+
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
@@ -193,6 +195,28 @@ LOCAL bool decodeHex(const char *s, byte *data, uint *dataLength, uint maxDataLe
   (*dataLength) = i;
 
   return TRUE;
+}
+
+LOCAL void disconnect(ServerIO *serverIO)
+{
+  assert(serverIO != NULL);
+
+  switch (serverIO->type)
+  {
+    case SERVER_IO_TYPE_NONE:
+      break;
+    case SERVER_IO_TYPE_BATCH:
+      break;
+    case SERVER_IO_TYPE_NETWORK:
+      Network_disconnect(&serverIO->network.socketHandle);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
+  serverIO->isConnected = FALSE;
 }
 
 /***********************************************************************\
@@ -402,6 +426,7 @@ LOCAL bool receiveData(ServerIO *serverIO)
       else
       {
         // disconnect
+        disconnect(serverIO);
         return FALSE;
       }
       break;
@@ -432,6 +457,7 @@ fprintf(stderr,"%s, %d: receivedBytes=%d buffer=%s\n",__FILE__,__LINE__,readByte
       else
       {
         // disconnect
+        disconnect(serverIO);
         return FALSE;
       }
       break;
@@ -484,6 +510,7 @@ return FALSE;
   else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
   {
     // error/disconnect
+    disconnect(serverIO);
     return FALSE;
   }
 
@@ -615,36 +642,35 @@ void ServerIO_done(ServerIO *serverIO)
   Semaphore_done(&serverIO->lock);
 }
 
-void ServerIO_initBatch(ServerIO   *serverIO,
-                        FileHandle fileHandle
-                       )
+void ServerIO_connectBatch(ServerIO   *serverIO,
+                           FileHandle fileHandle
+                          )
 {
   assert(serverIO != NULL);
-  assert(serverIO->type == SERVER_IO_TYPE_NONE);
 
   serverIO->type            = SERVER_IO_TYPE_BATCH;
   serverIO->file.fileHandle = fileHandle;
+  serverIO->isConnected          = TRUE;
 
   String_clear(serverIO->line);
   List_clear(&serverIO->commandList,CALLBACK((ListNodeFreeFunction)freeCommandNode,NULL));
   List_clear(&serverIO->resultList,CALLBACK((ListNodeFreeFunction)freeResultNode,NULL));
 }
 
-void ServerIO_initNetwork(ServerIO     *serverIO,
-                          ConstString  hostName,
-                          uint         hostPort,
-                          SocketHandle socketHandle
-                         )
+void ServerIO_connectNetwork(ServerIO     *serverIO,
+                             ConstString  hostName,
+                             uint         hostPort,
+                             SocketHandle socketHandle
+                            )
 {
   assert(serverIO != NULL);
-  assert(serverIO->type == SERVER_IO_TYPE_NONE);
 
-  // inti variables
+  // init variables
   serverIO->type                 = SERVER_IO_TYPE_NETWORK;
   serverIO->network.name         = String_duplicate(hostName);
   serverIO->network.port         = hostPort;
   serverIO->network.socketHandle = socketHandle;
-  serverIO->network.isConnected  = TRUE;
+  serverIO->isConnected          = TRUE;
 
   String_clear(serverIO->line);
   List_clear(&serverIO->commandList,CALLBACK((ListNodeFreeFunction)freeCommandNode,NULL));
@@ -655,23 +681,7 @@ void ServerIO_disconnect(ServerIO *serverIO)
 {
   assert(serverIO != NULL);
 
-  switch (serverIO->type)
-  {
-    case SERVER_IO_TYPE_NONE:
-      break;
-    case SERVER_IO_TYPE_BATCH:
-      break;
-    case SERVER_IO_TYPE_NETWORK:
-      Network_disconnect(&serverIO->network.socketHandle);
-      serverIO->network.isConnected = FALSE;
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break;
-    #endif /* NDEBUG */
-  }
-  serverIO->type = SERVER_IO_TYPE_NONE;
+  disconnect(serverIO);
 }
 
 void ServerIO_sendSessionId(ServerIO *serverIO)
@@ -885,7 +895,7 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
   // get new command id
   (*id) = atomicIncrement(&serverIO->commandId,1);
 
-  // send command
+  // format command
   command = String_new();
   locale = uselocale(POSIXLocale);
   {
@@ -901,6 +911,7 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
   }
   uselocale(locale);
 
+  // send command
   sendData(serverIO,command);
 
   // free resources
@@ -1111,7 +1122,6 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
         // not found -> wait for data
         Semaphore_unlock(&serverIO->resultList.lock);
         {
-fprintf(stderr,"%s, %d: wwwwwwwwwww\n",__FILE__,__LINE__);
           if (!waitData(serverIO,timeout))
           {
             return ERROR_NETWORK_TIMEOUT;

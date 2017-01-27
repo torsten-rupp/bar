@@ -51,7 +51,6 @@ typedef void(*SlaveConnectStatusInfoFunction)(bool isConnected,
 typedef struct
 {
 bool         forceSSL;                     // force SSL connection to slave hose
-  bool         isConnected;
 
   ServerIO     io;
 SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction;
@@ -157,7 +156,7 @@ Errors Slave_connect(SlaveInfo                      *slaveInfo,
 * Notes  : -
 \***********************************************************************/
 
-void Slave_disconnect(const SlaveInfo *slaveInfo);
+void Slave_disconnect(SlaveInfo *slaveInfo);
 
 /***********************************************************************\
 * Name   : Slave_isConnected
@@ -168,7 +167,15 @@ void Slave_disconnect(const SlaveInfo *slaveInfo);
 * Notes  : -
 \***********************************************************************/
 
-bool Slave_isConnected(const SlaveInfo *slaveInfo);
+INLINE bool Slave_isConnected(const SlaveInfo *slaveInfo);
+#if defined(NDEBUG) || defined(__SLAVE_IMPLEMENTATION__)
+INLINE bool Slave_isConnected(const SlaveInfo *slaveInfo)
+{
+  assert(slaveInfo != NULL);
+
+  return ServerIO_isConnected(&slaveInfo->io);
+}
+#endif /* NDEBUG || __SLAVE_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Slave_isConnected
@@ -193,16 +200,16 @@ SocketHandle *Slave_getSocketHandle(const SlaveInfo *slaveInfo);
 * Output : id          - command id
 *          name        - command name (can be NULL)
 *          argumentMap - argument map (can be NULL)
-* Return : ERROR_NONE or error code
+* Return : TRUE iff command received
 * Notes  : -
 \***********************************************************************/
 
-Errors Slave_waitCommand(const SlaveInfo *slaveInfo,
-                         long            timeout,
-                         uint            *id,
-                         String          name,
-                         StringMap       argumentMap
-                        );
+bool Slave_waitCommand(const SlaveInfo *slaveInfo,
+                       long            timeout,
+                       uint            *id,
+                       String          name,
+                       StringMap       argumentMap
+                      );
 
 /***********************************************************************\
 * Name   : Slave_executeCommand
