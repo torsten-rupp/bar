@@ -1364,7 +1364,6 @@ static inline void *memCopy(void *p0, size_t n0, const void *p1, size_t n1)
     // memory do not overlap
     memcpy(p0,p1,n);
   }
-  memset((byte*)p0+(n0-n),0,n0-n);
 
   return p0;
 }
