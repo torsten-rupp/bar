@@ -1189,8 +1189,8 @@ public class BARServer
               Socket plainSocket = new Socket(name,port);
               plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
 
-              input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream()));
-              output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream()));
+              input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
+              output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream(),"UTF-8"));
 
               // start session
               startSession(input,output);
@@ -1212,8 +1212,8 @@ public class BARServer
               sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               sslSocket.startHandshake();
 
-              input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
-              output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
+              input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
+              output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream(),"UTF-8"));
 
 /*
 Dprintf.dprintf("ssl info");
@@ -1314,8 +1314,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               sslSocket.startHandshake();
 
-              input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
-              output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
+              input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
+              output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream(),"UTF-8"));
 
               // start session
               startSession(input,output);
@@ -1408,8 +1408,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               Socket plainSocket = new Socket(name,port);
               plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
 
-              input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream()));
-              output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream()));
+              input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
+              output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream(),"UTF-8"));
 
               // start session
               startSession(input,output);
@@ -1431,8 +1431,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               sslSocket.startHandshake();
 
-              input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
-              output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
+              input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
+              output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream(),"UTF-8"));
 
 /*
 Dprintf.dprintf("ssl info");
@@ -1528,8 +1528,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               sslSocket.startHandshake();
 
-              input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
-              output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream()));
+              input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
+              output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream(),"UTF-8"));
 
               // start session
               startSession(input,output);
@@ -1602,8 +1602,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         Socket plainSocket = new Socket(name,port);
         plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
 
-        input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream()));
-        output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream()));
+        input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
+        output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream(),"UTF-8"));
 
         startSession(input,output);
 
