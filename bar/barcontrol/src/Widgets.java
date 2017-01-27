@@ -4881,6 +4881,30 @@ e composite widget
     return array;
   }
 
+  /** set selected combo item
+   * @param combo combo
+   * @param index index [0..n-1]
+   */
+  public static <T> void setSelectedComboItem(final Combo combo, final int index)
+  {
+    if (!combo.isDisposed())
+    {
+      combo.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!combo.isDisposed())
+          {
+            ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+            Object data = dataArray.get(index);
+            combo.select(index);
+            combo.setText(data.toString());
+          }
+        }
+      });
+    }
+  }
+
   /** get selected combo item
    * @param combo combo
    * @param default default value
@@ -4937,6 +4961,26 @@ e composite widget
               }
             }
             combo.setText(data.toString());
+          }
+        }
+      });
+    }
+  }
+
+  /** clear selected combo item
+   * @param combo combo
+   */
+  public static <T> void clearSelectedComboItem(final Combo combo)
+  {
+    if (!combo.isDisposed())
+    {
+      combo.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!combo.isDisposed())
+          {
+            combo.setText("");
           }
         }
       });
@@ -5222,6 +5266,15 @@ e composite widget
     return getComboItems(combo,clazz);
   }
 
+  /** set selected option menu item
+   * @param combo option menu combo
+   * @param index index [0..n-1]
+   */
+  public static <T> void setSelectedOptionMenuItem(Combo combo, int index)
+  {
+    setSelectedComboItem(combo,index);
+  }
+
   /** get selected option menu item
    * @param combo option menu combo
    * @param defaultValue default value
@@ -5239,6 +5292,14 @@ e composite widget
   public static <T> void setSelectedOptionMenuItem(Combo combo, T data)
   {
     setSelectedComboItem(combo,data);
+  }
+
+  /** clear selected option menu item
+   * @param combo option menu combo
+   */
+  public static <T> void clearSelectedOptionMenuItem(Combo combo)
+  {
+    clearSelectedComboItem(combo);
   }
 
   //-----------------------------------------------------------------------
