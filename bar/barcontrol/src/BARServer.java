@@ -2539,19 +2539,38 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
       if      (clazz == Boolean.class)
       {
-        data = (T)new Boolean(resultMap.getBoolean("value"));
+        data = (T)new Boolean(resultMap.getBoolean("value",false));
       }
       else if (clazz == Integer.class)
       {
-        data = (T)new Integer(resultMap.getInt("value"));
+        data = (T)new Integer(resultMap.getInt("value",0));
       }
       else if (clazz == Long.class)
       {
-        data = (T)new Long(resultMap.getLong("value"));
+        data = (T)new Long(resultMap.getLong("value",0L));
       }
       else if (clazz == String.class)
       {
         data = (T)resultMap.getString("value","");
+      }
+    }
+    else
+    {
+      if      (clazz == Boolean.class)
+      {
+        data = (T)new Boolean(false);
+      }
+      else if (clazz == Integer.class)
+      {
+        data = (T)new Integer(0);
+      }
+      else if (clazz == Long.class)
+      {
+        data = (T)new Long(0L);
+      }
+      else if (clazz == String.class)
+      {
+        data = (T)new String("");
       }
     }
 
@@ -2700,23 +2719,23 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
     if      (widgetVariable.getType() == Boolean.class)
     {
-      widgetVariable.set(resultMap.getBoolean("value"));
+      widgetVariable.set(resultMap.getBoolean("value",false));
     }
     else if (widgetVariable.getType() == Integer.class)
     {
-      widgetVariable.set(resultMap.getInt("value"));
+      widgetVariable.set(resultMap.getInt("value",0));
     }
     else if (widgetVariable.getType() == Long.class)
     {
-      widgetVariable.set(resultMap.getLong("value"));
+      widgetVariable.set(resultMap.getLong("value",0L));
     }
     else if (widgetVariable.getType() == Double.class)
     {
-      widgetVariable.set(resultMap.getDouble("value"));
+      widgetVariable.set(resultMap.getDouble("value",0.0));
     }
     else if (widgetVariable.getType() == String.class)
     {
-      widgetVariable.set(resultMap.getString("value"));
+      widgetVariable.set(resultMap.getString("value",""));
     }
     else if (widgetVariable.getType() == Enum.class)
     {
@@ -2728,7 +2747,7 @@ throw new Error("NYI");
       throw new Error("Type not supported");
     }
 
-    return error;
+    return Errors.NONE;
   }
 
   /** get string value from BAR server
