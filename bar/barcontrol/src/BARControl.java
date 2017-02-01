@@ -1403,6 +1403,12 @@ public class BARControl
   // string with "all files" extension
   public static final String ALL_FILE_EXTENSION;
 
+  // version, email
+  private static final String VERSION = Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+" ("+Config.VERSION_REVISION+")";
+  private static final char   MAIL_AT = '@';  // use MAIL_AT to avoid spam
+  private static final String EMAIL   = "torsten.rupp"+MAIL_AT+"gmx.net";
+
+  // host system
   private static final HostSystems hostSystem;
 
   // command line options
@@ -1683,7 +1689,7 @@ public class BARControl
    */
   private void printVersion()
   {
-    System.out.println("barcontrol "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+" ("+Config.VERSION_SVN+")");
+    System.out.println("barcontrol "+VERSION);
   }
 
   /** parse arguments
@@ -2939,7 +2945,6 @@ if (false) {
   BARControl(String[] args)
   {
     final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    final char             MAIL_AT     = '@';
 
     Thread.currentThread().setName("BARControl");
 
@@ -3963,24 +3968,28 @@ Dprintf.dprintf("still not supported");
       {
         printStackTrace(exception);
       }
+      System.err.println("Version "+VERSION);
+      System.err.println("Please report this error to torsten.rupp"+MAIL_AT+"gmx.net."); // use MAIL_AT to avoid SPAM
     }
-    catch (CommunicationError communicationError)
+    catch (CommunicationError error)
     {
-      System.err.println("ERROR communication: "+communicationError.getMessage());
+      System.err.println("ERROR communication: "+error.getMessage());
     }
-    catch (AssertionError assertionError)
+    catch (AssertionError error)
     {
-      System.err.println("INTERNAL ERROR: "+assertionError.toString());
-      printStackTrace(assertionError);
+      System.err.println("INTERNAL ERROR: "+error.toString());
+      printStackTrace(error);
       System.err.println("");
-      System.err.println("Please report this assertion error to torsten.rupp"+MAIL_AT+"gmx.net."); // use MAIL_AT to avoid SPAM
+      System.err.println("Version "+VERSION);
+      System.err.println("Please report this error to torsten.rupp"+MAIL_AT+"gmx.net."); // use MAIL_AT to avoid SPAM
     }
     catch (InternalError error)
     {
       System.err.println("INTERNAL ERROR: "+error.getMessage());
       printStackTrace(error);
       System.err.println("");
-      System.err.println("Please report this internal error to torsten.rupp"+MAIL_AT+"gmx.net."); // use MAIL_AT to avoid SPAM
+      System.err.println("Version "+VERSION);
+      System.err.println("Please report this error to torsten.rupp"+MAIL_AT+"gmx.net."); // use MAIL_AT to avoid SPAM
     }
     catch (Error error)
     {
