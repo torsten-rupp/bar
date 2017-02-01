@@ -570,7 +570,7 @@ dnl ----------------------- substitute settings ------------------------
 
 AC_SUBST(VERSION_MAJOR)                     dnl version major number
 AC_SUBST(VERSION_MINOR)                     dnl version minor number
-AC_SUBST(VERSION_SVN)                       dnl version SVN number
+AC_SUBST(VERSION_REVISION)                  dnl version revision number (SVN number)
 
 AC_SUBST(COPYRIGHT_DATE)                    dnl copyright date
 
@@ -3332,7 +3332,7 @@ dnl -------------------------------- misc ------------------------------
 
 VERSION_MAJOR=`cat $srcdir/version|grep MAJOR|sed 's/.*=//g'`
 VERSION_MINOR=`cat $srcdir/version|grep MINOR|sed 's/.*=//g'`
-VERSION_SVN=`$SVNVERSION . 2>/dev/null || cat $srcdir/version|grep RELEASE|sed 's/RELEASE=//g'`
+VERSION_REVISION=`$SVNVERSION . 2>/dev/null || cat $srcdir/version|grep RELEASE|sed 's/RELEASE=//g'`
 
 COPYRIGHT_DATE="2007-`date +%Y`"
 
@@ -3496,7 +3496,7 @@ AC_CONFIG_FILES(epm.list)
 
 AC_CONFIG_COMMANDS(BUILD_NOTE,
                    [echo "";
-                    echo "Configuration $VERSION_MAJOR.$VERSION_MINOR ($VERSION_SVN):";
+                    echo "Configuration $VERSION_MAJOR.$VERSION_MINOR ($VERSION_REVISION):";
                     echo "  Host              : $host";
                     echo "  Dynamic linked    : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
                     echo "  zip compression   : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
@@ -3549,7 +3549,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    ],
                    VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_MINOR="$VERSION_MINOR"
-                   VERSION_SVN="$VERSION_SVN"
+                   VERSION_REVISION="$VERSION_REVISION"
 
                    host="$host"
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC

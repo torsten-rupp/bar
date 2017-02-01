@@ -742,7 +742,7 @@ FILE_SEPARATOR_STRING
 FILE_SEPARATOR_CHAR
 PLATFORM
 COPYRIGHT_DATE
-VERSION_SVN
+VERSION_REVISION
 VERSION_MINOR
 VERSION_MAJOR
 host_os
@@ -19849,7 +19849,7 @@ fi
 
 VERSION_MAJOR=`cat $srcdir/version|grep MAJOR|sed 's/.*=//g'`
 VERSION_MINOR=`cat $srcdir/version|grep MINOR|sed 's/.*=//g'`
-VERSION_SVN=`$SVNVERSION . 2>/dev/null || cat $srcdir/version|grep RELEASE|sed 's/RELEASE=//g'`
+VERSION_REVISION=`$SVNVERSION . 2>/dev/null || cat $srcdir/version|grep RELEASE|sed 's/RELEASE=//g'`
 
 COPYRIGHT_DATE="2007-`date +%Y`"
 
@@ -20893,7 +20893,7 @@ cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
 #
 VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_MINOR="$VERSION_MINOR"
-                   VERSION_SVN="$VERSION_SVN"
+                   VERSION_REVISION="$VERSION_REVISION"
 
                    host="$host"
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
@@ -21517,7 +21517,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
     "SET_PACKAGE_IN_CONFIG_H":C) sed -i 's/#define PACKAGE_/#define BAR_PACKAGE_/g' bar/config.h
                    ;;
     "BUILD_NOTE":C) echo "";
-                    echo "Configuration $VERSION_MAJOR.$VERSION_MINOR ($VERSION_SVN):";
+                    echo "Configuration $VERSION_MAJOR.$VERSION_MINOR ($VERSION_REVISION):";
                     echo "  Host              : $host";
                     echo "  Dynamic linked    : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
                     echo "  zip compression   : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
