@@ -1604,7 +1604,7 @@ String Storage_getPrintableName(String                 string,
 
   if (masterIO != NULL)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: Storage_init master io\n",__FILE__,__LINE__);
     storageInfo->type      = STORAGE_TYPE_MASTER;
     storageInfo->master.io = masterIO;
   }

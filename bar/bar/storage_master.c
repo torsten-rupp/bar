@@ -343,7 +343,7 @@ fprintf(stderr,"%s, %d: StorageMaster_create\n",__FILE__,__LINE__);
   }
 
   error = ServerIO_waitResult(storageHandle->storageInfo->master.io,
-                              30LL*MS_PER_SECOND,
+100*                              30LL*MS_PER_SECOND,
                               id,
                               NULL,  // error
                               NULL,  // completedFlag

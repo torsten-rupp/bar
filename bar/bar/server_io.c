@@ -458,6 +458,8 @@ LOCAL bool receiveData(ServerIO *serverIO)
       break;
     case SERVER_IO_TYPE_NETWORK:
       (void)Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&readBytes);
+buffer[readBytes]=0;
+fprintf(stderr,"%s, %d: rec %s\n",__FILE__,__LINE__,buffer);
       if (readBytes > 0)
       {
         do
@@ -512,15 +514,12 @@ LOCAL bool waitData(ServerIO *serverIO, long timeout)
   // wait for data from slave
 //TODO: batch?
   pollfds[0].fd       = Network_getSocket(&serverIO->network.socketHandle);
-fprintf(stderr,"%s, %d: Network_getSocket(&serverIO->network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&serverIO->network.socketHandle));
   pollfds[0].events   = POLLIN|POLLERR|POLLNVAL;
   pollTimeout.tv_sec  = timeout/MS_PER_SECOND;
   pollTimeout.tv_nsec = (timeout%MS_PER_SECOND)*NS_PER_MS;
   if (ppoll(pollfds,1,&pollTimeout,&signalMask) <= 0)
   {
-fprintf(stderr,"%s, %d: poll fail %s\n",__FILE__,__LINE__,strerror(errno));
-Misc_udelay(10000*1000);
-return FALSE;
+    return FALSE;
   }
 
   // process data results/commands

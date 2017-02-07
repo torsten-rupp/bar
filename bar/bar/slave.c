@@ -811,7 +811,6 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
   }
 
   // wait for result
-fprintf(stderr,"%s, %d: timeout=%ld\n",__FILE__,__LINE__,timeout);
   error = ServerIO_waitResult(&slaveInfo->io,
                               timeout,
                               id,
@@ -1215,7 +1214,6 @@ ServerIO_sendResult(&slaveInfo->io,
   }
   while (error == ERROR_NONE);
 //  ServerIO_wait(&slaveInfo->io,timeout);
-
 
   // free resources
   StringMap_delete(argumentMap);
