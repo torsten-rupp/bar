@@ -74,6 +74,16 @@ interface SettingMigrate
   }
 }
 
+/** setting section annotation
+ */
+@Target({TYPE,FIELD})
+@Retention(RetentionPolicy.RUNTIME)
+@interface SettingSection
+{
+  String name() default "";                      // section name
+  String value() default "";                     // section value
+}
+
 /** setting value adapter
  */
 abstract class SettingValueAdapter<String,Value>
