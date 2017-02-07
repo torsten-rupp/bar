@@ -2212,6 +2212,7 @@ class Dialogs
 
   /** select dialog
    * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
    * @param title title string
    * @param message confirmation message
    * @param texts array with texts
@@ -2222,7 +2223,7 @@ class Dialogs
    * @param defaultValue default value (0..n-1)
    * @return selection index (0..n-1) or -1
    */
-  public static int select(Shell parentShell, String title, String message, String[] texts, String[] helpTexts, boolean[] enabled, String okText, String cancelText, int defaultValue)
+  public static int select(Shell parentShell, final BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts, String[] helpTexts, boolean[] enabled, String okText, String cancelText, int defaultValue)
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
 
@@ -2230,59 +2231,161 @@ class Dialogs
     Label     label;
     Button    button;
 
-    if (!parentShell.isDisposed())
+    if ((showAgainFieldFlag == null) || showAgainFieldFlag.get())
     {
-      final int[] result = new int[1];
-
-      final Shell dialog = openModal(parentShell,title);
-      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
-
-      composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+      if (!parentShell.isDisposed())
       {
-        // image
-        label = new Label(composite,SWT.LEFT);
-        label.setImage(IMAGE);
-        label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
+        final int[] result = new int[1];
 
-        subComposite = new Composite(composite,SWT.NONE);
-        subComposite.setLayout(new TableLayout(0.0,1.0));
-        subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE,0,0,4));
+        final Shell dialog = openModal(parentShell,title);
+        dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+
+        final Button widgetShowAgain;
+        composite = new Composite(dialog,SWT.NONE);
+        composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+        composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
         {
-          int row = 0;
+          // image
+          label = new Label(composite,SWT.LEFT);
+          label.setImage(IMAGE);
+          label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
 
-          if (message != null)
+          subComposite = new Composite(composite,SWT.NONE);
+          subComposite.setLayout(new TableLayout(0.0,1.0));
+          subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE,0,0,4));
           {
-            // message
-            label = new Label(subComposite,SWT.LEFT|SWT.WRAP);
-            label.setText(message);
-            label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE,0,0,4)); row++;
+            int row = 0;
+
+            if (message != null)
+            {
+              // message
+              label = new Label(subComposite,SWT.LEFT|SWT.WRAP);
+              label.setText(message);
+              label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE,0,0,4)); row++;
+            }
+
+            // buttons
+            if ((okText != null) || (cancelText != null))
+            {
+              Button selectedButton = null;
+              for (int i = 0; i < texts.length; i++)
+              {
+                if (texts[i] != null)
+                {
+                  button = new Button(subComposite,SWT.RADIO);
+                  button.setEnabled((enabled == null) || enabled[i]);
+                  button.setText(texts[i]);
+                  button.setData(i);
+                  if (   ((enabled == null) || enabled[i])
+                      && ((i == defaultValue) || (selectedButton == null))
+                     )
+                  {
+                    if (selectedButton != null) selectedButton.setSelection(false);
+
+                    button.setSelection(true);
+                    result[0] = i;
+                    selectedButton = button;
+                  }
+                  button.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W)); row++;
+                  button.addSelectionListener(new SelectionListener()
+                  {
+                    public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                    {
+                    }
+                    public void widgetSelected(SelectionEvent selectionEvent)
+                    {
+                      Button widget = (Button)selectionEvent.widget;
+
+                      result[0] = (Integer)widget.getData();
+                    }
+                  });
+                  if ((helpTexts != null) && (i < helpTexts.length) && (helpTexts[i] != null))
+                  {
+                    button.setToolTipText(helpTexts[i]);
+                  }
+                }
+              }
+            }
           }
 
-          // buttons
+          if (showAgainFieldFlag != null)
+          {
+            widgetShowAgain = new Button(composite,SWT.CHECK);
+            widgetShowAgain.setText(Dialogs.tr("show again"));
+            widgetShowAgain.setSelection(true);
+            widgetShowAgain.setLayoutData(new TableLayoutData(1,1,TableLayoutData.W));
+          }
+          else
+          {
+            widgetShowAgain = null;
+          }
+        }
+
+        // buttons
+        composite = new Composite(dialog,SWT.NONE);
+        composite.setLayout(new TableLayout(0.0,1.0));
+        composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+        {
           if ((okText != null) || (cancelText != null))
           {
-            Button selectedButton = null;
+            if (okText != null)
+            {
+              button = new Button(composite,SWT.CENTER);
+              button.setText(okText);
+              button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
+              button.addSelectionListener(new SelectionListener()
+              {
+                public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                {
+                }
+                public void widgetSelected(SelectionEvent selectionEvent)
+                {
+                  close(dialog,true);
+                }
+              });
+            }
+
+            if (cancelText != null)
+            {
+              button = new Button(composite,SWT.CENTER);
+              button.setText(cancelText);
+              button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
+              button.addSelectionListener(new SelectionListener()
+              {
+                public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                {
+                }
+                public void widgetSelected(SelectionEvent selectionEvent)
+                {
+                  close(dialog,false);
+                }
+              });
+            }
+          }
+          else
+          {
+            int textWidth = 0;
+            GC gc = new GC(composite);
+            for (String text : texts)
+            {
+              if (text != null)
+              {
+                textWidth = Math.max(textWidth,gc.textExtent(text).x);
+              }
+            }
+            gc.dispose();
+
+            int column = 0;
             for (int i = 0; i < texts.length; i++)
             {
               if (texts[i] != null)
               {
-                button = new Button(subComposite,SWT.RADIO);
+                button = new Button(composite,SWT.CENTER);
                 button.setEnabled((enabled == null) || enabled[i]);
                 button.setText(texts[i]);
                 button.setData(i);
-                if (   ((enabled == null) || enabled[i])
-                    && ((i == defaultValue) || (selectedButton == null))
-                   )
-                {
-                  if (selectedButton != null) selectedButton.setSelection(false);
-
-                  button.setSelection(true);
-                  result[0] = i;
-                  selectedButton = button;
-                }
-                button.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W)); row++;
+                if (i == defaultValue) button.setFocus();
+                button.setLayoutData(new TableLayoutData(0,column,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,textWidth+20,SWT.DEFAULT)); column++;
                 button.addSelectionListener(new SelectionListener()
                 {
                   public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2293,108 +2396,39 @@ class Dialogs
                     Button widget = (Button)selectionEvent.widget;
 
                     result[0] = (Integer)widget.getData();
+                    close(dialog,true);
                   }
                 });
-                if ((helpTexts != null) && (i < helpTexts.length) && (helpTexts[i] != null))
-                {
-                  button.setToolTipText(helpTexts[i]);
-                }
               }
             }
           }
         }
-      }
 
-      // buttons
-      composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(0.0,1.0));
-      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
-      {
-        if ((okText != null) || (cancelText != null))
+        if ((Boolean)run(dialog,
+                         false,
+                         new DialogRunnable()
+                         {
+                           public void done(Object result)
+                           {
+                             if (showAgainFieldFlag != null)
+                             {
+                               showAgainFieldFlag.set(widgetShowAgain.getSelection());
+                             }
+                           }
+                         }
+                        )
+           )
         {
-          if (okText != null)
-          {
-            button = new Button(composite,SWT.CENTER);
-            button.setText(okText);
-            button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
-            button.addSelectionListener(new SelectionListener()
-            {
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
-              }
-              public void widgetSelected(SelectionEvent selectionEvent)
-              {
-                close(dialog,true);
-              }
-            });
-          }
-
-          if (cancelText != null)
-          {
-            button = new Button(composite,SWT.CENTER);
-            button.setText(cancelText);
-            button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
-            button.addSelectionListener(new SelectionListener()
-            {
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
-              }
-              public void widgetSelected(SelectionEvent selectionEvent)
-              {
-                close(dialog,false);
-              }
-            });
-          }
+          return result[0];
         }
         else
         {
-          int textWidth = 0;
-          GC gc = new GC(composite);
-          for (String text : texts)
-          {
-            if (text != null)
-            {
-              textWidth = Math.max(textWidth,gc.textExtent(text).x);
-            }
-          }
-          gc.dispose();
-
-          int column = 0;
-          for (int i = 0; i < texts.length; i++)
-          {
-            if (texts[i] != null)
-            {
-              button = new Button(composite,SWT.CENTER);
-              button.setEnabled((enabled == null) || enabled[i]);
-              button.setText(texts[i]);
-              button.setData(i);
-              if (i == defaultValue) button.setFocus();
-              button.setLayoutData(new TableLayoutData(0,column,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,textWidth+20,SWT.DEFAULT)); column++;
-              button.addSelectionListener(new SelectionListener()
-              {
-                public void widgetDefaultSelected(SelectionEvent selectionEvent)
-                {
-                }
-                public void widgetSelected(SelectionEvent selectionEvent)
-                {
-                  Button widget = (Button)selectionEvent.widget;
-
-                  result[0] = (Integer)widget.getData();
-                  close(dialog,true);
-                }
-              });
-            }
-          }
+          return -1;
         }
-      }
-
-      if ((Boolean)run(dialog,false))
-      {
-        return result[0];
       }
       else
       {
-        return -1;
+        return defaultValue;
       }
     }
     else
@@ -2410,12 +2444,60 @@ class Dialogs
    * @param texts array with texts
    * @param helpTexts help texts or null
    * @param enabled array with enabled flags
+   * @param okText ok-text
+   * @param cancelText cancel-text
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1) or -1
+   */
+  public static int select(Shell parentShell, String title, String message, String[] texts, String[] helpTexts, boolean[] enabled, String okText, String cancelText, int defaultValue)
+  {
+    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,null,null,null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param title title string
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param helpTexts help texts or null
+   * @param enabled array with enabled flags
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts, String[] helpTexts, boolean[] enabled, int defaultValue)
+  {
+    return select(parentShell,showAgainFieldFlag,title,message,texts,helpTexts,null,null,null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param helpTexts help texts or null
+   * @param enabled array with enabled flags
    * @param defaultValue default value (0..n-1)
    * @return selection index (0..n-1)
    */
   public static int select(Shell parentShell, String title, String message, String[] texts, String[] helpTexts, boolean[] enabled, int defaultValue)
   {
-    return select(parentShell,title,message,texts,helpTexts,null,null,null,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,null,null,null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param title title string
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param enabled array with enabled flags
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts, boolean[] enabled, int defaultValue)
+  {
+    return select(parentShell,showAgainFieldFlag,title,message,texts,null,null,null,null,defaultValue);
   }
 
   /** select dialog
@@ -2429,7 +2511,22 @@ class Dialogs
    */
   public static int select(Shell parentShell, String title, String message, String[] texts, boolean[] enabled, int defaultValue)
   {
-    return select(parentShell,title,message,texts,null,null,null,null,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,null,null,null,null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param title title string
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param helpTexts help texts or null
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts, String[] helpTexts, int defaultValue)
+  {
+    return select(parentShell,showAgainFieldFlag,title,message,texts,helpTexts,null,defaultValue);
   }
 
   /** select dialog
@@ -2443,7 +2540,21 @@ class Dialogs
    */
   public static int select(Shell parentShell, String title, String message, String[] texts, String[] helpTexts, int defaultValue)
   {
-    return select(parentShell,title,message,texts,helpTexts,null,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param title title string
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts, int defaultValue)
+  {
+    return select(parentShell,showAgainFieldFlag,title,message,texts,null,null,defaultValue);
   }
 
   /** select dialog
@@ -2456,11 +2567,12 @@ class Dialogs
    */
   public static int select(Shell parentShell, String title, String message, String[] texts, int defaultValue)
   {
-    return select(parentShell,title,message,texts,null,null,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,null,null,defaultValue);
   }
 
   /** multiple select dialog
    * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
    * @param title title string
    * @param message confirmation message
    * @param texts array with texts
@@ -2469,7 +2581,7 @@ class Dialogs
    * @param defaultValue default value
    * @return selection
    */
-  public static BitSet selectMulti(Shell parentShell, String title, String message, String[] texts, String yesText, String noText, BitSet defaultValue)
+  public static BitSet selectMulti(Shell parentShell, final BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts, String yesText, String noText, BitSet defaultValue)
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
 
@@ -2580,6 +2692,37 @@ class Dialogs
 
   /** multiple select dialog
    * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param title title string
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param yesText yes-text
+   * @param noText no-text
+   * @param defaultValue default value
+   * @return selection
+   */
+  public static BitSet selectMulti(Shell parentShell, String title, String message, String[] texts, String yesText, String noText, BitSet defaultValue)
+  {
+    return selectMulti(parentShell,(BooleanFieldUpdater)null,title,message,texts,yesText,noText,null);
+  }
+
+  /** multiple select dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param title title string
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param yesText yes-text
+   * @param noText no-text
+   * @return selection
+   */
+  public static BitSet selectMulti(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts, String yesText, String noText)
+  {
+    return selectMulti(parentShell,showAgainFieldFlag,title,message,texts,yesText,noText,null);
+  }
+
+  /** multiple select dialog
+   * @param parentShell parent shell
    * @param title title string
    * @param message confirmation message
    * @param texts array with texts
@@ -2589,7 +2732,20 @@ class Dialogs
    */
   public static BitSet selectMulti(Shell parentShell, String title, String message, String[] texts, String yesText, String noText)
   {
-    return selectMulti(parentShell,title,message,texts,yesText,noText,null);
+    return selectMulti(parentShell,(BooleanFieldUpdater)null,title,message,texts,yesText,noText,null);
+  }
+
+  /** multiple select dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param title title string
+   * @param message confirmation message
+   * @param texts array with texts
+   * @return selection
+   */
+  public static BitSet selectMulti(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String title, String message, String[] texts)
+  {
+    return selectMulti(parentShell,showAgainFieldFlag,title,message,texts,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
   }
 
   /** multiple select dialog
@@ -2601,7 +2757,7 @@ class Dialogs
    */
   public static BitSet selectMulti(Shell parentShell, String title, String message, String[] texts)
   {
-    return selectMulti(parentShell,title,message,texts,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
+    return selectMulti(parentShell,(BooleanFieldUpdater)null,title,message,texts,Dialogs.tr("OK"),Dialogs.tr("Cancel"));
   }
 
   /** password dialog
