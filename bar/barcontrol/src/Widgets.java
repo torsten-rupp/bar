@@ -8376,16 +8376,31 @@ Dprintf.dprintf("");
     return composite;
   }
 
+  /** insert tab widget
+   * @param tabFolder tab folder
+   * @param leftComposite left tab item composite or null
+   * @param title title of tab
+   * @param titleImage title image of tab
+   * @param data data element
+   * @param style style
+   * @return new composite widget
+   */
+  public static Composite insertTab(TabFolder tabFolder, Composite leftComposite, String title, Object data, int style)
+  {
+    return insertTab(tabFolder,leftComposite,title,data,style,true);
+  }
+
   /** add tab widget
    * @param tabFolder tab folder
    * @param title title of tab
    * @param data data element
    * @param style style
+   * @param isVisible true for visible, false otherwise
    * @return new composite widget
    */
   public static Composite addTab(TabFolder tabFolder, String title, Object data, int style, boolean isVisible)
   {
-    return insertTab(tabFolder,null,title,data,style,isVisible);
+    return insertTab(tabFolder,(Composite)null,title,data,style,isVisible);
   }
 
   /** add tab widget
@@ -8404,6 +8419,7 @@ Dprintf.dprintf("");
    * @param tabFolder tab folder
    * @param title title of tab
    * @param data data element
+   * @param isVisible true for visible, false otherwise
    * @return new composite widget
    */
   public static Composite addTab(TabFolder tabFolder, String title, Object data, boolean isVisible)
@@ -8414,16 +8430,39 @@ Dprintf.dprintf("");
   /** add tab widget
    * @param tabFolder tab folder
    * @param title title of tab
+   * @param data data element
    * @return new composite widget
    */
-  public static Composite addTab(TabFolder tabFolder, String title, int style, boolean isVisible)
+  public static Composite addTab(TabFolder tabFolder, String title, Object data)
   {
-    return addTab(tabFolder,title,null,style,isVisible);
+    return addTab(tabFolder,title,data,true);
   }
 
   /** add tab widget
    * @param tabFolder tab folder
    * @param title title of tab
+   * @param isVisible true for visible, false otherwise
+   * @return new composite widget
+   */
+  public static Composite addTab(TabFolder tabFolder, String title, int style, boolean isVisible)
+  {
+    return addTab(tabFolder,title,(Object)null,style,isVisible);
+  }
+
+  /** add tab widget
+   * @param tabFolder tab folder
+   * @param title title of tab
+   * @return new composite widget
+   */
+  public static Composite addTab(TabFolder tabFolder, String title, int style)
+  {
+    return addTab(tabFolder,title,style,true);
+  }
+
+  /** add tab widget
+   * @param tabFolder tab folder
+   * @param title title of tab
+   * @param isVisible true for visible, false otherwise
    * @return new composite widget
    */
   public static Composite addTab(TabFolder tabFolder, String title, boolean isVisible)
@@ -8616,6 +8655,7 @@ Dprintf.dprintf("");
    * @param leftComposite left tab item composite or null
    * @param title title of tab
    * @param data data element
+   * @param isVisible true to make visible, false to make invisible
    * @return new composite widget
    */
   public static Composite insertTab(CTabFolder cTabFolder, Composite leftComposite, String title, Object data, boolean isVisible)
@@ -8651,15 +8691,50 @@ Dprintf.dprintf("");
     return composite;
   }
 
+  /** insert tab widget
+   * @param cTabFolder c-tab folder
+   * @param leftComposite left tab item composite or null
+   * @param title title of tab
+   * @param data data element
+   * @return new composite widget
+   */
+  public static Composite insertTab(CTabFolder cTabFolder, Composite leftComposite, String title, Object data)
+  {
+    return insertTab(cTabFolder,leftComposite,title,data,true);
+  }
+
+  /** add tab widget
+   * @param cTabFolder c-tab folder
+   * @param title title of tab
+   * @param data data element
+   * @param isVisible true to make visible, false to make invisible
+   * @return new composite widget
+   */
+  public static Composite addTab(CTabFolder cTabFolder, String title, Object data, boolean isVisible)
+  {
+    return insertTab(cTabFolder,(Composite)null,title,data,isVisible);
+  }
+
   /** add tab widget
    * @param cTabFolder c-tab folder
    * @param title title of tab
    * @param data data element
    * @return new composite widget
    */
-  public static Composite addTab(CTabFolder cTabFolder, String title, Object data, boolean isVisible)
+  public static Composite addTab(CTabFolder cTabFolder, String title, Object data)
   {
-    return insertTab(cTabFolder,null,title,data,isVisible);
+    return addTab(cTabFolder,title,data,true);
+  }
+
+  /** add tab widget
+   * @param cTabFolder c-tab folder
+   * @param title title of tab
+   * @param isVisible true to make visible, false to make invisible
+   * @return new composite widget
+   */
+  public static Composite addTab(CTabFolder cTabFolder, String title, boolean isVisible)
+  {
+    return addTab(cTabFolder,title,(Object)null,isVisible);
   }
 
   /** add tab widget
@@ -8667,9 +8742,9 @@ Dprintf.dprintf("");
    * @param title title of tab
    * @return new composite widget
    */
-  public static Composite addTab(CTabFolder cTabFolder, String title, boolean isVisible)
+  public static Composite addTab(CTabFolder cTabFolder, String title)
   {
-    return addTab(cTabFolder,title,(Object)null,isVisible);
+    return addTab(cTabFolder,title,true);
   }
 
   /** set tab widget
