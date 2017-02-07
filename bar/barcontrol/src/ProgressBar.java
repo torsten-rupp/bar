@@ -24,6 +24,12 @@ import org.eclipse.swt.widgets.Composite;
 /****************************** Classes ********************************/
 
 /** progress bar with percentage view
+ *
+ *  +------------------------------------------+
+ *  |<- sub value 1 ->| ... |<- sub value n -> |
+ *  +------------------------------------------+
+ *   <---------------- value ----------------->
+ *
  */
 public class ProgressBar extends Canvas
 {
@@ -32,7 +38,8 @@ public class ProgressBar extends Canvas
   // --------------------------- variables --------------------------------
   private double minimum;
   private double maximum;
-  private double value;
+  private int    subValueCount;
+  private double value,subValue;
   private Point  textSize;
   private String text;
 
@@ -55,6 +62,7 @@ public class ProgressBar extends Canvas
   {
     super(composite,style);
 
+    this.subValueCount        = 1;
     this.colorBlack           = getDisplay().getSystemColor(SWT.COLOR_BLACK);
     this.colorWhite           = getDisplay().getSystemColor(SWT.COLOR_WHITE);
     this.colorNormalShadow    = getDisplay().getSystemColor(SWT.COLOR_WIDGET_NORMAL_SHADOW);
@@ -125,6 +133,16 @@ public class ProgressBar extends Canvas
     this.maximum = n;
   }
 
+  /** set number of sub-values
+   * @param n number of sub-values
+   */
+  public void setSubValueCount(int n)
+  {
+    assert n > 0;
+
+    this.subValueCount = n;
+  }
+
   /** get progress value
    * @return value
    */
@@ -134,7 +152,7 @@ public class ProgressBar extends Canvas
   }
 
   /** set progress value
-   * @param n value
+   * @param n value [minimum..maximum]
    */
   public void setSelection(double n)
   {
@@ -142,10 +160,51 @@ public class ProgressBar extends Canvas
 
     if (!isDisposed())
     {
-      value = Math.min(Math.max(((maximum-minimum)>0.0)?(n-minimum)/(maximum-minimum):0.0,minimum),maximum);
+      value    = Math.min(Math.max(((maximum-minimum) > 0.0)
+                                     ? (n-minimum)/(maximum-minimum)
+                                     : 0.0,
+                                   minimum
+                                  ),
+                          maximum
+                         );
+      subValue = 0.0;
 
       gc = new GC(this);
-      text = String.format("%.1f%%",value*100.0);
+      text = String.format("%.1f%%",(value+subValue)*100.0);
+      textSize = gc.stringExtent(text);
+      gc.dispose();
+
+      redraw();
+    }
+  }
+
+  /** get progress sub-value
+   * @return value
+   */
+  public double getSubSelection()
+  {
+    return subValue;
+  }
+
+  /** set progress sub-value
+   * @param n value [minimum..maximum]
+   */
+  public void setSubSelection(double n)
+  {
+    GC gc;
+
+    if (!isDisposed())
+    {
+      subValue = Math.min(Math.max(((maximum-minimum) > 0.0)
+                                     ? ((value+n/(double)subValueCount)-minimum)/(maximum-minimum)
+                                     : 0.0,
+                                   minimum
+                                  ),
+                          maximum
+                         );
+
+      gc = new GC(this);
+      text = String.format("%.1f%%",(value+subValue)*100.0);
       textSize = gc.stringExtent(text);
       gc.dispose();
 
@@ -191,7 +250,7 @@ public class ProgressBar extends Canvas
     gc.setBackground(colorBar);
     gc.fillRectangle(x+2,y+2,w-4,h-4);
     gc.setBackground(colorBarSet);
-    gc.fillRectangle(x+2,y+2,(int)((double)(w-4)*value),h-4);
+    gc.fillRectangle(x+2,y+2,(int)((double)(w-4)*(value+subValue)),h-4);
 
     // draw percentage text
     gc.setForeground(colorBlack);
