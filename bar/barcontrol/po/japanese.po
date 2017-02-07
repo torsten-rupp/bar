@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-02-01 15:10+0100\n"
+"POT-Creation-Date: 2017-02-07 02:15+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -143,7 +143,7 @@ msgid "SSL"
 msgstr ""
 
 #: src/BARControl.java:1894 src/BARControl.java:3675 src/BARControl.java:3699
-#: src/Dialogs.java:2664 src/Dialogs.java:2889 src/ServerSettings.java:590
+#: src/Dialogs.java:2820 src/Dialogs.java:3045 src/ServerSettings.java:590
 #: src/ServerSettings.java:2506 src/TabJobs.java:6090 src/TabRestore.java:9389
 #: src/TabRestore.java:9416
 msgid "Password"
@@ -174,11 +174,11 @@ msgstr "ログイン"
 #: src/BARControl.java:2862 src/BARControl.java:2870 src/BARControl.java:2904
 #: src/BARControl.java:2912 src/BARControl.java:3882 src/BARControl.java:3894
 #: src/BARControl.java:3916 src/BARControl.java:3935 src/Dialogs.java:2023
-#: src/Dialogs.java:2093 src/Dialogs.java:2604 src/Dialogs.java:2787
-#: src/Dialogs.java:3024 src/Dialogs.java:3647 src/Dialogs.java:4646
-#: src/Dialogs.java:4812 src/Dialogs.java:4998 src/Dialogs.java:5336
-#: src/Dialogs.java:5436 src/Dialogs.java:5788 src/Dialogs.java:5882
-#: src/Dialogs.java:5972 src/ServerSettings.java:2076
+#: src/Dialogs.java:2093 src/Dialogs.java:2748 src/Dialogs.java:2760
+#: src/Dialogs.java:2943 src/Dialogs.java:3180 src/Dialogs.java:3803
+#: src/Dialogs.java:4802 src/Dialogs.java:4968 src/Dialogs.java:5154
+#: src/Dialogs.java:5492 src/Dialogs.java:5592 src/Dialogs.java:5944
+#: src/Dialogs.java:6038 src/Dialogs.java:6128 src/ServerSettings.java:2076
 #: src/ServerSettings.java:2693 src/TabJobs.java:8504 src/TabJobs.java:8621
 #: src/TabJobs.java:8755 src/TabJobs.java:10180 src/TabJobs.java:10510
 #: src/TabJobs.java:10868 src/TabJobs.java:11311 src/TabJobs.java:12601
@@ -320,8 +320,8 @@ msgstr "拡張エラー:"
 msgid "Please enter {0} login for: {1}"
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
 
-#: src/BARControl.java:3674 src/Dialogs.java:2652 src/Dialogs.java:2880
-#: src/Dialogs.java:3550 src/Dialogs.java:3610 src/ServerSettings.java:608
+#: src/BARControl.java:3674 src/Dialogs.java:2808 src/Dialogs.java:3036
+#: src/Dialogs.java:3706 src/Dialogs.java:3766 src/ServerSettings.java:608
 #: src/ServerSettings.java:2441 src/TabJobs.java:1844 src/TabJobs.java:3654
 #: src/TabJobs.java:8489 src/TabJobs.java:8604 src/TabJobs.java:10420
 #: src/TabRestore.java:4227 src/TabRestore.java:4531 src/TabRestore.java:4741
@@ -378,7 +378,7 @@ msgstr ""
 msgid "Select path name. Ctrl+Click to select local directory."
 msgstr ""
 
-#: src/BARWidgets.java:1099 src/BARWidgets.java:1107 src/Dialogs.java:4546
+#: src/BARWidgets.java:1099 src/BARWidgets.java:1107 src/Dialogs.java:4702
 #: src/TabRestore.java:8951 src/TabRestore.java:8959
 msgid "Select path"
 msgstr "パスを選択"
@@ -398,7 +398,7 @@ msgid "Close"
 msgstr "閉じる"
 
 #: src/Dialogs.java:1433 src/Dialogs.java:1597 src/Dialogs.java:1779
-#: src/Dialogs.java:1898
+#: src/Dialogs.java:1898 src/Dialogs.java:2314
 msgid "show again"
 msgstr "再表示"
 
@@ -431,16 +431,17 @@ msgstr "いいえ"
 msgid "Confirmation"
 msgstr "確定"
 
-#: src/Dialogs.java:2604 src/Dialogs.java:2787 src/Dialogs.java:3024
-#: src/Dialogs.java:4646 src/Dialogs.java:4998 src/TabStatus.java:2500
+#: src/Dialogs.java:2748 src/Dialogs.java:2760 src/Dialogs.java:2943
+#: src/Dialogs.java:3180 src/Dialogs.java:4802 src/Dialogs.java:5154
+#: src/TabStatus.java:2500
 msgid "OK"
 msgstr "OK"
 
-#: src/Dialogs.java:3474
+#: src/Dialogs.java:3630
 msgid "Path"
 msgstr ""
 
-#: src/Dialogs.java:3498 src/TabJobs.java:3062 src/TabJobs.java:3142
+#: src/Dialogs.java:3654 src/TabJobs.java:3062 src/TabJobs.java:3142
 #: src/TabJobs.java:3267 src/TabJobs.java:3348 src/TabJobs.java:3738
 #: src/TabJobs.java:3818 src/TabJobs.java:4473 src/TabJobs.java:4551
 #: src/TabJobs.java:8212 src/TabJobs.java:8297
@@ -448,64 +449,64 @@ msgstr ""
 msgid "Remove"
 msgstr "削除"
 
-#: src/Dialogs.java:3556 src/ServerSettings.java:605 src/TabJobs.java:10119
+#: src/Dialogs.java:3712 src/ServerSettings.java:605 src/TabJobs.java:10119
 #: src/TabJobs.java:13023 src/TabRestore.java:4564 src/TabRestore.java:4707
 #: src/TabRestore.java:4751 src/TabRestore.java:6084 src/TabRestore.java:8868
 #: src/TabStatus.java:620 src/TabStatus.java:698
 msgid "Type"
 msgstr "タイプ"
 
-#: src/Dialogs.java:3563 src/TabRestore.java:4981 src/TabRestore.java:5332
+#: src/Dialogs.java:3719 src/TabRestore.java:4981 src/TabRestore.java:5332
 msgid "Modified"
 msgstr "修正された"
 
-#: src/Dialogs.java:3570 src/ServerSettings.java:614 src/TabJobs.java:7343
+#: src/Dialogs.java:3726 src/ServerSettings.java:614 src/TabJobs.java:7343
 #: src/TabJobs.java:7687 src/TabRestore.java:4584 src/TabRestore.java:4761
 #: src/TabRestore.java:4978 src/TabRestore.java:5329 src/TabRestore.java:6087
 #: src/TabRestore.java:8870
 msgid "Size"
 msgstr "サイズ"
 
-#: src/Dialogs.java:3585 src/TabRestore.java:5868 src/TabRestore.java:6371
+#: src/Dialogs.java:3741 src/TabRestore.java:5868 src/TabRestore.java:6371
 msgid "Filter"
 msgstr "フィルター"
 
-#: src/Dialogs.java:3599
+#: src/Dialogs.java:3755
 #, fuzzy
 msgid "show hidden"
 msgstr "再表示"
 
-#: src/Dialogs.java:3633
+#: src/Dialogs.java:3789
 msgid "Open"
 msgstr ""
 
-#: src/Dialogs.java:3636 src/Dialogs.java:4829 src/ServerSettings.java:692
+#: src/Dialogs.java:3792 src/Dialogs.java:4985 src/ServerSettings.java:692
 #: src/ServerSettings.java:2073 src/TabJobs.java:10334 src/TabJobs.java:10727
 #: src/TabJobs.java:11017 src/TabJobs.java:11460 src/TabJobs.java:12598
 #: src/TabJobs.java:13340
 msgid "Save"
 msgstr "保存"
 
-#: src/Dialogs.java:3640 src/Dialogs.java:5352 src/Dialogs.java:5454
+#: src/Dialogs.java:3796 src/Dialogs.java:5508 src/Dialogs.java:5610
 #, fuzzy
 msgid "Select"
 msgstr "選択した"
 
-#: src/Dialogs.java:3730
+#: src/Dialogs.java:3886
 #, java-format
 msgid "''{0}'' is not a directory!"
 msgstr ""
 
-#: src/Dialogs.java:3734
+#: src/Dialogs.java:3890
 #, java-format
 msgid "''{0}'' does not exists"
 msgstr ""
 
-#: src/Dialogs.java:5503 src/Dialogs.java:5542
+#: src/Dialogs.java:5659 src/Dialogs.java:5698
 msgid "Busy"
 msgstr "使用中"
 
-#: src/Dialogs.java:5572
+#: src/Dialogs.java:5728
 msgid "Progress"
 msgstr "進捗"
 
