@@ -34,7 +34,8 @@ typedef pthread_t ThreadId;
 typedef struct
 {
   pthread_t handle;
-  bool      terminatedFlag;       // thread terminated/joined
+  bool      quitFlag;             // TRUE to request thread quit
+  bool      terminatedFlag;       // TRUE iff thread terminated/joined
 } Thread;
 
 // thread local storage
@@ -117,6 +118,40 @@ bool Thread_init(Thread     *thread,
 \***********************************************************************/
 
 void Thread_done(Thread *thread);
+
+/***********************************************************************\
+* Name   : Thread_quit
+* Purpose: request quit thread
+* Input  : thread - thread
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE void Thread_quit(Thread *thread);
+#if defined(NDEBUG) || defined(__THREADS_IMPLEMENTATION__)
+INLINE void Thread_quit(Thread *thread)
+{
+  thread->quitFlag = TRUE;
+}
+#endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Thread_isQuit
+* Purpose: check if thread should quit
+* Input  : thread - thread
+* Output : -
+* Return : TRUE iff quit thread requested
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Thread_isQuit(const Thread *thread);
+#if defined(NDEBUG) || defined(__THREADS_IMPLEMENTATION__)
+INLINE bool Thread_isQuit(const Thread *thread)
+{
+  return thread->quitFlag;
+}
+#endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Thread_join

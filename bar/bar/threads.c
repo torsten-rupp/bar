@@ -711,6 +711,7 @@ bool Thread_init(Thread     *thread,
   #endif /* HAVE_PTHREAD_ATTR_SETNAME */
 
   // start thread
+  thread->quitFlag       = FALSE;
   thread->terminatedFlag = FALSE;
   if (pthread_create(&thread->handle,
                      &threadAttributes,
@@ -758,7 +759,7 @@ bool Thread_join(Thread *thread)
     }
     thread->terminatedFlag = TRUE;
   }
-  
+
   return TRUE;
 }
 
