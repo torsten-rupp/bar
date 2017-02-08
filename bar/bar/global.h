@@ -2249,6 +2249,17 @@ void debugDumpCurrentStackTrace(FILE *handle,
 
 #ifndef NDEBUG
 /***********************************************************************\
+* Name   : debugPrintStackTrace
+* Purpose: print stack trace
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void debugPrintStackTrace(void);
+
+/***********************************************************************\
 * Name   : debugDumpMemory
 * Purpose: dump memory content (hex dump)
 * Input  : address      - start address

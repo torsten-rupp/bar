@@ -1009,6 +1009,11 @@ void debugDumpCurrentStackTrace(FILE *handle,
 }
 
 #ifndef NDEBUG
+void debugPrintStackTrace(void)
+{
+  debugDumpCurrentStackTrace(stderr,0,0);
+}
+
 void debugDumpMemory(const void *address, uint length, bool printAddress)
 {
   const byte *p;
