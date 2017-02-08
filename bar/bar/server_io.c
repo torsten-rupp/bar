@@ -258,7 +258,7 @@ LOCAL void processData(ServerIO *serverIO, ConstString line)
     #ifndef NDEBUG
       if (globalOptions.serverDebugFlag)
       {
-        fprintf(stderr,"DEBUG: receive result #%u %d %d: %s\n",id,completedFlag,error,String_cString(data));
+        fprintf(stderr,"DEBUG: receive result #%u completed=%d error=%d: %s\n",id,completedFlag,error,String_cString(data));
       }
     #endif /* not DEBUG */
 
@@ -277,6 +277,7 @@ LOCAL void processData(ServerIO *serverIO, ConstString line)
     SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       List_append(&serverIO->resultList,resultNode);
+//fprintf(stderr,"%s, %d: appended result: %d %d %d %s\n",__FILE__,__LINE__,resultNode->id,resultNode->error,resultNode->completedFlag,String_cString(resultNode->data));
     }
   }
   else if (String_parse(line,STRING_BEGIN,"%u %S % S",NULL,&id,name,data))
@@ -285,7 +286,7 @@ LOCAL void processData(ServerIO *serverIO, ConstString line)
     #ifndef NDEBUG
       if (globalOptions.serverDebugFlag)
       {
-        fprintf(stderr,"DEBUG: receive command #%u %s: %s\n",id,String_cString(name),String_cString(data));
+        fprintf(stderr,"DEBUG: receive command #%u name=%s: %s\n",id,String_cString(name),String_cString(data));
       }
     #endif /* not DEBUG */
 
@@ -321,6 +322,7 @@ LOCAL void processData(ServerIO *serverIO, ConstString line)
     SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       List_append(&serverIO->commandList,commandNode);
+//fprintf(stderr,"%s, %d: appended command: %d %s %s\n",__FILE__,__LINE__,commandNode->id,String_cString(commandNode->name),String_cString(commandNode->data));
     }
   }
   else
@@ -408,7 +410,7 @@ fprintf(stderr,"%s, %d: uuuuuuuuuuuuuuuuuuuuuuu\n",__FILE__,__LINE__);
 * Purpose: receive data
 * Input  : serverIO - server i/o
 * Output : -
-* Return : -
+* Return : TRUE if received data, FALSE on disconnect
 * Notes  : -
 \***********************************************************************/
 
@@ -452,14 +454,15 @@ LOCAL bool receiveData(ServerIO *serverIO)
       else
       {
         // disconnect
+fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
         disconnect(serverIO);
         return FALSE;
       }
       break;
     case SERVER_IO_TYPE_NETWORK:
       (void)Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&readBytes);
-buffer[readBytes]=0;
-fprintf(stderr,"%s, %d: rec %s\n",__FILE__,__LINE__,buffer);
+//buffer[readBytes]=0;
+//fprintf(stderr,"%s, %d: rec socket %d: bytes %d: %s\n",__FILE__,__LINE__,Network_getSocket(&serverIO->network.socketHandle),readBytes,buffer);
       if (readBytes > 0)
       {
         do
@@ -473,6 +476,7 @@ fprintf(stderr,"%s, %d: rec %s\n",__FILE__,__LINE__,buffer);
             }
             else
             {
+//fprintf(stderr,"%s, %d: process %s\n",__FILE__,__LINE__,String_cString(serverIO->line));
               processData(serverIO,serverIO->line);
               String_clear(serverIO->line);
             }
@@ -484,7 +488,8 @@ fprintf(stderr,"%s, %d: rec %s\n",__FILE__,__LINE__,buffer);
       else
       {
         // disconnect
-        disconnect(serverIO);
+fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
+//        disconnect(serverIO);
         return FALSE;
       }
       break;
@@ -513,14 +518,17 @@ LOCAL bool waitData(ServerIO *serverIO, long timeout)
 
   // wait for data from slave
 //TODO: batch?
+uint64 t0 = Misc_getTimestamp();
   pollfds[0].fd       = Network_getSocket(&serverIO->network.socketHandle);
   pollfds[0].events   = POLLIN|POLLERR|POLLNVAL;
   pollTimeout.tv_sec  = timeout/MS_PER_SECOND;
   pollTimeout.tv_nsec = (timeout%MS_PER_SECOND)*NS_PER_MS;
   if (ppoll(pollfds,1,&pollTimeout,&signalMask) <= 0)
   {
+fprintf(stderr,"%s, %d: ppoll timeout/error %d: polltime=%llu: %s\n",__FILE__,__LINE__,Network_getSocket(&serverIO->network.socketHandle),(Misc_getTimestamp()-t0)/1000,strerror(errno));
     return FALSE;
   }
+fprintf(stderr,"%s, %d: polltime=%llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-t0)/1000);
 
   // process data results/commands
   if ((pollfds[0].revents & POLLIN) != 0)
@@ -528,6 +536,7 @@ LOCAL bool waitData(ServerIO *serverIO, long timeout)
     // received data
     if (!receiveData(serverIO))
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return FALSE;
     }
   }
@@ -535,6 +544,7 @@ LOCAL bool waitData(ServerIO *serverIO, long timeout)
   {
     // error/disconnect
     disconnect(serverIO);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return FALSE;
   }
 
@@ -978,6 +988,7 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
 }
 
 bool ServerIO_getCommand(ServerIO  *serverIO,
+                         long      timeout,
                          uint      *id,
                          String    name,
                          StringMap argumentMap
@@ -996,97 +1007,51 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
   // get next command node (if any)
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    commandNode = List_removeFirst(&serverIO->commandList);
-  }
-  if (commandNode != NULL)
-  {
-    // get command
-    (*id) = commandNode->id;
-    String_set(name,commandNode->name);
-    if (argumentMap != NULL)
+    if (timeout != NO_WAIT)
     {
-//TODO: move to processData()
-//fprintf(stderr,"%s, %d: parse %s\n",__FILE__,__LINE__,String_cString(commandNode->data));
-      if (!StringMap_parse(argumentMap,commandNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+      // wait for command
+      while (List_isEmpty(&serverIO->commandList))
       {
-//TODO: move to processData()
-//sendData(serverIO,"%d 1 %d",commandNode->id,ERROR_PARSE);
-        deleteCommandNode(commandNode);
-        return FALSE;
-      }
-    }
-
-    // free resources
-    deleteCommandNode(commandNode);
-
-    return TRUE;
-  }
-  else
-  {
-    // no command
-    return FALSE;
-  }
-}
-
-bool ServerIO_waitCommand(ServerIO  *serverIO,
-                          long      timeout,
-                          uint      *id,
-                          String    name,
-                          StringMap argumentMap
-                         )
-{
-  SemaphoreLock       semaphoreLock;
-  ServerIOCommandNode *commandNode;
-
-  assert(serverIO != NULL);
-  assert(id != NULL);
-  assert(name != NULL);
-
-  // wait for command
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    // wait for command
-    while (List_isEmpty(&serverIO->commandList))
-    {
-      // no command -> wait for data
-      Semaphore_unlock(&serverIO->commandList.lock);
-      {
-        if (!waitData(serverIO,timeout))
+        // no command -> wait for data
+        Semaphore_unlock(&serverIO->commandList.lock);
         {
-          return FALSE;
+          if (!waitData(serverIO,timeout))
+          {
+            return FALSE;
+          }
         }
+        Semaphore_lock(&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
       }
-      Semaphore_lock(&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
     }
 
     // get command node
     commandNode = List_removeFirst(&serverIO->commandList);
   }
-  assert(commandNode != NULL);
-
-  // get command
-  if (commandNode != NULL)
-  {
-    (*id) = commandNode->id;
-    String_set(name,commandNode->name);
-    if (argumentMap != NULL)
-    {
-      if (!StringMap_parse(argumentMap,commandNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
-      {
-        deleteCommandNode(commandNode);
-        return ERROR_PARSE;
-      }
-    }
-
-    // free resources
-    deleteCommandNode(commandNode);
-
-    return TRUE;
-  }
-  else
+  if (commandNode == NULL)
   {
     return FALSE;
   }
+
+  // get command
+  (*id) = commandNode->id;
+  String_set(name,commandNode->name);
+  if (argumentMap != NULL)
+  {
+//TODO: move to processData()
+//fprintf(stderr,"%s, %d: parse %s\n",__FILE__,__LINE__,String_cString(commandNode->data));
+    if (!StringMap_parse(argumentMap,commandNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+    {
+//TODO: move to processData()
+//sendData(serverIO,"%d 1 %d",commandNode->id,ERROR_PARSE);
+      deleteCommandNode(commandNode);
+      return FALSE;
+    }
+  }
+
+  // free resources
+  deleteCommandNode(commandNode);
+
+  return TRUE;
 }
 
 Errors ServerIO_sendResult(ServerIO   *serverIO,
@@ -1164,6 +1129,7 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
         {
           if (!waitData(serverIO,timeout))
           {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             return ERROR_NETWORK_TIMEOUT;
           }
         }
@@ -1220,6 +1186,7 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
   }
 
   // wait for result, timeout, or quit
+fprintf(stderr,"%s, %d: wait command result %d \n",__FILE__,__LINE__,id);
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     do
@@ -1233,12 +1200,25 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
       }
       else
       {
+#if 1
+        // not found -> wait for data
+        Semaphore_unlock(&serverIO->resultList.lock);
+        {
+          if (!waitData(serverIO,timeout))
+          {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+            return ERROR_NETWORK_TIMEOUT;
+          }
+        }
+        Semaphore_lock(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+#else
         // wait for result
         if (!Semaphore_waitModified(&serverIO->lock,timeout))
         {
           Semaphore_unlock(&serverIO->lock);
           return ERROR_NETWORK_TIMEOUT;
         }
+#endif
       }
     }
     while (resultNode == NULL);

@@ -338,10 +338,12 @@ fprintf(stderr,"%s, %d: StorageMaster_create\n",__FILE__,__LINE__);
                               );
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
     StringMap_delete(resultMap);
     return error;
   }
 
+fprintf(stderr,"%s, %d: wait for %d\n",__FILE__,__LINE__,id);
   error = ServerIO_waitResult(storageHandle->storageInfo->master.io,
 100*                              30LL*MS_PER_SECOND,
                               id,
@@ -351,6 +353,7 @@ fprintf(stderr,"%s, %d: StorageMaster_create\n",__FILE__,__LINE__);
                              );
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: EEE %d: %s\n",__FILE__,__LINE__,id,Error_getText(error));
     StringMap_delete(resultMap);
     return error;
   }
@@ -401,6 +404,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
 LOCAL void StorageMaster_close(StorageHandle *storageHandle)
 {
+  Errors error;
+
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
@@ -409,19 +414,15 @@ LOCAL void StorageMaster_close(StorageHandle *storageHandle)
 fprintf(stderr,"%s, %d: StorageMaster_close\n",__FILE__,__LINE__);
   DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->master,sizeof(storageHandle->master));
 
-  switch (storageHandle->mode)
+fprintf(stderr,"%s, %d: StorageMaster_create\n",__FILE__,__LINE__);
+  error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
+                                  30LL*MS_PER_SECOND,
+                                  NULL,  // resultMap
+                                  "STORAGE_CLOSE"
+                                 );
+  if (error != ERROR_NONE)
   {
-    case STORAGE_MODE_WRITE:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-      break;
-    case STORAGE_MODE_READ:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
   }
 }
 
@@ -472,7 +473,11 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
                                  ulong         bufferLength
                                 )
 {
-  Errors error;
+  String     encodedData;
+  const byte *p;
+  ulong      writtenBytes;
+  ulong      n;
+  Errors     error;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
@@ -481,11 +486,42 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
   assert(buffer != NULL);
 
-  error = ERROR_NONE;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
+  // init variables
+  encodedData = String_new();
+
+  p            = (const byte*)buffer;
+  writtenBytes = 0L;
+  while (writtenBytes < bufferLength)
   {
-    error = File_write(&storageHandle->fileSystem.fileHandle,buffer,bufferLength);
+    // encode data
+    n = MIN(bufferLength,4096);
+    Misc_base64Encode(encodedData,p,n);
+
+    // send data
+  fprintf(stderr,"%s, %d: xxxxx\n",__FILE__,__LINE__);
+    error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
+                                    30LL*MS_PER_SECOND,
+                                    NULL,  // resultMap
+                                    "STORAGE_WRITE offset=%llu data=%s",
+                                    123LL+(uint64)writtenBytes,
+//TODO
+//                                    String_cString(encodedData)
+"XXXX"
+                                   );
+    if (error != ERROR_NONE)
+    {
+  fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
+      String_delete(encodedData);
+      return error;
+    }
+
+    // next part
+    p += n;
+    writtenBytes += n;
   }
+
+  // free resources
+  String_delete(encodedData);
 
   return error;
 }

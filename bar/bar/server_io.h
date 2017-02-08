@@ -326,6 +326,7 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
 * Purpose: receive command
 * Input  : serverIO - server i/o
 * Output : id        - command id
+*          timeout   - timeout [ms] or NO_WAIT, WAIT_FOREVER
 *          name      - command name
 *          arguments - command arguments (can be NULL)
 * Return : TRUE iff command received
@@ -333,29 +334,11 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
 \***********************************************************************/
 
 bool ServerIO_getCommand(ServerIO  *serverIO,
+                         long      timeout,
                          uint      *id,
                          String    name,
                          StringMap argumentMap
                         );
-
-/***********************************************************************\
-* Name   : ServerIO_waitCommand
-* Purpose: wait for and receive command
-* Input  : serverIO - server i/o
-*          timeout  - timeout [ms] or WAIT_FOREVER
-* Output : id        - command id
-*          name      - command name
-*          arguments - command arguments (can be NULL)
-* Return : TRUE iff command received
-* Notes  : -
-\***********************************************************************/
-
-bool ServerIO_waitCommand(ServerIO  *serverIO,
-                          long      timeout,
-                          uint      *id,
-                          String    name,
-                          StringMap argumentMap
-                         );
 
 // ----------------------------------------------------------------------
 

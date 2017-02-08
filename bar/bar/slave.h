@@ -53,6 +53,7 @@ typedef struct
 bool         forceSSL;                     // force SSL connection to slave hose
 
   ServerIO     io;
+  Thread       thread;
 SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction;
 void                           *slaveConnectStatusInfoUserData;
 } SlaveInfo;

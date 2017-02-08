@@ -157,7 +157,7 @@ SOCKET_TYPE_PLAIN,
                           hostPort,
                           socketHandle
                          );
-fprintf(stderr,"%s, %d: Network_getSocket(&slaveInfo->io.network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&slaveInfo->io.network.socketHandle));
+//fprintf(stderr,"%s, %d: Network_getSocket(&slaveInfo->io.network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&slaveInfo->io.network.socketHandle));
 
   // authorize
   line = String_new();
@@ -530,6 +530,51 @@ LOCAL Errors waitForResult(SlaveInfo *slaveInfo)
 }
 
 /***********************************************************************\
+* Name   : slaveThreadCode
+* Purpose: slave thread code
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void slaveThreadCode(SlaveInfo *slaveInfo)
+{
+  SemaphoreLock    semaphoreLock;
+  Errors                error;
+  uint id;
+  String name;
+  StringMap argumentMap;
+
+  // init variables
+
+  // process client requests
+  while (!Thread_isQuit(&slaveInfo->thread))
+  {
+fprintf(stderr,"%s, %d: slave thread wiat command\n",__FILE__,__LINE__);
+    if (ServerIO_getCommand(&slaveInfo->io,
+                            5*MS_PER_SECOND,
+                            &id,
+                            name,
+                            argumentMap
+                           )
+       )
+    {
+      // process command
+//      processCommand(&clientNode->clientInfo,id,name,argumentMap);
+fprintf(stderr,"%s, %d: ---------------- got command #%u: %s\n",__FILE__,__LINE__,id,String_cString(name));
+ServerIO_sendResult(&slaveInfo->io,
+                    id,
+                    TRUE,
+                    ERROR_NONE,
+                    ""
+                   );
+fprintf(stderr,"%s, %d: sent OK result\n",__FILE__,__LINE__);
+    }
+  }
+}
+
+/***********************************************************************\
 * Name   : Slave_setJobOptionInteger
 * Purpose: set job int value
 * Input  : slaveInfo - slave info
@@ -745,6 +790,12 @@ Errors Slave_connect(SlaveInfo                      *slaveInfo,
     return error;
   }
 
+  // start slave thread
+  if (!Thread_init(&slaveInfo->thread,"BAR slave",globalOptions.niceLevel,slaveThreadCode,slaveInfo))
+  {
+    HALT_FATAL_ERROR("Cannot initialize slave thread!");
+  }
+
   // init callback
   slaveInfo->slaveConnectStatusInfoFunction = slaveConnectStatusInfoFunction;
   slaveInfo->slaveConnectStatusInfoUserData = slaveConnectStatusInfoUserData;
@@ -774,12 +825,12 @@ bool Slave_waitCommand(const SlaveInfo *slaveInfo,
   assert(id != NULL);
   assert(name != NULL);
 
-  return ServerIO_waitCommand(&slaveInfo->io,
-                              timeout,
-                              id,
-                              name,
-                              argumentMap
-                             );
+  return ServerIO_getCommand(&slaveInfo->io,
+                             timeout,
+                             id,
+                             name,
+                             argumentMap
+                            );
 }
 
 //TODO
@@ -807,6 +858,7 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
                                );
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
 
@@ -820,6 +872,7 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
                              );
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: Slave_vexecuteCommand timeout=%ld\n",__FILE__,__LINE__,timeout);
     return error;
   }
 //  printInfo(4,"Received slave result: error=%d completedFlag=%d data=%s\n",error,String_cString(data));
@@ -828,6 +881,7 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
   // check error
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
 #else
@@ -1142,7 +1196,6 @@ fprintf(stderr,"%s, %d: %d: Slave_jobStart %s\n",__FILE__,__LINE__,error,Error_g
 
   // free resources
   String_delete(s);
-fprintf(stderr,"%s, %d: *******************************\n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 
@@ -1195,12 +1248,13 @@ Errors Slave_process(SlaveInfo *slaveInfo,
   // process commands
   do
   {
-    if (ServerIO_waitCommand(&slaveInfo->io,
-                             timeout,
-                             &id,
-                             name,
-                             argumentMap
-                            )
+fprintf(stderr,"%s, %d: wait command\n",__FILE__,__LINE__);
+    if (ServerIO_getCommand(&slaveInfo->io,
+                            timeout,
+                            &id,
+                            name,
+                            argumentMap
+                           )
        )
     {
 fprintf(stderr,"%s, %d: ---------------- got command #%u: %s\n",__FILE__,__LINE__,id,String_cString(name));
@@ -1208,8 +1262,9 @@ ServerIO_sendResult(&slaveInfo->io,
                     id,
                     TRUE,
                     ERROR_NONE,
-                    "OK"
+                    ""
                    );
+fprintf(stderr,"%s, %d: sent OK result\n",__FILE__,__LINE__);
     }
   }
   while (error == ERROR_NONE);
@@ -1219,7 +1274,7 @@ ServerIO_sendResult(&slaveInfo->io,
   StringMap_delete(argumentMap);
   String_delete(name);
 
-  return error;
+  return ERROR_NONE;
 }
 
 #ifdef __cplusplus

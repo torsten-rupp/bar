@@ -3941,6 +3941,7 @@ LOCAL void jobThreadCode(void)
     }
 
     // Note: job is now protected by running state from being deleted
+fprintf(stderr,"%s, %d: XXXXXXx start %d\n",__FILE__,__LINE__,jobNode->requestedAbortFlag);
 
     // init log
     initLog(&logHandle);
@@ -4132,14 +4133,14 @@ jobNode->masterIO,
                                                           &deltaSourceList,
                                                           &jobOptions,
                                                           archiveType,
-  NULL,//                                                        scheduleTitle,
+NULL,//                                                        scheduleTitle,
                                                           scheduleCustomText,
                                                           CALLBACK(getCryptPassword,jobNode),
                                                           CALLBACK(updateCreateStatusInfo,jobNode),
                                                           CALLBACK(storageRequestVolume,jobNode),
                                                           &pauseFlags.create,
                                                           &pauseFlags.storage,
-  //TODO access jobNode?
+//TODO access jobNode?
                                                           &jobNode->requestedAbortFlag,
                                                           &logHandle
                                                          );
@@ -4371,10 +4372,9 @@ fprintf(stderr,"%s, %d: wait for slave e=%s\n",__FILE__,__LINE__,Error_getText(j
              && Slave_isConnected(&jobNode->slaveInfo)
             )
       {
-fprintf(stderr,"%s, %d: get status\n",__FILE__,__LINE__);
         // get slave job status
         jobNode->runningInfo.error = Slave_executeCommand(&jobNode->slaveInfo,
-                                                          5LL*MS_PER_SECOND,
+1000*                                                          5LL*MS_PER_SECOND,
                                                           resultMap,
                                                           "JOB_STATUS jobUUID=%S",
                                                           jobNode->uuid
@@ -4382,8 +4382,8 @@ fprintf(stderr,"%s, %d: get status\n",__FILE__,__LINE__);
         if (jobNode->runningInfo.error != ERROR_NONE)
         {
 fprintf(stderr,"%s, %d: xxxxerror=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
-          jobNode->state = JOB_STATE_ERROR;
-          break;
+//          jobNode->state = JOB_STATE_ERROR;
+//          break;
         }
 
         // update job status
@@ -4413,10 +4413,8 @@ fprintf(stderr,"%s, %d: xxxxerror=%s\n",__FILE__,__LINE__,Error_getText(jobNode-
         StringMap_getDouble(resultMap,"volumeProgress",       &jobNode->runningInfo.volumeProgress,0.0);
         StringMap_getString(resultMap,"message",              jobNode->runningInfo.message,NULL);
 
-fprintf(stderr,"%s, %d: do process\n",__FILE__,__LINE__);
-        // process slave
+        // process slave commands (wait max. 1s)
         jobNode->runningInfo.error = Slave_process(&jobNode->slaveInfo,1*MS_PER_SECOND);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         if (jobNode->runningInfo.error != ERROR_NONE)
         {
 fprintf(stderr,"%s, %d: xxxxerror=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
@@ -4425,6 +4423,7 @@ fprintf(stderr,"%s, %d: xxxxerror=%s\n",__FILE__,__LINE__,Error_getText(jobNode-
         }
       }
 fprintf(stderr,"%s, %d: fertisch: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
+Misc_mdelay(30*1000);
 
       // disconnect slave
       Slave_disconnect(&jobNode->slaveInfo);
@@ -4513,6 +4512,8 @@ fprintf(stderr,"%s, %d: fertisch: %s\n",__FILE__,__LINE__,Error_getText(jobNode-
                      jobNode->uuid,
                      scheduleUUID
                     );
+
+fprintf(stderr,"%s, %d: XXXXXXx end\n",__FILE__,__LINE__);
 
     // done job
     SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
@@ -17607,7 +17608,6 @@ LOCAL void putCommand(ClientInfo            *clientInfo,
   command.authorizationState    = authorizationState;
   command.id                    = id;
   command.argumentMap           = StringMap_duplicate(argumentMap);
-fprintf(stderr,"%s, %d: dup map %p\n",__FILE__,__LINE__,command.argumentMap);
   (void)MsgQueue_put(&clientInfo->commandQueue,&command,sizeof(Command));
 }
 
@@ -18862,6 +18862,7 @@ Errors Server_run(ServerModes       mode,
               {
                 // process all commands
                 while (ServerIO_getCommand(&clientNode->clientInfo.io,
+                                           NO_WAIT,
                                            &id,
                                            name,
                                            argumentMap
@@ -18904,6 +18905,7 @@ Errors Server_run(ServerModes       mode,
                     authorizationFailNode->lastTimestamp = Misc_getTimestamp();
                     break;
                 }
+
                 printInfo(1,"Disconnected client '%s'\n",getClientInfo(&disconnectClientNode->clientInfo,buffer,sizeof(buffer)));
 
                 // done client and free resources
@@ -18967,6 +18969,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                     authorizationFailNode->lastTimestamp = Misc_getTimestamp();
                     break;
                 }
+
                 printInfo(1,"Disconnected client '%s'\n",getClientInfo(&disconnectClientNode->clientInfo,buffer,sizeof(buffer)));
 
                 // done client and free resources
@@ -19007,6 +19010,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                   authorizationFailNode->lastTimestamp = Misc_getTimestamp();
                   break;
               }
+
               printInfo(1,"Disconnected client '%s'\n",getClientInfo(&disconnectClientNode->clientInfo,buffer,sizeof(buffer)));
 
               // done client and free resources
@@ -19037,10 +19041,10 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
           authorizationFailNode->count++;
           authorizationFailNode->lastTimestamp = Misc_getTimestamp();
 
+          printInfo(1,"Disconnected client '%s'\n",getClientInfo(&disconnectClientNode->clientInfo,buffer,sizeof(buffer)));
+
           // done client and free resources
           deleteClient(disconnectClientNode);
-
-          printInfo(1,"Disconnected client '%s'\n",getClientInfo(&disconnectClientNode->clientInfo,buffer,sizeof(buffer)));
         }
         else
         {
@@ -19245,12 +19249,12 @@ Errors Server_batch(int inputDescriptor,
 #if 1
   while (!quitFlag && !File_eof(&inputFileHandle))
   {
-    if (ServerIO_waitCommand(&clientInfo.io,
-                             10L*MS_PER_SECOND,
-                             &id,
-                             name,
-                             argumentMap
-                            )
+    if (ServerIO_getCommand(&clientInfo.io,
+                            10L*MS_PER_SECOND,
+                            &id,
+                            name,
+                            argumentMap
+                           )
        )
     {
       processCommand(&clientInfo,id,name,argumentMap);

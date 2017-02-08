@@ -1604,7 +1604,6 @@ String Storage_getPrintableName(String                 string,
 
   if (masterIO != NULL)
   {
-fprintf(stderr,"%s, %d: Storage_init master io\n",__FILE__,__LINE__);
     storageInfo->type      = STORAGE_TYPE_MASTER;
     storageInfo->master.io = masterIO;
   }
@@ -1854,7 +1853,7 @@ Errors Storage_preProcess(StorageInfo *storageInfo,
       break;
     case STORAGE_TYPE_MASTER:
 //TODO
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: Storage_preProcess\n",__FILE__,__LINE__);
 error = ERROR_NONE;
       break;
     default:
@@ -2192,6 +2191,7 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
       error = StorageDevice_open(storageHandle,archiveName);
       break;
     case STORAGE_TYPE_MASTER:
+fprintf(stderr,"%s, %d: Storage_open\n",__FILE__,__LINE__);
 error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       break;
     default:
@@ -2259,8 +2259,6 @@ error = ERROR_(STILL_NOT_IMPLEMENTED,0);
       StorageDevice_close(storageHandle);
       break;
     case STORAGE_TYPE_MASTER:
-fprintf(stderr,"%s, %d: Storage_close\n",__FILE__,__LINE__);
-//TODO
       StorageMaster_close(storageHandle);
       break;
     default:
@@ -2444,8 +2442,7 @@ Errors Storage_write(StorageHandle *storageHandle,
       error = StorageDevice_write(storageHandle,buffer,bufferLength);
       break;
     case STORAGE_TYPE_MASTER:
-fprintf(stderr,"%s, %d: Storage_write\n",__FILE__,__LINE__);
-error = ERROR_(STILL_NOT_IMPLEMENTED,0);
+      error = StorageMaster_write(storageHandle,buffer,bufferLength);
       break;
     default:
       #ifndef NDEBUG
