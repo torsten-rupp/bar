@@ -685,7 +685,7 @@ double Misc_performanceFilterGetAverageValue(PerformanceFilter *performanceFilte
 * Notes  : -
 \***********************************************************************/
 
-String Misc_base64Encode(String string, const byte *data, uint dataLength);
+String Misc_base64Encode(String string, const byte *data, ulong dataLength);
 
 /***********************************************************************\
 * Name   : Misc_base64Decode
@@ -699,7 +699,7 @@ String Misc_base64Encode(String string, const byte *data, uint dataLength);
 * Notes  : -
 \***********************************************************************/
 
-bool Misc_base64Decode(byte *data, uint dataLength, ConstString string, ulong index);
+bool Misc_base64Decode(byte *data, ulong dataLength, ConstString string, ulong index);
 bool Misc_base64DecodeCString(byte *data, uint dataLength, const char *s);
 
 /***********************************************************************\
@@ -712,8 +712,8 @@ bool Misc_base64DecodeCString(byte *data, uint dataLength, const char *s);
 * Notes  : -
 \***********************************************************************/
 
-uint Misc_base64DecodeLength(ConstString string, ulong index);
-uint Misc_base64DecodeLengthCString(const char *s);
+ulong Misc_base64DecodeLength(ConstString string, ulong index);
+ulong Misc_base64DecodeLengthCString(const char *s);
 
 #ifdef __cplusplus
   }
