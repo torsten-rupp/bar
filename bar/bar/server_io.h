@@ -388,6 +388,46 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : ServerIO_vexecuteCommand
+* Purpose: execute server command
+* Input  : serverIO  - server i/o
+*          timeout   - timeout [ms] or WAIT_FOREVER
+*          format    - format string
+*          arguments - optional arguments
+* Output : resultMap - result map (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
+                                long       timeout,
+                                StringMap  resultMap,
+                                const char *format,
+                                va_list    arguments
+                               );
+
+/***********************************************************************\
+* Name   : ServerIO_executeCommand
+* Purpose: execute server command
+* Input  : serverIO - server i/o
+*          timeout  - timeout [ms] or WAIT_FOREVER
+*          format   - format string
+*          ...      - optional arguments
+* Output : resultMap - result map (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ServerIO_executeCommand(ServerIO   *serverIO,
+                               long       timeout,
+                               StringMap  resultMap,
+                               const char *format,
+                               ...
+                              );
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
 * Name   : ServerIO_clientAction
 * Purpose: execute client action
 * Input  : serverIO - server i/o
@@ -426,12 +466,6 @@ Errors ServerIO_sendMaster(const ServerIO     *serverIO,
                            const char         *format,
                            ...
                           );
-
-#if 0
-Errors ServerIO_wait(ServerIO  *serverIO,
-                     long      timeout
-                    );
-#endif
 
 #ifdef __cplusplus
   }

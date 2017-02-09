@@ -921,8 +921,6 @@ bool ServerIO_checkPassword(const ServerIO *serverIO,
 
 bool ServerIO_receiveData(ServerIO *serverIO)
 {
-  SemaphoreLock semaphoreLock;
-
   assert(serverIO != NULL);
 
   return receiveData(serverIO);
@@ -934,9 +932,8 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
                              va_list    arguments
                             )
 {
-  String        s;
-  locale_t      locale;
-  SemaphoreLock semaphoreLock;
+  String   s;
+  locale_t locale;
 
   assert(serverIO != NULL);
   assert(id != NULL);
@@ -1025,7 +1022,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     }
 
     // get command node
-    commandNode = List_removeFirst(&serverIO->commandList);
+    commandNode = (ServerIOCommandNode*)List_removeFirst(&serverIO->commandList);
   }
   if (commandNode == NULL)
   {
@@ -1124,31 +1121,21 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
       }
       else
       {
-//TODO
-#if 1
         // not found -> wait
         if (!Semaphore_waitModified(&serverIO->resultList.lock,timeout))
         {
-          return ERROR_NETWORK_TIMEOUT;
+          break;
         }
-#else
-        // not found -> wait for data
-        Semaphore_unlock(&serverIO->resultList.lock);
-        {
-          if (!waitData(serverIO,timeout))
-          {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-            return ERROR_NETWORK_TIMEOUT;
-          }
-        }
-        Semaphore_lock(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-#endif
       }
     }
     while (resultNode == NULL);
   }
+  if (resultNode == NULL)
+  {
+    return ERROR_NETWORK_TIMEOUT;
+  }
 
-  // get result
+  // get and parse result
   if (error != NULL) (*error) = resultNode->error;
   if (completedFlag != NULL) (*completedFlag) = resultNode->completedFlag;
   if (resultMap != NULL)
@@ -1174,7 +1161,6 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
                                )
 {
   uint               id;
-  SemaphoreLock      semaphoreLock;
   ServerIOResultNode *resultNode;
   Errors             error;
 
@@ -1387,8 +1373,6 @@ Errors ServerIO_sendMaster(const ServerIO     *serverIO,
 uint commandId;
   va_list       arguments;
   Errors        error;
-  SemaphoreLock semaphoreLock;
-//  serverIO    *serverIO;
 
   assert(serverIO != NULL);
   assert(format != NULL);
@@ -1412,36 +1396,6 @@ commandId = 0;
 
   return error;
 }
-
-#if 0
-Errors ServerIO_wait(ServerIO  *serverIO,
-                     long      timeout
-                    )
-{
-  uint64 t0,t1;
-  ulong  dt;
-
-  assert(serverIO != NULL);
-
-  while (timeout != 0)
-  {
-    t0 = Misc_getTimestamp();
-    if (!waitData(serverIO,timeout))
-    {
-      return ERROR_NETWORK_TIMEOUT;
-    }
-    t1 = Misc_getTimestamp();
-
-    if (timeout > 0)
-    {
-      dt = (t1-t0)/US_PER_MS;
-      timeout = (timeout > dt) ? timeout-dt : 0L;
-    }
-  }
-
-  return ERROR_NONE;
-}
-#endif
 
 #ifdef __cplusplus
   }

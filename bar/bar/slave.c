@@ -49,8 +49,6 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL bool      quitFlag;
-LOCAL Thread    slaveThread;
 
 /****************************** Macros *********************************/
 
@@ -190,102 +188,8 @@ LOCAL void slaveDisconnect(SlaveInfo *slaveInfo)
   ServerIO_disconnect(&slaveInfo->io);
 }
 
-LOCAL void processSlave(SlaveInfo *slaveInfo, ConstString line)
-{
-  uint                 commandId;
-  bool                 completedFlag;
-  Errors               error;
-  String               name;
-  String               data;
-  ServerIOResultNode           *resultNode;
-  ServerIOCommandNode          *commandNode;
-  SemaphoreLock        semaphoreLock;
-  uint                 i;
-  StringMap            argumentMap;
-
-//  assert(Semaphore_isLocked(&slaveList));
-
-  // init variables
-  name = String_new();
-  data = String_new();
-
-  // parse
-  if      (String_parse(line,STRING_BEGIN,"%u %y %u % S",NULL,&commandId,&completedFlag,&error,data))
-  {
-    // init result
-    resultNode = LIST_NEW_NODE(ServerIOResultNode);
-    if (resultNode == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    resultNode->id            = commandId;
-    resultNode->error         = (error != ERROR_NONE) ? Errorx_(error,0,"%s",String_cString(data)) : ERROR_NONE;
-    resultNode->completedFlag = completedFlag;
-    resultNode->data          = String_duplicate(data);
-
-    // add result
-//TODO:
+//TODO
 #if 0
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveInfo->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-      List_append(&slaveInfo->resultList,resultNode);
-    }
-fprintf(stderr,"%s, %d: %p added result commandId=%d data=%s %d\n",__FILE__,__LINE__,slaveInfo,commandId,String_cString(data),slaveInfo->resultList.count);
-//    Semaphore_signalModified(&slaveList.lock);
-#endif
-  }
-  else if (!String_parse(line,STRING_BEGIN,"%u %S % S",NULL,&commandId,name,data))
-  {
-    // init command
-    resultNode = LIST_NEW_NODE(ServerIOResultNode);
-    if (resultNode == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    commandNode->id = commandId;
-    commandNode->name      = String_duplicate(name);
-    commandNode->data      = String_duplicate(data);
-
-#if 0
-    // parse arguments
-    argumentMap = StringMap_new();
-    if (argumentMap == NULL)
-    {
-      String_delete(arguments);
-      String_delete(name);
-      return;
-    }
-    if (!StringMap_parse(argumentMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
-    {
-      StringMap_delete(argumentMap);
-      String_delete(name);
-      String_delete(name);
-      return;
-    }
-#endif
-
-    // add command
-//TODO:
-#if 0
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveInfo->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-      List_append(&slaveInfo->commandList,commandNode);
-    }
-fprintf(stderr,"%s, %d: %p added command %s %d\n",__FILE__,__LINE__,slaveInfo,commandId,String_cString(line),slaveInfo->commandList.count);
-//    Semaphore_signalModified(&slaveList.lock);
-#endif
-  }
-  else
-  {
-fprintf(stderr,"%s, %d: unkown %s\n",__FILE__,__LINE__,String_cString(line));
-    // unknown
-  }
-
-  // free resources
-  String_delete(data);
-  String_delete(name);
-}
-
 /***********************************************************************\
 * Name   : sendSlave
 * Purpose: send data to slave
@@ -298,7 +202,8 @@ fprintf(stderr,"%s, %d: unkown %s\n",__FILE__,__LINE__,String_cString(line));
 
 LOCAL uint sendSlave(SlaveInfo *slaveInfo, ConstString data)
 {
-  SemaphoreLock semaphoreLock;
+//TODO
+//  SemaphoreLock semaphoreLock;
   uint          commandId;
 
   assert(slaveInfo != NULL);
@@ -314,22 +219,14 @@ LOCAL uint sendSlave(SlaveInfo *slaveInfo, ConstString data)
   // format command
 
   // send data
-  if (!quitFlag)
-  {
 //    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-    {
-      (void)Network_send(&slaveInfo->io.network.socketHandle,String_cString(data),String_length(data));
-    }
+  {
+    (void)Network_send(&slaveInfo->io.network.socketHandle,String_cString(data),String_length(data));
   }
 
   return commandId;
 }
-
-LOCAL Errors waitForResult(SlaveInfo *slaveInfo)
-{
-
-  return ERROR_NONE;
-}
+#endif
 
 /***********************************************************************\
 * Name   : slaveThreadCode
@@ -344,18 +241,16 @@ LOCAL void slaveThreadCode(SlaveInfo *slaveInfo)
 {
   #define TIMEOUT (5*MS_PER_SECOND)
 
-  sigset_t              signalMask;
-  struct pollfd    pollfds[1];
-  struct timespec       pollTimeout;
-  int n;
-  SemaphoreLock    semaphoreLock;
-  Errors                error;
-  uint id;
-  String name;
-  StringMap argumentMap;
+  String          name;
+  StringMap       argumentMap;
+  sigset_t        signalMask;
+  struct pollfd   pollfds[1];
+  struct timespec pollTimeout;
+  int             n;
+  uint            id;
 
   // init variables
-  name = String_new();
+  name        = String_new();
   argumentMap = StringMap_new();
 
   // Note: ignore SIGALRM in ppoll()
@@ -420,6 +315,11 @@ slaveDisconnect(slaveInfo);
       }
     }
   }
+
+  // free resources
+  StringMap_delete(argumentMap);
+  String_delete(name);
+
 fprintf(stderr,"%s, %d: end slave\n",__FILE__,__LINE__);
 }
 
@@ -435,7 +335,7 @@ fprintf(stderr,"%s, %d: end slave\n",__FILE__,__LINE__);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionInteger(const SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, int value)
+LOCAL Errors Slave_setJobOptionInteger(SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, int value)
 {
   assert(slaveInfo != NULL);
   assert(name != NULL);
@@ -455,7 +355,7 @@ LOCAL Errors Slave_setJobOptionInteger(const SlaveInfo *slaveInfo, ConstString j
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionInteger64(const SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, int64 value)
+LOCAL Errors Slave_setJobOptionInteger64(SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, int64 value)
 {
   assert(slaveInfo != NULL);
   assert(name != NULL);
@@ -475,7 +375,7 @@ LOCAL Errors Slave_setJobOptionInteger64(const SlaveInfo *slaveInfo, ConstString
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionBoolean(const SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, bool value)
+LOCAL Errors Slave_setJobOptionBoolean(SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, bool value)
 {
   assert(slaveInfo != NULL);
   assert(name != NULL);
@@ -495,7 +395,7 @@ LOCAL Errors Slave_setJobOptionBoolean(const SlaveInfo *slaveInfo, ConstString j
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionString(const SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, ConstString value)
+LOCAL Errors Slave_setJobOptionString(SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, ConstString value)
 {
   assert(slaveInfo != NULL);
   assert(name != NULL);
@@ -515,7 +415,7 @@ LOCAL Errors Slave_setJobOptionString(const SlaveInfo *slaveInfo, ConstString jo
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionCString(const SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, const char *value)
+LOCAL Errors Slave_setJobOptionCString(SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, const char *value)
 {
   assert(slaveInfo != NULL);
   assert(name != NULL);
@@ -535,7 +435,7 @@ LOCAL Errors Slave_setJobOptionCString(const SlaveInfo *slaveInfo, ConstString j
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Slave_setJobOptionPassword(const SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, Password *password)
+LOCAL Errors Slave_setJobOptionPassword(SlaveInfo *slaveInfo, ConstString jobUUID, const char *name, Password *password)
 {
   const char *plainPassword;
   Errors     error;
@@ -555,30 +455,12 @@ LOCAL Errors Slave_setJobOptionPassword(const SlaveInfo *slaveInfo, ConstString 
 Errors Slave_initAll(void)
 {
   // init variables
-  quitFlag = FALSE;
-
-//  Semaphore_init(&slaveList.lock);
-//  List_init(&slaveList);
-
-//TODO
-#if 0
-  // start slave thread
-  if (!Thread_init(&slaveThread,"BAR slave",globalOptions.niceLevel,slaveThreadCode,NULL))
-  {
-    HALT_FATAL_ERROR("Cannot initialize slave thread!");
-  }
-#endif
 
   return ERROR_NONE;
 }
 
-Slave_doneAll(void)
+void Slave_doneAll(void)
 {
-  // quit slave thread
-  quitFlag = TRUE;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//  Thread_join(&slaveThread);
-
 //TODO
 //  List_done(&slaveList,
 //  Semaphore_done(&slaveList.lock);
@@ -670,11 +552,12 @@ void Slave_disconnect(SlaveInfo *slaveInfo)
 
 // ----------------------------------------------------------------------
 
-bool Slave_waitCommand(const SlaveInfo *slaveInfo,
-                       long            timeout,
-                       uint            *id,
-                       String          name,
-                       StringMap       argumentMap
+#if 0
+bool Slave_waitCommand(SlaveInfo *slaveInfo,
+                       long      timeout,
+                       uint      *id,
+                       String    name,
+                       StringMap argumentMap
                       )
 {
   assert(slaveInfo != NULL);
@@ -688,6 +571,7 @@ bool Slave_waitCommand(const SlaveInfo *slaveInfo,
                              argumentMap
                             );
 }
+#endif
 
 LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
                                    long       timeout,
@@ -696,7 +580,6 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
                                    va_list    arguments
                                   )
 {
-  uint   id;
   Errors error;
 
   assert(slaveInfo != NULL);
@@ -720,10 +603,10 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
   return ERROR_NONE;
 }
 
-Errors Slave_executeCommand(const SlaveInfo *slaveInfo,
-                            long            timeout,
-                            StringMap       resultMap,
-                            const char      *format,
+Errors Slave_executeCommand(SlaveInfo  *slaveInfo,
+                            long       timeout,
+                            StringMap  resultMap,
+                            const char *format,
                             ...
                            )
 {
@@ -739,7 +622,7 @@ Errors Slave_executeCommand(const SlaveInfo *slaveInfo,
   return error;
 }
 
-Errors Slave_jobStart(const SlaveInfo                 *slaveInfo,
+Errors Slave_jobStart(SlaveInfo                       *slaveInfo,
                       ConstString                     name,
                       ConstString                     jobUUID,
                       ConstString                     scheduleUUID,
@@ -829,7 +712,6 @@ Errors Slave_jobStart(const SlaveInfo                 *slaveInfo,
   PatternNode     *patternNode;
   MountNode       *mountNode;
   DeltaSourceNode *deltaSourceNode;
-//  bool            quitFlag;
 
 UNUSED_VARIABLE(scheduleUUID);
 UNUSED_VARIABLE(archiveType);
@@ -1017,16 +899,16 @@ fprintf(stderr,"%s, %d: %d: Slave_jobStart %s\n",__FILE__,__LINE__,error,Error_g
 
   return ERROR_NONE;
 
-  #undef SET_OPTION_BOOLEAN(name,value)
-  #undef SET_OPTION_INTEGER64(name,value)
-  #undef SET_OPTION_INTEGER(name,value)
-  #undef SET_OPTION_PASSWORD(name,value)
-  #undef SET_OPTION_CSTRING(name,value)
-  #undef SET_OPTION_STRING(name,value)
+  #undef SET_OPTION_BOOLEAN
+  #undef SET_OPTION_INTEGER64
+  #undef SET_OPTION_INTEGER
+  #undef SET_OPTION_PASSWORD
+  #undef SET_OPTION_CSTRING
+  #undef SET_OPTION_STRING
 }
 
-Errors Slave_jobAbort(const SlaveInfo *slaveInfo,
-                      ConstString     jobUUID
+Errors Slave_jobAbort(SlaveInfo   *slaveInfo,
+                      ConstString jobUUID
                      )
 {
   Errors error;
@@ -1048,6 +930,7 @@ Errors Slave_jobAbort(const SlaveInfo *slaveInfo,
   return ERROR_NONE;
 }
 
+#if 0
 Errors Slave_process(SlaveInfo *slaveInfo,
                      long      timeout
                     )
@@ -1094,6 +977,7 @@ fprintf(stderr,"%s, %d: sent OK result\n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }
+#endif
 
 #ifdef __cplusplus
   }

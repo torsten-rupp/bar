@@ -206,12 +206,14 @@ SocketHandle *Slave_getSocketHandle(const SlaveInfo *slaveInfo);
 * Notes  : -
 \***********************************************************************/
 
-bool Slave_waitCommand(const SlaveInfo *slaveInfo,
-                       long            timeout,
-                       uint            *id,
-                       String          name,
-                       StringMap       argumentMap
+#if 0
+bool Slave_waitCommand(SlaveInfo *slaveInfo,
+                       long      timeout,
+                       uint      *id,
+                       String    name,
+                       StringMap argumentMap
                       );
+#endif
 
 /***********************************************************************\
 * Name   : Slave_executeCommand
@@ -226,10 +228,10 @@ bool Slave_waitCommand(const SlaveInfo *slaveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Slave_executeCommand(const SlaveInfo *slaveInfo,
-                            long            timeout,
-                            StringMap       resultMap,
-                            const char      *format,
+Errors Slave_executeCommand(SlaveInfo   *slaveInfo,
+                            long        timeout,
+                            StringMap   resultMap,
+                            const char  *format,
                             ...
                            );
 
@@ -257,7 +259,7 @@ Errors Slave_executeCommand(const SlaveInfo *slaveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Slave_jobStart(const SlaveInfo                 *slaveInfo,
+Errors Slave_jobStart(SlaveInfo                       *slaveInfo,
                       ConstString                     name,
                       ConstString                     jobUUID,
                       ConstString                     scheduleUUID,
@@ -288,13 +290,16 @@ Errors Slave_jobStart(const SlaveInfo                 *slaveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Slave_jobAbort(const SlaveInfo *slaveInfo,
-                      ConstString     jobUUID
+Errors Slave_jobAbort(SlaveInfo   *slaveInfo,
+                      ConstString jobUUID
                      );
 
+//TODO
+#if 0
 Errors Slave_process(SlaveInfo *slaveInfo,
                      long      timeout
                     );
+#endif
 
 #ifdef __cplusplus
   }
