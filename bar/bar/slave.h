@@ -174,7 +174,8 @@ INLINE bool Slave_isConnected(const SlaveInfo *slaveInfo)
 {
   assert(slaveInfo != NULL);
 
-  return ServerIO_isConnected(&slaveInfo->io);
+//  return ServerIO_isConnected(&slaveInfo->io);
+  return !Thread_isQuit(&slaveInfo->thread);
 }
 #endif /* NDEBUG || __SLAVE_IMPLEMENTATION__ */
 

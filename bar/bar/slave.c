@@ -286,204 +286,6 @@ fprintf(stderr,"%s, %d: unkown %s\n",__FILE__,__LINE__,String_cString(line));
   String_delete(name);
 }
 
-#if 0
-/***********************************************************************\
-* Name   : slaveThreadCode
-* Purpose: slave thread code
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void slaveThreadCode(void)
-{
-  typedef struct SlaveJobInfoNode
-  {
-    LIST_NODE_HEADER(struct SlaveJobInfoNode);
-
-    String    jobUUID;
-    SlaveInfo slaveInfo;
-  } SlaveJobInfoNode;
-
-  typedef struct
-  {
-    LIST_HEADER(SlaveJobInfoNode);
-  } SlaveJobInfoList;
-
-  struct pollfd         *pollfds;
-  uint                  maxPollfdCount;
-  uint                  pollfdCount;
-
-  SemaphoreLock    semaphoreLock;
-  SlaveInfo        slaveInfo;
-  struct timespec       pollTimeout;
-  sigset_t              signalMask;
-  uint                  pollfdIndex;
-  char                  buffer[4096];
-  ulong                 receivedBytes;
-  ulong                 i;
-  Errors                error;
-
-  // init variables
-  maxPollfdCount = 64;  // initial max. number of parallel connections
-  pollfds = (struct pollfd*)malloc(maxPollfdCount * sizeof(struct pollfd));
-  if (pollfds == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-
-  // Note: ignore SIGALRM in ppoll()
-  sigemptyset(&signalMask);
-  sigaddset(&signalMask,SIGALRM);
-
-  // process client requests
-  while (!quitFlag)
-  {
-    // connect slaves
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-#if 0
-          if (isSlaveJob(jobNode) && !Slave_isConnected(&jobNode->slaveInfo))
-          {
-fprintf(stderr,"%s, %d: req connect jobUUID=%s host=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(jobNode->slaveInfo.name));
-            Slave_copyHost(&slaveInfo,&jobNode->slaveInfo);
-            tryConnectFlag = TRUE;
-          }
-
-      // try to connect
-      if (tryConnectFlag)
-      {
-//        (void)Slave_connect(&slaveInfo);
-        error = Slave_connect(&slaveInfo);
-fprintf(stderr,"%s, %d: connect result host=%s: %s\n",__FILE__,__LINE__,String_cString(slaveInfo.name),Error_getText(error));
-      }
-#endif
-    }
-    if (quitFlag) break;
-
-    // get connected slaves to wait for
-//fprintf(stderr,"%s, %d: lock: get slaves\n",__FILE__,__LINE__);
-    pollfdCount = 0;
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-      LIST_ITERATE(&slaveList,slaveNode)
-      {
-        if (slaveNode->isConnected)
-        {
-          if (pollfdCount >= maxPollfdCount)
-          {
-            maxPollfdCount += 64;
-            pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
-            if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
-          }
-          pollfds[pollfdCount].fd     = Network_getSocket(&slaveNode->socketHandle);
-          pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
-          pollfdCount++;
-        }
-      }
-    }
-fprintf(stderr,"%s, %d: active %d\n",__FILE__,__LINE__,pollfdCount);
-
-    if (pollfdCount > 0)
-    {
-      // wait for slave results/requests
-      pollTimeout.tv_sec  = SLEEP_TIME_SLAVE_THREAD;
-      pollTimeout.tv_nsec = 0;
-fprintf(stderr,"%s, %d: wait...\n",__FILE__,__LINE__);
-      (void)ppoll(pollfds,pollfdCount,&pollTimeout,&signalMask);
-fprintf(stderr,"%s, %d: wait done -------\n",__FILE__,__LINE__);
-      if (quitFlag) break;
-
-      // process slave results/requests
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-      {
-        for (pollfdIndex = 0; pollfdIndex < pollfdCount; pollfdIndex++)
-        {
-          // find slave
-          slaveNode = LIST_FIND(&slaveList,slaveNode,pollfds[pollfdIndex].fd == Network_getSocket(&slaveNode->socketHandle));
-assert(slaveNode != NULL);
-
-          if ((pollfds[pollfdIndex].revents & POLLIN) != 0)
-          {
-            // received data
-            Network_receive(&slaveNode->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
-//fprintf(stderr,"%s, %d: buffer=%s\n",__FILE__,__LINE__,buffer);
-
-            SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-            {
-              // find client node
-              slaveNode = LIST_FIND(&slaveList,
-                                     slaveNode,
-                                     pollfds[pollfdIndex].fd == Network_getSocket(&slaveNode->socketHandle)
-                                    );
-              if (slaveNode != NULL)
-              {
-                if (receivedBytes > 0)
-                {
-                  do
-                  {
-                    // received data -> process
-                    for (i = 0; i < receivedBytes; i++)
-                    {
-                      if (buffer[i] != '\n')
-                      {
-                        String_appendChar(slaveNode->line,buffer[i]);
-                      }
-                      else
-                      {
-//fprintf(stderr,"%s, %d: process %s \n",__FILE__,__LINE__,String_cString(slaveNode->line));
-                        processSlave(slaveNode,slaveNode->line);
-//fprintf(stderr,"%s, %d: process done\n",__FILE__,__LINE__);
-                        String_clear(slaveNode->line);
-                      }
-                    }
-                    error = Network_receive(&slaveNode->socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
-                  }
-                  while ((error == ERROR_NONE) && (receivedBytes > 0));
-                }
-                else
-                {
-                  // disconnect
-//                  deleteClient(disconnectClientNode);
-fprintf(stderr,"%s, %d: ---------- DISCONNECT1\n",__FILE__,__LINE__);
-                  slaveNode->isConnected = FALSE;
-
-                  printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
-                }
-              }
-            }
-          }
-          else if ((pollfds[pollfdIndex].revents & (POLLERR|POLLNVAL)) != 0)
-          {
-            // error/disconnect
-
-            // done client and free resources
-//                deleteClient(disconnectClientNode);
-fprintf(stderr,"%s, %d: ---------- DISCONNECT2\n",__FILE__,__LINE__);
-            slaveNode->isConnected = FALSE;
-
-            printInfo(1,"Disconnected slave '%s:%u'\n",String_cString(slaveNode->hostName),slaveNode->hostPort);
-          }
-        }
-      }
-    }
-    else
-    {
-      // sleep
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&slaveList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-      {
-        (void)Semaphore_waitModified(&slaveList.lock,SLEEP_TIME_SLAVE_THREAD*MS_PER_SECOND);
-      }
-    }
-    if (quitFlag) break;
-  }
-
-  // free resources
-  free(pollfds);
-}
-#endif
-
 /***********************************************************************\
 * Name   : sendSlave
 * Purpose: send data to slave
@@ -532,7 +334,7 @@ LOCAL Errors waitForResult(SlaveInfo *slaveInfo)
 /***********************************************************************\
 * Name   : slaveThreadCode
 * Purpose: slave thread code
-* Input  : -
+* Input  : slaveInfo - slave info
 * Output : -
 * Return : -
 * Notes  : -
@@ -540,6 +342,12 @@ LOCAL Errors waitForResult(SlaveInfo *slaveInfo)
 
 LOCAL void slaveThreadCode(SlaveInfo *slaveInfo)
 {
+  #define TIMEOUT (5*MS_PER_SECOND)
+
+  sigset_t              signalMask;
+  struct pollfd    pollfds[1];
+  struct timespec       pollTimeout;
+  int n;
   SemaphoreLock    semaphoreLock;
   Errors                error;
   uint id;
@@ -547,31 +355,72 @@ LOCAL void slaveThreadCode(SlaveInfo *slaveInfo)
   StringMap argumentMap;
 
   // init variables
+  name = String_new();
+  argumentMap = StringMap_new();
 
+  // Note: ignore SIGALRM in ppoll()
+  sigemptyset(&signalMask);
+  sigaddset(&signalMask,SIGALRM);
+
+fprintf(stderr,"%s, %d: start slave\n",__FILE__,__LINE__);
   // process client requests
   while (!Thread_isQuit(&slaveInfo->thread))
   {
-fprintf(stderr,"%s, %d: slave thread wiat command\n",__FILE__,__LINE__);
-    if (ServerIO_getCommand(&slaveInfo->io,
-                            5*MS_PER_SECOND,
-                            &id,
-                            name,
-                            argumentMap
-                           )
-       )
+//fprintf(stderr,"%s, %d: slave thread wiat command\n",__FILE__,__LINE__);
+    // wait for disconnect, command, or result
+    pollfds[0].fd     = Network_getSocket(&slaveInfo->io.network.socketHandle);
+    pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
+    pollTimeout.tv_sec  = (long)(TIMEOUT /MS_PER_SECOND);
+    pollTimeout.tv_nsec = (long)((TIMEOUT%MS_PER_SECOND)*1000LL);
+    n = ppoll(pollfds,1,&pollTimeout,&signalMask);
+    if      (n < 0)
     {
-      // process command
-//      processCommand(&clientNode->clientInfo,id,name,argumentMap);
+fprintf(stderr,"%s, %d: poll fail\n",__FILE__,__LINE__);
+slaveDisconnect(slaveInfo);
+break;
+    }
+    else if (n > 0)
+    {
+      if      ((pollfds[0].revents & POLLIN) != 0)
+      {
+        if (ServerIO_receiveData(&slaveInfo->io))
+        {
+          while (ServerIO_getCommand(&slaveInfo->io,
+                                  NO_WAIT,
+                                  &id,
+                                  name,
+                                  argumentMap
+                                 )
+                )
+          {
+            // process command
+    //      processCommand(&clientNode->clientInfo,id,name,argumentMap);
 fprintf(stderr,"%s, %d: ---------------- got command #%u: %s\n",__FILE__,__LINE__,id,String_cString(name));
 ServerIO_sendResult(&slaveInfo->io,
-                    id,
-                    TRUE,
-                    ERROR_NONE,
-                    ""
-                   );
+                      id,
+                      TRUE,
+                      ERROR_NONE,
+                      ""
+                     );
 fprintf(stderr,"%s, %d: sent OK result\n",__FILE__,__LINE__);
+          }
+        }
+        else
+        {
+  fprintf(stderr,"%s, %d: disc\n",__FILE__,__LINE__);
+slaveDisconnect(slaveInfo);
+          break;
+        }
+      }
+      else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
+      {
+  fprintf(stderr,"%s, %d: error/disc\n",__FILE__,__LINE__);
+slaveDisconnect(slaveInfo);
+        break;
+      }
     }
   }
+fprintf(stderr,"%s, %d: end slave\n",__FILE__,__LINE__);
 }
 
 /***********************************************************************\
@@ -809,6 +658,13 @@ void Slave_disconnect(SlaveInfo *slaveInfo)
 {
   assert(slaveInfo != NULL);
 
+  // stop slave thread
+  Thread_quit(&slaveInfo->thread);
+  if (!Thread_join(&slaveInfo->thread))
+  {
+    HALT_FATAL_ERROR("Cannot terminate slave thread!");
+  }
+
   slaveDisconnect(slaveInfo);
 }
 
@@ -833,7 +689,6 @@ bool Slave_waitCommand(const SlaveInfo *slaveInfo,
                             );
 }
 
-//TODO
 LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
                                    long       timeout,
                                    StringMap  resultMap,
@@ -846,56 +701,19 @@ LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
 
   assert(slaveInfo != NULL);
 
+//TODO
   // init variables
 
-#if 1
-//TODO: lock
-  // send command
-  error = ServerIO_vsendCommand(&slaveInfo->io,
-                                &id,
-                                format,
-                                arguments
-                               );
-  if (error != ERROR_NONE)
-  {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    return error;
-  }
-
-  // wait for result
-  error = ServerIO_waitResult(&slaveInfo->io,
-                              timeout,
-                              id,
-                              NULL,  // error,
-                              NULL,  // completedFlag,
-                              resultMap
-                             );
-  if (error != ERROR_NONE)
-  {
-fprintf(stderr,"%s, %d: Slave_vexecuteCommand timeout=%ld\n",__FILE__,__LINE__,timeout);
-    return error;
-  }
-//  printInfo(4,"Received slave result: error=%d completedFlag=%d data=%s\n",error,String_cString(data));
-//fprintf(stderr,"%s, %d: received error=%d/%s: data=%s\n",__FILE__,__LINE__,Error_getCode(error),Error_getText(error),String_cString(data));
-
-  // check error
-  if (error != ERROR_NONE)
-  {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-    return error;
-  }
-#else
   error = ServerIO_vexecuteCommand(&slaveInfo->io,
                                    timeout,
-                                   NULL,  // error,
-                                   NULL,  // completedFlag,
-                                   resultMap
+                                   resultMap,
+                                   format,
+                                   arguments
                                   );
   if (error != ERROR_NONE)
   {
     return error;
   }
-#endif
 
   // free resources
 

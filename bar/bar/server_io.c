@@ -1015,7 +1015,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
         // no command -> wait for data
         Semaphore_unlock(&serverIO->commandList.lock);
         {
-          if (!waitData(serverIO,timeout))
+//          if (!waitData(serverIO,timeout))
           {
             return FALSE;
           }
@@ -1124,6 +1124,14 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
       }
       else
       {
+//TODO
+#if 1
+        // not found -> wait
+        if (!Semaphore_waitModified(&serverIO->resultList.lock,timeout))
+        {
+          return ERROR_NETWORK_TIMEOUT;
+        }
+#else
         // not found -> wait for data
         Semaphore_unlock(&serverIO->resultList.lock);
         {
@@ -1134,6 +1142,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           }
         }
         Semaphore_lock(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+#endif
       }
     }
     while (resultNode == NULL);
@@ -1185,61 +1194,18 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
     return error;
   }
 
-  // wait for result, timeout, or quit
-fprintf(stderr,"%s, %d: wait command result %d \n",__FILE__,__LINE__,id);
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  // wait for result
+  error = ServerIO_waitResult(serverIO,
+                              timeout,
+                              id,
+                              NULL, // &error,
+                              NULL, //&completedFlag,
+                              resultMap
+                             );
+  if (error != ERROR_NONE)
   {
-    do
-    {
-      // check result
-      resultNode = LIST_FIND(&serverIO->resultList,resultNode,resultNode->id == id);
-      if (resultNode != NULL)
-      {
-        // get result
-        List_remove(&serverIO->resultList,resultNode);
-      }
-      else
-      {
-#if 1
-        // not found -> wait for data
-        Semaphore_unlock(&serverIO->resultList.lock);
-        {
-          if (!waitData(serverIO,timeout))
-          {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-            return ERROR_NETWORK_TIMEOUT;
-          }
-        }
-        Semaphore_lock(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-#else
-        // wait for result
-        if (!Semaphore_waitModified(&serverIO->lock,timeout))
-        {
-          Semaphore_unlock(&serverIO->lock);
-          return ERROR_NETWORK_TIMEOUT;
-        }
-#endif
-      }
-    }
-    while (resultNode == NULL);
+    return error;
   }
-
-  // get action result
-  error = resultNode->error;
-  if (resultMap != NULL)
-  {
-//    if (!StringMap_parse(command->argumentMap,arguments,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
-//    {
-//    }
-//    StringMap_move(resultMap,serverIO->action.resultMap);
-  }
-  else
-  {
-//    StringMap_clear(serverIO->action.resultMap);
-  }
-
-  // free resources
-  deleteResultNode(resultNode);
 
 #if 0
   // wait for result, timeout, or quit

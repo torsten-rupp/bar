@@ -345,7 +345,7 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
 
 fprintf(stderr,"%s, %d: wait for %d\n",__FILE__,__LINE__,id);
   error = ServerIO_waitResult(storageHandle->storageInfo->master.io,
-100*                              30LL*MS_PER_SECOND,
+                              5LL*MS_PER_SECOND,
                               id,
                               NULL,  // error
                               NULL,  // completedFlag
@@ -357,6 +357,7 @@ fprintf(stderr,"%s, %d: EEE %d: %s\n",__FILE__,__LINE__,id,Error_getText(error))
     StringMap_delete(resultMap);
     return error;
   }
+fprintf(stderr,"%s, %d: wait done\n",__FILE__,__LINE__);
 
   // free resources
   StringMap_delete(resultMap);
