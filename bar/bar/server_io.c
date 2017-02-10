@@ -405,6 +405,8 @@ fprintf(stderr,"%s, %d: uuuuuuuuuuuuuuuuuuuuuuu\n",__FILE__,__LINE__);
   }
 }
 
+#if 0
+//TODO obsolete
 /***********************************************************************\
 * Name   : receiveData
 * Purpose: receive data
@@ -497,7 +499,10 @@ fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
 
   return TRUE;
 }
+#endif
 
+#if 0
+//TODO obsolete
 /***********************************************************************\
 * Name   : waitData
 * Purpose: wait for and receive data
@@ -550,6 +555,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return TRUE;
 }
+#endif
 
 #if 0
 /***********************************************************************\
@@ -921,9 +927,86 @@ bool ServerIO_checkPassword(const ServerIO *serverIO,
 
 bool ServerIO_receiveData(ServerIO *serverIO)
 {
+  char   buffer[4096];
+  ulong  readBytes;
+  ulong  i;
+  Errors error;
+
   assert(serverIO != NULL);
 
-  return receiveData(serverIO);
+  switch (serverIO->type)
+  {
+    case SERVER_IO_TYPE_NONE:
+      break;
+    case SERVER_IO_TYPE_BATCH:
+      (void)File_read(&serverIO->file.fileHandle,buffer,sizeof(buffer),&readBytes);
+//fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,buffer);
+      if (readBytes > 0)
+      {
+        do
+        {
+          // received data -> process
+          for (i = 0; i < readBytes; i++)
+          {
+            if (buffer[i] != '\n')
+            {
+              String_appendChar(serverIO->line,buffer[i]);
+            }
+            else
+            {
+              processData(serverIO,serverIO->line);
+              String_clear(serverIO->line);
+            }
+          }
+          error = File_read(&serverIO->file.fileHandle,buffer,sizeof(buffer),&readBytes);
+        }
+        while ((error == ERROR_NONE) && (readBytes > 0));
+      }
+      else
+      {
+        // disconnect
+fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
+        disconnect(serverIO);
+        return FALSE;
+      }
+      break;
+    case SERVER_IO_TYPE_NETWORK:
+      (void)Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&readBytes);
+//buffer[readBytes]=0;
+//fprintf(stderr,"%s, %d: rec socket %d: bytes %d: %s\n",__FILE__,__LINE__,Network_getSocket(&serverIO->network.socketHandle),readBytes,buffer);
+      if (readBytes > 0)
+      {
+        do
+        {
+          // received data -> process
+          for (i = 0; i < readBytes; i++)
+          {
+            if (buffer[i] != '\n')
+            {
+              String_appendChar(serverIO->line,buffer[i]);
+            }
+            else
+            {
+//fprintf(stderr,"%s, %d: process %s\n",__FILE__,__LINE__,String_cString(serverIO->line));
+              processData(serverIO,serverIO->line);
+              String_clear(serverIO->line);
+            }
+          }
+          error = Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&readBytes);
+        }
+        while ((error == ERROR_NONE) && (readBytes > 0));
+      }
+      else
+      {
+        // disconnect
+fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
+//        disconnect(serverIO);
+        return FALSE;
+      }
+      break;
+  }
+
+  return TRUE;
 }
 
 Errors ServerIO_vsendCommand(ServerIO   *serverIO,
@@ -1058,9 +1141,8 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
                                 va_list    arguments
                                )
 {
-  uint               id;
-  ServerIOResultNode *resultNode;
-  Errors             error;
+  uint   id;
+  Errors error;
 
   assert(serverIO != NULL);
   assert(format != NULL);
@@ -1382,6 +1464,7 @@ uint commandId;
 
 error=ERROR_NONE;
 commandId = 0;
+UNUSED_VARIABLE(resultList);
 
     // send command
     va_start(arguments,format);
