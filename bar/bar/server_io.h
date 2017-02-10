@@ -322,8 +322,8 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
                            );
 
 /***********************************************************************\
-* Name   : ServerIO_receiveCommand
-* Purpose: receive command
+* Name   : ServerIO_getCommand
+* Purpose: get command
 * Input  : serverIO - server i/o
 * Output : id        - command id
 *          timeout   - timeout [ms] or NO_WAIT, WAIT_FOREVER
@@ -339,6 +339,46 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
                          String    name,
                          StringMap argumentMap
                         );
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : ServerIO_vexecuteCommand
+* Purpose: execute server command
+* Input  : serverIO  - server i/o
+*          timeout   - timeout [ms] or WAIT_FOREVER
+*          format    - format string
+*          arguments - optional arguments
+* Output : resultMap - result map (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
+                                long       timeout,
+                                StringMap  resultMap,
+                                const char *format,
+                                va_list    arguments
+                               );
+
+/***********************************************************************\
+* Name   : ServerIO_executeCommand
+* Purpose: execute server command
+* Input  : serverIO - server i/o
+*          timeout  - timeout [ms] or WAIT_FOREVER
+*          format   - format string
+*          ...      - optional arguments
+* Output : resultMap - result map (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ServerIO_executeCommand(ServerIO   *serverIO,
+                               long       timeout,
+                               StringMap  resultMap,
+                               const char *format,
+                               ...
+                              );
 
 // ----------------------------------------------------------------------
 
@@ -384,46 +424,6 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
                            bool      *completedFlag,
                            StringMap resultMap
                           );
-
-// ----------------------------------------------------------------------
-
-/***********************************************************************\
-* Name   : ServerIO_vexecuteCommand
-* Purpose: execute server command
-* Input  : serverIO  - server i/o
-*          timeout   - timeout [ms] or WAIT_FOREVER
-*          format    - format string
-*          arguments - optional arguments
-* Output : resultMap - result map (can be NULL)
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
-                                long       timeout,
-                                StringMap  resultMap,
-                                const char *format,
-                                va_list    arguments
-                               );
-
-/***********************************************************************\
-* Name   : ServerIO_executeCommand
-* Purpose: execute server command
-* Input  : serverIO - server i/o
-*          timeout  - timeout [ms] or WAIT_FOREVER
-*          format   - format string
-*          ...      - optional arguments
-* Output : resultMap - result map (can be NULL)
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors ServerIO_executeCommand(ServerIO   *serverIO,
-                               long       timeout,
-                               StringMap  resultMap,
-                               const char *format,
-                               ...
-                              );
 
 // ----------------------------------------------------------------------
 

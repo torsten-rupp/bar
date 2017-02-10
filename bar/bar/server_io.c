@@ -1051,6 +1051,94 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
   return TRUE;
 }
 
+Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
+                                long       timeout,
+                                StringMap  resultMap,
+                                const char *format,
+                                va_list    arguments
+                               )
+{
+  uint               id;
+  ServerIOResultNode *resultNode;
+  Errors             error;
+
+  assert(serverIO != NULL);
+  assert(format != NULL);
+
+  error = ERROR_UNKNOWN;
+
+  // send command
+  error = ServerIO_vsendCommand(serverIO,
+                                &id,
+                                format,
+                                arguments
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // wait for result
+  error = ServerIO_waitResult(serverIO,
+                              timeout,
+                              id,
+                              NULL, // &error,
+                              NULL, //&completedFlag,
+                              resultMap
+                             );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+#if 0
+  // wait for result, timeout, or quit
+  while ((serverIO->action.error == ERROR_UNKNOWN) && !serverIO->quitFlag)
+  {
+    if (!Semaphore_waitModified(&serverIO->action.lock,timeout))
+    {
+      Semaphore_unlock(&serverIO->action.lock);
+      return ERROR_NETWORK_TIMEOUT;
+    }
+  }
+  if (serverIO->quitFlag)
+  {
+    Semaphore_unlock(&serverIO->action.lock);
+    return ERROR_ABORTED;
+  }
+
+  // get action result
+  error = serverIO->action.error;
+  if (resultMap != NULL)
+  {
+    StringMap_move(resultMap,serverIO->action.resultMap);
+  }
+  else
+  {
+    StringMap_clear(serverIO->action.resultMap);
+  }
+#endif
+
+  return error;
+}
+
+Errors ServerIO_executeCommand(ServerIO   *serverIO,
+                               long       timeout,
+                               StringMap  resultMap,
+                               const char *format,
+                               ...
+                              )
+{
+  va_list arguments;
+  Errors  error;
+
+  va_start(arguments,format);
+  error = ServerIO_vexecuteCommand(serverIO,timeout,resultMap,format,arguments);
+  va_end(arguments);
+
+  return error;
+}
+
 Errors ServerIO_sendResult(ServerIO   *serverIO,
                            uint       id,
                            bool       completedFlag,
@@ -1151,94 +1239,6 @@ Errors ServerIO_waitResult(ServerIO  *serverIO,
   deleteResultNode(resultNode);
 
   return ERROR_NONE;
-}
-
-Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
-                                long       timeout,
-                                StringMap  resultMap,
-                                const char *format,
-                                va_list    arguments
-                               )
-{
-  uint               id;
-  ServerIOResultNode *resultNode;
-  Errors             error;
-
-  assert(serverIO != NULL);
-  assert(format != NULL);
-
-  error = ERROR_UNKNOWN;
-
-  // send command
-  error = ServerIO_vsendCommand(serverIO,
-                                &id,
-                                format,
-                                arguments
-                               );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // wait for result
-  error = ServerIO_waitResult(serverIO,
-                              timeout,
-                              id,
-                              NULL, // &error,
-                              NULL, //&completedFlag,
-                              resultMap
-                             );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-#if 0
-  // wait for result, timeout, or quit
-  while ((serverIO->action.error == ERROR_UNKNOWN) && !serverIO->quitFlag)
-  {
-    if (!Semaphore_waitModified(&serverIO->action.lock,timeout))
-    {
-      Semaphore_unlock(&serverIO->action.lock);
-      return ERROR_NETWORK_TIMEOUT;
-    }
-  }
-  if (serverIO->quitFlag)
-  {
-    Semaphore_unlock(&serverIO->action.lock);
-    return ERROR_ABORTED;
-  }
-
-  // get action result
-  error = serverIO->action.error;
-  if (resultMap != NULL)
-  {
-    StringMap_move(resultMap,serverIO->action.resultMap);
-  }
-  else
-  {
-    StringMap_clear(serverIO->action.resultMap);
-  }
-#endif
-
-  return error;
-}
-
-Errors ServerIO_executeCommand(ServerIO   *serverIO,
-                               long       timeout,
-                               StringMap  resultMap,
-                               const char *format,
-                               ...
-                              )
-{
-  va_list arguments;
-  Errors  error;
-
-  va_start(arguments,format);
-  error = ServerIO_vexecuteCommand(serverIO,timeout,resultMap,format,arguments);
-  va_end(arguments);
-
-  return error;
 }
 
 Errors ServerIO_clientAction(ServerIO   *serverIO,
