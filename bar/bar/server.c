@@ -3836,6 +3836,7 @@ LOCAL void jobThreadCode(void)
   Storage_initSpecifier(&storageSpecifier);
   jobName                                = String_new();
   slaveHostName                          = String_new();
+  slaveHostPort                          = 0;
   storageName                            = String_new();
   directory                              = String_new();
   hostName                               = String_new();
@@ -3967,9 +3968,6 @@ fprintf(stderr,"%s, %d: XXXXXXx start %d\n",__FILE__,__LINE__,jobNode->requested
       String_appendCString(s,")");
     }
 
-    // get start date/time
-    startDateTime = Misc_getCurrentDateTime();
-
     // log
     switch (jobNode->jobType)
     {
@@ -4038,6 +4036,9 @@ fprintf(stderr,"%s, %d: XXXXXXx start %d\n",__FILE__,__LINE__,jobNode->requested
           jobNode->runningInfo.error = addExcludeListCommand(&excludePatternList,String_cString(jobNode->excludeCommand));
         }
       }
+
+      // get start date/time
+      startDateTime = Misc_getCurrentDateTime();
 
       // pre-process command
       if (jobNode->runningInfo.error == ERROR_NONE)
@@ -4218,6 +4219,9 @@ NULL,//                                                        scheduleTitle,
         }
       }
 
+      // get end date/time
+      endDateTime = Misc_getCurrentDateTime();
+
       // add index history information
       switch (jobNode->jobType)
       {
@@ -4330,6 +4334,9 @@ NULL,//                                                        scheduleTitle,
       // slave job -> send to slave and run on slave machine
 
 fprintf(stderr,"%s, %d: ------------------------------------------------ \n",__FILE__,__LINE__);
+      // get start date/time
+      startDateTime = Misc_getCurrentDateTime();
+
       // connect slave
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
@@ -4426,6 +4433,9 @@ fprintf(stderr,"%s, %d: fertisch: %s\n",__FILE__,__LINE__,Error_getText(jobNode-
 
       // disconnect slave
       Slave_disconnect(&jobNode->slaveInfo);
+
+      // get end date/time
+      endDateTime = Misc_getCurrentDateTime();
     }
 
     // get error message
@@ -4433,9 +4443,6 @@ fprintf(stderr,"%s, %d: fertisch: %s\n",__FILE__,__LINE__,Error_getText(jobNode-
     {
       String_setCString(jobNode->runningInfo.message,Error_getText(jobNode->runningInfo.error));
     }
-
-    // get end date/time
-    endDateTime = Misc_getCurrentDateTime();
 
     // log
     switch (jobNode->jobType)
@@ -6694,6 +6701,7 @@ LOCAL void serverCommand_version(ClientInfo *clientInfo, IndexHandle *indexHandl
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
+  s = NULL;
   switch (serverMode)
   {
     case SERVER_MODE_MASTER: s = "MASTER"; break;
@@ -14391,10 +14399,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
 
     // handle error
     error = ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
+                                  60*1000,
                                   restoreCommandInfo->id,
                                   NULL,  // resultMap
                                   "CONFIRM",
-                                  60*1000,
                                   "error=%d errorMessage=%'s storage=%'S entry=%'S",
                                   error,
                                   Error_getText(error),
@@ -14448,10 +14456,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
 
     // request password
     error = ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
+                                  60*1000,
                                   restoreCommandInfo->id,
                                   resultMap,
                                   "REQUEST_PASSWORD",
-                                  60*1000,
                                   "name=%'S passwordType=%'s passwordText=%'s",
                                   name,
                                   getPasswordTypeName(passwordType),
@@ -18660,6 +18668,7 @@ Errors Server_run(ServerModes       mode,
   {
     // get active sockets to wait for
     pollfdCount = 0;
+    waitTimeout = 0LL;
     SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
     {
       // get standard port connection requests
