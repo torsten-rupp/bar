@@ -281,11 +281,10 @@ break;
         if (ServerIO_receiveData(&slaveInfo->io))
         {
           while (ServerIO_getCommand(&slaveInfo->io,
-                                  NO_WAIT,
-                                  &id,
-                                  name,
-                                  argumentMap
-                                 )
+                                     &id,
+                                     name,
+                                     argumentMap
+                                    )
                 )
           {
             // process command
@@ -565,7 +564,6 @@ bool Slave_waitCommand(SlaveInfo *slaveInfo,
   assert(name != NULL);
 
   return ServerIO_getCommand(&slaveInfo->io,
-                             timeout,
                              id,
                              name,
                              argumentMap
@@ -951,7 +949,6 @@ Errors Slave_process(SlaveInfo *slaveInfo,
   {
 fprintf(stderr,"%s, %d: wait command\n",__FILE__,__LINE__);
     if (ServerIO_getCommand(&slaveInfo->io,
-                            timeout,
                             &id,
                             name,
                             argumentMap

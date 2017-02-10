@@ -2501,7 +2501,6 @@ fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,globalOptions.fragmentSize);
           }
           continue;
         }
-fprintf(stderr,"%s, %d: FOUND %s\n",__FILE__,__LINE__,String_cString(name));
 
         if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
         {
@@ -3210,7 +3209,6 @@ fprintf(stderr,"%s, %d: FOUND %s\n",__FILE__,__LINE__,String_cString(name));
       // next include entry
       includeEntryNode = includeEntryNode->next;
     }
-fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,createInfo->failError,isAborted(createInfo));
 
     // free resoures
     String_delete(fileName);

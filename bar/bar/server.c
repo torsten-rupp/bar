@@ -4347,9 +4347,9 @@ fprintf(stderr,"%s, %d: ------------------------------------------------ \n",__F
                                                   );
       }
 
-      // start job
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
+        // start job
         jobNode->runningInfo.error = Slave_jobStart(&jobNode->slaveInfo,
                                                     jobNode->name,
                                                     jobNode->uuid,
@@ -4368,71 +4368,71 @@ fprintf(stderr,"%s, %d: ------------------------------------------------ \n",__F
   //                                                  CALLBACK(updateCreateStatusInfo,jobNode),
                                                     CALLBACK(storageRequestVolume,jobNode)
                                                    );
-      }
 fprintf(stderr,"%s, %d: start: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
 
-      // wait for slave job
-fprintf(stderr,"%s, %d: wait for slave e=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
-      while (   !quitFlag
-             && isJobRunning(jobNode)
-             && (jobNode->runningInfo.error == ERROR_NONE)
-             && Slave_isConnected(&jobNode->slaveInfo)
-            )
-      {
-        // get slave job status
-        jobNode->runningInfo.error = Slave_executeCommand(&jobNode->slaveInfo,
-                                                          5LL*MS_PER_SECOND,
-                                                          resultMap,
-                                                          "JOB_STATUS jobUUID=%S",
-                                                          jobNode->uuid
-                                                         );
-        if (jobNode->runningInfo.error == ERROR_NONE)
+        // wait for slave job
+  fprintf(stderr,"%s, %d: wait for slave e=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
+        while (   !quitFlag
+               && isJobRunning(jobNode)
+               && (jobNode->runningInfo.error == ERROR_NONE)
+               && Slave_isConnected(&jobNode->slaveInfo)
+              )
         {
-          // update job status
-          StringMap_getEnum  (resultMap,"state",                &jobNode->state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
-          StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0L);
-          StringMap_getUInt64(resultMap,"doneSize",             &jobNode->runningInfo.doneSize,0LL);
-          StringMap_getULong (resultMap,"totalEntryCount",      &jobNode->runningInfo.totalEntryCount,0L);
-          StringMap_getUInt64(resultMap,"totalEntrySize",       &jobNode->runningInfo.totalEntrySize,0LL);
-          StringMap_getBool  (resultMap,"collectTotalSumDone",  &jobNode->runningInfo.collectTotalSumDone,FALSE);
-          StringMap_getULong (resultMap,"skippedEntryCount",    &jobNode->runningInfo.skippedEntryCount,0L);
-          StringMap_getUInt64(resultMap,"skippedEntrySize",     &jobNode->runningInfo.skippedEntrySize,0LL);
-          StringMap_getULong (resultMap,"errorEntryCount",      &jobNode->runningInfo.errorEntryCount,0L);
-          StringMap_getUInt64(resultMap,"errorEntrySize",       &jobNode->runningInfo.errorEntrySize,0LL);
-          StringMap_getDouble(resultMap,"entriesPerSecond",     &jobNode->runningInfo.entriesPerSecond,0.0);
-          StringMap_getDouble(resultMap,"bytesPerSecond",       &jobNode->runningInfo.bytesPerSecond,0.0);
-          StringMap_getDouble(resultMap,"storageBytesPerSecond",&jobNode->runningInfo.storageBytesPerSecond,0.0);
-          StringMap_getUInt64(resultMap,"archiveSize",          &jobNode->runningInfo.archiveSize,0LL);
-          StringMap_getDouble(resultMap,"compressionRatio",     &jobNode->runningInfo.compressionRatio,0.0);
-          StringMap_getULong (resultMap,"estimatedRestTime",    &jobNode->runningInfo.estimatedRestTime,0L);
-          StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.entryName,NULL);
-          StringMap_getUInt64(resultMap,"entryDoneSize",        &jobNode->runningInfo.entryDoneSize,0LL);
-          StringMap_getUInt64(resultMap,"entryTotalSize",       &jobNode->runningInfo.entryTotalSize,0LL);
-          StringMap_getString(resultMap,"storageName",          jobNode->runningInfo.storageName,NULL);
-          StringMap_getUInt64(resultMap,"storageDoneSize",      &jobNode->runningInfo.storageDoneSize,0L);
-          StringMap_getUInt64(resultMap,"storageTotalSize",     &jobNode->runningInfo.storageTotalSize,0L);
-          StringMap_getUInt  (resultMap,"volumeNumber",         &jobNode->runningInfo.volumeNumber,0);
-          StringMap_getDouble(resultMap,"volumeProgress",       &jobNode->runningInfo.volumeProgress,0.0);
-          StringMap_getString(resultMap,"message",              jobNode->runningInfo.message,NULL);
-        }
+          // get slave job status
+          jobNode->runningInfo.error = Slave_executeCommand(&jobNode->slaveInfo,
+                                                            5LL*MS_PER_SECOND,
+                                                            resultMap,
+                                                            "JOB_STATUS jobUUID=%S",
+                                                            jobNode->uuid
+                                                           );
+          if (jobNode->runningInfo.error == ERROR_NONE)
+          {
+            // update job status
+            StringMap_getEnum  (resultMap,"state",                &jobNode->state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
+            StringMap_getULong (resultMap,"doneCount",            &jobNode->runningInfo.doneCount,0L);
+            StringMap_getUInt64(resultMap,"doneSize",             &jobNode->runningInfo.doneSize,0LL);
+            StringMap_getULong (resultMap,"totalEntryCount",      &jobNode->runningInfo.totalEntryCount,0L);
+            StringMap_getUInt64(resultMap,"totalEntrySize",       &jobNode->runningInfo.totalEntrySize,0LL);
+            StringMap_getBool  (resultMap,"collectTotalSumDone",  &jobNode->runningInfo.collectTotalSumDone,FALSE);
+            StringMap_getULong (resultMap,"skippedEntryCount",    &jobNode->runningInfo.skippedEntryCount,0L);
+            StringMap_getUInt64(resultMap,"skippedEntrySize",     &jobNode->runningInfo.skippedEntrySize,0LL);
+            StringMap_getULong (resultMap,"errorEntryCount",      &jobNode->runningInfo.errorEntryCount,0L);
+            StringMap_getUInt64(resultMap,"errorEntrySize",       &jobNode->runningInfo.errorEntrySize,0LL);
+            StringMap_getDouble(resultMap,"entriesPerSecond",     &jobNode->runningInfo.entriesPerSecond,0.0);
+            StringMap_getDouble(resultMap,"bytesPerSecond",       &jobNode->runningInfo.bytesPerSecond,0.0);
+            StringMap_getDouble(resultMap,"storageBytesPerSecond",&jobNode->runningInfo.storageBytesPerSecond,0.0);
+            StringMap_getUInt64(resultMap,"archiveSize",          &jobNode->runningInfo.archiveSize,0LL);
+            StringMap_getDouble(resultMap,"compressionRatio",     &jobNode->runningInfo.compressionRatio,0.0);
+            StringMap_getULong (resultMap,"estimatedRestTime",    &jobNode->runningInfo.estimatedRestTime,0L);
+            StringMap_getString(resultMap,"entryName",            jobNode->runningInfo.entryName,NULL);
+            StringMap_getUInt64(resultMap,"entryDoneSize",        &jobNode->runningInfo.entryDoneSize,0LL);
+            StringMap_getUInt64(resultMap,"entryTotalSize",       &jobNode->runningInfo.entryTotalSize,0LL);
+            StringMap_getString(resultMap,"storageName",          jobNode->runningInfo.storageName,NULL);
+            StringMap_getUInt64(resultMap,"storageDoneSize",      &jobNode->runningInfo.storageDoneSize,0L);
+            StringMap_getUInt64(resultMap,"storageTotalSize",     &jobNode->runningInfo.storageTotalSize,0L);
+            StringMap_getUInt  (resultMap,"volumeNumber",         &jobNode->runningInfo.volumeNumber,0);
+            StringMap_getDouble(resultMap,"volumeProgress",       &jobNode->runningInfo.volumeProgress,0.0);
+            StringMap_getString(resultMap,"message",              jobNode->runningInfo.message,NULL);
+          }
 
-#if 0
-        // process slave commands (wait max. 1s)
-        jobNode->runningInfo.error = Slave_process(&jobNode->slaveInfo,1*MS_PER_SECOND);
-        if (jobNode->runningInfo.error != ERROR_NONE)
-        {
-fprintf(stderr,"%s, %d: xxxxerror=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
-          jobNode->state = JOB_STATE_ERROR;
-          break;
+  #if 0
+          // process slave commands (wait max. 1s)
+          jobNode->runningInfo.error = Slave_process(&jobNode->slaveInfo,1*MS_PER_SECOND);
+          if (jobNode->runningInfo.error != ERROR_NONE)
+          {
+  fprintf(stderr,"%s, %d: xxxxerror=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
+            jobNode->state = JOB_STATE_ERROR;
+            break;
+          }
+  #endif
+          // sleep a short time
+          Misc_udelay(1*US_PER_SECOND);
         }
-#endif
-        // sleep a short time
-        Misc_udelay(1*US_PER_SECOND);
+  fprintf(stderr,"%s, %d: fertisch: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
+
+        // disconnect slave
+        Slave_disconnect(&jobNode->slaveInfo);
       }
-fprintf(stderr,"%s, %d: fertisch: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
-
-      // disconnect slave
-      Slave_disconnect(&jobNode->slaveInfo);
 
       // get end date/time
       endDateTime = Misc_getCurrentDateTime();
@@ -18684,6 +18684,7 @@ Errors Server_run(ServerModes       mode,
         pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
         pollServerSocketIndex = pollfdCount;
         pollfdCount++;
+//ServerIO_addWait(&clientNode->clientInfo.io,Network_getServerSocket(&serverSocketHandle));
       }
 
       // get TLS connection requests
@@ -18699,6 +18700,7 @@ Errors Server_run(ServerModes       mode,
         pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
         pollServerTLSSocketIndex = pollfdCount;
         pollfdCount++;
+//ServerIO_addWait(&clientNode->clientInfo.io,Network_getServerSocket(&serverTLSSocketHandle));
       }
 
       // get client connections
@@ -18734,6 +18736,7 @@ Errors Server_run(ServerModes       mode,
           pollfds[pollfdCount].fd     = Network_getSocket(&clientNode->clientInfo.io.network.socketHandle);
           pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
           pollfdCount++;
+//ServerIO_addWait(&clientNode->clientInfo.io,Network_getSocket(&clientNode->clientInfo.io.network.socketHandle));
         }
       }
     }
@@ -18870,7 +18873,6 @@ Errors Server_run(ServerModes       mode,
               {
                 // process all commands
                 while (ServerIO_getCommand(&clientNode->clientInfo.io,
-                                           NO_WAIT,
                                            &id,
                                            name,
                                            argumentMap
@@ -19258,7 +19260,6 @@ Errors Server_batch(int inputDescriptor,
   while (!quitFlag && !File_eof(&inputFileHandle))
   {
     if (ServerIO_getCommand(&clientInfo.io,
-                            10L*MS_PER_SECOND,
                             &id,
                             name,
                             argumentMap

@@ -83,10 +83,21 @@ typedef struct
   SessionId        sessionId;
   CryptKey         publicKey,privateKey;
 
-  // output buffer/input line
+  // poll handles
+  struct pollfd    *pollfds;
+  uint             pollfdCount;
+  uint             maxPollfdCount;
+
+  // input/output buffer
+  char             inputBuffer[4096];
+  uint             inputBufferIndex;
+  uint             inputBufferLength;
   char             *outputBuffer;
   uint             outputBufferSize;
+
+  // current input line
   String           line;
+  bool             lineFlag;                    // TRUE iff line complete
 
   // connection
   enum
@@ -117,8 +128,7 @@ typedef struct
   // command
   uint             commandId;
 
-  // commands/results list
-  ServerIOCommandList commandList;
+  // results list
   ServerIOResultList  resultList;
 } ServerIO;
 
@@ -274,6 +284,14 @@ bool ServerIO_checkPassword(const ServerIO *serverIO,
 
 // ----------------------------------------------------------------------
 
+void ServerIO_clearWait(ServerIO *serverIO);
+
+void ServerIO_addWait(ServerIO *serverIO,
+                           int      handle
+                          );
+
+void ServerIO_wait(ServerIO *serverIO);
+
 /***********************************************************************\
 * Name   : ServerIO_receiveData
 * Purpose: process data
@@ -284,6 +302,23 @@ bool ServerIO_checkPassword(const ServerIO *serverIO,
 \***********************************************************************/
 
 bool ServerIO_receiveData(ServerIO *serverIO);
+
+/***********************************************************************\
+* Name   : ServerIO_getCommand
+* Purpose: get command
+* Input  : serverIO - server i/o
+* Output : id        - command id
+*          name      - command name
+*          arguments - command arguments (can be NULL)
+* Return : TRUE iff command received
+* Notes  : -
+\***********************************************************************/
+
+bool ServerIO_getCommand(ServerIO  *serverIO,
+                         uint      *id,
+                         String    name,
+                         StringMap argumentMap
+                        );
 
 // ----------------------------------------------------------------------
 
@@ -320,25 +355,6 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
                             const char *format,
                             ...
                            );
-
-/***********************************************************************\
-* Name   : ServerIO_getCommand
-* Purpose: get command
-* Input  : serverIO - server i/o
-* Output : id        - command id
-*          timeout   - timeout [ms] or NO_WAIT, WAIT_FOREVER
-*          name      - command name
-*          arguments - command arguments (can be NULL)
-* Return : TRUE iff command received
-* Notes  : -
-\***********************************************************************/
-
-bool ServerIO_getCommand(ServerIO  *serverIO,
-                         long      timeout,
-                         uint      *id,
-                         String    name,
-                         StringMap argumentMap
-                        );
 
 // ----------------------------------------------------------------------
 

@@ -343,7 +343,7 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 
-fprintf(stderr,"%s, %d: wait for %d\n",__FILE__,__LINE__,id);
+fprintf(stderr,"%s, %d: wait for id=%d (%llu)\n",__FILE__,__LINE__,id,Misc_getTimestamp());
   error = ServerIO_waitResult(storageHandle->storageInfo->master.io,
                               5LL*MS_PER_SECOND,
                               id,
@@ -353,7 +353,7 @@ fprintf(stderr,"%s, %d: wait for %d\n",__FILE__,__LINE__,id);
                              );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: EEE %d: %s\n",__FILE__,__LINE__,id,Error_getText(error));
+fprintf(stderr,"%s, %d: EEE id=%d (%llu): %s\n",__FILE__,__LINE__,id,Misc_getTimestamp(),Error_getText(error));
     StringMap_delete(resultMap);
     return error;
   }
@@ -499,15 +499,14 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
     Misc_base64Encode(encodedData,p,n);
 
     // send data
-  fprintf(stderr,"%s, %d: xxxxx\n",__FILE__,__LINE__);
     error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
                                     30LL*MS_PER_SECOND,
                                     NULL,  // resultMap
                                     "STORAGE_WRITE offset=%llu data=%s",
                                     123LL+(uint64)writtenBytes,
 //TODO
-//                                    String_cString(encodedData)
-"XXXX"
+                                    String_cString(encodedData)
+//"XXXX"
                                    );
     if (error != ERROR_NONE)
     {

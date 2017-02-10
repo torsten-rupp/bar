@@ -224,121 +224,51 @@ LOCAL void disconnect(ServerIO *serverIO)
 }
 
 /***********************************************************************\
-* Name   : processData
-* Purpose: process received data line
+* Name   : fillLine
+* Purpose: fill-in line from input buffer
 * Input  : serverIO - server i/o
-*          line     - data line
+* Output : -
+* Return : TRUE iff line available
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool fillLine(ServerIO *serverIO)
+{
+  char ch;
+
+  assert(serverIO != NULL);
+
+  while (   !serverIO->lineFlag
+         && (serverIO->inputBufferIndex < serverIO->inputBufferLength)
+        )
+  {
+    ch = serverIO->inputBuffer[serverIO->inputBufferIndex]; serverIO->inputBufferIndex++;
+    if (ch != '\n')
+    {
+      String_appendChar(serverIO->line,ch);
+    }
+    else
+    {
+      serverIO->lineFlag = TRUE;
+    }
+  }
+
+  return serverIO->lineFlag;
+}
+
+/***********************************************************************\
+* Name   : doneLine
+* Purpose: done line
+* Input  : serverIO - server i/o
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void processData(ServerIO *serverIO, ConstString line)
+LOCAL bool doneLine(ServerIO *serverIO)
 {
-  uint                 id;
-  bool                 completedFlag;
-  Errors               error;
-  String               name;
-  String               data;
-  ServerIOResultNode   *resultNode;
-  ServerIOCommandNode  *commandNode;
-  SemaphoreLock        semaphoreLock;
-
-  assert(serverIO != NULL);
-  assert(line != NULL);
-
-  // init variables
-  name = String_new();
-  data = String_new();
-
-  // parse
-  if      (String_parse(line,STRING_BEGIN,"%u %y %u % S",NULL,&id,&completedFlag,&error,data))
-  {
-    // result
-    #ifndef NDEBUG
-      if (globalOptions.serverDebugFlag)
-      {
-        fprintf(stderr,"DEBUG: receive result #%u completed=%d error=%d: %s\n",id,completedFlag,error,String_cString(data));
-      }
-    #endif /* not DEBUG */
-
-    // init result
-    resultNode = LIST_NEW_NODE(ServerIOResultNode);
-    if (resultNode == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    resultNode->id            = id;
-    resultNode->error         = (error != ERROR_NONE) ? Errorx_(error,0,"%s",String_cString(data)) : ERROR_NONE;
-    resultNode->completedFlag = completedFlag;
-    resultNode->data          = String_duplicate(data);
-
-    // add result
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-      List_append(&serverIO->resultList,resultNode);
-//fprintf(stderr,"%s, %d: appended result: %d %d %d %s\n",__FILE__,__LINE__,resultNode->id,resultNode->error,resultNode->completedFlag,String_cString(resultNode->data));
-    }
-  }
-  else if (String_parse(line,STRING_BEGIN,"%u %S % S",NULL,&id,name,data))
-  {
-    // command
-    #ifndef NDEBUG
-      if (globalOptions.serverDebugFlag)
-      {
-        fprintf(stderr,"DEBUG: receive command #%u name=%s: %s\n",id,String_cString(name),String_cString(data));
-      }
-    #endif /* not DEBUG */
-
-    // init command
-    commandNode = LIST_NEW_NODE(ServerIOCommandNode);
-    if (commandNode == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    commandNode->id   = id;
-    commandNode->name = String_duplicate(name);
-    commandNode->data = String_duplicate(data);
-
-#if 0
-    // parse arguments
-    argumentMap = StringMap_new();
-    if (argumentMap == NULL)
-    {
-      String_delete(arguments);
-      String_delete(name);
-      return;
-    }
-    if (!StringMap_parse(argumentMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
-    {
-      StringMap_delete(argumentMap);
-      String_delete(name);
-      String_delete(name);
-      return;
-    }
-#endif
-
-    // add command
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-      List_append(&serverIO->commandList,commandNode);
-//fprintf(stderr,"%s, %d: appended command: %d %s %s\n",__FILE__,__LINE__,commandNode->id,String_cString(commandNode->name),String_cString(commandNode->data));
-    }
-  }
-  else
-  {
-    // unknown
-    #ifndef NDEBUG
-      if (globalOptions.serverDebugFlag)
-      {
-        fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(line));
-      }
-    #endif /* not DEBUG */
-  }
-
-  // free resources
-  String_delete(data);
-  String_delete(name);
+  String_clear(serverIO->line);
+  serverIO->lineFlag = FALSE;
 }
 
 /***********************************************************************\
@@ -659,18 +589,30 @@ void ServerIO_init(ServerIO *serverIO)
                                          CRYPT_PADDING_TYPE_PKCS1,
                                          CRYPT_KEY_MODE_TRANSIENT
                                         );
-  serverIO->outputBuffer     = (char*)malloc(BUFFER_SIZE);
+
+  serverIO->pollfds           = (struct pollfd*)malloc(64*sizeof(struct pollfd));
+  if (serverIO->pollfds == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  serverIO->pollfdCount       = 0;
+  serverIO->maxPollfdCount    = 64;
+
+  serverIO->inputBufferIndex  = 0;
+  serverIO->inputBufferLength = 0;
+  serverIO->outputBuffer      = (char*)malloc(BUFFER_SIZE);
   if (serverIO->outputBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  serverIO->outputBufferSize = BUFFER_SIZE;
-  serverIO->line             = String_new();
-  serverIO->type             = SERVER_IO_TYPE_NONE;
-  serverIO->isConnected      = FALSE;
-  serverIO->commandId        = 0;
-  Semaphore_init(&serverIO->commandList.lock);
-  List_init(&serverIO->commandList);
+  serverIO->outputBufferSize  = BUFFER_SIZE;
+
+  serverIO->line              = String_new();
+  serverIO->lineFlag          = FALSE;
+
+  serverIO->type              = SERVER_IO_TYPE_NONE;
+  serverIO->isConnected       = FALSE;
+  serverIO->commandId         = 0;
   Semaphore_init(&serverIO->resultList.lock);
   List_init(&serverIO->resultList);
 }
@@ -681,10 +623,9 @@ void ServerIO_done(ServerIO *serverIO)
 
   List_done(&serverIO->resultList,CALLBACK((ListNodeFreeFunction)freeResultNode,NULL));
   Semaphore_done(&serverIO->resultList.lock);
-  List_done(&serverIO->commandList,CALLBACK((ListNodeFreeFunction)freeCommandNode,NULL));
-  Semaphore_done(&serverIO->commandList.lock);
   String_delete(serverIO->line);
   free(serverIO->outputBuffer);
+  free(serverIO->pollfds);
   Crypt_doneKey(&serverIO->privateKey);
   Crypt_doneKey(&serverIO->publicKey);
   Semaphore_done(&serverIO->lock);
@@ -696,12 +637,14 @@ void ServerIO_connectBatch(ServerIO   *serverIO,
 {
   assert(serverIO != NULL);
 
-  serverIO->type            = SERVER_IO_TYPE_BATCH;
-  serverIO->file.fileHandle = fileHandle;
-  serverIO->isConnected          = TRUE;
+  serverIO->type              = SERVER_IO_TYPE_BATCH;
+  serverIO->file.fileHandle   = fileHandle;
+  serverIO->isConnected       = TRUE;
 
+  serverIO->inputBufferIndex  = 0;
+  serverIO->inputBufferLength = 0;
   String_clear(serverIO->line);
-  List_clear(&serverIO->commandList,CALLBACK((ListNodeFreeFunction)freeCommandNode,NULL));
+  serverIO->lineFlag          = FALSE;
   List_clear(&serverIO->resultList,CALLBACK((ListNodeFreeFunction)freeResultNode,NULL));
 }
 
@@ -720,8 +663,10 @@ void ServerIO_connectNetwork(ServerIO     *serverIO,
   serverIO->network.socketHandle = socketHandle;
   serverIO->isConnected          = TRUE;
 
+  serverIO->inputBufferIndex     = 0;
+  serverIO->inputBufferLength    = 0;
   String_clear(serverIO->line);
-  List_clear(&serverIO->commandList,CALLBACK((ListNodeFreeFunction)freeCommandNode,NULL));
+  serverIO->lineFlag             = FALSE;
   List_clear(&serverIO->resultList,CALLBACK((ListNodeFreeFunction)freeResultNode,NULL));
 }
 
@@ -925,40 +870,80 @@ bool ServerIO_checkPassword(const ServerIO *serverIO,
 
 // ----------------------------------------------------------------------
 
+//TODO
+void ServerIO_clearWait(ServerIO *serverIO)
+{
+  assert(serverIO != NULL);
+
+  serverIO->pollfdCount = 0;
+}
+
+void ServerIO_addWait(ServerIO *serverIO,
+                      int      handle
+                     )
+{
+  assert(serverIO != NULL);
+  assert(serverIO->pollfds != NULL);
+
+fprintf(stderr,"%s, %d: serverIO->pollfdCount=%d\n",__FILE__,__LINE__,serverIO->pollfdCount);
+  if (serverIO->pollfdCount >= serverIO->maxPollfdCount)
+  {
+    serverIO->maxPollfdCount += 64;
+    serverIO->pollfds = (struct pollfd*)realloc(serverIO->pollfds,serverIO->maxPollfdCount);
+    if (serverIO->pollfds == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+  }
+  serverIO->pollfds[serverIO->pollfdCount].fd     = handle;
+  serverIO->pollfds[serverIO->pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
+  serverIO->pollfdCount++;
+}
+
+void ServerIO_wait(ServerIO *serverIO)
+{
+  assert(serverIO != NULL);
+  assert(serverIO->pollfds != NULL);
+}
+
 bool ServerIO_receiveData(ServerIO *serverIO)
 {
-  char   buffer[4096];
+  uint   maxBytes;
   ulong  readBytes;
   ulong  i;
   Errors error;
 
   assert(serverIO != NULL);
+  assert(serverIO->inputBufferIndex <= serverIO->inputBufferLength);
+
+  // shift input buffer
+  if (serverIO->inputBufferIndex >= 0)
+  {
+    memCopy(&serverIO->inputBuffer[0],sizeof(serverIO->inputBuffer),
+            &serverIO->inputBuffer[serverIO->inputBufferIndex],serverIO->inputBufferLength-serverIO->inputBufferIndex
+           );
+    serverIO->inputBufferLength -= serverIO->inputBufferIndex;
+    serverIO->inputBufferIndex = 0;
+  }
+
+  // get max. number of bytes to receive
+  maxBytes = sizeof(serverIO->inputBuffer)-serverIO->inputBufferLength;
 
   switch (serverIO->type)
   {
     case SERVER_IO_TYPE_NONE:
       break;
     case SERVER_IO_TYPE_BATCH:
-      (void)File_read(&serverIO->file.fileHandle,buffer,sizeof(buffer),&readBytes);
+      (void)File_read(&serverIO->file.fileHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,&readBytes);
 //fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,buffer);
       if (readBytes > 0)
       {
         do
         {
-          // received data -> process
-          for (i = 0; i < readBytes; i++)
-          {
-            if (buffer[i] != '\n')
-            {
-              String_appendChar(serverIO->line,buffer[i]);
-            }
-            else
-            {
-              processData(serverIO,serverIO->line);
-              String_clear(serverIO->line);
-            }
-          }
-          error = File_read(&serverIO->file.fileHandle,buffer,sizeof(buffer),&readBytes);
+          serverIO->inputBufferLength += (uint)readBytes;
+
+          maxBytes = sizeof(serverIO->inputBuffer)-serverIO->inputBufferLength;
+          error = File_read(&serverIO->file.fileHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,&readBytes);
         }
         while ((error == ERROR_NONE) && (readBytes > 0));
       }
@@ -971,28 +956,17 @@ fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
       }
       break;
     case SERVER_IO_TYPE_NETWORK:
-      (void)Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&readBytes);
+      (void)Network_receive(&serverIO->network.socketHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,NO_WAIT,&readBytes);
 //buffer[readBytes]=0;
 //fprintf(stderr,"%s, %d: rec socket %d: bytes %d: %s\n",__FILE__,__LINE__,Network_getSocket(&serverIO->network.socketHandle),readBytes,buffer);
       if (readBytes > 0)
       {
         do
         {
-          // received data -> process
-          for (i = 0; i < readBytes; i++)
-          {
-            if (buffer[i] != '\n')
-            {
-              String_appendChar(serverIO->line,buffer[i]);
-            }
-            else
-            {
-//fprintf(stderr,"%s, %d: process %s\n",__FILE__,__LINE__,String_cString(serverIO->line));
-              processData(serverIO,serverIO->line);
-              String_clear(serverIO->line);
-            }
-          }
-          error = Network_receive(&serverIO->network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&readBytes);
+          serverIO->inputBufferLength += (uint)readBytes;
+
+          maxBytes = sizeof(serverIO->inputBuffer)-serverIO->inputBufferLength;
+          error = Network_receive(&serverIO->network.socketHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,NO_WAIT,&readBytes);
         }
         while ((error == ERROR_NONE) && (readBytes > 0));
       }
@@ -1007,6 +981,107 @@ fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
   }
 
   return TRUE;
+}
+
+bool ServerIO_getCommand(ServerIO  *serverIO,
+                         uint      *id,
+                         String    name,
+                         StringMap argumentMap
+                        )
+{
+  bool commandFlag;
+  uint               resultId;
+  bool               completedFlag;
+  uint               errorCode;
+  String             data;
+  ServerIOResultNode *resultNode;
+  SemaphoreLock      semaphoreLock;
+
+  assert(serverIO != NULL);
+  assert(id != NULL);
+  assert(name != NULL);
+
+  // init variables
+  data = String_new();
+
+  commandFlag = FALSE;
+  while (   !commandFlag
+         && fillLine(serverIO)
+        )
+  {
+    // parse
+    if      (String_parse(serverIO->line,STRING_BEGIN,"%u %y %u % S",NULL,&resultId,&completedFlag,&errorCode,data))
+    {
+      // result
+      #ifndef NDEBUG
+        if (globalOptions.serverDebugFlag)
+        {
+          fprintf(stderr,"DEBUG: receive result #%u completed=%d error=%d: %s\n",resultId,completedFlag,errorCode,String_cString(data));
+        }
+      #endif /* not DEBUG */
+
+      // init result
+      resultNode = LIST_NEW_NODE(ServerIOResultNode);
+      if (resultNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      resultNode->id            = resultId;
+      resultNode->error         = (errorCode != 0) ? Errorx_(errorCode,0,"%s",String_cString(data)) : ERROR_NONE;
+      resultNode->completedFlag = completedFlag;
+      resultNode->data          = String_duplicate(data);
+
+//TODO: parse arguments?
+
+      // add result
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        List_append(&serverIO->resultList,resultNode);
+//fprintf(stderr,"%s, %d: appended result: %d %d %d %s\n",__FILE__,__LINE__,resultNode->id,resultNode->error,resultNode->completedFlag,String_cString(resultNode->data));
+      }
+    }
+    else if (String_parse(serverIO->line,STRING_BEGIN,"%u %S % S",NULL,id,name,data))
+    {
+      // command
+      #ifndef NDEBUG
+        if (globalOptions.serverDebugFlag)
+        {
+          fprintf(stderr,"DEBUG: receive command #%u name=%s: %s\n",*id,String_cString(name),String_cString(data));
+        }
+      #endif /* not DEBUG */
+
+      // parse arguments
+      if (argumentMap != NULL)
+      {
+//fprintf(stderr,"%s, %d: parse %s\n",__FILE__,__LINE__,String_cString(commandNode->data));
+        commandFlag = StringMap_parse(argumentMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL);
+      }
+      else
+      {
+        commandFlag = TRUE;
+      }
+    }
+    else
+    {
+      // unknown
+      #ifndef NDEBUG
+        if (globalOptions.serverDebugFlag)
+        {
+          fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
+        }
+      #endif /* not DEBUG */
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+exit(1);
+    }
+
+    // done line
+    doneLine(serverIO);
+  }
+
+  // free resources
+  String_delete(data);
+
+  return commandFlag;
 }
 
 Errors ServerIO_vsendCommand(ServerIO   *serverIO,
@@ -1067,73 +1142,6 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
   return error;
 }
 
-bool ServerIO_getCommand(ServerIO  *serverIO,
-                         long      timeout,
-                         uint      *id,
-                         String    name,
-                         StringMap argumentMap
-                        )
-{
-  SemaphoreLock       semaphoreLock;
-  ServerIOCommandNode *commandNode;
-
-  assert(serverIO != NULL);
-  assert(id != NULL);
-  assert(name != NULL);
-
-  // receive any available data
-//  (void)receiveData(serverIO);
-
-  // get next command node (if any)
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    if (timeout != NO_WAIT)
-    {
-      // wait for command
-      while (List_isEmpty(&serverIO->commandList))
-      {
-        // no command -> wait for data
-        Semaphore_unlock(&serverIO->commandList.lock);
-        {
-//          if (!waitData(serverIO,timeout))
-          {
-            return FALSE;
-          }
-        }
-        Semaphore_lock(&serverIO->commandList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-      }
-    }
-
-    // get command node
-    commandNode = (ServerIOCommandNode*)List_removeFirst(&serverIO->commandList);
-  }
-  if (commandNode == NULL)
-  {
-    return FALSE;
-  }
-
-  // get command
-  (*id) = commandNode->id;
-  String_set(name,commandNode->name);
-  if (argumentMap != NULL)
-  {
-//TODO: move to processData()
-//fprintf(stderr,"%s, %d: parse %s\n",__FILE__,__LINE__,String_cString(commandNode->data));
-    if (!StringMap_parse(argumentMap,commandNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
-    {
-//TODO: move to processData()
-//sendData(serverIO,"%d 1 %d",commandNode->id,ERROR_PARSE);
-      deleteCommandNode(commandNode);
-      return FALSE;
-    }
-  }
-
-  // free resources
-  deleteCommandNode(commandNode);
-
-  return TRUE;
-}
-
 Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
                                 long       timeout,
                                 StringMap  resultMap,
@@ -1173,35 +1181,7 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
     return error;
   }
 
-#if 0
-  // wait for result, timeout, or quit
-  while ((serverIO->action.error == ERROR_UNKNOWN) && !serverIO->quitFlag)
-  {
-    if (!Semaphore_waitModified(&serverIO->action.lock,timeout))
-    {
-      Semaphore_unlock(&serverIO->action.lock);
-      return ERROR_NETWORK_TIMEOUT;
-    }
-  }
-  if (serverIO->quitFlag)
-  {
-    Semaphore_unlock(&serverIO->action.lock);
-    return ERROR_ABORTED;
-  }
-
-  // get action result
-  error = serverIO->action.error;
-  if (resultMap != NULL)
-  {
-    StringMap_move(resultMap,serverIO->action.resultMap);
-  }
-  else
-  {
-    StringMap_clear(serverIO->action.resultMap);
-  }
-#endif
-
-  return error;
+  return ERROR_NONE;
 }
 
 Errors ServerIO_executeCommand(ServerIO   *serverIO,
