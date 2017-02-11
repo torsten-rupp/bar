@@ -880,6 +880,8 @@ String String_fillChar(String string, ulong length, char ch);
 * Notes  : additional format characters
 *           %S   String
 *           %cS  String with quoting char c
+*           %b   binary value
+*           %y   bool value
 \***********************************************************************/
 
 String String_format(String string, const char *format, ...);
