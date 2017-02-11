@@ -194,14 +194,14 @@ LOCAL Errors StorageMaster_preProcess(StorageInfo *storageInfo,
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
-  assert(!String_isEmpty(archiveName));
 
   // init variables
   resultMap = StringMap_new();
 
   error = ServerIO_sendCommand(storageInfo->master.io,
                                &id,
-                               "PREPROCESS archiveName=%S time=%llu initialFlag=%b",
+                               "PREPROCESS archiveName=%S time=%llu initialFlag=%y",
+//TODO: if empty/NULL?
                                archiveName,
                                time,
                                initialFlag
@@ -245,14 +245,14 @@ LOCAL Errors StorageMaster_postProcess(StorageInfo *storageInfo,
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
-  assert(!String_isEmpty(archiveName));
 
   // init variables
   resultMap = StringMap_new();
 
   error = ServerIO_sendCommand(storageInfo->master.io,
                                &id,
-                               "POSTPROCESS archiveName=%S time=%llu finalFlag=%b",
+                               "POSTPROCESS archiveName=%S time=%llu finalFlag=%y",
+//TODO: if empty/NULL?
                                archiveName,
                                time,
                                finalFlag
