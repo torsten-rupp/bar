@@ -6627,6 +6627,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    String_delete(encryptType);
     return;
   }
   encryptedPassword = String_new();
@@ -6831,6 +6832,7 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, IndexHandle *indexHandle, u
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
 
@@ -6880,6 +6882,7 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
 
@@ -7748,6 +7751,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
   if (!StringMap_getString(argumentMap,"modeMask",modeMask,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE|ALL");
+    String_delete(modeMask);
     return;
   }
 
@@ -8134,6 +8138,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
 
@@ -8287,6 +8292,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
   if (!StringMap_getString(argumentMap,"directory",directory,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected directory=<name>");
+    String_delete(directory);
     return;
   }
 
@@ -8467,6 +8473,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
   attribute = String_new();
@@ -8549,6 +8556,7 @@ LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *i
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
   attribute = String_new();
@@ -8664,6 +8672,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
   attribute = String_new();
@@ -8919,6 +8928,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
 
@@ -8999,12 +9009,14 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
   value = String_new();
   if (!StringMap_getString(argumentMap,"value",value,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected value=<value>");
+    String_delete(value);
     String_delete(name);
     return;
   }
@@ -9088,6 +9100,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
 
@@ -12191,6 +12204,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
 
@@ -12298,12 +12312,14 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
   value = String_new();
   if (!StringMap_getString(argumentMap,"value",value,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected value=<value>");
+    String_delete(value);
     String_delete(name);
     return;
   }
@@ -12406,6 +12422,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<name>");
+    String_delete(name);
     return;
   }
 
@@ -12606,6 +12623,7 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
   if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    String_delete(encryptType);
     return;
   }
   encryptedPassword = String_new();
@@ -12670,6 +12688,7 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
   if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    String_delete(encryptType);
     return;
   }
   encryptedPassword = String_new();
@@ -12733,6 +12752,7 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
   if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    String_delete(encryptType);
     return;
   }
   encryptedPassword = String_new();
@@ -12796,6 +12816,7 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
   if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    String_delete(encryptType);
     return;
   }
   encryptedPassword = String_new();
@@ -12867,6 +12888,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
   if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    String_delete(encryptType);
     return;
   }
   encryptedPassword = String_new();
@@ -13122,6 +13144,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   if (!StringMap_getString(argumentMap,"name",storageName,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name=<storage name>");
+    String_delete(storageName);
     return;
   }
 
@@ -14388,6 +14411,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     encryptType = String_new();
     if (!StringMap_getString(resultMap,"encryptType",encryptType,NULL))
     {
+      String_delete(encryptType);
       StringMap_delete(resultMap);
       return ERROR_EXPECTED_PARAMETER;
     }
@@ -14395,12 +14419,14 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     if (!StringMap_getString(resultMap,"encryptedPassword",encryptedPassword,NULL))
     {
       String_delete(encryptedPassword);
+      String_delete(encryptType);
       StringMap_delete(resultMap);
       return ERROR_EXPECTED_PARAMETER;
     }
     if (!ServerIO_decryptPassword(password,&clientInfo->io,encryptType,encryptedPassword))
     {
       String_delete(encryptedPassword);
+      String_delete(encryptType);
       StringMap_delete(resultMap);
       return ERROR_INVALID_PASSWORD;
     }
@@ -18033,104 +18059,6 @@ LOCAL void deleteAuthorizationFailNode(AuthorizationFailNode *authorizationFailN
 
 // ----------------------------------------------------------------------
 
-//TODO
-#if 0
-/***********************************************************************\
-* Name   : processCommand
-* Purpose: process client command
-* Input  : clientInfo  - client info
-*          commandLine - command line to process
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void processCommand(ClientInfo *clientInfo, ConstString commandLine)
-{
-  Command command;
-
-  assert(clientInfo != NULL);
-
-  #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
-    {
-      fprintf(stderr,"DEBUG: process command '%s'\n",String_cString(commandLine));
-    }
-  #endif /* not NDEBUG */
-
-  // parse command
-  if (!parseCommand(&command,commandLine))
-  {
-    ServerIO_sendResult(&clientInfo->io,command.id,TRUE,ERROR_PARSING,"parse error '%S'",commandLine);
-    return;
-  }
-
-  switch (clientInfo->io.type)
-  {
-    case SERVER_IO_TYPE_BATCH:
-      // check authorization (if not in server debug mode)
-      if (globalOptions.serverDebugFlag || (command.authorizationState == clientInfo->authorizationState))
-      {
-        // execute
-        command.serverCommandFunction(clientInfo,
-                                      indexHandle,
-                                      command.id,
-                                      command.argumentMap
-                                     );
-      }
-      else
-      {
-        // authorization failure -> mark for disconnect
-        clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
-        ServerIO_sendResult(&clientInfo->io,command.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
-      }
-
-      // free resources
-      freeCommand(&command,NULL);
-      break;
-    case SERVER_IO_TYPE_NETWORK:
-      switch (clientInfo->authorizationState)
-      {
-        case AUTHORIZATION_STATE_WAITING:
-          // check authorization (if not in server debug mode)
-          if (globalOptions.serverDebugFlag || (command.authorizationState == AUTHORIZATION_STATE_WAITING))
-          {
-            // execute command
-            command.serverCommandFunction(clientInfo,
-                                          indexHandle,
-                                          command.id,
-                                          command.argumentMap
-                                         );
-          }
-          else
-          {
-            // authorization failure -> mark for disconnect
-            clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
-            ServerIO_sendResult(&clientInfo->io,command.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
-          }
-
-          // free resources
-          freeCommand(&command,NULL);
-          break;
-        case AUTHORIZATION_STATE_OK:
-          // send command to client thread for asynchronous processing
-          (void)MsgQueue_put(&clientInfo->commandQueue,&command,sizeof(Command));
-          break;
-        case AUTHORIZATION_STATE_FAIL:
-          break;
-      }
-      break;
-    default:
-      // free resources
-      freeCommand(&command,NULL);
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break;
-  }
-}
-#endif
-
 /***********************************************************************\
 * Name   : processCommand
 * Purpose: process client command
@@ -18213,50 +18141,6 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
       break;
   }
 }
-
-//TODO
-#if 0
-/***********************************************************************\
-* Name   : processSlaveCommand
-* Purpose: process slave command
-* Input  : clientInfo  - client info
-*          commandLine - command line to process
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void processSlaveCommand(ClientInfo *clientInfo, ConstString commandLine)
-{
-  Command command;
-
-  assert(clientInfo != NULL);
-
-  #ifndef NDEBUG
-    if (globalOptions.serverDebugFlag)
-    {
-      fprintf(stderr,"DEBUG: process slave command=%s\n",String_cString(commandLine));
-    }
-  #endif /* not NDEBUG */
-
-  // parse command
-  if (!parseCommand(&command,commandLine))
-  {
-    ServerIO_sendResult(&clientInfo->io,command.id,TRUE,ERROR_PARSING,"parse error '%S'",commandLine);
-    return;
-  }
-
-  // execute command
-  command.serverCommandFunction(clientInfo,
-                                indexHandle,
-                                command.id,
-                                command.argumentMap
-                               );
-
-  // free resources
-  freeCommand(&command,NULL);
-}
-#endif
 
 /*---------------------------------------------------------------------*/
 
