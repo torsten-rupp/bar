@@ -188,56 +188,49 @@ LOCAL Errors StorageMaster_preProcess(StorageInfo *storageInfo,
                                       bool        initialFlag
                                      )
 {
-  TextMacro textMacros[2];
-  String    script;
   Errors    error;
+  uint      id;
+  StringMap resultMap;
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(!String_isEmpty(archiveName));
 
-  error = ERROR_NONE;
+  // init variables
+  resultMap = StringMap_new();
 
-  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+  error = ServerIO_sendCommand(storageInfo->master.io,
+                               &id,
+                               "PREPROCESS archiveName=%S time=%llu initialFlag=%b",
+                               archiveName,
+                               time,
+                               initialFlag
+                              );
+  if (error != ERROR_NONE)
   {
-    if (!initialFlag)
-    {
-      // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
-      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
-
-      if (globalOptions.file.writePreProcessCommand != NULL)
-      {
-        // write pre-processing
-        printInfo(1,"Write pre-processing...");
-
-        // get script
-        script = expandTemplate(String_cString(globalOptions.file.writePreProcessCommand),
-                                EXPAND_MACRO_MODE_STRING,
-                                time,
-                                initialFlag,
-                                textMacros,
-                                SIZE_OF_ARRAY(textMacros)
-                               );
-        if (script != NULL)
-        {
-          // execute script
-          error = Misc_executeScript(String_cString(script),
-                                     CALLBACK(executeIOOutput,NULL),
-                                     CALLBACK(executeIOOutput,NULL)
-                                    );
-          String_delete(script);
-        }
-        else
-        {
-          error = ERROR_EXPAND_TEMPLATE;
-        }
-
-        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-      }
-    }
+fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
+    StringMap_delete(resultMap);
+    return error;
   }
 
-  return error;
+  error = ServerIO_waitResult(storageInfo->master.io,
+                              5LL*MS_PER_SECOND,
+                              id,
+                              NULL,  // error
+                              NULL,  // completedFlag
+                              resultMap
+                             );
+  if (error != ERROR_NONE)
+  {
+fprintf(stderr,"%s, %d: EEE id=%d (%llu): %s\n",__FILE__,__LINE__,id,Misc_getTimestamp(),Error_getText(error));
+    StringMap_delete(resultMap);
+    return error;
+  }
+
+  // free resources
+  StringMap_delete(resultMap);
+
+  return ERROR_NONE;
 }
 
 LOCAL Errors StorageMaster_postProcess(StorageInfo *storageInfo,
@@ -246,56 +239,49 @@ LOCAL Errors StorageMaster_postProcess(StorageInfo *storageInfo,
                                        bool        finalFlag
                                       )
 {
-  TextMacro textMacros[2];
-  String    script;
   Errors    error;
+  uint      id;
+  StringMap resultMap;
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(!String_isEmpty(archiveName));
 
-  error = ERROR_NONE;
+  // init variables
+  resultMap = StringMap_new();
 
-  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
+  error = ServerIO_sendCommand(storageInfo->master.io,
+                               &id,
+                               "POSTPROCESS archiveName=%S time=%llu finalFlag=%b",
+                               archiveName,
+                               time,
+                               finalFlag
+                              );
+  if (error != ERROR_NONE)
   {
-    if (!finalFlag)
-    {
-      // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,              NULL);
-      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
-
-      if (globalOptions.file.writePostProcessCommand != NULL)
-      {
-        // write post-process
-        printInfo(1,"Write post-processing...");
-
-        // get script
-        script = expandTemplate(String_cString(globalOptions.file.writePostProcessCommand),
-                                EXPAND_MACRO_MODE_STRING,
-                                time,
-                                finalFlag,
-                                textMacros,
-                                SIZE_OF_ARRAY(textMacros)
-                               );
-        if (script != NULL)
-        {
-          // execute script
-          error = Misc_executeScript(String_cString(script),
-                                     CALLBACK(executeIOOutput,NULL),
-                                     CALLBACK(executeIOOutput,NULL)
-                                    );
-          String_delete(script);
-        }
-        else
-        {
-          error = ERROR_EXPAND_TEMPLATE;
-        }
-
-        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-      }
-    }
+fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
+    StringMap_delete(resultMap);
+    return error;
   }
 
-  return error;
+  error = ServerIO_waitResult(storageInfo->master.io,
+                              5LL*MS_PER_SECOND,
+                              id,
+                              NULL,  // error
+                              NULL,  // completedFlag
+                              resultMap
+                             );
+  if (error != ERROR_NONE)
+  {
+fprintf(stderr,"%s, %d: EEE id=%d (%llu): %s\n",__FILE__,__LINE__,id,Misc_getTimestamp(),Error_getText(error));
+    StringMap_delete(resultMap);
+    return error;
+  }
+
+  // free resources
+  StringMap_delete(resultMap);
+
+  return ERROR_NONE;
 }
 
 LOCAL bool StorageMaster_exists(StorageInfo *storageInfo, ConstString fileName)
@@ -305,7 +291,8 @@ LOCAL bool StorageMaster_exists(StorageInfo *storageInfo, ConstString fileName)
 
   UNUSED_VARIABLE(storageInfo);
 
-  return File_exists(fileName);
+//TODO
+return TRUE;
 }
 
 LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
@@ -313,10 +300,8 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
                                   uint64        fileSize
                                  )
 {
-  Errors error;
-  String directoryName;
-ServerIOResultList serverResultList;
-  uint id;
+  Errors    error;
+  uint      id;
   StringMap resultMap;
 
   assert(storageHandle != NULL);
@@ -329,7 +314,6 @@ ServerIOResultList serverResultList;
   // init variables
   resultMap = StringMap_new();
 
-fprintf(stderr,"%s, %d: StorageMaster_create\n",__FILE__,__LINE__);
   error = ServerIO_sendCommand(storageHandle->storageInfo->master.io,
                                &id,
                                "STORAGE_CREATE archiveName=%S archiveSize=%llu",
@@ -343,7 +327,6 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 
-fprintf(stderr,"%s, %d: wait for id=%d (%llu)\n",__FILE__,__LINE__,id,Misc_getTimestamp());
   error = ServerIO_waitResult(storageHandle->storageInfo->master.io,
                               5LL*MS_PER_SECOND,
                               id,
@@ -357,7 +340,6 @@ fprintf(stderr,"%s, %d: EEE id=%d (%llu): %s\n",__FILE__,__LINE__,id,Misc_getTim
     StringMap_delete(resultMap);
     return error;
   }
-fprintf(stderr,"%s, %d: wait done\n",__FILE__,__LINE__);
 
   // free resources
   StringMap_delete(resultMap);
@@ -381,26 +363,7 @@ LOCAL Errors StorageMaster_open(StorageHandle *storageHandle,
   // init variables
   storageHandle->mode = STORAGE_MODE_READ;
 
-  // check if file exists
-  if (!File_exists(fileName))
-  {
-    return ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(fileName));
-  }
-
-  // open file
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  error = File_open(&storageHandle->fileSystem.fileHandle,
-                    fileName,
-                    FILE_OPEN_READ
-                   );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->master,sizeof(storageHandle->master));
-
-  return ERROR_NONE;
+return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL void StorageMaster_close(StorageHandle *storageHandle)
@@ -412,10 +375,8 @@ LOCAL void StorageMaster_close(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
-fprintf(stderr,"%s, %d: StorageMaster_close\n",__FILE__,__LINE__);
   DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->master,sizeof(storageHandle->master));
 
-fprintf(stderr,"%s, %d: StorageMaster_create\n",__FILE__,__LINE__);
   error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
                                   30LL*MS_PER_SECOND,
                                   NULL,  // resultMap
@@ -423,6 +384,7 @@ fprintf(stderr,"%s, %d: StorageMaster_create\n",__FILE__,__LINE__);
                                  );
   if (error != ERROR_NONE)
   {
+//TODO
 fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
   }
 }
@@ -435,14 +397,8 @@ LOCAL bool StorageMaster_eof(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    return File_eof(&storageHandle->fileSystem.fileHandle);
-  }
-  else
-  {
-    return TRUE;
-  }
+//TODO
+return TRUE;
 }
 
 LOCAL Errors StorageMaster_read(StorageHandle *storageHandle,
@@ -460,13 +416,7 @@ LOCAL Errors StorageMaster_read(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
   assert(buffer != NULL);
 
-  error = ERROR_NONE;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    error = File_read(&storageHandle->fileSystem.fileHandle,buffer,bufferSize,bytesRead);
-  }
-
-  return error;
+return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
@@ -503,10 +453,9 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
                                     30LL*MS_PER_SECOND,
                                     NULL,  // resultMap
                                     "STORAGE_WRITE offset=%llu data=%s",
-                                    123LL+(uint64)writtenBytes,
 //TODO
+                                    123LL+(uint64)writtenBytes,
                                     String_cString(encodedData)
-//"XXXX"
                                    );
     if (error != ERROR_NONE)
     {
@@ -540,13 +489,7 @@ LOCAL Errors StorageMaster_tell(StorageHandle *storageHandle,
 
   (*offset) = 0LL;
 
-  error = ERROR_NONE;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    error = File_tell(&storageHandle->fileSystem.fileHandle,offset);
-  }
-
-  return error;
+return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL Errors StorageMaster_seek(StorageHandle *storageHandle,
@@ -560,13 +503,7 @@ LOCAL Errors StorageMaster_seek(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
-  error = ERROR_NONE;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    error = File_seek(&storageHandle->fileSystem.fileHandle,offset);
-  }
-
-  return error;
+return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL uint64 StorageMaster_getSize(StorageHandle *storageHandle)
@@ -578,13 +515,8 @@ LOCAL uint64 StorageMaster_getSize(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
-  size = 0LL;
-  if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
-  {
-    size = File_getSize(&storageHandle->fileSystem.fileHandle);
-  }
-
-  return size;
+//TODO
+return 0;
 }
 
 LOCAL Errors StorageMaster_delete(StorageInfo *storageInfo,
@@ -597,13 +529,7 @@ LOCAL Errors StorageMaster_delete(StorageInfo *storageInfo,
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
   assert(!String_isEmpty(fileName));
 
-  error = ERROR_NONE;
-  if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
-  {
-    error = File_delete(fileName,FALSE);
-  }
-
-  return error;
+return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 #if 0
@@ -649,16 +575,7 @@ LOCAL Errors StorageMaster_openDirectoryList(StorageDirectoryListHandle *storage
   // init variables
   storageDirectoryListHandle->type = STORAGE_TYPE_MASTER;
 
-  // open directory
-  error = File_openDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,
-                                 pathName
-                                );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  return ERROR_NONE;
+return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL void StorageMaster_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
@@ -666,7 +583,7 @@ LOCAL void StorageMaster_closeDirectoryList(StorageDirectoryListHandle *storageD
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_MASTER);
 
-  File_closeDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle);
+return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL bool StorageMaster_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
@@ -674,7 +591,7 @@ LOCAL bool StorageMaster_endOfDirectoryList(StorageDirectoryListHandle *storageD
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_MASTER);
 
-  return File_endOfDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle);
+return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL Errors StorageMaster_readDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
@@ -687,14 +604,7 @@ LOCAL Errors StorageMaster_readDirectoryList(StorageDirectoryListHandle *storage
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_MASTER);
 
-  error = File_readDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,fileName);
-  if (error == ERROR_NONE)
-  {
-    if (fileInfo != NULL)
-    {
-      (void)File_getFileInfo(fileName,fileInfo);
-    }
-  }
+return ERROR_STILL_NOT_IMPLEMENTED;
 
   return error;
 }

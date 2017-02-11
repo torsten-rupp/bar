@@ -1852,9 +1852,7 @@ Errors Storage_preProcess(StorageInfo *storageInfo,
       error = StorageDevice_preProcess(storageInfo,archiveName,time,initialFlag);
       break;
     case STORAGE_TYPE_MASTER:
-//TODO
-fprintf(stderr,"%s, %d: Storage_preProcess\n",__FILE__,__LINE__);
-error = ERROR_NONE;
+      error = StorageMaster_preProcess(storageInfo,archiveName,time,initialFlag);
       break;
     default:
       #ifndef NDEBUG
@@ -1908,9 +1906,7 @@ Errors Storage_postProcess(StorageInfo *storageInfo,
       error = StorageDevice_postProcess(storageInfo,archiveName,time,finalFlag);
       break;
     case STORAGE_TYPE_MASTER:
-//TODO
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-error = ERROR_NONE;
+      error = StorageMaster_postProcess(storageInfo,archiveName,time,finalFlag);
       break;
     default:
       #ifndef NDEBUG

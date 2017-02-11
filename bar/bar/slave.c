@@ -378,6 +378,52 @@ LOCAL Errors Slave_setJobOptionPassword(SlaveInfo *slaveInfo, ConstString jobUUI
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : slaveCommand_preProcess
+* Purpose: pre-process
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            archiveName=<name>
+*            time=<n>
+*            initialFlag=yes|no
+*          Result:
+\***********************************************************************/
+
+LOCAL void slaveCommand_preProcess(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_postProcess
+* Purpose: post-process
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            archiveName=<name>
+*            time=<n>
+*            finalFlag=yes|no
+*          Result:
+\***********************************************************************/
+
+LOCAL void slaveCommand_postProcess(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
 * Name   : slaveCommand_storageCreate
 * Purpose: create storage
 * Input  : slaveInfo   - slave info
@@ -580,6 +626,9 @@ const struct
 }
 SLAVE_COMMANDS[] =
 {
+  { "PREPROCESS",                     slaveCommand_preProcess     },
+  { "POSTPROCESS",                    slaveCommand_postProcess    },
+
   { "STORAGE_CREATE",                 slaveCommand_storageCreate  },
   { "STORAGE_WRITE",                  slaveCommand_storageWrite   },
   { "STORAGE_CLOSE",                  slaveCommand_storageClose   },
