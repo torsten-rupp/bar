@@ -193,6 +193,7 @@ typedef struct JobNode
   // modified info
   bool            modifiedFlag;                         // TRUE iff job config modified
   bool            scheduleModifiedFlag;
+//TODO: remove?
 //  uint64          lastIncludeExcludeModified;
 //  uint64          lastScheduleModified;
 
@@ -4343,6 +4344,8 @@ fprintf(stderr,"%s, %d: ------------------------------------------------ \n",__F
         jobNode->runningInfo.error = Slave_connect(&jobNode->slaveInfo,
                                                    slaveHostName,
                                                    slaveHostPort,
+                                                   jobNode->archiveName,
+                                                   &jobNode->jobOptions,
                                                    CALLBACK(updateConnectStatusInfo,NULL)
                                                   );
       }

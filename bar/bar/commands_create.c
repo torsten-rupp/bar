@@ -108,7 +108,6 @@ typedef struct
   bool                        partialFlag;                        // TRUE for create incremental/differential archive
   Dictionary                  namesDictionary;                    // dictionary with files (used for incremental/differental backup)
   bool                        storeIncrementalFileInfoFlag;       // TRUE to store incremental file data
-//  StorageInfo                 storageInfo;                        // storage info
   time_t                      startTime;                          // start time [ms] (unix time)
 
   MsgQueue                    entryMsgQueue;                      // queue with entries to store

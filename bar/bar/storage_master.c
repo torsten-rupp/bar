@@ -332,7 +332,7 @@ ServerIOResultList serverResultList;
 fprintf(stderr,"%s, %d: StorageMaster_create\n",__FILE__,__LINE__);
   error = ServerIO_sendCommand(storageHandle->storageInfo->master.io,
                                &id,
-                               "STORAGE_CREATE name=%S size=%llu",
+                               "STORAGE_CREATE archiveName=%S archiveSize=%llu",
                                fileName,
                                fileSize
                               );

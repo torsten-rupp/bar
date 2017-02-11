@@ -54,6 +54,10 @@ bool         forceSSL;                     // force SSL connection to slave hose
 
   ServerIO     io;
   Thread       thread;
+
+  StorageHandle storageHandle;
+  StorageInfo storageInfo;
+
 SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction;
 void                           *slaveConnectStatusInfoUserData;
 } SlaveInfo;
@@ -144,6 +148,8 @@ void Slave_done(SlaveInfo *slaveInfo);
 Errors Slave_connect(SlaveInfo                      *slaveInfo,
                      ConstString                    hostName,
                      uint                           hostPort,
+                     ConstString                    storageName,
+                     JobOptions                     *jobOptions,
                      SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction,
                      void                           *slaveConnectStatusInfoUserData
                     );

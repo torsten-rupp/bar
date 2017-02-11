@@ -40,6 +40,8 @@
 
 /****************** Conditional compilation switches *******************/
 
+#define SLAVE_DEBUG
+
 /***************************** Constants *******************************/
 #define SLEEP_TIME_SLAVE_THREAD (   10)  // [s]
 
@@ -47,6 +49,24 @@
 #define COMMAND_TIMEOUT         (10LL*MS_PER_SECOND)
 
 /***************************** Datatypes *******************************/
+
+/***********************************************************************\
+* Name   : SlaveCommandFunction
+* Purpose: slave command function
+* Input  : clientInfo  - client info
+*          indexHandle - index handle or NULL
+*          id          - command id
+*          argumentMap - argument map
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*SlaveCommandFunction)(SlaveInfo       *slaveInfo,
+                                    IndexHandle     *indexHandle,
+                                    uint            id,
+                                    const StringMap argumentMap
+                                   );
 
 /***************************** Variables *******************************/
 
@@ -229,100 +249,6 @@ LOCAL uint sendSlave(SlaveInfo *slaveInfo, ConstString data)
 #endif
 
 /***********************************************************************\
-* Name   : slaveThreadCode
-* Purpose: slave thread code
-* Input  : slaveInfo - slave info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void slaveThreadCode(SlaveInfo *slaveInfo)
-{
-  #define TIMEOUT (5*MS_PER_SECOND)
-
-  String          name;
-  StringMap       argumentMap;
-  sigset_t        signalMask;
-  struct pollfd   pollfds[1];
-  struct timespec pollTimeout;
-  int             n;
-  uint            id;
-
-  // init variables
-  name        = String_new();
-  argumentMap = StringMap_new();
-
-  // Note: ignore SIGALRM in ppoll()
-  sigemptyset(&signalMask);
-  sigaddset(&signalMask,SIGALRM);
-
-fprintf(stderr,"%s, %d: start slave\n",__FILE__,__LINE__);
-  // process client requests
-  while (!Thread_isQuit(&slaveInfo->thread))
-  {
-//fprintf(stderr,"%s, %d: slave thread wiat command\n",__FILE__,__LINE__);
-    // wait for disconnect, command, or result
-    pollfds[0].fd     = Network_getSocket(&slaveInfo->io.network.socketHandle);
-    pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
-    pollTimeout.tv_sec  = (long)(TIMEOUT /MS_PER_SECOND);
-    pollTimeout.tv_nsec = (long)((TIMEOUT%MS_PER_SECOND)*1000LL);
-    n = ppoll(pollfds,1,&pollTimeout,&signalMask);
-    if      (n < 0)
-    {
-fprintf(stderr,"%s, %d: poll fail\n",__FILE__,__LINE__);
-slaveDisconnect(slaveInfo);
-break;
-    }
-    else if (n > 0)
-    {
-      if      ((pollfds[0].revents & POLLIN) != 0)
-      {
-        if (ServerIO_receiveData(&slaveInfo->io))
-        {
-          while (ServerIO_getCommand(&slaveInfo->io,
-                                     &id,
-                                     name,
-                                     argumentMap
-                                    )
-                )
-          {
-            // process command
-    //      processCommand(&clientNode->clientInfo,id,name,argumentMap);
-fprintf(stderr,"%s, %d: ---------------- got command #%u: %s\n",__FILE__,__LINE__,id,String_cString(name));
-ServerIO_sendResult(&slaveInfo->io,
-                      id,
-                      TRUE,
-                      ERROR_NONE,
-                      ""
-                     );
-fprintf(stderr,"%s, %d: sent OK result\n",__FILE__,__LINE__);
-          }
-        }
-        else
-        {
-  fprintf(stderr,"%s, %d: disc\n",__FILE__,__LINE__);
-slaveDisconnect(slaveInfo);
-          break;
-        }
-      }
-      else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
-      {
-  fprintf(stderr,"%s, %d: error/disc\n",__FILE__,__LINE__);
-slaveDisconnect(slaveInfo);
-        break;
-      }
-    }
-  }
-
-  // free resources
-  StringMap_delete(argumentMap);
-  String_delete(name);
-
-fprintf(stderr,"%s, %d: end slave\n",__FILE__,__LINE__);
-}
-
-/***********************************************************************\
 * Name   : Slave_setJobOptionInteger
 * Purpose: set job int value
 * Input  : slaveInfo - slave info
@@ -451,6 +377,350 @@ LOCAL Errors Slave_setJobOptionPassword(SlaveInfo *slaveInfo, ConstString jobUUI
 
 // ----------------------------------------------------------------------
 
+/***********************************************************************\
+* Name   : slaveCommand_storageCreate
+* Purpose: create storage
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            archiveName=<name>
+*            archiveSize=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void slaveCommand_storageCreate(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  String archiveName;
+  uint64 archiveSize;
+  Errors error;
+
+  // get archive name, archive size
+  archiveName = String_new();
+  if (!StringMap_getString(argumentMap,"archiveName",archiveName,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveName=<name>");
+    String_delete(archiveName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"archiveSize",&archiveSize,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveSize=<n>");
+    String_delete(archiveName);
+    return;
+  }
+
+  error = Storage_create(&slaveInfo->storageHandle,
+                         &slaveInfo->storageInfo,
+                         archiveName,
+                         archiveSize
+                        );
+  if (error != ERROR_NONE)
+  {
+fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create storage fail");
+    String_delete(archiveName);
+    return;
+  }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(archiveName);
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_storageWrite
+* Purpose: write storage
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            offset=<n>
+*            data=<base64 encoded data>
+*          Result:
+\***********************************************************************/
+
+LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  uint64 offset;
+  String data;
+  void   *buffer;
+  ulong  bufferLength;
+  Errors error;
+
+  // get offset, data
+  if (!StringMap_getUInt64(argumentMap,"offset",&offset,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected offset=<n>");
+    return;
+  }
+  data = String_new();
+  if (!StringMap_getString(argumentMap,"data",data,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected data=<data>");
+    String_delete(data);
+    return;
+  }
+
+  // decode data
+  bufferLength = Misc_base64DecodeLength(data,STRING_BEGIN);
+  buffer = malloc(bufferLength);
+  if (buffer == NULL)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"insufficient memory");
+    String_delete(data);
+    return;
+  }
+  Misc_base64Decode(buffer,bufferLength,data,STRING_BEGIN);
+
+//TODO: offset?
+
+  // write storage
+  error = Storage_write(&slaveInfo->storageHandle,buffer,bufferLength);
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"write storage fail");
+    free(buffer);
+    String_delete(data);
+    return;
+  }
+
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  free(buffer);
+  String_delete(data);
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_storageClose
+* Purpose: close storage
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+\***********************************************************************/
+
+LOCAL void slaveCommand_storageClose(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  uint64 archiveSize;
+
+  // get archive size
+  archiveSize = Storage_getSize(&slaveInfo->storageHandle);
+
+  // close storage
+  Storage_close(&slaveInfo->storageHandle);
+
+//TODO: index
+
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_indexEntityAdd
+* Purpose: close storage
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            error=<n>
+*          Result:
+*            errorMessage=<text>
+\***********************************************************************/
+
+LOCAL void slaveCommand_indexEntityAdd(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_indexEntryAdd
+* Purpose: close storage
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            error=<n>
+*          Result:
+*            errorMessage=<text>
+\***********************************************************************/
+
+LOCAL void slaveCommand_indexEntryAdd(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+// server commands
+const struct
+{
+  const char           *name;
+  SlaveCommandFunction slaveCommandFunction;
+}
+SLAVE_COMMANDS[] =
+{
+  { "STORAGE_CREATE",                 slaveCommand_storageCreate  },
+  { "STORAGE_WRITE",                  slaveCommand_storageWrite   },
+  { "STORAGE_CLOSE",                  slaveCommand_storageClose   },
+
+  { "INDEX_ENTITY_ADD",               slaveCommand_indexEntityAdd },
+  { "INDEX_ENTRY_ADD",                slaveCommand_indexEntryAdd  },
+};
+
+/***********************************************************************\
+* Name   : findCommand
+* Purpose: find command
+* Input  : name - command name
+* Output : slaveCommandFunction - slave command function
+* Return : TRUE if command found, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool findCommand(ConstString          name,
+                       SlaveCommandFunction *slaveCommandFunction
+                      )
+{
+  uint i;
+
+  assert(name != NULL);
+  assert(slaveCommandFunction != NULL);
+
+  // find command by name
+  i = 0;
+  while ((i < SIZE_OF_ARRAY(SLAVE_COMMANDS)) && !String_equalsCString(name,SLAVE_COMMANDS[i].name))
+  {
+    i++;
+  }
+  if (i >= SIZE_OF_ARRAY(SLAVE_COMMANDS))
+  {
+    return FALSE;
+  }
+  (*slaveCommandFunction) = SLAVE_COMMANDS[i].slaveCommandFunction;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : slaveThreadCode
+* Purpose: slave thread code
+* Input  : slaveInfo - slave info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void slaveThreadCode(SlaveInfo *slaveInfo)
+{
+  #define TIMEOUT (5*MS_PER_SECOND)
+
+  String               name;
+  StringMap            argumentMap;
+  sigset_t             signalMask;
+  struct pollfd        pollfds[1];
+  struct timespec      pollTimeout;
+  int                  n;
+  uint                 id;
+  SlaveCommandFunction slaveCommandFunction;
+
+  // init variables
+  name        = String_new();
+  argumentMap = StringMap_new();
+
+  // Note: ignore SIGALRM in ppoll()
+  sigemptyset(&signalMask);
+  sigaddset(&signalMask,SIGALRM);
+
+fprintf(stderr,"%s, %d: start slave\n",__FILE__,__LINE__);
+  // process client requests
+  while (!Thread_isQuit(&slaveInfo->thread))
+  {
+//fprintf(stderr,"%s, %d: slave thread wiat command\n",__FILE__,__LINE__);
+    // wait for disconnect, command, or result
+    pollfds[0].fd     = Network_getSocket(&slaveInfo->io.network.socketHandle);
+    pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
+    pollTimeout.tv_sec  = (long)(TIMEOUT /MS_PER_SECOND);
+    pollTimeout.tv_nsec = (long)((TIMEOUT%MS_PER_SECOND)*1000LL);
+    n = ppoll(pollfds,1,&pollTimeout,&signalMask);
+    if      (n < 0)
+    {
+fprintf(stderr,"%s, %d: poll fail\n",__FILE__,__LINE__);
+slaveDisconnect(slaveInfo);
+break;
+    }
+    else if (n > 0)
+    {
+      if      ((pollfds[0].revents & POLLIN) != 0)
+      {
+        if (ServerIO_receiveData(&slaveInfo->io))
+        {
+          while (ServerIO_getCommand(&slaveInfo->io,
+                                     &id,
+                                     name,
+                                     argumentMap
+                                    )
+                )
+          {
+            // find command
+            #ifdef SLAVE_DEBUG
+              fprintf(stderr,"DEBUG: received command '%s'\n",String_cString(name));
+            #endif
+            if (!findCommand(name,&slaveCommandFunction))
+            {
+              ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_PARSING,"unknown command '%S'",name);
+              continue;
+            }
+            assert(slaveCommandFunction != NULL);
+
+            // process command
+            slaveCommandFunction(slaveInfo,NULL,id,argumentMap);
+          }
+        }
+        else
+        {
+fprintf(stderr,"%s, %d: disc\n",__FILE__,__LINE__);
+slaveDisconnect(slaveInfo);
+          break;
+        }
+      }
+      else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
+      {
+fprintf(stderr,"%s, %d: error/disc\n",__FILE__,__LINE__);
+slaveDisconnect(slaveInfo);
+        break;
+      }
+    }
+  }
+
+  // free resources
+  StringMap_delete(argumentMap);
+  String_delete(name);
+
+fprintf(stderr,"%s, %d: end slave\n",__FILE__,__LINE__);
+}
+
+// ----------------------------------------------------------------------
+
 Errors Slave_initAll(void)
 {
   // init variables
@@ -501,14 +771,25 @@ void Slave_done(SlaveInfo *slaveInfo)
 Errors Slave_connect(SlaveInfo                      *slaveInfo,
                      ConstString                    hostName,
                      uint                           hostPort,
+                     ConstString                    storageName,
+                     JobOptions                     *jobOptions,
                      SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction,
                      void                           *slaveConnectStatusInfoUserData
                     )
 {
-  Errors error;
+  AutoFreeList     autoFreeList;
+  String           printableStorageName;
+  Errors           error;
+  StorageSpecifier storageSpecifier;
+  IndexHandle      *indexHandle;
 
   assert(slaveInfo != NULL);
   assert(hostName != NULL);
+
+  // init variables
+  AutoFree_init(&autoFreeList);
+  printableStorageName         = String_new();
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // slave connect
   error = slaveConnect(slaveInfo,
@@ -519,6 +800,52 @@ Errors Slave_connect(SlaveInfo                      *slaveInfo,
   {
     return error;
   }
+
+  // parse storage name
+  Storage_initSpecifier(&storageSpecifier);
+  error = Storage_parseName(&storageSpecifier,storageName);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot initialize storage '%s' (error: %s)\n",
+               String_cString(storageName),
+               Error_getText(error)
+              );
+    Storage_doneSpecifier(&storageSpecifier);
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE() { Storage_doneSpecifier(&storageSpecifier); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
+
+  // open index
+  indexHandle = Index_open(INDEX_PRIORITY_HIGH,INDEX_TIMEOUT);
+  AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
+
+  // get printable storage name
+  Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+
+  // init storage
+  error = Storage_init(&slaveInfo->storageInfo,
+                       NULL, // masterIO
+                       &storageSpecifier,
+                       jobOptions,
+                       &globalOptions.maxBandWidthList,
+                       SERVER_CONNECTION_PRIORITY_HIGH,
+CALLBACK(NULL,NULL),//                       CALLBACK(updateStorageStatusInfo,slaveInfo),
+CALLBACK(NULL,NULL),//                       CALLBACK(getPasswordFunction,getPasswordUserData),
+CALLBACK(NULL,NULL)//                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData)
+                      );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot initialize storage '%s' (error: %s)\n",
+               String_cString(printableStorageName),
+               Error_getText(error)
+              );
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE() { Storage_done(&slaveInfo->storageInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&slaveInfo->storageInfo,{ Storage_done(&slaveInfo->storageInfo); });
 
   // start slave thread
   if (!Thread_init(&slaveInfo->thread,"BAR slave",globalOptions.niceLevel,slaveThreadCode,slaveInfo))
@@ -531,6 +858,11 @@ Errors Slave_connect(SlaveInfo                      *slaveInfo,
   slaveInfo->slaveConnectStatusInfoUserData = slaveConnectStatusInfoUserData;
 
   printInfo(2,"Connected slave host '%s:%d'\n",String_cString(hostName),hostPort);
+
+  // free resources
+  Storage_doneSpecifier(&storageSpecifier);
+  String_delete(printableStorageName);
+  AutoFree_done(&autoFreeList);
 
   return ERROR_NONE;
 }
@@ -545,6 +877,12 @@ void Slave_disconnect(SlaveInfo *slaveInfo)
   {
     HALT_FATAL_ERROR("Cannot terminate slave thread!");
   }
+
+  // close storage (if open)
+//TODO
+
+  // done storage
+  Storage_done(&slaveInfo->storageInfo);
 
   slaveDisconnect(slaveInfo);
 }
