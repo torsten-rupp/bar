@@ -284,6 +284,7 @@ bool ServerIO_checkPassword(const ServerIO *serverIO,
 
 // ----------------------------------------------------------------------
 
+//TODO
 void ServerIO_clearWait(ServerIO *serverIO);
 
 void ServerIO_addWait(ServerIO *serverIO,
