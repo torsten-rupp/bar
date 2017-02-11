@@ -6490,11 +6490,10 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
 /***********************************************************************\
 * Name   : serverCommand_errorInfo
 * Purpose: get error info
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -6531,11 +6530,10 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 /***********************************************************************\
 * Name   : serverCommand_startSSL
 * Purpose: start SSL connection
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -6599,11 +6597,10 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
 /***********************************************************************\
 * Name   : serverCommand_authorize
 * Purpose: user authorization: check password
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -6676,11 +6673,10 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 /***********************************************************************\
 * Name   : serverCommand_version
 * Purpose: get protocol version
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -6726,11 +6722,10 @@ LOCAL void serverCommand_version(ClientInfo *clientInfo, IndexHandle *indexHandl
 /***********************************************************************\
 * Name   : serverCommand_quit
 * Purpose: quit server
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -6760,11 +6755,10 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
 /***********************************************************************\
 * Name   : serverCommand_quit
 * Purpose: quit server
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -6811,11 +6805,10 @@ LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, IndexHandle *index
 /***********************************************************************\
 * Name   : serverCommand_get
 * Purpose: get setting from server
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -6858,11 +6851,10 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, IndexHandle *indexHandle, u
 /***********************************************************************\
 * Name   : serverCommand_serverOptionGet
 * Purpose: get server option
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -6919,11 +6911,10 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
 /***********************************************************************\
 * Name   : serverCommand_serverOptionSet
 * Purpose: set server option
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -6986,11 +6977,10 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
 /***********************************************************************\
 * Name   : serverCommand_serverOptionFlush
 * Purpose: flush server options to config file
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -7022,11 +7012,10 @@ LOCAL void serverCommand_serverOptionFlush(ClientInfo *clientInfo, IndexHandle *
 /***********************************************************************\
 * Name   : serverCommand_serverList
 * Purpose: get job server list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -7119,11 +7108,10 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
 /***********************************************************************\
 * Name   : serverCommand_serverListAdd
 * Purpose: add entry to server list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -7333,11 +7321,10 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
 /***********************************************************************\
 * Name   : serverCommand_serverListUpdate
 * Purpose: update entry in server list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -7561,11 +7548,10 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
 /***********************************************************************\
 * Name   : serverCommand_serverListRemove
 * Purpose: delete entry in server list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -7624,11 +7610,10 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
 /***********************************************************************\
 * Name   : serverCommand_abort
 * Purpose: abort command execution
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -7682,11 +7667,10 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : serverCommand_status
 * Purpose: get status
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -7728,11 +7712,10 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, IndexHandle *indexHandle
 /***********************************************************************\
 * Name   : serverCommand_pause
 * Purpose: pause job execution
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -7835,11 +7818,10 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
 /***********************************************************************\
 * Name   : serverCommand_suspend
 * Purpose: suspend job execution
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -7916,11 +7898,10 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
 /***********************************************************************\
 * Name   : serverCommand_continue
 * Purpose: continue job execution
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -7959,11 +7940,10 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
 /***********************************************************************\
 * Name   : serverCommand_deviceList
 * Purpose: get device list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -8042,11 +8022,10 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
 /***********************************************************************\
 * Name   : serverCommand_rootList
 * Purpose: root list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -8117,11 +8096,10 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
 /***********************************************************************\
 * Name   : serverCommand_fileInfo
 * Purpose: get file info
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -8269,11 +8247,10 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
 /***********************************************************************\
 * Name   : serverCommand_fileList
 * Purpose: file list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -8458,11 +8435,10 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
 /***********************************************************************\
 * Name   : serverCommand_fileAttributeGet
 * Purpose: get file attribute
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -8541,11 +8517,10 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
 /***********************************************************************\
 * Name   : serverCommand_fileAttributeSet
 * Purpose: set file attribute
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -8658,11 +8633,10 @@ UNUSED_VARIABLE(value);
 /***********************************************************************\
 * Name   : serverCommand_fileAttributeClear
 * Purpose: clear file attribute
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -8768,11 +8742,10 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
 /***********************************************************************\
 * Name   : serverCommand_directoryInfo
 * Purpose: get directory info
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -8852,11 +8825,10 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
 /***********************************************************************\
 * Name   : serverCommand_testScript
 * Purpose: test script
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -8909,11 +8881,10 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
 /***********************************************************************\
 * Name   : serverCommand_jobOptionGet
 * Purpose: get job option
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -8993,11 +8964,10 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
 /***********************************************************************\
 * Name   : serverCommand_jobOptionSet
 * Purpose: set job option
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -9083,11 +9053,10 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
 /***********************************************************************\
 * Name   : serverCommand_jobOptionDelete
 * Purpose: delete job option
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -9158,11 +9127,10 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
 /***********************************************************************\
 * Name   : serverCommand_jobList
 * Purpose: get job list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -9237,11 +9205,10 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
 /***********************************************************************\
 * Name   : serverCommand_jobInfo
 * Purpose: get job info
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -9306,11 +9273,10 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 /***********************************************************************\
 * Name   : serverCommand_jobNew
 * Purpose: create new job
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -9434,11 +9400,10 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
 /***********************************************************************\
 * Name   : serverCommand_jobClone
 * Purpose: copy job
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -9541,11 +9506,10 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
 /***********************************************************************\
 * Name   : serverCommand_jobRename
 * Purpose: rename job
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -9631,11 +9595,10 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
 /***********************************************************************\
 * Name   : serverCommand_jobDelete
 * Purpose: delete job
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -9714,11 +9677,10 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
 /***********************************************************************\
 * Name   : serverCommand_jobStart
 * Purpose: start job execution
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -9787,11 +9749,10 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
 /***********************************************************************\
 * Name   : serverCommand_jobAbort
 * Purpose: abort job execution
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -9843,11 +9804,10 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
 /***********************************************************************\
 * Name   : serverCommand_jobFlush
 * Purpose: flush all job data (write to disk)
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -9871,11 +9831,10 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 /***********************************************************************\
 * Name   : serverCommand_jobStatus
 * Purpose: get job status
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -9974,11 +9933,10 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
 /***********************************************************************\
 * Name   : serverCommand_includeList
 * Purpose: get job include list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -10037,11 +9995,10 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
 /***********************************************************************\
 * Name   : serverCommand_includeListClear
 * Purpose: clear job include list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -10094,11 +10051,10 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
 /***********************************************************************\
 * Name   : serverCommand_includeListAdd
 * Purpose: add entry to job include list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -10176,11 +10132,10 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
 /***********************************************************************\
 * Name   : serverCommand_includeListUpdate
 * Purpose: update entry to job include list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -10263,11 +10218,10 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
 /***********************************************************************\
 * Name   : serverCommand_includeListRemove
 * Purpose: remove entry from job include list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -10332,11 +10286,10 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
 /***********************************************************************\
 * Name   : serverCommand_excludeList
 * Purpose: get job exclude list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -10394,11 +10347,10 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
 /***********************************************************************\
 * Name   : serverCommand_excludeListClear
 * Purpose: clear job exclude list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -10451,11 +10403,10 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
 /***********************************************************************\
 * Name   : serverCommand_excludeListAdd
 * Purpose: add entry to job exclude list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -10526,11 +10477,10 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
 /***********************************************************************\
 * Name   : serverCommand_excludeListUpdate
 * Purpose: update entry in job exclude list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -10606,11 +10556,10 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
 /***********************************************************************\
 * Name   : serverCommand_excludeListRemove
 * Purpose: remove entry from job exclude list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -10677,11 +10626,10 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
 /***********************************************************************\
 * Name   : serverCommand_mountList
 * Purpose: get job mount list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -10740,11 +10688,10 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
 /***********************************************************************\
 * Name   : serverCommand_mountListClear
 * Purpose: clear job mount list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -10797,11 +10744,10 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
 /***********************************************************************\
 * Name   : serverCommand_mountListAdd
 * Purpose: add entry to job mountlist
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -10897,11 +10843,10 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
 /***********************************************************************\
 * Name   : serverCommand_mountListUpdate
 * Purpose: update entry to job mount list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -11008,11 +10953,10 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
 /***********************************************************************\
 * Name   : serverCommand_mountListRemove
 * Purpose: remove entry from job mount list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -11083,11 +11027,10 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
 /***********************************************************************\
 * Name   : serverCommand_sourceList
 * Purpose: get soource list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -11146,11 +11089,10 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
 /***********************************************************************\
 * Name   : serverCommand_sourceListClear
 * Purpose: clear source list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -11200,11 +11142,10 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
 /***********************************************************************\
 * Name   : serverCommand_sourceListAdd
 * Purpose: add entry to source list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -11272,11 +11213,10 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
 /***********************************************************************\
 * Name   : serverCommand_sourceListUpdate
 * Purpose: update entry in source list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -11349,11 +11289,10 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
 /***********************************************************************\
 * Name   : serverCommand_sourceListRemove
 * Purpose: remove entry from source list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -11417,11 +11356,10 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
 /***********************************************************************\
 * Name   : serverCommand_excludeCompressList
 * Purpose: get job exclude compress list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -11478,11 +11416,10 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
 /***********************************************************************\
 * Name   : serverCommand_excludeCompressListClear
 * Purpose: clear job exclude compress list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -11532,11 +11469,10 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
 /***********************************************************************\
 * Name   : serverCommand_excludeCompressListAdd
 * Purpose: add entry to job exclude compress list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -11604,11 +11540,10 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
 /***********************************************************************\
 * Name   : serverCommand_excludeCompressListUpdate
 * Purpose: update entry in job exclude compress list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -11681,11 +11616,10 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
 /***********************************************************************\
 * Name   : serverCommand_excludeCompressListRemove
 * Purpose: remove entry from job exclude compress list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -11749,11 +11683,10 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
 /***********************************************************************\
 * Name   : serverCommand_scheduleList
 * Purpose: get job schedule list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -11918,11 +11851,10 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 /***********************************************************************\
 * Name   : serverCommand_scheduleListAdd
 * Purpose: add entry to job schedule list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -12141,11 +12073,10 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
 /***********************************************************************\
 * Name   : serverCommand_scheduleListRemove
 * Purpose: remove entry from job schedule list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -12214,11 +12145,10 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
 /***********************************************************************\
 * Name   : serverCommand_scheduleOptionGet
 * Purpose: get schedule options
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -12325,11 +12255,10 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
 /***********************************************************************\
 * Name   : serverCommand_scheduleOptionSet
 * Purpose: set schedule option
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -12434,11 +12363,10 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
 /***********************************************************************\
 * Name   : serverCommand_scheduleOptionDelete
 * Purpose: delete schedule option
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -12539,11 +12467,10 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
 /***********************************************************************\
 * Name   : serverCommand_scheduleTrigger
 * Purpose: trigger job schedule
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -12623,11 +12550,10 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
 /***********************************************************************\
 * Name   : serverCommand_decryptPasswordsClear
 * Purpose: clear decrypt passwords in internal list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -12651,11 +12577,10 @@ LOCAL void serverCommand_decryptPasswordsClear(ClientInfo *clientInfo, IndexHand
 /***********************************************************************\
 * Name   : serverCommand_decryptPasswordAdd
 * Purpose: add password to internal list of decrypt passwords
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -12717,11 +12642,10 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
 /***********************************************************************\
 * Name   : serverCommand_ftpPassword
 * Purpose: set job FTP password
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -12781,11 +12705,10 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
 /***********************************************************************\
 * Name   : serverCommand_sshPassword
 * Purpose: set job SSH password
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -12845,11 +12768,10 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
 /***********************************************************************\
 * Name   : serverCommand_webdavPassword
 * Purpose: set job Webdav password
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -12909,11 +12831,10 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
 /***********************************************************************\
 * Name   : serverCommand_cryptPassword
 * Purpose: set job encryption password
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -13010,11 +12931,10 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
 /***********************************************************************\
 * Name   : serverCommand_passwordsClear
 * Purpose: clear ssh/ftp/crypt passwords stored in memory
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -13044,11 +12964,10 @@ LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, IndexHandle *ind
 /***********************************************************************\
 * Name   : serverCommand_volumeLoad
 * Purpose: load volume
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -13103,11 +13022,10 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
 /***********************************************************************\
 * Name   : serverCommand_volumeUnload
 * Purpose: unload volumne
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -13155,11 +13073,10 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
 /***********************************************************************\
 * Name   : serverCommand_archiveList
 * Purpose: list content of archive
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -13636,11 +13553,10 @@ NULL, // masterIO
 /***********************************************************************\
 * Name   : serverCommand_storageList
 * Purpose: list selected storages
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -13725,11 +13641,10 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
 /***********************************************************************\
 * Name   : serverCommand_storageListClear
 * Purpose: clear selected storage list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -13758,11 +13673,10 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, IndexHandle *i
 /***********************************************************************\
 * Name   : serverCommand_storageListAdd
 * Purpose: add to selected storage list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -13804,11 +13718,10 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
 /***********************************************************************\
 * Name   : serverCommand_storageListRemove
 * Purpose: remove from selected storage list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -13850,11 +13763,10 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
 /***********************************************************************\
 * Name   : serverCommand_storageListInfo
 * Purpose: get selected storage list info
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -13909,11 +13821,10 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, IndexHandle *in
 /***********************************************************************\
 * Name   : serverCommand_entryList
 * Purpose: list selected entries
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -14017,11 +13928,10 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
 /***********************************************************************\
 * Name   : serverCommand_entryListClear
 * Purpose: clear selected entry list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -14049,11 +13959,10 @@ LOCAL void serverCommand_entryListClear(ClientInfo *clientInfo, IndexHandle *ind
 /***********************************************************************\
 * Name   : serverCommand_entryListAdd
 * Purpose: add to selected entry list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -14095,11 +14004,10 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *index
 /***********************************************************************\
 * Name   : serverCommand_entryListRemove
 * Purpose: remove from selected entry list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -14141,11 +14049,10 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, IndexHandle *in
 /***********************************************************************\
 * Name   : serverCommand_entryListInfo
 * Purpose: get restore entry list info
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -14197,11 +14104,10 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, IndexHandle *inde
 /***********************************************************************\
 * Name   : serverCommand_storageDelete
 * Purpose: delete storage and remove database index
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -14280,11 +14186,10 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
 /***********************************************************************\
 * Name   : serverCommand_restore
 * Purpose: restore archives/files
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -14719,11 +14624,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
 /***********************************************************************\
 * Name   : serverCommand_restoreContinue
 * Purpose: continue restore archives/files
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -14746,11 +14650,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 /***********************************************************************\
 * Name   : serverCommand_indexUUIDList
 * Purpose: get index database UUID list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -14982,11 +14885,10 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 /***********************************************************************\
 * Name   : serverCommand_indexEntityList
 * Purpose: get index database entity list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -15171,11 +15073,10 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 /***********************************************************************\
 * Name   : serverCommand_indexStorageList
 * Purpose: get index database storage list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -15412,11 +15313,10 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
 /***********************************************************************\
 * Name   : serverCommand_indexEntryList
 * Purpose: get index database entry list
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -15759,11 +15659,10 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
 /***********************************************************************\
 * Name   : serverCommand_indexEntityAdd
 * Purpose: add entity to index database
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -15831,11 +15730,10 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
 /***********************************************************************\
 * Name   : serverCommand_indexStorageAdd
 * Purpose: add storage to index database (if not already exists)
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -16073,11 +15971,10 @@ NULL, // masterIO
 /***********************************************************************\
 * Name   : serverCommand_indexEntitySet
 * Purpose: set entity type in index database
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -16147,11 +16044,10 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
 /***********************************************************************\
 * Name   : serverCommand_indexAssign
 * Purpose: assign index database for storage; create entity if requested
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -16398,11 +16294,10 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
 /***********************************************************************\
 * Name   : serverCommand_indexRefresh
 * Purpose: refresh index database for storage
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -16782,11 +16677,10 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
 /***********************************************************************\
 * Name   : serverCommand_indexRemove
 * Purpose: remove job/entity/storage from index database
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -16979,11 +16873,10 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
 /***********************************************************************\
 * Name   : serverCommand_indexStoragesInfo
 * Purpose: get index database storage info
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -17110,11 +17003,10 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
 /***********************************************************************\
 * Name   : serverCommand_indexEntriesInfo
 * Purpose: get index database entries info
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments
-*          argumentCount - command arguments count
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -17207,11 +17099,10 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
 /***********************************************************************\
 * Name   : serverCommand_debugPrintStatistics
 * Purpose: print array/string/file statistics info
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments (not used)
-*          argumentCount - command arguments count (not used)
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -17236,11 +17127,10 @@ LOCAL void serverCommand_debugPrintStatistics(ClientInfo *clientInfo, IndexHandl
 /***********************************************************************\
 * Name   : serverCommand_debugPrintMemoryInfo
 * Purpose: print array/string debug info
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments (not used)
-*          argumentCount - command arguments count (not used)
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
@@ -17306,11 +17196,10 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
 /***********************************************************************\
 * Name   : serverCommand_debugDumpMemoryInfo
 * Purpose: dump array/string/file debug info into file "bar-memory.dump"
-* Input  : clientInfo    - client info
-*          indexHandle   - index handle
-*          id            - command id
-*          arguments     - command arguments (not used)
-*          argumentCount - command arguments count (not used)
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
 * Output : -
 * Return : -
 * Notes  : Arguments:
