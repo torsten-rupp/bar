@@ -1298,7 +1298,7 @@ Errors Network_receive(SocketHandle *socketHandle,
         pollfds[0].fd     = socketHandle->handle;
         pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
         if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) >= 0)
-            || ((pollfds[0].revents & (POLLERR|POLLNVAL)) == 0)
+            && ((pollfds[0].revents & POLLIN) != 0)
            )
         {
           // receive
@@ -1385,39 +1385,37 @@ Errors Network_send(SocketHandle *socketHandle,
     switch (socketHandle->type)
     {
       case SOCKET_TYPE_PLAIN:
-          do
+        do
+        {
+          // Note: ignore SIGALRM in ppoll()
+          sigemptyset(&signalMask);
+          sigaddset(&signalMask,SIGALRM);
+
+          // wait until space in buffer is available
+          pollTimeout.tv_sec  = SEND_TIMEOUT/1000L;
+          pollTimeout.tv_nsec = (SEND_TIMEOUT%1000L)*1000000L;
+          pollfds[0].fd     = socketHandle->handle;
+          pollfds[0].events = POLLOUT|POLLERR|POLLNVAL;
+          if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) >= 0)
+              && ((pollfds[0].revents & POLLOUT) != 0)
+             )
           {
-            assert(socketHandle->handle < FD_SETSIZE);
-
-            // Note: ignore SIGALRM in ppoll()
-            sigemptyset(&signalMask);
-            sigaddset(&signalMask,SIGALRM);
-
-            // wait until space in buffer is available
-            pollTimeout.tv_sec  = SEND_TIMEOUT/1000L;
-            pollTimeout.tv_nsec = (SEND_TIMEOUT%1000L)*1000000L;
-            pollfds[0].fd     = socketHandle->handle;
-            pollfds[0].events = POLLOUT|POLLERR|POLLNVAL;
-            if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) == -1)
-                || ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
-               )
-            {
-              break;
-            }
-
             // send data
             n = send(socketHandle->handle,((byte*)buffer)+sentBytes,length-sentBytes,MSG_NOSIGNAL);
-            if      (n > 0) sentBytes += n;
+            if      (n > 0) sentBytes += (ulong)n;
             else if ((n == -1) && (errno != EAGAIN)) break;
           }
-          while (sentBytes < length);
+          else
+          {
+            break;
+          }
+        }
+        while (sentBytes < length);
         break;
       case SOCKET_TYPE_TLS:
         #ifdef HAVE_GNU_TLS
           do
           {
-            assert(socketHandle->handle < FD_SETSIZE);
-
             // Note: ignore SIGALRM in ppoll()
             sigemptyset(&signalMask);
             sigaddset(&signalMask,SIGALRM);
@@ -1427,17 +1425,19 @@ Errors Network_send(SocketHandle *socketHandle,
             pollTimeout.tv_nsec = (SEND_TIMEOUT%1000L)*1000000L;
             pollfds[0].fd     = socketHandle->handle;
             pollfds[0].events = POLLOUT|POLLERR|POLLNVAL;
-            if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) == -1)
-                || ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
+            if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) >= 0)
+                && ((pollfds[0].revents & POLLOUT) != 0)
                )
+            {
+              // send data
+              n = gnutls_record_send(socketHandle->gnuTLS.session,((byte*)buffer)+sentBytes,length-sentBytes);
+              if      (n > 0) sentBytes += n;
+              else if ((n < 0) && (errno != GNUTLS_E_AGAIN)) break;
+            }
+            else
             {
               break;
             }
-
-            // send data
-            n = gnutls_record_send(socketHandle->gnuTLS.session,((byte*)buffer)+sentBytes,length-sentBytes);
-            if      (n > 0) sentBytes += n;
-            else if ((n < 0) && (errno != GNUTLS_E_AGAIN)) break;
           }
           while (sentBytes < length);
         #else /* not HAVE_GNU_TLS */
