@@ -1755,6 +1755,8 @@ String Misc_base64Encode(String string, const byte *data, ulong dataLength)
   char  b0,b1,b2;
   uint  i0,i1,i2,i3;
 
+  String_clear(string);
+
   i = 0;
   while (i < dataLength)
   {
