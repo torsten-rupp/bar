@@ -89,9 +89,11 @@ typedef struct
   uint             maxPollfdCount;
 
   // input/output buffer
-  char             inputBuffer[4096];
+  char             *inputBuffer;
   uint             inputBufferIndex;
   uint             inputBufferLength;
+  uint             inputBufferSize;
+
   char             *outputBuffer;
   uint             outputBufferSize;
 

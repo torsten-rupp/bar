@@ -291,6 +291,7 @@ LOCAL bool StorageMaster_exists(StorageInfo *storageInfo, ConstString fileName)
 
   UNUSED_VARIABLE(storageInfo);
 
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 //TODO
 return TRUE;
 }
@@ -397,6 +398,7 @@ LOCAL bool StorageMaster_eof(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 //TODO
 return TRUE;
 }
@@ -444,22 +446,23 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
   writtenBytes = 0L;
   while (writtenBytes < bufferLength)
   {
-    // encode data
-    n = MIN(bufferLength,4096);
+    // encode data (max. 4096bytes in single write)
+    n = MIN(bufferLength-writtenBytes,4096);
     Misc_base64Encode(encodedData,p,n);
 
     // send data
     error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
                                     30LL*MS_PER_SECOND,
                                     NULL,  // resultMap
-                                    "STORAGE_WRITE offset=%llu data=%s",
+                                    "STORAGE_WRITE offset=%llu length=%u data=%s",
 //TODO
-                                    123LL+(uint64)writtenBytes,
+                                    storageHandle->storageInfo->master.index,
+                                    n,
                                     String_cString(encodedData)
                                    );
     if (error != ERROR_NONE)
     {
-  fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
+fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
       String_delete(encodedData);
       return error;
     }
@@ -467,6 +470,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
     // next part
     p += n;
     writtenBytes += n;
+    storageHandle->storageInfo->master.index += (uint64)n;
   }
 
   // free resources
@@ -487,9 +491,9 @@ LOCAL Errors StorageMaster_tell(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
   assert(offset != NULL);
 
-  (*offset) = 0LL;
+  (*offset) = storageHandle->storageInfo->master.index;
 
-return ERROR_STILL_NOT_IMPLEMENTED;
+  return ERROR_NONE;
 }
 
 LOCAL Errors StorageMaster_seek(StorageHandle *storageHandle,
@@ -503,7 +507,9 @@ LOCAL Errors StorageMaster_seek(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
-return ERROR_STILL_NOT_IMPLEMENTED;
+  storageHandle->storageInfo->master.index = offset;
+
+  return ERROR_NONE;
 }
 
 LOCAL uint64 StorageMaster_getSize(StorageHandle *storageHandle)
@@ -515,6 +521,7 @@ LOCAL uint64 StorageMaster_getSize(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 //TODO
 return 0;
 }
@@ -582,8 +589,6 @@ LOCAL void StorageMaster_closeDirectoryList(StorageDirectoryListHandle *storageD
 {
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_MASTER);
-
-return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL bool StorageMaster_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)

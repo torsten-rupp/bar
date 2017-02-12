@@ -384,6 +384,7 @@ typedef struct
     struct
     {
       ServerIO   *io;
+      uint64     index;
     } master;
   };
 

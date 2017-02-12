@@ -18530,7 +18530,8 @@ Errors Server_run(ServerModes       mode,
     {
       error = Network_accept(&socketHandle,
                              &serverSocketHandle,
-                             SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
+//                             SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
+0
                             );
       if (error == ERROR_NONE)
       {
@@ -18573,7 +18574,8 @@ Errors Server_run(ServerModes       mode,
     {
       error = Network_accept(&socketHandle,
                              &serverTLSSocketHandle,
-                             SOCKET_FLAG_NON_BLOCKING
+//                             SOCKET_FLAG_NON_BLOCKING
+0
                             );
       if (error == ERROR_NONE)
       {

@@ -52,11 +52,12 @@ typedef struct
 {
 bool         forceSSL;                     // force SSL connection to slave hose
 
-  ServerIO     io;
-  Thread       thread;
+  ServerIO      io;
+  Thread        thread;
 
+  StorageInfo   storageInfo;
   StorageHandle storageHandle;
-  StorageInfo storageInfo;
+  bool          storageOpenFlag;          // TRUE iff storage created and open
 
 SlaveConnectStatusInfoFunction slaveConnectStatusInfoFunction;
 void                           *slaveConnectStatusInfoUserData;

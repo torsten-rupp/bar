@@ -162,7 +162,8 @@ SOCKET_TYPE_PLAIN,
                           0,
                           NULL,  // sshPrivateKeyFileName
                           0,
-                          SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
+//                          SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
+0
                          );
   if (error != ERROR_NONE)
   {
@@ -395,7 +396,7 @@ LOCAL Errors Slave_setJobOptionPassword(SlaveInfo *slaveInfo, ConstString jobUUI
 
 LOCAL void slaveCommand_preProcess(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: slaveCommand_preProcess\n",__FILE__,__LINE__);
 
   ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -418,7 +419,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
 LOCAL void slaveCommand_postProcess(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: slaveCommand_postProcess\n",__FILE__,__LINE__);
 
   ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -459,6 +460,7 @@ LOCAL void slaveCommand_storageCreate(SlaveInfo *slaveInfo, IndexHandle *indexHa
     return;
   }
 
+  // create storage
   error = Storage_create(&slaveInfo->storageHandle,
                          &slaveInfo->storageInfo,
                          archiveName,
@@ -466,12 +468,11 @@ LOCAL void slaveCommand_storageCreate(SlaveInfo *slaveInfo, IndexHandle *indexHa
                         );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create storage fail");
     String_delete(archiveName);
     return;
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  slaveInfo->storageOpenFlag = TRUE;
 
   ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
 
@@ -490,6 +491,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 * Return : -
 * Notes  : Arguments:
 *            offset=<n>
+*            length=<n>
 *            data=<base64 encoded data>
 *          Result:
 \***********************************************************************/
@@ -497,15 +499,21 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   uint64 offset;
+  uint   length;
   String data;
   void   *buffer;
   ulong  bufferLength;
   Errors error;
 
-  // get offset, data
+  // get offset, length, data
   if (!StringMap_getUInt64(argumentMap,"offset",&offset,0LL))
   {
     ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected offset=<n>");
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"length",&length,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected length=<n>");
     return;
   }
   data = String_new();
@@ -516,21 +524,36 @@ LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHan
     return;
   }
 
+  // check if open
+  if (!slaveInfo->storageOpenFlag)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_INVALID_STORAGE,"storage not open");
+    String_delete(data);
+    return;
+  }
+
   // decode data
-  bufferLength = Misc_base64DecodeLength(data,STRING_BEGIN);
-  buffer = malloc(bufferLength);
+  buffer = malloc(length);
   if (buffer == NULL)
   {
     ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"insufficient memory");
     String_delete(data);
     return;
   }
-  Misc_base64Decode(buffer,bufferLength,data,STRING_BEGIN);
+  Misc_base64Decode(buffer,length,data,STRING_BEGIN);
 
 //TODO: offset?
+  error = Storage_seek(&slaveInfo->storageHandle,offset);
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"write storage fail");
+    free(buffer);
+    String_delete(data);
+    return;
+  }
 
   // write storage
-  error = Storage_write(&slaveInfo->storageHandle,buffer,bufferLength);
+  error = Storage_write(&slaveInfo->storageHandle,buffer,length);
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"write storage fail");
@@ -567,7 +590,11 @@ LOCAL void slaveCommand_storageClose(SlaveInfo *slaveInfo, IndexHandle *indexHan
   archiveSize = Storage_getSize(&slaveInfo->storageHandle);
 
   // close storage
-  Storage_close(&slaveInfo->storageHandle);
+  if (slaveInfo->storageOpenFlag)
+  {
+    Storage_close(&slaveInfo->storageHandle);
+  }
+  slaveInfo->storageOpenFlag = FALSE;
 
 //TODO: index
 
@@ -700,7 +727,6 @@ LOCAL void slaveThreadCode(SlaveInfo *slaveInfo)
   sigemptyset(&signalMask);
   sigaddset(&signalMask,SIGALRM);
 
-fprintf(stderr,"%s, %d: start slave\n",__FILE__,__LINE__);
   // process client requests
   while (!Thread_isQuit(&slaveInfo->thread))
   {
@@ -732,7 +758,8 @@ break;
           {
             // find command
             #ifdef SLAVE_DEBUG
-              fprintf(stderr,"DEBUG: received command '%s'\n",String_cString(name));
+//TODO: enable
+//              fprintf(stderr,"DEBUG: received command '%s'\n",String_cString(name));
             #endif
             if (!findCommand(name,&slaveCommandFunction))
             {
@@ -764,8 +791,6 @@ slaveDisconnect(slaveInfo);
   // free resources
   StringMap_delete(argumentMap);
   String_delete(name);
-
-fprintf(stderr,"%s, %d: end slave\n",__FILE__,__LINE__);
 }
 
 // ----------------------------------------------------------------------
@@ -779,9 +804,6 @@ Errors Slave_initAll(void)
 
 void Slave_doneAll(void)
 {
-//TODO
-//  List_done(&slaveList,
-//  Semaphore_done(&slaveList.lock);
 }
 
 void Slave_init(SlaveInfo *slaveInfo)
@@ -791,16 +813,18 @@ void Slave_init(SlaveInfo *slaveInfo)
 //TODO: remove
 //  slaveInfo->forceSSL                        = forceSSL;
   ServerIO_init(&slaveInfo->io);
+  slaveInfo->storageOpenFlag                = FALSE;
   slaveInfo->slaveConnectStatusInfoFunction = NULL;
   slaveInfo->slaveConnectStatusInfoUserData = NULL;
 }
 
 void Slave_duplicate(SlaveInfo *slaveInfo, const SlaveInfo *fromSlaveInfo)
 {
+  assert(slaveInfo != NULL);
+  assert(fromSlaveInfo != NULL);
+
   Slave_init(slaveInfo);
 
-//  String_set(slaveInfo->name,fromSlaveInfo->name);
-//  slaveInfo->port                           = fromSlaveInfo->port;
   slaveInfo->slaveConnectStatusInfoFunction = fromSlaveInfo->slaveConnectStatusInfoFunction;
   slaveInfo->slaveConnectStatusInfoUserData = fromSlaveInfo->slaveConnectStatusInfoUserData;
 }
@@ -809,11 +833,10 @@ void Slave_done(SlaveInfo *slaveInfo)
 {
   assert(slaveInfo != NULL);
 
-//TODO: remove
-//  List_done(&slaveInfo->resultList,CALLBACK(freeResultNode,NULL));
-//  Semaphore_done(&slaveInfo->resultList.lock);
-//  List_done(&slaveInfo->commandList,CALLBACK(freeCommandNode,NULL));
-//  Semaphore_done(&slaveInfo->commandList.lock);
+  if (slaveInfo->storageOpenFlag)
+  {
+    Storage_close(&slaveInfo->storageHandle);
+  }
   ServerIO_done(&slaveInfo->io);
 }
 
@@ -928,7 +951,10 @@ void Slave_disconnect(SlaveInfo *slaveInfo)
   }
 
   // close storage (if open)
-//TODO
+  if (slaveInfo->storageOpenFlag)
+  {
+    Storage_close(&slaveInfo->storageHandle);
+  }
 
   // done storage
   Storage_done(&slaveInfo->storageInfo);
@@ -937,26 +963,6 @@ void Slave_disconnect(SlaveInfo *slaveInfo)
 }
 
 // ----------------------------------------------------------------------
-
-#if 0
-bool Slave_waitCommand(SlaveInfo *slaveInfo,
-                       long      timeout,
-                       uint      *id,
-                       String    name,
-                       StringMap argumentMap
-                      )
-{
-  assert(slaveInfo != NULL);
-  assert(id != NULL);
-  assert(name != NULL);
-
-  return ServerIO_getCommand(&slaveInfo->io,
-                             id,
-                             name,
-                             argumentMap
-                            );
-}
-#endif
 
 LOCAL Errors Slave_vexecuteCommand(SlaveInfo  *slaveInfo,
                                    long       timeout,

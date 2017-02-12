@@ -42,7 +42,7 @@
 
 #define LOCK_TIMEOUT                             (10*60*1000)  // general lock timeout [ms]
 
-#define BUFFER_SIZE       4096
+#define BUFFER_SIZE       8192
 #define BUFFER_DELTA_SIZE 4096
 
 /***************************** Datatypes *******************************/
@@ -245,6 +245,7 @@ LOCAL bool fillLine(ServerIO *serverIO)
     ch = serverIO->inputBuffer[serverIO->inputBufferIndex]; serverIO->inputBufferIndex++;
     if (ch != '\n')
     {
+assert(ch != 0);
       String_appendChar(serverIO->line,ch);
     }
     else
@@ -284,6 +285,7 @@ LOCAL bool doneLine(ServerIO *serverIO)
 LOCAL void sendData(ServerIO *serverIO, ConstString line)
 {
   SemaphoreLock semaphoreLock;
+  Errors        error;
   uint          n;
 
   assert(serverIO != NULL);
@@ -323,7 +325,12 @@ fprintf(stderr,"%s, %d: uuuuuuuuuuuuuuuuuuuuuuu\n",__FILE__,__LINE__);
           (void)File_flush(&serverIO->file.fileHandle);
           break;
         case SERVER_IO_TYPE_NETWORK:
-          (void)Network_send(&serverIO->network.socketHandle,serverIO->outputBuffer,n+1);
+          error = Network_send(&serverIO->network.socketHandle,serverIO->outputBuffer,n+1);
+          if (error != ERROR_NONE)
+          {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+            HALT_INTERNAL_ERROR("sent");
+          }
           break;
         #ifndef NDEBUG
           default:
@@ -598,8 +605,15 @@ void ServerIO_init(ServerIO *serverIO)
   serverIO->pollfdCount       = 0;
   serverIO->maxPollfdCount    = 64;
 
+  serverIO->inputBuffer       = (char*)malloc(BUFFER_SIZE);
+  if (serverIO->inputBuffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
   serverIO->inputBufferIndex  = 0;
   serverIO->inputBufferLength = 0;
+  serverIO->inputBufferSize   = BUFFER_SIZE;
+
   serverIO->outputBuffer      = (char*)malloc(BUFFER_SIZE);
   if (serverIO->outputBuffer == NULL)
   {
@@ -625,6 +639,7 @@ void ServerIO_done(ServerIO *serverIO)
   Semaphore_done(&serverIO->resultList.lock);
   String_delete(serverIO->line);
   free(serverIO->outputBuffer);
+  free(serverIO->inputBuffer);
   free(serverIO->pollfds);
   Crypt_doneKey(&serverIO->privateKey);
   Crypt_doneKey(&serverIO->publicKey);
@@ -919,7 +934,7 @@ bool ServerIO_receiveData(ServerIO *serverIO)
   // shift input buffer
   if (serverIO->inputBufferIndex >= 0)
   {
-    memCopy(&serverIO->inputBuffer[0],sizeof(serverIO->inputBuffer),
+    memCopy(&serverIO->inputBuffer[0],serverIO->inputBufferSize,
             &serverIO->inputBuffer[serverIO->inputBufferIndex],serverIO->inputBufferLength-serverIO->inputBufferIndex
            );
     serverIO->inputBufferLength -= serverIO->inputBufferIndex;
@@ -927,7 +942,7 @@ bool ServerIO_receiveData(ServerIO *serverIO)
   }
 
   // get max. number of bytes to receive
-  maxBytes = sizeof(serverIO->inputBuffer)-serverIO->inputBufferLength;
+  maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
 
   switch (serverIO->type)
   {
@@ -942,7 +957,7 @@ bool ServerIO_receiveData(ServerIO *serverIO)
         {
           serverIO->inputBufferLength += (uint)readBytes;
 
-          maxBytes = sizeof(serverIO->inputBuffer)-serverIO->inputBufferLength;
+          maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
           error = File_read(&serverIO->file.fileHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,&readBytes);
         }
         while ((error == ERROR_NONE) && (readBytes > 0));
@@ -958,14 +973,14 @@ fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
     case SERVER_IO_TYPE_NETWORK:
       (void)Network_receive(&serverIO->network.socketHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,NO_WAIT,&readBytes);
 //buffer[readBytes]=0;
-//fprintf(stderr,"%s, %d: rec socket %d: bytes %d: %s\n",__FILE__,__LINE__,Network_getSocket(&serverIO->network.socketHandle),readBytes,buffer);
+//fprintf(stderr,"%s, %d: rec socket %d: bytes %d at %d: ",__FILE__,__LINE__,Network_getSocket(&serverIO->network.socketHandle),readBytes,serverIO->inputBufferLength); fwrite(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,1,stderr); fprintf(stderr,"\n");
       if (readBytes > 0)
       {
         do
         {
           serverIO->inputBufferLength += (uint)readBytes;
 
-          maxBytes = sizeof(serverIO->inputBuffer)-serverIO->inputBufferLength;
+          maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
           error = Network_receive(&serverIO->network.socketHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,NO_WAIT,&readBytes);
         }
         while ((error == ERROR_NONE) && (readBytes > 0));
@@ -1046,7 +1061,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
       #ifndef NDEBUG
         if (globalOptions.serverDebugFlag)
         {
-          fprintf(stderr,"DEBUG: receive command #%u name=%s: %s\n",*id,String_cString(name),String_cString(data));
+          fprintf(stderr,"DEBUG: received command #%u name=%s: %s\n",*id,String_cString(name),String_cString(data));
         }
       #endif /* not DEBUG */
 
@@ -1063,6 +1078,8 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     }
     else
     {
+asm("int3");
+String_parse(serverIO->line,STRING_BEGIN,"%u %S % S",NULL,id,name,data);
       // unknown
       #ifndef NDEBUG
         if (globalOptions.serverDebugFlag)
@@ -1070,7 +1087,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
           fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
         }
       #endif /* not DEBUG */
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(serverIO->line));
 exit(1);
     }
 
