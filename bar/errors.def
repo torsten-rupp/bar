@@ -144,6 +144,7 @@ ERROR SSH
 // --- storage ----------------------------------------------------------
 ERROR INIT_STORAGE                     "init storage fail"
 ERROR NO_STORAGE_NAME                  "no storage name given"
+ERROR INVALID_STORAGE                  "invalid storage"
 
 // --- FTP --------------------------------------------------------------
 ERROR INVALID_FTP_SPECIFIER            "invalid FTP specifier"
