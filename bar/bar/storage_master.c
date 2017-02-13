@@ -188,47 +188,29 @@ LOCAL Errors StorageMaster_preProcess(StorageInfo *storageInfo,
                                       bool        initialFlag
                                      )
 {
-  Errors    error;
-  uint      id;
-  StringMap resultMap;
+  Errors error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
 
   // init variables
-  resultMap = StringMap_new();
 
-  error = ServerIO_sendCommand(storageInfo->master.io,
-                               &id,
-                               "PREPROCESS archiveName=%S time=%llu initialFlag=%y",
+  error = ServerIO_executeCommand(storageInfo->master.io,
+                                  5LL*MS_PER_SECOND,
+                                  NULL,  // resultMap
+                                  "PREPROCESS archiveName=%S time=%llu initialFlag=%y",
 //TODO: if empty/NULL?
-                               archiveName,
-                               time,
-                               initialFlag
-                              );
+                                  archiveName,
+                                  time,
+                                  initialFlag
+                                 );
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
-    StringMap_delete(resultMap);
-    return error;
-  }
-
-  error = ServerIO_waitResult(storageInfo->master.io,
-                              5LL*MS_PER_SECOND,
-                              id,
-                              NULL,  // error
-                              NULL,  // completedFlag
-                              resultMap
-                             );
-  if (error != ERROR_NONE)
-  {
-fprintf(stderr,"%s, %d: EEE id=%d (%llu): %s\n",__FILE__,__LINE__,id,Misc_getTimestamp(),Error_getText(error));
-    StringMap_delete(resultMap);
     return error;
   }
 
   // free resources
-  StringMap_delete(resultMap);
 
   return ERROR_NONE;
 }
@@ -239,47 +221,29 @@ LOCAL Errors StorageMaster_postProcess(StorageInfo *storageInfo,
                                        bool        finalFlag
                                       )
 {
-  Errors    error;
-  uint      id;
-  StringMap resultMap;
+  Errors error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
 
   // init variables
-  resultMap = StringMap_new();
 
-  error = ServerIO_sendCommand(storageInfo->master.io,
-                               &id,
-                               "POSTPROCESS archiveName=%S time=%llu finalFlag=%y",
+  error = ServerIO_executeCommand(storageInfo->master.io,
+                                  5LL*MS_PER_SECOND,
+                                  NULL,  // resultMap
+                                 "POSTPROCESS archiveName=%S time=%llu finalFlag=%y",
 //TODO: if empty/NULL?
-                               archiveName,
-                               time,
-                               finalFlag
-                              );
+                                 archiveName,
+                                 time,
+                                 finalFlag
+                                );
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
-    StringMap_delete(resultMap);
-    return error;
-  }
-
-  error = ServerIO_waitResult(storageInfo->master.io,
-                              5LL*MS_PER_SECOND,
-                              id,
-                              NULL,  // error
-                              NULL,  // completedFlag
-                              resultMap
-                             );
-  if (error != ERROR_NONE)
-  {
-fprintf(stderr,"%s, %d: EEE id=%d (%llu): %s\n",__FILE__,__LINE__,id,Misc_getTimestamp(),Error_getText(error));
-    StringMap_delete(resultMap);
     return error;
   }
 
   // free resources
-  StringMap_delete(resultMap);
 
   return ERROR_NONE;
 }
@@ -301,9 +265,7 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
                                   uint64        fileSize
                                  )
 {
-  Errors    error;
-  uint      id;
-  StringMap resultMap;
+  Errors error;
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
@@ -313,37 +275,21 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
   UNUSED_VARIABLE(fileSize);
 
   // init variables
-  resultMap = StringMap_new();
 
-  error = ServerIO_sendCommand(storageHandle->storageInfo->master.io,
-                               &id,
-                               "STORAGE_CREATE archiveName=%S archiveSize=%llu",
-                               fileName,
-                               fileSize
-                              );
+  error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
+                                  5LL*MS_PER_SECOND,
+                                  NULL,  // resultMap
+                                  "STORAGE_CREATE archiveName=%S archiveSize=%llu",
+                                  fileName,
+                                  fileSize
+                                 );
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
-    StringMap_delete(resultMap);
-    return error;
-  }
-
-  error = ServerIO_waitResult(storageHandle->storageInfo->master.io,
-                              5LL*MS_PER_SECOND,
-                              id,
-                              NULL,  // error
-                              NULL,  // completedFlag
-                              resultMap
-                             );
-  if (error != ERROR_NONE)
-  {
-fprintf(stderr,"%s, %d: EEE id=%d (%llu): %s\n",__FILE__,__LINE__,id,Misc_getTimestamp(),Error_getText(error));
-    StringMap_delete(resultMap);
     return error;
   }
 
   // free resources
-  StringMap_delete(resultMap);
 
   DEBUG_ADD_RESOURCE_TRACE(&storageHandle->master,sizeof(storageHandle->master));
 
