@@ -1190,7 +1190,7 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
                               timeout,
                               id,
                               NULL, // &error,
-                              NULL, //&completedFlag,
+                              NULL, // &completedFlag,
                               resultMap
                              );
   if (error != ERROR_NONE)
