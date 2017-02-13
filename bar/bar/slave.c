@@ -890,7 +890,7 @@ Errors Slave_connect(SlaveInfo                      *slaveInfo,
   AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
   // open index
-  indexHandle = Index_open(INDEX_PRIORITY_HIGH,INDEX_TIMEOUT);
+  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
   AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
 
   // get printable storage name
