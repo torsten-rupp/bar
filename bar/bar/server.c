@@ -3857,7 +3857,7 @@ LOCAL void jobThreadCode(void)
   }
 
   // open index
-  indexHandle = Index_open(INDEX_PRIORITY_HIGH,INDEX_TIMEOUT);
+  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   jobNode     = NULL;
   archiveType = ARCHIVE_ENTRY_TYPE_UNKNOWN;
@@ -4936,7 +4936,7 @@ LOCAL void schedulerThreadCode(void)
   bool          pendingFlag;
 
   // init index
-  indexHandle = Index_open(INDEX_PRIORITY_MEDIUM,INDEX_TIMEOUT);
+  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   while (!quitFlag)
   {
@@ -5165,7 +5165,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   string  = String_new();
 
   // init index
-  indexHandle = Index_open(INDEX_PRIORITY_MEDIUM,INDEX_TIMEOUT);
+  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
   if (indexHandle == NULL)
   {
     plogMessage(NULL,  // logHandle,
@@ -5496,7 +5496,7 @@ LOCAL void indexThreadCode(void)
   List_init(&indexCryptPasswordList);
 
   // init index
-  indexHandle = Index_open(INDEX_PRIORITY_MEDIUM,INDEX_TIMEOUT);
+  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
   if (indexHandle == NULL)
   {
     List_done(&indexCryptPasswordList,CALLBACK((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
@@ -5761,7 +5761,7 @@ LOCAL void autoIndexThreadCode(void)
   storageName          = String_new();
 
   // init index (Note: timeout not important; auto-index should not block)
-  indexHandle = Index_open(INDEX_PRIORITY_MEDIUM,5L*MS_PER_SECOND);
+  indexHandle = Index_open(NULL,5L*MS_PER_SECOND);
   if (indexHandle == NULL)
   {
     String_delete(storageName);
@@ -17603,7 +17603,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   result = String_new();
 
   // init index
-  indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
+  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   while (   !clientInfo->quitFlag
          && MsgQueue_get(&clientInfo->commandQueue,&command,NULL,sizeof(command),WAIT_FOREVER)
@@ -18370,7 +18370,7 @@ Errors Server_run(ServerModes       mode,
   }
 
   // init index
-  indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
+  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   // read job list
   rereadAllJobs(serverJobsDirectory);
@@ -19008,7 +19008,7 @@ Errors Server_batch(int inputDescriptor,
   }
 
   // init index
-  indexHandle = Index_open(INDEX_PRIORITY_IMMEDIATE,INDEX_TIMEOUT);
+  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   // run in batch mode
   if (globalOptions.serverDebugFlag)
