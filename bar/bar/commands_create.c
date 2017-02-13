@@ -6782,7 +6782,7 @@ Errors Command_create(ConstString                  jobUUID,
   AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
   // open index
-  indexHandle = Index_open(INDEX_PRIORITY_HIGH,INDEX_TIMEOUT);
+  indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
   AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
 
   // init create info
