@@ -27,18 +27,13 @@
 #include "index_definition.h"
 
 #include "storage.h"
+#include "server_io.h"
 
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
 // index version
 #define INDEX_VERSION INDEX_CONST_VERSION
-
-// index priorities
-#define INDEX_PRIORITY_IMMEDIATE DATABASE_PRIORITY_IMMEDIATE
-#define INDEX_PRIORITY_HIGH      DATABASE_PRIORITY_HIGH
-#define INDEX_PRIORITY_MEDIUM    DATABASE_PRIORITY_MEDIUM
-#define INDEX_PRIORITY_LOW       DATABASE_PRIORITY_LOW
 
 // max. limit value
 #define INDEX_UNLIMITED 9223372036854775807LL
@@ -118,6 +113,7 @@ typedef uint64 IndexModeSet;
 // index handle
 typedef struct
 {
+  ServerIO       *masterIO;
   const char     *databaseFileName;
   DatabaseHandle databaseHandle;
   Errors         upgradeError;
@@ -246,7 +242,7 @@ typedef bool(*IndexPauseCallbackFunction)(void *userData);
 #define INDEX_ID_HISTORY(databaseId)   INDEX_ID_(INDEX_TYPE_HISTORY  ,databaseId)
 
 #ifndef NDEBUG
-  #define Index_open(...) __Index_open(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Index_open(...)             __Index_open            (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Index_beginTransaction(...) __Index_beginTransaction(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
@@ -433,7 +429,7 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
 * Purpose: open index database
 * Input  : indexHandle      - index handle variable
 *          databaseFileName - database file name
-*          priority         - priority (0=highest)
+*          masterIO         - master I/O or NULL
 *          timeout          - timeout [ms]
 * Output : -
 * Return : ERROR_NONE or error code
@@ -441,13 +437,13 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
 \***********************************************************************/
 
 #ifdef NDEBUG
-IndexHandle *Index_open(uint priority,
-                        long timeout
+IndexHandle *Index_open(ServerIO *masterIO,
+                        long     timeout
                        );
 #else /* not NDEBUG */
 IndexHandle *__Index_open(const char *__fileName__,
                           ulong      __lineNb__,
-                          uint        priority,
+                          ServerIO   *masterIO,
                           long       timeout
                          );
 #endif /* NDEBUG */

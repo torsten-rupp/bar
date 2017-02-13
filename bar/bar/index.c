@@ -28,6 +28,7 @@
 #include "errors.h"
 
 #include "storage.h"
+#include "server_io.h"
 #include "index_definition.h"
 #include "bar.h"
 #include "bar_global.h"
@@ -185,8 +186,8 @@ LOCAL bool                       quitFlag;
 
 #ifndef NDEBUG
   #define createIndex(...) __createIndex(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define openIndex(...)  __openIndex(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define closeIndex(...) __closeIndex(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define openIndex(...)   __openIndex  (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define closeIndex(...)  __closeIndex (__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -202,6 +203,7 @@ LOCAL bool                       quitFlag;
 * Purpose: open index database
 * Input  : databaseFileName - database file name NULL for "in memory"
 *          indexOpenModes   - open modes; see INDEX_OPEN_MODE_...
+*          timeout          - timeout [ms]
 * Output : indexHandle - index handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -210,8 +212,8 @@ LOCAL bool                       quitFlag;
 #ifdef NDEBUG
   LOCAL Errors openIndex(IndexHandle *indexHandle,
                          const char  *databaseFileName,
+                         ServerIO    *masterIO,
                          uint        indexOpenModes,
-                         uint        priority,
                          long        timeout
                         )
 #else /* not NDEBUG */
@@ -219,8 +221,8 @@ LOCAL bool                       quitFlag;
                            ulong       __lineNb__,
                            IndexHandle *indexHandle,
                            const char  *databaseFileName,
+                           ServerIO    *masterIO,
                            uint        indexOpenModes,
-                           uint        priority,
                            long        timeout
                           )
 #endif /* NDEBUG */
@@ -231,6 +233,7 @@ LOCAL bool                       quitFlag;
 
   // init variables
   indexHandle->databaseFileName = databaseFileName;
+  indexHandle->masterIO         = masterIO;
   indexHandle->upgradeError     = ERROR_NONE;
   #ifndef NDEBUG
     indexHandle->threadId = pthread_self();
@@ -247,9 +250,9 @@ LOCAL bool                       quitFlag;
 
     // open database
     #ifdef NDEBUG
-      error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,priority,NO_WAIT);
+      error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
     #else /* not NDEBUG */
-      error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,priority,NO_WAIT);
+      error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
     #endif /* NDEBUG */
     if (error != ERROR_NONE)
     {
@@ -276,9 +279,9 @@ LOCAL bool                       quitFlag;
   {
     // open database
     #ifdef NDEBUG
-      error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,priority,timeout);
+      error = Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
     #else /* not NDEBUG */
-      error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,priority,timeout);
+      error = __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,timeout);
     #endif /* NDEBUG */
     if (error != ERROR_NONE)
     {
@@ -375,7 +378,7 @@ LOCAL Errors getIndexVersion(const char *databaseFileName, int64 *indexVersion)
   IndexHandle indexHandle;
 
   // open index database
-  error = openIndex(&indexHandle,databaseFileName,INDEX_OPEN_MODE_READ,INDEX_PRIORITY_HIGH,NO_WAIT);
+  error = openIndex(&indexHandle,databaseFileName,NULL,INDEX_OPEN_MODE_READ,NO_WAIT);
   if (error != ERROR_NONE)
   {
     return error;
@@ -791,7 +794,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
   int64       indexVersion;
 
   // open old index
-  error = openIndex(&oldIndexHandle,String_cString(oldDatabaseFileName),INDEX_OPEN_MODE_READ,INDEX_PRIORITY_IMMEDIATE,NO_WAIT);
+  error = openIndex(&oldIndexHandle,String_cString(oldDatabaseFileName),NULL,INDEX_OPEN_MODE_READ,NO_WAIT);
   if (error != ERROR_NONE)
   {
     return error;
@@ -2496,7 +2499,7 @@ LOCAL void indexThreadCode(void)
   assert(indexDatabaseFileName != NULL);
 
   // open index
-  error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ_WRITE,INDEX_PRIORITY_LOW,INDEX_TIMEOUT);
+  error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ_WRITE,INDEX_TIMEOUT);
   if (error != ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
@@ -4026,10 +4029,10 @@ Errors Index_init(const char *fileName)
     // check if database is corrupt
     if (File_existsCString(indexDatabaseFileName))
     {
-      error = openIndex(&indexHandleReference,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,INDEX_PRIORITY_HIGH,NO_WAIT);
+      error = openIndex(&indexHandleReference,NULL,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,NO_WAIT);
       if (error == ERROR_NONE)
       {
-        error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ,INDEX_PRIORITY_HIGH,NO_WAIT);
+        error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ,NO_WAIT);
         if (error == ERROR_NONE)
         {
           error = Database_compare(&indexHandleReference.databaseHandle,&indexHandle.databaseHandle);
@@ -4072,7 +4075,7 @@ Errors Index_init(const char *fileName)
   if (createFlag)
   {
     // create new index
-    error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,INDEX_PRIORITY_HIGH,NO_WAIT);
+    error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_CREATE,NO_WAIT);
     if (error != ERROR_NONE)
     {
       plogMessage(NULL,  // logHandle
@@ -4120,7 +4123,7 @@ Errors Index_init(const char *fileName)
   }
 
   // initial clean-up
-  error = openIndex(&indexHandle,indexDatabaseFileName,INDEX_OPEN_MODE_READ_WRITE,INDEX_PRIORITY_HIGH,NO_WAIT);
+  error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);
   if (error != ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
@@ -4193,19 +4196,19 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
 }
 
 #ifdef NDEBUG
-IndexHandle *Index_open(uint priority,
-                        long timeout
+IndexHandle *Index_open(ServerIO *masterIO,
+                        long     timeout
                        )
 #else /* not NDEBUG */
 IndexHandle *__Index_open(const char *__fileName__,
                           ulong      __lineNb__,
-                          uint       priority,
+                          ServerIO   *masterIO,
                           long       timeout
                          )
 #endif /* NDEBUG */
 {
   IndexHandle *indexHandle;
-  Errors error;
+  Errors      error;
 
   indexHandle = NULL;
 
@@ -4220,8 +4223,8 @@ IndexHandle *__Index_open(const char *__fileName__,
     #ifdef NDEBUG
       error = openIndex(indexHandle,
                         indexDatabaseFileName,
+                        masterIO,
                         INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_FOREIGN_KEYS,
-                        priority,
                         timeout
                        );
     #else /* not NDEBUG */
@@ -4229,8 +4232,8 @@ IndexHandle *__Index_open(const char *__fileName__,
                           __lineNb__,
                           indexHandle,
                           indexDatabaseFileName,
+                          masterIO,
                           INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_FOREIGN_KEYS,
-                          priority,
                           timeout
                          );
     #endif /* NDEBUG */
@@ -10368,110 +10371,136 @@ Errors Index_addFile(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    // add entry
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO entries \
-                                ( \
-                                 storageId, \
-                                 type, \
-                                 name, \
-                                 timeLastAccess, \
-                                 timeModified, \
-                                 timeLastChanged, \
-                                 userId, \
-                                 groupId, \
-                                 permission \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lld, \
-                                 %d, \
-                                 %'S, \
-                                 %llu, \
-                                 %llu, \
-                                 %llu, \
-                                 %u, \
-                                 %u, \
-                                 %u \
-                                ); \
-                             ",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_FILE,
-                             fileName,
-                             timeLastAccess,
-                             timeModified,
-                             timeLastChanged,
-                             userId,
-                             groupId,
-                             permission
-                            );
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      // add entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO entries \
+                                  ( \
+                                   storageId, \
+                                   type, \
+                                   name, \
+                                   timeLastAccess, \
+                                   timeModified, \
+                                   timeLastChanged, \
+                                   userId, \
+                                   groupId, \
+                                   permission \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %d, \
+                                   %'S, \
+                                   %llu, \
+                                   %llu, \
+                                   %llu, \
+                                   %u, \
+                                   %u, \
+                                   %u \
+                                  ); \
+                               ",
+                               Index_getDatabaseId(storageId),
+                               INDEX_TYPE_FILE,
+                               fileName,
+                               timeLastAccess,
+                               timeModified,
+                               timeLastChanged,
+                               userId,
+                               groupId,
+                               permission
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
+
+      // add file entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO fileEntries \
+                                  ( \
+                                   storageId, \
+                                   entryId, \
+                                   size, \
+                                   fragmentOffset, \
+                                   fragmentSize\
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %lld, \
+                                   %llu, \
+                                   %llu, \
+                                   %llu\
+                                  ); \
+                               ",
+                               Index_getDatabaseId(storageId),
+                               Index_getDatabaseId(entryId),
+                               size,
+                               fragmentOffset,
+                               fragmentSize
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      // update directory content count/size aggregates
+      error = updateDirectoryContentAggregates(indexHandle,
+                                               storageId,
+                                               entryId,
+                                               fileName,
+                                               size
+                                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      #ifndef NDEBUG
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileCount<0");
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileSize<0");
+
+        verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+        verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
+      #endif /* not NDEBUG */
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    5LL*MS_PER_SECOND,
+                                    NULL,  // resultMap
+                                    "INDEX_ENTRY_ADD storageId=%llu type=FILE name=%S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    storageId,
+                                    fileName,
+                                    size,
+                                    timeLastAccess,
+                                    timeModified,
+                                    timeLastChanged,
+                                    userId,
+                                    groupId,
+                                    permission,
+                                    fragmentOffset,
+                                    fragmentSize
+                                   );
     if (error != ERROR_NONE)
     {
       return error;
     }
-    entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
-
-    // add file entry
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO fileEntries \
-                                ( \
-                                 storageId, \
-                                 entryId, \
-                                 size, \
-                                 fragmentOffset, \
-                                 fragmentSize\
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lld, \
-                                 %lld, \
-                                 %llu, \
-                                 %llu, \
-                                 %llu\
-                                ); \
-                             ",
-                             Index_getDatabaseId(storageId),
-                             Index_getDatabaseId(entryId),
-                             size,
-                             fragmentOffset,
-                             fragmentSize
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // update directory content count/size aggregates
-    error = updateDirectoryContentAggregates(indexHandle,
-                                             storageId,
-                                             entryId,
-                                             fileName,
-                                             size
-                                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    #ifndef NDEBUG
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileCount<0");
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileSize<0");
-
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
-    #endif /* not NDEBUG */
-
-    return ERROR_NONE;
-  });
+  }
 
   return error;
 }
@@ -10499,98 +10528,119 @@ Errors Index_addImage(IndexHandle     *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    // add entry
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO entries \
-                                ( \
-                                 storageId, \
-                                 type, \
-                                 name, \
-                                 timeLastAccess, \
-                                 timeModified, \
-                                 timeLastChanged, \
-                                 userId, \
-                                 groupId, \
-                                 permission \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lld, \
-                                 %lld, \
-                                 %d, \
-                                 %'S, \
-                                 %llu, \
-                                 %llu, \
-                                 %llu, \
-                                 %u, \
-                                 %u, \
-                                 %u \
-                                ); \
-                             ",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_IMAGE,
-                             imageName,
-                             0LL,
-                             0LL,
-                             0LL,
-                             0,
-                             0,
-                             0
-                            );
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      // add entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO entries \
+                                  ( \
+                                   storageId, \
+                                   type, \
+                                   name, \
+                                   timeLastAccess, \
+                                   timeModified, \
+                                   timeLastChanged, \
+                                   userId, \
+                                   groupId, \
+                                   permission \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %lld, \
+                                   %d, \
+                                   %'S, \
+                                   %llu, \
+                                   %llu, \
+                                   %llu, \
+                                   %u, \
+                                   %u, \
+                                   %u \
+                                  ); \
+                               ",
+                               Index_getDatabaseId(storageId),
+                               INDEX_TYPE_IMAGE,
+                               imageName,
+                               0LL,
+                               0LL,
+                               0LL,
+                               0,
+                               0,
+                               0
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+
+      // add image entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO imageEntries \
+                                  ( \
+                                   storageId, \
+                                   entryId, \
+                                   size, \
+                                   fragmentOffset, \
+                                   fragmentSize\
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %lld, \
+                                   %d, \
+                                   %llu, \
+                                   %u, \
+                                   %llu, \
+                                   %llu\
+                                  ); \
+                               ",
+                               Index_getDatabaseId(storageId),
+                               entryId,
+                               fileSystemType,
+                               size,
+                               blockSize,
+                               blockOffset,
+                               blockCount
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      #ifndef NDEBUG
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE id=%lld AND totalEntrySize<0",Index_getDatabaseId(storageId));
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE id=%lld AND totalFileSize<0",Index_getDatabaseId(storageId));
+      #endif /* not NDEBUG */
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    5LL*MS_PER_SECOND,
+                                    NULL,  // resultMap
+                                    "INDEX_ENTRY_ADD storageId=%llu type=IMAGE name=%S size=%llu blockSize=%lu blockOffset=%llu blockCount=%llu",
+                                    storageId,
+                                    imageName,
+                                    size,
+                                    blockSize,
+                                    blockOffset,
+                                    blockCount
+                                   );
     if (error != ERROR_NONE)
     {
       return error;
     }
-    entryId = Database_getLastRowId(&indexHandle->databaseHandle);
-
-    // add image entry
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO imageEntries \
-                                ( \
-                                 storageId, \
-                                 entryId, \
-                                 size, \
-                                 fragmentOffset, \
-                                 fragmentSize\
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lld, \
-                                 %lld, \
-                                 %d, \
-                                 %llu, \
-                                 %u, \
-                                 %llu, \
-                                 %llu\
-                                ); \
-                             ",
-                             Index_getDatabaseId(storageId),
-                             entryId,
-                             fileSystemType,
-                             size,
-                             blockSize,
-                             blockOffset,
-                             blockCount
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    #ifndef NDEBUG
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE id=%lld AND totalEntrySize<0",Index_getDatabaseId(storageId));
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE id=%lld AND totalFileSize<0",Index_getDatabaseId(storageId));
-    #endif /* not NDEBUG */
-
-    return ERROR_NONE;
-  });
+  }
 
   return error;
 }
@@ -10619,102 +10669,125 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    // add entry
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO entries \
-                                ( \
-                                 storageId, \
-                                 type, \
-                                 name, \
-                                 timeLastAccess, \
-                                 timeModified, \
-                                 timeLastChanged, \
-                                 userId, \
-                                 groupId, \
-                                 permission \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lld, \
-                                 %d, \
-                                 %'S, \
-                                 %llu, \
-                                 %llu, \
-                                 %llu, \
-                                 %u, \
-                                 %u, \
-                                 %u \
-                                ); \
-                             ",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_DIRECTORY,
-                             directoryName,
-                             timeLastAccess,
-                             timeModified,
-                             timeLastChanged,
-                             userId,
-                             groupId,
-                             permission
-                            );
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      // add entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO entries \
+                                  ( \
+                                   storageId, \
+                                   type, \
+                                   name, \
+                                   timeLastAccess, \
+                                   timeModified, \
+                                   timeLastChanged, \
+                                   userId, \
+                                   groupId, \
+                                   permission \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %d, \
+                                   %'S, \
+                                   %llu, \
+                                   %llu, \
+                                   %llu, \
+                                   %u, \
+                                   %u, \
+                                   %u \
+                                  ); \
+                               ",
+                               Index_getDatabaseId(storageId),
+                               INDEX_TYPE_DIRECTORY,
+                               directoryName,
+                               timeLastAccess,
+                               timeModified,
+                               timeLastChanged,
+                               userId,
+                               groupId,
+                               permission
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
+
+      // add directory entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO directoryEntries \
+                                  ( \
+                                   storageId, \
+                                   entryId, \
+                                   name \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %lld, \
+                                   %'S\
+                                  ); \
+                               ",
+                               Index_getDatabaseId(storageId),
+                               Index_getDatabaseId(entryId),
+                               directoryName
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      // update directory content count/size aggregates
+      error = updateDirectoryContentAggregates(indexHandle,
+                                               storageId,
+                                               entryId,
+                                               directoryName,
+                                               0LL
+                                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      #ifndef NDEBUG
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalDirectoryCount<0");
+
+        verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+        verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
+      #endif /* not NDEBUG */
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    5LL*MS_PER_SECOND,
+                                    NULL,  // resultMap
+                                    "INDEX_ENTRY_ADD storageId=%llu type=DIRECTORY name=%S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
+                                    storageId,
+                                    directoryName,
+                                    timeLastAccess,
+                                    timeModified,
+                                    timeLastChanged,
+                                    userId,
+                                    groupId,
+                                    permission
+                                   );
     if (error != ERROR_NONE)
     {
       return error;
     }
-    entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
-
-    // add directory entry
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO directoryEntries \
-                                ( \
-                                 storageId, \
-                                 entryId, \
-                                 name \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lld, \
-                                 %lld, \
-                                 %'S\
-                                ); \
-                             ",
-                             Index_getDatabaseId(storageId),
-                             Index_getDatabaseId(entryId),
-                             directoryName
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // update directory content count/size aggregates
-    error = updateDirectoryContentAggregates(indexHandle,
-                                             storageId,
-                                             entryId,
-                                             directoryName,
-                                             0LL
-                                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    #ifndef NDEBUG
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalDirectoryCount<0");
-
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
-    #endif /* not NDEBUG */
-
-    return ERROR_NONE;
-  });
+  }
 
   return error;
 }
@@ -10747,94 +10820,118 @@ Errors Index_addLink(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    // add entry
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO entries \
-                                ( \
-                                 storageId, \
-                                 type, \
-                                 name, \
-                                 timeLastAccess, \
-                                 timeModified, \
-                                 timeLastChanged, \
-                                 userId, \
-                                 groupId, \
-                                 permission \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lld, \
-                                 %d, \
-                                 %'S, \
-                                 %llu, \
-                                 %llu, \
-                                 %llu, \
-                                 %u, \
-                                 %u, \
-                                 %u \
-                                ); \
-                             ",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_LINK,
-                             linkName,
-                             timeLastAccess,
-                             timeModified,
-                             timeLastChanged,
-                             userId,
-                             groupId,
-                             permission
-                            );
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      // add entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO entries \
+                                  ( \
+                                   storageId, \
+                                   type, \
+                                   name, \
+                                   timeLastAccess, \
+                                   timeModified, \
+                                   timeLastChanged, \
+                                   userId, \
+                                   groupId, \
+                                   permission \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %d, \
+                                   %'S, \
+                                   %llu, \
+                                   %llu, \
+                                   %llu, \
+                                   %u, \
+                                   %u, \
+                                   %u \
+                                  ); \
+                               ",
+                               Index_getDatabaseId(storageId),
+                               INDEX_TYPE_LINK,
+                               linkName,
+                               timeLastAccess,
+                               timeModified,
+                               timeLastChanged,
+                               userId,
+                               groupId,
+                               permission
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
+
+      // add link entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO linkEntries \
+                                  ( \
+                                   storageId, \
+                                   entryId, \
+                                   destinationName \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %lld, \
+                                   %'S \
+                                  ); \
+                               ",
+                               Index_getDatabaseId(storageId),
+                               Index_getDatabaseId(entryId),
+                               destinationName
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      // update directory content count/size aggregates
+      error = updateDirectoryContentAggregates(indexHandle,
+                                               storageId,
+                                               entryId,
+                                               linkName,
+                                               0LL
+                                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    5LL*MS_PER_SECOND,
+                                    NULL,  // resultMap
+                                    "INDEX_ENTRY_ADD storageId=%llu type=LINK name=%S destinationName=%S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
+                                    storageId,
+                                    linkName,
+                                    destinationName,
+                                    timeLastAccess,
+                                    timeModified,
+                                    timeLastChanged,
+                                    userId,
+                                    groupId,
+                                    permission
+                                   );
     if (error != ERROR_NONE)
     {
       return error;
     }
-    entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
-
-    // add link entry
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO linkEntries \
-                                ( \
-                                 storageId, \
-                                 entryId, \
-                                 destinationName \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lld, \
-                                 %lld, \
-                                 %'S \
-                                ); \
-                             ",
-                             Index_getDatabaseId(storageId),
-                             Index_getDatabaseId(entryId),
-                             destinationName
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // update directory content count/size aggregates
-    error = updateDirectoryContentAggregates(indexHandle,
-                                             storageId,
-                                             entryId,
-                                             linkName,
-                                             0LL
-                                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
+  }
 
   return error;
 }
@@ -10866,110 +10963,136 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    // add entry
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO entries \
-                                ( \
-                                 storageId, \
-                                 type, \
-                                 name, \
-                                 timeLastAccess, \
-                                 timeModified, \
-                                 timeLastChanged, \
-                                 userId, \
-                                 groupId, \
-                                 permission \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lld, \
-                                 %d, \
-                                 %'S, \
-                                 %llu, \
-                                 %llu, \
-                                 %llu, \
-                                 %u, \
-                                 %u, \
-                                 %u \
-                                ); \
-                             ",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_HARDLINK,
-                             fileName,
-                             timeLastAccess,
-                             timeModified,
-                             timeLastChanged,
-                             userId,
-                             groupId,
-                             permission
-                            );
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      // add entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO entries \
+                                  ( \
+                                   storageId, \
+                                   type, \
+                                   name, \
+                                   timeLastAccess, \
+                                   timeModified, \
+                                   timeLastChanged, \
+                                   userId, \
+                                   groupId, \
+                                   permission \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %d, \
+                                   %'S, \
+                                   %llu, \
+                                   %llu, \
+                                   %llu, \
+                                   %u, \
+                                   %u, \
+                                   %u \
+                                  ); \
+                               ",
+                               Index_getDatabaseId(storageId),
+                               INDEX_TYPE_HARDLINK,
+                               fileName,
+                               timeLastAccess,
+                               timeModified,
+                               timeLastChanged,
+                               userId,
+                               groupId,
+                               permission
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
+
+      // add hard link entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO hardlinkEntries \
+                                  ( \
+                                   storageId, \
+                                   entryId, \
+                                   size, \
+                                   fragmentOffset, \
+                                   fragmentSize\
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %lld, \
+                                   %llu, \
+                                   %llu, \
+                                   %llu\
+                                  ); \
+                               ",
+                               Index_getDatabaseId(storageId),
+                               Index_getDatabaseId(entryId),
+                               size,
+                               fragmentOffset,
+                               fragmentSize
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      // update directory content count/size aggregates
+      error = updateDirectoryContentAggregates(indexHandle,
+                                               storageId,
+                                               entryId,
+                                               fileName,
+                                               size
+                                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      #ifndef NDEBUG
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileCount<0");
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileSize<0");
+
+        verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+        verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
+      #endif /* not NDEBUG */
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    5LL*MS_PER_SECOND,
+                                    NULL,  // resultMap
+                                    "INDEX_ENTRY_ADD storageId=%llu type=HARDLINK name=%S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    storageId,
+                                    fileName,
+                                    size,
+                                    timeLastAccess,
+                                    timeModified,
+                                    timeLastChanged,
+                                    userId,
+                                    groupId,
+                                    permission,
+                                    fragmentOffset,
+                                    fragmentSize
+                                   );
     if (error != ERROR_NONE)
     {
       return error;
     }
-    entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
-
-    // add hard link entry
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO hardlinkEntries \
-                                ( \
-                                 storageId, \
-                                 entryId, \
-                                 size, \
-                                 fragmentOffset, \
-                                 fragmentSize\
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lld, \
-                                 %lld, \
-                                 %llu, \
-                                 %llu, \
-                                 %llu\
-                                ); \
-                             ",
-                             Index_getDatabaseId(storageId),
-                             Index_getDatabaseId(entryId),
-                             size,
-                             fragmentOffset,
-                             fragmentSize
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // update directory content count/size aggregates
-    error = updateDirectoryContentAggregates(indexHandle,
-                                             storageId,
-                                             entryId,
-                                             fileName,
-                                             size
-                                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    #ifndef NDEBUG
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileCount<0");
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileSize<0");
-
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
-    #endif /* not NDEBUG */
-
-    return ERROR_NONE;
-  });
+  }
 
   return error;
 }
@@ -11001,100 +11124,126 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    // add entry
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO entries \
-                                ( \
-                                 storageId, \
-                                 type, \
-                                 name, \
-                                 timeLastAccess, \
-                                 timeModified, \
-                                 timeLastChanged, \
-                                 userId, \
-                                 groupId, \
-                                 permission \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lld, \
-                                 %d, \
-                                 %'S, \
-                                 %llu, \
-                                 %llu, \
-                                 %llu, \
-                                 %u, \
-                                 %u, \
-                                 %u \
-                                ); \
-                             ",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_SPECIAL,
-                             name,
-                             timeLastAccess,
-                             timeModified,
-                             timeLastChanged,
-                             userId,
-                             groupId,
-                             permission
-                            );
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      // add entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO entries \
+                                  ( \
+                                   storageId, \
+                                   type, \
+                                   name, \
+                                   timeLastAccess, \
+                                   timeModified, \
+                                   timeLastChanged, \
+                                   userId, \
+                                   groupId, \
+                                   permission \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %d, \
+                                   %'S, \
+                                   %llu, \
+                                   %llu, \
+                                   %llu, \
+                                   %u, \
+                                   %u, \
+                                   %u \
+                                  ); \
+                               ",
+                               Index_getDatabaseId(storageId),
+                               INDEX_TYPE_SPECIAL,
+                               name,
+                               timeLastAccess,
+                               timeModified,
+                               timeLastChanged,
+                               userId,
+                               groupId,
+                               permission
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
+
+      // add special entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO specialEntries \
+                                  ( \
+                                   storageId, \
+                                   entryId, \
+                                   specialType, \
+                                   major, \
+                                   minor \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %lld, \
+                                   %d, \
+                                   %d, \
+                                   %d\
+                                  ); \
+                               ",
+                               Index_getDatabaseId(storageId),
+                               Index_getDatabaseId(entryId),
+                               specialType,
+                               major,
+                               minor
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      // update directory content count/size aggregates
+      error = updateDirectoryContentAggregates(indexHandle,
+                                               storageId,
+                                               entryId,
+                                               name,
+                                               0LL
+                                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    5LL*MS_PER_SECOND,
+                                    NULL,  // resultMap
+                                    "INDEX_ENTRY_ADD storageId=%llu type=SPECIAL name=%S specialType=%u timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o major=%u minor=%u",
+                                    storageId,
+                                    name,
+                                    specialType,
+                                    timeLastAccess,
+                                    timeModified,
+                                    timeLastChanged,
+                                    userId,
+                                    groupId,
+                                    permission,
+                                    major,
+                                    minor
+                                   );
     if (error != ERROR_NONE)
     {
       return error;
     }
-    entryId = INDEX_ID_ENTRY(Database_getLastRowId(&indexHandle->databaseHandle));
-
-    // add special entry
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO specialEntries \
-                                ( \
-                                 storageId, \
-                                 entryId, \
-                                 specialType, \
-                                 major, \
-                                 minor \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %lld, \
-                                 %lld, \
-                                 %d, \
-                                 %d, \
-                                 %d\
-                                ); \
-                             ",
-                             Index_getDatabaseId(storageId),
-                             Index_getDatabaseId(entryId),
-                             specialType,
-                             major,
-                             minor
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // update directory content count/size aggregates
-    error = updateDirectoryContentAggregates(indexHandle,
-                                             storageId,
-                                             entryId,
-                                             name,
-                                             0LL
-                                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
+  }
 
   return error;
 }

@@ -40,12 +40,6 @@ typedef enum
   DATABASE_OPENMODE_READWRITE,
 } DatabaseOpenModes;
 
-// priorities
-#define DATABASE_PRIORITY_IMMEDIATE 3
-#define DATABASE_PRIORITY_HIGH      2
-#define DATABASE_PRIORITY_MEDIUM    1
-#define DATABASE_PRIORITY_LOW       0
-
 // database types
 typedef enum
 {
@@ -84,7 +78,6 @@ typedef struct DatabaseHandle
     LIST_NODE_HEADER(struct DatabaseHandle);
   #endif /* not NDEBUG */
 
-  uint          priority;                   // access priority
   Semaphore     lock;                       // lock (Note: do not use sqlite mutex, because of debug facilities in semaphore.c)
   sqlite3       *handle;                    // SQlite3 handle
   long          timeout;                    // timeout [ms]
@@ -257,7 +250,6 @@ void Database_doneAll(void);
 * Input  : databaseHandle   - database handle variable
 *          fileName         - file name or NULL for "in memory"
 *          databaseOpenMode - open mode; see DatabaseOpenModes
-*          priority         - priority (0=highest)
 *          timeout          - timeout [ms]
 * Output : databaseHandle - database handle
 * Return : ERROR_NONE or error code
@@ -268,7 +260,6 @@ void Database_doneAll(void);
   Errors Database_open(DatabaseHandle    *databaseHandle,
                        const char        *fileName,
                        DatabaseOpenModes databaseOpenMode,
-                       uint              priority,
                        long              timeout
                       );
 #else /* not NDEBUG */
@@ -277,7 +268,6 @@ void Database_doneAll(void);
                          DatabaseHandle    *databaseHandle,
                          const char        *fileName,
                          DatabaseOpenModes databaseOpenMode,
-                         uint              priority,
                          long              timeout
                         );
 #endif /* NDEBUG */
