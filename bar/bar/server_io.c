@@ -278,11 +278,11 @@ LOCAL bool doneLine(ServerIO *serverIO)
 * Input  : serverIO - server i/o
 *          line     - data line
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void sendData(ServerIO *serverIO, ConstString line)
+LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
 {
   SemaphoreLock semaphoreLock;
   Errors        error;
@@ -319,18 +319,14 @@ fprintf(stderr,"%s, %d: uuuuuuuuuuuuuuuuuuuuuuu\n",__FILE__,__LINE__);
       switch (serverIO->type)
       {
         case SERVER_IO_TYPE_NONE:
+          error = ERROR_CONNECT_FAIL;
           break;
         case SERVER_IO_TYPE_BATCH:
-          (void)File_write(&serverIO->file.fileHandle,serverIO->outputBuffer,n+1);
+          error = File_write(&serverIO->file.fileHandle,serverIO->outputBuffer,n+1);
           (void)File_flush(&serverIO->file.fileHandle);
           break;
         case SERVER_IO_TYPE_NETWORK:
           error = Network_send(&serverIO->network.socketHandle,serverIO->outputBuffer,n+1);
-          if (error != ERROR_NONE)
-          {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
-            HALT_INTERNAL_ERROR("sent");
-          }
           break;
         #ifndef NDEBUG
           default:
@@ -340,6 +336,8 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
       }
     }
   }
+
+  return error;
 }
 
 #if 0
@@ -535,7 +533,12 @@ LOCAL Errors sendAction(ServerIO *serverIO, uint id, StringMap resultMap, const 
   uselocale(locale);
 
   // send action
-  sendData(serverIO,s);
+  error = sendData(serverIO,s);
+  if (error != ERROR_NONE)
+  {
+    String_delete(s);
+    return error;
+  }
   #ifndef NDEBUG
     if (globalOptions.serverDebugFlag)
     {
@@ -697,6 +700,7 @@ void ServerIO_sendSessionId(ServerIO *serverIO)
   String encodedId;
   String n,e;
   String s;
+  Errors error;
 
   assert(serverIO != NULL);
 
@@ -727,7 +731,15 @@ void ServerIO_sendSessionId(ServerIO *serverIO)
   }
 
   // send session data
-  sendData(serverIO,s);
+  error = sendData(serverIO,s);
+  if (error != ERROR_NONE)
+  {
+    String_delete(e);
+    String_delete(n);
+    String_delete(encodedId);
+    String_delete(s);
+    return error;
+  }
   #ifndef NDEBUG
     if (globalOptions.serverDebugFlag)
     {
@@ -1109,6 +1121,7 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
 {
   String   s;
   locale_t locale;
+  Errors   error;
 
   assert(serverIO != NULL);
   assert(id != NULL);
@@ -1129,7 +1142,12 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
   uselocale(locale);
 
   // send command
-  sendData(serverIO,s);
+  error = sendData(serverIO,s);
+  if (error != ERROR_NONE)
+  {
+    String_delete(s);
+    return error;
+  }
   #ifndef NDEBUG
     if (globalOptions.serverDebugFlag)
     {
@@ -1247,7 +1265,12 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
   uselocale(locale);
 
   // send result
-  sendData(serverIO,s);
+  error = sendData(serverIO,s);
+  if (error != ERROR_NONE)
+  {
+    String_delete(s);
+    return error;
+  }
   #ifndef NDEBUG
     if (globalOptions.serverDebugFlag)
     {
@@ -1359,6 +1382,11 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
 
   // send action
   sendData(serverIO,s);
+  if (error != ERROR_NONE)
+  {
+    String_delete(s);
+    return error;
+  }
   #ifndef NDEBUG
     if (globalOptions.serverDebugFlag)
     {
