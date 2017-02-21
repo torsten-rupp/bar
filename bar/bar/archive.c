@@ -53,11 +53,11 @@ LOCAL const struct
   ArchiveTypes archiveType;
 } ARCHIVE_TYPES[] =
 {
-  {"normal",      ARCHIVE_TYPE_NORMAL,     },
-  {"full",        ARCHIVE_TYPE_FULL,       },
-  {"incremental", ARCHIVE_TYPE_INCREMENTAL },
-  {"differential",ARCHIVE_TYPE_DIFFERENTIAL},
-  {"continuous",  ARCHIVE_TYPE_CONTINUOUS  }
+  {"NORMAL",      ARCHIVE_TYPE_NORMAL,     },
+  {"FULL",        ARCHIVE_TYPE_FULL,       },
+  {"INCREMENTAL", ARCHIVE_TYPE_INCREMENTAL },
+  {"DIFFERENTIAL",ARCHIVE_TYPE_DIFFERENTIAL},
+  {"CONTINUOUS",  ARCHIVE_TYPE_CONTINUOUS  }
 };
 
 // archive entry types
@@ -67,12 +67,12 @@ LOCAL const struct
   ArchiveEntryTypes archiveEntryType;
 } ARCHIVE_ENTRY_TYPES[] =
 {
-  { "file",     ARCHIVE_ENTRY_TYPE_FILE      },
-  { "image",    ARCHIVE_ENTRY_TYPE_IMAGE     },
-  { "directory",ARCHIVE_ENTRY_TYPE_DIRECTORY },
-  { "link",     ARCHIVE_ENTRY_TYPE_LINK      },
-  { "hardlink", ARCHIVE_ENTRY_TYPE_HARDLINK  },
-  { "special",  ARCHIVE_ENTRY_TYPE_SPECIAL   }
+  { "FILE",     ARCHIVE_ENTRY_TYPE_FILE      },
+  { "IMAGE",    ARCHIVE_ENTRY_TYPE_IMAGE     },
+  { "DIRECTORY",ARCHIVE_ENTRY_TYPE_DIRECTORY },
+  { "LINK",     ARCHIVE_ENTRY_TYPE_LINK      },
+  { "HARDLINK", ARCHIVE_ENTRY_TYPE_HARDLINK  },
+  { "SPECIAL",  ARCHIVE_ENTRY_TYPE_SPECIAL   }
 };
 
 // size of buffer for processing data
@@ -4094,8 +4094,8 @@ void Archive_doneAll(void)
 
 const char *Archive_archiveTypeToString(ArchiveTypes archiveType, const char *defaultValue)
 {
-  return ((ARCHIVE_TYPE_NORMAL <= archiveType) && (archiveType <= ARCHIVE_TYPE_CONTINUOUS))
-           ? ARCHIVE_TYPES[archiveType].name
+  return ((ARRAY_FIRST(ARCHIVE_TYPES).archiveType <= archiveType) && (archiveType <= ARRAY_LAST(ARCHIVE_TYPES).archiveType))
+           ? ARCHIVE_TYPES[archiveType-ARRAY_FIRST(ARCHIVE_TYPES).archiveType].name
            : defaultValue;
 }
 
@@ -4128,8 +4128,8 @@ bool Archive_parseArchiveType(const char *name, ArchiveTypes *archiveType)
 
 const char *Archive_archiveEntryTypeToString(ArchiveEntryTypes archiveEntryType, const char *defaultValue)
 {
-  return ((ARCHIVE_ENTRY_TYPE_FILE <= archiveEntryType) && (archiveEntryType <= ARCHIVE_ENTRY_TYPE_SPECIAL))
-           ? ARCHIVE_ENTRY_TYPES[archiveEntryType].name
+  return ((ARRAY_FIRST(ARCHIVE_ENTRY_TYPES).archiveEntryType <= archiveEntryType) && (archiveEntryType <= ARRAY_LAST(ARCHIVE_ENTRY_TYPES).archiveEntryType))
+           ? ARCHIVE_ENTRY_TYPES[archiveEntryType-ARRAY_FIRST(ARCHIVE_ENTRY_TYPES).archiveEntryType].name
            : defaultValue;
 }
 
