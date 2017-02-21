@@ -45,12 +45,12 @@ LOCAL const struct
   IndexStates indexState;
 } INDEX_STATES[] =
 {
-  { "none",             INDEX_STATE_NONE             },
-  { "ok",               INDEX_STATE_OK               },
-  { "create",           INDEX_STATE_CREATE           },
-  { "update_requested", INDEX_STATE_UPDATE_REQUESTED },
-  { "update",           INDEX_STATE_UPDATE           },
-  { "error",            INDEX_STATE_ERROR            }
+  { "NONE",             INDEX_STATE_NONE             },
+  { "OK",               INDEX_STATE_OK               },
+  { "CREATE",           INDEX_STATE_CREATE           },
+  { "UPDATE_REQUESTED", INDEX_STATE_UPDATE_REQUESTED },
+  { "UPDATE",           INDEX_STATE_UPDATE           },
+  { "ERROR",            INDEX_STATE_ERROR            }
 };
 
 LOCAL const struct
@@ -137,6 +137,9 @@ LOCAL const char *INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[] =
 
 // sleep time [s]
 #define SLEEP_TIME_INDEX_CLEANUP_THREAD 60L
+
+// server i/o timeout
+#define SERVER_IO_TIMEOUT (5LL*MS_PER_SECOND)
 
 /***************************** Datatypes *******************************/
 #define INDEX_OPEN_MODE_READ         (1 << 0)
@@ -4360,13 +4363,13 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
   // init variables
   filterString = String_newCString("1");
 
-  // filters
-  filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","uuids.jobUUID=%'S",findJobUUID);
-  filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'S",findScheduleUUID);
-
 //TODO get errorMessage
   if (indexHandle->masterIO == NULL)
   {
+    // filters
+    filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","uuids.jobUUID=%'S",findJobUUID);
+    filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'S",findScheduleUUID);
+
     INDEX_DOX(error,
               indexHandle,
     {
@@ -4414,6 +4417,10 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
 
       return ERROR_NONE;
     });
+
+    if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(uuidId_);
+
+    String_delete(filterString);
   }
   else
   {
@@ -4421,37 +4428,33 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
     lastErrorMessage = String_new();
 
     error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    5LL*MS_PER_SECOND,
+                                    SERVER_IO_TIMEOUT,
                                     resultMap,
                                     "INDEX_FIND_UUID jobUUID=%S scheduleUUID=%s",
                                     findJobUUID,
                                     (findScheduleUUID != NULL) ? String_cString(findScheduleUUID) : ""
                                    );
-    if (error != ERROR_NONE)
+    if (error == ERROR_NONE)
     {
-      String_delete(lastErrorMessage);
-      StringMap_delete(resultMap);
-      return error;
-    }
+      StringMap_getInt64 (resultMap,"uuidId",uuidId,INDEX_ID_NONE);
+      if ((*uuidId) != INDEX_ID_NONE)
+      {
+        if (lastExecutedDateTime != NULL) StringMap_getUInt64(resultMap,"lastExecutedDateTime",lastExecutedDateTime,0LL );
+        if (lastErrorMessage     != NULL) StringMap_getString(resultMap,"lastErrorMessage",    lastErrorMessage,    NULL);
+        if (executionCount       != NULL) StringMap_getULong (resultMap,"executionCount",      executionCount,      0L  );
+        if (averageDuration      != NULL) StringMap_getUInt64(resultMap,"averageDuration",     averageDuration,     0LL );
+        if (totalEntityCount     != NULL) StringMap_getULong (resultMap,"totalEntityCount",    totalEntityCount,    0L  );
+        if (totalStorageCount    != NULL) StringMap_getULong (resultMap,"totalStorageCount",   totalStorageCount,   0L  );
+        if (totalStorageSize     != NULL) StringMap_getUInt64(resultMap,"totalStorageSize",    totalStorageSize,    0LL );
+        if (totalEntryCount      != NULL) StringMap_getULong (resultMap,"totalEntryCount",     totalEntryCount,     0L  );
+        if (totalEntrySize       != NULL) StringMap_getUInt64(resultMap,"totalEntrySize",      totalEntrySize,      0LL );
 
-    StringMap_getInt64 (resultMap,"uuidId",&uuidId_,INDEX_ID_NONE);
-    if (uuidId_ != INDEX_ID_NONE)
-    {
-      if (lastExecutedDateTime != NULL) StringMap_getUInt64(resultMap,"lastExecutedDateTime",lastExecutedDateTime,0LL);
-      if (lastErrorMessage     != NULL) StringMap_getString(resultMap,"lastErrorMessage",    lastErrorMessage,    "" );
-      if (executionCount       != NULL) StringMap_getULong (resultMap,"executionCount",      executionCount,      0L );
-      if (averageDuration      != NULL) StringMap_getUInt64(resultMap,"averageDuration",     averageDuration,     0LL);
-      if (totalEntityCount     != NULL) StringMap_getULong (resultMap,"totalEntityCount",    totalEntityCount,    0L );
-      if (totalStorageCount    != NULL) StringMap_getULong (resultMap,"totalStorageCount",   totalStorageCount,   0L );
-      if (totalStorageSize     != NULL) StringMap_getUInt64(resultMap,"totalStorageSize",    totalStorageSize,    0LL);
-      if (totalEntryCount      != NULL) StringMap_getULong (resultMap,"totalEntryCount",     totalEntryCount,     0L );
-      if (totalEntrySize       != NULL) StringMap_getUInt64(resultMap,"totalEntrySize",      totalEntrySize,      0LL);
-
-      result = TRUE;
-    }
-    else
-    {
-      result = FALSE;
+        result = TRUE;
+      }
+      else
+      {
+        result = FALSE;
+      }
     }
 
     String_delete(lastErrorMessage);
@@ -4459,14 +4462,8 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
   }
   if (error != ERROR_NONE)
   {
-    String_delete(filterString);
     return FALSE;
   }
-
-  if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(uuidId_);
-
-  // free resources
-  String_delete(filterString);
 
   return result;
 }
@@ -4969,131 +4966,151 @@ Errors Index_setState(IndexHandle *indexHandle,
     errorText = NULL;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    switch (Index_getType(indexId))
+    INDEX_DOX(error,
+              indexHandle,
     {
-      case INDEX_TYPE_ENTITY:
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 "UPDATE storage \
-                                  SET state       =%d, \
-                                      errorMessage=NULL \
-                                  WHERE entityId=%lld; \
-                                 ",
-                                 indexState,
-                                 Index_getDatabaseId(indexId)
-                                );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-
-        if (lastCheckedDateTime != 0LL)
-        {
+      switch (Index_getType(indexId))
+      {
+        case INDEX_TYPE_ENTITY:
           error = Database_execute(&indexHandle->databaseHandle,
                                    CALLBACK(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
                                    "UPDATE storage \
-                                    SET lastChecked=DATETIME(%llu,'unixepoch') \
+                                    SET state       =%d, \
+                                        errorMessage=NULL \
                                     WHERE entityId=%lld; \
                                    ",
-                                   lastCheckedDateTime,
+                                   indexState,
                                    Index_getDatabaseId(indexId)
                                   );
           if (error != ERROR_NONE)
           {
             return error;
           }
-        }
 
-        if (errorText != NULL)
-        {
-          error = Database_execute(&indexHandle->databaseHandle,
-                                   CALLBACK(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount
-                                   "UPDATE storage \
-                                    SET errorMessage=%'S \
-                                    WHERE entityId=%lld; \
-                                   ",
-                                   errorText,
-                                   Index_getDatabaseId(indexId)
-                                  );
-          if (error != ERROR_NONE)
+          if (lastCheckedDateTime != 0LL)
           {
-            return error;
+            error = Database_execute(&indexHandle->databaseHandle,
+                                     CALLBACK(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     "UPDATE storage \
+                                      SET lastChecked=DATETIME(%llu,'unixepoch') \
+                                      WHERE entityId=%lld; \
+                                     ",
+                                     lastCheckedDateTime,
+                                     Index_getDatabaseId(indexId)
+                                    );
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
           }
-        }
-        break;
-      case INDEX_TYPE_STORAGE:
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 "UPDATE storage \
-                                  SET state       =%d, \
-                                      errorMessage=NULL \
-                                  WHERE id=%lld; \
-                                 ",
-                                 indexState,
-                                 Index_getDatabaseId(indexId)
-                                );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
 
-        if (lastCheckedDateTime != 0LL)
-        {
+          if (errorText != NULL)
+          {
+            error = Database_execute(&indexHandle->databaseHandle,
+                                     CALLBACK(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     "UPDATE storage \
+                                      SET errorMessage=%'S \
+                                      WHERE entityId=%lld; \
+                                     ",
+                                     errorText,
+                                     Index_getDatabaseId(indexId)
+                                    );
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
+          }
+          break;
+        case INDEX_TYPE_STORAGE:
           error = Database_execute(&indexHandle->databaseHandle,
                                    CALLBACK(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
                                    "UPDATE storage \
-                                    SET lastChecked=DATETIME(%llu,'unixepoch') \
+                                    SET state       =%d, \
+                                        errorMessage=NULL \
                                     WHERE id=%lld; \
                                    ",
-                                   lastCheckedDateTime,
+                                   indexState,
                                    Index_getDatabaseId(indexId)
                                   );
           if (error != ERROR_NONE)
           {
             return error;
           }
-        }
 
-        if (errorText != NULL)
-        {
-          error = Database_execute(&indexHandle->databaseHandle,
-                                   CALLBACK(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount
-                                   "UPDATE storage \
-                                    SET errorMessage=%'S \
-                                    WHERE id=%lld; \
-                                   ",
-                                   errorText,
-                                   Index_getDatabaseId(indexId)
-                                  );
-          if (error != ERROR_NONE)
+          if (lastCheckedDateTime != 0LL)
           {
-            return error;
+            error = Database_execute(&indexHandle->databaseHandle,
+                                     CALLBACK(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     "UPDATE storage \
+                                      SET lastChecked=DATETIME(%llu,'unixepoch') \
+                                      WHERE id=%lld; \
+                                     ",
+                                     lastCheckedDateTime,
+                                     Index_getDatabaseId(indexId)
+                                    );
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
           }
-        }
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* not NDEBUG */
-        break;
-    }
 
-    return ERROR_NONE;
-  });
+          if (errorText != NULL)
+          {
+            error = Database_execute(&indexHandle->databaseHandle,
+                                     CALLBACK(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     "UPDATE storage \
+                                      SET errorMessage=%'S \
+                                      WHERE id=%lld; \
+                                     ",
+                                     errorText,
+                                     Index_getDatabaseId(indexId)
+                                    );
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
+          }
+          break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* not NDEBUG */
+          break;
+      }
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_TIMEOUT,
+                                    NULL,  // resultMap
+                                    "INDEX_SET_STATE indexId=%lld indexState=%s lastCheckedDateTime=%llu errorMessage=%'S",
+                                    indexId,
+                                    Index_stateToString(indexState,NULL),
+                                    lastCheckedDateTime,
+                                    errorText
+                                   );
+  }
+  if (error != ERROR_NONE)
+  {
+    if (errorMessage != NULL) String_delete(errorText);
+    return error;
+  }
 
   // free resources
   if (errorMessage != NULL) String_delete(errorText);
 
-  return error;
+  return ERROR_NONE;
 }
 
 long Index_countState(IndexHandle *indexHandle,
@@ -5371,9 +5388,9 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
     resultMap = StringMap_new();
 
     error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    5LL*MS_PER_SECOND,
+                                    SERVER_IO_TIMEOUT,
                                     resultMap,
-                                    "INDEX_NEW_HISTORY jobUUID=%S scheduleUUID=%s hostName=%S archiveType=%s createdDateTime=%llu errorMessage=%s duration=%llu totalEntryCount=%lu totalEntrySize=%llu skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu",
+                                    "INDEX_NEW_HISTORY jobUUID=%S scheduleUUID=%s hostName=%'S archiveType=%s createdDateTime=%llu errorMessage=%'s duration=%llu totalEntryCount=%lu totalEntrySize=%llu skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu",
                                     jobUUID,
                                     (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
                                     hostName,
@@ -5388,16 +5405,15 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                                     errorEntryCount,
                                     errorEntrySize
                                    );
-    if (error != ERROR_NONE)
+    if (error == ERROR_NONE)
     {
-      StringMap_delete(resultMap);
-      return error;
-    }
-
-    if (!StringMap_getInt64 (resultMap,"historyId",&historyId,INDEX_ID_NONE))
-    {
-      StringMap_delete(resultMap);
-      return ERROR_EXPECTED_PARAMETER;
+      if (historyId != NULL)
+      {
+        if (!StringMap_getInt64(resultMap,"historyId",historyId,INDEX_ID_NONE))
+        {
+          error = ERROR_EXPECTED_PARAMETER;
+        }
+      }
     }
 
     StringMap_delete(resultMap);
@@ -5739,21 +5755,18 @@ Errors Index_newUUID(IndexHandle *indexHandle,
     resultMap = StringMap_new();
 
     error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    5LL*MS_PER_SECOND,
+                                    SERVER_IO_TIMEOUT,
                                     resultMap,
                                     "INDEX_NEW_UUID jobUUID=%S",
                                     jobUUID
                                    );
-    if (error != ERROR_NONE)
+    if (error == ERROR_NONE)
     {
-      StringMap_delete(resultMap);
-      return error;
-    }
-
-    if (!StringMap_getInt64(resultMap,"uuidId",uuidId,INDEX_ID_NONE))
-    {
-      StringMap_delete(resultMap);
-      return ERROR_EXPECTED_PARAMETER;
+      if (!StringMap_getInt64(resultMap,"uuidId",uuidId,INDEX_ID_NONE))
+      {
+        StringMap_delete(resultMap);
+        error = ERROR_EXPECTED_PARAMETER;
+      }
     }
 
     StringMap_delete(resultMap);
@@ -6149,7 +6162,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
     resultMap = StringMap_new();
 
     error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    5LL*MS_PER_SECOND,
+                                    SERVER_IO_TIMEOUT,
                                     resultMap,
                                     "INDEX_NEW_ENTITY jobUUID=%S scheduleUUID=%s archiveType=%s createdDateTime=%llu locked=%y",
                                     jobUUID,
@@ -6158,16 +6171,13 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                                     createdDateTime,
                                     locked
                                    );
-    if (error != ERROR_NONE)
+    if (error == ERROR_NONE)
     {
-      StringMap_delete(resultMap);
-      return error;
-    }
-
-    if (!StringMap_getInt64 (resultMap,"entityId",entityId,INDEX_ID_NONE))
-    {
-      StringMap_delete(resultMap);
-      return ERROR_EXPECTED_PARAMETER;
+      if (!StringMap_getInt64 (resultMap,"entityId",entityId,INDEX_ID_NONE))
+      {
+        StringMap_delete(resultMap);
+          error = ERROR_EXPECTED_PARAMETER;
+      }
     }
 
     StringMap_delete(resultMap);
@@ -7226,26 +7236,22 @@ Errors Index_newStorage(IndexHandle *indexHandle,
     resultMap = StringMap_new();
 
     error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    5LL*MS_PER_SECOND,
+                                    SERVER_IO_TIMEOUT,
                                     resultMap,
-                                    "INDEX_NEW_STORAGE entityId=%lld storageName=%S createdDateTime=%llu size=%llu indexState=%s indexMode=%s",
+                                    "INDEX_NEW_STORAGE entityId=%lld storageName=%'s createdDateTime=%llu size=%llu indexState=%s indexMode=%s",
                                     entityId,
-                                    storageName,
+                                    (storageName != NULL) ? String_cString(storageName) : "",
                                     createdDateTime,
                                     size,
                                     Index_stateToString(indexState,NULL),
                                     Index_modeToString(indexMode,NULL)
                                    );
-    if (error != ERROR_NONE)
+    if (error == ERROR_NONE)
     {
-      StringMap_delete(resultMap);
-      return error;
-    }
-
-    if (!StringMap_getInt64 (resultMap,"storageId",storageId,INDEX_ID_NONE))
-    {
-      StringMap_delete(resultMap);
-      return ERROR_EXPECTED_PARAMETER;
+      if (!StringMap_getInt64 (resultMap,"storageId",storageId,INDEX_ID_NONE))
+      {
+        error = ERROR_EXPECTED_PARAMETER;
+      }
     }
 
     StringMap_delete(resultMap);
@@ -7338,29 +7344,36 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "UPDATE storage \
-                              SET state=%d \
-                              WHERE id=%lld; \
-                             ",
-                             INDEX_STATE_DELETED,
-                             Index_getDatabaseId(storageId)
-                            );
-    if (error != ERROR_NONE)
+    INDEX_DOX(error,
+              indexHandle,
     {
-      return error;
-    }
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "UPDATE storage \
+                                SET state=%d \
+                                WHERE id=%lld; \
+                               ",
+                               INDEX_STATE_DELETED,
+                               Index_getDatabaseId(storageId)
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
 
-    // trigger clean-up thread
-    Semaphore_signalModified(&indexThreadTrigger);
+      // trigger clean-up thread
+      Semaphore_signalModified(&indexThreadTrigger);
 
-    return ERROR_NONE;
-  });
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  }
 
   return error;
 }
@@ -7374,16 +7387,23 @@ Errors Index_isEmptyStorage(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
-  INDEX_DOX(emptyFlag,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    return !Database_exists(&indexHandle->databaseHandle,
-                            "entries",
-                            "id",
-                            "WHERE storageId=%lld",
-                            Index_getDatabaseId(storageId)
-                           );
-  });
+    INDEX_DOX(emptyFlag,
+              indexHandle,
+    {
+      return !Database_exists(&indexHandle->databaseHandle,
+                              "entries",
+                              "id",
+                              "WHERE storageId=%lld",
+                              Index_getDatabaseId(storageId)
+                             );
+    });
+  }
+  else
+  {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  }
 
   return emptyFlag;
 }
@@ -7667,48 +7687,66 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    // update name
-    if (storageName != NULL)
+    INDEX_DOX(error,
+              indexHandle,
     {
+      // update name
+      if (storageName != NULL)
+      {
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 "UPDATE storage \
+                                  SET name=%'S \
+                                  WHERE id=%lld; \
+                                 ",
+                                 storageName,
+                                 Index_getDatabaseId(storageId)
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+
+      // update size
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "UPDATE storage \
-                                SET name=%'S \
+                                SET size=%llu \
                                 WHERE id=%lld; \
                                ",
-                               storageName,
+                               storageSize,
                                Index_getDatabaseId(storageId)
                               );
       if (error != ERROR_NONE)
       {
         return error;
       }
-    }
 
-    // update size
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "UPDATE storage \
-                              SET size=%llu \
-                              WHERE id=%lld; \
-                             ",
-                             storageSize,
-                             Index_getDatabaseId(storageId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_TIMEOUT,
+                                    NULL,  // resultMap
+                                    "INDEX_STORAGE_UPDATE storageId=%lld storageName=%'S storageSize=%llu",
+                                    storageId,
+                                    storageName,
+                                    storageSize
+                                   );
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
-    return ERROR_NONE;
-  });
-
-  return error;
+  return ERROR_NONE;
 }
 
 Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
@@ -10666,9 +10704,9 @@ Errors Index_addFile(IndexHandle *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    5LL*MS_PER_SECOND,
+                                    SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
-                                    "INDEX_ADD_FILE storageId=%llu fileName=%S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    "INDEX_ADD_FILE storageId=%llu fileName=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
                                     storageId,
                                     fileName,
                                     size,
@@ -10684,7 +10722,6 @@ Errors Index_addFile(IndexHandle *indexHandle,
   }
   if (error != ERROR_NONE)
   {
-exit(1);
     return error;
   }
 
@@ -10812,9 +10849,9 @@ Errors Index_addImage(IndexHandle     *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    5LL*MS_PER_SECOND,
+                                    SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
-                                    "INDEX_ADD_IMAGE storageId=%llu type=IMAGE name=%S size=%llu blockSize=%lu blockOffset=%llu blockCount=%llu",
+                                    "INDEX_ADD_IMAGE storageId=%llu type=IMAGE name=%'S size=%llu blockSize=%lu blockOffset=%llu blockCount=%llu",
                                     storageId,
                                     imageName,
                                     size,
@@ -10957,9 +10994,9 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    5LL*MS_PER_SECOND,
+                                    SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
-                                    "INDEX_ADD_DIRECTORY storageId=%llu type=DIRECTORY name=%S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
+                                    "INDEX_ADD_DIRECTORY storageId=%llu type=DIRECTORY name=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
                                     storageId,
                                     directoryName,
                                     timeLastAccess,
@@ -11100,9 +11137,9 @@ Errors Index_addLink(IndexHandle *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    5LL*MS_PER_SECOND,
+                                    SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
-                                    "INDEX_ADD_LINK storageId=%llu type=LINK name=%S destinationName=%S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
+                                    "INDEX_ADD_LINK storageId=%llu type=LINK name=%'S destinationName=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
                                     storageId,
                                     linkName,
                                     destinationName,
@@ -11259,9 +11296,9 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    5LL*MS_PER_SECOND,
+                                    SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
-                                    "INDEX_ADD_HARDLINK storageId=%llu type=HARDLINK name=%S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    "INDEX_ADD_HARDLINK storageId=%llu type=HARDLINK name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
                                     storageId,
                                     fileName,
                                     size,
@@ -11410,9 +11447,9 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
   else
   {
     error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    5LL*MS_PER_SECOND,
+                                    SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
-                                    "INDEX_ADD_SPECIAL storageId=%llu type=SPECIAL name=%S specialType=%u timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o major=%u minor=%u",
+                                    "INDEX_ADD_SPECIAL storageId=%llu type=SPECIAL name=%'S specialType=%u timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o major=%u minor=%u",
                                     storageId,
                                     name,
                                     specialType,
@@ -11454,144 +11491,151 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    if      (toJobUUID != NULL)
+    INDEX_DOX(error,
+              indexHandle,
     {
-      if (entityId != INDEX_ID_NONE)
+      if      (toJobUUID != NULL)
       {
-        assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
-
-        // assign entity to other job
-        error = assignEntityToJob(indexHandle,
-                                  entityId,
-                                  toJobUUID,
-                                  toArchiveType
-                                 );
-        if (error != ERROR_NONE)
+        if (entityId != INDEX_ID_NONE)
         {
-          return error;
+          assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+
+          // assign entity to other job
+          error = assignEntityToJob(indexHandle,
+                                    entityId,
+                                    toJobUUID,
+                                    toArchiveType
+                                   );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+
+        if (!String_isEmpty(jobUUID))
+        {
+          // assign all entities of job to other job
+          error = assignJobToJob(indexHandle,
+                                 jobUUID,
+                                 toJobUUID,
+                                 toArchiveType
+                                );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
         }
       }
-
-      if (!String_isEmpty(jobUUID))
+      else if (toEntityId != INDEX_ID_NONE)
       {
-        // assign all entities of job to other job
-        error = assignJobToJob(indexHandle,
-                               jobUUID,
-                               toJobUUID,
-                               toArchiveType
-                              );
-        if (error != ERROR_NONE)
+        // assign to other entity
+
+        if (storageId != INDEX_ID_NONE)
         {
-          return error;
+          assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+
+          // assign storage to other entity
+          error = assignStorageToEntity(indexHandle,
+                                        storageId,
+                                        toEntityId
+                                       );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+
+        if (entityId != INDEX_ID_NONE)
+        {
+          assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+
+          // assign all storage entries of entity to other entity
+          error = assignEntityToEntity(indexHandle,
+                                       entityId,
+                                       toEntityId,
+                                       toArchiveType
+                                      );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+
+        if (!String_isEmpty(jobUUID))
+        {
+          // assign all entities of job to other entity
+          error = assignJobToEntity(indexHandle,
+                                    jobUUID,
+                                    toEntityId,
+                                    toArchiveType
+                                   );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
         }
       }
-    }
-    else if (toEntityId != INDEX_ID_NONE)
-    {
-      // assign to other entity
-
-      if (storageId != INDEX_ID_NONE)
+      else if (toStorageId != INDEX_ID_NONE)
       {
-        assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+        // assign to other storage
 
-        // assign storage to other entity
-        error = assignStorageToEntity(indexHandle,
-                                      storageId,
-                                      toEntityId
-                                     );
-        if (error != ERROR_NONE)
+        if (storageId != INDEX_ID_NONE)
         {
-          return error;
+          assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+
+          // assign storage entries to other storage
+          error = assignStorageToStorage(indexHandle,storageId,toStorageId);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
         }
-      }
 
-      if (entityId != INDEX_ID_NONE)
-      {
-        assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+        if (entityId != INDEX_ID_NONE)
+        {
+          assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
 
-        // assign all storage entries of entity to other entity
-        error = assignEntityToEntity(indexHandle,
-                                     entityId,
-                                     toEntityId,
-                                     toArchiveType
+          // assign all storage entries of entity to other storage
+          error = assignEntityToStorage(indexHandle,entityId,toStorageId);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+
+        if (!String_isEmpty(jobUUID))
+        {
+          // assign all storage entries of all entities of job to other storage
+          error = assignJobToStorage(indexHandle,
+                                     jobUUID,
+                                     toStorageId
                                     );
-        if (error != ERROR_NONE)
-        {
-          return error;
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
         }
       }
 
-      if (!String_isEmpty(jobUUID))
-      {
-        // assign all entities of job to other entity
-        error = assignJobToEntity(indexHandle,
-                                  jobUUID,
-                                  toEntityId,
-                                  toArchiveType
-                                 );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-      }
-    }
-    else if (toStorageId != INDEX_ID_NONE)
-    {
-      // assign to other storage
+      #ifndef NDEBUG
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileSize<0");
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalImageSize<0");
+        verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalHardlinkSize<0");
 
-      if (storageId != INDEX_ID_NONE)
-      {
-        assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+        verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
+        verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
+      #endif /* not NDEBUG */
 
-        // assign storage entries to other storage
-        error = assignStorageToStorage(indexHandle,storageId,toStorageId);
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-      }
-
-      if (entityId != INDEX_ID_NONE)
-      {
-        assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
-
-        // assign all storage entries of entity to other storage
-        error = assignEntityToStorage(indexHandle,entityId,toStorageId);
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-      }
-
-      if (!String_isEmpty(jobUUID))
-      {
-        // assign all storage entries of all entities of job to other storage
-        error = assignJobToStorage(indexHandle,
-                                   jobUUID,
-                                   toStorageId
-                                  );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-      }
-    }
-
-    #ifndef NDEBUG
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalEntrySize<0");
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalFileSize<0");
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalImageSize<0");
-      verify(indexHandle,"storage","COUNT(id)",0,"WHERE totalHardlinkSize<0");
-
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
-    #endif /* not NDEBUG */
-
-    return ERROR_NONE;
-  });
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  }
 
   return error;
 }
@@ -11697,103 +11741,110 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
   assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
 
   // prune storages of entity
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    error = Index_initListStorages(&indexQueryHandle,
-                                   indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   entityId,
-                                   NULL,  // jobUUID
-                                   NULL,   // storageIds
-                                   0,  // storageIdCount
-                                   INDEX_STATE_SET_ALL,
-                                   INDEX_MODE_SET_ALL,
-                                   NULL,  // name
-                                   INDEX_STORAGE_SORT_MODE_NONE,
-                                   DATABASE_ORDERING_NONE,
-                                   0LL,   // offset
-                                   INDEX_UNLIMITED
-                                  );
-    if (error != ERROR_NONE)
+    INDEX_DOX(error,
+              indexHandle,
     {
-      return error;
-    }
-    while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // uuidId
-                                NULL,  // jobUUID
-                                NULL,  // entityId
-                                NULL,  // scheduleUUID
-                                NULL,  // archiveType
-                                &storageId,
-                                NULL,  // storageName,
-                                NULL,  // createdDateTime
-                                NULL,  // size,
-                                NULL,  // indexState
-                                NULL,  // indexMode
-                                NULL,  // lastCheckedDateTime
-                                NULL,  // errorMessage
-                                NULL,  // totalEntryCount
-                                NULL  // totalEntrySize
-                               )
-          )
-    {
-      error = Index_pruneStorage(indexHandle,storageId);
+      error = Index_initListStorages(&indexQueryHandle,
+                                     indexHandle,
+                                     INDEX_ID_ANY,  // uuidId
+                                     entityId,
+                                     NULL,  // jobUUID
+                                     NULL,   // storageIds
+                                     0,  // storageIdCount
+                                     INDEX_STATE_SET_ALL,
+                                     INDEX_MODE_SET_ALL,
+                                     NULL,  // name
+                                     INDEX_STORAGE_SORT_MODE_NONE,
+                                     DATABASE_ORDERING_NONE,
+                                     0LL,   // offset
+                                     INDEX_UNLIMITED
+                                    );
       if (error != ERROR_NONE)
       {
-        break;
+        return error;
       }
-    }
-    Index_doneList(&indexQueryHandle);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    if (Index_getDatabaseId(entityId) != INDEX_DEFAULT_ENTITY_ID)
-    {
-      // get locked count
-      error = Database_getInteger64(&indexHandle->databaseHandle,
-                                    &lockedCount,
-                                    "entities",
-                                    "lockedCount",
-                                    "WHERE id=%lld",
-                                    Index_getDatabaseId(entityId)
-                                   );
+      while (Index_getNextStorage(&indexQueryHandle,
+                                  NULL,  // uuidId
+                                  NULL,  // jobUUID
+                                  NULL,  // entityId
+                                  NULL,  // scheduleUUID
+                                  NULL,  // archiveType
+                                  &storageId,
+                                  NULL,  // storageName,
+                                  NULL,  // createdDateTime
+                                  NULL,  // size,
+                                  NULL,  // indexState
+                                  NULL,  // indexMode
+                                  NULL,  // lastCheckedDateTime
+                                  NULL,  // errorMessage
+                                  NULL,  // totalEntryCount
+                                  NULL  // totalEntrySize
+                                 )
+            )
+      {
+        error = Index_pruneStorage(indexHandle,storageId);
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
+      }
+      Index_doneList(&indexQueryHandle);
       if (error != ERROR_NONE)
       {
         return error;
       }
 
-      if (lockedCount == 0LL)
+      if (Index_getDatabaseId(entityId) != INDEX_DEFAULT_ENTITY_ID)
       {
-        // check if storage exists
-        existsStorageFlag = Database_exists(&indexHandle->databaseHandle,
-                                            "storage",
-                                            "id",
-                                            "WHERE entityId=%lld",
-                                            Index_getDatabaseId(entityId)
-                                           );
-
-        // prune entity if empty
-        if (!existsStorageFlag)
+        // get locked count
+        error = Database_getInteger64(&indexHandle->databaseHandle,
+                                      &lockedCount,
+                                      "entities",
+                                      "lockedCount",
+                                      "WHERE id=%lld",
+                                      Index_getDatabaseId(entityId)
+                                     );
+        if (error != ERROR_NONE)
         {
-          error = Database_execute(&indexHandle->databaseHandle,
-                                   CALLBACK(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount
-                                   "DELETE FROM entities WHERE id=%lld;",
-                                   Index_getDatabaseId(entityId)
-                                  );
-          if (error != ERROR_NONE)
+          return error;
+        }
+
+        if (lockedCount == 0LL)
+        {
+          // check if storage exists
+          existsStorageFlag = Database_exists(&indexHandle->databaseHandle,
+                                              "storage",
+                                              "id",
+                                              "WHERE entityId=%lld",
+                                              Index_getDatabaseId(entityId)
+                                             );
+
+          // prune entity if empty
+          if (!existsStorageFlag)
           {
-            return error;
+            error = Database_execute(&indexHandle->databaseHandle,
+                                     CALLBACK(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     "DELETE FROM entities WHERE id=%lld;",
+                                     Index_getDatabaseId(entityId)
+                                    );
+            if (error != ERROR_NONE)
+            {
+              return error;
+            }
           }
         }
       }
-    }
 
-    return ERROR_NONE;
-  });
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  }
 
   return ERROR_NONE;
 }
