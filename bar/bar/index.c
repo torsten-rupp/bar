@@ -30,6 +30,7 @@
 #include "storage.h"
 #include "server_io.h"
 #include "index_definition.h"
+#include "archive.h"
 #include "bar.h"
 #include "bar_global.h"
 
@@ -4346,6 +4347,7 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
   DatabaseQueryHandle databaseQueryHandle;
   bool                result;
   DatabaseId          uuidId_;
+  StringMap           resultMap;
 
   assert(indexHandle != NULL);
 
@@ -4363,53 +4365,98 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
   filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'S",findScheduleUUID);
 
 //TODO get errorMessage
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-                             "SELECT uuids.id, \
-                                     (SELECT UNIXTIMESTAMP(storage.created) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
-                                     (SELECT storage.errorMessage FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
-                                     (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID), \
-                                     (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
-                                     COUNT(entities.id), \
-                                     COUNT(storage.id), \
-                                     TOTAL(storage.size), \
-                                     TOTAL(storage.totalEntryCount) , \
-                                     TOTAL(storage.totalEntrySize) \
-                              FROM uuids \
-                                LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                                LEFT JOIN storage ON storage.entityId=entities.id \
-                              WHERE %S \
-                              GROUP BY uuids.id \
-                             ",
-                             filterString
-                            );
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT uuids.id, \
+                                       (SELECT UNIXTIMESTAMP(storage.created) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
+                                       (SELECT storage.errorMessage FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
+                                       (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID), \
+                                       (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')=''), \
+                                       COUNT(entities.id), \
+                                       COUNT(storage.id), \
+                                       TOTAL(storage.size), \
+                                       TOTAL(storage.totalEntryCount) , \
+                                       TOTAL(storage.totalEntrySize) \
+                                FROM uuids \
+                                  LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                                  LEFT JOIN storage ON storage.entityId=entities.id \
+                                WHERE %S \
+                                GROUP BY uuids.id \
+                               ",
+                               filterString
+                              );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      result = Database_getNextRow(&databaseQueryHandle,
+                                   "%lld %lld %S %lu %llu %lu %lu %llu %lu %llu",
+                                   &uuidId_,
+                                   lastExecutedDateTime,
+                                   lastErrorMessage,
+                                   executionCount,
+                                   averageDuration,
+                                   totalEntityCount,
+                                   totalStorageCount,
+                                   totalStorageSize,
+                                   totalEntryCount,
+                                   totalEntrySize
+                                  );
+
+      Database_finalize(&databaseQueryHandle);
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    resultMap        = StringMap_new();
+    lastErrorMessage = String_new();
+
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    5LL*MS_PER_SECOND,
+                                    resultMap,
+                                    "INDEX_FIND_UUID jobUUID=%S scheduleUUID=%s",
+                                    findJobUUID,
+                                    (findScheduleUUID != NULL) ? String_cString(findScheduleUUID) : ""
+                                   );
     if (error != ERROR_NONE)
     {
+      String_delete(lastErrorMessage);
+      StringMap_delete(resultMap);
       return error;
     }
 
-    result = Database_getNextRow(&databaseQueryHandle,
-                                 "%lld %lld %S %lu %llu %lu %lu %llu %lu %llu",
-                                 &uuidId_,
-                                 lastExecutedDateTime,
-                                 lastErrorMessage,
-                                 executionCount,
-                                 averageDuration,
-                                 totalEntityCount,
-                                 totalStorageCount,
-                                 totalStorageSize,
-                                 totalEntryCount,
-                                 totalEntrySize
-                                );
+    StringMap_getInt64 (resultMap,"uuidId",&uuidId_,INDEX_ID_NONE);
+    if (uuidId_ != INDEX_ID_NONE)
+    {
+      if (lastExecutedDateTime != NULL) StringMap_getUInt64(resultMap,"lastExecutedDateTime",lastExecutedDateTime,0LL);
+      if (lastErrorMessage     != NULL) StringMap_getString(resultMap,"lastErrorMessage",    lastErrorMessage,    "" );
+      if (executionCount       != NULL) StringMap_getULong (resultMap,"executionCount",      executionCount,      0L );
+      if (averageDuration      != NULL) StringMap_getUInt64(resultMap,"averageDuration",     averageDuration,     0LL);
+      if (totalEntityCount     != NULL) StringMap_getULong (resultMap,"totalEntityCount",    totalEntityCount,    0L );
+      if (totalStorageCount    != NULL) StringMap_getULong (resultMap,"totalStorageCount",   totalStorageCount,   0L );
+      if (totalStorageSize     != NULL) StringMap_getUInt64(resultMap,"totalStorageSize",    totalStorageSize,    0LL);
+      if (totalEntryCount      != NULL) StringMap_getULong (resultMap,"totalEntryCount",     totalEntryCount,     0L );
+      if (totalEntrySize       != NULL) StringMap_getUInt64(resultMap,"totalEntrySize",      totalEntrySize,      0LL);
 
-    Database_finalize(&databaseQueryHandle);
+      result = TRUE;
+    }
+    else
+    {
+      result = FALSE;
+    }
 
-    return ERROR_NONE;
-  });
+    String_delete(lastErrorMessage);
+    StringMap_delete(resultMap);
+  }
   if (error != ERROR_NONE)
   {
     String_delete(filterString);
@@ -5241,7 +5288,8 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                         IndexId      *historyId
                        )
 {
-  Errors error;
+  Errors    error;
+  StringMap resultMap;
 
   assert(indexHandle != NULL);
 
@@ -5251,70 +5299,109 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    Errors error;
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      Errors error;
 
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                            "INSERT INTO history \
-                               ( \
-                                jobUUID, \
-                                scheduleUUID, \
-                                hostName, \
-                                type, \
-                                created, \
-                                errorMessage, \
-                                duration, \
-                                totalEntryCount, \
-                                totalEntrySize, \
-                                skippedEntryCount, \
-                                skippedEntrySize, \
-                                errorEntryCount, \
-                                errorEntrySize \
-                               ) \
-                             VALUES \
-                               ( \
-                                %'S, \
-                                %'S, \
-                                %'S, \
-                                %d, \
-                                %llu, \
-                                %'s, \
-                                %llu, \
-                                %lu, \
-                                %llu, \
-                                %lu, \
-                                %llu, \
-                                %lu, \
-                                %llu \
-                               ); \
-                            ",
-                            jobUUID,
-                            scheduleUUID,
-                            hostName,
-                            archiveType,
-                            createdDateTime,
-                            errorMessage,
-                            duration,
-                            totalEntryCount,
-                            totalEntrySize,
-                            skippedEntryCount,
-                            skippedEntrySize,
-                            errorEntryCount,
-                            errorEntrySize
-                           );
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                              "INSERT INTO history \
+                                 ( \
+                                  jobUUID, \
+                                  scheduleUUID, \
+                                  hostName, \
+                                  type, \
+                                  created, \
+                                  errorMessage, \
+                                  duration, \
+                                  totalEntryCount, \
+                                  totalEntrySize, \
+                                  skippedEntryCount, \
+                                  skippedEntrySize, \
+                                  errorEntryCount, \
+                                  errorEntrySize \
+                                 ) \
+                               VALUES \
+                                 ( \
+                                  %'S, \
+                                  %'S, \
+                                  %'S, \
+                                  %d, \
+                                  %llu, \
+                                  %'s, \
+                                  %llu, \
+                                  %lu, \
+                                  %llu, \
+                                  %lu, \
+                                  %llu, \
+                                  %lu, \
+                                  %llu \
+                                 ); \
+                              ",
+                              jobUUID,
+                              scheduleUUID,
+                              hostName,
+                              archiveType,
+                              createdDateTime,
+                              errorMessage,
+                              duration,
+                              totalEntryCount,
+                              totalEntrySize,
+                              skippedEntryCount,
+                              skippedEntrySize,
+                              errorEntryCount,
+                              errorEntrySize
+                             );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      if (historyId != NULL) (*historyId) = INDEX_ID_HISTORY(Database_getLastRowId(&indexHandle->databaseHandle));
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    resultMap = StringMap_new();
+
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    5LL*MS_PER_SECOND,
+                                    resultMap,
+                                    "INDEX_NEW_HISTORY jobUUID=%S scheduleUUID=%s hostName=%S archiveType=%s createdDateTime=%llu errorMessage=%s duration=%llu totalEntryCount=%lu totalEntrySize=%llu skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu",
+                                    jobUUID,
+                                    (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
+                                    hostName,
+                                    Archive_archiveTypeToString(archiveType,NULL),
+                                    createdDateTime,
+                                    errorMessage,
+                                    duration,
+                                    totalEntryCount,
+                                    totalEntrySize,
+                                    skippedEntryCount,
+                                    skippedEntrySize,
+                                    errorEntryCount,
+                                    errorEntrySize
+                                   );
     if (error != ERROR_NONE)
     {
+      StringMap_delete(resultMap);
       return error;
     }
 
-    if (historyId != NULL) (*historyId) = INDEX_ID_HISTORY(Database_getLastRowId(&indexHandle->databaseHandle));
+    if (!StringMap_getInt64 (resultMap,"historyId",&historyId,INDEX_ID_NONE))
+    {
+      StringMap_delete(resultMap);
+      return ERROR_EXPECTED_PARAMETER;
+    }
 
-    return ERROR_NONE;
-  });
+    StringMap_delete(resultMap);
+  }
   if (error != ERROR_NONE)
   {
     return error;
@@ -5606,7 +5693,8 @@ Errors Index_newUUID(IndexHandle *indexHandle,
                      IndexId     *uuidId
                     )
 {
-  Errors error;
+  Errors    error;
+  StringMap resultMap;
 
   assert(indexHandle != NULL);
   assert(uuidId != NULL);
@@ -5617,32 +5705,59 @@ Errors Index_newUUID(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO uuids \
-                                ( \
-                                 jobUUID \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %'S \
-                                ); \
-                             ",
-                             jobUUID
-                            );
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO uuids \
+                                  ( \
+                                   jobUUID \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %'S \
+                                  ); \
+                               ",
+                               jobUUID
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      (*uuidId) = INDEX_ID_UUID(Database_getLastRowId(&indexHandle->databaseHandle));
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    resultMap = StringMap_new();
+
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    5LL*MS_PER_SECOND,
+                                    resultMap,
+                                    "INDEX_NEW_UUID jobUUID=%S",
+                                    jobUUID
+                                   );
     if (error != ERROR_NONE)
     {
+      StringMap_delete(resultMap);
       return error;
     }
 
-    (*uuidId) = INDEX_ID_UUID(Database_getLastRowId(&indexHandle->databaseHandle));
+    if (!StringMap_getInt64(resultMap,"uuidId",uuidId,INDEX_ID_NONE))
+    {
+      StringMap_delete(resultMap);
+      return ERROR_EXPECTED_PARAMETER;
+    }
 
-    return ERROR_NONE;
-  });
+    StringMap_delete(resultMap);
+  }
   if (error != ERROR_NONE)
   {
     return error;
@@ -5953,7 +6068,8 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                        IndexId      *entityId
                       )
 {
-  Errors error;
+  Errors    error;
+  StringMap resultMap;
 
   assert(indexHandle != NULL);
   assert(entityId != NULL);
@@ -5964,67 +6080,98 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT OR IGNORE INTO uuids \
-                                ( \
-                                 jobUUID \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %'S \
-                                ); \
-                             ",
-                             jobUUID
-                            );
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT OR IGNORE INTO uuids \
+                                  ( \
+                                   jobUUID \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %'S \
+                                  ); \
+                               ",
+                               jobUUID
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO entities \
+                                  ( \
+                                   jobUUID, \
+                                   scheduleUUID, \
+                                   created, \
+                                   type, \
+                                   parentJobUUID, \
+                                   bidFlag, \
+                                   lockedCount \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %'S, \
+                                   %'S, \
+                                   %llu, \
+                                   %u, \
+                                   '', \
+                                   0, \
+                                   %d \
+                                  ); \
+                               ",
+                               jobUUID,
+                               scheduleUUID,
+                               (createdDateTime != 0LL) ? createdDateTime : Misc_getCurrentDateTime(),
+                               archiveType,
+                               locked ? 1 : 0
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      (*entityId) = INDEX_ID_ENTITY(Database_getLastRowId(&indexHandle->databaseHandle));
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    resultMap = StringMap_new();
+
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    5LL*MS_PER_SECOND,
+                                    resultMap,
+                                    "INDEX_NEW_ENTITY jobUUID=%S scheduleUUID=%s archiveType=%s createdDateTime=%llu locked=%y",
+                                    jobUUID,
+                                    (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
+                                    Archive_archiveTypeToString(archiveType,NULL),
+                                    createdDateTime,
+                                    locked
+                                   );
     if (error != ERROR_NONE)
     {
+      StringMap_delete(resultMap);
       return error;
     }
 
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO entities \
-                                ( \
-                                 jobUUID, \
-                                 scheduleUUID, \
-                                 created, \
-                                 type, \
-                                 parentJobUUID, \
-                                 bidFlag, \
-                                 lockedCount \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %'S, \
-                                 %'S, \
-                                 %llu, \
-                                 %u, \
-                                 '', \
-                                 0, \
-                                 %d \
-                                ); \
-                             ",
-                             jobUUID,
-                             scheduleUUID,
-                             (createdDateTime != 0LL) ? createdDateTime : Misc_getCurrentDateTime(),
-                             archiveType,
-                             locked ? 1 : 0
-                            );
-    if (error != ERROR_NONE)
+    if (!StringMap_getInt64 (resultMap,"entityId",entityId,INDEX_ID_NONE))
     {
-      return error;
+      StringMap_delete(resultMap);
+      return ERROR_EXPECTED_PARAMETER;
     }
 
-    (*entityId) = INDEX_ID_ENTITY(Database_getLastRowId(&indexHandle->databaseHandle));
-
-    return ERROR_NONE;
-  });
+    StringMap_delete(resultMap);
+  }
   if (error != ERROR_NONE)
   {
     return error;
@@ -7015,7 +7162,8 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                         IndexId     *storageId
                        )
 {
-  Errors error;
+  Errors    error;
+  StringMap resultMap;
 
   assert(indexHandle != NULL);
   assert(storageId != NULL);
@@ -7027,51 +7175,88 @@ Errors Index_newStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO storage \
-                                ( \
-                                 entityId, \
-                                 name, \
-                                 created, \
-                                 size, \
-                                 state, \
-                                 mode, \
-                                 lastChecked\
-                                ) \
-                              VALUES \
-                                ( \
-                                 %d, \
-                                 %'S, \
-                                 DATETIME(%llu,'unixepoch'), \
-                                 %llu, \
-                                 %d, \
-                                 %d, \
-                                 DATETIME('now') \
-                                ); \
-                             ",
-                             Index_getDatabaseId(entityId),
-                             storageName,
-                             createdDateTime,
-                             size,
-                             indexState,
-                             indexMode
-                            );
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO storage \
+                                  ( \
+                                   entityId, \
+                                   name, \
+                                   created, \
+                                   size, \
+                                   state, \
+                                   mode, \
+                                   lastChecked\
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %d, \
+                                   %'S, \
+                                   DATETIME(%llu,'unixepoch'), \
+                                   %llu, \
+                                   %d, \
+                                   %d, \
+                                   DATETIME('now') \
+                                  ); \
+                               ",
+                               Index_getDatabaseId(entityId),
+                               storageName,
+                               createdDateTime,
+                               size,
+                               indexState,
+                               indexMode
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      (*storageId) = INDEX_ID_STORAGE(Database_getLastRowId(&indexHandle->databaseHandle));
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    resultMap = StringMap_new();
+
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    5LL*MS_PER_SECOND,
+                                    resultMap,
+                                    "INDEX_NEW_STORAGE entityId=%lld storageName=%S createdDateTime=%llu size=%llu indexState=%s indexMode=%s",
+                                    entityId,
+                                    storageName,
+                                    createdDateTime,
+                                    size,
+                                    Index_stateToString(indexState,NULL),
+                                    Index_modeToString(indexMode,NULL)
+                                   );
     if (error != ERROR_NONE)
     {
+      StringMap_delete(resultMap);
       return error;
     }
 
-    (*storageId) = INDEX_ID_STORAGE(Database_getLastRowId(&indexHandle->databaseHandle));
+    if (!StringMap_getInt64 (resultMap,"storageId",storageId,INDEX_ID_NONE))
+    {
+      StringMap_delete(resultMap);
+      return ERROR_EXPECTED_PARAMETER;
+    }
 
-    return ERROR_NONE;
-  });
+    StringMap_delete(resultMap);
+  }
 
-  return error;
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 Errors Index_updateStorage(IndexHandle *indexHandle,
@@ -10483,7 +10668,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     5LL*MS_PER_SECOND,
                                     NULL,  // resultMap
-                                    "INDEX_ENTRY_ADD storageId=%llu type=FILE name=%S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    "INDEX_ADD_FILE storageId=%llu fileName=%S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
                                     storageId,
                                     fileName,
                                     size,
@@ -10496,13 +10681,14 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                     fragmentOffset,
                                     fragmentSize
                                    );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+  }
+  if (error != ERROR_NONE)
+  {
+exit(1);
+    return error;
   }
 
-  return error;
+  return ERROR_NONE;
 }
 
 Errors Index_addImage(IndexHandle     *indexHandle,
@@ -10628,7 +10814,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     5LL*MS_PER_SECOND,
                                     NULL,  // resultMap
-                                    "INDEX_ENTRY_ADD storageId=%llu type=IMAGE name=%S size=%llu blockSize=%lu blockOffset=%llu blockCount=%llu",
+                                    "INDEX_ADD_IMAGE storageId=%llu type=IMAGE name=%S size=%llu blockSize=%lu blockOffset=%llu blockCount=%llu",
                                     storageId,
                                     imageName,
                                     size,
@@ -10636,13 +10822,13 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                     blockOffset,
                                     blockCount
                                    );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
   }
 
-  return error;
+  return ERROR_NONE;
 }
 
 Errors Index_addDirectory(IndexHandle *indexHandle,
@@ -10773,7 +10959,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     5LL*MS_PER_SECOND,
                                     NULL,  // resultMap
-                                    "INDEX_ENTRY_ADD storageId=%llu type=DIRECTORY name=%S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
+                                    "INDEX_ADD_DIRECTORY storageId=%llu type=DIRECTORY name=%S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
                                     storageId,
                                     directoryName,
                                     timeLastAccess,
@@ -10783,13 +10969,13 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                     groupId,
                                     permission
                                    );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
   }
 
-  return error;
+  return ERROR_NONE;
 }
 
 Errors Index_addLink(IndexHandle *indexHandle,
@@ -10916,7 +11102,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     5LL*MS_PER_SECOND,
                                     NULL,  // resultMap
-                                    "INDEX_ENTRY_ADD storageId=%llu type=LINK name=%S destinationName=%S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
+                                    "INDEX_ADD_LINK storageId=%llu type=LINK name=%S destinationName=%S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
                                     storageId,
                                     linkName,
                                     destinationName,
@@ -10927,13 +11113,13 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                     groupId,
                                     permission
                                    );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
   }
 
-  return error;
+  return ERROR_NONE;
 }
 
 Errors Index_addHardlink(IndexHandle *indexHandle,
@@ -11075,7 +11261,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     5LL*MS_PER_SECOND,
                                     NULL,  // resultMap
-                                    "INDEX_ENTRY_ADD storageId=%llu type=HARDLINK name=%S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    "INDEX_ADD_HARDLINK storageId=%llu type=HARDLINK name=%S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
                                     storageId,
                                     fileName,
                                     size,
@@ -11088,13 +11274,13 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                     fragmentOffset,
                                     fragmentSize
                                    );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
   }
 
-  return error;
+  return ERROR_NONE;
 }
 
 Errors Index_addSpecial(IndexHandle      *indexHandle,
@@ -11226,7 +11412,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     5LL*MS_PER_SECOND,
                                     NULL,  // resultMap
-                                    "INDEX_ENTRY_ADD storageId=%llu type=SPECIAL name=%S specialType=%u timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o major=%u minor=%u",
+                                    "INDEX_ADD_SPECIAL storageId=%llu type=SPECIAL name=%S specialType=%u timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o major=%u minor=%u",
                                     storageId,
                                     name,
                                     specialType,
@@ -11239,13 +11425,13 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                     major,
                                     minor
                                    );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
   }
 
-  return error;
+  return ERROR_NONE;
 }
 
 Errors Index_assignTo(IndexHandle  *indexHandle,
