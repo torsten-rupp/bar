@@ -387,7 +387,7 @@ const char *Crypt_algorithmToString(CryptAlgorithms cryptAlgorithm, const char *
 * Purpose: parse crypt algorithm
 * Input  : name - name of crypt algorithm
 * Output : cryptAlgorithm - crypt algorithm
-* Return : TRUE if parsed
+* Return : TRUE iff parsed
 * Notes  : -
 \***********************************************************************/
 
