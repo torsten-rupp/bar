@@ -1709,6 +1709,140 @@ LOCAL void slaveCommand_indexAddSpecial(SlaveInfo *slaveInfo, IndexHandle *index
 }
 
 /***********************************************************************\
+* Name   : slaveCommand_indexSetState
+* Purpose: set index state
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            indexId=<n>
+*            indexState=<state>
+*            lastCheckedDateTime=<n>
+*            errorMessage=<text>
+*          Result:
+\***********************************************************************/
+
+LOCAL void slaveCommand_indexSetState(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId     indexId;
+  IndexStates indexState;
+  uint64      lastCheckedDateTime;
+  String      errorMessage;
+  Errors      error;
+
+  // get indexId, indexState, lastCheckedDateTime, errorMessage
+  if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexId=<n>");
+    return;
+  }
+  if (!StringMap_getEnum(argumentMap,"indexState",&indexState,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_NONE))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"lastCheckedDateTime",&lastCheckedDateTime,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected lastCheckedDateTime=<n>");
+    return;
+  }
+  errorMessage = String_new();
+  if (!StringMap_getString(argumentMap,"errorMessage",errorMessage,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected errorMessage=<name>");
+    String_delete(errorMessage);
+    return;
+  }
+
+  // set state
+  error = Index_setState(indexHandle,
+                         indexId,
+                         indexState,
+                         lastCheckedDateTime,
+                         "%s",
+                         String_cString(errorMessage)
+                        );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"set state fail");
+    String_delete(errorMessage);
+    return;
+  }
+
+  // send result
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(errorMessage);
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_indexStorageUpdate
+* Purpose: update storage
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            storageId=<n>
+*            storageName=<text>
+*            storageSize=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void slaveCommand_indexStorageUpdate(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId     storageId;
+  String      storageName;
+  uint64      storageSize;
+  Errors      error;
+
+  // get storageId, storageName, storageSize
+  if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    return;
+  }
+  storageName = String_new();
+  if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageName=<name>");
+    String_delete(storageName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"storageSize",&storageSize,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageSize=<n>");
+    String_delete(storageName);
+    return;
+  }
+
+  // update storage
+  error = Index_storageUpdate(indexHandle,
+                              storageId,
+                              storageName,
+                              storageSize
+                             );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"update storage fail");
+    String_delete(storageName);
+    return;
+  }
+
+  // send result
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(storageName);
+}
+
+/***********************************************************************\
 * Name   : slaveCommand_indexNewHistory
 * Purpose: new index history entry
 * Input  : slaveInfo   - slave info
@@ -1882,25 +2016,29 @@ const struct
 }
 SLAVE_COMMANDS[] =
 {
-  { "PREPROCESS",                     slaveCommand_preProcess        },
-  { "POSTPROCESS",                    slaveCommand_postProcess       },
+  { "PREPROCESS",          slaveCommand_preProcess         },
+  { "POSTPROCESS",         slaveCommand_postProcess        },
 
-  { "STORAGE_CREATE",                 slaveCommand_storageCreate     },
-  { "STORAGE_WRITE",                  slaveCommand_storageWrite      },
-  { "STORAGE_CLOSE",                  slaveCommand_storageClose      },
+  { "STORAGE_CREATE",      slaveCommand_storageCreate      },
+  { "STORAGE_WRITE",       slaveCommand_storageWrite       },
+  { "STORAGE_CLOSE",       slaveCommand_storageClose       },
 
-  { "INDEX_FIND_UUID",                slaveCommand_indexFindUUID     },
-  { "INDEX_NEW_UUID",                 slaveCommand_indexNewUUID      },
-  { "INDEX_NEW_ENTITY",               slaveCommand_indexNewEntity    },
-  { "INDEX_NEW_STORAGE",              slaveCommand_indexNewStorage   },
-  { "INDEX_ADD_FILE",                 slaveCommand_indexAddFile      },
-  { "INDEX_ADD_IMAGE",                slaveCommand_indexAddImage     },
-  { "INDEX_ADD_DIRECTORY",            slaveCommand_indexAddDirectory },
-  { "INDEX_ADD_LINK",                 slaveCommand_indexAddLink      },
-  { "INDEX_ADD_HARDLINK",             slaveCommand_indexAddHardlink  },
-  { "INDEX_ADD_SPECIAL",              slaveCommand_indexAddSpecial   },
+  { "INDEX_FIND_UUID",     slaveCommand_indexFindUUID      },
+  { "INDEX_NEW_UUID",      slaveCommand_indexNewUUID       },
+  { "INDEX_NEW_ENTITY",    slaveCommand_indexNewEntity     },
+  { "INDEX_NEW_STORAGE",   slaveCommand_indexNewStorage    },
+  { "INDEX_ADD_FILE",      slaveCommand_indexAddFile       },
+  { "INDEX_ADD_IMAGE",     slaveCommand_indexAddImage      },
+  { "INDEX_ADD_DIRECTORY", slaveCommand_indexAddDirectory  },
+  { "INDEX_ADD_LINK",      slaveCommand_indexAddLink       },
+  { "INDEX_ADD_HARDLINK",  slaveCommand_indexAddHardlink   },
+  { "INDEX_ADD_SPECIAL",   slaveCommand_indexAddSpecial    },
 
-  { "INDEX_NEW_HISTORY",              slaveCommand_indexNewHistory   },
+  { "INDEX_SET_STATE",     slaveCommand_indexSetState      },
+  { "INDEX_STORAGE_UPDATE",slaveCommand_indexStorageUpdate },
+
+
+  { "INDEX_NEW_HISTORY",   slaveCommand_indexNewHistory    },
 };
 
 /***********************************************************************\
@@ -2522,7 +2660,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 fprintf(stderr,"%s, %d: %d: Slave_jobStart %s\n",__FILE__,__LINE__,error,Error_getText(error));
 
   // start execute job
-  error = Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"JOB_START jobUUID=%S archiveType=%s dryRun=%y",jobUUID,"FULL"/*archiveType*/,FALSE);
+  error = Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"JOB_START jobUUID=%S archiveType=%s dryRun=%y",jobUUID,Archive_archiveTypeToString(archiveType,NULL),FALSE);
   if (error != ERROR_NONE)
   {
     (void)Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"JOB_DELETE jobUUID=%S",jobUUID);
