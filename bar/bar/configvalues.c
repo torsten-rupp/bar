@@ -203,7 +203,7 @@ LOCAL const ConfigValueSelect *findSelect(const ConfigValueSelect *selects, cons
   {
     select = selects;
     while (   (select->name != NULL)
-           && !stringEqualsIgnoreCase(select->name,selectName)
+           && !stringEquals(select->name,selectName)
           )
     {
       select++;
@@ -265,7 +265,7 @@ LOCAL const ConfigValueSet *findSet(const ConfigValueSet *sets, const char *setN
   {
     set = sets;
     while (   (set->name != NULL)
-           && !stringEqualsIgnoreCase(set->name,setName)
+           && !stringEquals(set->name,setName)
           )
     {
       set++;
@@ -771,7 +771,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
 
         // calculate value
         if      (   (value == NULL)
-                 || stringEqualsIgnoreCase(value,"1")
+                 || stringEquals(value,"1")
                  || stringEqualsIgnoreCase(value,"true")
                  || stringEqualsIgnoreCase(value,"on")
                  || stringEqualsIgnoreCase(value,"yes")
@@ -779,7 +779,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         {
           data = TRUE;
         }
-        else if (   stringEqualsIgnoreCase(value,"0")
+        else if (   stringEquals(value,"0")
                  || stringEqualsIgnoreCase(value,"false")
                  || stringEqualsIgnoreCase(value,"off")
                  || stringEqualsIgnoreCase(value,"no")
