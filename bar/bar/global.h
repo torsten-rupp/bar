@@ -433,6 +433,30 @@ typedef struct
       )
 
 /***********************************************************************\
+* Name   : ARRAY_FIRST
+* Purpose: first element of array
+* Input  : array - array
+* Output : -
+* Return : first element of array
+* Notes  : -
+\***********************************************************************/
+
+#define ARRAY_FIRST(array) \
+  array[0]
+
+/***********************************************************************\
+* Name   : ARRAY_LAST
+* Purpose: last element of array
+* Input  : array - array
+* Output : -
+* Return : last element of array
+* Notes  : -
+\***********************************************************************/
+
+#define ARRAY_LAST(array) \
+  array[SIZE_OF_ARRAY(array)-1]
+
+/***********************************************************************\
 * Name   : ALIGN
 * Purpose: align value to boundary
 * Input  : n         - address
