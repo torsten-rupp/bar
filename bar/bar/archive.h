@@ -490,6 +490,41 @@ Errors Archive_initAll(void);
 void Archive_doneAll(void);
 
 /***********************************************************************\
+* Name   : Archive_archiveTypeToString
+* Purpose: get name of archive type
+* Input  : archiveType  - archive type
+*          defaultValue - default value
+* Output : -
+* Return : archive type string
+* Notes  : -
+\***********************************************************************/
+
+const char *Archive_archiveTypeToString(ArchiveTypes archiveType, const char *defaultValue);
+
+/***********************************************************************\
+* Name   : Archive_parseArchiveType
+* Purpose: parse archive type algorithm
+* Input  : name - name of crypt algorithm
+* Output : archiveType - archive type
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Archive_parseArchiveType(const char *name, ArchiveTypes *archiveType);
+
+/***********************************************************************\
+* Name   : Archive_archiveEntryTypeToString
+* Purpose: get name of archive entry type
+* Input  : archiveEntryType - archive entry type
+*          defaultValue     - default value
+* Output : -
+* Return : archive entry type string
+* Notes  : -
+\***********************************************************************/
+
+const char *Archive_archiveEntryTypeToString(ArchiveEntryTypes archiveEntryType, const char *defaultValue);
+
+/***********************************************************************\
 * Name   : Archive_parseArchiveEntryType
 * Purpose: get archive entry type
 * Input  : name - name of archive entry type

@@ -660,41 +660,6 @@ LOCAL bool parseServerType(const char *name, ServerTypes *serverType)
 }
 
 /***********************************************************************\
-* Name   : parseArchiveType
-* Purpose: parse archive type
-* Input  : name - normal|full|incremental|differential|continuous
-* Output : archiveType - archive type
-* Return : TRUE iff parsed
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool parseArchiveType(const char *name, ArchiveTypes *archiveType)
-{
-  const ConfigValueSelect *configValueSelect;
-
-  assert(name != NULL);
-  assert(archiveType != NULL);
-
-  configValueSelect = CONFIG_VALUE_ARCHIVE_TYPES;
-  while (   (configValueSelect->name != NULL)
-         && !stringEqualsIgnoreCase(configValueSelect->name,name)
-        )
-  {
-    configValueSelect++;
-  }
-  if (configValueSelect->name != NULL)
-  {
-    (*archiveType) = (ArchiveTypes)configValueSelect->value;
-    return TRUE;
-  }
-  else
-  {
-    (*archiveType) = ARCHIVE_TYPE_NONE;
-    return FALSE;
-  }
-}
-
-/***********************************************************************\
 * Name   : freeScheduleNode
 * Purpose: free schedule node
 * Input  : scheduleNode - schedule node
@@ -1361,7 +1326,7 @@ LOCAL bool parseScheduleArchiveType(ConstString s, ArchiveTypes *archiveType)
   }
   else
   {
-    if (!parseArchiveType(String_cString(s),archiveType))
+    if (!Archive_parseArchiveType(String_cString(s),archiveType))
     {
       return FALSE;
     }
@@ -3856,9 +3821,6 @@ LOCAL void jobThreadCode(void)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  // open index
-  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
-
   jobNode     = NULL;
   archiveType = ARCHIVE_ENTRY_TYPE_UNKNOWN;
   while (!quitFlag)
@@ -3993,6 +3955,9 @@ fprintf(stderr,"%s, %d: XXXXXXx start %d\n",__FILE__,__LINE__,jobNode->requested
                   );
         break;
     }
+
+    // open index
+    indexHandle = Index_open(jobNode->masterIO,INDEX_TIMEOUT);
 
     // execute job
     if (!isSlaveJob(jobNode))
@@ -4313,7 +4278,7 @@ NULL,//                                                        scheduleTitle,
               {
                 logMessage(&logHandle,
                            LOG_TYPE_ALWAYS,
-                           "Cannot insert history information for '%s' (error: %s)\n",
+                           "Warning: cannot insert history information for '%s' (error: %s)\n",
                            String_cString(jobName),
                            Error_getText(error)
                           );
@@ -4367,14 +4332,12 @@ fprintf(stderr,"%s, %d: ------------------------------------------------ \n",__F
                                                     archiveType,
                                                     NULL,  // scheduleTitle,
                                                     NULL,  // scheduleCustomText,
-  //                                                  CALLBACK(getCryptPassword,jobNode),
-  //                                                  CALLBACK(updateCreateStatusInfo,jobNode),
+//                                                    CALLBACK(getCryptPassword,jobNode),
+//                                                    CALLBACK(updateCreateStatusInfo,jobNode),
                                                     CALLBACK(storageRequestVolume,jobNode)
                                                    );
-fprintf(stderr,"%s, %d: start: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
 
         // wait for slave job
-  fprintf(stderr,"%s, %d: wait for slave e=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
         while (   !quitFlag
                && isJobRunning(jobNode)
                && (jobNode->runningInfo.error == ERROR_NONE)
@@ -4418,20 +4381,9 @@ fprintf(stderr,"%s, %d: start: %s\n",__FILE__,__LINE__,Error_getText(jobNode->ru
             StringMap_getString(resultMap,"message",              jobNode->runningInfo.message,NULL);
           }
 
-  #if 0
-          // process slave commands (wait max. 1s)
-          jobNode->runningInfo.error = Slave_process(&jobNode->slaveInfo,1*MS_PER_SECOND);
-          if (jobNode->runningInfo.error != ERROR_NONE)
-          {
-  fprintf(stderr,"%s, %d: xxxxerror=%s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
-            jobNode->state = JOB_STATE_ERROR;
-            break;
-          }
-  #endif
           // sleep a short time
           Misc_udelay(1*US_PER_SECOND);
         }
-  fprintf(stderr,"%s, %d: fertisch: %s\n",__FILE__,__LINE__,Error_getText(jobNode->runningInfo.error));
 
         // disconnect slave
         Slave_disconnect(&jobNode->slaveInfo);
@@ -4508,6 +4460,9 @@ fprintf(stderr,"%s, %d: start: %s\n",__FILE__,__LINE__,Error_getText(jobNode->ru
       #endif /* NDEBUG */
     }
 
+    // close index
+    Index_close(indexHandle);
+
     // done log
     doneLog(&logHandle);
 
@@ -4568,9 +4523,6 @@ fprintf(stderr,"%s, %d: XXXXXXx end\n",__FILE__,__LINE__);
       }
     }
   }
-
-  // close index
-  Index_close(indexHandle);
 
   // free resources
   String_delete(scheduleAggregateInfo.lastErrorMessage);
@@ -5259,7 +5211,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                                   "INDEX",
                                   "Purged expired entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
                                   String_cString(jobName),
-                                  ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                                  Archive_archiveTypeToString(archiveType,"normal"),
                                   String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
                                   totalEntryCount,
                                   BYTES_SHORT(totalEntrySize),
@@ -5315,7 +5267,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                                       "INDEX",
                                       "Purged surplus entity of job '%s': %s, created at %s, %llu entries/%.1f%s (%llu bytes)\n",
                                       String_cString(jobName),
-                                      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                                      Archive_archiveTypeToString(archiveType,"normal"),
                                       String_cString(Misc_formatDateTime(string,createdDateTime,NULL)),
                                       totalEntryCount,
                                       BYTES_SHORT(totalEntrySize),
@@ -9726,7 +9678,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
@@ -11747,7 +11699,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_NONE);
+  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_NONE);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
@@ -11838,7 +11790,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                             "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%llu totalEntities=%lu totalEntryCount=%lu totalEntrySize=%llu",
                             scheduleNode->uuid,
-                            (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,scheduleNode->archiveType,NULL) : "*",
+                            (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? Archive_archiveTypeToString(scheduleNode->archiveType,NULL) : "*",
                             date,
                             weekDays,
                             time,
@@ -11875,7 +11827,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<uuid>
-*            archiveType=normal|full|incremental|differential|continuous
+*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
 *            date=<year>|*-<month>|*-<day>|*
 *            weekDays=<week day>,...|*
 *            time=<hour>|*:<minute>|*
@@ -11954,7 +11906,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   }
   else
   {
-    if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
+    if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
       String_delete(time);
@@ -15081,7 +15033,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                         jobName,
                         scheduleUUID,
                         entityId,
-                        ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                        Archive_archiveTypeToString(archiveType,"normal"),
                         createdDateTime,
                         lastErrorMessage,
                         totalEntryCount,
@@ -15313,7 +15265,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                         jobName,
                         entityId,
                         scheduleUUID,
-                        ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"),
+                        Archive_archiveTypeToString(archiveType,"normal"),
                         storageId,
                         printableStorageName,
                         dateTime,
@@ -15390,7 +15342,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
                           "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=FILE name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
                           jobName, \
-                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                          Archive_archiveTypeToString(archiveType,"normal"), \
                           storageName, \
                           storageDateTime, \
                           entryId, \
@@ -15411,7 +15363,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
                           "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=IMAGE name=%'S fileSystemType=%s size=%llu blockOffset=%llu blockCount=%llu", \
                           jobName, \
-                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                          Archive_archiveTypeToString(archiveType,"normal"), \
                           storageName, \
                           storageDateTime, \
                           entryId, \
@@ -15429,7 +15381,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
                           "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=DIRECTORY name=%'S size=%llu dateTime=%llu userId=%u groupId=%u permission=%u", \
                           jobName, \
-                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                          Archive_archiveTypeToString(archiveType,"normal"), \
                           storageName, \
                           storageDateTime, \
                           entryId, \
@@ -15448,7 +15400,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
                           "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=LINK name=%'S destinationName=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
                           jobName, \
-                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                          Archive_archiveTypeToString(archiveType,"normal"), \
                           storageName, \
                           storageDateTime, \
                           entryId, \
@@ -15467,7 +15419,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
                           "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=HARDLINK name=%'S size=%lld dateTime=%llu userId=%u groupId=%u permission=%u fragmentOffset=%llu fragmentSize=%llu", \
                           jobName, \
-                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,"normal"), \
+                          Archive_archiveTypeToString(archiveType,"normal"), \
                           storageName, \
                           storageDateTime, \
                           entryId, \
@@ -15488,7 +15440,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
                           "jobName=%'S archiveType=%s storageName=%'S storageDateTime=%llu entryId=%lld entryType=SPECIAL name=%'S dateTime=%llu userId=%u groupId=%u permission=%u", \
                           jobName, \
-                          ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,archiveType,NULL), \
+                          Archive_archiveTypeToString(archiveType,NULL), \
                           storageName, \
                           storageDateTime, \
                           entryId, \
@@ -15722,7 +15674,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
     return;
   }
   StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
@@ -16035,7 +15987,7 @@ LOCAL void serverCommand_indexEntitySet(ClientInfo *clientInfo, IndexHandle *ind
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<uuid>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     return;
@@ -16121,7 +16073,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
     return;
   }
   StringMap_getString(argumentMap,"toScheduleUUID",toScheduleUUID,NULL);
-  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,ARCHIVE_TYPE_NONE);
+  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_NONE);
   StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
   String_clear(jobUUID);
   entityId  = INDEX_ID_NONE;

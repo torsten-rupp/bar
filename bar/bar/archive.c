@@ -46,6 +46,20 @@
 
 /***************************** Constants *******************************/
 
+// archive types
+LOCAL const struct
+{
+  const char   *name;
+  ArchiveTypes archiveType;
+} ARCHIVE_TYPES[] =
+{
+  {"normal",      ARCHIVE_TYPE_NORMAL,     },
+  {"full",        ARCHIVE_TYPE_FULL,       },
+  {"incremental", ARCHIVE_TYPE_INCREMENTAL },
+  {"differential",ARCHIVE_TYPE_DIFFERENTIAL},
+  {"continuous",  ARCHIVE_TYPE_CONTINUOUS  }
+};
+
 // archive entry types
 LOCAL const struct
 {
@@ -4078,23 +4092,64 @@ void Archive_doneAll(void)
   Semaphore_done(&decryptPasswordList.lock);
 }
 
+const char *Archive_archiveTypeToString(ArchiveTypes archiveType, const char *defaultValue)
+{
+  return ((ARCHIVE_TYPE_NORMAL <= archiveType) && (archiveType <= ARCHIVE_TYPE_CONTINUOUS))
+           ? ARCHIVE_TYPES[archiveType].name
+           : defaultValue;
+}
+
+bool Archive_parseArchiveType(const char *name, ArchiveTypes *archiveType)
+{
+{
+  uint i;
+
+  assert(name != NULL);
+  assert(archiveType != NULL);
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(ARCHIVE_TYPES))
+         && !stringEqualsIgnoreCase(ARCHIVE_TYPES[i].name,name)
+        )
+  {
+    i++;
+  }
+  if (i < SIZE_OF_ARRAY(ARCHIVE_TYPES))
+  {
+    (*archiveType) = ARCHIVE_TYPES[i].archiveType;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+}
+
+const char *Archive_archiveEntryTypeToString(ArchiveEntryTypes archiveEntryType, const char *defaultValue)
+{
+  return ((ARCHIVE_ENTRY_TYPE_FILE <= archiveEntryType) && (archiveEntryType <= ARCHIVE_ENTRY_TYPE_SPECIAL))
+           ? ARCHIVE_ENTRY_TYPES[archiveEntryType].name
+           : defaultValue;
+}
+
 bool Archive_parseArchiveEntryType(const char *name, ArchiveEntryTypes *archiveEntryType)
 {
-  uint z;
+  uint i;
 
   assert(name != NULL);
   assert(archiveEntryType != NULL);
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(ARCHIVE_ENTRY_TYPES))
-         && !stringEqualsIgnoreCase(ARCHIVE_ENTRY_TYPES[z].name,name)
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(ARCHIVE_ENTRY_TYPES))
+         && !stringEqualsIgnoreCase(ARCHIVE_ENTRY_TYPES[i].name,name)
         )
   {
-    z++;
+    i++;
   }
-  if (z < SIZE_OF_ARRAY(ARCHIVE_ENTRY_TYPES))
+  if (i < SIZE_OF_ARRAY(ARCHIVE_ENTRY_TYPES))
   {
-    (*archiveEntryType) = ARCHIVE_ENTRY_TYPES[z].archiveEntryType;
+    (*archiveEntryType) = ARCHIVE_ENTRY_TYPES[i].archiveEntryType;
     return TRUE;
   }
   else
