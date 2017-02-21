@@ -153,18 +153,6 @@
 #define FILE_NAME_EXTENSION_ARCHIVE_FILE      ".bar"
 #define FILE_NAME_EXTENSION_INCREMENTAL_FILE  ".bid"
 
-LOCAL const struct
-{
-  const char   *name;
-  ArchiveTypes archiveType;
-} ARCHIVE_TYPES[] =
-{
-  { "normal",       ARCHIVE_TYPE_NORMAL       },
-  { "full",         ARCHIVE_TYPE_FULL         },
-  { "incremental",  ARCHIVE_TYPE_INCREMENTAL  },
-  { "differential", ARCHIVE_TYPE_DIFFERENTIAL }
-};
-
 /***************************** Datatypes *******************************/
 
 // commands
