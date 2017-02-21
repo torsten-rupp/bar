@@ -32,6 +32,7 @@
 #include "entrylists.h"
 #include "patternlists.h"
 #include "misc.h"
+#include "archive.h"
 #include "bar.h"
 
 #include "server.h"
@@ -397,6 +398,8 @@ LOCAL Errors Slave_setJobOptionPassword(SlaveInfo *slaveInfo, ConstString jobUUI
 LOCAL void slaveCommand_preProcess(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
 fprintf(stderr,"%s, %d: slaveCommand_preProcess\n",__FILE__,__LINE__);
+UNUSED_VARIABLE(indexHandle);
+UNUSED_VARIABLE(argumentMap);
 
   ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -420,6 +423,8 @@ fprintf(stderr,"%s, %d: slaveCommand_preProcess\n",__FILE__,__LINE__);
 LOCAL void slaveCommand_postProcess(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
 fprintf(stderr,"%s, %d: slaveCommand_postProcess\n",__FILE__,__LINE__);
+UNUSED_VARIABLE(indexHandle);
+UNUSED_VARIABLE(argumentMap);
 
   ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -444,6 +449,8 @@ LOCAL void slaveCommand_storageCreate(SlaveInfo *slaveInfo, IndexHandle *indexHa
   String archiveName;
   uint64 archiveSize;
   Errors error;
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get archive name, archive size
   archiveName = String_new();
@@ -474,6 +481,7 @@ LOCAL void slaveCommand_storageCreate(SlaveInfo *slaveInfo, IndexHandle *indexHa
   }
   slaveInfo->storageOpenFlag = TRUE;
 
+  // send result
   ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
@@ -502,8 +510,9 @@ LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHan
   uint   length;
   String data;
   void   *buffer;
-  ulong  bufferLength;
   Errors error;
+
+  UNUSED_VARIABLE(indexHandle);
 
   // get offset, length, data
   if (!StringMap_getUInt64(argumentMap,"offset",&offset,0LL))
@@ -542,7 +551,7 @@ LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHan
   }
   Misc_base64Decode(buffer,length,data,STRING_BEGIN);
 
-//TODO: offset?
+  // write storage
   error = Storage_seek(&slaveInfo->storageHandle,offset);
   if (error != ERROR_NONE)
   {
@@ -551,8 +560,6 @@ LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHan
     String_delete(data);
     return;
   }
-
-  // write storage
   error = Storage_write(&slaveInfo->storageHandle,buffer,length);
   if (error != ERROR_NONE)
   {
@@ -562,6 +569,7 @@ LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHan
     return;
   }
 
+  // send result
   ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
@@ -588,6 +596,9 @@ LOCAL void slaveCommand_storageClose(SlaveInfo *slaveInfo, IndexHandle *indexHan
 
   // get archive size
   archiveSize = Storage_getSize(&slaveInfo->storageHandle);
+UNUSED_VARIABLE(archiveSize);
+UNUSED_VARIABLE(indexHandle);
+UNUSED_VARIABLE(argumentMap);
 
   // close storage
   if (slaveInfo->storageOpenFlag)
@@ -598,12 +609,13 @@ LOCAL void slaveCommand_storageClose(SlaveInfo *slaveInfo, IndexHandle *indexHan
 
 //TODO: index
 
+  // send result
   ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexEntityAdd
-* Purpose: close storage
+* Name   : slaveCommand_indexFindUUID
+* Purpose: find index UUID
 * Input  : slaveInfo   - slave info
 *          indexHandle - index handle
 *          id          - command id
@@ -611,21 +623,93 @@ LOCAL void slaveCommand_storageClose(SlaveInfo *slaveInfo, IndexHandle *indexHan
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            error=<n>
+*            jobUUID=<text>
+*            scheduleUUUID=<text>
 *          Result:
-*            errorMessage=<text>
+*            uuidId=<n>
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexEntityAdd(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void slaveCommand_indexFindUUID(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (scheduleUUUID,MISC_UUID_STRING_LENGTH);
+  IndexId      uuidId;
+  uint64       lastExecutedDateTime;
+  String       lastErrorMessage;
+  ulong        executionCount;
+  uint64       averageDuration;
+  ulong        totalEntityCount;
+  ulong        totalStorageCount;
+  uint64       totalStorageSize;
+  ulong        totalEntryCount;
+  uint64       totalEntrySize;
 
-  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+  // get jobUUID, scheduleUUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
+    return;
+  }
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUUID,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<text>");
+    return;
+  }
+
+  // find job data
+  lastErrorMessage = String_new();
+
+  if (Index_findUUIDByJobUUID(indexHandle,
+                              jobUUID,
+                              scheduleUUUID,
+                              &uuidId,
+                              &lastExecutedDateTime,
+                              lastErrorMessage,
+                              &executionCount,
+                              &averageDuration,
+                              &totalEntityCount,
+                              &totalStorageCount,
+                              &totalStorageSize,
+                              &totalEntryCount,
+                              &totalEntrySize
+                             )
+     )
+  {
+    ServerIO_sendResult(&slaveInfo->io,
+                        id,
+                        TRUE,
+                        ERROR_NONE,
+                        "uuidId=%lld lastExecutedDateTime=%llu lastErrorMessage=%S executionCount=%lu averageDuration=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
+                        uuidId,
+                        lastExecutedDateTime,
+                        lastErrorMessage,
+                        executionCount,
+                        averageDuration,
+                        totalEntityCount,
+                        totalStorageCount,
+                        totalStorageSize,
+                        totalEntryCount,
+                        totalEntrySize
+                       );
+  }
+  else
+  {
+    ServerIO_sendResult(&slaveInfo->io,
+                        id,
+                        TRUE,
+                        ERROR_NONE,
+                        "uuidId=%lld",
+                        INDEX_ID_NONE
+                       );
+  }
+
+  // free resources
+  String_delete(lastErrorMessage);
 }
 
 /***********************************************************************\
-* Name   : slaveCommand_indexEntryAdd
-* Purpose: close storage
+* Name   : slaveCommand_indexNewUUID
+* Purpose: add new index UUID
 * Input  : slaveInfo   - slave info
 *          indexHandle - index handle
 *          id          - command id
@@ -633,16 +717,1161 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            error=<n>
+*            jobUUID=<text>
+*          Result:
+*            uuidId=<n>
+\***********************************************************************/
+
+LOCAL void slaveCommand_indexNewUUID(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  Errors       error;
+  IndexId      uuidId;
+
+  // get jobUUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
+    return;
+  }
+
+  // create new UUID
+  error = Index_newUUID(indexHandle,jobUUID,&uuidId);
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new UUID fail");
+    return;
+  }
+
+  // send result
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"uuidId=%lld",uuidId);
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_indexNewEntity
+* Purpose: create new index entity
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
+*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL
+*            createdDateTime=<n>
+*            locked=yes|no
+*          Result:
+*            entityId=<n>
+\***********************************************************************/
+
+LOCAL void slaveCommand_indexNewEntity(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes archiveType;
+  uint64       createdDateTime;
+  bool         locked;
+  Errors       error;
+  IndexId      entityId;
+
+  // get jobUUID, scheduleUUID, archiveType, createdDateTime, locked
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
+    return;
+  }
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<text>");
+    return;
+  }
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_NONE))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    return;
+  }
+  StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
+  StringMap_getBool(argumentMap,"locked",&locked,FALSE);
+
+  // create new entity
+  error = Index_newEntity(indexHandle,jobUUID,scheduleUUID,archiveType,createdDateTime,locked,&entityId);
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new entity fail");
+    return;
+  }
+
+  // send result
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"entityId=%lld",entityId);
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_indexNewStorage
+* Purpose: create new index storage
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            entityId=<n>
+*            storageName=<name>
+*            createdDateTime=<n>
+*            size=<n>
+*            indexState=<n>
+*            indexMode=<n>
+*          Result:
+*            storageId=<n>
+\***********************************************************************/
+
+LOCAL void slaveCommand_indexNewStorage(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId      entityId;
+  String       storageName;
+  uint64       createdDateTime;
+  uint64       size;
+  IndexStates  indexState;
+  IndexModes   indexMode;
+  Errors       error;
+  IndexId      storageId;
+
+  // get entityId, storageName, createdDateTime, size, indexMode, indexState
+  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entityId=<n>");
+    return;
+  }
+  storageName = String_new();
+  if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageName=<name>");
+    String_delete(storageName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected createdDateTime=<n>");
+    String_delete(storageName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
+    String_delete(storageName);
+    return;
+  }
+  if (!StringMap_getEnum(argumentMap,"indexState",&indexState,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_NONE))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
+    String_delete(storageName);
+    return;
+  }
+  if (!StringMap_getEnum(argumentMap,"indexMode",&indexMode,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_MANUAL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexMode=MANUAL|AUTO");
+    String_delete(storageName);
+    return;
+  }
+
+  // create new entity
+  error = Index_newStorage(indexHandle,entityId,storageName,createdDateTime,size,indexState,indexMode,&storageId);
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new storage fail");
+    String_delete(storageName);
+    return;
+  }
+
+  // send result
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"storageId=%lld",storageId);
+
+  // free resources
+  String_delete(storageName);
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_indexAddFile
+* Purpose: add index file entry
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            storageId=<n>
+*            fileName=<name>
+*            size=<n>
+*            timeLastAccess=<n>
+*            timeModified=<n>
+*            timeLastChanged=<n>
+*            userId=<n>
+*            groupId=<n>
+*            permission=<n>
+*            fragmentOffset=<n>
+*            fragmentSize=<n>
 *          Result:
 *            errorMessage=<text>
 \***********************************************************************/
 
-LOCAL void slaveCommand_indexEntryAdd(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void slaveCommand_indexAddFile(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  IndexId storageId;
+  String  fileName;
+  uint64  size;
+  uint64  timeLastAccess;
+  uint64  timeModified;
+  uint64  timeLastChanged;
+  uint32  userId;
+  uint32  groupId;
+  uint32  permission;
+  uint64  fragmentOffset;
+  uint64  fragmentSize;
+  Errors  error;
 
+  // get storageId, fileName, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    return;
+  }
+  fileName = String_new();
+  if (!StringMap_getString(argumentMap,"fileName",fileName,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileName=<name>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
+    String_delete(fileName);
+    return;
+  }
+
+  // add index file entry
+  error = Index_addFile(indexHandle,
+                        storageId,
+                        fileName,
+                        size,
+                        timeLastAccess,
+                        timeModified,
+                        timeLastChanged,
+                        userId,
+                        groupId,
+                        permission,
+                        fragmentOffset,
+                        fragmentSize
+                       );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new storage fail");
+    String_delete(fileName);
+    return;
+  }
+
+  // send result
   ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(fileName);
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_indexAddImage
+* Purpose: add index file entry
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            storageId=<n>
+*            fileName=<name>
+*            size=<n>
+*            timeLastAccess=<n>
+*            timeModified=<n>
+*            timeLastChanged=<n>
+*            userId=<n>
+*            groupId=<n>
+*            permission=<n>
+*            fragmentOffset=<n>
+*            fragmentSize=<n>
+*          Result:
+*            errorMessage=<text>
+\***********************************************************************/
+
+LOCAL void slaveCommand_indexAddImage(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId storageId;
+  String  fileName;
+  uint64  size;
+  uint64  timeLastAccess;
+  uint64  timeModified;
+  uint64  timeLastChanged;
+  uint32  userId;
+  uint32  groupId;
+  uint32  permission;
+  uint64  fragmentOffset;
+  uint64  fragmentSize;
+  Errors  error;
+
+  // get storageId, fileName, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    return;
+  }
+  fileName = String_new();
+  if (!StringMap_getString(argumentMap,"fileName",fileName,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileName=<name>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
+    String_delete(fileName);
+    return;
+  }
+
+  // add index file entry
+  error = Index_addFile(indexHandle,
+                        storageId,
+                        fileName,
+                        size,
+                        timeLastAccess,
+                        timeModified,
+                        timeLastChanged,
+                        userId,
+                        groupId,
+                        permission,
+                        fragmentOffset,
+                        fragmentSize
+                       );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new storage fail");
+    String_delete(fileName);
+    return;
+  }
+
+  // send result
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(fileName);
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_indexAddDirectory
+* Purpose: add index file entry
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            storageId=<n>
+*            fileName=<name>
+*            size=<n>
+*            timeLastAccess=<n>
+*            timeModified=<n>
+*            timeLastChanged=<n>
+*            userId=<n>
+*            groupId=<n>
+*            permission=<n>
+*            fragmentOffset=<n>
+*            fragmentSize=<n>
+*          Result:
+*            errorMessage=<text>
+\***********************************************************************/
+
+LOCAL void slaveCommand_indexAddDirectory(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId storageId;
+  String  fileName;
+  uint64  size;
+  uint64  timeLastAccess;
+  uint64  timeModified;
+  uint64  timeLastChanged;
+  uint32  userId;
+  uint32  groupId;
+  uint32  permission;
+  uint64  fragmentOffset;
+  uint64  fragmentSize;
+  Errors  error;
+
+  // get storageId, fileName, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    return;
+  }
+  fileName = String_new();
+  if (!StringMap_getString(argumentMap,"fileName",fileName,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileName=<name>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
+    String_delete(fileName);
+    return;
+  }
+
+  // add index file entry
+  error = Index_addFile(indexHandle,
+                        storageId,
+                        fileName,
+                        size,
+                        timeLastAccess,
+                        timeModified,
+                        timeLastChanged,
+                        userId,
+                        groupId,
+                        permission,
+                        fragmentOffset,
+                        fragmentSize
+                       );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new storage fail");
+    String_delete(fileName);
+    return;
+  }
+
+  // send result
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(fileName);
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_indexAddLink
+* Purpose: add index file entry
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            storageId=<n>
+*            fileName=<name>
+*            size=<n>
+*            timeLastAccess=<n>
+*            timeModified=<n>
+*            timeLastChanged=<n>
+*            userId=<n>
+*            groupId=<n>
+*            permission=<n>
+*            fragmentOffset=<n>
+*            fragmentSize=<n>
+*          Result:
+*            errorMessage=<text>
+\***********************************************************************/
+
+LOCAL void slaveCommand_indexAddLink(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId storageId;
+  String  fileName;
+  uint64  size;
+  uint64  timeLastAccess;
+  uint64  timeModified;
+  uint64  timeLastChanged;
+  uint32  userId;
+  uint32  groupId;
+  uint32  permission;
+  uint64  fragmentOffset;
+  uint64  fragmentSize;
+  Errors  error;
+
+  // get storageId, fileName, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    return;
+  }
+  fileName = String_new();
+  if (!StringMap_getString(argumentMap,"fileName",fileName,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileName=<name>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
+    String_delete(fileName);
+    return;
+  }
+
+  // add index file entry
+  error = Index_addFile(indexHandle,
+                        storageId,
+                        fileName,
+                        size,
+                        timeLastAccess,
+                        timeModified,
+                        timeLastChanged,
+                        userId,
+                        groupId,
+                        permission,
+                        fragmentOffset,
+                        fragmentSize
+                       );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new storage fail");
+    String_delete(fileName);
+    return;
+  }
+
+  // send result
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(fileName);
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_indexAddHardlink
+* Purpose: add index file entry
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            storageId=<n>
+*            fileName=<name>
+*            size=<n>
+*            timeLastAccess=<n>
+*            timeModified=<n>
+*            timeLastChanged=<n>
+*            userId=<n>
+*            groupId=<n>
+*            permission=<n>
+*            fragmentOffset=<n>
+*            fragmentSize=<n>
+*          Result:
+*            errorMessage=<text>
+\***********************************************************************/
+
+LOCAL void slaveCommand_indexAddHardlink(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId storageId;
+  String  fileName;
+  uint64  size;
+  uint64  timeLastAccess;
+  uint64  timeModified;
+  uint64  timeLastChanged;
+  uint32  userId;
+  uint32  groupId;
+  uint32  permission;
+  uint64  fragmentOffset;
+  uint64  fragmentSize;
+  Errors  error;
+
+  // get storageId, fileName, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    return;
+  }
+  fileName = String_new();
+  if (!StringMap_getString(argumentMap,"fileName",fileName,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileName=<name>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
+    String_delete(fileName);
+    return;
+  }
+
+  // add index file entry
+  error = Index_addFile(indexHandle,
+                        storageId,
+                        fileName,
+                        size,
+                        timeLastAccess,
+                        timeModified,
+                        timeLastChanged,
+                        userId,
+                        groupId,
+                        permission,
+                        fragmentOffset,
+                        fragmentSize
+                       );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new storage fail");
+    String_delete(fileName);
+    return;
+  }
+
+  // send result
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(fileName);
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_indexAddSpecial
+* Purpose: add index file entry
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            storageId=<n>
+*            fileName=<name>
+*            size=<n>
+*            timeLastAccess=<n>
+*            timeModified=<n>
+*            timeLastChanged=<n>
+*            userId=<n>
+*            groupId=<n>
+*            permission=<n>
+*            fragmentOffset=<n>
+*            fragmentSize=<n>
+*          Result:
+*            errorMessage=<text>
+\***********************************************************************/
+
+LOCAL void slaveCommand_indexAddSpecial(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId storageId;
+  String  fileName;
+  uint64  size;
+  uint64  timeLastAccess;
+  uint64  timeModified;
+  uint64  timeLastChanged;
+  uint32  userId;
+  uint32  groupId;
+  uint32  permission;
+  uint64  fragmentOffset;
+  uint64  fragmentSize;
+  Errors  error;
+
+  // get storageId, fileName, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storageId=<n>");
+    return;
+  }
+  fileName = String_new();
+  if (!StringMap_getString(argumentMap,"fileName",fileName,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fileName=<name>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected size=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastAccess=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeModified=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected timeLastChanged=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected userId=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected groupId=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected permission=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentOffset=<n>");
+    String_delete(fileName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected fragmentSize=<n>");
+    String_delete(fileName);
+    return;
+  }
+
+  // add index file entry
+  error = Index_addFile(indexHandle,
+                        storageId,
+                        fileName,
+                        size,
+                        timeLastAccess,
+                        timeModified,
+                        timeLastChanged,
+                        userId,
+                        groupId,
+                        permission,
+                        fragmentOffset,
+                        fragmentSize
+                       );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new storage fail");
+    String_delete(fileName);
+    return;
+  }
+
+  // send result
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(fileName);
+}
+
+/***********************************************************************\
+* Name   : slaveCommand_indexNewHistory
+* Purpose: new index history entry
+* Input  : slaveInfo   - slave info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
+*            hostName=<name>
+*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL
+*            createdDateTime=<n>
+*            errorMessage=<text>
+*            duration=<n>
+*            totalEntryCount=<n>
+*            totalEntrySize=<n>
+*            skippedEntryCount=<n>
+*            skippedEntrySize=<n>
+*            errorEntryCount=<n>
+*            errorEntrySize=<n>
+*          Result:
+*            errorMessage=<text>
+\***********************************************************************/
+
+LOCAL void slaveCommand_indexNewHistory(SlaveInfo *slaveInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  String       hostName;
+  ArchiveTypes archiveType;
+  uint64       createdDateTime;
+  String       errorMessage;
+  uint64       duration;
+  ulong        totalEntryCount;
+  uint64       totalEntrySize;
+  ulong        skippedEntryCount;
+  uint64       skippedEntrySize;
+  ulong        errorEntryCount;
+  uint64       errorEntrySize;
+  Errors       error;
+  IndexId      historyId;
+
+  // get jobUUID, scheduleUUID, hostName, archiveType, createdDateTime, errorMessage, duration, totalEntryCount, totalEntrySize, skippedEntryCount, skippedEntrySize, errorEntryCount, errorEntrySize
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobUUID=<text>");
+    return;
+  }
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected scheduleUUID=<text>");
+    return;
+  }
+  hostName = String_new();
+  if (!StringMap_getString(argumentMap,"hostName",hostName,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected hostName=<text>");
+    String_delete(hostName);
+    return;
+  }
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseArchiveType,ARCHIVE_TYPE_NONE))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    String_delete(hostName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected createdDateTime=<n>");
+    String_delete(hostName);
+    return;
+  }
+  errorMessage = String_new();
+  if (!StringMap_getString(argumentMap,"errorMessage",errorMessage,NULL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected hostName=<text>");
+    String_delete(errorMessage);
+    String_delete(hostName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"duration",&duration,0L))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected duration=<n>");
+    String_delete(errorMessage);
+    String_delete(hostName);
+    return;
+  }
+  if (!StringMap_getULong(argumentMap,"totalEntryCount",&totalEntryCount,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected totalEntryCount=<n>");
+    String_delete(errorMessage);
+    String_delete(hostName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"totalEntrySize",&totalEntrySize,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected totalEntrySize=<n>");
+    String_delete(errorMessage);
+    String_delete(hostName);
+    return;
+  }
+  if (!StringMap_getULong(argumentMap,"skippedEntryCount",&skippedEntryCount,0L))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected skippedEntryCount=<n>");
+    String_delete(errorMessage);
+    String_delete(hostName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"skippedEntrySize",&skippedEntrySize,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected skippedEntrySize=<n>");
+    String_delete(errorMessage);
+    String_delete(hostName);
+    return;
+  }
+  if (!StringMap_getULong(argumentMap,"errorEntryCount",&errorEntryCount,0L))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected errorEntryCount=<n>");
+    String_delete(errorMessage);
+    String_delete(hostName);
+    return;
+  }
+  if (!StringMap_getUInt64(argumentMap,"errorEntrySize",&errorEntrySize,0LL))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected errorEntrySize=<n>");
+    String_delete(errorMessage);
+    String_delete(hostName);
+    return;
+  }
+
+  // add index history entry
+  error = Index_newHistory(indexHandle,
+                           jobUUID,
+                           scheduleUUID,
+                           hostName,
+                           archiveType,
+                           createdDateTime,
+                           String_cString(errorMessage),
+                           duration,
+                           totalEntryCount,
+                           totalEntrySize,
+                           skippedEntryCount,
+                           skippedEntrySize,
+                           errorEntryCount,
+                           errorEntrySize,
+                           &historyId
+                          );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,error,"create new history entry");
+    String_delete(errorMessage);
+    String_delete(hostName);
+    return;
+  }
+
+  // send result
+  ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_NONE,"historyId=%lld",historyId);
+
+  // free resources
+  String_delete(errorMessage);
+  String_delete(hostName);
 }
 
 // server commands
@@ -653,15 +1882,25 @@ const struct
 }
 SLAVE_COMMANDS[] =
 {
-  { "PREPROCESS",                     slaveCommand_preProcess     },
-  { "POSTPROCESS",                    slaveCommand_postProcess    },
+  { "PREPROCESS",                     slaveCommand_preProcess        },
+  { "POSTPROCESS",                    slaveCommand_postProcess       },
 
-  { "STORAGE_CREATE",                 slaveCommand_storageCreate  },
-  { "STORAGE_WRITE",                  slaveCommand_storageWrite   },
-  { "STORAGE_CLOSE",                  slaveCommand_storageClose   },
+  { "STORAGE_CREATE",                 slaveCommand_storageCreate     },
+  { "STORAGE_WRITE",                  slaveCommand_storageWrite      },
+  { "STORAGE_CLOSE",                  slaveCommand_storageClose      },
 
-  { "INDEX_ENTITY_ADD",               slaveCommand_indexEntityAdd },
-  { "INDEX_ENTRY_ADD",                slaveCommand_indexEntryAdd  },
+  { "INDEX_FIND_UUID",                slaveCommand_indexFindUUID     },
+  { "INDEX_NEW_UUID",                 slaveCommand_indexNewUUID      },
+  { "INDEX_NEW_ENTITY",               slaveCommand_indexNewEntity    },
+  { "INDEX_NEW_STORAGE",              slaveCommand_indexNewStorage   },
+  { "INDEX_ADD_FILE",                 slaveCommand_indexAddFile      },
+  { "INDEX_ADD_IMAGE",                slaveCommand_indexAddImage     },
+  { "INDEX_ADD_DIRECTORY",            slaveCommand_indexAddDirectory },
+  { "INDEX_ADD_LINK",                 slaveCommand_indexAddLink      },
+  { "INDEX_ADD_HARDLINK",             slaveCommand_indexAddHardlink  },
+  { "INDEX_ADD_SPECIAL",              slaveCommand_indexAddSpecial   },
+
+  { "INDEX_NEW_HISTORY",              slaveCommand_indexNewHistory   },
 };
 
 /***********************************************************************\
@@ -713,6 +1952,7 @@ LOCAL void slaveThreadCode(SlaveInfo *slaveInfo)
   String               name;
   StringMap            argumentMap;
   sigset_t             signalMask;
+  IndexHandle          *indexHandle;
   struct pollfd        pollfds[1];
   struct timespec      pollTimeout;
   int                  n;
@@ -726,6 +1966,9 @@ LOCAL void slaveThreadCode(SlaveInfo *slaveInfo)
   // Note: ignore SIGALRM in ppoll()
   sigemptyset(&signalMask);
   sigaddset(&signalMask,SIGALRM);
+
+  // init index
+  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   // process client requests
   while (!Thread_isQuit(&slaveInfo->thread))
@@ -769,7 +2012,7 @@ break;
             assert(slaveCommandFunction != NULL);
 
             // process command
-            slaveCommandFunction(slaveInfo,NULL,id,argumentMap);
+            slaveCommandFunction(slaveInfo,indexHandle,id,argumentMap);
           }
         }
         else
@@ -787,6 +2030,9 @@ slaveDisconnect(slaveInfo);
       }
     }
   }
+
+  // done index
+  Index_close(indexHandle);
 
   // free resources
   StringMap_delete(argumentMap);
@@ -1193,7 +2439,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   SET_OPTION_BOOLEAN  ("wait-first-volume",      jobOptions->waitFirstVolumeFlag         );
 
   SET_OPTION_STRING   ("comment",                jobOptions->comment                     );
-fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   // set lists
   if (error == ERROR_NONE) error = Slave_executeCommand(slaveInfo,COMMAND_TIMEOUT,NULL,"INCLUDE_LIST_CLEAR jobUUID=%S",jobUUID);
