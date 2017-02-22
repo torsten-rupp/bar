@@ -503,7 +503,7 @@ const char *Archive_archiveTypeToString(ArchiveTypes archiveType, const char *de
 
 /***********************************************************************\
 * Name   : Archive_parseArchiveType
-* Purpose: parse archive type algorithm
+* Purpose: parse archive type
 * Input  : name - name of archive type
 * Output : archiveType - archive type
 * Return : TRUE iff parsed
