@@ -26,19 +26,25 @@
 
 /***************************** Constants *******************************/
 
-LOCAL const struct { const char *name; FileSystemTypes fileSystemType; } FILESYTEM_NAMES[] =
+// file system types
+LOCAL const struct
 {
-  { "none",       FILE_SYSTEM_TYPE_NONE      },
+  const char      *name;
+  FileSystemTypes fileSystemType;
+}
+FILESYTEM_TYPES[] =
+{
+  {"none",       FILE_SYSTEM_TYPE_NONE     },
 
-  { "Ext2",       FILE_SYSTEM_TYPE_EXT2      },
-  { "Ext3",       FILE_SYSTEM_TYPE_EXT3      },
-  { "Ext4",       FILE_SYSTEM_TYPE_EXT4      },
-  { "FAT12",      FILE_SYSTEM_TYPE_FAT12     },
-  { "FAT16",      FILE_SYSTEM_TYPE_FAT16     },
-  { "FAT32",      FILE_SYSTEM_TYPE_FAT32     },
-  { "ReiserFS 1", FILE_SYSTEM_TYPE_REISERFS1 },
-  { "ReiserFS 3", FILE_SYSTEM_TYPE_REISERFS3 },
-  { "ReiserFS 4", FILE_SYSTEM_TYPE_REISERFS4 },
+  {"Ext2",       FILE_SYSTEM_TYPE_EXT2     },
+  {"Ext3",       FILE_SYSTEM_TYPE_EXT3     },
+  {"Ext4",       FILE_SYSTEM_TYPE_EXT4     },
+  {"FAT12",      FILE_SYSTEM_TYPE_FAT12    },
+  {"FAT16",      FILE_SYSTEM_TYPE_FAT16    },
+  {"FAT32",      FILE_SYSTEM_TYPE_FAT32    },
+  {"ReiserFS 1", FILE_SYSTEM_TYPE_REISERFS1},
+  {"ReiserFS 3", FILE_SYSTEM_TYPE_REISERFS3},
+  {"ReiserFS 4", FILE_SYSTEM_TYPE_REISERFS4},
 };
 
 
@@ -193,28 +199,36 @@ Errors FileSystem_done(FileSystemHandle *fileSystemHandle)
   return ERROR_NONE;
 }
 
-const char *FileSystem_getName(FileSystemTypes fileSystemType)
+const char *FileSystem_fileSystemTypeToString(FileSystemTypes fileSystemType, const char *defaultValue)
 {
-  uint       z;
-  const char *fileSytemName;
+  return ((ARRAY_FIRST(FILESYTEM_TYPES).fileSystemType <= fileSystemType) && (fileSystemType <= ARRAY_LAST(FILESYTEM_TYPES).fileSystemType))
+           ? FILESYTEM_TYPES[fileSystemType-ARRAY_FIRST(FILESYTEM_TYPES).fileSystemType].name
+           : defaultValue;
+}
 
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(FILESYTEM_NAMES))
-         && (FILESYTEM_NAMES[z].fileSystemType != fileSystemType)
+bool FileSystem_parseFileSystemType(const char *name, FileSystemTypes *fileSystemType)
+{
+  uint i;
+
+  assert(name != NULL);
+  assert(fileSystemType != NULL);
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(FILESYTEM_TYPES))
+         && !stringEqualsIgnoreCase(FILESYTEM_TYPES[i].name,name)
         )
   {
-    z++;
+    i++;
   }
-  if (z < SIZE_OF_ARRAY(FILESYTEM_NAMES))
+  if (i < SIZE_OF_ARRAY(FILESYTEM_TYPES))
   {
-    fileSytemName = FILESYTEM_NAMES[z].name;
+    (*fileSystemType) = FILESYTEM_TYPES[i].fileSystemType;
+    return TRUE;
   }
   else
   {
-    fileSytemName = "unknown";
+    return FALSE;
   }
-
-  return fileSytemName;
 }
 
 bool FileSystem_blockIsUsed(FileSystemHandle *fileSystemHandle, uint64 offset)

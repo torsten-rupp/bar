@@ -99,15 +99,27 @@ Errors FileSystem_init(FileSystemHandle *fileSystemHandle,
 Errors FileSystem_done(FileSystemHandle *fileSystemHandle);
 
 /***********************************************************************\
-* Name   : FileSystem_getName
+* Name   : FileSystem_fileSystemTypeToString
 * Purpose: get name of file system
 * Input  : fileSystemType - file system type
+*          defaultValue   - default value
 * Output : -
 * Return : file system name
 * Notes  : -
 \***********************************************************************/
 
-const char *FileSystem_getName(FileSystemTypes fileSystemType);
+const char *FileSystem_fileSystemTypeToString(FileSystemTypes fileSystemType, const char *defaultValue);
+
+/***********************************************************************\
+* Name   : FileSystem_parseFileSystemType
+* Purpose: parse file system type
+* Input  : name - name of archive type
+* Output : archiveType - archive type
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool FileSystem_parseFileSystemType(const char *name, FileSystemTypes *fileSystemType);
 
 /***********************************************************************\
 * Name   : FileSystem_blockIsUsed
