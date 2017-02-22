@@ -618,6 +618,54 @@ Errors File_getTmpDirectoryNameCString(String directoryName, const char *pattern
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : File_fileTypeToString
+* Purpose: get name of file type
+* Input  : fileType     - file type
+*          defaultValue - default value
+* Output : -
+* Return : file type string
+* Notes  : -
+\***********************************************************************/
+
+const char *File_fileTypeToString(FileTypes fileType, const char *defaultValue);
+
+/***********************************************************************\
+* Name   : File_parseFileType
+* Purpose: parse file type algorithm
+* Input  : name - name of crypt algorithm
+* Output : fileType - archive type
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool File_parseFileType(const char *name, FileTypes *fileType);
+
+/***********************************************************************\
+* Name   : File_fileSpecialTypeToString
+* Purpose: get name of file special type
+* Input  : fileSpecialType - file special type
+*          defaultValue    - default value
+* Output : -
+* Return : file type string
+* Notes  : -
+\***********************************************************************/
+
+const char *File_fileSpecialTypeToString(FileSpecialTypes fileSpecialType, const char *defaultValue);
+
+/***********************************************************************\
+* Name   : File_parseSpecialFileType
+* Purpose: parse file special type
+* Input  : name - name of file special type
+* Output : fileSpecialType - file special type
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool File_parseFileSpecialType(const char *name, FileSpecialTypes *fileSpecialType);
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
 * Name   : File_open, File_openCString
 * Purpose: open file
 * Input  : fileHandle - file handle

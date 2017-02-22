@@ -65,6 +65,35 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+
+// file types
+LOCAL const struct
+{
+  const char *name;
+  FileTypes  fileType;
+} FILE_TYPES[] =
+{
+  {"FILE",     FILE_TYPE_FILE     },
+  {"DIRECTORY",FILE_TYPE_DIRECTORY},
+  {"LINK",     FILE_TYPE_LINK     },
+  {"HARDLINK", FILE_TYPE_HARDLINK },
+  {"SPECIAL",  FILE_TYPE_SPECIAL  }
+};
+
+// file special types
+LOCAL const struct
+{
+  const char       *name;
+  FileSpecialTypes fileSpecialType;
+} FILE_SPECIAL_TYPES[] =
+{
+  {"CHARACTER_DEVICE",FILE_SPECIAL_TYPE_CHARACTER_DEVICE},
+  {"BLOCK_DEVICE",    FILE_SPECIAL_TYPE_BLOCK_DEVICE    },
+  {"FIFO",            FILE_SPECIAL_TYPE_FIFO            },
+  {"SOCKET",          FILE_SPECIAL_TYPE_SOCKET          },
+  {"OTHER",           FILE_SPECIAL_TYPE_OTHER           }
+};
+
 #define DEBUG_MAX_CLOSED_LIST 100
 
 /***************************** Datatypes *******************************/
@@ -1598,6 +1627,72 @@ Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern
   free(s);
 
   return ERROR_NONE;
+}
+
+/*---------------------------------------------------------------------*/
+
+const char *File_fileTypeToString(FileTypes fileType, const char *defaultValue)
+{
+  return ((ARRAY_FIRST(FILE_TYPES).fileType <= fileType) && (fileType <= ARRAY_LAST(FILE_TYPES).fileType))
+           ? FILE_TYPES[fileType-ARRAY_FIRST(FILE_TYPES).fileType].name
+           : defaultValue;
+}
+
+bool File_parseFileType(const char *name, FileTypes *fileType)
+{
+  uint i;
+
+  assert(name != NULL);
+  assert(fileType != NULL);
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(FILE_TYPES))
+         && !stringEqualsIgnoreCase(FILE_TYPES[i].name,name)
+        )
+  {
+    i++;
+  }
+  if (i < SIZE_OF_ARRAY(FILE_TYPES))
+  {
+    (*fileType) = FILE_TYPES[i].fileType;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+const char *File_fileSpecialTypeToString(FileSpecialTypes fileSpecialType, const char *defaultValue)
+{
+  return ((ARRAY_FIRST(FILE_SPECIAL_TYPES).fileSpecialType <= fileSpecialType) && (fileSpecialType <= ARRAY_LAST(FILE_SPECIAL_TYPES).fileSpecialType))
+           ? FILE_SPECIAL_TYPES[fileSpecialType-ARRAY_FIRST(FILE_SPECIAL_TYPES).fileSpecialType].name
+           : defaultValue;
+}
+
+bool File_parseFileSpecialType(const char *name, FileSpecialTypes *fileSpecialType)
+{
+  uint i;
+
+  assert(name != NULL);
+  assert(fileSpecialType != NULL);
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(FILE_SPECIAL_TYPES))
+         && !stringEqualsIgnoreCase(FILE_SPECIAL_TYPES[i].name,name)
+        )
+  {
+    i++;
+  }
+  if (i < SIZE_OF_ARRAY(FILE_SPECIAL_TYPES))
+  {
+    (*fileSpecialType) = FILE_SPECIAL_TYPES[i].fileSpecialType;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 
 /*---------------------------------------------------------------------*/
