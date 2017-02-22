@@ -67,12 +67,12 @@ LOCAL const struct
   ArchiveEntryTypes archiveEntryType;
 } ARCHIVE_ENTRY_TYPES[] =
 {
-  { "FILE",     ARCHIVE_ENTRY_TYPE_FILE      },
-  { "IMAGE",    ARCHIVE_ENTRY_TYPE_IMAGE     },
-  { "DIRECTORY",ARCHIVE_ENTRY_TYPE_DIRECTORY },
-  { "LINK",     ARCHIVE_ENTRY_TYPE_LINK      },
-  { "HARDLINK", ARCHIVE_ENTRY_TYPE_HARDLINK  },
-  { "SPECIAL",  ARCHIVE_ENTRY_TYPE_SPECIAL   }
+  {"FILE",     ARCHIVE_ENTRY_TYPE_FILE     },
+  {"IMAGE",    ARCHIVE_ENTRY_TYPE_IMAGE    },
+  {"DIRECTORY",ARCHIVE_ENTRY_TYPE_DIRECTORY},
+  {"LINK",     ARCHIVE_ENTRY_TYPE_LINK     },
+  {"HARDLINK", ARCHIVE_ENTRY_TYPE_HARDLINK },
+  {"SPECIAL",  ARCHIVE_ENTRY_TYPE_SPECIAL  }
 };
 
 // size of buffer for processing data
@@ -4101,7 +4101,6 @@ const char *Archive_archiveTypeToString(ArchiveTypes archiveType, const char *de
 
 bool Archive_parseArchiveType(const char *name, ArchiveTypes *archiveType)
 {
-{
   uint i;
 
   assert(name != NULL);
@@ -4123,7 +4122,6 @@ bool Archive_parseArchiveType(const char *name, ArchiveTypes *archiveType)
   {
     return FALSE;
   }
-}
 }
 
 const char *Archive_archiveEntryTypeToString(ArchiveEntryTypes archiveEntryType, const char *defaultValue)
