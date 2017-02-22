@@ -275,6 +275,8 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
   UNUSED_VARIABLE(fileSize);
 
   // init variables
+  storageHandle->master.index = 0LL;
+  storageHandle->master.size  = 0LL;
 
   error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
                                   5LL*MS_PER_SECOND,
@@ -309,6 +311,9 @@ LOCAL Errors StorageMaster_open(StorageHandle *storageHandle,
 
   // init variables
   storageHandle->mode = STORAGE_MODE_READ;
+  storageHandle->master.index = 0LL;
+//TODO:
+storageHandle->master.size = 0LL;
 
 return ERROR_STILL_NOT_IMPLEMENTED;
 }
@@ -344,9 +349,7 @@ LOCAL bool StorageMaster_eof(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-//TODO
-return TRUE;
+  return storageHandle->master.index >= storageHandle->master.size;
 }
 
 LOCAL Errors StorageMaster_read(StorageHandle *storageHandle,
@@ -402,7 +405,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
                                     NULL,  // resultMap
                                     "STORAGE_WRITE offset=%llu length=%u data=%s",
 //TODO
-                                    storageHandle->storageInfo->master.index,
+                                    storageHandle->master.index,
                                     n,
                                     String_cString(encodedData)
                                    );
@@ -416,7 +419,12 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
     // next part
     p += n;
     writtenBytes += n;
-    storageHandle->storageInfo->master.index += (uint64)n;
+    storageHandle->master.index += (uint64)n;
+  }
+
+  if (storageHandle->master.index > storageHandle->master.size)
+  {
+    storageHandle->master.size = storageHandle->master.index;
   }
 
   // free resources
@@ -437,7 +445,7 @@ LOCAL Errors StorageMaster_tell(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
   assert(offset != NULL);
 
-  (*offset) = storageHandle->storageInfo->master.index;
+  (*offset) = storageHandle->master.index;
 
   return ERROR_NONE;
 }
@@ -453,7 +461,7 @@ LOCAL Errors StorageMaster_seek(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
-  storageHandle->storageInfo->master.index = offset;
+  storageHandle->master.index = offset;
 
   return ERROR_NONE;
 }
@@ -467,9 +475,7 @@ LOCAL uint64 StorageMaster_getSize(StorageHandle *storageHandle)
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-//TODO
-return 0;
+  return storageHandle->master.size;
 }
 
 LOCAL Errors StorageMaster_delete(StorageInfo *storageInfo,
