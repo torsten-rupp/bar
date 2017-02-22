@@ -384,7 +384,6 @@ typedef struct
     struct
     {
       ServerIO   *io;
-      uint64     index;
     } master;
   };
 
@@ -559,7 +558,9 @@ typedef struct
     // master storage
     struct
     {
-      ServerIO   *io;
+//      ServerIO   *io;
+      uint64     index;                                      // current read/write index in file [0..n-1]
+      uint64     size;                                       // size of file [bytes]
     } master;
   };
 } StorageHandle;

@@ -2618,8 +2618,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       size = StorageDevice_getSize(storageHandle);
       break;
     case STORAGE_TYPE_MASTER:
-//      error = ERROR_STILL_NOT_IMPLEMENTED;
-size = 0LL;
+      size = StorageMaster_getSize(storageHandle);
       break;
     default:
       #ifndef NDEBUG
