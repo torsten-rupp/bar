@@ -504,7 +504,7 @@ const char *Archive_archiveTypeToString(ArchiveTypes archiveType, const char *de
 /***********************************************************************\
 * Name   : Archive_parseArchiveType
 * Purpose: parse archive type algorithm
-* Input  : name - name of crypt algorithm
+* Input  : name - name of archive type
 * Output : archiveType - archive type
 * Return : TRUE iff parsed
 * Notes  : -
