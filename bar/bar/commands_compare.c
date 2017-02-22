@@ -791,7 +791,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     }
 
     printInfo(1,"OK\n",
-              fileSystemFlag?FileSystem_getName(fileSystemHandle.type):"raw"
+              fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw"
              );
 
     /* check if all data read.

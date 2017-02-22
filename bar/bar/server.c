@@ -13288,7 +13288,7 @@ NULL, // masterIO
                                   cryptType,
                                   deltaSourceName,
                                   deltaSourceSize,
-                                  FileSystem_getName(fileSystemType),
+                                  FileSystem_fileSystemTypeToString(fileSystemType,NULL),
                                   deviceInfo.blockSize,
                                   blockOffset,
                                   blockCount
@@ -15368,7 +15368,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                           storageDateTime, \
                           entryId, \
                           name, \
-                          FileSystem_getName(fileSystemType), \
+                          FileSystem_fileSystemTypeToString(fileSystemType,NULL), \
                           size, \
                           blockOffset, \
                           blockCount \
