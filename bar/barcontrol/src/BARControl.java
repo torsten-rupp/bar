@@ -10,20 +10,29 @@
 
 /****************************** Imports ********************************/
 // base
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Console;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+
 import java.security.KeyStore;
+
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -38,6 +47,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 // graphics
+import java.awt.Desktop;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.dnd.ByteArrayTransfer;
 import org.eclipse.swt.dnd.DND;
@@ -1340,6 +1350,12 @@ public class BARControl
 
   // --------------------------- constants --------------------------------
 
+  // exit codes
+  public static int EXITCODE_OK             =   0;
+  public static int EXITCODE_FAIL           =   1;
+  public static int EXITCODE_RESTART        =  64;
+  public static int EXITCODE_INTERNAL_ERROR = 127;
+
   /** roles
    */
   public static enum Roles
@@ -1403,10 +1419,12 @@ public class BARControl
   // string with "all files" extension
   public static final String ALL_FILE_EXTENSION;
 
-  // version, email
-  private static final String VERSION = Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+" ("+Config.VERSION_REVISION+")";
-  private static final char   MAIL_AT = '@';  // use MAIL_AT to avoid spam
-  private static final String EMAIL   = "torsten.rupp"+MAIL_AT+"gmx.net";
+  // version, email, homepage URL
+  private static final String VERSION          = Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+" ("+Config.VERSION_REVISION+")";
+  private static final char   MAIL_AT          = '@';  // use MAIL_AT to avoid spam
+  private static final String EMAIL            = "torsten.rupp"+MAIL_AT+"gmx.net";
+  private static final String URL              = "http://www.kigen.de/projects/bar";
+  private static final String URL_VERSION_FILE = URL+"/version";
 
   // host system
   private static final HostSystems hostSystem;
@@ -1727,14 +1745,14 @@ public class BARControl
     if (Settings.helpFlag || Settings.xhelpFlag)
     {
       printUsage();
-      System.exit(0);
+      System.exit(EXITCODE_OK);
     }
 
     // version
     if (Settings.versionFlag)
     {
       printVersion();
-      System.exit(0);
+      System.exit(EXITCODE_OK);
     }
 
     // add/update server
@@ -1817,7 +1835,7 @@ if (false) {
       {
         printError("cannot get job list (error: %s)",errorMessage[0]);
         BARServer.disconnect();
-        System.exit(1);
+        System.exit(EXITCODE_FAIL);
       }
     }
 
@@ -2038,6 +2056,304 @@ if (false) {
     {
       return false;
     }
+  }
+
+  /** init loaded classes/JARs watchdog
+   */
+  private void initClassesWatchDog()
+  {
+    // get timestamp of all classes/JAR files
+    final HashMap<File,Long> classModifiedMap = new HashMap<File,Long>();
+    LinkedList<File> directoryList = new LinkedList<File>();
+    for (String name : System.getProperty("java.class.path").split(File.pathSeparator))
+    {
+      File file = new File(name);
+      if (file.isDirectory())
+      {
+        directoryList.add(file);
+      }
+      else
+      {
+        classModifiedMap.put(file,new Long(file.lastModified()));
+      }
+    }
+    while (directoryList.size() > 0)
+    {
+      File directory = directoryList.removeFirst();
+      File[] files = directory.listFiles();
+      if (files != null)
+      {
+        for (File file : files)
+        {
+          if (file.isDirectory())
+          {
+            directoryList.add(file);
+          }
+          else
+          {
+            classModifiedMap.put(file,new Long(file.lastModified()));
+          }
+        }
+      }
+    }
+
+    // periodically check timestamp of classes/JAR files
+    Thread classWatchDogThread = new Thread()
+    {
+      private String                  homepageVersionMajor    = null;
+      private String                  homepageVersionMinor    = null;
+      private String                  homepageVersionRevision = null;
+      private final ArrayList<String> homepageChangeLog       = new ArrayList<String>();
+
+      public void run()
+      {
+        final long REMINDER_TIME       =  5*60*1000; // [ms]
+        final long VERSION_CHECK_TIME  = 60*60*1000; // [ms]
+
+        long            lastRemindedTimestamp       = 0L;
+        long            lastVersionCheckedTimestamp = 0L;
+        final boolean[] reminderFlag                = new boolean[]{true};
+
+        for (;;)
+        {
+          // check timestamps of classes/JAR files, show warning dialog
+          for (final File file : classModifiedMap.keySet())
+          {
+            if (   reminderFlag[0]
+                && (file.lastModified() > classModifiedMap.get(file))
+                && (System.currentTimeMillis() > (lastRemindedTimestamp+REMINDER_TIME))
+               )
+            {
+//Dprintf.dprintf("file=%s %d -> %d",file,file.lastModified(),classModifiedMap.get(file));
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  switch (Dialogs.select(shell,"Warning","Class/JAR file '"+file.getName()+"' changed. Is is recommended to restart Onzen now.",new String[]{"Restart","Remind me again in 5min","Ignore"},0))
+                  {
+                    case 0:
+                      // send close event with restart
+                      Widgets.notify(shell,SWT.Close,EXITCODE_RESTART);
+                      break;
+                    case 1:
+                      break;
+                    case 2:
+                      reminderFlag[0] = false;
+                      break;
+                  }
+                }
+              });
+              lastRemindedTimestamp = System.currentTimeMillis();
+            }
+          }
+
+          if (System.currentTimeMillis() > (lastVersionCheckedTimestamp+VERSION_CHECK_TIME))
+          {
+            // get version on homepage, show warning dialog
+            getServerVersionInfo();
+
+            // check if newer version is available
+            if (   ((homepageVersionMajor != null) && (homepageVersionMinor != null))
+                && (   (homepageVersionMajor.compareTo(Config.VERSION_MAJOR) > 0)
+                    || (homepageVersionMinor.compareTo(Config.VERSION_MINOR) > 0)
+//                    || ((homepageVersionRevision != null) && (homepageVersionRevision.compareTo(Config.VERSION_MAJOR) > 0))
+                   )
+               )
+            {
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  showNewVersionInfo(shell);
+                }
+              });
+            }
+
+            lastVersionCheckedTimestamp = System.currentTimeMillis();
+          }
+
+          // sleep a short time
+          try { Thread.sleep(30*1000); } catch (InterruptedException exception) { /* ignored */ }
+        }
+      }
+
+      /** get servers version info
+       */
+      private void getServerVersionInfo()
+      {
+        final Pattern PATTERN_MAJOR    = Pattern.compile("MAJOR=(.*)");
+        final Pattern PATTERN_MINOR    = Pattern.compile("MINOR=(.*)");
+        final Pattern PATTERN_REVISION = Pattern.compile("REVISION=(.*)");
+
+        BufferedReader input = null;
+        try
+        {
+          input = new BufferedReader(new InputStreamReader(new URL(URL_VERSION_FILE).openStream(),"UTF-8"));
+
+          // get version/change log available on server
+          String  line;
+          Matcher matcher;
+          while (((line = input.readLine()) != null) && !line.isEmpty())
+          {
+//Dprintf.dprintf("homepage1 %s",line);
+            if      ((matcher = PATTERN_MAJOR.matcher(line)).matches())
+            {
+              homepageVersionMajor    = matcher.group(1);
+            }
+            else if ((matcher = PATTERN_MINOR.matcher(line)).matches())
+            {
+              homepageVersionMinor    = matcher.group(1);
+            }
+            else if ((matcher = PATTERN_REVISION.matcher(line)).matches())
+            {
+              homepageVersionRevision = matcher.group(1);
+            }
+          }
+          while ((line = input.readLine()) != null)
+          {
+//Dprintf.dprintf("homepage2 %s",line);
+            homepageChangeLog.add(line);
+          }
+
+          input.close(); input = null;
+        }
+        catch (Exception exception)
+        {
+          // nothing to do
+        }
+        finally
+        {
+          try { input.close(); } catch (Exception exception) { /* nothing to do */ }
+        }
+      }
+
+      /** show version info, change log
+       * @param shell parent shell
+       */
+      private void showNewVersionInfo(final Shell shell)
+      {
+        Composite composite;
+        Label     label;
+        Text      text;
+        Button    button;
+
+        String version = String.format("%s.%s%s",
+                                       homepageVersionMajor,
+                                       homepageVersionMinor,
+                                       (homepageVersionRevision != null) ? " (revision "+homepageVersionRevision+")" : ""
+                                      );
+
+        StringBuilder changeLog = new StringBuilder();
+        for (String line : homepageChangeLog)
+        {
+          changeLog.append(line+Text.DELIMITER);
+        }
+
+        final Shell dialog = Dialogs.openModal(shell,"Confirmation",new double[]{1.0,0.0},1.0);
+        dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+
+        final Button widgetShowAgain;
+        composite = new Composite(dialog,SWT.NONE);
+        composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+        composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+        {
+          // message
+          label = Widgets.newImage(composite,Widgets.loadImage(shell.getDisplay(),"question.png"));
+          Widgets.layout(label,0,0,TableLayoutData.W,0,0,10);
+
+          label = Widgets.newLabel(composite,
+                                   String.format("A newer version %s of Onzen is available. You\ncan download it from the Onzen homepage:\n\n%s\n\nChangeLog:",
+                                                 version,
+                                                 URL
+                                                ),
+                                   SWT.LEFT|SWT.WRAP
+                                  );
+          Widgets.layout(label,0,1,TableLayoutData.W,0,0,4);
+
+          // change log
+          text = Widgets.newStringView(composite,SWT.BORDER|SWT.WRAP);
+          text.setText(changeLog.toString());
+          Widgets.layout(text,1,1,TableLayoutData.NSWE,0,0,4);
+
+          // show again
+          widgetShowAgain = Widgets.newCheckbox(composite,"show again");
+          widgetShowAgain.setSelection(true);
+          Widgets.layout(widgetShowAgain,2,1,TableLayoutData.W,0,0,4);
+        }
+
+        // buttons
+        composite = new Composite(dialog,SWT.NONE);
+        composite.setLayout(new TableLayout(0.0,1.0));
+        composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+        {
+          button = Widgets.newButton(composite,"Open browser");
+          button.setFocus();
+          Widgets.layout(button,0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Dialogs.close(dialog,true);
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+
+          button = Widgets.newButton(composite,"Cancel");
+          Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Dialogs.close(dialog,false);
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+        }
+
+        Dialogs.run(dialog,
+                    true,
+                    new DialogRunnable()
+                    {
+                      public void done(Object result)
+                      {
+                        if ((Boolean)result)
+                        {
+                          try
+                          {
+                            if (Desktop.isDesktopSupported())
+                            {
+                              Desktop.getDesktop().browse(new URI(URL));
+                            }
+                          }
+                          catch (URISyntaxException exception)
+                          {
+                            Dialogs.error(shell,"Cannot open default web browser:\n\n"+exception.getMessage());
+                          }
+                          catch (IOException exception)
+                          {
+                            Dialogs.error(shell,"Cannot open default web browser:\n\n"+reniceIOException(exception).getMessage());
+                          }
+                          catch (Exception exception)
+                          {
+                            Dialogs.error(shell,"Cannot open default web browser:\n\n"+exception.getMessage());
+                          }
+                        }
+                        else
+                        {
+                          // nothting to do
+                        }
+                        Settings.showNewVersionInformation = widgetShowAgain.getSelection();
+                      }
+                    }
+                   );
+      }
+    };
+    classWatchDogThread.setDaemon(true);
+    classWatchDogThread.start();
   }
 
   /** create main window
@@ -3013,7 +3329,7 @@ if (false) {
         catch (ConnectionError error)
         {
           printError("cannot connect to server (error: %s)",error.getMessage());
-          System.exit(1);
+          System.exit(EXITCODE_FAIL);
         }
 
         // execute commands
@@ -3028,7 +3344,7 @@ if (false) {
           {
             printError("job '%s' not found",Settings.runJobName);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
 
           // start job
@@ -3043,7 +3359,7 @@ if (false) {
           {
             printError("cannot start job '%s' (error: %s)",Settings.runJobName,errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
         }
 
@@ -3063,7 +3379,7 @@ if (false) {
           {
             printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
         }
 
@@ -3083,7 +3399,7 @@ if (false) {
           {
             printError("cannot refresh index for storage '%s' from index (error: %s)",Settings.indexDatabaseRefreshStorageName,errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
         }
 
@@ -3103,7 +3419,7 @@ if (false) {
           {
             printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
         }
 
@@ -3159,7 +3475,7 @@ if (false) {
           {
             printError("cannot list storages index (error: %s)",errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
           System.out.println(StringUtils.repeat("-",8+1+14+1+14+1+19+1+40));
           System.out.println(String.format("%d entities",n[0]));
@@ -3220,7 +3536,7 @@ if (false) {
           {
             printError("cannot list storages index (error: %s)",errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
           System.out.println(StringUtils.repeat("-",8+1+14+1+19+1+16+1+5+40));
           System.out.println(String.format("%d storages",n[0]));
@@ -3380,7 +3696,7 @@ if (false) {
           {
             printError("cannot list entries index (error: %s)",errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
           System.out.println(StringUtils.repeat("-",8+1+40+1+8+1+14+1+19+40));
           System.out.println(String.format("%d entries",n[0]));
@@ -3403,7 +3719,7 @@ if (false) {
           {
             printError("cannot pause (error: %s)",errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
         }
 
@@ -3426,7 +3742,7 @@ if (false) {
           {
             printError("cannot suspend (error: %s)",Settings.runJobName,errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
         }
 
@@ -3444,7 +3760,7 @@ if (false) {
           {
             printError("cannot continue (error: %s)",Settings.runJobName,errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
         }
 
@@ -3459,7 +3775,7 @@ if (false) {
           {
             printError("job '%s' not found",Settings.abortJobName);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
 
           // abort job
@@ -3473,7 +3789,7 @@ if (false) {
           {
             printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
         }
 
@@ -3495,7 +3811,7 @@ if (false) {
           {
             printError("cannot get state (error: %s)",errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
           serverState = valueMap.getString("state");
           if      (serverState.equalsIgnoreCase("running"))
@@ -3514,7 +3830,7 @@ if (false) {
           {
             printWarning("unknown server response '%s'",errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
 
           // get joblist
@@ -3527,7 +3843,7 @@ if (false) {
           {
             printError("cannot get job list (error: %s)",errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
           System.out.println(String.format("%-40s %-20s %-10s %-14s %-14s %-25s %-14s %-10s %-8s %-19s %-12s",
                                            "Name",
@@ -3603,7 +3919,7 @@ if (false) {
           {
             printError("cannot set restore list (error: %s)",errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
           error = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s storagePattern=%'S offset=%ld",
                                                                "*",
@@ -3634,7 +3950,7 @@ if (false) {
           {
             printError("cannot list storages index (error: %s)",errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
 
           // restore
@@ -3719,7 +4035,7 @@ false//                                                                   Settin
                                                        break;
                                                      case REQUEST_VOLUME:
 Dprintf.dprintf("still not supported");
-//System.exit(1);
+//System.exit(EXITCODE_FAIL);
                                                        break;
                                                      case CONFIRM:
                                                        System.err.println(BARControl.tr("Cannot restore ''{0}'': {1} - skipped", !entry.isEmpty() ? entry : storage,errorMessage));
@@ -3749,7 +4065,7 @@ Dprintf.dprintf("still not supported");
                                                  if (Settings.debugLevel > 0)
                                                  {
                                                    System.err.println("ERROR: "+exception.getMessage());
-                                                   System.exit(1);
+                                                   System.exit(EXITCODE_FAIL);
                                                  }
                                                }
 
@@ -3761,7 +4077,7 @@ Dprintf.dprintf("still not supported");
           {
             printError("cannot list storages index (error: %s)",errorMessage[0]);
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
         }
 
@@ -3772,7 +4088,7 @@ Dprintf.dprintf("still not supported");
           {
             printError("cannot quit server");
             BARServer.disconnect();
-            System.exit(1);
+            System.exit(EXITCODE_FAIL);
           }
         }
       }
@@ -3847,7 +4163,7 @@ Dprintf.dprintf("still not supported");
           // get login data
           if (!getLoginData(loginData,true))
           {
-            System.exit(0);
+            System.exit(EXITCODE_OK);
           }
           if ((loginData.serverPort == 0) && (loginData.serverTLSPort == 0))
           {
@@ -3885,7 +4201,7 @@ Dprintf.dprintf("still not supported");
               }
               else
               {
-                System.exit(1);
+                System.exit(EXITCODE_FAIL);
               }
             }
           }
@@ -3919,13 +4235,13 @@ Dprintf.dprintf("still not supported");
                 }
                 else
                 {
-                  System.exit(1);
+                  System.exit(EXITCODE_FAIL);
                 }
               }
             }
             else
             {
-              System.exit(1);
+              System.exit(EXITCODE_FAIL);
             }
           }
 
@@ -3934,7 +4250,7 @@ Dprintf.dprintf("still not supported");
           {
             if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+errorMessage,BARControl.tr("Try again"),BARControl.tr("Cancel")))
             {
-              System.exit(1);
+              System.exit(EXITCODE_FAIL);
             }
           }
         }
@@ -3943,6 +4259,9 @@ Dprintf.dprintf("still not supported");
 
         do
         {
+          // add watchdog for loaded classes/JARs
+          initClassesWatchDog();
+
           // open main window
           createWindow();
           createTabs(Settings.selectedJobName);

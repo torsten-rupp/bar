@@ -533,6 +533,8 @@ public class Settings
   public static boolean               showEntriesExceededInfo         = true;
 //TODO: preference file
   public static boolean               showEntriesMarkInfo             = true;
+  @SettingValue
+  public static Boolean               showNewVersionInformation       = new Boolean(true);;
 
   // version, help
   public static boolean               versionFlag                     = false;
