@@ -13068,7 +13068,7 @@ Dprintf.dprintf("line=%s",line);
                                                              "8h",   8*60
                                                             }
                                 );
-      Widgets.setSelectedOptionMenuItem(widgetInterval,scheduleData.interval);
+      Widgets.setSelectedOptionMenuItem(widgetInterval,new Integer(scheduleData.interval));
       widgetTypeContinuous.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -13116,7 +13116,7 @@ Dprintf.dprintf("line=%s",line);
                                                               "10",10
                                                              }
                                   );
-        Widgets.setSelectedOptionMenuItem(widgetMinKeep,scheduleData.minKeep);
+        Widgets.setSelectedOptionMenuItem(widgetMinKeep,new Integer(scheduleData.minKeep));
         Widgets.layout(widgetMinKeep,0,1,TableLayoutData.W);
 
         label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":",Settings.hasNormalRole());
@@ -13137,7 +13137,7 @@ Dprintf.dprintf("line=%s",line);
                                                               "10",10
                                                              }
                                   );
-        Widgets.setSelectedOptionMenuItem(widgetMaxKeep,scheduleData.maxKeep);
+        Widgets.setSelectedOptionMenuItem(widgetMaxKeep,new Integer(scheduleData.maxKeep));
         Widgets.layout(widgetMaxKeep,0,3,TableLayoutData.W);
 
         label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":",Settings.hasExpertRole());
@@ -13161,7 +13161,7 @@ Dprintf.dprintf("line=%s",line);
                                                              "6 months",180
                                                             }
                                   );
-        Widgets.setSelectedOptionMenuItem(widgetMaxAge,scheduleData.maxAge);
+        Widgets.setSelectedOptionMenuItem(widgetMaxAge,new Integer(scheduleData.maxAge));
         Widgets.layout(widgetMaxAge,0,5,TableLayoutData.W);
       }
 
