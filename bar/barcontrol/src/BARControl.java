@@ -2147,7 +2147,7 @@ if (false) {
             }
           }
 
-          if (System.currentTimeMillis() > (lastVersionCheckedTimestamp+VERSION_CHECK_TIME))
+          if (Settings.showNewVersionInformation && (System.currentTimeMillis() > (lastVersionCheckedTimestamp+VERSION_CHECK_TIME)))
           {
             // get version on homepage, show warning dialog
             getServerVersionInfo();
