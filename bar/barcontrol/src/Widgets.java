@@ -457,6 +457,7 @@ class WidgetVariable<T>
   {
     String s;
     if      (type == Boolean.class) s = ((Boolean)this.value).toString();
+    else if (type == Integer.class) s = ((Integer)this.value).toString();
     else if (type == Long.class   ) s = ((Long   )this.value).toString();
     else if (type == Double.class ) s = ((Double )this.value).toString();
     else if (type == String.class ) s = (String)this.value;
@@ -642,9 +643,10 @@ class WidgetModifyListener
         String text = getString(variable);
         if (text == null)
         {
-          if      (variable.getType() == Long.class  ) text = Long.toString(variable.getLong());
-          else if (variable.getType() == Double.class) text = Double.toString(variable.getDouble());
-          else if (variable.getType() == String.class) text = variable.getString();
+          if      (variable.getType() == Integer.class) text = Integer.toString(variable.getInteger());
+          else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
+          else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
+          else if (variable.getType() == String.class ) text = variable.getString();
         }
         if ((text != null) && !text.equals(cachedText))
         {
@@ -666,9 +668,10 @@ class WidgetModifyListener
           String text = getString(variable);
           if (text == null)
           {
-            if      (variable.getType() == Long.class  ) text = Long.toString(variable.getLong());
-            else if (variable.getType() == Double.class) text = Double.toString(variable.getDouble());
-            else if (variable.getType() == String.class) text = variable.getString();
+            if      (variable.getType() == Integer.class) text = Integer.toString(variable.getInteger());
+            else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
+            else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
+            else if (variable.getType() == String.class ) text = variable.getString();
           }
           if ((text != null) && !text.equals(cachedText))
           {
@@ -685,6 +688,7 @@ class WidgetModifyListener
         {
           boolean selection = false;
           if      (variable.getType() == Boolean.class) selection = variable.getBoolean();
+          else if (variable.getType() == Integer.class) selection = (variable.getInteger() != 0);
           else if (variable.getType() == Long.class   ) selection = (variable.getLong() != 0);
           else if (variable.getType() == Double.class ) selection = (variable.getDouble() != 0);
           widgetButton.setSelection(selection);
@@ -693,6 +697,7 @@ class WidgetModifyListener
         {
           boolean selection = false;
           if      (variable.getType() == Boolean.class) selection = variable.getBoolean();
+          else if (variable.getType() == Integer.class) selection = (variable.getInteger() != 0);
           else if (variable.getType() == Long.class   ) selection = (variable.getLong() != 0);
           else if (variable.getType() == Double.class ) selection = (variable.getDouble() != 0);
           widgetButton.setSelection(selection);
@@ -706,6 +711,7 @@ class WidgetModifyListener
         if (text == null)
         {
           if      (variable.getType() == Boolean.class) text = Boolean.toString(variable.getBoolean());
+          else if (variable.getType() == Integer.class) text = Long.toString(variable.getInteger());
           else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
           else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
           else if (variable.getType() == String.class ) text = variable.getString();
@@ -729,9 +735,10 @@ class WidgetModifyListener
         String text = getString(variable);
         if (text == null)
         {
-          if      (variable.getType() == Long.class  ) text = Long.toString(variable.getLong());
-          else if (variable.getType() == Double.class) text = Double.toString(variable.getDouble());
-          else if (variable.getType() == String.class) text = variable.getString();
+          if      (variable.getType() == Integer.class) text = Integer.toString(variable.getInteger());
+          else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
+          else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
+          else if (variable.getType() == String.class ) text = variable.getString();
         }
         if ((text != null) && !text.equals(cachedText))
         {
@@ -751,9 +758,10 @@ class WidgetModifyListener
         String text = getString(variable);
         if (text == null)
         {
-          if      (variable.getType() == Long.class  ) text = Long.toString(variable.getLong());
-          else if (variable.getType() == Double.class) text = Double.toString(variable.getDouble());
-          else if (variable.getType() == String.class) text = variable.getString();
+          if      (variable.getType() == Integer.class) text = Integer.toString(variable.getInteger());
+          else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
+          else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
+          else if (variable.getType() == String.class ) text = variable.getString();
         }
         if ((text != null) && !text.equals(cachedText))
         {
@@ -781,8 +789,9 @@ class WidgetModifyListener
         Slider widgetSlider = (Slider)widget;
 
         int value = 0;
-        if      (variable.getType() == Long.class  ) value = (int)variable.getLong();
-        else if (variable.getType() == Double.class) value = (int)variable.getDouble();
+        if      (variable.getType() == Integer.class) value = variable.getInteger();
+        else if (variable.getType() == Long.class   ) value = (int)variable.getLong();
+        else if (variable.getType() == Double.class ) value = (int)variable.getDouble();
         widgetSlider.setSelection(value);
       }
       else if (widget instanceof Scale)
@@ -790,8 +799,9 @@ class WidgetModifyListener
         Scale widgetScale = (Scale)widget;
 
         int value = 0;
-        if      (variable.getType() == Long.class  ) value = (int)variable.getLong();
-        else if (variable.getType() == Double.class) value = (int)variable.getDouble();
+        if      (variable.getType() == Integer.class) value = variable.getInteger();
+        if      (variable.getType() == Long.class   ) value = (int)variable.getLong();
+        else if (variable.getType() == Double.class ) value = (int)variable.getDouble();
         widgetScale.setSelection(value);
       }
       else if (widget instanceof ProgressBar)
@@ -799,8 +809,9 @@ class WidgetModifyListener
         ProgressBar widgetProgressBar = (ProgressBar)widget;
 
         double value = 0.0;
-        if      (variable.getType() == Long.class  ) value = (double)variable.getLong();
-        else if (variable.getType() == Double.class) value = variable.getDouble();
+        if      (variable.getType() == Integer.class) value = (double)variable.getInteger();
+        if      (variable.getType() == Long.class   ) value = (double)variable.getLong();
+        else if (variable.getType() == Double.class ) value = variable.getDouble();
         widgetProgressBar.setSelection(value);
       }
       else if (widget instanceof MenuItem)
