@@ -230,9 +230,9 @@ public class BARWidgets
    * @param widgetVariable widget variable
    * @return text widget
    */
-  public static Text newText(Composite            parentComposite,
-                             String               toolTipText,
-                             final WidgetVariable widgetVariable
+  public static Text newText(Composite      parentComposite,
+                             String         toolTipText,
+                             WidgetVariable widgetVariable
                             )
   {
     return newText(parentComposite,toolTipText,widgetVariable,(Listener)null);
@@ -381,11 +381,11 @@ public class BARWidgets
    * @param min,max min/max value
    * @return number widget
    */
-  public static Spinner newNumber(Composite            parentComposite,
-                                  String               toolTipText,
-                                  final WidgetVariable widgetVariable,
-                                  int                  min,
-                                  int                  max
+  public static Spinner newNumber(Composite      parentComposite,
+                                  String         toolTipText,
+                                  WidgetVariable widgetVariable,
+                                  int            min,
+                                  int            max
                                  )
   {
     return newNumber(parentComposite,toolTipText,widgetVariable,min,max,(Listener)null);
@@ -480,10 +480,10 @@ public class BARWidgets
    * @param text checkbox text
    * @return number widget
    */
-  public static Button newCheckbox(Composite            parentComposite,
-                                   String               toolTipText,
-                                   final WidgetVariable widgetVariable,
-                                   String               text
+  public static Button newCheckbox(Composite      parentComposite,
+                                   String         toolTipText,
+                                   WidgetVariable widgetVariable,
+                                   String         text
                                   )
   {
     return newCheckbox(parentComposite,toolTipText,widgetVariable,text,(Listener)null);
@@ -690,10 +690,10 @@ public class BARWidgets
    * @param values combo values
    * @return number widget
    */
-  public static Combo newByteSize(Composite            parentComposite,
-                                  String               toolTipText,
-                                  final WidgetVariable widgetVariable,
-                                  String[]             values
+  public static Combo newByteSize(Composite      parentComposite,
+                                  String         toolTipText,
+                                  WidgetVariable widgetVariable,
+                                  String[]       values
                                  )
   {
     return newByteSize(parentComposite,toolTipText,widgetVariable,values,(Listener)null);
@@ -994,10 +994,10 @@ public class BARWidgets
    * @param values combo values
    * @return number widget
    */
-  public static Combo newTime(Composite            parentComposite,
-                              String               toolTipText,
-                              final WidgetVariable widgetVariable,
-                              String[]             values
+  public static Combo newTime(Composite      parentComposite,
+                              String         toolTipText,
+                              WidgetVariable widgetVariable,
+                              String[]       values
                              )
   {
     return newTime(parentComposite,toolTipText,widgetVariable,values,(Listener)null);
@@ -1357,9 +1357,9 @@ public class BARWidgets
    * @param widgetVariable widget variable
    * @return text widget
    */
-  public static Text newPassword(Composite            parentComposite,
-                                 String               toolTipText,
-                                 final WidgetVariable widgetVariable
+  public static Text newPassword(Composite      parentComposite,
+                                 String         toolTipText,
+                                 WidgetVariable widgetVariable
                                 )
   {
     return newPassword(parentComposite,toolTipText,widgetVariable,(Listener)null);
