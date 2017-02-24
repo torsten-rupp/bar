@@ -1857,7 +1857,6 @@ Errors Network_accept(SocketHandle             *socketHandle,
       break;
     case SERVER_SOCKET_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
-fprintf(stderr,"%s, %d: call initSSL\n",__FILE__,__LINE__);
         // init SSL
         error = initSSL(socketHandle,
                         serverSocketHandle->caData,
@@ -1867,8 +1866,6 @@ fprintf(stderr,"%s, %d: call initSSL\n",__FILE__,__LINE__);
                         serverSocketHandle->keyData,
                         serverSocketHandle->keyLength
                        );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
         if (error != ERROR_NONE)
         {
           return error;
