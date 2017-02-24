@@ -13015,6 +13015,7 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
+//TODO: improve speed: read n entries, then transction with add
 Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                            IndexId                      storageId,
                            StorageInfo                  *storageInfo,
