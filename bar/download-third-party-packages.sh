@@ -402,7 +402,7 @@ if test $cleanFlag -eq 0; then
      cd $destination/packages
      fileName=`ls zlib-*.tar.gz 2>/dev/null`
      if test ! -f "$fileName"; then
-       fileName=`$WGET $WGET_OPTIONS --quiet -O - 'http://www.zlib.net'|grep -E -e 'http://zlib.net/zlib-.*\.tar\.gz'|head -1|sed 's|.*http://zlib.net/\(.*\.tar\.gz\)".*|\1|g'`
+       fileName=`$WGET $WGET_OPTIONS --quiet -O - 'http://www.zlib.net'|grep -E -e 'http://.*/zlib-.*\.tar\.gz'|head -1|sed 's|.*http://.*/\(.*\.tar\.gz\).*|\1|g'`
        $WGET $WGET_OPTIONS "http://www.zlib.net/$fileName"
      fi
      if test $noDecompressFlag -eq 0; then
