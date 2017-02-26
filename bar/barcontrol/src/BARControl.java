@@ -1460,7 +1460,7 @@ public class BARControl
     new Option("--job",                         "-j",Options.Types.STRING,     "runJobName"),
     new Option("--archive-type",                null,Options.Types.ENUMERATION,"archiveType",ARCHIVE_TYPE_ENUMERATION),
     new Option("--abort",                       null,Options.Types.STRING,     "abortJobName"),
-    new Option("--pause",                       "-t",Options.Types.INTEGER,    "pauseTime"),
+    new Option("--pause",                       "-t",Options.Types.INTEGER,    "pauseTime",new Object[]{"s",1,"m",60,"h",60*60}),
     new Option("--ping",                        "-i",Options.Types.BOOLEAN,    "pingFlag"),
     new Option("--suspend",                     "-s",Options.Types.BOOLEAN,    "suspendFlag"),
     new Option("--continue",                    "-c",Options.Types.BOOLEAN,    "continueFlag"),
@@ -1677,7 +1677,7 @@ public class BARControl
     System.out.println("                                                        differential");
     System.out.println("         --abort=<name>                             - abort execution of job <name>");
     System.out.println("         -i|--ping                                  - check connection to server");
-    System.out.println("         -t|--pause=<n>                             - pause job execution for <n> seconds");
+    System.out.println("         -t|--pause=<n>[s|m|h]                      - pause job execution for <n> seconds/minutes/hours");
     System.out.println("         -s|--suspend                               - suspend job execution");
     System.out.println("         -c|--continue                              - continue job execution");
     System.out.println("         -l|--list                                  - list jobs");

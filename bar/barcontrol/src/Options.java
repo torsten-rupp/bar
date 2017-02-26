@@ -68,19 +68,19 @@ public class Options
     for (Option option : options)
     {
       Option foundOption = null;
-      String value       = null;
+      String string      = null;
       int    n           = 0;
 //Dprintf.dprintf("op=%s\n",option);
       if      (args[index].startsWith(option.name+"="))
       {
         foundOption = option;
-        value       = args[index].substring(option.name.length()+1);
+        string      = args[index].substring(option.name.length()+1);
         n           = 1;
       }
       else if (args[index].startsWith(option.shortName+"="))
       {
         foundOption = option;
-        value       = args[index].substring(option.shortName.length()+1);
+        string      = args[index].substring(option.shortName.length()+1);
         n           = 1;
       }
       if      (args[index].equals(option.name))
@@ -93,13 +93,13 @@ public class Options
             printError("Value expected for option '%s'",option.name);
             System.exit(1);
           }
-          value = args[index+1];
-          n     = 2;
+          string = args[index+1];
+          n      = 2;
         }
         else
         {
-          value = "1";
-          n     = 1;
+          string = "1";
+          n      = 1;
         }
       }
       else if (args[index].equals(option.shortName))
@@ -112,13 +112,13 @@ public class Options
             printError("Value expected for option '%s'",option.shortName);
             System.exit(1);
           }
-          value = args[index+1];
-          n     = 2;
+          string = args[index+1];
+          n      = 2;
         }
         else
         {
-          value = "1";
-          n     = 1;
+          string = "1";
+          n      = 1;
         }
       }
 
@@ -132,54 +132,108 @@ public class Options
             switch (foundOption.type)
             {
               case INTEGER:
-                try
                 {
-                  field.setInt(null,Integer.parseInt(value));
-                }
-                catch (NumberFormatException exception)
-                {
-                  printError("Invalid number '%s' for option %s",value,option.name);
-                  System.exit(1);
+                  // get unit
+                  int factor = 1;
+                  if (foundOption.units != null)
+                  {
+                    for (int i = 0; i < foundOption.units.length; i += 2)
+                    {
+                      if (string.endsWith((String)foundOption.units[i+0]))
+                      {
+                        string = string.substring(0,string.length()-((String)(foundOption.units[i+0])).length());
+                        factor = (Integer)foundOption.units[i+1];
+                        break;
+                      }
+                    }
+                  }
+
+                  // parse value
+                  try
+                  {
+                    field.setInt(null,Integer.parseInt(string)*factor);
+                  }
+                  catch (NumberFormatException exception)
+                  {
+                    printError("Invalid number '%s' for option %s",string,option.name);
+                    System.exit(1);
+                  }
                 }
                 break;
               case STRING:
-                field.set(null,value);
+                field.set(null,string);
                 break;
               case FLOAT:
-                try
                 {
-                  field.setFloat(null,Float.parseFloat(value));
-                }
-                catch (NumberFormatException exception)
-                {
-                  printError("Invalid number '%s' for option %s",value,option.name);
-                  System.exit(1);
+                  // get unit
+                  float factor = 1.0F;
+                  if (foundOption.units != null)
+                  {
+                    for (int i = 0; i < foundOption.units.length; i += 2)
+                    {
+                      if (string.endsWith((String)foundOption.units[i+0]))
+                      {
+                        string = string.substring(0,string.length()-((String)(foundOption.units[i+0])).length());
+                        factor = (Float)foundOption.units[i+1];
+                        break;
+                      }
+                    }
+                  }
+
+                  // parse value
+                  try
+                  {
+                    field.setFloat(null,Float.parseFloat(string)*factor);
+                  }
+                  catch (NumberFormatException exception)
+                  {
+                    printError("Invalid number '%s' for option %s",string,option.name);
+                    System.exit(1);
+                  }
                 }
                 break;
               case DOUBLE:
-                try
                 {
-                  field.setDouble(null,NumberFormat.getInstance().parse(value).doubleValue());
-                }
-                catch (ParseException exception)
-                {
-                  printError("Invalid number '%s' for option %s",value,option.name);
-                  System.exit(1);
+                  // get unit
+                  double factor = 1.0D;
+                  if (foundOption.units != null)
+                  {
+                    for (int i = 0; i < foundOption.units.length; i += 2)
+                    {
+                      if (string.endsWith((String)foundOption.units[i+0]))
+                      {
+                        string = string.substring(0,string.length()-((String)(foundOption.units[i+0])).length());
+                        factor = (Double)foundOption.units[i+1];
+                        break;
+                      }
+                    }
+                  }
+
+                  // parse value
+                  try
+                  {
+                    field.setDouble(null,NumberFormat.getInstance().parse(string).doubleValue()*factor);
+                  }
+                  catch (ParseException exception)
+                  {
+                    printError("Invalid number '%s' for option %s",string,option.name);
+                    System.exit(1);
+                  }
                 }
                 break;
               case BOOLEAN:
                 field.setBoolean(null,
-                                    value.equals("1")
-                                 || value.equalsIgnoreCase("true")
-                                 || value.equalsIgnoreCase("yes")
-                                 || value.equalsIgnoreCase("on")
+                                    string.equals("1")
+                                 || string.equalsIgnoreCase("true")
+                                 || string.equalsIgnoreCase("yes")
+                                 || string.equalsIgnoreCase("on")
                                 );
                 break;
               case ENUMERATION:
                 boolean foundFlag = false;
                 for (OptionEnumeration optionEnumeration : foundOption.enumeration)
                 {
-                  if (value.equalsIgnoreCase(optionEnumeration.name))
+                  if (string.equalsIgnoreCase(optionEnumeration.name))
                   {
                     field.set(null,optionEnumeration.value);
                     foundFlag = true;
@@ -188,23 +242,23 @@ public class Options
                 }
                 if (!foundFlag)
                 {
-                  printError("Unknown value '%s' for option %s",value,option.name);
+                  printError("Unknown value '%s' for option %s",string,option.name);
                   System.exit(1);
                 }
                 break;
               case INCREMENT:
                 try
                 {
-                  field.setInt(null,field.getInt(null)+Integer.parseInt(value));
+                  field.setInt(null,field.getInt(null)+Integer.parseInt(string));
                 }
                 catch (NumberFormatException exception)
                 {
-                  printError("Invalid number '%s'",value);
+                  printError("Invalid number '%s'",string);
                   System.exit(1);
                 }
                 break;
               case SPECIAL:
-                foundOption.special.parse(value,field.get(null));
+                foundOption.special.parse(string,field.get(null));
                 break;
             }
           }
