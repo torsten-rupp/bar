@@ -179,11 +179,10 @@ LOCAL int lz4CompressBlock(CompressInfo *compressInfo,
                                                      (int)inputBufferLength,
                                                      (int)outputBufferSize
                                                     );
-    if (result <= 0)
-    {
-      return LZ4_FAIL;
-    }
-
+      if (result <= 0)
+      {
+        return LZ4_FAIL;
+      }
     #else /* not LZ4_STREAM */
       result = LZ4_compressHC_limitedOutput((const char*)inputBuffer,
                                             (char*)outputBuffer,
@@ -192,7 +191,7 @@ LOCAL int lz4CompressBlock(CompressInfo *compressInfo,
                                            );
       if (result <= 0)
       {
-       return LZ4_FAIL;
+        return LZ4_FAIL;
       }
     #endif /* LZ4_STREAM */
   }
@@ -209,7 +208,6 @@ LOCAL int lz4CompressBlock(CompressInfo *compressInfo,
       {
        return LZ4_FAIL;
       }
-
 
       /* Note: bug in LZ4? If the dictionary buffer is not saved decompression
          will fail.
