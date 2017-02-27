@@ -549,7 +549,12 @@ LOCAL void slaveCommand_storageWrite(SlaveInfo *slaveInfo, IndexHandle *indexHan
     String_delete(data);
     return;
   }
-  Misc_base64Decode(buffer,length,data,STRING_BEGIN);
+  if (!Misc_base64Decode(buffer,length,data,STRING_BEGIN))
+  {
+    ServerIO_sendResult(&slaveInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"decode base64 data fail");
+    String_delete(data);
+    return;
+  }
 
   // write storage
   error = Storage_seek(&slaveInfo->storageHandle,offset);

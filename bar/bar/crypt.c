@@ -1769,7 +1769,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
 
     // decode base64
-    if (Misc_base64Decode((byte*)encryptedKey,encryptedKeyLength,string,STRING_BEGIN) == -1)
+    if (!Misc_base64Decode((byte*)encryptedKey,encryptedKeyLength,string,STRING_BEGIN))
     {
       Password_freeSecure(encryptedKey);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
