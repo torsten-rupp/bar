@@ -28,6 +28,7 @@ XZ="xz"
 
 BZIP2_VERSION=1.0.6
 LZO_VERSION=2.09
+LZ4_VERSION=r131
 LIBGPG_ERROR_VERSION=1.20
 LIBGCRYPT_VERSION=1.6.4
 GMP_VERSION=6.0.0a
@@ -474,8 +475,8 @@ if test $cleanFlag -eq 0; then
 #
 #       fileName=`echo $URL|sed 's|.*/\(lz4-.*\.tar\.gz\).*|\1|g'`
 #       $WGET $WGET_OPTIONS "$url"
-       fileName="lz4-r126.tar.gz"
-       $WGET $WGET_OPTIONS "https://github.com/Cyan4973/lz4/archive/r126.tar.gz" -O "$fileName"
+       fileName="lz4-$LZ4_VERSION.tar.gz"
+       $WGET $WGET_OPTIONS "https://github.com/Cyan4973/lz4/archive/$LZ4_VERSION.tar.gz" -O "$fileName"
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf $fileName
