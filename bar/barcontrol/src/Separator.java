@@ -96,14 +96,19 @@ class Separator extends Canvas
    */
   public Point computeSize(int wHint, int hHint, boolean changed)
   {
-    GC gc;
+    GC  gc;
     int width,height;
 
-    width  = 0;
-    height = 0;
-
-    width  = 2+textSize.x+2;
-    height = 2+textSize.y+2;
+    if (text != null)
+    {
+      width  = 2+textSize.x+2;
+      height = 2+textSize.y+2;
+    }
+    else
+    {
+      width  = 2+2;
+      height = 2+2;
+    }
     if (wHint != SWT.DEFAULT) width  = wHint;
     if (hHint != SWT.DEFAULT) height = hHint;
 
@@ -121,9 +126,16 @@ class Separator extends Canvas
     {
       this.text = text;
 
-      gc = new GC(this);
-      textSize = gc.stringExtent(text);
-      gc.dispose();
+      if (text != null)
+      {
+        gc = new GC(this);
+        textSize = gc.stringExtent(text);
+        gc.dispose();
+      }
+      else
+      {
+        textSize = null;
+      }
 
       redraw();
     }
@@ -145,24 +157,35 @@ class Separator extends Canvas
     Rectangle bounds;
     int       x,y,w,h;
 
-    gc = paintEvent.gc;
+    gc     = paintEvent.gc;
     bounds = getBounds();
-    x = 0;
-    y = 0;
-    w = bounds.width;
-    h = bounds.height;
+    x      = 0;
+    y      = 0;
+    w      = bounds.width;
+    h      = bounds.height;
 
-    // draw line with shadow
-    gc.setForeground(colorNormalShadow);
-    gc.drawLine(x                 +0,y+h/2  ,x+(w-textSize.x)/2-4,y+h/2  );
-    gc.drawLine(x+(w+textSize.x)/2+4,y+h/2  ,x+w                 ,y+h/2  );
-    gc.setForeground(colorHighlightShadow);
-    gc.drawLine(x                 +1,y+h/2+1,x+(w-textSize.x)/2-5,y+h/2+1);
-    gc.drawLine(x+(w+textSize.x)/2+5,y+h/2+1,x+w               -1,y+h/2+1);
+    if (text != null)
+    {
+      // draw broken line with shadow
+      gc.setForeground(colorNormalShadow);
+      gc.drawLine(x                 +0,y+h/2  ,x+(w-textSize.x)/2-4,y+h/2  );
+      gc.drawLine(x+(w+textSize.x)/2+4,y+h/2  ,x+w                 ,y+h/2  );
+      gc.setForeground(colorHighlightShadow);
+      gc.drawLine(x                 +1,y+h/2+1,x+(w-textSize.x)/2-5,y+h/2+1);
+      gc.drawLine(x+(w+textSize.x)/2+5,y+h/2+1,x+w               -1,y+h/2+1);
 
-    // draw text
-    gc.setForeground(colorBlack);
-    gc.drawString(text,(w-textSize.x)/2,(h-textSize.y)/2,true);
+      // draw text
+      gc.setForeground(colorBlack);
+      gc.drawString(text,(w-textSize.x)/2,(h-textSize.y)/2,true);
+    }
+    else
+    {
+      // draw continuous line with shadow
+      gc.setForeground(colorNormalShadow);
+      gc.drawLine(x                 +0,y+h/2  ,x+w                 ,y+h/2  );
+      gc.setForeground(colorHighlightShadow);
+      gc.drawLine(x                 +1,y+h/2+1,x+w               -1,y+h/2+1);
+    }
   }
 }
 

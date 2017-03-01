@@ -10070,7 +10070,7 @@ Dprintf.dprintf("");
    */
   public static Separator newSeparator(Composite composite)
   {
-    return newSeparator(composite,"");
+    return newSeparator(composite,(String)null);
   }
 
   //-----------------------------------------------------------------------
