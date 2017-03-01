@@ -10068,7 +10068,7 @@ Dprintf.dprintf("");
    * @param composite composite widget
    * @return new separator widget
    */
-  public static Canvas newSeparator(Composite composite)
+  public static Separator newSeparator(Composite composite)
   {
     return newSeparator(composite,"");
   }
