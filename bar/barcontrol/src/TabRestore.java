@@ -4118,6 +4118,7 @@ Dprintf.dprintf("cirrect?");
   // colors
   private final Color COLOR_MODIFIED;
   private final Color COLOR_INFO_FORGROUND;
+  private final Color COLOR_WARNING_FORGROUND;
   private final Color COLOR_INFO_BACKGROUND;
   private final Color COLOR_NO_SCHEDULE_INFO;
   private final Color COLOR_NO_JOB_INFO;
@@ -4349,8 +4350,9 @@ Dprintf.dprintf("cirrect?");
    */
   private void showEntityIndexToolTip(EntityIndexData entityIndexData, int x, int y)
   {
-    int   row;
-    Label label;
+    int       row;
+    Label     label;
+    Separator separator;
 
     if (widgetStorageTreeToolTip != null)
     {
@@ -4448,6 +4450,37 @@ Dprintf.dprintf("cirrect?");
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
+
+      if (entityIndexData.jobUUID.isEmpty() || entityIndexData.scheduleUUID.isEmpty())
+      {
+        separator = Widgets.newSeparator(widgetStorageTreeToolTip);
+        separator.setForeground(COLOR_WARNING_FORGROUND);
+        separator.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(separator,row,0,TableLayoutData.WE,0,2);
+        row++;
+
+        label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Warnings")+":");
+        label.setForeground(COLOR_WARNING_FORGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,0,TableLayoutData.W);
+
+        if (entityIndexData.jobUUID.isEmpty())
+        {
+          label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("no job info"));
+          label.setForeground(COLOR_WARNING_FORGROUND);
+          label.setBackground(COLOR_INFO_BACKGROUND);
+          Widgets.layout(label,row,1,TableLayoutData.WE);
+          row++;
+        }
+        if (entityIndexData.scheduleUUID.isEmpty())
+        {
+          label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("no schedule info"));
+          label.setForeground(COLOR_WARNING_FORGROUND);
+          label.setBackground(COLOR_INFO_BACKGROUND);
+          Widgets.layout(label,row,1,TableLayoutData.WE);
+          row++;
+        }
+      }
 
       Point size = widgetStorageTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
       widgetStorageTreeToolTip.setBounds(x,y,size.x,size.y);
@@ -4853,11 +4886,12 @@ Dprintf.dprintf("cirrect?");
     display = shell.getDisplay();
 
     // get colors
-    COLOR_MODIFIED         = display.getSystemColor(SWT.COLOR_GRAY);
-    COLOR_INFO_FORGROUND   = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
-    COLOR_INFO_BACKGROUND  = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
-    COLOR_NO_SCHEDULE_INFO = new Color(null,0xFF,0xF0,0xFF);
-    COLOR_NO_JOB_INFO      = new Color(null,0xF0,0xFF,0xFF);
+    COLOR_MODIFIED          = display.getSystemColor(SWT.COLOR_GRAY);
+    COLOR_INFO_FORGROUND    = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+    COLOR_WARNING_FORGROUND = display.getSystemColor(SWT.COLOR_RED);
+    COLOR_INFO_BACKGROUND   = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+    COLOR_NO_SCHEDULE_INFO  = new Color(null,0xFF,0xF0,0xFF);
+    COLOR_NO_JOB_INFO       = new Color(null,0xF0,0xFF,0xFF);
 
     // get images
     IMAGE_DIRECTORY  = Widgets.loadImage(display,"directory.png");
