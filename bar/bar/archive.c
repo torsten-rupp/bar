@@ -1919,7 +1919,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
       AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_unlock(&archiveHandle->chunkIOLock); });
 
       // get intermediate data filename
-      error = File_getTmpFileName(archiveHandle->file.fileName,"archive-XXXXXX",tmpDirectory);
+      error = File_getTmpFileName(archiveHandle->file.fileName,"archive",tmpDirectory);
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
