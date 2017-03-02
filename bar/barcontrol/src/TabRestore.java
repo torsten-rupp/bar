@@ -7169,9 +7169,9 @@ Dprintf.dprintf("remove");
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          MenuItem widget = (MenuItem)selectionEvent.widget;
-
+          MenuItem     widget       = (MenuItem)selectionEvent.widget;
           AssignToData assignToData = (AssignToData)widget.getData();
+
           assignStorages(assignToData.jobUUID,assignToData.scheduleUUID,archiveType);
         }
       });
