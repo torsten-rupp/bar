@@ -944,7 +944,7 @@ bool ServerIO_receiveData(ServerIO *serverIO)
   assert(serverIO->inputBufferIndex <= serverIO->inputBufferLength);
 
   // shift input buffer
-  if (serverIO->inputBufferIndex >= 0)
+  if (serverIO->inputBufferIndex > 0)
   {
     memCopy(&serverIO->inputBuffer[0],serverIO->inputBufferSize,
             &serverIO->inputBuffer[serverIO->inputBufferIndex],serverIO->inputBufferLength-serverIO->inputBufferIndex
@@ -952,6 +952,7 @@ bool ServerIO_receiveData(ServerIO *serverIO)
     serverIO->inputBufferLength -= serverIO->inputBufferIndex;
     serverIO->inputBufferIndex = 0;
   }
+  assert(serverIO->inputBufferIndex == 0);
 
   // get max. number of bytes to receive
   maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
@@ -961,7 +962,11 @@ bool ServerIO_receiveData(ServerIO *serverIO)
     case SERVER_IO_TYPE_NONE:
       break;
     case SERVER_IO_TYPE_BATCH:
-      (void)File_read(&serverIO->file.fileHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,&readBytes);
+      (void)File_read(&serverIO->file.fileHandle,
+                      &serverIO->inputBuffer[serverIO->inputBufferLength],
+                      maxBytes,
+                      &readBytes
+                     );
 //fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,buffer);
       if (readBytes > 0)
       {
@@ -983,9 +988,15 @@ fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
       }
       break;
     case SERVER_IO_TYPE_NETWORK:
-      (void)Network_receive(&serverIO->network.socketHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,NO_WAIT,&readBytes);
-//buffer[readBytes]=0;
-//fprintf(stderr,"%s, %d: rec socket %d: bytes %d at %d: ",__FILE__,__LINE__,Network_getSocket(&serverIO->network.socketHandle),readBytes,serverIO->inputBufferLength); fwrite(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,1,stderr); fprintf(stderr,"\n");
+      (void)Network_receive(&serverIO->network.socketHandle,
+                            &serverIO->inputBuffer[serverIO->inputBufferLength],
+                            maxBytes,
+                            NO_WAIT,
+                            &readBytes
+                           );
+fprintf(stderr,"%s, %d: +++++++++++++ rec socket: maxBytes=%d received=%d at %d: ",__FILE__,__LINE__,maxBytes,readBytes,serverIO->inputBufferLength);
+fwrite(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,1,stderr);
+fprintf(stderr,"\n");
       if (readBytes > 0)
       {
         do
