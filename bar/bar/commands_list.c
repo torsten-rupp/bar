@@ -207,6 +207,7 @@ typedef struct
   LIST_HEADER(ArchiveContentNode);
 } ArchiveContentList;
 
+//TODO
 // obsolete?
 typedef struct SSHSocketNode
 {
