@@ -3506,7 +3506,7 @@ throw new Error("NYI");
      */
     public String toString()
     {
-      return "RemoteFile {"+getPath()+", "+fileType+", "+size+","+dateTime+"}";
+      return "RemoteFile {"+getAbsolutePath()+", "+fileType+", "+size+", "+dateTime+"}";
     }
   };
 
