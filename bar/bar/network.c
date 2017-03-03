@@ -1398,8 +1398,9 @@ Errors Network_send(SocketHandle *socketHandle,
           // wait until space in buffer is available
           pollTimeout.tv_sec  = SEND_TIMEOUT/1000L;
           pollTimeout.tv_nsec = (SEND_TIMEOUT%1000L)*1000000L;
-          pollfds[0].fd     = socketHandle->handle;
-          pollfds[0].events = POLLOUT|POLLERR|POLLNVAL;
+          pollfds[0].fd      = socketHandle->handle;
+          pollfds[0].events  = POLLOUT|POLLERR|POLLNVAL;
+          pollfds[0].revents = 0;
           if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) >= 0)
               && ((pollfds[0].revents & POLLOUT) != 0)
              )
@@ -1427,8 +1428,9 @@ Errors Network_send(SocketHandle *socketHandle,
             // wait until space in buffer is available
             pollTimeout.tv_sec  = SEND_TIMEOUT/1000L;
             pollTimeout.tv_nsec = (SEND_TIMEOUT%1000L)*1000000L;
-            pollfds[0].fd     = socketHandle->handle;
-            pollfds[0].events = POLLOUT|POLLERR|POLLNVAL;
+            pollfds[0].fd      = socketHandle->handle;
+            pollfds[0].events  = POLLOUT|POLLERR|POLLNVAL;
+            pollfds[0].revents = 0;
             if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) >= 0)
                 && ((pollfds[0].revents & POLLOUT) != 0)
                )
