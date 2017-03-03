@@ -1295,8 +1295,9 @@ Errors Network_receive(SocketHandle *socketHandle,
         // wait for data
         pollTimeout.tv_sec  = timeout/1000L;
         pollTimeout.tv_nsec = (timeout%1000L)*1000000L;
-        pollfds[0].fd     = socketHandle->handle;
-        pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
+        pollfds[0].fd      = socketHandle->handle;
+        pollfds[0].events  = POLLIN|POLLERR|POLLNVAL;
+        pollfds[0].revents = 0;
         if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) >= 0)
             && ((pollfds[0].revents & POLLIN) != 0)
            )
@@ -1327,8 +1328,11 @@ Errors Network_receive(SocketHandle *socketHandle,
           sigaddset(&signalMask,SIGALRM);
 
           // wait for data
-          pollfds[0].fd     = socketHandle->handle;
-          pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
+          pollTimeout.tv_sec  = timeout/1000L;
+          pollTimeout.tv_nsec = (timeout%1000L)*1000000L;
+          pollfds[0].fd       = socketHandle->handle;
+          pollfds[0].events   = POLLIN|POLLERR|POLLNVAL;
+          pollfds[0].revents  = 0;
           if (   (ppoll(pollfds,1,&pollTimeout,&signalMask) >= 0)
               && ((pollfds[0].revents & (POLLERR|POLLNVAL)) == 0)
              )
@@ -1764,10 +1768,10 @@ Errors Network_startSSL(SocketHandle *socketHandle,
     {
       #if  defined(PLATFORM_LINUX)
         socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-        fcntl(socketHandle->handle,F_SETFL,socketFlags & ~O_NONBLOCK);
+        (void)fcntl(socketHandle->handle,F_SETFL,socketFlags & ~O_NONBLOCK);
       #elif defined(PLATFORM_WINDOWS)
         n = 0;
-        ioctlsocket(socketHandle->handle,FIONBIO,&n);
+        (void)ioctlsocket(socketHandle->handle,FIONBIO,&n);
       #endif /* PLATFORM_... */
     }
 
@@ -1783,10 +1787,10 @@ Errors Network_startSSL(SocketHandle *socketHandle,
     {
       #if  defined(PLATFORM_LINUX)
         socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-        fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+        (void)fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
       #elif defined(PLATFORM_WINDOWS)
         n = 1;
-        ioctlsocket(socketHandle->handle,FIONBIO,&n);
+        (void)ioctlsocket(socketHandle->handle,FIONBIO,&n);
       #endif /* PLATFORM_... */
     }
 
