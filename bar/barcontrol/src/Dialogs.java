@@ -545,10 +545,6 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
 {
   private HashMap<String,T> shortcutMap = new HashMap<String,T>();
 
-//  public ListDirectory()
-//  {
-//  }
-
   /** get new file instance
    * @param name name
    * @return file instance
@@ -590,7 +586,14 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
    */
   public T getParentFile(T file)
   {
-    return newFileInstance(file.getParentFile().getAbsolutePath());
+    if (file.getParentFile() != null)
+    {
+      return newFileInstance(file.getParentFile().getAbsolutePath());
+    }
+    else
+    {
+      return null;
+    }
   }
 
   /** compare files
@@ -684,7 +687,7 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
    * @param file file to check
    * @return true if file exists
    */
-  public boolean exists(File file)
+  public boolean exists(T file)
   {
     return file.exists();
   }
@@ -3204,15 +3207,15 @@ class Dialogs
    * @param listDirectory list directory handler
    * @return file name or null
    */
-  public static String file(Shell                 parentShell,
-                            final FileDialogTypes type,
-                            String                title,
-                            File                  oldFile,
-                            final String[]        fileExtensions,
-                            String                defaultFileExtension,
-                            int                   flags,
-                            final ListDirectory   listDirectory
-                           )
+  public static <T extends File> String file(Shell                  parentShell,
+                                             final FileDialogTypes  type,
+                                             String                 title,
+                                             T                      oldFile,
+                                             final String[]         fileExtensions,
+                                             String                 defaultFileExtension,
+                                             int                    flags,
+                                             final ListDirectory<T> listDirectory
+                                            )
   {
     /** dialog data
      */
@@ -3223,7 +3226,7 @@ class Dialogs
 
     /** file comparator
     */
-    class FileComparator implements Comparator<File>
+    class FileComparator<T extends File> implements Comparator<T>
     {
       // Note: enum in inner classes are not possible in Java, thus use the old way...
       private final static int SORTMODE_NONE     = 0;
@@ -3256,7 +3259,7 @@ class Dialogs
                   0 iff file1 = file2,
                   1 iff file1 > file2
        */
-      public int compare(File file1, File file2)
+      public int compare(T file1, T file2)
       {
         int result;
         if     (file1.isDirectory())
@@ -3324,18 +3327,18 @@ class Dialogs
     */
     class Updater
     {
-      private FileComparator   fileComparator;
-      private ListDirectory    listDirectory;
-      private SimpleDateFormat simpleDateFormat;
-      private Pattern          fileFilterPattern;
-      private boolean          showHidden;
-      private boolean          showFiles;
+      private FileComparator<T> fileComparator;
+      private ListDirectory<T>  listDirectory;
+      private SimpleDateFormat  simpleDateFormat;
+      private Pattern           fileFilterPattern;
+      private boolean           showHidden;
+      private boolean           showFiles;
 
       /** create update file list
        * @param listDirectory list directory
        * @param fileComparator file comparator
        */
-      public Updater(FileComparator fileComparator, ListDirectory listDirectory, boolean showFiles)
+      public Updater(FileComparator<T> fileComparator, ListDirectory<T> listDirectory, boolean showFiles)
       {
         this.fileComparator    = fileComparator;
         this.listDirectory     = listDirectory;
@@ -3349,10 +3352,10 @@ class Dialogs
        * @param widgetShortcutList shortcut list widget
        * @param shortcutList shortcuts
        */
-      public void updateShortcutList(List widgetShortcutList, ArrayList<File> shortcutList)
+      public void updateShortcutList(List widgetShortcutList, ArrayList<T> shortcutList)
       {
         widgetShortcutList.removeAll();
-        for (File file : shortcutList)
+        for (T file : shortcutList)
         {
           widgetShortcutList.add(file.getAbsolutePath());
         }
@@ -3363,7 +3366,7 @@ class Dialogs
        * @param path path
        * @param name name or null
        */
-      public void updateFileList(Table table, File path, String name)
+      public void updateFileList(Table table, T path, String name)
       {
         if (!table.isDisposed())
         {
@@ -3372,7 +3375,7 @@ class Dialogs
           if (listDirectory.open(path))
           {
             // update list
-            File file;
+            T file;
             while ((file = listDirectory.getNext()) != null)
             {
               if (   (showHidden || !listDirectory.isHidden(file))
@@ -3384,7 +3387,7 @@ class Dialogs
                 int index = 0;
                 TableItem tableItems[] = table.getItems();
                 while (   (index < tableItems.length)
-                       && (fileComparator.compare(file,(File)tableItems[index].getData()) > 0)
+                       && (fileComparator.compare(file,(T)tableItems[index].getData()) > 0)
                       )
                 {
                   index++;
@@ -3589,9 +3592,9 @@ class Dialogs
     {
       final String[] result = new String[1];
 
-      final FileComparator  fileComparator = new FileComparator(FileComparator.SORTMODE_NAME);
-      final Updater         updater        = new Updater(fileComparator,listDirectory,(type != FileDialogTypes.DIRECTORY));
-      final ArrayList<File> shortcutList   = new ArrayList<File>();
+      final FileComparator fileComparator = new FileComparator(FileComparator.SORTMODE_NAME);
+      final Updater        updater        = new Updater(fileComparator,listDirectory,(type != FileDialogTypes.DIRECTORY));
+      final ArrayList<T>   shortcutList   = new ArrayList<T>();
 
       // load images
       final Image IMAGE_FOLDER_UP;
@@ -3617,7 +3620,7 @@ class Dialogs
       final Button widgetShowHidden;
       final Text   widgetName;
       final Button widgetDone;
-      final File   dragFile[] = new File[1];
+      final Object dragFile[] = new Object[1];
       DragSource   dragSource;
       DropTarget   dropTarget;
 
@@ -3820,7 +3823,7 @@ class Dialogs
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           updater.updateFileList(widgetFileList,
-                                 (File)widgetPath.getData(),
+                                 (T)widgetPath.getData(),
                                  (widgetName != null) ? widgetName.getText() : null
                                 );
         }
@@ -3835,9 +3838,9 @@ class Dialogs
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          File file = (File)widgetPath.getData();
+          T file = (T)widgetPath.getData();
 
-          File parentFile = listDirectory.getParentFile(file);
+          T parentFile = listDirectory.getParentFile(file);
           if (parentFile != null)
           {
             // set new path, clear name
@@ -3847,7 +3850,7 @@ class Dialogs
 
             // update list
             updater.updateFileList(widgetFileList,
-                                   (File)widgetPath.getData(),
+                                   (T)widgetPath.getData(),
                                    (widgetName != null) ? widgetName.getText() : null
                                   );
 
@@ -3867,7 +3870,7 @@ class Dialogs
           int index = widgetShortcutList.getSelectionIndex();
           if (index >= 0)
           {
-            File file = shortcutList.get(index);
+            T file = shortcutList.get(index);
             if      (listDirectory.isDirectory(file))
             {
               // set new path, clear name
@@ -3877,7 +3880,7 @@ class Dialogs
 
               // update list
               updater.updateFileList(widgetFileList,
-                                     (File)widgetPath.getData(),
+                                     (T)widgetPath.getData(),
                                      (widgetName != null) ? widgetName.getText() : null
                                     );
             }
@@ -3931,19 +3934,19 @@ class Dialogs
           if (index >= 0)
           {
             TableItem tableItem = widgetFileList.getItem(index);
-            File      file      = (File)tableItem.getData();
+            T         file      = (T)tableItem.getData();
 
             if (file.isDirectory())
             {
               // set new path, clear name
-              File newPath = listDirectory.newFileInstance((File)widgetPath.getData(),file.getName());
+              T newPath = listDirectory.newFileInstance((T)widgetPath.getData(),file.getName());
               widgetPath.setData(newPath);
               widgetPath.setText(newPath.getAbsolutePath());
               if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.ENTRY)) widgetName.setText("");
 
               // update list
               updater.updateFileList(widgetFileList,
-                                     (File)widgetPath.getData(),
+                                     (T)widgetPath.getData(),
                                      (widgetName != null) ? widgetName.getText() : null
                                     );
             }
@@ -3962,7 +3965,7 @@ class Dialogs
           if (index >= 0)
           {
             TableItem tableItem = widgetFileList.getItem(index);
-            File      file      = (File)tableItem.getData();
+            T         file      = (T)tableItem.getData();
 
             // set new name
             if (listDirectory.isFile(file))
@@ -3986,7 +3989,7 @@ class Dialogs
           TableItem[] tableItems = widgetFileList.getSelection();
           if (tableItems.length > 0)
           {
-            File file = (File)tableItems[0].getData();
+            T file = (T)tableItems[0].getData();
             if (file.isDirectory())
             {
               updater.updateFileList(widgetFileList,
@@ -4028,7 +4031,7 @@ class Dialogs
 
               updater.setFileFilter(widgetFilter.getText());
               updater.updateFileList(widgetFileList,
-                                     (File)widgetPath.getData(),
+                                     (T)widgetPath.getData(),
                                      (widgetName != null) ? widgetName.getText() : null
                                     );
             }
@@ -4046,7 +4049,7 @@ class Dialogs
           {
             updater.setShowHidden(widgetShowHidden.getSelection());
             updater.updateFileList(widgetFileList,
-                                   (File)widgetPath.getData(),
+                                   (T)widgetPath.getData(),
                                    (widgetName != null) ? widgetName.getText() : null
                                   );
           }
@@ -4080,7 +4083,7 @@ class Dialogs
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           fileGeometry = dialog.getSize();
-          File file = (File)widgetPath.getData();
+          T file = (T)widgetPath.getData();
           close(dialog,
                 (widgetName != null)
                   ? listDirectory.newFileInstance(file,widgetName.getText()).getAbsolutePath()
@@ -4098,9 +4101,9 @@ class Dialogs
         {
           Point point = new Point(dragSourceEvent.x,dragSourceEvent.y);
           TableItem tableItem = widgetFileList.getItem(point);
-          if ((tableItem != null) && listDirectory.isDirectory((File)tableItem.getData()))
+          if ((tableItem != null) && listDirectory.isDirectory((T)tableItem.getData()))
           {
-            dragFile[0] = (File)tableItem.getData();
+            dragFile[0] = tableItem.getData();
           }
           else
           {
@@ -4113,7 +4116,7 @@ class Dialogs
           TableItem tableItem = widgetFileList.getItem(point);
           if (tableItem != null)
           {
-            dragSourceEvent.data = dragFile[0].getAbsolutePath();
+            dragSourceEvent.data = ((T)dragFile[0]).getAbsolutePath();
           }
         }
         public void dragFinished(DragSourceEvent dragSourceEvent)
@@ -4168,7 +4171,7 @@ class Dialogs
           }
           else
           {
-            File parentFile = oldFile.getParentFile();
+            T parentFile = listDirectory.getParentFile(oldFile);
             widgetPath.setData(parentFile);
             if (parentFile != null)
             {
@@ -4201,7 +4204,7 @@ class Dialogs
       if (!widgetPath.getText().isEmpty())
       {
         updater.updateFileList(widgetFileList,
-                               (File)widgetPath.getData(),
+                               (T)widgetPath.getData(),
                                (widgetName != null) ? widgetName.getText() : null
                               );
       }
@@ -4242,17 +4245,18 @@ class Dialogs
    * @param listDirectory list directory handler
    * @return file name or null
    */
-  public static String file(Shell           parentShell,
-                            FileDialogTypes type,
-                            String          title,
-                            String          oldFileName,
-                            String[]        fileExtensions,
-                            String          defaultFileExtension,
-                            int             flags,
-                            ListDirectory   listDirectory
-                           )
+  public static <T extends File> String file(Shell            parentShell,
+                                             FileDialogTypes  type,
+                                             String           title,
+                                             String           oldFileName,
+                                             String[]         fileExtensions,
+                                             String           defaultFileExtension,
+                                             int              flags,
+                                             ListDirectory<T> listDirectory
+                                            )
   {
-    return file(parentShell,type,title,(oldFileName != null) ? new File(oldFileName) : (File)null,fileExtensions,defaultFileExtension,flags,listDirectory);
+    if (oldFileName.isEmpty()) oldFileName = System.getProperty("user.dir");
+    return file(parentShell,type,title,(oldFileName != null) ? listDirectory.newFileInstance(oldFileName) : (T)null,fileExtensions,defaultFileExtension,flags,listDirectory);
   }
 
   /** open a file dialog
@@ -4265,14 +4269,14 @@ class Dialogs
    * @param listDirectory list directory handler
    * @return file name or null
    */
-  public static String file(Shell                 parentShell,
-                            final FileDialogTypes type,
-                            String                title,
-                            File                  oldFile,
-                            final String[]        fileExtensions,
-                            String                defaultFileExtension,
-                            final ListDirectory   listDirectory
-                           )
+  public static <T extends File> String file(Shell                 parentShell,
+                                             final FileDialogTypes type,
+                                             String                title,
+                                             T                     oldFile,
+                                             final String[]        fileExtensions,
+                                             String                defaultFileExtension,
+                                             ListDirectory<T>      listDirectory
+                                            )
   {
     return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,FILE_SHOW_HIDDEN,listDirectory);
   }
@@ -4287,16 +4291,17 @@ class Dialogs
    * @param listDirectory list directory handler
    * @return file name or null
    */
-  public static String file(Shell           parentShell,
-                            FileDialogTypes type,
-                            String          title,
-                            String          oldFileName,
-                            final String[]  fileExtensions,
-                            String          defaultFileExtension,
-                            ListDirectory   listDirectory
-                           )
+  public static <T extends File> String file(Shell            parentShell,
+                                             FileDialogTypes  type,
+                                             String           title,
+                                             String           oldFileName,
+                                             final String[]   fileExtensions,
+                                             String           defaultFileExtension,
+                                             ListDirectory<T> listDirectory
+                                            )
   {
-    return file(parentShell,type,title,(oldFileName != null) ? new File(oldFileName) : (File)null,fileExtensions,defaultFileExtension,listDirectory);
+    if (oldFileName.isEmpty()) oldFileName = System.getProperty("user.dir");
+    return file(parentShell,type,title,(oldFileName != null) ? listDirectory.newFileInstance(oldFileName) : (T)null,fileExtensions,defaultFileExtension,listDirectory);
   }
 
   /** open a file dialog
@@ -4308,13 +4313,13 @@ class Dialogs
    * @param listDirectory list directory handler
    * @return file name or null
    */
-  public static String file(Shell               parentShell,
-                            FileDialogTypes     type,
-                            String              title,
-                            File                oldFile,
-                            int                 flags,
-                            final ListDirectory listDirectory
-                           )
+  public static <T extends File> String file(Shell            parentShell,
+                                             FileDialogTypes  type,
+                                             String           title,
+                                             T                oldFile,
+                                             int              flags,
+                                             ListDirectory<T> listDirectory
+                                            )
   {
     return file(parentShell,type,title,oldFile,(String[])null,(String)null,flags,listDirectory);
   }
@@ -4328,15 +4333,16 @@ class Dialogs
    * @param listDirectory list directory handler
    * @return file name or null
    */
-  public static String file(Shell               parentShell,
-                            FileDialogTypes     type,
-                            String              title,
-                            String              oldFileName,
-                            int                 flags,
-                            final ListDirectory listDirectory
-                           )
+  public static <T extends File> String file(Shell            parentShell,
+                                             FileDialogTypes  type,
+                                             String           title,
+                                             String           oldFileName,
+                                             int              flags,
+                                             ListDirectory<T> listDirectory
+                                            )
   {
-    return file(parentShell,type,title,(oldFileName != null) ? new File(oldFileName) : (File)null,flags,listDirectory);
+    if (oldFileName.isEmpty()) oldFileName = System.getProperty("user.dir");
+    return file(parentShell,type,title,(oldFileName != null) ? listDirectory.newFileInstance(oldFileName) : (T)null,flags,listDirectory);
   }
 
   /** open a file dialog
@@ -4347,12 +4353,12 @@ class Dialogs
    * @param listDirectory list directory handler
    * @return file name or null
    */
-  public static String file(Shell               parentShell,
-                            FileDialogTypes     type,
-                            String              title,
-                            File                oldFile,
-                            final ListDirectory listDirectory
-                           )
+  public static <T extends File> String file(Shell            parentShell,
+                                             FileDialogTypes  type,
+                                             String           title,
+                                             T                oldFile,
+                                             ListDirectory<T> listDirectory
+                                            )
   {
     return file(parentShell,type,title,oldFile,FILE_NONE,listDirectory);
   }
@@ -4365,14 +4371,15 @@ class Dialogs
    * @param listDirectory list directory handler
    * @return file name or null
    */
-  public static String file(Shell           parentShell,
-                            FileDialogTypes type,
-                            String          title,
-                            String          oldFileName,
-                            ListDirectory   listDirectory
-                           )
+  public static <T extends File> String file(Shell            parentShell,
+                                             FileDialogTypes  type,
+                                             String           title,
+                                             String           oldFileName,
+                                             ListDirectory<T> listDirectory
+                                            )
   {
-    return file(parentShell,type,title,(oldFileName != null) ? new File(oldFileName) : (File)null,listDirectory);
+    if (oldFileName.isEmpty()) oldFileName = System.getProperty("user.dir");
+    return file(parentShell,type,title,(oldFileName != null) ? listDirectory.newFileInstance(oldFileName) : (T)null,listDirectory);
   }
 
   /** open a file dialog
