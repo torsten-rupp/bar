@@ -297,10 +297,10 @@ void ServerIO_wait(ServerIO *serverIO);
 
 /***********************************************************************\
 * Name   : ServerIO_receiveData
-* Purpose: process data
+* Purpose: receive data
 * Input  : serverIO - server i/o
 * Output : -
-* Return : TRUE if data processed, FALSE on disconnect
+* Return : TRUE if data received, FALSE on disconnect
 * Notes  : -
 \***********************************************************************/
 

@@ -957,65 +957,67 @@ bool ServerIO_receiveData(ServerIO *serverIO)
   // get max. number of bytes to receive
   maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
 
-  switch (serverIO->type)
+  if (maxBytes > 0)
   {
-    case SERVER_IO_TYPE_NONE:
-      break;
-    case SERVER_IO_TYPE_BATCH:
-      (void)File_read(&serverIO->file.fileHandle,
-                      &serverIO->inputBuffer[serverIO->inputBufferLength],
-                      maxBytes,
-                      &readBytes
-                     );
+    switch (serverIO->type)
+    {
+      case SERVER_IO_TYPE_NONE:
+        break;
+      case SERVER_IO_TYPE_BATCH:
+        (void)File_read(&serverIO->file.fileHandle,
+                        &serverIO->inputBuffer[serverIO->inputBufferLength],
+                        maxBytes,
+                        &readBytes
+                       );
 //fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,buffer);
-      if (readBytes > 0)
-      {
-        do
+        if (readBytes > 0)
         {
-          serverIO->inputBufferLength += (uint)readBytes;
+          do
+          {
+            serverIO->inputBufferLength += (uint)readBytes;
 
-          maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-          error = File_read(&serverIO->file.fileHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,&readBytes);
+            maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
+            error = File_read(&serverIO->file.fileHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,&readBytes);
+          }
+          while ((error == ERROR_NONE) && (readBytes > 0));
         }
-        while ((error == ERROR_NONE) && (readBytes > 0));
-      }
-      else
-      {
-        // disconnect
+        else
+        {
+          // disconnect
 fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
-        disconnect(serverIO);
-        return FALSE;
-      }
-      break;
-    case SERVER_IO_TYPE_NETWORK:
-      (void)Network_receive(&serverIO->network.socketHandle,
-                            &serverIO->inputBuffer[serverIO->inputBufferLength],
-                            maxBytes,
-                            NO_WAIT,
-                            &readBytes
-                           );
-fprintf(stderr,"%s, %d: +++++++++++++ rec socket: maxBytes=%d received=%d at %d: ",__FILE__,__LINE__,maxBytes,readBytes,serverIO->inputBufferLength);
-fwrite(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,1,stderr);
-fprintf(stderr,"\n");
-      if (readBytes > 0)
-      {
-        do
-        {
-          serverIO->inputBufferLength += (uint)readBytes;
-
-          maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-          error = Network_receive(&serverIO->network.socketHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,NO_WAIT,&readBytes);
+          disconnect(serverIO);
+          return FALSE;
         }
-        while ((error == ERROR_NONE) && (readBytes > 0));
-      }
-      else
-      {
-        // disconnect
+        break;
+      case SERVER_IO_TYPE_NETWORK:
+        (void)Network_receive(&serverIO->network.socketHandle,
+                              &serverIO->inputBuffer[serverIO->inputBufferLength],
+                              maxBytes,
+                              NO_WAIT,
+                              &readBytes
+                             );
+//fprintf(stderr,"%s, %d: +++++++++++++ rec socket: maxBytes=%d received=%d at %d: ",__FILE__,__LINE__,maxBytes,readBytes,serverIO->inputBufferLength);
+//fwrite(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,1,stderr); fprintf(stderr,"\n");
+        if (readBytes > 0)
+        {
+          do
+          {
+            serverIO->inputBufferLength += (uint)readBytes;
+
+            maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
+            error = Network_receive(&serverIO->network.socketHandle,&serverIO->inputBuffer[serverIO->inputBufferLength],maxBytes,NO_WAIT,&readBytes);
+          }
+          while ((error == ERROR_NONE) && (readBytes > 0));
+        }
+        else
+        {
+          // disconnect
 fprintf(stderr,"%s, %d: DISCONNECT?\n",__FILE__,__LINE__);
 //        disconnect(serverIO);
-        return FALSE;
-      }
-      break;
+          return FALSE;
+        }
+        break;
+    }
   }
 
   return TRUE;
