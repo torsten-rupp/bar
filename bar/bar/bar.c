@@ -3013,50 +3013,12 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
   {
     // read key data from file
 
-    // read file contents
-    string = String_new();
-    error = File_openCString(&fileHandle,value,FILE_OPEN_READ);
+    error = readKeyFile(key,value);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,Error_getText(error),errorMessageSize);
-      String_delete(string);
       return error;
     }
-    error = File_readLine(&fileHandle,string);
-    if (error != ERROR_NONE)
-    {
-      stringSet(errorMessage,Error_getText(error),errorMessageSize);
-      File_close(&fileHandle);
-      String_delete(string);
-      return error;
-    }
-    File_close(&fileHandle);
-
-    // allocate secure memory
-    dataLength = Misc_base64DecodeLength(string,STRING_BEGIN);
-    data = Password_allocSecure((size_t)dataLength);
-    if (data == NULL)
-    {
-      stringSet(errorMessage,"insufficient secure memory",errorMessageSize);
-      (void)File_close(&fileHandle);
-      return ERROR_INSUFFICIENT_MEMORY;
-    }
-
-    // decode base64
-    if (!Misc_base64Decode((byte*)data,dataLength,string,STRING_BEGIN))
-    {
-      stringSet(errorMessage,"decode base64 fail",errorMessageSize);
-      Password_freeSecure(data);
-      return FALSE;
-    }
-
-    // set key data
-    if (key->data != NULL) Password_freeSecure(key->data);
-    key->data   = data;
-    key->length = dataLength;
-
-    // free resources
-    String_delete(string);
   }
   else if (stringStartsWith(value,"base64:"))
   {
