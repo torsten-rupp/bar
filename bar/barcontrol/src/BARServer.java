@@ -1010,8 +1010,8 @@ public class BARServer
   private final static int   PROTOCOL_VERSION_MAJOR = 5;
   private final static int   PROTOCOL_VERSION_MINOR = 0;
 
-  public final static String DEFAULT_CA_FILE_NAME          = "bar-server-cert.pem";  // default certificate authority file name
-  public final static String DEFAULT_CERTIFICATE_FILE_NAME = "bar-ca.pem";           // default certificate file name
+  public final static String DEFAULT_CA_FILE_NAME          = "bar-ca.pem";           // default certificate authority file name
+  public final static String DEFAULT_CERTIFICATE_FILE_NAME = "bar-server-cert.pem";  // default certificate file name
   public final static String DEFAULT_KEY_FILE_NAME         = "bar-key.pem";          // default key file name
   public final static String DEFAULT_JAVA_KEY_FILE_NAME    = "bar.jks";              // default Java key file name
 
@@ -1188,6 +1188,7 @@ public class BARServer
               // create plain socket
               Socket plainSocket = new Socket(name,port);
               plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
+              plainSocket.setTcpNoDelay(true);
 
               input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream(),"UTF-8"));
@@ -1210,6 +1211,7 @@ public class BARServer
               // create TLS socket on plain socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(plainSocket,name,tlsPort,false);
               sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
+              sslSocket.setTcpNoDelay(true);
               sslSocket.startHandshake();
 
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
