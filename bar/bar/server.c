@@ -6509,17 +6509,17 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
   UNUSED_VARIABLE(argumentMap);
 
   #ifdef HAVE_GNU_TLS
-    if ((serverCA == NULL) || (serverCA->data == NULL))
+    if ((serverCA == NULL) || (serverCA->data == NULL) || (serverCA->length == 0))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_CA,"no server certificate authority data");
       return;
     }
-    if ((serverCert == NULL) || (serverCert->data == NULL))
+    if ((serverCert == NULL) || (serverCert->data == NULL) || (serverCert->length == 0))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_CERTIFICATE,"no server certificate data");
       return;
     }
-    if ((serverKey == NULL) || (serverKey->data == NULL))
+    if ((serverKey == NULL) || (serverKey->data == NULL) || (serverKey->length == 0))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_KEY,"no server key data");
       return;
@@ -18408,8 +18408,9 @@ Errors Server_run(ServerModes       mode,
           pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
           if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
         }
-        pollfds[pollfdCount].fd     = Network_getServerSocket(&serverSocketHandle);
-        pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
+        pollfds[pollfdCount].fd      = Network_getServerSocket(&serverSocketHandle);
+        pollfds[pollfdCount].events  = POLLIN|POLLERR|POLLNVAL;
+        pollfds[pollfdCount].revents = 0;
         pollServerSocketIndex = pollfdCount;
         pollfdCount++;
 //ServerIO_addWait(&clientNode->clientInfo.io,Network_getServerSocket(&serverSocketHandle));
@@ -18424,8 +18425,9 @@ Errors Server_run(ServerModes       mode,
           pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
           if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
         }
-        pollfds[pollfdCount].fd     = Network_getServerSocket(&serverTLSSocketHandle);
-        pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
+        pollfds[pollfdCount].fd      = Network_getServerSocket(&serverTLSSocketHandle);
+        pollfds[pollfdCount].events  = POLLIN|POLLERR|POLLNVAL;
+        pollfds[pollfdCount].revents = 0;
         pollServerTLSSocketIndex = pollfdCount;
         pollfdCount++;
 //ServerIO_addWait(&clientNode->clientInfo.io,Network_getServerSocket(&serverTLSSocketHandle));
@@ -18461,8 +18463,9 @@ Errors Server_run(ServerModes       mode,
             pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
             if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
           }
-          pollfds[pollfdCount].fd     = Network_getSocket(&clientNode->clientInfo.io.network.socketHandle);
-          pollfds[pollfdCount].events = POLLIN|POLLERR|POLLNVAL;
+          pollfds[pollfdCount].fd      = Network_getSocket(&clientNode->clientInfo.io.network.socketHandle);
+          pollfds[pollfdCount].events  = POLLIN|POLLERR|POLLNVAL;
+          pollfds[pollfdCount].revents = 0;
           pollfdCount++;
 //ServerIO_addWait(&clientNode->clientInfo.io,Network_getSocket(&clientNode->clientInfo.io.network.socketHandle));
         }
@@ -18482,8 +18485,7 @@ Errors Server_run(ServerModes       mode,
     {
       error = Network_accept(&socketHandle,
                              &serverSocketHandle,
-//                             SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
-0
+                             SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
                             );
       if (error == ERROR_NONE)
       {
@@ -18526,8 +18528,7 @@ Errors Server_run(ServerModes       mode,
     {
       error = Network_accept(&socketHandle,
                              &serverTLSSocketHandle,
-//                             SOCKET_FLAG_NON_BLOCKING
-0
+                             SOCKET_FLAG_NON_BLOCKING
                             );
       if (error == ERROR_NONE)
       {
@@ -18598,6 +18599,7 @@ Errors Server_run(ServerModes       mode,
           {
             if ((pollfds[pollfdIndex].revents & POLLIN) != 0)
             {
+//TODO
 #if 1
               if (ServerIO_receiveData(&clientNode->clientInfo.io))
               {
