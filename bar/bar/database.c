@@ -4453,7 +4453,7 @@ void Database_debugPrintInfo(void)
                   databaseHandle->locked.lineNb
                  );
         }
-        if (Thread_equalThreads(databaseHandle->transaction.threadId,THREAD_ID_NONE))
+        if (!Thread_equalThreads(databaseHandle->transaction.threadId,THREAD_ID_NONE))
         {
           fprintf(stderr,
                   "    Thread '%s' started transaction at %s, %u\n",
