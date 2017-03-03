@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-03 14:01+0100\n"
+"POT-Creation-Date: 2017-03-03 17:17+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -143,7 +143,7 @@ msgid "SSL"
 msgstr ""
 
 #: src/BARControl.java:1912 src/BARControl.java:3991 src/BARControl.java:4015
-#: src/Dialogs.java:2820 src/Dialogs.java:3045 src/ServerSettings.java:590
+#: src/Dialogs.java:2823 src/Dialogs.java:3048 src/ServerSettings.java:590
 #: src/ServerSettings.java:2506 src/TabJobs.java:6090 src/TabRestore.java:9423
 #: src/TabRestore.java:9450
 msgid "Password"
@@ -173,12 +173,12 @@ msgstr ""
 #: src/BARControl.java:1983 src/BARControl.java:2510 src/BARControl.java:3154
 #: src/BARControl.java:3178 src/BARControl.java:3186 src/BARControl.java:3220
 #: src/BARControl.java:3228 src/BARControl.java:4198 src/BARControl.java:4210
-#: src/BARControl.java:4232 src/BARControl.java:4251 src/Dialogs.java:2023
-#: src/Dialogs.java:2093 src/Dialogs.java:2748 src/Dialogs.java:2760
-#: src/Dialogs.java:2943 src/Dialogs.java:3180 src/Dialogs.java:3803
-#: src/Dialogs.java:4802 src/Dialogs.java:4968 src/Dialogs.java:5154
-#: src/Dialogs.java:5492 src/Dialogs.java:5592 src/Dialogs.java:5944
-#: src/Dialogs.java:6038 src/Dialogs.java:6128 src/ServerSettings.java:2076
+#: src/BARControl.java:4232 src/BARControl.java:4251 src/Dialogs.java:2026
+#: src/Dialogs.java:2096 src/Dialogs.java:2751 src/Dialogs.java:2763
+#: src/Dialogs.java:2946 src/Dialogs.java:3183 src/Dialogs.java:3806
+#: src/Dialogs.java:4809 src/Dialogs.java:4975 src/Dialogs.java:5161
+#: src/Dialogs.java:5499 src/Dialogs.java:5599 src/Dialogs.java:5951
+#: src/Dialogs.java:6045 src/Dialogs.java:6135 src/ServerSettings.java:2076
 #: src/ServerSettings.java:2693 src/TabJobs.java:8504 src/TabJobs.java:8621
 #: src/TabJobs.java:8755 src/TabJobs.java:10180 src/TabJobs.java:10510
 #: src/TabJobs.java:10868 src/TabJobs.java:11311 src/TabJobs.java:12601
@@ -314,8 +314,8 @@ msgstr ""
 msgid "Please enter {0} login for: {1}"
 msgstr ""
 
-#: src/BARControl.java:3990 src/Dialogs.java:2808 src/Dialogs.java:3036
-#: src/Dialogs.java:3706 src/Dialogs.java:3766 src/ServerSettings.java:608
+#: src/BARControl.java:3990 src/Dialogs.java:2811 src/Dialogs.java:3039
+#: src/Dialogs.java:3709 src/Dialogs.java:3769 src/ServerSettings.java:608
 #: src/ServerSettings.java:2441 src/TabJobs.java:1844 src/TabJobs.java:3654
 #: src/TabJobs.java:8489 src/TabJobs.java:8604 src/TabJobs.java:10420
 #: src/TabRestore.java:4228 src/TabRestore.java:4564 src/TabRestore.java:4774
@@ -359,7 +359,7 @@ msgstr ""
 msgid "Select path name. Ctrl+Click to select local directory."
 msgstr ""
 
-#: src/BARWidgets.java:1099 src/BARWidgets.java:1107 src/Dialogs.java:4702
+#: src/BARWidgets.java:1099 src/BARWidgets.java:1107 src/Dialogs.java:4709
 #: src/TabRestore.java:8985 src/TabRestore.java:8993
 msgid "Select path"
 msgstr ""
@@ -372,118 +372,118 @@ msgstr ""
 msgid "Select file"
 msgstr ""
 
-#: src/BusyDialog.java:577 src/Dialogs.java:1449 src/Dialogs.java:1614
-#: src/Dialogs.java:1795
+#: src/BusyDialog.java:577 src/Dialogs.java:1452 src/Dialogs.java:1617
+#: src/Dialogs.java:1798
 msgid "Close"
 msgstr ""
 
-#: src/Dialogs.java:1433 src/Dialogs.java:1597 src/Dialogs.java:1779
-#: src/Dialogs.java:1898 src/Dialogs.java:2314
+#: src/Dialogs.java:1436 src/Dialogs.java:1600 src/Dialogs.java:1782
+#: src/Dialogs.java:1901 src/Dialogs.java:2317
 msgid "show again"
 msgstr ""
 
-#: src/Dialogs.java:1516
+#: src/Dialogs.java:1519
 msgid "Information"
 msgstr ""
 
-#: src/Dialogs.java:1547 src/TabRestore.java:4647
+#: src/Dialogs.java:1550 src/TabRestore.java:4647
 msgid "Error"
 msgstr ""
 
-#: src/Dialogs.java:1585
+#: src/Dialogs.java:1588
 msgid "Extended error:"
 msgstr ""
 
-#: src/Dialogs.java:1759
+#: src/Dialogs.java:1762
 msgid "Warning"
 msgstr ""
 
-#: src/Dialogs.java:2105 src/Dialogs.java:2128
+#: src/Dialogs.java:2108 src/Dialogs.java:2131
 msgid "Yes"
 msgstr ""
 
-#: src/Dialogs.java:2105 src/Dialogs.java:2128
+#: src/Dialogs.java:2108 src/Dialogs.java:2131
 msgid "No"
 msgstr ""
 
-#: src/Dialogs.java:2150 src/TabRestore.java:8346 src/TabRestore.java:9491
+#: src/Dialogs.java:2153 src/TabRestore.java:8346 src/TabRestore.java:9491
 #: src/TabStatus.java:2289
 msgid "Confirmation"
 msgstr ""
 
-#: src/Dialogs.java:2748 src/Dialogs.java:2760 src/Dialogs.java:2943
-#: src/Dialogs.java:3180 src/Dialogs.java:4802 src/Dialogs.java:5154
+#: src/Dialogs.java:2751 src/Dialogs.java:2763 src/Dialogs.java:2946
+#: src/Dialogs.java:3183 src/Dialogs.java:4809 src/Dialogs.java:5161
 #: src/TabStatus.java:2500
 msgid "OK"
 msgstr ""
 
-#: src/Dialogs.java:3630
+#: src/Dialogs.java:3633
 msgid "Path"
 msgstr ""
 
-#: src/Dialogs.java:3654 src/TabJobs.java:3062 src/TabJobs.java:3142
+#: src/Dialogs.java:3657 src/TabJobs.java:3062 src/TabJobs.java:3142
 #: src/TabJobs.java:3267 src/TabJobs.java:3348 src/TabJobs.java:3738
 #: src/TabJobs.java:3818 src/TabJobs.java:4473 src/TabJobs.java:4551
 #: src/TabJobs.java:8212 src/TabJobs.java:8297
 msgid "Remove"
 msgstr ""
 
-#: src/Dialogs.java:3712 src/ServerSettings.java:605 src/TabJobs.java:10119
+#: src/Dialogs.java:3715 src/ServerSettings.java:605 src/TabJobs.java:10119
 #: src/TabJobs.java:13023 src/TabRestore.java:4597 src/TabRestore.java:4740
 #: src/TabRestore.java:4784 src/TabRestore.java:6118 src/TabRestore.java:8902
 #: src/TabStatus.java:620 src/TabStatus.java:698
 msgid "Type"
 msgstr ""
 
-#: src/Dialogs.java:3719 src/TabRestore.java:5015 src/TabRestore.java:5366
+#: src/Dialogs.java:3722 src/TabRestore.java:5015 src/TabRestore.java:5366
 msgid "Modified"
 msgstr ""
 
-#: src/Dialogs.java:3726 src/ServerSettings.java:614 src/TabJobs.java:7343
+#: src/Dialogs.java:3729 src/ServerSettings.java:614 src/TabJobs.java:7343
 #: src/TabJobs.java:7687 src/TabRestore.java:4617 src/TabRestore.java:4794
 #: src/TabRestore.java:5012 src/TabRestore.java:5363 src/TabRestore.java:6121
 #: src/TabRestore.java:8904
 msgid "Size"
 msgstr ""
 
-#: src/Dialogs.java:3741 src/TabRestore.java:5902 src/TabRestore.java:6405
+#: src/Dialogs.java:3744 src/TabRestore.java:5902 src/TabRestore.java:6405
 msgid "Filter"
 msgstr ""
 
-#: src/Dialogs.java:3755
+#: src/Dialogs.java:3758
 msgid "show hidden"
 msgstr ""
 
-#: src/Dialogs.java:3789
+#: src/Dialogs.java:3792
 msgid "Open"
 msgstr ""
 
-#: src/Dialogs.java:3792 src/Dialogs.java:4985 src/ServerSettings.java:692
+#: src/Dialogs.java:3795 src/Dialogs.java:4992 src/ServerSettings.java:692
 #: src/ServerSettings.java:2073 src/TabJobs.java:10334 src/TabJobs.java:10727
 #: src/TabJobs.java:11017 src/TabJobs.java:11460 src/TabJobs.java:12598
 #: src/TabJobs.java:13340
 msgid "Save"
 msgstr ""
 
-#: src/Dialogs.java:3796 src/Dialogs.java:5508 src/Dialogs.java:5610
+#: src/Dialogs.java:3799 src/Dialogs.java:5515 src/Dialogs.java:5617
 msgid "Select"
 msgstr ""
 
-#: src/Dialogs.java:3886
+#: src/Dialogs.java:3889
 #, java-format
 msgid "''{0}'' is not a directory!"
 msgstr ""
 
-#: src/Dialogs.java:3890
+#: src/Dialogs.java:3893
 #, java-format
 msgid "''{0}'' does not exists"
 msgstr ""
 
-#: src/Dialogs.java:5659 src/Dialogs.java:5698
+#: src/Dialogs.java:5666 src/Dialogs.java:5705
 msgid "Busy"
 msgstr ""
 
-#: src/Dialogs.java:5728
+#: src/Dialogs.java:5735
 msgid "Progress"
 msgstr ""
 
