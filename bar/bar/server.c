@@ -15933,6 +15933,9 @@ NULL, // masterIO
                           );
   }
 
+  // trigger index thread
+  Semaphore_signalModified(&indexThreadTrigger);
+
   if (error == ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -16787,7 +16790,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
           String_set(printableStorageName,storageName);
         }
 
-        // delete index
+        // delete from index
         error = Index_deleteStorage(indexHandle,storageId);
         if (error == ERROR_NONE)
         {
@@ -16802,6 +16805,12 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
           ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
           Index_doneList(&indexQueryHandle);
           return;
+        }
+
+        // remove index id
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+        {
+          Array_removeAll(&clientInfo->indexIdArray,&storageId,CALLBACK(NULL,NULL));
         }
       }
     }
@@ -16822,6 +16831,12 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
       return;
     }
+
+    // remove index id
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    {
+      Array_removeAll(&clientInfo->indexIdArray,&uuidId,CALLBACK(NULL,NULL));
+    }
   }
 
   if (entityId != INDEX_ID_NONE)
@@ -16833,6 +16848,12 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
       return;
     }
+
+    // remove index id
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    {
+      Array_removeAll(&clientInfo->indexIdArray,&entityId,CALLBACK(NULL,NULL));
+    }
   }
 
   if (storageId != INDEX_ID_NONE)
@@ -16843,6 +16864,12 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
       return;
+    }
+
+    // remove index id
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    {
+      Array_removeAll(&clientInfo->indexIdArray,&storageId,CALLBACK(NULL,NULL));
     }
   }
 
