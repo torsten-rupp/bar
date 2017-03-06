@@ -16686,6 +16686,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
   String           storageName;
   String           printableStorageName;
   IndexStates      indexState;
+  SemaphoreLock    semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
