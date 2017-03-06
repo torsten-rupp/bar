@@ -13142,8 +13142,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     }
   }
 
-//TODO: remove?
-  #define _ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
   #define MAX_ARCHIVE_CONTENT_LIST_LENGTH 256
 
   StorageSpecifier   storageSpecifier;
@@ -13171,6 +13169,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   assert(indexHandle != NULL);
   assert(storageInfo != NULL);
 
+fprintf(stderr,"%s, %d: ------------------------------------------------------\n",__FILE__,__LINE__);
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   printableStorageName = String_new();
@@ -13246,24 +13245,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
-  #if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
-    error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
-    if (error != ERROR_NONE)
-    {
-      Archive_close(&archiveHandle);
-      Index_setState(indexHandle,
-                     storageId,
-                     INDEX_STATE_ERROR,
-                     0LL,
-                     "%s (error code: %d)",
-                     Error_getText(error),
-                     Error_getCode(error)
-                    );
-      String_delete(printableStorageName);
-      Storage_doneSpecifier(&storageSpecifier);
-      return error;
-    }
-  #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
 
   // get current uuidId, entityId
 //TODO
@@ -13276,9 +13257,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
 
-    #if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
-      (void)Index_rollbackTransaction(indexHandle);
-    #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
     Archive_close(&archiveHandle);
     Index_setState(indexHandle,
                    storageId,
@@ -13302,6 +13280,9 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   directoryName   = String_new();
   linkName        = String_new();
   destinationName = String_new();
+fprintf(stderr,"%s, %d: ++++++++++++++++\n",__FILE__,__LINE__);
+uint64 t0,t1;
+t0 = Misc_getTimestamp();
   while (   !Archive_eof(&archiveHandle,FALSE,FALSE)
          && (error == ERROR_NONE)
          && !abortedFlag
@@ -13314,15 +13295,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     // pause
     if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
     {
-      #if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
-        // end transaction
-        error = Index_endTransaction(indexHandle);
-        if (error != ERROR_NONE)
-        {
-          break;
-        }
-      #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
-
 #if 0
       // temporarly close storage
       error = Archive_storageInterrupt(&archiveHandle);
@@ -13347,15 +13319,6 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
         break;
       }
 #endif /* 0 */
-
-      #if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
-        // start transaction
-        error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
-        if (error != ERROR_NONE)
-        {
-          break;
-        }
-      #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
     }
 #endif
 
@@ -13662,8 +13625,19 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
       break;
     }
 
+#if 1
+#define XXX
     if (List_count(&archiveContentList) > MAX_ARCHIVE_CONTENT_LIST_LENGTH)
     {
+#ifdef XXX
+      // start transaction
+      error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+#endif
+
       LIST_ITERATE(&archiveContentList,archiveContentNode)
       {
         // read entry
@@ -13877,12 +13851,30 @@ IndexId newEntityId;
             break; /* not reached */
         }
       }
+
+#ifdef XXX
+      // end transaction
+      error = Index_endTransaction(indexHandle);
+      if (error != ERROR_NONE)
+      {
+        (void)Index_rollbackTransaction(indexHandle);
+        break;
+      }
+#endif
+
+      // clear list
       List_clear(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);
+t1 = Misc_getTimestamp();
+fprintf(stderr,"%s, %d: %d dt=%llu\n",__FILE__,__LINE__,MAX_ARCHIVE_CONTENT_LIST_LENGTH,(t1-t0)/1000LL);
+t0 = t1;
     }
     if (error != ERROR_NONE)
     {
       break;
     }
+#else
+      List_clear(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);
+#endif
 
 #if 0
     // update temporary entries, size (ignore error)
@@ -13896,15 +13888,6 @@ IndexId newEntityId;
 #if 1
     if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
     {
-      #if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
-        // end transaction
-        error = Index_endTransaction(indexHandle);
-        if (error != ERROR_NONE)
-        {
-          break;
-        }
-      #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
-
 #if 0
       // temporarly close storage
       error = Archive_storageInterrupt(&archiveHandle);
@@ -13915,6 +13898,7 @@ IndexId newEntityId;
 #endif /* 0 */
 
       // wait
+fprintf(stderr,"%s, %d: wait....\n",__FILE__,__LINE__);
       do
       {
         Misc_udelay(10LL*US_PER_SECOND);
@@ -13929,15 +13913,6 @@ IndexId newEntityId;
         break;
       }
 #endif /* 0 */
-
-      #if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
-        // start transacation
-        error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
-        if (error != ERROR_NONE)
-        {
-          break;
-        }
-      #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
     }
 #endif
 
@@ -13945,21 +13920,12 @@ IndexId newEntityId;
     abortedFlag                 = (abortCallbackFunction != NULL) && abortCallbackFunction(abortCallbackUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
   }
+fprintf(stderr,"%s, %d:dddddddddddon\n",__FILE__,__LINE__);
   String_delete(destinationName);
   String_delete(linkName);
   String_delete(directoryName);
   String_delete(imageName);
   String_delete(fileName);
-  #if ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION
-    if (error == ERROR_NONE)
-    {
-      error = Index_endTransaction(indexHandle);
-    }
-    else
-    {
-      (void)Index_rollbackTransaction(indexHandle);
-    }
-  #endif /* ARCHIVE_UPDATE_INDEX_WITH_TRANSACTION */
 
   if      (error != ERROR_NONE)
   {
