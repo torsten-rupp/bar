@@ -6982,6 +6982,7 @@ masterIO, // masterIO
   // create new archive
   error = Archive_create(&createInfo.archiveHandle,
                          &createInfo.storageInfo,
+                         NULL,  // archiveName
                          indexHandle,
                          uuidId,
                          entityId,

@@ -287,7 +287,7 @@ LOCAL Errors getCryptPassword(Password            *password,
   switch (archiveHandle->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
-      String_set(printableStorageName,archiveHandle->file.fileName);
+      String_set(printableStorageName,archiveHandle->file.tmpFileName);
       break;
     case ARCHIVE_IO_TYPE_STORAGE:
       Storage_getPrintableName(printableStorageName,&archiveHandle->storageInfo->storageSpecifier,NULL);
@@ -1919,18 +1919,18 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
       AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_unlock(&archiveHandle->chunkIOLock); });
 
       // get intermediate data filename
-      error = File_getTmpFileName(archiveHandle->file.fileName,"archive",tmpDirectory);
+      error = File_getTmpFileName(archiveHandle->file.tmpFileName,"archive",tmpDirectory);
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-      AUTOFREE_ADD(&autoFreeList,&archiveHandle->file.fileName,{ File_delete(archiveHandle->file.fileName,FALSE); });
+      AUTOFREE_ADD(&autoFreeList,&archiveHandle->file.tmpFileName,{ File_delete(archiveHandle->file.tmpFileName,FALSE); });
       DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
-      // create file
-      error = File_open(&archiveHandle->file.fileHandle,
-                        archiveHandle->file.fileName,
+      // create tempoary file
+      error = File_open(&archiveHandle->file.tmpFileHandle,
+                        archiveHandle->file.tmpFileName,
                         FILE_OPEN_CREATE
                        );
       if (error != ERROR_NONE)
@@ -1938,7 +1938,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-      AUTOFREE_ADD(&autoFreeList,&archiveHandle->file.fileHandle,{ File_close(&archiveHandle->file.fileHandle); });
+      AUTOFREE_ADD(&autoFreeList,&archiveHandle->file.tmpFileHandle,{ File_close(&archiveHandle->file.tmpFileHandle); });
       DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
       // write BAR header
@@ -2059,7 +2059,7 @@ if (!archiveHandle->file.openFlag) return ERROR_NONE;
       error = writeSignature(archiveHandle);
       if (error != ERROR_NONE)
       {
-        (void)File_close(&archiveHandle->file.fileHandle);
+        (void)File_close(&archiveHandle->file.tmpFileHandle);
         archiveHandle->file.openFlag = FALSE;
         Semaphore_unlock(&archiveHandle->chunkIOLock);
         return error;
@@ -2067,7 +2067,7 @@ if (!archiveHandle->file.openFlag) return ERROR_NONE;
     }
 
     // close file
-    (void)File_close(&archiveHandle->file.fileHandle);
+    (void)File_close(&archiveHandle->file.tmpFileHandle);
 
     // mark archive file "closed"
     archiveHandle->file.openFlag = FALSE;
@@ -2086,7 +2086,7 @@ if (!archiveHandle->file.openFlag) return ERROR_NONE;
                                                   isSplittedArchive(archiveHandle)
                                                     ? (int)archiveHandle->partNumber
                                                     : ARCHIVE_PART_NUMBER_NONE,
-                                                  archiveHandle->file.fileName,
+                                                  archiveHandle->file.tmpFileName,
                                                   Archive_getSize(archiveHandle),
                                                   archiveHandle->archiveStoreUserData
                                                  );
@@ -4311,6 +4311,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
 #ifdef NDEBUG
   Errors Archive_create(ArchiveHandle          *archiveHandle,
                         StorageInfo            *storageInfo,
+                        ConstString            archiveName,
                         IndexHandle            *indexHandle,
                         IndexId                uuidId,
                         IndexId                entityId,
@@ -4335,6 +4336,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                           ulong                   __lineNb__,
                           ArchiveHandle          *archiveHandle,
                           StorageInfo            *storageInfo,
+                          ConstString            archiveName,
                           IndexHandle            *indexHandle,
                           IndexId                uuidId,
                           IndexId                entityId,
@@ -4415,12 +4417,13 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->signatureKeyDataLength  = 0;
 
   archiveHandle->ioType                  = ARCHIVE_IO_TYPE_FILE;
-  archiveHandle->file.fileName           = String_new();
+  archiveHandle->file.archiveName        = String_duplicate(archiveName);
+  archiveHandle->file.tmpFileName        = String_new();
   archiveHandle->file.openFlag           = FALSE;
   archiveHandle->printableStorageName    = NULL;
   Semaphore_init(&archiveHandle->chunkIOLock);
   archiveHandle->chunkIO                 = &CHUNK_IO_FILE;
-  archiveHandle->chunkIOUserData         = &archiveHandle->file.fileHandle;
+  archiveHandle->chunkIOUserData         = &archiveHandle->file.tmpFileHandle;
 
   archiveHandle->entries                 = 0LL;
   archiveHandle->archiveFileSize         = 0LL;
@@ -4434,7 +4437,8 @@ UNUSED_VARIABLE(storageInfo);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->passwordLock,{ Semaphore_done(&archiveHandle->passwordLock); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptKey,{ Crypt_doneKey(&archiveHandle->cryptKey); });
 //  AUTOFREE_ADD(&autoFreeList,&archiveHandle->signatureCryptKey,{ Crypt_doneKey(&archiveHandle->signatureCryptKey); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->file.fileName,{ String_delete(archiveHandle->file.fileName); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->file.archiveName,{ String_delete(archiveHandle->file.archiveName); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->file.tmpFileName,{ String_delete(archiveHandle->file.tmpFileName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
 
   // get crypt salt
@@ -4763,6 +4767,7 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
 
     free(archiveHandle->encryptedKeyData);
   }
+//TODO: remove?
 //  Crypt_doneKey(&archiveHandle->signatureCryptKey);
   Crypt_doneKey(&archiveHandle->cryptKey);
 
@@ -4775,7 +4780,8 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
   switch (archiveHandle->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
-      if (archiveHandle->file.fileName != NULL) String_delete(archiveHandle->file.fileName);
+      String_delete(archiveHandle->file.tmpFileName);
+      String_delete(archiveHandle->file.archiveName);
       break;
     case ARCHIVE_IO_TYPE_STORAGE:
 //TODO: remove
@@ -4836,12 +4842,12 @@ Errors Archive_storageInterrupt(ArchiveHandle *archiveHandle)
         archiveHandle->interrupt.openFlag = archiveHandle->file.openFlag;
         if (archiveHandle->file.openFlag)
         {
-          error = File_tell(&archiveHandle->file.fileHandle,&archiveHandle->interrupt.offset);
+          error = File_tell(&archiveHandle->file.tmpFileHandle,&archiveHandle->interrupt.offset);
           if (error != ERROR_NONE)
           {
             return error;
           }
-          File_close(&archiveHandle->file.fileHandle);
+          File_close(&archiveHandle->file.tmpFileHandle);
           archiveHandle->file.openFlag = FALSE;
         }
       }
@@ -4878,7 +4884,7 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle)
       {
         if (archiveHandle->interrupt.openFlag)
         {
-          error = File_open(&archiveHandle->file.fileHandle,archiveHandle->file.fileName,FILE_OPEN_WRITE);
+          error = File_open(&archiveHandle->file.tmpFileHandle,archiveHandle->file.tmpFileName,FILE_OPEN_WRITE);
           if (error != ERROR_NONE)
           {
             return error;
@@ -4886,7 +4892,7 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle)
 #ifndef WERROR
 #warning seek?
 #endif
-          error = File_seek(&archiveHandle->file.fileHandle,archiveHandle->interrupt.offset);
+          error = File_seek(&archiveHandle->file.tmpFileHandle,archiveHandle->interrupt.offset);
           if (error != ERROR_NONE)
           {
             return error;
@@ -14067,6 +14073,7 @@ Errors Archive_copy(ConstString         storageName,
 
   // create destination
   error = Archive_create(&destinationArchiveHandle,
+NULL,//                      ConstString         archiveName,
 //                        DeltaSourceList                 *deltaSourceList,
                          jobOptions,
 archiveHandle->archiveInitFunction              = NULL;

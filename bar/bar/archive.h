@@ -237,10 +237,11 @@ typedef struct
     // local file
     struct
     {
-      String               appendFileName;
-      String               fileName;
-      FileHandle           fileHandle;
-      bool                 openFlag;                                   // TRUE iff archive file is open
+//TODO
+String archiveName;
+      String               tmpFileName;                                // temporary archive file name
+      FileHandle           tmpFileHandle;                              // temporary file handle
+      bool                 openFlag;                                   // TRUE iff temporary archive file is open
     } file;
     // local or remote storage
     struct
@@ -607,6 +608,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 * Purpose: create archive
 * Input  : archiveHandle        - archive handle
 *          storageInfo          - storage info
+*          archiveName          - archive name (can be NULL)
 *          indexHandle          - index handle or NULL
 *          uuidId               - index UUID id or INDEX_ID_NONE
 *          entityId             - index entity id or INDEX_ID_NONE
@@ -631,6 +633,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 #ifdef NDEBUG
   Errors Archive_create(ArchiveHandle          *archiveHandle,
                         StorageInfo            *storageInfo,
+                        ConstString            archiveName,
                         IndexHandle            *indexHandle,
                         IndexId                uuidId,
                         IndexId                entityId,
@@ -655,6 +658,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                           ulong                  __lineNb__,
                           ArchiveHandle          *archiveHandle,
                           StorageInfo            *storageInfo,
+                          ConstString            archiveName,
                           IndexHandle            *indexHandle,
                           IndexId                uuidId,
                           IndexId                entityId,
