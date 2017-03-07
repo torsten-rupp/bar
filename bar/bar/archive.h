@@ -826,6 +826,11 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 * Purpose: add new file to archive
 * Input  : archiveEntryInfo          - archive file entry info variable
 *          archiveHandle             - archive handle
+*          indexHandle               - index handle (can be NULL)
+*          deltaCompressAlgorithm    - used delta compression algorithm
+*          byteCompressAlgorithm     - used byte compression algorithm
+*          cryptAlgorithm            - used crypt algorithm
+*          cryptType                 - used crypt type
 *          fileName                  - file name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -846,6 +851,10 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
   Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveHandle                   *archiveHandle,
                               IndexHandle                     *indexHandle,
+                              CompressAlgorithms              deltaCompressAlgorithm,
+                              CompressAlgorithms              byteCompressAlgorithm,
+                              CryptAlgorithms                 cryptAlgorithm,
+                              CryptTypes                      cryptType,
                               ConstString                     fileName,
                               const FileInfo                  *fileInfo,
                               const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -860,6 +869,10 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveHandle                   *archiveHandle,
                                 IndexHandle                     *indexHandle,
+                                CompressAlgorithms              deltaCompressAlgorithm,
+                                CompressAlgorithms              byteCompressAlgorithm,
+                                CryptAlgorithms                 cryptAlgorithm,
+                                CryptTypes                      cryptType,
                                 ConstString                     fileName,
                                 const FileInfo                  *fileInfo,
                                 const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -873,47 +886,60 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 /***********************************************************************\
 * Name   : Archive_newImageEntry
 * Purpose: add new block device image to archive
-* Input  : archiveEntryInfo  - archive image entry info variable
-*          archiveHandle     - archive handle
-*          deviceName        - special device name
-*          deviceInfo        - device info
-*          fragmentOffset    - fragment offset [blocks]
-*          fragmentSize      - fragment size [blocks]
-*          deltaCompressFlag - TRUE for delta compression, FALSE
-*                              otherwise
-*          byteCompressFlag  - TRUE for byte compression, FALSE
-*                              otherwise (e. g. file is to small
-*                              or already compressed)
+* Input  : archiveEntryInfo       - archive image entry info variable
+*          archiveHandle          - archive handle
+*          indexHandle            - index handle (can be NULL)
+*          deltaCompressAlgorithm - used delta compression algorithm
+*          byteCompressAlgorithm  - used byte compression algorithm
+*          cryptAlgorithm         - used crypt algorithm
+*          cryptType              - used crypt type
+*          deviceName             - special device name
+*          deviceInfo             - device info
+*          fragmentOffset         - fragment offset [blocks]
+*          fragmentSize           - fragment size [blocks]
+*          deltaCompressFlag      - TRUE for delta compression, FALSE
+*                                   otherwise
+*          byteCompressFlag       - TRUE for byte compression, FALSE
+*                                   otherwise (e. g. file is to small or
+*                                   already compressed)
 * Output : archiveEntryInfo - archive image entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
-                               ArchiveHandle    *archiveHandle,
-                               IndexHandle      *indexHandle,
-                               ConstString      deviceName,
-                               const DeviceInfo *deviceInfo,
-                               FileSystemTypes  fileSystemType,
-                               uint64           fragmentOffset,
-                               uint64           fragmentSize,
-                               const bool       deltaCompressFlag,
-                               const bool       byteCompressFlag
+  Errors Archive_newImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
+                               ArchiveHandle      *archiveHandle,
+                               IndexHandle        *indexHandle,
+                               CompressAlgorithms deltaCompressAlgorithm,
+                               CompressAlgorithms byteCompressAlgorithm,
+                               CryptAlgorithms    cryptAlgorithm,
+                               CryptTypes         cryptType,
+                               ConstString        deviceName,
+                               const DeviceInfo   *deviceInfo,
+                               FileSystemTypes    fileSystemType,
+                               uint64             fragmentOffset,
+                               uint64             fragmentSize,
+                               const bool         deltaCompressFlag,
+                               const bool         byteCompressFlag
                               );
 #else /* not NDEBUG */
-  Errors __Archive_newImageEntry(const char       *__fileName__,
-                                 ulong            __lineNb__,
-                                 ArchiveEntryInfo *archiveEntryInfo,
-                                 ArchiveHandle    *archiveHandle,
-                                 IndexHandle      *indexHandle,
-                                 ConstString      deviceName,
-                                 const DeviceInfo *deviceInfo,
-                                 FileSystemTypes  fileSystemType,
-                                 uint64           fragmentOffset,
-                                 uint64           fragmentSize,
-                                 const bool       deltaCompressFlag,
-                                 const bool       byteCompressFlag
+  Errors __Archive_newImageEntry(const char         *__fileName__,
+                                 ulong              __lineNb__,
+                                 ArchiveEntryInfo   *archiveEntryInfo,
+                                 ArchiveHandle      *archiveHandle,
+                                 IndexHandle        *indexHandle,
+                                 CompressAlgorithms deltaCompressAlgorithm,
+                                 CompressAlgorithms byteCompressAlgorithm,
+                                 CryptAlgorithms    cryptAlgorithm,
+                                 CryptTypes         cryptType,
+                                 ConstString        deviceName,
+                                 const DeviceInfo   *deviceInfo,
+                                 FileSystemTypes    fileSystemType,
+                                 uint64             fragmentOffset,
+                                 uint64             fragmentSize,
+                                 const bool         deltaCompressFlag,
+                                 const bool         byteCompressFlag
                                 );
 #endif /* NDEBUG */
 
@@ -923,7 +949,10 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 * Input  : archiveEntryInfo          - archive directory entry info
 *                                      variable
 *          archiveHandle             - archive handle
-*          name                      - directory name
+*          indexHandle               - index handle (can be NULL)
+*          cryptAlgorithm            - used crypt algorithm
+*          cryptType                 - used crypt type
+*          directoryName             - directory name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
 *                                      NULL
@@ -936,6 +965,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
   Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
                                    IndexHandle                     *indexHandle,
+                                   CryptAlgorithms                 cryptAlgorithm,
+                                   CryptTypes                      cryptType,
                                    ConstString                     directoryName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -946,6 +977,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                      ArchiveEntryInfo                *archiveEntryInfo,
                                      ArchiveHandle                   *archiveHandle,
                                      IndexHandle                     *indexHandle,
+                                     CryptAlgorithms                 cryptAlgorithm,
+                                     CryptTypes                      cryptType,
                                      ConstString                     directoryName,
                                      const FileInfo                  *fileInfo,
                                      const FileExtendedAttributeList *fileExtendedAttributeList
@@ -957,6 +990,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 * Purpose: add new link to archive
 * Input  : archiveEntryInfo          - archive link entry variable
 *          archiveHandle             - archive handle
+*          indexHandle               - index handle (can be NULL)
+*          cryptAlgorithm            - used crypt algorithm
+*          cryptType                 - used crypt type
 *          fileName                  - link name
 *          destinationName           - name of referenced file
 *          fileInfo                  - file info
@@ -971,6 +1007,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
   Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveHandle                   *archiveHandle,
                               IndexHandle                     *indexHandle,
+                              CryptAlgorithms                 cryptAlgorithm,
+                              CryptTypes                      cryptType,
                               ConstString                     linkName,
                               ConstString                     destinationName,
                               const FileInfo                  *fileInfo,
@@ -982,6 +1020,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveHandle                   *archiveHandle,
                                 IndexHandle                     *indexHandle,
+                                CryptAlgorithms                 cryptAlgorithm,
+                                CryptTypes                      cryptType,
                                 ConstString                     linkName,
                                 ConstString                     destinationName,
                                 const FileInfo                  *fileInfo,
@@ -995,6 +1035,11 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 * Input  : archiveEntryInfo          - archive hardlink entry info
 *                                      variable
 *          archiveHandle             - archive handle
+*          indexHandle               - index handle (can be NULL)
+*          deltaCompressAlgorithm    - used delta compression algorithm
+*          byteCompressAlgorithm     - used byte compression algorithm
+*          cryptAlgorithm            - used crypt algorithm
+*          cryptType                 - used crypt type
 *          fileNameList              - list of file names
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -1015,6 +1060,10 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
   Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                   ArchiveHandle                   *archiveHandle,
                                   IndexHandle                     *indexHandle,
+                                  CompressAlgorithms              deltaCompressAlgorithm,
+                                  CompressAlgorithms              byteCompressAlgorithm,
+                                  CryptAlgorithms                 cryptAlgorithm,
+                                  CryptTypes                      cryptType,
                                   const StringList                *fileNameList,
                                   const FileInfo                  *fileInfo,
                                   const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -1029,6 +1078,10 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                     ArchiveEntryInfo                *archiveEntryInfo,
                                     ArchiveHandle                   *archiveHandle,
                                     IndexHandle                     *indexHandle,
+                                    CompressAlgorithms              deltaCompressAlgorithm,
+                                    CompressAlgorithms              byteCompressAlgorithm,
+                                    CryptAlgorithms                 cryptAlgorithm,
+                                    CryptTypes                      cryptType,
                                     const StringList                *fileNameList,
                                     const FileInfo                  *fileInfo,
                                     const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -1045,6 +1098,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 * Input  : archiveEntryInfo          - archive special entry info
 *                                      variable
 *          archiveHandle             - archive handle
+*          indexHandle               - index handle (can be NULL)
+*          cryptAlgorithm            - used crypt algorithm
+*          cryptType                 - used crypt type
 *          specialName               - special name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -1058,6 +1114,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
   Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                  ArchiveHandle                   *archiveHandle,
                                  IndexHandle                     *indexHandle,
+                                 CryptAlgorithms                 cryptAlgorithm,
+                                 CryptTypes                      cryptType,
                                  ConstString                     specialName,
                                  const FileInfo                  *fileInfo,
                                  const FileExtendedAttributeList *fileExtendedAttributeList
@@ -1068,6 +1126,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                    ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
                                    IndexHandle                     *indexHandle,
+                                   CryptAlgorithms                 cryptAlgorithm,
+                                   CryptTypes                      cryptType,
                                    ConstString                     specialName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
