@@ -671,6 +671,8 @@ Errors __Crypt_init(const char      *__fileName__,
           uint         keyLength;
           Errors       error;
 
+          assert(cryptKey != NULL);
+
           // get gcrpyt algorithm, gcrypt mode, gcrypt flags
           gcryptAlgorithm = 0;
           switch (cryptAlgorithm)
