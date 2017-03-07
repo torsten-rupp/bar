@@ -18,13 +18,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "stringlists.h"
-
 #include "bar.h"
-#include "entrylists.h"
-#include "patternlists.h"
-#include "deltasourcelists.h"
-#include "crypt.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -48,9 +42,6 @@
 * Name   : Commands_convert
 * Purpose: convert archive and file system content
 * Input  : archiveFileNameList - list with archive files
-*          includeEntryList    - include entry list
-*          excludePatternList  - exclude pattern list
-*          deltaSourceList     - delta source list
 *          jobOptions          - job options
 *          getPasswordFunction - get password call back
 *          getPasswordUserData - user data for get password call back
@@ -61,9 +52,6 @@
 \***********************************************************************/
 
 Errors Command_convert(const StringList    *archiveFileNameList,
-                       const EntryList     *includeEntryList,
-                       const PatternList   *excludePatternList,
-                       DeltaSourceList     *deltaSourceList,
                        JobOptions          *jobOptions,
                        GetPasswordFunction getPasswordFunction,
                        void                *getPasswordUserData,
