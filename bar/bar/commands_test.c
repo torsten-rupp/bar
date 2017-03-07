@@ -1362,7 +1362,7 @@ NULL,  //               requestedAbortFlag,
     entryMsg.offset           = offset;
     if (!MsgQueue_put(&testInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
     {
-      HALT_INTERNAL_ERROR("Send message to test threads!");
+      HALT_INTERNAL_ERROR("Send message to test threads fail!");
     }
 
     // next entry
