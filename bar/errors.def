@@ -234,6 +234,7 @@ ERROR INIT_CRYPT
     stringSet(errorText,"init crypt fail",sizeof(errorText));
   }
 
+ERROR NO_DECRYPT_KEY                   "no decrypt key for cipher"
 ERROR NO_CRYPT_PASSWORD                "no password given for cipher"
 ERROR INVALID_CRYPT_PASSWORD           "invalid decryption password"
 ERROR CRYPT_PASSWORDS_MISMATCH         "encryption passwords mismatch"

@@ -7547,6 +7547,15 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
     AutoFree_freeAll(&autoFreeList2);
     error = Chunk_seek(&archiveEntryInfo->meta.chunkMeta.info,index);
 
+    // check decrypt key (if encrypted)
+//TODO: multi-crypt
+    if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
+        && (decryptKey == NULL)
+       )
+    {
+      error = ERROR_NO_DECRYPT_KEY;
+    }
+
     // init meta entry crypt
     if (error == ERROR_NONE)
     {
@@ -7942,6 +7951,15 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
     // reset
     AutoFree_freeAll(&autoFreeList2);
     error = Chunk_seek(&archiveEntryInfo->file.chunkFile.info,index);
+
+    // check decrypt key (if encrypted)
+//TODO: multi-crypt
+    if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
+        && (decryptKey == NULL)
+       )
+    {
+      error = ERROR_NO_DECRYPT_KEY;
+    }
 
     // init file entry/extended attribute/delta/data/file crypt
     if (error == ERROR_NONE)
@@ -8581,6 +8599,15 @@ NULL,//                         password,
     AutoFree_freeAll(&autoFreeList2);
     error = Chunk_seek(&archiveEntryInfo->image.chunkImage.info,index);
 
+    // check decrypt key (if encrypted)
+//TODO: multi-crypt
+    if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
+        && (decryptKey == NULL)
+       )
+    {
+      error = ERROR_NO_DECRYPT_KEY;
+    }
+
     // init image entry/delta/data/image crypt
     if (error == ERROR_NONE)
     {
@@ -9083,6 +9110,15 @@ NULL,//                         password,
     AutoFree_freeAll(&autoFreeList2);
     error = Chunk_seek(&archiveEntryInfo->directory.chunkDirectory.info,index);
 
+    // check decrypt key (if encrypted)
+//TODO: multi-crypt
+    if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
+        && (decryptKey == NULL)
+       )
+    {
+      error = ERROR_NO_DECRYPT_KEY;
+    }
+
     // init crypt
     if (error == ERROR_NONE)
     {
@@ -9495,6 +9531,15 @@ NULL,//                         password,
     // reset
     AutoFree_freeAll(&autoFreeList2);
     error = Chunk_seek(&archiveEntryInfo->link.chunkLink.info,index);
+
+    // check decrypt key (if encrypted)
+//TODO: multi-crypt
+    if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
+        && (decryptKey == NULL)
+       )
+    {
+      error = ERROR_NO_DECRYPT_KEY;
+    }
 
     // init crypt
     if (error == ERROR_NONE)
@@ -9954,6 +9999,15 @@ NULL,//                         password,
     // reset
     AutoFree_freeAll(&autoFreeList2);
     error = Chunk_seek(&archiveEntryInfo->hardLink.chunkHardLink.info,index);
+
+    // check decrypt key (if encrypted)
+//TODO: multi-crypt
+    if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
+        && (decryptKey == NULL)
+       )
+    {
+      error = ERROR_NO_DECRYPT_KEY;
+    }
 
     // init crypt
     if (error == ERROR_NONE)
@@ -10582,6 +10636,15 @@ NULL,//                         password,
     // reset
     AutoFree_freeAll(&autoFreeList2);
     error = Chunk_seek(&archiveEntryInfo->special.chunkSpecial.info,index);
+
+    // check decrypt key (if encrypted)
+//TODO: multi-crypt
+    if (   Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0])
+        && (decryptKey == NULL)
+       )
+    {
+      error = ERROR_NO_DECRYPT_KEY;
+    }
 
     // init crypt
     if (error == ERROR_NONE)
