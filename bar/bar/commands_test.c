@@ -1172,7 +1172,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 * Name   : testArchiveContent
 * Purpose: test archive content
 * Input  : storageSpecifier    - storage specifier
-*          fileName            - file name (can be NULL)
+*          archiveName         - archive name (can be NULL)
 *          includeEntryList    - include entry list
 *          excludePatternList  - exclude pattern list
 *          deltaSourceList     - delta source list
@@ -1187,7 +1187,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 \***********************************************************************/
 
 LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
-                                ConstString         fileName,
+                                ConstString         archiveName,
                                 const EntryList     *includeEntryList,
                                 const PatternList   *excludePatternList,
                                 DeltaSourceList     *deltaSourceList,
@@ -1228,7 +1228,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   }
 
   // get printable storage name
-  Storage_getPrintableName(printableStorageName,storageSpecifier,fileName);
+  Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
 
   // init storage
   error = Storage_init(&storageInfo,
@@ -1256,7 +1256,7 @@ NULL, // masterSocketHandle
   if (!jobOptions->skipVerifySignaturesFlag)
   {
     error = Archive_verifySignatures(&storageInfo,
-                                     fileName,
+                                     archiveName,
                                      jobOptions,
                                      &allCryptSignatureState
                                     );
@@ -1305,7 +1305,7 @@ NULL,  //               requestedAbortFlag,
   // open archive
   error = Archive_open(&archiveHandle,
                        &storageInfo,
-                       fileName,
+                       archiveName,
                        deltaSourceList,
                        getPasswordFunction,
                        getPasswordUserData,
