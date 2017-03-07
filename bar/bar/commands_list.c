@@ -2117,7 +2117,7 @@ LOCAL void printArchiveList(void)
 * Name   : listArchiveContent
 * Purpose: list archive content
 * Input  : storageSpecifier     - storage specifier
-*          fileName             - file name
+*          archiveName          - archive name (can be NULL)
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
 *          showEntriesFlag      - TRUE to show entries
@@ -2132,7 +2132,7 @@ LOCAL void printArchiveList(void)
 \***********************************************************************/
 
 LOCAL Errors listArchiveContent(StorageSpecifier    *storageSpecifier,
-                                ConstString         fileName,
+                                ConstString         archiveName,
                                 const EntryList     *includeEntryList,
                                 const PatternList   *excludePatternList,
                                 bool                showEntriesFlag,
@@ -2164,7 +2164,7 @@ remoteBarFlag=FALSE;
   printableStorageName = String_new();
 
   // get printable storage name
-  Storage_getPrintableName(printableStorageName,storageSpecifier,fileName);
+  Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
 
   allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
   printedHeaderFlag      = FALSE;
@@ -2206,7 +2206,7 @@ NULL, // masterSocketHandle
         if (!jobOptions->skipVerifySignaturesFlag)
         {
           error = Archive_verifySignatures(&storageInfo,
-                                           fileName,
+                                           archiveName,
                                            jobOptions,
                                            &allCryptSignatureState
                                           );
@@ -2224,7 +2224,7 @@ NULL, // masterSocketHandle
         // open archive
         error = Archive_open(&archiveHandle,
                              &storageInfo,
-                             fileName,
+                             archiveName,
                              NULL,  // deltaSourceList
                              getPasswordFunction,
                              getPasswordUserData,
