@@ -790,9 +790,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
       }
     }
 
-    printInfo(1,"OK\n",
-              fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw"
-             );
+    printInfo(1,"OK\n");
 
     /* check if all data read.
        Note: it is not possible to check if all data is read when
@@ -1043,7 +1041,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
       return error;
     }
 
-    // check link name
+    // check link
     localFileName = String_new();
     error = File_readLink(localFileName,linkName);
     if (error != ERROR_NONE)
