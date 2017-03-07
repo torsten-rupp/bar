@@ -746,6 +746,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("no-fragments-check",           0,  1,2,jobOptions.noFragmentsCheckFlag,                                                                              "do not check completeness of file fragments"                              ),
   CMD_OPTION_BOOLEAN      ("no-index-database",            0,  1,1,jobOptions.noIndexDatabaseFlag,                                                                               "do not store index database for archives"                                 ),
   CMD_OPTION_SELECT       ("archive-file-mode",            0,  1,2,jobOptions.archiveFileMode,                      COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES,                     "select archive files write mode"                                          ),
+  // Note: shortcut for --archive-file-mode=overwrite
   CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,2,jobOptions.archiveFileModeOverwriteFlag,                                                                      "overwrite existing archive files"                                         ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,2,jobOptions.overwriteEntriesFlag,                                                                              "overwrite existing entries"                                               ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,2,jobOptions.waitFirstVolumeFlag,                                                                               "wait for first volume"                                                    ),
@@ -8829,15 +8830,8 @@ NULL, // masterSocketHandle
             break;
           case COMMAND_CONVERT:
             error = Command_convert(&storageNameList,
-                                    &includeEntryList,
-                                    &excludePatternList,
-                                    &deltaSourceList,
                                     &jobOptions,
-                                    CALLBACK(NULL,NULL),  // restoreStatusInfo callback
-                                    CALLBACK(NULL,NULL),  // restoreError callback
                                     CALLBACK(getPasswordConsole,NULL),
-                                    CALLBACK(NULL,NULL),  // isPause callback
-                                    CALLBACK(NULL,NULL),  // isAborted callback
                                     NULL  // logHandle
                                    );
             break;
