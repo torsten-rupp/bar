@@ -904,7 +904,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
 
 LOCAL void formatString(struct __String *string,
                         const char      *format,
-                        const va_list   arguments
+                        va_list         arguments
                        )
 {
   FormatToken  formatToken;
@@ -1403,13 +1403,13 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
 *            n
 \***********************************************************************/
 
-LOCAL bool parseString(const char    *string,
-                       ulong         length,
-                       ulong         index,
-                       const char    *format,
-                       const va_list arguments,
-                       const char    *stringQuotes,
-                       long          *nextIndex
+LOCAL bool parseString(const char *string,
+                       ulong      length,
+                       ulong      index,
+                       const char *format,
+                       va_list    arguments,
+                       const char *stringQuotes,
+                       long       *nextIndex
                       )
 {
   FormatToken formatToken;
