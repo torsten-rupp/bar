@@ -375,6 +375,7 @@ BAR_SOURCES          = bar.c \
                        commands_test.c \
                        commands_compare.c \
                        commands_restore.c \
+                       commands_convert.c \
                        files.c \
                        devices.c \
                        filesystems.c \
@@ -1038,9 +1039,11 @@ functionSlaveCopy = \
 #   with compression defined in COMPRESS_NAMES
 #   with encryption defined in CRYPT_NAMES
 #   asymmetric crypt
+#   signature
 #   splitting
 #   everything together
 #   parameters and errors
+#   convert
 #   images
 #   dvd
 #
