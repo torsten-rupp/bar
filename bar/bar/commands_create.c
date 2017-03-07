@@ -156,7 +156,7 @@ typedef struct
   uint64     fragmentSize;
 } EntryMsg;
 
-// storage message, send from main -> storage thread
+// storage message, send from create threads -> storage thread
 typedef struct
 {
   IndexId      uuidId;
@@ -234,8 +234,6 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 
   String_delete(storageMsg->archiveName);
   String_delete(storageMsg->fileName);
-//  String_delete(storageMsg->scheduleUUID);
-//  String_delete(storageMsg->jobUUID);
 }
 
 /***********************************************************************\
@@ -4608,6 +4606,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
     // free resources
     freeStorageMsg(&storageMsg,NULL);
+
     AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
   }
 
@@ -7047,10 +7046,12 @@ masterIO, // masterIO
   {
     HALT_INTERNAL_ERROR("Cannot stop collector sum thread!");
   }
+  Thread_done(&collectorSumThread);
   if (!Thread_join(&collectorThread))
   {
     HALT_INTERNAL_ERROR("Cannot stop collector thread!");
   }
+  Thread_done(&collectorThread);
 
   // wait for and done create threads
   MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
@@ -7083,6 +7084,7 @@ masterIO, // masterIO
   {
     HALT_INTERNAL_ERROR("Cannot stop storage thread!");
   }
+  Thread_done(&storageThread);
 
   // final update of status info
   (void)updateStatusInfo(&createInfo,TRUE);
@@ -7209,9 +7211,6 @@ masterIO, // masterIO
   }
 
   // free resources
-  Thread_done(&collectorSumThread);
-  Thread_done(&collectorThread);
-  Thread_done(&storageThread);
   if (useIncrementalFileInfoFlag)
   {
     String_delete(incrementalListFileName);
