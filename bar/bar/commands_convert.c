@@ -251,15 +251,19 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   FileInfo      fileInfo;
   String        archiveName;
   StorageMsg    storageMsg;
-  SemaphoreLock semaphoreLock;
 
   assert(storageInfo != NULL);
   assert(!String_isEmpty(intermediateFileName));
   assert(convertInfo != NULL);
 
   UNUSED_VARIABLE(indexHandle);
+  UNUSED_VARIABLE(uuidId);
+  UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(jobUUID);
   UNUSED_VARIABLE(scheduleUUID);
+  UNUSED_VARIABLE(entityId);
+  UNUSED_VARIABLE(storageId);
+  UNUSED_VARIABLE(partNumber);
 
   // get file info
 // TODO replace by getFileSize()
@@ -334,20 +338,10 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
   FileHandle       fileHandle;
   uint             retryCount;
   uint64           archiveSize;
-  bool             appendFlag;
   StorageHandle    storageHandle;
   ulong            bufferLength;
-  SemaphoreLock    semaphoreLock;
-  String           pattern;
 
   String           pathName;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          storageId;
-  IndexId          existingEntityId;
-  IndexId          existingStorageId;
-  String           existingStorageName;
-  String           existingPathName;
-  StorageSpecifier existingStorageSpecifier;
 
   assert(convertInfo != NULL);
   assert(convertInfo->jobOptions != NULL);
@@ -361,17 +355,10 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
   }
   printableStorageName = String_new();
   pathName             = String_new();
-  existingStorageName  = String_new();
-  existingPathName     = String_new();
-  Storage_initSpecifier(&existingStorageSpecifier);
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
   AUTOFREE_ADD(&autoFreeList,pathName,{ String_delete(printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,pathName,{ String_delete(pathName); });
-  AUTOFREE_ADD(&autoFreeList,existingStorageName,{ String_delete(existingStorageName); });
-  AUTOFREE_ADD(&autoFreeList,existingPathName,{ String_delete(existingPathName); });
-  AUTOFREE_ADD(&autoFreeList,&existingStorageSpecifier,{ Storage_doneSpecifier(&existingStorageSpecifier); });
 
-fprintf(stderr,"%s, %d: -----+++++\n",__FILE__,__LINE__);
   // store archives
   while (   (convertInfo->failError == ERROR_NONE)
 //         && !isAborted(createInfo)
@@ -388,11 +375,9 @@ fprintf(stderr,"%s, %d: -----+++++\n",__FILE__,__LINE__);
     {
       break;
     }
-fprintf(stderr,"%s, %d: get store %s\n",__FILE__,__LINE__,String_cString(storageMsg.archiveName));
     AUTOFREE_ADD(&autoFreeList,&storageMsg,
                  {
                    File_delete(storageMsg.fileName,FALSE);
-fprintf(stderr,"%s, %d: freeStorageMsg in au\n",__FILE__,__LINE__);
                    freeStorageMsg(&storageMsg,NULL);
                  }
                 );
@@ -439,7 +424,6 @@ fprintf(stderr,"%s, %d: freeStorageMsg in au\n",__FILE__,__LINE__);
 
     // write data to storage
     retryCount  = 0;
-    appendFlag  = FALSE;
     archiveSize = 0LL;
     do
     {
@@ -563,13 +547,6 @@ fprintf(stderr,"%s, %d: freeStorageMsg in au\n",__FILE__,__LINE__);
 
     // done
     printInfo(1,"OK\n");
-    logMessage(convertInfo->logHandle,
-               LOG_TYPE_STORAGE,
-               "%s '%s' (%llu bytes)\n",
-               appendFlag ? "Appended to" : "Storged",
-               String_cString(printableStorageName),
-               archiveSize
-              );
 
     // delete temporary storage file
     error = File_delete(storageMsg.fileName,FALSE);
@@ -605,9 +582,6 @@ fprintf(stderr,"%s, %d: freeStorageMsg in au\n",__FILE__,__LINE__);
   }
 
   // free resoures
-  Storage_doneSpecifier(&existingStorageSpecifier);
-  String_delete(existingPathName);
-  String_delete(existingStorageName);
   String_delete(pathName);
   String_delete(printableStorageName);
   free(buffer);
@@ -623,7 +597,7 @@ fprintf(stderr,"%s, %d: freeStorageMsg in au\n",__FILE__,__LINE__);
 *          destinationArchiveHandle - destination archive handle
 *          printableStorageName     - printable storage name
 *          jobOptions               - job options
-*          buffer0,buffer1          - buffers for temporary data
+*          buffer                   - buffer for temporary data
 *          bufferSize               - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
@@ -641,15 +615,15 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   Errors                    error;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CompressAlgorithms        deltaCompressAlgorithm,byteCompressAlgorithm;
+  CryptAlgorithms           cryptAlgorithm;
+  CryptTypes                cryptType;
   String                    fileName;
   FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
   uint64                    fragmentOffset,fragmentSize;
-  FileHandle                fileHandle;
   uint64                    length;
   ulong                     bufferLength;
-  SemaphoreLock             semaphoreLock;
 
   // read source file entry
   fileName = String_new();
@@ -658,8 +632,8 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                                 sourceArchiveHandle,
                                 &deltaCompressAlgorithm,
                                 &byteCompressAlgorithm,
-                                NULL,  // cryptAlgorithm
-                                NULL,  // cryptType
+                                &cryptAlgorithm,
+                                &cryptType,
                                 fileName,
                                 &fileInfo,
                                 &fileExtendedAttributeList,
@@ -682,18 +656,36 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
 
   printInfo(1,"  Convert file '%s'...",String_cString(fileName));
 
+//TODO
+if (jobOptions->compressAlgorithms.byte != COMPRESS_ALGORITHM_NONE) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
+
   // create new file entry
   error = Archive_newFileEntry(&destinationArchiveEntryInfo,
                                destinationArchiveHandle,
                                NULL,  // indexHandle,
+                               deltaCompressAlgorithm,
+                               byteCompressAlgorithm,
+                               cryptAlgorithm,
+cryptType,
                                fileName,
                                &fileInfo,
                                &fileExtendedAttributeList,
                                fragmentOffset,
                                fragmentSize,
-FALSE,//                               tryDeltaCompressFlag,
-FALSE//                               tryByteCompressFlag
+                               TRUE,  // tryDeltaCompressFlag,
+                               TRUE  // tryByteCompressFlag
                               );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot create new archive file entry '%s' (error: %s)!\n",
+               printableStorageName,
+               Error_getText(error)
+              );
+    File_doneExtendedAttributes(&fileExtendedAttributeList);
+    String_delete(fileName);
+    return error;
+  }
+  DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
 
   // convert archive and file content
   length = 0LL;
@@ -706,7 +698,7 @@ FALSE//                               tryByteCompressFlag
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
-      printError("Cannot read content of archive '%s' (error: %s)!\n",
+      printError("Cannot read content of file '%s' (error: %s)!\n",
                  printableStorageName,
                  Error_getText(error)
                 );
@@ -719,7 +711,7 @@ FALSE//                               tryByteCompressFlag
     if (error != ERROR_NONE)
     {
       printInfo(0,"FAIL!\n");
-      printError("Cannot write file '%s' (error: %s)!\n",
+      printError("Cannot write content of file '%s' (error: %s)!\n",
                  printableStorageName,
                  Error_getText(error)
                 );
@@ -739,7 +731,7 @@ FALSE//                               tryByteCompressFlag
     String_delete(fileName);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { (void)Archive_closeEntry(&destinationArchiveEntryInfo); (void)Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
 
   printInfo(2,"    \b\b\b\b");
 
@@ -793,7 +785,7 @@ FALSE//                               tryByteCompressFlag
 *          destinationArchiveHandle - destination archive handle
 *          printableStorageName     - printable storage name
 *          jobOptions               - job options
-*          buffer0,buffer1          - buffers for temporary data
+*          buffer                   - buffer for temporary data
 *          bufferSize               - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
@@ -804,36 +796,33 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                                ArchiveHandle    *destinationArchiveHandle,
                                const char       *printableStorageName,
                                const JobOptions *jobOptions,
-                               byte             *buffer0,
-                               byte             *buffer1,
+                               byte             *buffer,
                                uint             bufferSize
                               )
 {
   Errors             error;
-  ArchiveEntryInfo   archiveEntryInfo;
+  ArchiveEntryInfo   sourceArchiveEntryInfo;
   CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
+  CryptAlgorithms    cryptAlgorithm;
+  CryptTypes         cryptType;
   String             deviceName;
   DeviceInfo         deviceInfo;
+  ArchiveEntryInfo   destinationArchiveEntryInfo;
   uint64             blockOffset,blockCount;
-  DeviceHandle       deviceHandle;
-  bool               fileSystemFlag;
-  FileSystemHandle   fileSystemHandle;
-  bool               equalFlag;
+  FileSystemTypes    fileSystemType;
   uint64             block;
-  ulong              diffIndex;
-  SemaphoreLock      semaphoreLock;
 
-  // read image
+  // read source image entry
   deviceName = String_new();
-  error = Archive_readImageEntry(&archiveEntryInfo,
+  error = Archive_readImageEntry(&sourceArchiveEntryInfo,
                                  sourceArchiveHandle,
                                  &deltaCompressAlgorithm,
                                  &byteCompressAlgorithm,
-                                 NULL,  // cryptAlgorithm
-                                 NULL,  // cryptType
+                                 &cryptAlgorithm,
+                                 &cryptType,
                                  deviceName,
                                  &deviceInfo,
-                                 NULL,  // fileSystemType
+                                 &fileSystemType,
                                  NULL,  // deltaSourceName
                                  NULL,  // deltaSourceSize
                                  &blockOffset,
@@ -848,7 +837,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
     String_delete(deviceName);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
   if (deviceInfo.blockSize > bufferSize)
   {
     printError("Device block size %llu on '%s' is too big (max: %llu)\n",
@@ -859,129 +848,51 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
     String_delete(deviceName);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
   assert(deviceInfo.blockSize > 0);
 
   printInfo(1,"  Convert image '%s'...",String_cString(deviceName));
 
-  // check if device/image exists
-  if (!File_exists(deviceName))
-  {
-    printInfo(1,"FAIL!\n");
-    printError("Device '%s' not found!\n",String_cString(deviceName));
-    (void)Archive_closeEntry(&archiveEntryInfo);
-    String_delete(deviceName);
-    return error;
-  }
+//TODO
+if (jobOptions->compressAlgorithms.byte != COMPRESS_ALGORITHM_NONE) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
 
-  // get device info
-  error = Device_getDeviceInfo(&deviceInfo,deviceName);
+  // create new image entry
+  error = Archive_newImageEntry(&destinationArchiveEntryInfo,
+                                destinationArchiveHandle,
+                                NULL,  // indexHandle,
+                                deltaCompressAlgorithm,
+                                byteCompressAlgorithm,
+                                cryptAlgorithm,
+cryptType,
+                                deviceName,
+                                &deviceInfo,
+                                fileSystemType,
+                                blockOffset,
+                                blockCount,
+                                TRUE,  // tryDeltaCompressFlag,
+                                TRUE  // tryByteCompressFlag
+                               );
   if (error != ERROR_NONE)
   {
-    (void)Archive_closeEntry(&archiveEntryInfo);
-    if (jobOptions->skipUnreadableFlag)
-    {
-      printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      String_delete(deviceName);
-    }
-    else
-    {
-      printInfo(1,"FAIL\n");
-      printError("Cannot open device '%s' (error: %s)\n",
-                 String_cString(deviceName),
-                 Error_getText(error)
-                );
-      String_delete(deviceName);
-      return error;
-    }
-  }
-  DEBUG_TESTCODE() { Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
-
-  // check device block size, get max. blocks in buffer
-  if (deviceInfo.blockSize > bufferSize)
-  {
-    printInfo(1,"FAIL\n");
-    printError("Device block size %llu on '%s' is too big (max: %llu)\n",
-               deviceInfo.blockSize,
-               String_cString(deviceName),
-               bufferSize
-              );
-    (void)Archive_closeEntry(&archiveEntryInfo);
-    String_delete(deviceName);
-    return ERROR_INVALID_DEVICE_BLOCK_SIZE;
-  }
-  assert(deviceInfo.blockSize > 0);
-
-  // open device
-  error = Device_open(&deviceHandle,deviceName,DEVICE_OPEN_READ);
-  if (error != ERROR_NONE)
-  {
-    printInfo(1,"FAIL!\n");
-    printError("Cannot open file '%s' (error: %s)\n",
-               String_cString(deviceName),
+    printError("Cannot create new archive image entry '%s' (error: %s)!\n",
+               printableStorageName,
                Error_getText(error)
               );
-    (void)Archive_closeEntry(&archiveEntryInfo);
     String_delete(deviceName);
     return error;
   }
-  DEBUG_TESTCODE() { Device_close(&deviceHandle); Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
-
-  // check image size
-  if (deviceInfo.size != Device_getSize(&deviceHandle))
-  {
-    printInfo(1,"FAIL!\n");
-    printError("'%s' differ in size: expected %lld bytes, found %lld bytes\n",
-               String_cString(deviceName),
-               deviceInfo.size,
-               Device_getSize(&deviceHandle)
-              );
-    Device_close(&deviceHandle);
-    (void)Archive_closeEntry(&archiveEntryInfo);
-    String_delete(deviceName);
-    return ERROR_ENTRIES_DIFFER;
-  }
-
-  // check if device contain a known file system or a raw image should be convertd
-  if (!jobOptions->rawImagesFlag)
-  {
-    fileSystemFlag = (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE);
-  }
-  else
-  {
-    fileSystemFlag = FALSE;
-  }
-
-  // seek to fragment position
-  error = Device_seek(&deviceHandle,blockOffset*(uint64)deviceInfo.blockSize);
-  if (error != ERROR_NONE)
-  {
-    printInfo(1,"FAIL!\n");
-    printError("Cannot write to device '%s' (error: %s)\n",
-               String_cString(deviceName),
-               Error_getText(error)
-              );
-    Device_close(&deviceHandle);
-    (void)Archive_closeEntry(&archiveEntryInfo);
-    String_delete(deviceName);
-    return error;
-  }
-  DEBUG_TESTCODE() { Device_close(&deviceHandle); Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
 
   // convert archive and device/image content
-  block     = 0LL;
-  equalFlag = TRUE;
-  diffIndex = 0L;
-  while (   (block < blockCount)
-         && equalFlag
-        )
+  block = 0LL;
+  while (block < blockCount)
   {
     // read data from archive (only single block)
-    error = Archive_readData(&archiveEntryInfo,buffer0,deviceInfo.blockSize);
+    error = Archive_readData(&sourceArchiveEntryInfo,buffer,deviceInfo.blockSize);
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
-      printError("Cannot read content of archive '%s' (error: %s)!\n",
+      printError("Cannot read content of image '%s' (error: %s)!\n",
                  printableStorageName,
                  Error_getText(error)
                 );
@@ -989,54 +900,18 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
     }
     DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
 
-    if (   !fileSystemFlag
-        || FileSystem_blockIsUsed(&fileSystemHandle,(blockOffset+block)*(uint64)deviceInfo.blockSize)
-       )
+    // write data to destination archive
+    error = Archive_writeData(&destinationArchiveEntryInfo,buffer,deviceInfo.blockSize,1);
+    if (error != ERROR_NONE)
     {
-      // seek to device/image position
-      error = Device_seek(&deviceHandle,(blockOffset+block)*(uint64)deviceInfo.blockSize);
-      if (error != ERROR_NONE)
-      {
-        printInfo(1,"FAIL!\n");
-        printError("Cannot seek device '%s' (error: %s)\n",
-                   String_cString(deviceName),
-                   Error_getText(error)
-                  );
-        break;
-      }
-      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-
-      // read data from device/image
-      error = Device_read(&deviceHandle,buffer1,deviceInfo.blockSize,NULL);
-      if (error != ERROR_NONE)
-      {
-        printInfo(1,"FAIL!\n");
-        printError("Cannot read device '%s' (error: %s)\n",
-                   String_cString(deviceName),
-                   Error_getText(error)
-                  );
-        break;
-      }
-      DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-
-//TODO
-#if 0
-      // compare
-      diffIndex = compare(buffer0,buffer1,deviceInfo.blockSize);
-      equalFlag = (diffIndex >= deviceInfo.blockSize);
-      if (!equalFlag)
-      {
-        error = ERROR_ENTRIES_DIFFER;
-
-        printInfo(1,"FAIL!\n");
-        printError("'%s' differ at offset %llu\n",
-                   String_cString(deviceName),
-                   blockOffset*(uint64)deviceInfo.blockSize+block*(uint64)deviceInfo.blockSize+(uint64)diffIndex
-                  );
-        break;
-      }
-#endif
+      printInfo(0,"FAIL!\n");
+      printError("Cannot write content of image '%s' (error: %s)!\n",
+                 printableStorageName,
+                 Error_getText(error)
+                );
+      break;
     }
+    DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
 
     block += 1LL;
 
@@ -1044,16 +919,29 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   }
   if (error != ERROR_NONE)
   {
-    if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
-    Device_close(&deviceHandle);
-    (void)Archive_closeEntry(&archiveEntryInfo);
+    (void)Archive_closeEntry(&destinationArchiveEntryInfo);
+    (void)Archive_closeEntry(&sourceArchiveEntryInfo);
     String_delete(deviceName);
     return error;
   }
-  DEBUG_TESTCODE() { if (fileSystemFlag) { FileSystem_done(&fileSystemHandle); } Device_close(&deviceHandle); Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { (void)Archive_closeEntry(&destinationArchiveEntryInfo); (void)Archive_closeEntry(&sourceArchiveEntryInfo);  String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
+
   printInfo(2,"    \b\b\b\b");
 
-  printInfo(1,"OK TODO\n");
+  // close destination archive entry
+  error = Archive_closeEntry(&destinationArchiveEntryInfo);
+  if (error != ERROR_NONE)
+  {
+    printInfo(1,"FAIL\n");
+    printError("Cannot close archive image entry (error: %s)!\n",
+               Error_getText(error)
+              );
+    (void)Archive_closeEntry(&sourceArchiveEntryInfo);
+    String_delete(deviceName);
+    return error;
+  }
+
+  printInfo(1,"OK\n");
 
   /* check if all data read.
      Note: it is not possible to check if all data is read when
@@ -1063,22 +951,13 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   */
   if (   !Compress_isCompressed(deltaCompressAlgorithm)
       && !Compress_isCompressed(byteCompressAlgorithm)
-      && !Archive_eofData(&archiveEntryInfo))
+      && !Archive_eofData(&sourceArchiveEntryInfo))
   {
     printWarning("unexpected data at end of image entry '%S'.\n",deviceName);
   }
 
-  // done file system
-  if (fileSystemFlag)
-  {
-    FileSystem_done(&fileSystemHandle);
-  }
-
-  // close device
-  Device_close(&deviceHandle);
-
-  // close archive file, free resources
-  error = Archive_closeEntry(&archiveEntryInfo);
+  // close source archive file
+  error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
     printWarning("close 'image' entry fail (error: %s)\n",Error_getText(error));
@@ -1109,11 +988,13 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
                                    const JobOptions *jobOptions
                                   )
 {
-  Errors                    error;
   String                    directoryName;
-  ArchiveEntryInfo          sourceArchiveEntryInfo;
-  FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
+  Errors                    error;
+  ArchiveEntryInfo          sourceArchiveEntryInfo;
+  CryptAlgorithms           cryptAlgorithm;
+  CryptTypes                cryptType;
+  FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
 
   UNUSED_VARIABLE(jobOptions);
@@ -1123,8 +1004,8 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = Archive_readDirectoryEntry(&sourceArchiveEntryInfo,
                                      sourceArchiveHandle,
-                                     NULL,  // cryptAlgorithm
-                                     NULL,  // cryptType
+                                     &cryptAlgorithm,
+                                     &cryptType,
                                      directoryName,
                                      &fileInfo,
                                      &fileExtendedAttributeList
@@ -1147,6 +1028,8 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   error = Archive_newDirectoryEntry(&destinationArchiveEntryInfo,
                                     destinationArchiveHandle,
                                     NULL,  // indexHandle,
+                                    cryptAlgorithm,
+cryptType,
                                     directoryName,
                                     &fileInfo,
                                     &fileExtendedAttributeList
@@ -1162,7 +1045,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
     String_delete(directoryName);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); String_delete(directoryName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(directoryName); return DEBUG_TESTCODE_ERROR(); }
 
   // close destination archive entry
   error = Archive_closeEntry(&destinationArchiveEntryInfo);
@@ -1218,24 +1101,26 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                               const JobOptions *jobOptions
                              )
 {
-  Errors                    error;
-  ArchiveEntryInfo          sourceArchiveEntryInfo;
   String                    linkName;
   String                    fileName;
-  FileInfo                  fileInfo;
+  CryptAlgorithms           cryptAlgorithm;
+  CryptTypes                cryptType;
   FileExtendedAttributeList fileExtendedAttributeList;
+  Errors                    error;
+  ArchiveEntryInfo          sourceArchiveEntryInfo;
+  FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
 
   UNUSED_VARIABLE(jobOptions);
 
-  // read link
+  // read source link entry
   linkName = String_new();
   fileName = String_new();
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = Archive_readLinkEntry(&sourceArchiveEntryInfo,
                                 sourceArchiveHandle,
-                                NULL,  // cryptAlgorithm
-                                NULL,  // cryptType
+                                &cryptAlgorithm,
+                                &cryptType,
                                 linkName,
                                 fileName,
                                 &fileInfo,
@@ -1260,6 +1145,8 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   error = Archive_newLinkEntry(&destinationArchiveEntryInfo,
                                destinationArchiveHandle,
                                NULL,  // indexHandle,
+                               cryptAlgorithm,
+cryptType,
                                linkName,
                                fileName,
                                &fileInfo,
@@ -1318,12 +1205,12 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 
 /***********************************************************************\
 * Name   : convertHardLinkEntry
-* Purpose: convert a hardlink entry in archive
+* Purpose: convert a hard link entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
 *          printableStorageName     - printable storage name
 *          jobOptions               - job options
-*          buffer0,buffer1          - buffers for temporary data
+*          buffer                   - buffer for temporary data
 *          bufferSize               - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1334,42 +1221,35 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                                   ArchiveHandle    *destinationArchiveHandle,
                                   const char       *printableStorageName,
                                   const JobOptions *jobOptions,
-                                  byte             *buffer0,
-                                  byte             *buffer1,
+                                  byte             *buffer,
                                   uint             bufferSize
                                  )
 {
-  Errors             error;
-  ArchiveEntryInfo   archiveEntryInfo;
-  CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
-  StringList         fileNameList;
-  FileInfo           fileInfo;
+  StringList                fileNameList;
   FileExtendedAttributeList fileExtendedAttributeList;
+  Errors                    error;
+  ArchiveEntryInfo          sourceArchiveEntryInfo;
+  CompressAlgorithms        deltaCompressAlgorithm,byteCompressAlgorithm;
+  CryptAlgorithms           cryptAlgorithm;
+  CryptTypes                cryptType;
+  FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
-  uint64             fragmentOffset,fragmentSize;
-  bool               convertdDataFlag;
-  const StringNode   *stringNode;
-  String             fileName;
-//            FileInfo         localFileInfo;
-  FileHandle         fileHandle;
-  bool               equalFlag;
-  uint64             length;
-  ulong              bufferLength;
-  ulong              diffIndex;
-  SemaphoreLock      semaphoreLock;
+  uint64                    fragmentOffset,fragmentSize;
+  uint64                    length;
+  ulong                     bufferLength;
 
-  // read hard link
+  // read source hard link entry
   StringList_init(&fileNameList);
   File_initExtendedAttributes(&fileExtendedAttributeList);
-  error = Archive_readHardLinkEntry(&archiveEntryInfo,
+  error = Archive_readHardLinkEntry(&sourceArchiveEntryInfo,
                                     sourceArchiveHandle,
                                     &deltaCompressAlgorithm,
                                     &byteCompressAlgorithm,
-                                    NULL,  // cryptAlgorithm
-                                    NULL,  // cryptType
+                                    &cryptAlgorithm,
+                                    &cryptType,
                                     &fileNameList,
                                     &fileInfo,
-                                    NULL,  // fileExtendedAttributeList
+                                    &fileExtendedAttributeList,
                                     NULL,  // deltaSourceName
                                     NULL,  // deltaSourceSize
                                     &fragmentOffset,
@@ -1381,211 +1261,115 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                printableStorageName,
                Error_getText(error)
               );
+    File_doneExtendedAttributes(&fileExtendedAttributeList);
     StringList_done(&fileNameList);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_closeEntry(&archiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); StringList_done(&fileNameList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); StringList_done(&fileNameList); return DEBUG_TESTCODE_ERROR(); }
 
-  convertdDataFlag = FALSE;
-  STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
-  {
-    printInfo(1,"  Convert hard link '%s'...",String_cString(fileName));
-
-    // check file if exists and file type
-    if (!File_exists(fileName))
-    {
-      printInfo(1,"FAIL!\n");
-      printError("File '%s' not found!\n",String_cString(fileName));
-      if (!jobOptions->noStopOnErrorFlag)
-      {
-        error = ERROR_FILE_NOT_FOUND_;
-        break;
-      }
-      else
-      {
-        continue;
-      }
-    }
-    if (File_getType(fileName) != FILE_TYPE_HARDLINK)
-    {
-      printInfo(1,"FAIL!\n");
-      printError("'%s' is not a hard link!\n",String_cString(fileName));
-      if (!jobOptions->noStopOnErrorFlag)
-      {
-        error = ERROR_WRONG_ENTRY_TYPE;
-        break;
-      }
-      else
-      {
-        continue;
-      }
-    }
-
-    if (!convertdDataFlag && (error == ERROR_NONE))
-    {
-      // convert hard link data
-
-      // open file
-      error = File_open(&fileHandle,fileName,FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
-      if (error != ERROR_NONE)
-      {
-        printInfo(1,"FAIL!\n");
-        printError("Cannot open file '%s' (error: %s)\n",
-                   String_cString(fileName),
-                   Error_getText(error)
-                  );
-        if (!jobOptions->noStopOnErrorFlag)
-        {
-          break;
-        }
-        else
-        {
-          continue;
-        }
-      }
-      DEBUG_TESTCODE() { (void)File_close(&fileHandle); error = DEBUG_TESTCODE_ERROR(); break; }
-
-      // check file size
-      if (fileInfo.size != File_getSize(&fileHandle))
-      {
-        printInfo(1,"FAIL!\n");
-        printError("'%s' differ in size: expected %lld bytes, found %lld bytes\n",
-                   String_cString(fileName),
-                   fileInfo.size,
-                   File_getSize(&fileHandle)
-                  );
-        File_close(&fileHandle);
-        if (!jobOptions->noStopOnErrorFlag)
-        {
-          error = ERROR_ENTRIES_DIFFER;
-          break;
-        }
-        else
-        {
-          continue;
-        }
-      }
-
-      // seek to fragment position
-      error = File_seek(&fileHandle,fragmentOffset);
-      if (error != ERROR_NONE)
-      {
-        printInfo(1,"FAIL!\n");
-        printError("Cannot read file '%s' (error: %s)\n",
-                   String_cString(fileName),
-                   Error_getText(error)
-                  );
-        File_close(&fileHandle);
-        if (!jobOptions->noStopOnErrorFlag)
-        {
-          break;
-        }
-        else
-        {
-          continue;
-        }
-      }
-      DEBUG_TESTCODE() { (void)File_close(&fileHandle); error = DEBUG_TESTCODE_ERROR(); break; }
-
-      // convert archive and hard link content
-      length    = 0LL;
-      equalFlag = TRUE;
-      diffIndex = 0L;
-      while (   (length < fragmentSize)
-             && equalFlag
-            )
-      {
-        bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
-
-        // read archive, file
-        error = Archive_readData(&archiveEntryInfo,buffer0,bufferLength);
-        if (error != ERROR_NONE)
-        {
-          printInfo(1,"FAIL!\n");
-          printError("Cannot read content of archive '%s' (error: %s)!\n",
-                     printableStorageName,
-                     Error_getText(error)
-                    );
-          break;
-        }
-        DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
-        error = File_read(&fileHandle,buffer1,bufferLength,NULL);
-        if (error != ERROR_NONE)
-        {
-          printInfo(1,"FAIL!\n");
-          printError("Cannot read file '%s' (error: %s)\n",
-                     String_cString(fileName),
-                     Error_getText(error)
-                    );
-          break;
-        }
-        DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+  printInfo(1,"  Convert hard link '%s'...",String_cString(StringList_first(&fileNameList,NULL)));
 
 //TODO
-#if 0
-        // compare
-        diffIndex = compare(buffer0,buffer1,bufferLength);
-        equalFlag = (diffIndex >= bufferLength);
-        if (!equalFlag)
-        {
-          error = ERROR_ENTRIES_DIFFER;
+if (jobOptions->compressAlgorithms.byte != COMPRESS_ALGORITHM_NONE) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
 
-          printInfo(1,"FAIL!\n");
-          printError("'%s' differ at offset %llu\n",
-                     String_cString(fileName),
-                     fragmentOffset+length+(uint64)diffIndex
-                    );
-          break;
-        }
-#endif
+  // create new hard link entry
+  error = Archive_newHardLinkEntry(&destinationArchiveEntryInfo,
+                                   destinationArchiveHandle,
+                                   NULL,  // indexHandle,
+                                   deltaCompressAlgorithm,
+                                   byteCompressAlgorithm,
+                                   cryptAlgorithm,
+cryptType,
+                                   &fileNameList,
+                                   &fileInfo,
+                                   &fileExtendedAttributeList,
+                                   fragmentOffset,
+                                   fragmentSize,
+                                   TRUE,  // tryDeltaCompressFlag,
+                                   TRUE  // tryByteCompressFlag
+                                  );
 
-        length += (uint64)bufferLength;
 
-        printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
-      }
-      if (error != ERROR_NONE)
-      {
-        (void)File_close(&fileHandle);
-        return error;
-      }
-      printInfo(2,"    \b\b\b\b");
 
-      // close file
-      (void)File_close(&fileHandle);
+  // convert archive and hard link content
+  length = 0LL;
+  while (length < fragmentSize)
+  {
+    bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
 
-      printInfo(1,"OK TODO\n");
-
-      /* check if all data read.
-         Note: it is not possible to check if all data is read when
-         compression is used. The decompressor may not be at the end
-         of a compressed data chunk even compressed data is _not_
-         corrupt.
-      */
-      if (   !Compress_isCompressed(deltaCompressAlgorithm)
-          && !Compress_isCompressed(byteCompressAlgorithm)
-          && !Archive_eofData(&archiveEntryInfo))
-      {
-        printWarning("unexpected data at end of hard link entry '%S'.\n",fileName);
-      }
-
-      convertdDataFlag = TRUE;
-    }
-    else
+    // read source archive
+    error = Archive_readData(&sourceArchiveEntryInfo,buffer,bufferLength);
+    if (error != ERROR_NONE)
     {
-      // convert hard link data already done
-      if (error == ERROR_NONE)
-      {
-        printInfo(1,"OK TODO\n");
-      }
-      else
-      {
-        printInfo(1,"FAIL!\n");
-      }
+      printInfo(1,"FAIL!\n");
+fprintf(stderr,"%s, %d: fragmentSize=%llu\n",__FILE__,__LINE__,fragmentSize);
+fprintf(stderr,"%s, %d: read %lu\n",__FILE__,__LINE__,bufferLength);
+      printError("Cannot read content of hard link '%s' (error: %s)!\n",
+                 printableStorageName,
+                 Error_getText(error)
+                );
+      break;
     }
+    DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+
+    // write data to destination archive
+    error = Archive_writeData(&destinationArchiveEntryInfo,buffer,bufferLength,1);
+    if (error != ERROR_NONE)
+    {
+      printInfo(0,"FAIL!\n");
+      printError("Cannot write content of hard link '%s' (error: %s)!\n",
+                 printableStorageName,
+                 Error_getText(error)
+                );
+      break;
+    }
+    DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+
+    length += (uint64)bufferLength;
+
+    printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
+  }
+  if (error != ERROR_NONE)
+  {
+    (void)Archive_closeEntry(&destinationArchiveEntryInfo);
+    (void)Archive_closeEntry(&sourceArchiveEntryInfo);
+    File_doneExtendedAttributes(&fileExtendedAttributeList);
+    StringList_done(&fileNameList);
+    return error;
+  }
+  printInfo(2,"    \b\b\b\b");
+
+  // close destination archive entry
+  error = Archive_closeEntry(&destinationArchiveEntryInfo);
+  if (error != ERROR_NONE)
+  {
+    printInfo(1,"FAIL\n");
+    printError("Cannot close archive hard link entry (error: %s)!\n",
+               Error_getText(error)
+              );
+    (void)Archive_closeEntry(&sourceArchiveEntryInfo);
+    File_doneExtendedAttributes(&fileExtendedAttributeList);
+    StringList_done(&fileNameList);
+    return error;
   }
 
-  // close archive file, free resources
-  error = Archive_closeEntry(&archiveEntryInfo);
+  printInfo(1,"OK\n");
+
+  /* check if all data read.
+     Note: it is not possible to check if all data is read when
+     compression is used. The decompressor may not be at the end
+     of a compressed data chunk even compressed data is _not_
+     corrupt.
+  */
+  if (   !Compress_isCompressed(deltaCompressAlgorithm)
+      && !Compress_isCompressed(byteCompressAlgorithm)
+      && !Archive_eofData(&sourceArchiveEntryInfo))
+  {
+    printWarning("unexpected data at end of hard link entry '%S'.\n",StringList_first(&fileNameList,NULL));
+  }
+
+  // close source archive file
+  error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
     printWarning("close 'hard link' entry fail (error: %s)\n",Error_getText(error));
@@ -1616,23 +1400,27 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
                                  const JobOptions *jobOptions
                                 )
 {
-  Errors           error;
-  ArchiveEntryInfo archiveEntryInfo;
-  String           fileName;
-  FileInfo         fileInfo;
-  FileInfo         localFileInfo;
+  String                    fileName;
+  FileExtendedAttributeList fileExtendedAttributeList;
+  Errors                    error;
+  ArchiveEntryInfo          sourceArchiveEntryInfo;
+  CryptAlgorithms           cryptAlgorithm;
+  CryptTypes                cryptType;
+  FileInfo                  fileInfo;
+  ArchiveEntryInfo          destinationArchiveEntryInfo;
 
   UNUSED_VARIABLE(jobOptions);
 
-  // read special
+  // read source special entry
   fileName = String_new();
-  error = Archive_readSpecialEntry(&archiveEntryInfo,
+  File_initExtendedAttributes(&fileExtendedAttributeList);
+  error = Archive_readSpecialEntry(&sourceArchiveEntryInfo,
                                    sourceArchiveHandle,
-                                   NULL,  // cryptAlgorithm
-                                   NULL,  // cryptType
+                                   &cryptAlgorithm,
+                                   &cryptType,
                                    fileName,
                                    &fileInfo,
-                                   NULL   // fileExtendedAttributeList
+                                   &fileExtendedAttributeList
                                   );
   if (error != ERROR_NONE)
   {
@@ -1640,102 +1428,68 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
                printableStorageName,
                Error_getText(error)
               );
+    File_doneExtendedAttributes(&fileExtendedAttributeList);
     String_delete(fileName);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_closeEntry(&archiveEntryInfo); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
 
   printInfo(1,"  Convert special device '%s'...",String_cString(fileName));
 
-  // check if file exists and file type
-  if (!File_exists(fileName))
-  {
-    printInfo(1,"FAIL!\n");
-    printError("Special device '%s' does not exists!\n",
-               String_cString(fileName)
-              );
-    (void)Archive_closeEntry(&archiveEntryInfo);
-    String_delete(fileName);
-    return error;
-  }
-  if (File_getType(fileName) != FILE_TYPE_SPECIAL)
-  {
-    printInfo(1,"FAIL!\n");
-    printError("'%s' is not a special device!\n",
-               String_cString(fileName)
-              );
-    (void)Archive_closeEntry(&archiveEntryInfo);
-    String_delete(fileName);
-    return error;
-  }
-
-  // check special settings
-  error = File_getFileInfo(fileName,&localFileInfo);
+  // create new directory entry
+  error = Archive_newSpecialEntry(&destinationArchiveEntryInfo,
+                                  destinationArchiveHandle,
+                                  NULL,  // indexHandle,
+                                  cryptAlgorithm,
+cryptType,
+                                  fileName,
+                                  &fileInfo,
+                                  &fileExtendedAttributeList
+                                 );
   if (error != ERROR_NONE)
   {
-    printError("Cannot read local file '%s' (error: %s)!\n",
-               String_cString(fileName),
+    printError("Cannot create new archive special entry '%s' (error: %s)\n",
+               printableStorageName,
                Error_getText(error)
               );
-    (void)Archive_closeEntry(&archiveEntryInfo);
+    (void)Archive_closeEntry(&sourceArchiveEntryInfo);
+    File_doneExtendedAttributes(&fileExtendedAttributeList);
     String_delete(fileName);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_closeEntry(&archiveEntryInfo); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
-  if (fileInfo.specialType != localFileInfo.specialType)
+  DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
+
+  // close destination archive entry
+  error = Archive_closeEntry(&destinationArchiveEntryInfo);
+  if (error != ERROR_NONE)
   {
-    printError("Different types of special device '%s'!\n",
-               String_cString(fileName)
+    printInfo(1,"FAIL\n");
+    printError("Cannot close archive special entry (error: %s)!\n",
+               Error_getText(error)
               );
-    (void)Archive_closeEntry(&archiveEntryInfo);
+    (void)Archive_closeEntry(&sourceArchiveEntryInfo);
+    File_doneExtendedAttributes(&fileExtendedAttributeList);
     String_delete(fileName);
     return error;
   }
-  if (   (fileInfo.specialType == FILE_SPECIAL_TYPE_CHARACTER_DEVICE)
-      || (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
-     )
-  {
-    if (fileInfo.major != localFileInfo.major)
-    {
-      printError("Different major numbers of special device '%s'!\n",
-                 String_cString(fileName)
-                );
-      (void)Archive_closeEntry(&archiveEntryInfo);
-      String_delete(fileName);
-      return error;
-    }
-    if (fileInfo.minor != localFileInfo.minor)
-    {
-      printError("Different minor numbers of special device '%s'!\n",
-                 String_cString(fileName)
-                );
-      (void)Archive_closeEntry(&archiveEntryInfo);
-      String_delete(fileName);
-      return error;
-    }
-  }
 
-#if 0
-
-  // check file time, permissions, file owner/group
-#endif /* 0 */
-
-  printInfo(1,"OK TODO\n");
+  printInfo(1,"OK\n");
 
   // check if all data read
-  if (!Archive_eofData(&archiveEntryInfo))
+  if (!Archive_eofData(&sourceArchiveEntryInfo))
   {
     printWarning("unexpected data at end of special entry '%S'.\n",fileName);
   }
 
-  // close archive file
-  error = Archive_closeEntry(&archiveEntryInfo);
+  // close source archive file
+  error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
     printWarning("close 'special' entry fail (error: %s)\n",Error_getText(error));
   }
 
   // free resources
+  File_doneExtendedAttributes(&fileExtendedAttributeList);
   String_delete(fileName);
 
   return ERROR_NONE;
@@ -1837,7 +1591,6 @@ NULL,//                         convertInfo->deltaSourceList,
                                   String_cString(printableStorageName),
                                   convertInfo->jobOptions,
                                   buffer0,
-                                  buffer1,
                                   BUFFER_SIZE
                                  );
         break;
@@ -1861,7 +1614,6 @@ NULL,//                         convertInfo->deltaSourceList,
                                      String_cString(printableStorageName),
                                      convertInfo->jobOptions,
                                      buffer0,
-                                     buffer1,
                                      BUFFER_SIZE
                                     );
         break;
