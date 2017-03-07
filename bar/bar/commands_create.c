@@ -4932,6 +4932,10 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     error = Archive_newFileEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
                                  indexHandle,
+                                 createInfo->jobOptions->compressAlgorithms.delta,
+                                 createInfo->jobOptions->compressAlgorithms.byte,
+                                 createInfo->jobOptions->cryptAlgorithms[0],
+CRYPT_TYPE_SYMMETRIC, //TODO
                                  fileName,
                                  &fileInfo,
                                  &fileExtendedAttributeList,
@@ -5335,6 +5339,10 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     error = Archive_newImageEntry(&archiveEntryInfo,
                                   &createInfo->archiveHandle,
                                   indexHandle,
+                                  createInfo->jobOptions->compressAlgorithms.delta,
+                                  createInfo->jobOptions->compressAlgorithms.byte,
+                                  createInfo->jobOptions->cryptAlgorithms[0],
+CRYPT_TYPE_SYMMETRIC, //TODO
                                   deviceName,
                                   &deviceInfo,
                                   fileSystemHandle.type,
@@ -5671,6 +5679,8 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
                                       &createInfo->archiveHandle,
                                       indexHandle,
+                                      createInfo->jobOptions->cryptAlgorithms[0],
+CRYPT_TYPE_SYMMETRIC, //TODO
                                       directoryName,
                                       &fileInfo,
                                       &fileExtendedAttributeList
@@ -5868,6 +5878,8 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     error = Archive_newLinkEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
                                  indexHandle,
+                                 createInfo->jobOptions->cryptAlgorithms[0],
+CRYPT_TYPE_SYMMETRIC, //TODO
                                  linkName,
                                  fileName,
                                  &fileInfo,
@@ -5945,7 +5957,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 * Purpose: store a hard link entry into archive
 * Input  : createInfo        - create info structure
 *          indexHandle       - index handle or NULL if no index
-*          nameList          - hard link name list to store
+*          fileNameList      - hard link filename list to store
 *          fragmentNumber    - fragment number [0..n-1]
 *          maxFragmentNumber - max. fragment number [0..n-1]
 *          fragmentOffset    - fragment offset [bytes]
@@ -5959,7 +5971,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 
 LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                 IndexHandle      *indexHandle,
-                                const StringList *nameList,
+                                const StringList *fileNameList,
                                 uint             fragmentNumber,
                                 uint             maxFragmentNumber,
                                 uint64           fragmentOffset,
@@ -5984,27 +5996,27 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   double                    compressionRatio;
   char                      s1[256],s2[256];
   const StringNode          *stringNode;
-  String                    name;
+  String                    fileName;
 
   assert(createInfo != NULL);
-  assert(nameList != NULL);
-  assert(!StringList_isEmpty(nameList));
+  assert(fileNameList != NULL);
+  assert(!StringList_isEmpty(fileNameList));
   assert(buffer != NULL);
 
-  printInfo(1,"Add '%s'...",String_cString(StringList_first(nameList,NULL)));
+  printInfo(1,"Add '%s'...",String_cString(StringList_first(fileNameList,NULL)));
 
   // get file info
-  error = File_getFileInfo(StringList_first(nameList,NULL),&fileInfo);
+  error = File_getFileInfo(StringList_first(fileNameList,NULL),&fileInfo);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(StringList_first(nameList,NULL)),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        createInfo->statusInfo.doneCount += StringList_count(nameList);
-        createInfo->statusInfo.errorEntryCount += StringList_count(nameList);
+        createInfo->statusInfo.doneCount += StringList_count(fileNameList);
+        createInfo->statusInfo.errorEntryCount += StringList_count(fileNameList);
       }
       return ERROR_NONE;
     }
@@ -6012,7 +6024,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"FAIL\n");
       printError("Cannot get info for '%s' (error: %s)\n",
-                 String_cString(StringList_first(nameList,NULL)),
+                 String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
       return error;
@@ -6020,17 +6032,17 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
 
   // try to set status done entry info
-  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,StringList_first(nameList,NULL),fileInfo.size);
+  statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,StringList_first(fileNameList,NULL),fileInfo.size);
 
   // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);
-  error = File_getExtendedAttributes(&fileExtendedAttributeList,StringList_first(nameList,NULL));
+  error = File_getExtendedAttributes(&fileExtendedAttributeList,StringList_first(fileNameList,NULL));
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(StringList_first(nameList,NULL)),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         createInfo->statusInfo.doneCount++;
@@ -6044,7 +6056,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"FAIL\n");
       printError("Cannot get extended attributes for '%s' (error: %s)\n",
-                 String_cString(StringList_first(nameList,NULL)),
+                 String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -6054,19 +6066,19 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
 
   // open file
-  error = File_open(&fileHandle,StringList_first(nameList,NULL),FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
+  error = File_open(&fileHandle,StringList_first(fileNameList,NULL),FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)\n",String_cString(StringList_first(nameList,NULL)),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)\n",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        createInfo->statusInfo.doneCount += StringList_count(nameList);
-        createInfo->statusInfo.doneSize += (uint64)StringList_count(nameList)*(uint64)fileInfo.size;
-        createInfo->statusInfo.errorEntryCount += StringList_count(nameList);
-        createInfo->statusInfo.errorEntrySize += (uint64)StringList_count(nameList)*(uint64)fileInfo.size;
+        createInfo->statusInfo.doneCount += StringList_count(fileNameList);
+        createInfo->statusInfo.doneSize += (uint64)StringList_count(fileNameList)*(uint64)fileInfo.size;
+        createInfo->statusInfo.errorEntryCount += StringList_count(fileNameList);
+        createInfo->statusInfo.errorEntrySize += (uint64)StringList_count(fileNameList)*(uint64)fileInfo.size;
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       clearStatusEntryDoneInfo(createInfo,statusEntryDoneLocked);
@@ -6076,7 +6088,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"FAIL\n");
       printError("Cannot open file '%s' (error: %s)\n",
-                 String_cString(StringList_first(nameList,NULL)),
+                 String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -6089,7 +6101,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   {
     // check if file data should be byte compressed
     tryByteCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
-                          && !PatternList_matchStringList(createInfo->compressExcludePatternList,nameList,PATTERN_MATCH_MODE_EXACT);
+                          && !PatternList_matchStringList(createInfo->compressExcludePatternList,fileNameList,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
     tryDeltaCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
@@ -6099,7 +6111,11 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     error = Archive_newHardLinkEntry(&archiveEntryInfo,
                                      &createInfo->archiveHandle,
                                      indexHandle,
-                                     nameList,
+                                     createInfo->jobOptions->compressAlgorithms.delta,
+                                     createInfo->jobOptions->compressAlgorithms.byte,
+                                     createInfo->jobOptions->cryptAlgorithms[0],
+CRYPT_TYPE_SYMMETRIC, //TODO
+                                     fileNameList,
                                      &fileInfo,
                                      &fileExtendedAttributeList,
                                      fragmentOffset,
@@ -6111,7 +6127,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"FAIL\n");
       printError("Cannot create new archive hardlink entry '%s' (error: %s)\n",
-                 String_cString(StringList_first(nameList,NULL)),
+                 String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
       (void)File_close(&fileHandle);
@@ -6138,13 +6154,13 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
           error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
           if (error == ERROR_NONE)
           {
-            entryDoneSize += (uint64)StringList_count(nameList)*(uint64)bufferLength;
+            entryDoneSize += (uint64)StringList_count(fileNameList)*(uint64)bufferLength;
             archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
             // try to set status done entry info
             if (!statusEntryDoneLocked)
             {
-              statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,StringList_first(nameList,NULL),fileInfo.size);
+              statusEntryDoneLocked = setStatusEntryDoneInfo(createInfo,StringList_first(fileNameList,NULL),fileInfo.size);
             }
 
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -6155,10 +6171,10 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                    ? 100.0-(archiveSize*100.0)/doneSize
                                    : 0.0;
 
-              createInfo->statusInfo.doneSize += (uint64)StringList_count(nameList)*(uint64)bufferLength;
+              createInfo->statusInfo.doneSize += (uint64)StringList_count(fileNameList)*(uint64)bufferLength;
               if (statusEntryDoneLocked)
               {
-                String_set(createInfo->statusInfo.entryName,StringList_first(nameList,NULL));
+                String_set(createInfo->statusInfo.entryName,StringList_first(fileNameList,NULL));
                 createInfo->statusInfo.entryDoneSize  = entryDoneSize;
                 createInfo->statusInfo.entryTotalSize = fileInfo.size;
               }
@@ -6267,7 +6283,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
                  "Added '%s' (%llu bytes%s%s)\n",
-                 String_cString(StringList_first(nameList,NULL)),
+                 String_cString(StringList_first(fileNameList,NULL)),
                  fragmentSize,
                  s1,
                  s2
@@ -6292,7 +6308,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   // update done entries
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    createInfo->statusInfo.doneCount += StringList_count(nameList);
+    createInfo->statusInfo.doneCount += StringList_count(fileNameList);
     updateStatusInfo(createInfo,FALSE);
   }
 
@@ -6305,9 +6321,9 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
   {
-    STRINGLIST_ITERATE(nameList,stringNode,name)
+    STRINGLIST_ITERATE(fileNameList,stringNode,fileName)
     {
-      addIncrementalList(&createInfo->namesDictionary,name,&fileInfo);
+      addIncrementalList(&createInfo->namesDictionary,fileName,&fileInfo);
     }
   }
 
@@ -6412,6 +6428,8 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     error = Archive_newSpecialEntry(&archiveEntryInfo,
                                     &createInfo->archiveHandle,
                                     indexHandle,
+                                    createInfo->jobOptions->cryptAlgorithms[0],
+CRYPT_TYPE_SYMMETRIC, //TODO
                                     fileName,
                                     &fileInfo,
                                     &fileExtendedAttributeList
