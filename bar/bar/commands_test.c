@@ -195,7 +195,6 @@ LOCAL void doneTestInfo(TestInfo *testInfo)
 * Name   : testFileEntry
 * Purpose: test a file entry in archive
 * Input  : archiveHandle        - archive handle
-*          offset               - offset
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
@@ -219,8 +218,8 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
                           )
 {
   Errors           error;
-  ArchiveEntryInfo archiveEntryInfo;
   String           fileName;
+  ArchiveEntryInfo archiveEntryInfo;
   FileInfo         fileInfo;
   uint64           fragmentOffset,fragmentSize;
   uint64           length;
@@ -372,7 +371,8 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
 * Name   : testImageEntry
 * Purpose: test a image entry in archive
 * Input  : archiveHandle        - archive handle
-*          offset               - offset
+*          includeEntryList     - include entry list
+*          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
 *          fragmentList         - fragment list
@@ -394,8 +394,8 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
                            )
 {
   Errors           error;
-  ArchiveEntryInfo archiveEntryInfo;
   String           deviceName;
+  ArchiveEntryInfo archiveEntryInfo;
   DeviceInfo       deviceInfo;
   uint64           blockOffset,blockCount;
   uint64           block;
@@ -546,7 +546,8 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
 * Name   : testDirectoryEntry
 * Purpose: test a directory entry in archive
 * Input  : archiveHandle        - archive handle
-*          offset               - offset
+*          includeEntryList     - include entry list
+*          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
 * Output : -
@@ -562,8 +563,8 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
                                )
 {
   Errors           error;
-  ArchiveEntryInfo archiveEntryInfo;
   String           directoryName;
+  ArchiveEntryInfo archiveEntryInfo;
   FileInfo         fileInfo;
 
   UNUSED_VARIABLE(jobOptions);
@@ -635,7 +636,8 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
 * Name   : testLinkEntry
 * Purpose: test a link entry in archive
 * Input  : archiveHandle        - archive handle
-*          offset               - offset
+*          includeEntryList     - include entry list
+*          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
 * Output : -
@@ -651,9 +653,9 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
                           )
 {
   Errors           error;
-  ArchiveEntryInfo archiveEntryInfo;
   String           linkName;
   String           fileName;
+  ArchiveEntryInfo archiveEntryInfo;
   FileInfo         fileInfo;
 
   UNUSED_VARIABLE(jobOptions);
@@ -731,7 +733,8 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
 * Name   : testHardLinkEntry
 * Purpose: test a hardlink entry in archive
 * Input  : archiveHandle        - archive handle
-*          offset               - offset
+*          includeEntryList     - include entry list
+*          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
 *          fragmentList         - fragment list
@@ -753,8 +756,8 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
                               )
 {
   Errors           error;
-  ArchiveEntryInfo archiveEntryInfo;
   StringList       fileNameList;
+  ArchiveEntryInfo archiveEntryInfo;
   FileInfo         fileInfo;
   uint64           fragmentOffset,fragmentSize;
   bool             testedDataFlag;
@@ -921,7 +924,8 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
 * Name   : testSpecialEntry
 * Purpose: test a special entry in archive
 * Input  : archiveHandle        - archive handle
-*          offset               - offset
+*          includeEntryList     - include entry list
+*          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
 * Output : -
@@ -937,8 +941,8 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
                              )
 {
   Errors           error;
-  ArchiveEntryInfo archiveEntryInfo;
   String           fileName;
+  ArchiveEntryInfo archiveEntryInfo;
   FileInfo         fileInfo;
 
   UNUSED_VARIABLE(jobOptions);

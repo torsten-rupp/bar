@@ -228,7 +228,6 @@ LOCAL_INLINE ulong compare(const void *p0, const void *p1, ulong length)
 * Name   : compareFileEntry
 * Purpose: compare a file entry in archive
 * Input  : archiveHandle        - archive handle
-*          offset               - offset
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
@@ -253,9 +252,9 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
                              )
 {
   Errors             error;
+  String             fileName;
   ArchiveEntryInfo   archiveEntryInfo;
   CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
-  String             fileName;
   FileInfo           fileInfo;
   uint64             fragmentOffset,fragmentSize;
 //            FileInfo         localFileInfo;
@@ -499,7 +498,8 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
 * Name   : compareImageEntry
 * Purpose: compare a image entry in archive
 * Input  : archiveHandle        - archive handle
-*          offset               - offset
+*          includeEntryList     - include entry list
+*          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
 *          fragmentList         - fragment list
@@ -522,9 +522,9 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
                               )
 {
   Errors             error;
+  String             deviceName;
   ArchiveEntryInfo   archiveEntryInfo;
   CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
-  String             deviceName;
   DeviceInfo         deviceInfo;
   uint64             blockOffset,blockCount;
   DeviceHandle       deviceHandle;
@@ -840,7 +840,8 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
 * Name   : compareDirectoryEntry
 * Purpose: compare a directory entry in archive
 * Input  : archiveHandle        - archive handle
-*          offset               - offset
+*          includeEntryList     - include entry list
+*          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
 * Output : -
@@ -856,8 +857,8 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
                                   )
 {
   Errors           error;
-  ArchiveEntryInfo archiveEntryInfo;
   String           directoryName;
+  ArchiveEntryInfo archiveEntryInfo;
   FileInfo         fileInfo;
 //            String   localFileName;
 //            FileInfo localFileInfo;
@@ -961,7 +962,8 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
 * Name   : compareLinkEntry
 * Purpose: compare a link entry in archive
 * Input  : archiveHandle        - archive handle
-*          offset               - offset
+*          includeEntryList     - include entry list
+*          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
 * Output : -
@@ -977,9 +979,9 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
                              )
 {
   Errors           error;
-  ArchiveEntryInfo archiveEntryInfo;
   String           linkName;
   String           fileName;
+  ArchiveEntryInfo archiveEntryInfo;
   FileInfo         fileInfo;
   String           localFileName;
 //                    FileInfo localFileInfo;
@@ -1124,7 +1126,8 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
 * Name   : compareHardLinkEntry
 * Purpose: compare a hardlink entry in archive
 * Input  : archiveHandle        - archive handle
-*          offset               - offset
+*          includeEntryList     - include entry list
+*          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
 *          fragmentList         - fragment list
@@ -1147,9 +1150,9 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
                                  )
 {
   Errors             error;
+  StringList         fileNameList;
   ArchiveEntryInfo   archiveEntryInfo;
   CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
-  StringList         fileNameList;
   FileInfo           fileInfo;
   uint64             fragmentOffset,fragmentSize;
   bool               comparedDataFlag;
@@ -1439,7 +1442,8 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
 * Name   : compareSpecialEntry
 * Purpose: compare a special entry in archive
 * Input  : archiveHandle        - archive handle
-*          offset               - offset
+*          includeEntryList     - include entry list
+*          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
 *          jobOptions           - job options
 * Output : -
@@ -1455,8 +1459,8 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
                                 )
 {
   Errors           error;
-  ArchiveEntryInfo archiveEntryInfo;
   String           fileName;
+  ArchiveEntryInfo archiveEntryInfo;
   FileInfo         fileInfo;
   FileInfo         localFileInfo;
 
