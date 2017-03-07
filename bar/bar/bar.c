@@ -67,6 +67,7 @@
 #include "commands_restore.h"
 #include "commands_test.h"
 #include "commands_compare.h"
+#include "commands_convert.h"
 #include "server.h"
 
 #include "bar.h"
@@ -3000,12 +3001,10 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
 
 LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
-  Key        *key = (Key*)variable;
-  Errors     error;
-  String     string;
-  FileHandle fileHandle;
-  uint       dataLength;
-  void       *data;
+  Key    *key = (Key*)variable;
+  Errors error;
+  uint   dataLength;
+  void   *data;
 
   assert(variable != NULL);
   assert(value != NULL);
