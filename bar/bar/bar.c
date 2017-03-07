@@ -166,6 +166,7 @@ typedef enum
   COMMAND_TEST,
   COMMAND_COMPARE,
   COMMAND_RESTORE,
+  COMMAND_CONVERT,
 
 //  COMMAND_VERIFY_SIGNATURES,
 
@@ -469,6 +470,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM         ("test",                         't',0,1,command,                                         COMMAND_TEST,                                                "test contents of archives"                                                ),
   CMD_OPTION_ENUM         ("compare",                      'd',0,1,command,                                         COMMAND_COMPARE,                                             "compare contents of archive swith files and images"                       ),
   CMD_OPTION_ENUM         ("extract",                      'x',0,1,command,                                         COMMAND_RESTORE,                                             "restore archives"                                                         ),
+  CMD_OPTION_ENUM         ("convert",                      0,  0,1,command,                                         COMMAND_CONVERT,                                             "convert archives"                                                         ),
   CMD_OPTION_ENUM         ("generate-keys",                0,  0,1,command,                                         COMMAND_GENERATE_ENCRYPTION_KEYS,                            "generate new public/private key pair for encryption"                      ),
   CMD_OPTION_ENUM         ("generate-signature-keys",      0,  0,1,command,                                         COMMAND_GENERATE_SIGNATURE_KEYS,                             "generate new public/private key pair for signature"                       ),
 //  CMD_OPTION_ENUM         ("new-key-password",             0,  1,1,command,                                         COMMAND_NEW_KEY_PASSWORD,                                   "set new private key password"                                             ),
@@ -2247,6 +2249,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
     case COMMAND_TEST:
     case COMMAND_COMPARE:
     case COMMAND_RESTORE:
+    case COMMAND_CONVERT:
     case COMMAND_GENERATE_ENCRYPTION_KEYS:
     case COMMAND_GENERATE_SIGNATURE_KEYS:
     case COMMAND_NEW_KEY_PASSWORD:
@@ -2315,6 +2318,7 @@ LOCAL bool cmdOptionParseEntryPatternCommand(void *userData, void *variable, con
     case COMMAND_TEST:
     case COMMAND_COMPARE:
     case COMMAND_RESTORE:
+    case COMMAND_CONVERT:
     case COMMAND_INFO:
     case COMMAND_CHECK_SIGNATURE:
     case COMMAND_GENERATE_ENCRYPTION_KEYS:
@@ -3591,7 +3595,7 @@ LOCAL Errors initAll(void)
   AutoFree_init(&autoFreeList);
   tmpDirectory = String_new();
   pidFileName  = NULL;
-  AUTOFREE_ADD(&autoFreeList,&consoleLock,{ String_delete(tmpDirectory); });
+  AUTOFREE_ADD(&autoFreeList,tmpDirectory,{ String_delete(tmpDirectory); });
 
   Semaphore_init(&consoleLock);
   DEBUG_TESTCODE() { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
@@ -8738,15 +8742,16 @@ NULL, // masterSocketHandle
     case COMMAND_TEST:
     case COMMAND_COMPARE:
     case COMMAND_RESTORE:
+    case COMMAND_CONVERT:
       {
-        StringList fileNameList;
+        StringList storageNameList;
         int        z;
 
         // get archive files
-        StringList_init(&fileNameList);
+        StringList_init(&storageNameList);
         for (z = 1; z < argc; z++)
         {
-          StringList_appendCString(&fileNameList,argv[z]);
+          StringList_appendCString(&storageNameList,argv[z]);
         }
 
         switch (command)
@@ -8755,7 +8760,7 @@ NULL, // masterSocketHandle
             if      (globalOptions.metaInfoFlag)
             {
               // default: show meta-info only
-              error = Command_list(&fileNameList,
+              error = Command_list(&storageNameList,
                                    &includeEntryList,
                                    &excludePatternList,
                                       globalOptions.longFormatFlag  // showContentFlag
@@ -8768,7 +8773,7 @@ NULL, // masterSocketHandle
             else
             {
               // default: list archives content
-              error = Command_list(&fileNameList,
+              error = Command_list(&storageNameList,
                                    &includeEntryList,
                                    &excludePatternList,
                                    TRUE,  // showContentFlag
@@ -8779,7 +8784,7 @@ NULL, // masterSocketHandle
             }
             break;
           case COMMAND_LIST:
-            error = Command_list(&fileNameList,
+            error = Command_list(&storageNameList,
                                  &includeEntryList,
                                  &excludePatternList,
                                  TRUE,  // showContentFlag
@@ -8789,7 +8794,7 @@ NULL, // masterSocketHandle
                                 );
             break;
           case COMMAND_TEST:
-            error = Command_test(&fileNameList,
+            error = Command_test(&storageNameList,
                                  &includeEntryList,
                                  &excludePatternList,
                                  &deltaSourceList,
@@ -8799,7 +8804,7 @@ NULL, // masterSocketHandle
                                 );
             break;
           case COMMAND_COMPARE:
-            error = Command_compare(&fileNameList,
+            error = Command_compare(&storageNameList,
                                     &includeEntryList,
                                     &excludePatternList,
                                     &deltaSourceList,
@@ -8809,7 +8814,21 @@ NULL, // masterSocketHandle
                                    );
             break;
           case COMMAND_RESTORE:
-            error = Command_restore(&fileNameList,
+            error = Command_restore(&storageNameList,
+                                    &includeEntryList,
+                                    &excludePatternList,
+                                    &deltaSourceList,
+                                    &jobOptions,
+                                    CALLBACK(NULL,NULL),  // restoreStatusInfo callback
+                                    CALLBACK(NULL,NULL),  // restoreError callback
+                                    CALLBACK(getPasswordConsole,NULL),
+                                    CALLBACK(NULL,NULL),  // isPause callback
+                                    CALLBACK(NULL,NULL),  // isAborted callback
+                                    NULL  // logHandle
+                                   );
+            break;
+          case COMMAND_CONVERT:
+            error = Command_convert(&storageNameList,
                                     &includeEntryList,
                                     &excludePatternList,
                                     &deltaSourceList,
@@ -8827,7 +8846,7 @@ NULL, // masterSocketHandle
         }
 
         // free resources
-        StringList_done(&fileNameList);
+        StringList_done(&storageNameList);
       }
       break;
     case COMMAND_GENERATE_ENCRYPTION_KEYS:
