@@ -421,7 +421,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
 //            FileInfo                      localFileInfo;
   FileHandle                fileHandle;
   uint64                    length;
-  ulong                     n;
+  ulong                     bufferLength;
 
   assert(restoreInfo != NULL);
   assert(restoreInfo->jobOptions != NULL);
@@ -596,7 +596,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("Cannot write file '%s' (error: %s)\n",
+        printError("Cannot write content of file '%s' (error: %s)\n",
                    String_cString(destinationFileName),
                    Error_getText(error)
                   );
@@ -618,13 +618,13 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
         Misc_udelay(500L*US_PER_MS);
       }
 
-      n = (ulong)MIN(fragmentSize-length,bufferSize);
+      bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
 
-      error = Archive_readData(&archiveEntryInfo,buffer,n);
+      error = Archive_readData(&archiveEntryInfo,buffer,bufferLength);
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("Cannot read content of archive '%s' (error: %s)!\n",
+        printError("Cannot read content of file '%s' (error: %s)!\n",
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
@@ -632,11 +632,11 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       }
       if (!restoreInfo->jobOptions->dryRunFlag)
       {
-        error = File_write(&fileHandle,buffer,n);
+        error = File_write(&fileHandle,buffer,bufferLength);
         if (error != ERROR_NONE)
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot write file '%s' (error: %s)\n",
+          printError("Cannot write content of file '%s' (error: %s)\n",
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
@@ -645,10 +645,10 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       }
 
       // update status info
-      restoreInfo->statusInfo.entryDoneSize += (uint64)n;
+      restoreInfo->statusInfo.entryDoneSize += (uint64)bufferLength;
       updateStatusInfo(restoreInfo,FALSE);
 
-      length += (uint64)n;
+      length += (uint64)bufferLength;
 
       printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
     }
@@ -824,7 +824,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
   deviceName = String_new();
   AUTOFREE_ADD(&autoFreeList,deviceName,{ String_delete(deviceName); });
 
-  // read image
+  // read image entry
   error = Archive_readImageEntry(&archiveEntryInfo,
                                  archiveHandle,
                                  NULL,  // deltaCompressAlgorithm
@@ -1016,7 +1016,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot write to device '%s' (error: %s)\n",
+            printError("Cannot write content to device '%s' (error: %s)\n",
                        String_cString(destinationDeviceName),
                        Error_getText(error)
                       );
@@ -1027,7 +1027,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot write to file '%s' (error: %s)\n",
+            printError("Cannot write content of file '%s' (error: %s)\n",
                        String_cString(destinationDeviceName),
                        Error_getText(error)
                       );
@@ -1066,7 +1066,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("Cannot read content of archive '%s' (error: %s)!\n",
+        printError("Cannot read content of image '%s' (error: %s)!\n",
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
@@ -1083,7 +1083,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
             if (error != ERROR_NONE)
             {
               printInfo(1,"FAIL!\n");
-              printError("Cannot write to device '%s' (error: %s)\n",
+              printError("Cannot write content to device '%s' (error: %s)\n",
                          String_cString(destinationDeviceName),
                          Error_getText(error)
                         );
@@ -1094,7 +1094,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
             if (error != ERROR_NONE)
             {
               printInfo(1,"FAIL!\n");
-              printError("Cannot write to file '%s' (error: %s)\n",
+              printError("Cannot write content of file '%s' (error: %s)\n",
                          String_cString(destinationDeviceName),
                          Error_getText(error)
                         );
@@ -1251,7 +1251,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
   AUTOFREE_ADD(&autoFreeList,directoryName,{ String_delete(directoryName); });
   AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
 
-  // read directory
+  // read directory entry
   error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                      archiveHandle,
                                      NULL,  // cryptAlgorithm
@@ -1432,7 +1432,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
   AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
   AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
 
-  // read link
+  // read link entry
   error = Archive_readLinkEntry(&archiveEntryInfo,
                                 archiveHandle,
                                 NULL,  // cryptAlgorithm
@@ -1665,7 +1665,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
 //            FileInfo                  localFileInfo;
   FileHandle                fileHandle;
   uint64                    length;
-  ulong                     n;
+  ulong                     bufferLength;
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -1674,7 +1674,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
   AUTOFREE_ADD(&autoFreeList,&fileNameList,{ StringList_done(&fileNameList); });
   AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
 
-  // read hard link
+  // read hard link entry
   error = Archive_readHardLinkEntry(&archiveEntryInfo,
                                     archiveHandle,
                                     NULL,  // deltaCompressAlgorithm
@@ -1844,7 +1844,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot write file '%s' (error: %s)\n",
+            printError("Cannot write content of hard link '%s' (error: %s)\n",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -1868,13 +1868,13 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
             Misc_udelay(500L*US_PER_MS);
           }
 
-          n = (ulong)MIN(fragmentSize-length,bufferSize);
+          bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
 
-          error = Archive_readData(&archiveEntryInfo,buffer,n);
+          error = Archive_readData(&archiveEntryInfo,buffer,bufferLength);
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot read content of archive '%s' (error: %s)!\n",
+            printError("Cannot read content of hard link '%s' (error: %s)!\n",
                        String_cString(printableStorageName),
                        Error_getText(error)
                       );
@@ -1882,11 +1882,11 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           }
           if (!restoreInfo->jobOptions->dryRunFlag)
           {
-            error = File_write(&fileHandle,buffer,n);
+            error = File_write(&fileHandle,buffer,bufferLength);
             if (error != ERROR_NONE)
             {
               printInfo(1,"FAIL!\n");
-              printError("Cannot write file '%s' (error: %s)\n",
+              printError("Cannot write content of hard link '%s' (error: %s)\n",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -1895,10 +1895,10 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           }
 
           // update status info
-          restoreInfo->statusInfo.entryDoneSize += (uint64)n;
+          restoreInfo->statusInfo.entryDoneSize += (uint64)bufferLength;
           updateStatusInfo(restoreInfo,FALSE);
 
-          length += (uint64)n;
+          length += (uint64)bufferLength;
 
           printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
         }
@@ -2121,7 +2121,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
   AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
   AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
 
-  // read special device
+  // read special device entry
   error = Archive_readSpecialEntry(&archiveEntryInfo,
                                    archiveHandle,
                                    NULL,  // cryptAlgorithm
