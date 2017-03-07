@@ -4687,6 +4687,12 @@ NULL, // masterIO
   {
     resultError = error;
   }
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Deleted storage #%lld: '%s'\n",
+             Index_getDatabaseId(storageId),
+             String_cString(storageName)
+            );
 
   // free resources
   String_delete(storageName);
@@ -4769,6 +4775,12 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   {
     return error;
   }
+//TODO: better info?
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Deleted entity #%lld\n",
+             Index_getDatabaseId(entityId)
+            );
 
   return ERROR_NONE;
 }
@@ -4861,6 +4873,12 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
   {
     return error;
   }
+//TODO: better info?
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Deleted UUID '%s'\n",
+             String_cString(jobUUID)
+            );
 
   return ERROR_NONE;
 }
