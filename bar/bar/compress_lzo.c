@@ -234,7 +234,7 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
           // shift LZO input buffer
           memmove(compressInfo->lzo.inputBuffer,
                   &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex+length],
-                  length
+                  compressInfo->lzo.bufferSize-length
                  );
           compressInfo->lzo.inputBufferLength -= length;
           compressInfo->lzo.inputBufferIndex  =  0;
@@ -334,7 +334,7 @@ LOCAL Errors CompressLZO_compressData(CompressInfo *compressInfo)
           // shift LZO input buffer
           memmove(compressInfo->lzo.inputBuffer,
                   &compressInfo->lzo.inputBuffer[compressInfo->lzo.inputBufferIndex+length],
-                  length
+                  compressInfo->lzo.bufferSize-length
                  );
           compressInfo->lzo.inputBufferLength -= length;
           compressInfo->lzo.inputBufferIndex  =  0;

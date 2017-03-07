@@ -428,7 +428,7 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
           // shift LZ4 input buffer
           memmove(compressInfo->lz4.inputBuffer,
                   &compressInfo->lz4.inputBuffer[compressInfo->lz4.inputBufferIndex+length],
-                  length
+                  compressInfo->lzo.bufferSize-length
                  );
           compressInfo->lz4.inputBufferLength -= length;
           compressInfo->lz4.inputBufferIndex  =  0;
@@ -536,7 +536,7 @@ LOCAL Errors CompressLZ4_compressData(CompressInfo *compressInfo)
           // shift LZ4 input buffer
           memmove(compressInfo->lz4.inputBuffer,
                   &compressInfo->lz4.inputBuffer[compressInfo->lz4.inputBufferIndex+length],
-                  length
+                  compressInfo->lzo.bufferSize-length
                  );
           compressInfo->lz4.inputBufferLength -= length;
           compressInfo->lz4.inputBufferIndex  =  0;
