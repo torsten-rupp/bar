@@ -484,7 +484,7 @@ LOCAL Errors StorageSCP_done(StorageInfo *storageInfo)
   return ERROR_NONE;
 }
 
-LOCAL bool StorageSCP_isServerAllocationPending(StorageInfo *storageInfo)
+LOCAL bool StorageSCP_isServerAllocationPending(const StorageInfo *storageInfo)
 {
   bool serverAllocationPending;
 
@@ -503,10 +503,10 @@ LOCAL bool StorageSCP_isServerAllocationPending(StorageInfo *storageInfo)
   return serverAllocationPending;
 }
 
-LOCAL Errors StorageSCP_preProcess(StorageInfo *storageInfo,
-                                   ConstString archiveName,
-                                   time_t      timestamp,
-                                   bool        initialFlag
+LOCAL Errors StorageSCP_preProcess(const StorageInfo *storageInfo,
+                                   ConstString       archiveName,
+                                   time_t            timestamp,
+                                   bool              initialFlag
                                   )
 {
   Errors error;
@@ -574,10 +574,10 @@ LOCAL Errors StorageSCP_preProcess(StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL Errors StorageSCP_postProcess(StorageInfo *storageInfo,
-                                    ConstString archiveName,
-                                    time_t      timestamp,
-                                    bool        finalFlag
+LOCAL Errors StorageSCP_postProcess(const StorageInfo *storageInfo,
+                                    ConstString       archiveName,
+                                    time_t            timestamp,
+                                    bool              finalFlag
                                    )
 {
   Errors error;
@@ -645,7 +645,7 @@ LOCAL Errors StorageSCP_postProcess(StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL bool StorageSCP_exists(StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageSCP_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
@@ -654,7 +654,21 @@ LOCAL bool StorageSCP_exists(StorageInfo *storageInfo, ConstString archiveName)
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
   return File_exists(archiveName);
+}
+
+LOCAL Errors StorageSCP_getTmpName(String archiveName, const StorageInfo *storageInfo)
+{
+  assert(archiveName != NULL);
+  assert(!String_isEmpty(archiveName) != NULL);
+  assert(storageInfo != NULL);
+
+  UNUSED_VARIABLE(storageInfo);
+
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_getTmpFileName(archiveName,String_cString(archiveName),NULL);
 }
 
 LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
@@ -1392,8 +1406,8 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 }
 
-LOCAL Errors StorageSCP_delete(StorageInfo *storageInfo,
-                               ConstString archiveName
+LOCAL Errors StorageSCP_delete(const StorageInfo *storageInfo,
+                               ConstString       archiveName
                               )
 {
 //  ConstString deleteFileName;
@@ -1452,9 +1466,9 @@ whould this be a possible implementation?
 
 #if 0
 still not complete
-LOCAL Errors StorageSCP_getFileInfo(StorageInfo *storageInfo,
-                                    ConstString fileName,
-                                    FileInfo    *fileInfo
+LOCAL Errors StorageSCP_getFileInfo(const StorageInfo *storageInfo,
+                                    ConstString       fileName,
+                                    FileInfo          *fileInfo
                                    )
 {
   String infoFileName;

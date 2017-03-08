@@ -170,7 +170,7 @@ LOCAL Errors StorageFile_done(StorageInfo *storageInfo)
   return ERROR_NONE;
 }
 
-LOCAL bool StorageFile_isServerAllocationPending(StorageInfo *storageInfo)
+LOCAL bool StorageFile_isServerAllocationPending(const StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
@@ -180,10 +180,10 @@ LOCAL bool StorageFile_isServerAllocationPending(StorageInfo *storageInfo)
   return FALSE;
 }
 
-LOCAL Errors StorageFile_preProcess(StorageInfo *storageInfo,
-                                    ConstString archiveName,
-                                    time_t      time,
-                                    bool        initialFlag
+LOCAL Errors StorageFile_preProcess(const StorageInfo *storageInfo,
+                                    ConstString       archiveName,
+                                    time_t            time,
+                                    bool              initialFlag
                                    )
 {
   TextMacro textMacros[2];
@@ -200,7 +200,7 @@ LOCAL Errors StorageFile_preProcess(StorageInfo *storageInfo,
     if (!initialFlag)
     {
       // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
+      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,              NULL);
       TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
 
       if (globalOptions.file.writePreProcessCommand != NULL)
@@ -238,10 +238,10 @@ LOCAL Errors StorageFile_preProcess(StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL Errors StorageFile_postProcess(StorageInfo *storageInfo,
-                                     ConstString archiveName,
-                                     time_t      time,
-                                     bool        finalFlag
+LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
+                                     ConstString       archiveName,
+                                     time_t            time,
+                                     bool              finalFlag
                                     )
 {
   TextMacro textMacros[2];
@@ -296,7 +296,7 @@ LOCAL Errors StorageFile_postProcess(StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL bool StorageFile_exists(StorageInfo *storageInfo, ConstString fileName)
+LOCAL bool StorageFile_exists(const StorageInfo *storageInfo, ConstString fileName)
 {
   assert(storageInfo != NULL);
   assert(!String_isEmpty(fileName));
@@ -304,6 +304,17 @@ LOCAL bool StorageFile_exists(StorageInfo *storageInfo, ConstString fileName)
   UNUSED_VARIABLE(storageInfo);
 
   return File_exists(fileName);
+}
+
+LOCAL Errors StorageFile_getTmpName(String archiveName, const StorageInfo *storageInfo)
+{
+  assert(archiveName != NULL);
+  assert(!String_isEmpty(archiveName) != NULL);
+  assert(storageInfo != NULL);
+
+  UNUSED_VARIABLE(storageInfo);
+
+  return File_getTmpFileName(archiveName,String_cString(archiveName),NULL);
 }
 
 LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
@@ -560,8 +571,8 @@ LOCAL uint64 StorageFile_getSize(StorageHandle *storageHandle)
   return size;
 }
 
-LOCAL Errors StorageFile_delete(StorageInfo *storageInfo,
-                                ConstString fileName
+LOCAL Errors StorageFile_delete(const StorageInfo *storageInfo,
+                                ConstString       fileName
                                )
 {
   Errors error;
@@ -581,9 +592,9 @@ LOCAL Errors StorageFile_delete(StorageInfo *storageInfo,
 
 #if 0
 still not complete
-LOCAL Errors StorageFile_getFileInfo(StorageInfo *storageInfo,
-                                     ConstString fileName,
-                                     FileInfo    *fileInfo
+LOCAL Errors StorageFile_getFileInfo(const StorageInfo *storageInfo,
+                                     ConstString       fileName,
+                                     FileInfo          *fileInfo
                                     )
 {
   String infoFileName;

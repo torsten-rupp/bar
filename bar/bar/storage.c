@@ -2039,6 +2039,63 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
   return existsFlag;
 }
 
+Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
+{
+  Errors error;
+
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
+
+  if (!String_isEmpty(storageInfo->storageSpecifier.archiveName))
+  {
+    String_set(archiveName,storageInfo->storageSpecifier.archiveName);
+  }
+  else
+  {
+    String_setCString(archiveName,"archive");
+  }
+
+  switch (storageInfo->type)
+  {
+    case STORAGE_TYPE_FILESYSTEM:
+      error = StorageFile_getTmpName(archiveName,storageInfo);
+      break;
+    case STORAGE_TYPE_FTP:
+      error = StorageFTP_getTmpName(archiveName,storageInfo);
+      break;
+    case STORAGE_TYPE_SSH:
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
+      break;
+    case STORAGE_TYPE_SCP:
+      error = StorageSCP_getTmpName(archiveName,storageInfo);
+      break;
+    case STORAGE_TYPE_SFTP:
+      error = StorageSFTP_getTmpName(archiveName,storageInfo);
+      break;
+    case STORAGE_TYPE_WEBDAV:
+      error = StorageWebDAV_getTmpName(archiveName,storageInfo);
+      break;
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+      error = StorageOptical_getTmpName(archiveName,storageInfo);
+      break;
+    case STORAGE_TYPE_DEVICE:
+      error = StorageDevice_getTmpName(archiveName,storageInfo);
+      break;
+    case STORAGE_TYPE_MASTER:
+      error = StorageMaster_getTmpName(archiveName,storageInfo);
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+
+  return error;
+}
+
 #ifdef NDEBUG
   Errors Storage_create(StorageHandle *storageHandle,
                         StorageInfo   *storageInfo,

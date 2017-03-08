@@ -1471,7 +1471,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL Errors StorageOptical_unloadVolume(StorageInfo *storageInfo)
+LOCAL Errors StorageOptical_unloadVolume(const StorageInfo *storageInfo)
 {
   Errors    error;
   TextMacro textMacros[1];
@@ -1492,7 +1492,7 @@ LOCAL Errors StorageOptical_unloadVolume(StorageInfo *storageInfo)
   return error;
 }
 
-LOCAL bool StorageOptical_exists(StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageOptical_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
@@ -1502,6 +1502,18 @@ LOCAL bool StorageOptical_exists(StorageInfo *storageInfo, ConstString archiveNa
   UNUSED_VARIABLE(archiveName);
 
   return FALSE;
+}
+
+LOCAL Errors StorageOptical_getTmpName(String archiveName, const StorageInfo *storageInfo)
+{
+  assert(archiveName != NULL);
+  assert(!String_isEmpty(archiveName) != NULL);
+  assert(storageInfo != NULL);
+
+  UNUSED_VARIABLE(storageInfo);
+
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_getTmpFileName(archiveName,String_cString(archiveName),NULL);
 }
 
 LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
@@ -1940,8 +1952,8 @@ LOCAL uint64 StorageOptical_getSize(StorageHandle *storageHandle)
   return size;
 }
 
-LOCAL Errors StorageOptical_delete(StorageInfo *storageInfo,
-                                   ConstString archiveName
+LOCAL Errors StorageOptical_delete(const StorageInfo *storageInfo,
+                                   ConstString       archiveName
                                   )
 {
   assert(storageInfo != NULL);
@@ -1957,9 +1969,9 @@ LOCAL Errors StorageOptical_delete(StorageInfo *storageInfo,
 
 #if 0
 still not complete
-LOCAL Errors StorageOptical_getFileInfo(StorageInfo *storageInfo,
-                                        ConstString fileName,
-                                        FileInfo    *fileInfo
+LOCAL Errors StorageOptical_getFileInfo(const StorageInfo *storageInfo,
+                                        ConstString       fileName,
+                                        FileInfo          *fileInfo
                                        )
 {
   String infoFileName;

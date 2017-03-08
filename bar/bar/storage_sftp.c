@@ -481,7 +481,7 @@ LOCAL Errors StorageSFTP_done(StorageInfo *storageInfo)
   return ERROR_NONE;
 }
 
-LOCAL bool StorageSFTP_isServerAllocationPending(StorageInfo *storageInfo)
+LOCAL bool StorageSFTP_isServerAllocationPending(const StorageInfo *storageInfo)
 {
   bool serverAllocationPending;
 
@@ -500,10 +500,10 @@ LOCAL bool StorageSFTP_isServerAllocationPending(StorageInfo *storageInfo)
   return serverAllocationPending;
 }
 
-LOCAL Errors StorageSFTP_preProcess(StorageInfo *storageInfo,
-                                    ConstString archiveName,
-                                    time_t      timestamp,
-                                    bool        initialFlag
+LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
+                                    ConstString       archiveName,
+                                    time_t            timestamp,
+                                    bool              initialFlag
                                    )
 {
   Errors error;
@@ -571,10 +571,10 @@ LOCAL Errors StorageSFTP_preProcess(StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL Errors StorageSFTP_postProcess(StorageInfo *storageInfo,
-                                     ConstString archiveName,
-                                     time_t      timestamp,
-                                     bool        finalFlag
+LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
+                                     ConstString       archiveName,
+                                     time_t            timestamp,
+                                     bool              finalFlag
                                     )
 {
   Errors error;
@@ -643,7 +643,7 @@ LOCAL Errors StorageSFTP_postProcess(StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL bool StorageSFTP_exists(StorageInfo*storageInfo, ConstString archiveName)
+LOCAL bool StorageSFTP_exists(const StorageInfo*storageInfo, ConstString archiveName)
 {
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
@@ -652,7 +652,21 @@ LOCAL bool StorageSFTP_exists(StorageInfo*storageInfo, ConstString archiveName)
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
   return File_exists(archiveName);
+}
+
+LOCAL Errors StorageSFTP_getTmpName(String archiveName, const StorageInfo *storageInfo)
+{
+  assert(archiveName != NULL);
+  assert(!String_isEmpty(archiveName) != NULL);
+  assert(storageInfo != NULL);
+
+  UNUSED_VARIABLE(storageInfo);
+
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_getTmpFileName(archiveName,String_cString(archiveName),NULL);
 }
 
 LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
@@ -1362,8 +1376,8 @@ LOCAL Errors StorageSFTP_seek(StorageHandle *storageHandle,
   return error;
 }
 
-LOCAL Errors StorageSFTP_delete(StorageInfo *storageInfo,
-                                ConstString archiveName
+LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
+                                ConstString       archiveName
                                )
 {
   Errors       error;
@@ -1456,9 +1470,9 @@ LOCAL Errors StorageSFTP_delete(StorageInfo *storageInfo,
 
 #if 0
 still not complete
-LOCAL Errors StorageSFTP_getFileInfo(StorageInfo *storageInfo,
-                                     ConstString fileName,
-                                     FileInfo    *fileInfo
+LOCAL Errors StorageSFTP_getFileInfo(const StorageInfo *storageInfo,
+                                     ConstString       fileName,
+                                     FileInfo          *fileInfo
                                     )
 {
   String infoFileName;

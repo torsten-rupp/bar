@@ -10,7 +10,7 @@
 
 /* Format storage URL:
 
-   <type>://<url specific values>/<file name>
+   <type>://<url specific values>/<archive name>
 
    Supported storage types:
 
@@ -1251,11 +1251,23 @@ Errors Storage_unloadVolume(StorageInfo *storageInfo);
 bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName);
 
 /***********************************************************************\
+* Name   : Storage_getTmpName
+* Purpose: get temporary archive name
+* Input  : archiveName - archive name variable
+*          storageInfo - storage info
+* Output : archiveName - new archive name
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo);
+
+/***********************************************************************\
 * Name   : Storage_create
 * Purpose: create new/append to storage
 * Input  : storageHandle - storage handle variable
 *          storageInfo   - storage info
-*          archiveName   - archive name
+*          archiveName   - archive name (can be NULL)
 *          archiveSize   - archive size [bytes]
 * Output : -
 * Return : ERROR_NONE or errorcode

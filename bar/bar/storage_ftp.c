@@ -1313,7 +1313,7 @@ LOCAL Errors StorageFTP_done(StorageInfo *storageInfo)
   return ERROR_NONE;
 }
 
-LOCAL bool StorageFTP_isServerAllocationPending(StorageInfo *storageInfo)
+LOCAL bool StorageFTP_isServerAllocationPending(const StorageInfo *storageInfo)
 {
   bool serverAllocationPending;
 
@@ -1332,10 +1332,10 @@ LOCAL bool StorageFTP_isServerAllocationPending(StorageInfo *storageInfo)
   return serverAllocationPending;
 }
 
-LOCAL Errors StorageFTP_preProcess(StorageInfo *storageInfo,
-                                   ConstString archiveName,
-                                   time_t      time,
-                                   bool        initialFlag
+LOCAL Errors StorageFTP_preProcess(const StorageInfo *storageInfo,
+                                   ConstString       archiveName,
+                                   time_t            time,
+                                   bool              initialFlag
                                   )
 {
   Errors error;
@@ -1402,10 +1402,10 @@ LOCAL Errors StorageFTP_preProcess(StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL Errors StorageFTP_postProcess(StorageInfo *storageInfo,
-                                    ConstString archiveName,
-                                    time_t      time,
-                                    bool        finalFlag
+LOCAL Errors StorageFTP_postProcess(const StorageInfo *storageInfo,
+                                    ConstString       archiveName,
+                                    time_t            time,
+                                    bool              finalFlag
                                    )
 {
   Errors error;
@@ -1472,7 +1472,7 @@ LOCAL Errors StorageFTP_postProcess(StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL Errors StorageFTP_unloadVolume(StorageInfo *storageInfo)
+LOCAL Errors StorageFTP_unloadVolume(const StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_FTP);
@@ -1483,7 +1483,7 @@ LOCAL Errors StorageFTP_unloadVolume(StorageInfo *storageInfo)
   return ERROR_NONE;
 }
 
-LOCAL bool StorageFTP_exists(StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageFTP_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
   bool existsFlag;
   #if   defined(HAVE_CURL)
@@ -1673,6 +1673,19 @@ LOCAL bool StorageFTP_exists(StorageInfo *storageInfo, ConstString archiveName)
   #endif /* HAVE_CURL || HAVE_FTP */
 
   return existsFlag;
+}
+
+LOCAL Errors StorageFTP_getTmpName(String archiveName, const StorageInfo *storageInfo)
+{
+  assert(archiveName != NULL);
+  assert(!String_isEmpty(archiveName) != NULL);
+  assert(storageInfo != NULL);
+
+  UNUSED_VARIABLE(storageInfo);
+
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_getTmpFileName(archiveName,String_cString(archiveName),NULL);
 }
 
 LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
@@ -3244,9 +3257,9 @@ LOCAL Errors StorageFTP_delete(StorageInfo  *storageInfo,
 
 #if 0
 still not complete
-LOCAL Errors StorageFTP_getFileInfo(StorageInfo *storageInfo,
-                                    ConstString fileName,
-                                    FileInfo    *fileInfo
+LOCAL Errors StorageFTP_getFileInfo(const StorageInfo *storageInfo,
+                                    ConstString       fileName,
+                                    FileInfo          *fileInfo
                                    )
 {
   String infoFileName;

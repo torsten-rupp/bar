@@ -764,7 +764,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL Errors StorageDevice_unloadVolume(StorageInfo *storageInfo)
+LOCAL Errors StorageDevice_unloadVolume(const StorageInfo *storageInfo)
 {
   Errors    error;
   TextMacro textMacros[1];
@@ -782,16 +782,29 @@ LOCAL Errors StorageDevice_unloadVolume(StorageInfo *storageInfo)
   return error;
 }
 
-LOCAL bool StorageDevice_exists(StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageDevice_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
 
-//TODO: still not implemented
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
+//TODO: still not implemented
+return ERROR_STILL_NOT_IMPLEMENTED;
   return File_exists(archiveName);
+}
+
+LOCAL Errors StorageDevice_getTmpName(String archiveName, const StorageInfo *storageInfo)
+{
+  assert(archiveName != NULL);
+  assert(!String_isEmpty(archiveName) != NULL);
+  assert(storageInfo != NULL);
+
+  UNUSED_VARIABLE(archiveName);
+  UNUSED_VARIABLE(storageInfo);
+
+  return ERROR_FUNCTION_NOT_SUPPORTED;
 }
 
 LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
@@ -1041,8 +1054,8 @@ LOCAL uint64 StorageDevice_getSize(StorageHandle *storageHandle)
   return size;
 }
 
-LOCAL Errors StorageDevice_delete(StorageInfo *storageInfo,
-                                  ConstString archiveName
+LOCAL Errors StorageDevice_delete(const StorageInfo *storageInfo,
+                                  ConstString       archiveName
                                  )
 {
   assert(storageInfo != NULL);
@@ -1058,9 +1071,9 @@ LOCAL Errors StorageDevice_delete(StorageInfo *storageInfo,
 
 #if 0
 still not complete
-LOCAL Errors StorageDevice_getFileInfo(StorageInfo *storageInfo,
-                                       ConstString fileName,
-                                       FileInfo    *fileInfo
+LOCAL Errors StorageDevice_getFileInfo(const StorageInfo *storageInfo,
+                                       ConstString       fileName,
+                                       FileInfo          *fileInfo
                                       )
 {
   Errors error;

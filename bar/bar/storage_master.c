@@ -172,7 +172,7 @@ LOCAL Errors StorageMaster_done(StorageInfo *storageInfo)
   return ERROR_NONE;
 }
 
-LOCAL bool StorageMaster_isServerAllocationPending(StorageInfo *storageInfo)
+LOCAL bool StorageMaster_isServerAllocationPending(const StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
@@ -182,10 +182,10 @@ LOCAL bool StorageMaster_isServerAllocationPending(StorageInfo *storageInfo)
   return FALSE;
 }
 
-LOCAL Errors StorageMaster_preProcess(StorageInfo *storageInfo,
-                                      ConstString archiveName,
-                                      time_t      time,
-                                      bool        initialFlag
+LOCAL Errors StorageMaster_preProcess(const StorageInfo *storageInfo,
+                                      ConstString       archiveName,
+                                      time_t            time,
+                                      bool              initialFlag
                                      )
 {
   Errors error;
@@ -215,10 +215,10 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
   return ERROR_NONE;
 }
 
-LOCAL Errors StorageMaster_postProcess(StorageInfo *storageInfo,
-                                       ConstString archiveName,
-                                       time_t      time,
-                                       bool        finalFlag
+LOCAL Errors StorageMaster_postProcess(const StorageInfo *storageInfo,
+                                       ConstString       archiveName,
+                                       time_t            time,
+                                       bool              finalFlag
                                       )
 {
   Errors error;
@@ -248,7 +248,7 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
   return ERROR_NONE;
 }
 
-LOCAL bool StorageMaster_exists(StorageInfo *storageInfo, ConstString fileName)
+LOCAL bool StorageMaster_exists(const StorageInfo *storageInfo, ConstString fileName)
 {
   assert(storageInfo != NULL);
   assert(!String_isEmpty(fileName));
@@ -258,6 +258,18 @@ LOCAL bool StorageMaster_exists(StorageInfo *storageInfo, ConstString fileName)
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 //TODO
 return TRUE;
+}
+
+LOCAL Errors StorageMaster_getTmpName(String archiveName, const StorageInfo *storageInfo)
+{
+  assert(archiveName != NULL);
+  assert(!String_isEmpty(archiveName) != NULL);
+  assert(storageInfo != NULL);
+
+  UNUSED_VARIABLE(storageInfo);
+
+return ERROR_STILL_NOT_IMPLEMENTED;
+  return File_getTmpFileName(archiveName,String_cString(archiveName),NULL);
 }
 
 LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
@@ -478,8 +490,8 @@ LOCAL uint64 StorageMaster_getSize(StorageHandle *storageHandle)
   return storageHandle->master.size;
 }
 
-LOCAL Errors StorageMaster_delete(StorageInfo *storageInfo,
-                                  ConstString fileName
+LOCAL Errors StorageMaster_delete(const StorageInfo *storageInfo,
+                                  ConstString       fileName
                                  )
 {
   Errors error;
@@ -493,9 +505,9 @@ return ERROR_STILL_NOT_IMPLEMENTED;
 
 #if 0
 still not complete
-LOCAL Errors StorageMaster_getFileInfo(StorageInfo *storageInfo,
-                                       ConstString fileName,
-                                       FileInfo    *fileInfo
+LOCAL Errors StorageMaster_getFileInfo(const StorageInfo *storageInfo,
+                                       ConstString       fileName,
+                                       FileInfo          *fileInfo
                                       )
 {
   String infoFileName;
