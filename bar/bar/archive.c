@@ -254,8 +254,7 @@ LOCAL void freeDecryptKeyNode(DecryptKeyNode *decryptKeyNode, void *userData)
 * Input  : archiveHandle       - archive handle
 *          jobOptions          - job options
 *          passwordMode        - password mode
-*          getPasswordFunction - get password call-back (can
-*                                be NULL)
+*          getPasswordFunction - get password call-back (can be NULL)
 *          getPasswordUserData - user data for get password call-back
 * Output : password - password
 * Return : ERROR_NONE or error code
@@ -737,6 +736,10 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
             decryptKey = &decryptKeyNode->cryptKey;
           }
         }
+        else
+        {
+          decryptKey = &decryptKeyNode->cryptKey;
+        }
       }
       else
       {
@@ -746,7 +749,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
              // no more decrypt keys
              break;
            case PASSWORD_MODE_CONFIG:
-             // get decrypt key from config
+             // get decrypt key from job config
              if (decryptKeyIterator->jobCryptPassword != NULL)
              {
                decryptKey = addDecryptKeyNode(decryptKeyIterator->jobCryptPassword,
@@ -835,14 +838,15 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
 * Input  : archiveHandle       - archive handle
 *          jobOptions          - job options
 *          passwordMode        - password mode
-*          getPasswordFunction - get password call-back
+*          cryptPassword       - config crypt password (can be NULL)
+*          getPasswordFunction - get password call-back (can be NULL)
 *          getPasswordUserData - user data for get password call-back
-*          keyLength          - key length [bits]
-*          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
-*          salt               - salt
-*          saltLength         - salt length [bytes]
+*          keyLength           - key length [bits]
+*          cryptKeyDeriveType  - key derive type; see CryptKeyDeriveTypes
+*          salt                - salt
+*          saltLength          - salt length [bytes]
 * Output : decryptKeyIterator - decrypt key iterator
-* Return : decrypt key or NULL if no more decrypt keys
+* Return : decrypt key or NULL if no decrypt key
 * Notes  : -
 \***********************************************************************/
 
