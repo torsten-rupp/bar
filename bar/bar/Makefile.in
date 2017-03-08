@@ -224,6 +224,9 @@ SQLITE_FLAGS = $(if @HAVE_USLEEP@,-DHAVE_USLEEP=1) -DSQLITE_DEFAULT_FILE_PERMISS
 # xdelta3 flags
 XDELTA3_FLAGS =
 
+# additional options
+OPTIONS ?=
+
 # image types used for tests
 TEST_IMAGE_OPERATIONS = test_image_operations
 
@@ -598,15 +601,16 @@ help:
 	@$(ECHO) "  test4[-debug|-valgrind], test_asymmetric_crypt[-debug|-valgrind]"
 	@$(ECHO) "  test5[-debug|-valgrind], test_signatures[-debug|-valgrind]"
 	@$(ECHO) "  test6[-debug|-valgrind], test_split[-debug|-valgrind]"
-	@$(ECHO) "  test7[-debug|-valgrind], test_image[-debug|-valgrind]"
-	@$(ECHO) "  test8[-debug|-valgrind], test_storage[-debug|-valgrind]"
+	@$(ECHO) "  test7[-debug|-valgrind], test_convert[-debug|-valgrind]"
+	@$(ECHO) "  test8[-debug|-valgrind], test_image[-debug|-valgrind]"
+	@$(ECHO) "  test9[-debug|-valgrind], test_storage[-debug|-valgrind]"
 	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav)[-debug|-valgrind]"
-	@$(ECHO) "  test9[-debug|-valgrind], test_hugefiles[-debug|-valgrind]"
-	@$(ECHO) "  test10[-debug|-valgrind], test_dvd[-debug|-valgrind]"
-	@$(ECHO) "  test11[-debug|-valgrind], test_server[-debug|-valgrind]"
-	@$(ECHO) "  test12[-debug|-valgrind], test_master_slave[-debug|-valgrind]"
-	@$(ECHO) "  test12_master[-debug|-valgrind], test_master[-debug|-valgrind]"
-	@$(ECHO) "  test12_slave[-debug|-valgrind], test_slave[-debug|-valgrind]"
+	@$(ECHO) "  test10[-debug|-valgrind], test_hugefiles[-debug|-valgrind]"
+	@$(ECHO) "  test11[-debug|-valgrind], test_dvd[-debug|-valgrind]"
+	@$(ECHO) "  test12[-debug|-valgrind], test_server[-debug|-valgrind]"
+	@$(ECHO) "  test13[-debug|-valgrind], test_master_slave[-debug|-valgrind]"
+	@$(ECHO) "  test13_master[-debug|-valgrind], test_master[-debug|-valgrind]"
+	@$(ECHO) "  test13_slave[-debug|-valgrind], test_slave[-debug|-valgrind]"
 	@$(ECHO) "  test_combined[-debug|-valgrind]"
 	@$(ECHO) "  test_parameters[-debug|-valgrind]"
 	@$(ECHO) "  test_misc[-debug|-valgrind]"
@@ -1149,9 +1153,9 @@ TEST_TIMEOUT = $(TIMEOUT) --signal=KILL 600 timeout --signal=ABRT 300
 
 .PHONY: test test_win
 .PHONY: test-debug test_win-debug
-.PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test12_master test12_slave
-.PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug test10-debug test11-debug test12-debug test12_master-debug test12_slave-debug
-.PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind test10-valgrind test11-valgrind test12-valgrind test12_master-valgrind test12_slave-valgrind
+.PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test13_master test13_slave
+.PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug test10-debug test11-debug test12-debug test13-debug test13_master-debug test13_slave-debug
+.PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind test10-valgrind test11-valgrind test12-valgrind test13-valgrind test13_master-valgrind test13_slave-valgrind
 .PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_signatures test_split test_image test_storage test_dvd test_combined test_server test_slave test_parameters test_misc
 .PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_signatures-debug test_split-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_server-debug test_slave-debug test_parameters-debug test_misc-debug
 .PHONY: test_basic-valgrind test_compress-valgrind test_crypt-valgrind test_asymmetric_crypt-valgrind test_signatures_crypt-valgrind test_split-valgrind test_image-valgrind test_storage-valgrind test_dvd-valgrind test_combined-valgrind test_server-valgrind test_slave-valgrind test_parameters-valgrind test_misc-valgrind
@@ -1200,19 +1204,19 @@ test1 test_basic: \
 	@$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=${PWD}/test/index.db --max-threads=1" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=${PWD}/test/index.db --max-threads=1 $(OPTIONS)" \
           test_file_operations \
           ;
 	@$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=${PWD}/test/index.db" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=${PWD}/test/index.db $(OPTIONS)" \
           test_file_operations \
           ;
 	@$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=${PWD}/test/index.db" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=${PWD}/test/index.db $(OPTIONS)" \
           test_file_operations_dryrun \
           ;
 	@$(ECHO) "ok"
@@ -1231,7 +1235,7 @@ test2 test_compress: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --max-threads=1" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1241,7 +1245,7 @@ test2 test_compress: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none $(OPTIONS)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1251,7 +1255,7 @@ test2 test_compress: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none $(OPTIONS)" \
             test_file_operations_dryrun \
             ; \
           rc=$$?; \
@@ -1275,7 +1279,7 @@ test_delta_compress: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress+xdelta9 --crypt-algorithm=none --max-threads=1" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress+xdelta9 --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
             test_file_operations_delta \
             ; \
           rc=$$?; \
@@ -1285,7 +1289,7 @@ test_delta_compress: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress+xdelta9 --crypt-algorithm=none" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress+xdelta9 --crypt-algorithm=none $(OPTIONS)" \
             test_file_operations_delta \
             ; \
           rc=$$?; \
@@ -1309,7 +1313,7 @@ test3 test_crypt: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password='$(TEST_PASSWORD_CRYPT)' --max-threads=1" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password='$(TEST_PASSWORD_CRYPT)' --max-threads=1 $(OPTIONS)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1319,7 +1323,7 @@ test3 test_crypt: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) $(OPTIONS)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1329,7 +1333,7 @@ test3 test_crypt: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) $(OPTIONS)" \
             test_file_operations_dryrun \
             ; \
           rc=$$?; \
@@ -1343,7 +1347,7 @@ test3 test_crypt: \
 #	$(MAKE) \
 #          BAR_FILE="test" \
 #          BAR_PATTERN="test" \
-#          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=3DES+CAST5+AES256+CAMELLIA256 --crypt-password='$(TEST_PASSWORD_CRYPT)' --max-threads=1" \
+#          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=3DES+CAST5+AES256+CAMELLIA256 --crypt-password='$(TEST_PASSWORD_CRYPT)' --max-threads=1 $(OPTIONS)" \
 #          test_file_operations \
 #          ;
 
@@ -1363,7 +1367,7 @@ test4 test_asymmetric_crypt: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --max-threads=1" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --max-threads=1 $(OPTIONS)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1373,7 +1377,7 @@ test4 test_asymmetric_crypt: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) $(OPTIONS)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -1383,7 +1387,7 @@ test4 test_asymmetric_crypt: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE)" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) $(OPTIONS)" \
             test_file_operations_dryrun \
             ; \
           rc=$$?; \
@@ -1423,19 +1427,19 @@ test5 test_signatures: \
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --max-threads=1" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --max-threads=1 $(OPTIONS)" \
           test_file_operations \
           ;
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) $(OPTIONS)" \
           test_file_operations \
           ;
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) $(OPTIONS)" \
           test_file_operations_dryrun \
           ;
 	# wrong signature
@@ -1457,19 +1461,19 @@ test6 test_split: \
 	$(MAKE) \
           BAR_FILE="test-###" \
           BAR_PATTERN="test-*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none --max-threads=1" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
           test_file_operations \
           ;
 	$(MAKE) \
           BAR_FILE="test-###" \
           BAR_PATTERN="test-*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
           test_file_operations \
           ;
 	$(MAKE) \
           BAR_FILE="test-###" \
           BAR_PATTERN="test-*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
           test_file_operations_dryrun \
           ;
 	@$(ECHO) "ok"
@@ -1480,15 +1484,33 @@ test6-debug test_split-debug:
 test6-valgrind test_split-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_split
 
-test7 test_image: \
+test7 test_convert: \
   $(TEST_BAR) \
   $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 7: image..."
+	@$(ECHO_NO_LF) "Test 7: convert..."
+	$(MAKE) \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --max-threads=1 $(OPTIONS)" \
+          test_convert_operations \
+          ;
+	@$(ECHO) "ok"
+
+test7-debug test_convert-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_convert
+
+test7-valgrind test_convert-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_convert
+
+test8 test_image: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG)
+	@$(ECHO_NO_LF) "Test 8: image..."
 	for compress in none zip9; do \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --max-threads=1" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
             $(TEST_IMAGE_OPERATIONS) \
             ; \
           rc=$$?; \
@@ -1498,7 +1520,7 @@ test7 test_image: \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none $(OPTIONS)" \
             $(TEST_IMAGE_OPERATIONS) \
             ; \
           rc=$$?; \
@@ -1508,26 +1530,26 @@ test7 test_image: \
         done
 	@$(ECHO) "ok"
 
-test7-debug test_image-debug:
+test8-debug test_image-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_image
 
-test7-valgrind test_image-valgrind:
+test8-valgrind test_image-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_image
 
-test8 test_storage: \
+test9 test_storage: \
   $(TEST_BAR) \
   $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 8: storage..."
+	@$(ECHO_NO_LF) "Test 9: storage..."
 	@$(MAKE) test_storage_file \
 	         test_storage_ftp \
 	         test_storage_scp \
 	         test_storage_sftp \
 	         test_storage_webdav
 
-test8-debug test_storage-debug:
+test9-debug test_storage-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage
 
-test8-valgrind test_storage-valgrind:
+test9-valgrind test_storage-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage
 
 test_storage_file: \
@@ -1537,14 +1559,14 @@ test_storage_file: \
           BAR_STORAGE="file://test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --max-threads=1" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="file://test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
           test_file_operations_base \
           ;
 # delta test?
@@ -1563,14 +1585,14 @@ test_storage_ftp: \
           BAR_STORAGE="ftp://$(TEST_HOST_FTP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-password='$(TEST_PASSWORD_FTP)' --max-threads=1" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-password='$(TEST_PASSWORD_FTP)' --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="ftp://$(TEST_HOST_FTP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-password='$(TEST_PASSWORD_FTP)'" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-password='$(TEST_PASSWORD_FTP)' $(OPTIONS)" \
           test_file_operations_base \
           ;
 
@@ -1590,14 +1612,14 @@ test_storage_scp: \
           BAR_STORAGE="scp://$(TEST_HOST_SCP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-public-key=$(TEST_PUBLIC_KEY_SCP) --ssh-private-key=$(TEST_PRIVATE_KEY_SCP) --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --max-threads=1" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-public-key=$(TEST_PUBLIC_KEY_SCP) --ssh-private-key=$(TEST_PRIVATE_KEY_SCP) --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="scp://$(TEST_HOST_SCP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-public-key=$(TEST_PUBLIC_KEY_SCP) --ssh-private-key=$(TEST_PRIVATE_KEY_SCP) --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))'" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-public-key=$(TEST_PUBLIC_KEY_SCP) --ssh-private-key=$(TEST_PRIVATE_KEY_SCP) --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' $(OPTIONS)" \
           test_file_operations_base \
           ;
 
@@ -1617,14 +1639,14 @@ test_storage_sftp: \
           BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-password='$(TEST_PASSWORD_SFTP)' --max-threads=1" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-password='$(TEST_PASSWORD_SFTP)' --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-password='$(TEST_PASSWORD_SFTP)'" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-password='$(TEST_PASSWORD_SFTP)' $(OPTIONS)" \
           test_file_operations_base \
           ;
 
@@ -1642,14 +1664,14 @@ test_storage_webdav: \
           BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-password='$(TEST_PASSWORD_WEBDAV)' --max-threads=1" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-password='$(TEST_PASSWORD_WEBDAV)' --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/test/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-password='$(TEST_PASSWORD_WEBDAV)'" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-password='$(TEST_PASSWORD_WEBDAV)' $(OPTIONS)" \
           test_file_operations_base \
           ;
 	@$(ECHO) "ok"
@@ -1660,15 +1682,15 @@ test_storage_webdav-debug:
 test_storage_webdav-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_webdav
 
-test9 test_hugefiles: \
+test10 test_hugefiles: \
   $(TEST_BAR) \
   $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 9: huge files..."
+	@$(ECHO_NO_LF) "Test 10: huge files..."
 	for compress in $(COMPRESS_NAMES_HUGE); do \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none $(OPTIONS)" \
             test_hugefiles_operations \
             ; \
           rc=$$?; \
@@ -1678,106 +1700,106 @@ test9 test_hugefiles: \
         done
 	@$(ECHO) "ok"
 
-test9-debug test_hugefiles-debug:
+test10-debug test_hugefiles-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_hugefiles
 
-test9-valgrind test_hugefiles-valgrind:
+test10-valgrind test_hugefiles-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_hugefiles
 
-test10 test_dvd: \
+test11 test_dvd: \
   $(TEST_BAR) \
   $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 109: dvd..."
+	@$(ECHO_NO_LF) "Test 11: dvd..."
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
           test_dvd_operations \
           ;
 	@$(ECHO) "ok"
 
-test10-debug test_dvd-debug:
+test11-debug test_dvd-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_dvd
 
-test10-valgrind test_dvd-valgrind:
+test11-valgrind test_dvd-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_dvd
 
-test11 test_server: \
+test12 test_server: \
   $(TEST_BAR) \
   $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 11: server..."
+	@$(ECHO_NO_LF) "Test 12: server..."
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=master --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=master --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
           test_server_operations \
           ;
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=slave --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=slave --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
           test_server_operations \
           ;
 	@$(ECHO) "ok"
 
-test11-debug test_server-debug:
+test12-debug test_server-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_server
 
-test11-valgrind test_server-valgrind:
+test12-valgrind test_server-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_server
 
-test12: \
+test13: \
   $(TEST_BAR) \
   $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 12: slave..."
+	@$(ECHO_NO_LF) "Test 13: slave..."
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
           test_master_slave_operations \
           ;
 	@$(ECHO) "ok"
 
-test12-debug:
+test13-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_slave
 
-test12-valgrind:
+test13-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_slave
 
-test12_master test_master: \
+test13_master test_master: \
   $(TEST_BAR) \
   $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 12: master..."
+	@$(ECHO_NO_LF) "Test 13: master..."
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
           test_master_slave_operations_master \
           ;
 	@$(ECHO) "ok"
 
-test12_master-debug test_master-debug:
+test13_master-debug test_master-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_master
 
-test12_master-valgrind test_master-valgrind:
+test13_master-valgrind test_master-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_master
 
-test12_slave test_slave: \
+test13_slave test_slave: \
   $(TEST_BAR) \
   $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 12: slave..."
+	@$(ECHO_NO_LF) "Test 13: slave..."
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
           test_master_slave_operations_slave \
           ;
 	@$(ECHO) "ok"
 
-test12_slave-debug test_slave-debug:
+test13_slave-debug test_slave-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_slave
 
-test12_slave-valgrind test_slave-valgrind:
+test13_slave-valgrind test_slave-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_slave
 
 test_combined: \
@@ -1790,7 +1812,7 @@ test_combined: \
             $(MAKE) \
               BAR_FILE=test-### \
               BAR_PATTERN="test-*" \
-              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=100K" \
+              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=100K $(OPTIONS)" \
               test_file_operations \
               ; \
             rc=$$?; \
@@ -1800,7 +1822,7 @@ test_combined: \
             $(MAKE) \
               BAR_FILE=test-### \
               BAR_PATTERN="test-*" \
-              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=10M" \
+              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=10M $(OPTIONS)" \
               $(TEST_IMAGE_OPERATIONS) \
               ; \
             rc=$$?; \
@@ -1961,14 +1983,6 @@ run_debug_test_code:
 	$(call functionTestCheckExitcode,125,125,initAll9=1 $(TEST_BAR))
 	$(call functionTestCheckExitcode,125,125,initAll10=1 $(TEST_BAR))
 	$(call functionTestCheckExitcode,125,125,initAll11=1 $(TEST_BAR))
-
-.PHONY: test_file_operations
-test_file_operations: \
-  test_file_operations_base \
-  test_file_operations_delta \
-  test_file_operations_incremental \
-  test_file_operations_differential \
-  test_file_operations_destroyed
 
 $(TEST_KEY_CRYPT_PUBLIC) $(TEST_KEY_CRYPT_PRIVATE): $(TEST_BAR)
 	$(RMF) $(TEST_KEY_CRYPT_PUBLIC) $(TEST_KEY_CRYPT_PRIVATE)
@@ -2163,6 +2177,14 @@ functionVerifyParameter = \
     exit 1; \
   fi
 
+.PHONY: test_file_operations
+test_file_operations: \
+  test_file_operations_base \
+  test_file_operations_delta \
+  test_file_operations_incremental \
+  test_file_operations_differential \
+  test_file_operations_destroyed
+
 .PHONY: test_file_operations_base test_file_operations_delta test_file_operations_dryrun test_file_operations_incremental test_file_operations_differential test_file_operations_destroyed
 test_file_operations_base: \
   $(TEST_BAR) \
@@ -2306,12 +2328,27 @@ test_file_operations_destroyed: \
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName d:1000:10 >$${fileName}_destroyed; done
 	- `($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null)` $(if $(QUIET),</dev/null 1>/dev/null)
 
-# helper function to create test file with data
-# call functionTestFileCreate,<data device>,<file>,<size>
-functionTestFileCreate = \
-  ( \
-    $(DD) if=$1 of=$2 bs=$3 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-  )
+.PHONY: test_convert_operations
+test_convert_operations: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG) \
+  $(TEST_FILES)
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,BAR_FILE)
+	#
+	$(RMRF) $(TEST_FILES_CLEAN)
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --compress-algorithm=zip9 --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	#
+ifeq (@HAVE_GCRYPT@,1)
+	$(RMRF) $(TEST_FILES_CLEAN)
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password='$(TEST_PASSWORD_CRYPT)' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='test' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='test' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+endif
 
 # helper function to create a test device
 # call functionTestDeviceReset
@@ -2451,7 +2488,7 @@ test_image_operations_raw:
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_base
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
@@ -2464,7 +2501,7 @@ test_image_operations_raw:
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_base
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
@@ -2478,7 +2515,7 @@ test_image_operations_raw:
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -2538,7 +2575,7 @@ ifneq (@MKFS_EXT2@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -2586,7 +2623,7 @@ ifneq (@MKFS_EXT2@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -2634,7 +2671,7 @@ ifneq (@MKFS_EXT2@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -2682,7 +2719,7 @@ ifneq (@MKFS_EXT2@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -2737,7 +2774,7 @@ ifneq (@MKFS_EXT3@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -2785,7 +2822,7 @@ ifneq (@MKFS_EXT3@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -2833,7 +2870,7 @@ ifneq (@MKFS_EXT3@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -2881,7 +2918,7 @@ ifneq (@MKFS_EXT3@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -2936,7 +2973,7 @@ ifneq (@MKFS_EXT4@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -2984,7 +3021,7 @@ ifneq (@MKFS_EXT4@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -3032,7 +3069,7 @@ ifneq (@MKFS_EXT4@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -3090,7 +3127,7 @@ ifneq (@MKFS_EXT4@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -3151,7 +3188,7 @@ ifneq (@MKFS_MSDOS@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -3206,7 +3243,7 @@ ifneq (@MKFS_MSDOS@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -3261,7 +3298,7 @@ ifneq (@MKFS_MSDOS@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -3364,7 +3401,7 @@ ifneq (@MKFS_REISERFS@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -3516,7 +3553,7 @@ test_image_operations_dryrun: \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images --dry-run)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images --dry-run) $(OPTIONS)" \
           test_image_operations_base
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
@@ -3529,7 +3566,7 @@ test_image_operations_dryrun: \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images --dry-run)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images --dry- $(OPTIONS)run)" \
           test_image_operations_base
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
