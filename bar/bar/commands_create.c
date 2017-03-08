@@ -300,7 +300,6 @@ LOCAL void initStatusInfo(CreateStatusInfo *statusInfo)
 \***********************************************************************/
 
 LOCAL void initCreateInfo(CreateInfo               *createInfo,
-                          StorageSpecifier         *storageSpecifier,
                           IndexHandle              *indexHandle,
                           ConstString              jobUUID,
                           ConstString              scheduleUUID,
@@ -321,9 +320,6 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
                          )
 {
   assert(createInfo != NULL);
-
-//TODO: remove?
-UNUSED_VARIABLE(storageSpecifier);
 
   // init variables
   createInfo->indexHandle                    = indexHandle;
@@ -4186,7 +4182,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     AUTOFREE_ADD(&autoFreeList,&fileHandle,{ File_close(&fileHandle); });
     DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
-    // write data to storage
+    // create storage
     retryCount  = 0;
     appendFlag  = FALSE;
     archiveSize = 0LL;
@@ -4240,7 +4236,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         updateStatusInfo(createInfo,FALSE);
       }
 
-      // store data
+      // write data to storage
       File_seek(&fileHandle,0);
       do
       {
@@ -6804,7 +6800,6 @@ Errors Command_create(ConstString                  jobUUID,
 
   // init create info
   initCreateInfo(&createInfo,
-                 &storageSpecifier,
                  indexHandle,
                  jobUUID,
                  scheduleUUID,
@@ -6851,6 +6846,7 @@ Errors Command_create(ConstString                  jobUUID,
   // init storage
 fprintf(stderr,"%s, %d: masterIO=%p\n",__FILE__,__LINE__,masterIO);
   error = Storage_init(&createInfo.storageInfo,
+//TODO
 masterIO, // masterIO
                        &storageSpecifier,
                        jobOptions,
