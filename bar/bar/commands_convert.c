@@ -658,6 +658,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
 
 //TODO
 if (jobOptions->compressAlgorithms.byte != COMPRESS_ALGORITHM_NONE) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
+if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
 
   // create new file entry
   error = Archive_newFileEntry(&destinationArchiveEntryInfo,
@@ -855,6 +856,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
 
 //TODO
 if (jobOptions->compressAlgorithms.byte != COMPRESS_ALGORITHM_NONE) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
+if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
 
   // create new image entry
   error = Archive_newImageEntry(&destinationArchiveEntryInfo,
@@ -1271,6 +1273,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 
 //TODO
 if (jobOptions->compressAlgorithms.byte != COMPRESS_ALGORITHM_NONE) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
+if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
 
   // create new hard link entry
   error = Archive_newHardLinkEntry(&destinationArchiveEntryInfo,
