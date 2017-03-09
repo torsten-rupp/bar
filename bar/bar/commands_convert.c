@@ -70,11 +70,12 @@ typedef struct
 // entry message send to convert threads
 typedef struct
 {
-  StorageInfo       *storageInfo;
-  byte              cryptSalt[CRYPT_SALT_LENGTH];
-  uint              cryptMode;
-  ArchiveEntryTypes archiveEntryType;
-  uint64            offset;
+  StorageInfo         *storageInfo;
+  byte                cryptSalt[CRYPT_SALT_LENGTH];
+  uint                cryptMode;
+  CryptKeyDeriveTypes cryptKeyDeriveType;
+  ArchiveEntryTypes   archiveEntryType;
+  uint64              offset;
 } EntryMsg;
 
 // storage message, send from convert threads -> storage thread
@@ -137,27 +138,33 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 /***********************************************************************\
 * Name   : initConvertInfo
 * Purpose: initialize convert info
-* Input  : convertInfo        - convert info variable
-*          jobOptions         - job options
-*          pauseTestFlag      - pause creation flag (can be NULL)
-*          requestedAbortFlag - request abort flag (can be NULL)
-*          logHandle          - log handle (can be NULL)
+* Input  : convertInfo         - convert info variable
+*          jobOptions          - job options
+*          getPasswordFunction - get password call back
+*          getPasswordUserData - user data for get password call back
+*          pauseTestFlag       - pause creation flag (can be NULL)
+*          requestedAbortFlag  - request abort flag (can be NULL)
+*          logHandle           - log handle (can be NULL)
 * Output : convertInfo - initialized convert info variable
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initConvertInfo(ConvertInfo      *convertInfo,
-                           const JobOptions *jobOptions,
-                           bool             *pauseTestFlag,
-                           bool             *requestedAbortFlag,
-                           LogHandle        *logHandle
+LOCAL void initConvertInfo(ConvertInfo         *convertInfo,
+                           const JobOptions    *jobOptions,
+                           GetPasswordFunction getPasswordFunction,
+                           void                *getPasswordUserData,
+                           bool                *pauseTestFlag,
+                           bool                *requestedAbortFlag,
+                           LogHandle           *logHandle
                           )
 {
   assert(convertInfo != NULL);
 
   // init variables
   convertInfo->jobOptions            = jobOptions;
+  convertInfo->getPasswordFunction   = getPasswordFunction;
+  convertInfo->getPasswordUserData   = getPasswordUserData;
   convertInfo->pauseTestFlag         = pauseTestFlag;
   convertInfo->requestedAbortFlag    = requestedAbortFlag;
   convertInfo->logHandle             = logHandle;
@@ -238,11 +245,10 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
                           void         *userData
                          )
 {
-  ConvertInfo   *convertInfo = (ConvertInfo*)userData;
-  Errors        error;
-  FileInfo      fileInfo;
-  String        archiveName;
-  StorageMsg    storageMsg;
+  ConvertInfo *convertInfo = (ConvertInfo*)userData;
+  Errors      error;
+  FileInfo    fileInfo;
+  StorageMsg  storageMsg;
 
   assert(storageInfo != NULL);
   assert(!String_isEmpty(intermediateFileName));
@@ -314,19 +320,18 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
 
   AutoFreeList     autoFreeList;
   byte             *buffer;
+  String           printableStorageName;
+  String           archiveName;
   void             *autoFreeSavePoint;
   StorageMsg       storageMsg;
   Errors           error;
-  String           printableStorageName;
   FileInfo         fileInfo;
   Server           server;
   FileHandle       fileHandle;
   uint             retryCount;
-  uint64           archiveSize;
+  FileHandle       toFileHandle;
   StorageHandle    storageHandle;
   ulong            bufferLength;
-
-  String           pathName;
 
   assert(convertInfo != NULL);
   assert(convertInfo->jobOptions != NULL);
@@ -339,10 +344,10 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
   printableStorageName = String_new();
-  pathName             = String_new();
+  archiveName          = String_new();
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
-  AUTOFREE_ADD(&autoFreeList,pathName,{ String_delete(printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,pathName,{ String_delete(pathName); });
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
+  AUTOFREE_ADD(&autoFreeList,archiveName,{ String_delete(archiveName); });
 
   // store archives
   while (   (convertInfo->failError == ERROR_NONE)
@@ -367,8 +372,22 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
                  }
                 );
 
+    // get destination archive name
+    if (!String_isEmpty(convertInfo->jobOptions->destination))
+    {
+      String_set(archiveName,convertInfo->jobOptions->destination);
+      File_appendFileName(archiveName,convertInfo->storageInfo.storageSpecifier.archiveName);
+    }
+
     // get printable storage name
-    Storage_getPrintableName(printableStorageName,&convertInfo->storageInfo.storageSpecifier,NULL);
+    if (!String_isEmpty(convertInfo->jobOptions->destination))
+    {
+      String_set(printableStorageName,archiveName);
+    }
+    else
+    {
+      Storage_getPrintableName(printableStorageName,&convertInfo->storageInfo.storageSpecifier,NULL);
+    }
 
     // get file info
     error = File_getFileInfo(storageMsg.fileName,&fileInfo);
@@ -401,6 +420,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
                 );
       convertInfo->failError = error;
 
+//TODO: delete not processed storage file?
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
     }
@@ -408,81 +428,26 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     DEBUG_TESTCODE() { convertInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
     // create storage
-    retryCount  = 0;
-    archiveSize = 0LL;
-    do
+    if (!String_isEmpty(convertInfo->jobOptions->destination))
     {
-      // next try
-      if (retryCount > MAX_RETRIES)
+      // create local file
+      error = File_open(&toFileHandle,archiveName,FILE_OPEN_CREATE);
+      AUTOFREE_ADD(&autoFreeList,&toFileHandle,{ File_close(&toFileHandle); });
+      if (error != ERROR_NONE)
       {
+        printInfo(0,"FAIL!\n");
+        printError("Cannot store '%s' (error: %s)\n",
+                   String_cString(printableStorageName),
+                   Error_getText(error)
+                  );
         break;
       }
-      retryCount++;
-
-      // pause
-//      pauseStorage(convertInfo);
-//      if (isAborted(convertInfo)) break;
-
-      // rename existing storage file
-//TODO
-#if 0
-      error = Storage_rename(&convertInfo->storageInfo,
-                             NULL,  // archiveName,
-                             fileInfo.size
-                            );
-      if (error != ERROR_NONE)
-      {
-        if (retryCount <= MAX_RETRIES)
-        {
-          // retry
-          continue;
-        }
-        else
-        {
-          printInfo(0,"FAIL!\n");
-          printError("Cannot store '%s' (error: %s)\n",
-                     String_cString(printableStorageName),
-                     Error_getText(error)
-                    );
-          break;
-        }
-      }
-      DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
-#endif
-
-      // create storage file
-      error = Storage_create(&storageHandle,
-                             &convertInfo->storageInfo,
-                             NULL,  // archiveName,
-                             fileInfo.size
-                            );
-      if (error != ERROR_NONE)
-      {
-        if (retryCount <= MAX_RETRIES)
-        {
-          // retry
-          continue;
-        }
-        else
-        {
-          printInfo(0,"FAIL!\n");
-          printError("Cannot store '%s' (error: %s)\n",
-                     String_cString(printableStorageName),
-                     Error_getText(error)
-                    );
-          break;
-        }
-      }
       DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
 
-      // write data to storage
+      // transfer data
       File_seek(&fileHandle,0);
       do
       {
-        // pause
-//        pauseStorage(convertInfo);
-//        if (isAborted(convertInfo)) break;
-
         // read data from local intermediate file
         error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
         if (error != ERROR_NONE)
@@ -496,24 +461,16 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         }
         DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
 
-        // store data into storage file
-        error = Storage_write(&storageHandle,buffer,bufferLength);
+        // store data into local file
+        error = File_write(&toFileHandle,buffer,bufferLength);
         if (error != ERROR_NONE)
         {
-          if (retryCount <= MAX_RETRIES)
-          {
-            // retry
-            break;
-          }
-          else
-          {
-            printInfo(0,"FAIL!\n");
-            printError("Cannot write file '%s' (error: %s)!\n",
-                       String_cString(printableStorageName),
-                       Error_getText(error)
-                      );
-            break;
-          }
+          printInfo(0,"FAIL!\n");
+          printError("Cannot write file '%s' (error: %s)!\n",
+                     String_cString(printableStorageName),
+                     Error_getText(error)
+                    );
+          break;
         }
         DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
       }
@@ -524,17 +481,156 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
 
 //TODO: on error restore to original size/delete
 
-      // get archive size
-      archiveSize = Storage_getSize(&storageHandle);
-
-      // close storage
-      Storage_close(&storageHandle);
+      // close local file
+      File_close(&toFileHandle);
+      AUTOFREE_REMOVE(&autoFreeList,&toFileHandle);
     }
-    while (   (convertInfo->failError == ERROR_NONE)                            // no eror
-//           && !isAborted(convertInfo)                                           // not aborted
-           && ((error != ERROR_NONE) && (Error_getCode(error) != ENOSPC))      // some error amd not "no space left"
-           && (retryCount <= MAX_RETRIES)                                      // still some retry left
-          );
+    else
+    {
+      retryCount = 0;
+      do
+      {
+        // next try
+        if (retryCount > MAX_RETRIES)
+        {
+          break;
+        }
+        retryCount++;
+
+        // pause
+  //      pauseStorage(convertInfo);
+  //      if (isAborted(convertInfo)) break;
+
+        // rename existing storage file
+//TODO
+#if 0
+        error = Storage_rename(&convertInfo->storageInfo,
+                               NULL,  // archiveName,
+                               fileInfo.size
+                              );
+        if (error != ERROR_NONE)
+        {
+          if (retryCount <= MAX_RETRIES)
+          {
+            // retry
+            continue;
+          }
+          else
+          {
+            printInfo(0,"FAIL!\n");
+            printError("Cannot store '%s' (error: %s)\n",
+                       String_cString(printableStorageName),
+                       Error_getText(error)
+                      );
+            break;
+          }
+        }
+        DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
+  #endif
+
+        // create original storage
+        error = Storage_create(&storageHandle,
+                               &convertInfo->storageInfo,
+                               NULL,  // archiveName,
+                               fileInfo.size
+                              );
+        AUTOFREE_ADD(&autoFreeList,&storageHandle,{ Storage_close(&storageHandle); });
+        if (error != ERROR_NONE)
+        {
+          if (retryCount <= MAX_RETRIES)
+          {
+            // retry
+            continue;
+          }
+          else
+          {
+            printInfo(0,"FAIL!\n");
+            printError("Cannot store '%s' (error: %s)\n",
+                       String_cString(printableStorageName),
+                       Error_getText(error)
+                      );
+            break;
+          }
+        }
+        DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
+
+        // copy data
+        File_seek(&fileHandle,0);
+        do
+        {
+          // pause
+  //        pauseStorage(convertInfo);
+  //        if (isAborted(convertInfo)) break;
+
+          // read data from local intermediate file
+          error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
+          if (error != ERROR_NONE)
+          {
+            printInfo(0,"FAIL!\n");
+            printError("Cannot read file '%s' (error: %s)!\n",
+                       String_cString(printableStorageName),
+                       Error_getText(error)
+                      );
+            break;
+          }
+          DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+
+          // store data into storage
+          error = Storage_write(&storageHandle,buffer,bufferLength);
+          if (error != ERROR_NONE)
+          {
+            if (retryCount <= MAX_RETRIES)
+            {
+              // retry
+              break;
+            }
+            else
+            {
+              printInfo(0,"FAIL!\n");
+              printError("Cannot write file '%s' (error: %s)!\n",
+                         String_cString(printableStorageName),
+                         Error_getText(error)
+                        );
+              break;
+            }
+          }
+          DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
+        }
+        while (   (convertInfo->failError == ERROR_NONE)
+  //             && !isAborted(convertInfo)
+               && !File_eof(&fileHandle)
+              );
+
+//TODO: on error restore to original size/delete
+
+        // close local file
+        Storage_close(&storageHandle);
+        AUTOFREE_REMOVE(&autoFreeList,&storageHandle);
+
+  #if 0
+        if (String_isEmpty(convertInfo->jobOptions->destination))
+        {
+          // rename orignal archive
+          error = Storage_rename(&convertInfo->storageInfo,tmpArchiveName,NULL);
+          if (error != ERROR_NONE)
+          {
+            printError("Cannot rename archive '%s' (error: %s)\n",
+                       String_cString(printableStorageName),
+                       Error_getText(error)
+                      );
+            AutoFree_cleanup(&autoFreeList);
+            break;
+          }
+        }
+  #endif
+        DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+      }
+      while (   (convertInfo->failError == ERROR_NONE)                            // no eror
+  //           && !isAborted(convertInfo)                                           // not aborted
+             && ((error != ERROR_NONE) && (Error_getCode(error) != ENOSPC))      // some error amd not "no space left"
+             && (retryCount <= MAX_RETRIES)                                      // still some retry left
+            );
+    }
     if (error != ERROR_NONE)
     {
       if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
@@ -543,7 +639,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
       continue;
     }
 
-    // close file to store
+    // close file
     File_close(&fileHandle);
     AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
 
@@ -594,7 +690,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
   }
 
   // free resoures
-  String_delete(pathName);
+  String_delete(archiveName);
   String_delete(printableStorageName);
   free(buffer);
   AutoFree_done(&autoFreeList);
@@ -618,6 +714,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
 
 LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                               ArchiveHandle    *destinationArchiveHandle,
+//TODO: move to covnertInfo?
                               const char       *printableStorageName,
                               const JobOptions *jobOptions,
                               byte             *buffer,
@@ -665,12 +762,14 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
     return error;
   }
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   printInfo(1,"  Convert file '%s'...",String_cString(fileName));
 
 //TODO
 if (jobOptions->compressAlgorithms.byte != COMPRESS_ALGORITHM_NONE) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
 if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+cryptAlgorithm = jobOptions->cryptAlgorithms[0];
 
   // create new file entry
   error = Archive_newFileEntry(&destinationArchiveEntryInfo,
@@ -869,6 +968,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
 //TODO
 if (jobOptions->compressAlgorithms.byte != COMPRESS_ALGORITHM_NONE) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
 if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+cryptAlgorithm = jobOptions->cryptAlgorithms[0];
 
   // create new image entry
   error = Archive_newImageEntry(&destinationArchiveEntryInfo,
@@ -1038,6 +1138,10 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
 
   printInfo(1,"  Convert directory '%s'...",String_cString(directoryName));
 
+//TODO
+if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+
   // create new directory entry
   error = Archive_newDirectoryEntry(&destinationArchiveEntryInfo,
                                     destinationArchiveHandle,
@@ -1154,6 +1258,10 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); String_delete(linkName); return DEBUG_TESTCODE_ERROR(); }
 
   printInfo(1,"  Convert link '%s'...",String_cString(linkName));
+
+//TODO
+if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+cryptAlgorithm = jobOptions->cryptAlgorithms[0];
 
   // create new link entry
   error = Archive_newLinkEntry(&destinationArchiveEntryInfo,
@@ -1286,6 +1394,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 //TODO
 if (jobOptions->compressAlgorithms.byte != COMPRESS_ALGORITHM_NONE) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
 if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+cryptAlgorithm = jobOptions->cryptAlgorithms[0];
 
   // create new hard link entry
   error = Archive_newHardLinkEntry(&destinationArchiveEntryInfo,
@@ -1451,7 +1560,11 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
 
   printInfo(1,"  Convert special device '%s'...",String_cString(fileName));
 
-  // create new directory entry
+//TODO
+if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+
+  // create new special entry
   error = Archive_newSpecialEntry(&destinationArchiveEntryInfo,
                                   destinationArchiveHandle,
                                   NULL,  // indexHandle,
@@ -1553,7 +1666,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
     error = Archive_open(&sourceArchiveHandle,
                          entryMsg.storageInfo,
                          NULL,  // fileName,
-NULL,//                         convertInfo->deltaSourceList,
+NULL,//                         deltaSourceList,
                          convertInfo->getPasswordFunction,
                          convertInfo->getPasswordUserData,
                          convertInfo->logHandle
@@ -1568,8 +1681,9 @@ NULL,//                         convertInfo->deltaSourceList,
       break;
     }
 
-    // set crypt salt and crypt mode
+    // set crypt salt, crypt key derive type, and crypt mode
     Archive_setCryptSalt(&sourceArchiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
+    Archive_setCryptKeyDeriveType(&sourceArchiveHandle,entryMsg.cryptKeyDeriveType);
     Archive_setCryptMode(&sourceArchiveHandle,entryMsg.cryptMode);
 
     // seek to start of entry
@@ -1724,6 +1838,8 @@ LOCAL Errors convertArchive(StorageSpecifier    *storageSpecifier,
   // init convert info
   initConvertInfo(&convertInfo,
                   jobOptions,
+                  getPasswordFunction,
+                  getPasswordUserData,
 //TODO
 NULL,  //               pauseTestFlag,
 NULL,  //               requestedAbortFlag,
@@ -1893,13 +2009,16 @@ CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertI
       break;
     }
     DEBUG_TESTCODE() { failError = DEBUG_TESTCODE_ERROR(); break; }
+//TODO: remove
+//fprintf(stderr,"%s, %d: archiveEntryType=%s\n",__FILE__,__LINE__,Archive_archiveEntryTypeToString(archiveEntryType,NULL));
 
     // send entry to convert threads
-    entryMsg.storageInfo      = &convertInfo.storageInfo;
+    entryMsg.storageInfo        = &convertInfo.storageInfo;
     memCopyFast(entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt),sourceArchiveHandle.cryptSalt,sizeof(sourceArchiveHandle.cryptSalt));
-    entryMsg.cryptMode        = sourceArchiveHandle.cryptMode;
-    entryMsg.archiveEntryType = archiveEntryType;
-    entryMsg.offset           = offset;
+    entryMsg.cryptKeyDeriveType = sourceArchiveHandle.cryptKeyDeriveType;
+    entryMsg.cryptMode          = sourceArchiveHandle.cryptMode;
+    entryMsg.archiveEntryType   = archiveEntryType;
+    entryMsg.offset             = offset;
     if (!MsgQueue_put(&convertInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
     {
       HALT_INTERNAL_ERROR("Send message to convert threads fail!");
@@ -1953,9 +2072,6 @@ CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertI
   // close source archive
   AUTOFREE_REMOVE(&autoFreeList,&sourceArchiveHandle);
   (void)Archive_close(&sourceArchiveHandle);
-
-  // rename converted archive
-//TODO
 
   // done storage
   (void)Storage_done(&convertInfo.storageInfo);
