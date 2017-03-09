@@ -311,8 +311,8 @@ LOCAL Errors getCryptPassword(Password            *password,
                                       (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
                                         ? String_cString(printableStorageName)
                                         : NULL,
-                                      TRUE,
-                                      TRUE,
+                                      TRUE,  // validateFlag
+                                      TRUE,  // weakCheckFlag
                                       getPasswordUserData
                                      );
           archiveHandle->cryptPasswordReadFlag = TRUE;
@@ -339,8 +339,8 @@ LOCAL Errors getCryptPassword(Password            *password,
                                       (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
                                         ? String_cString(printableStorageName)
                                         : NULL,
-                                      TRUE,
-                                      TRUE,
+                                      TRUE,  // validateFlag
+                                      TRUE,  // weakCheckFlag
                                       getPasswordUserData
                                      );
           archiveHandle->cryptPasswordReadFlag = TRUE;
@@ -372,8 +372,8 @@ LOCAL Errors getCryptPassword(Password            *password,
                                       (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
                                         ? String_cString(printableStorageName)
                                         : NULL,
-                                      TRUE,
-                                      TRUE,
+                                      TRUE,  // validateFlag
+                                      TRUE,  // weakCheckFlag
                                       getPasswordUserData
                                      );
           archiveHandle->cryptPasswordReadFlag = TRUE;
@@ -467,8 +467,8 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
                                                            (passwordHandle->archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
                                                              ? String_cString(printableStorageName)
                                                              : NULL,
-                                                           FALSE,
-                                                           FALSE,
+                                                           FALSE,  // validateFlag
+                                                           FALSE,  // weakCheckFlag
                                                            passwordHandle->getPasswordUserData
                                                           );
                if (error == ERROR_NONE)
@@ -609,6 +609,9 @@ LOCAL CryptKey *addDecryptKeyNode(const Password      *password,
 
   assert(password != NULL);
   assert(keyLength > 0);
+
+fprintf(stderr,"%s, %d: cryptKeyDeriveType=%d\n",__FILE__,__LINE__,cryptKeyDeriveType);
+Password_dump(password);
 
   // find/add decrypt key
   decryptKeyNode = LIST_FIND(&decryptKeyList,decryptKeyNode,Password_equals(decryptKeyNode->password,password));
@@ -786,15 +789,15 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                printableStorageName = Storage_getPrintableName(String_new(),&decryptKeyIterator->archiveHandle->storageInfo->storageSpecifier,NULL);
                Password_init(&newPassword);
                error = decryptKeyIterator->getPasswordFunction(NULL,  // loginName
-                                                             &newPassword,
-                                                             PASSWORD_TYPE_CRYPT,
-                                                             (decryptKeyIterator->archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
-                                                               ? String_cString(printableStorageName)
-                                                               : NULL,
-                                                             FALSE,
-                                                             FALSE,
-                                                             decryptKeyIterator->getPasswordUserData
-                                                            );
+                                                               &newPassword,
+                                                               PASSWORD_TYPE_CRYPT,
+                                                               (decryptKeyIterator->archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
+                                                                 ? String_cString(printableStorageName)
+                                                                 : NULL,
+                                                               FALSE,  // validateFlag
+                                                               FALSE,  // weakCheckFlag
+                                                               decryptKeyIterator->getPasswordUserData
+                                                              );
                if (error == ERROR_NONE)
                {
                  // add to decrypt key list
@@ -805,19 +808,12 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                                                 saltLength
                                                );
                }
-               else
-               {
-                 // next password mode is: none
-                 decryptKeyIterator->passwordMode = PASSWORD_MODE_NONE;
-               }
                Password_done(&newPassword);
                String_delete(printableStorageName);
              }
-             else
-             {
-               // next password mode is: none
-               decryptKeyIterator->passwordMode = PASSWORD_MODE_NONE;
-             }
+
+             // next password mode is: none
+             decryptKeyIterator->passwordMode = PASSWORD_MODE_NONE;
              break;
            default:
              #ifndef NDEBUG
@@ -4959,7 +4955,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
     return FALSE;
   }
 
-  // find next file, image, directory, link, hard link, special chunk
+  // find next file/image/directory/link/hard link/special/meta/signature chunk
   chunkHeaderFoundFlag = FALSE;
   scanFlag             = FALSE;
   while (   !chunkHeaderFoundFlag
@@ -5216,7 +5212,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   archiveEntryInfo->file.fileExtendedAttributeList = fileExtendedAttributeList;
 
-  archiveEntryInfo->file.deltaCompressAlgorithm    = COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->file.deltaCompressAlgorithm    = deltaCompressFlag ? deltaCompressAlgorithm : COMPRESS_ALGORITHM_NONE;
   archiveEntryInfo->file.byteCompressAlgorithm     = byteCompressFlag ? byteCompressAlgorithm : COMPRESS_ALGORITHM_NONE;
 
   archiveEntryInfo->file.deltaSourceHandleInitFlag = FALSE;
@@ -5256,7 +5252,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   AUTOFREE_ADD(&autoFreeList,archiveEntryInfo->file.deltaBuffer,{ free(archiveEntryInfo->file.deltaBuffer); });
 
   // get source for delta-compression
-  if (deltaCompressFlag)
+  if (deltaCompressFlag && (deltaCompressAlgorithm != COMPRESS_ALGORITHM_NONE))
   {
     error = DeltaSource_openEntry(&archiveEntryInfo->file.deltaSourceHandle,
                                   archiveHandle->deltaSourceList,
@@ -5268,7 +5264,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     if      (error == ERROR_NONE)
     {
       archiveEntryInfo->file.deltaSourceHandleInitFlag = TRUE;
-      archiveEntryInfo->file.deltaCompressAlgorithm = deltaCompressAlgorithm;
       AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.deltaSourceHandle,{ DeltaSource_closeEntry(&archiveEntryInfo->file.deltaSourceHandle); });
     }
     else if (archiveHandle->storageInfo->jobOptions->forceDeltaCompressionFlag)
@@ -5644,7 +5639,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   archiveEntryInfo->image.blockSize                 = deviceInfo->blockSize;
 
-  archiveEntryInfo->image.deltaCompressAlgorithm    = COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->image.deltaCompressAlgorithm    = deltaCompressFlag ? deltaCompressAlgorithm : COMPRESS_ALGORITHM_NONE;
   archiveEntryInfo->image.byteCompressAlgorithm     = byteCompressFlag ? byteCompressAlgorithm :COMPRESS_ALGORITHM_NONE;
 
   archiveEntryInfo->image.headerLength              = 0;
@@ -5682,7 +5677,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   AUTOFREE_ADD(&autoFreeList,archiveEntryInfo->image.deltaBuffer,{ free(archiveEntryInfo->image.deltaBuffer); });
 
   // get source for delta-compression
-  if (deltaCompressFlag)
+  if (deltaCompressFlag && (deltaCompressAlgorithm != COMPRESS_ALGORITHM_NONE))
   {
     error = DeltaSource_openEntry(&archiveEntryInfo->image.deltaSourceHandle,
                                   archiveHandle->deltaSourceList,
@@ -5694,7 +5689,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     if (error == ERROR_NONE)
     {
       archiveEntryInfo->image.deltaSourceHandleInitFlag = TRUE;
-      archiveEntryInfo->image.deltaCompressAlgorithm = deltaCompressAlgorithm;
       AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.deltaSourceHandle,{ DeltaSource_closeEntry(&archiveEntryInfo->image.deltaSourceHandle); });
     }
     else
@@ -6520,7 +6514,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->hardLink.fileNameList              = fileNameList;
   archiveEntryInfo->hardLink.fileExtendedAttributeList = fileExtendedAttributeList;
 
-  archiveEntryInfo->hardLink.deltaCompressAlgorithm    = COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->hardLink.deltaCompressAlgorithm    = deltaCompressFlag ? deltaCompressAlgorithm : COMPRESS_ALGORITHM_NONE;
   archiveEntryInfo->hardLink.byteCompressAlgorithm     = byteCompressFlag ? byteCompressAlgorithm : COMPRESS_ALGORITHM_NONE;
 
   archiveEntryInfo->hardLink.deltaSourceHandleInitFlag = FALSE;
@@ -6560,7 +6554,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.deltaBuffer,{ free(archiveEntryInfo->hardLink.deltaBuffer); });
 
   // get source for delta-compression
-  if (deltaCompressFlag)
+  if (deltaCompressFlag && (deltaCompressAlgorithm != COMPRESS_ALGORITHM_NONE))
   {
     error = ERROR_NONE;
     STRINGLIST_ITERATE(fileNameList,stringNode,fileName)
@@ -6577,7 +6571,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     if      (error == ERROR_NONE)
     {
       archiveEntryInfo->hardLink.deltaSourceHandleInitFlag = TRUE;
-      archiveEntryInfo->hardLink.deltaCompressAlgorithm = deltaCompressAlgorithm;
       AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.deltaSourceHandle,{ DeltaSource_closeEntry(&archiveEntryInfo->hardLink.deltaSourceHandle); });
     }
     else if (archiveHandle->storageInfo->jobOptions->forceDeltaCompressionFlag)
@@ -7182,7 +7175,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
     return error;
   }
 
-  // find next file, image, directory, link, special chunk
+  // find next file/image/directory/link/hard link/special/meta/signature chunk
   scanMode = FALSE;
   do
   {
@@ -7954,7 +7947,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   }
   AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->file.deltaBuffer,{ free(archiveEntryInfo->file.deltaBuffer); });
 
-  // try to read file entry with all passwords
+  // try to read file entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->file.chunkFile.info,&index);
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
@@ -8019,7 +8012,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
       error = cryptInit(&archiveEntryInfo->file.chunkFileEntry.cryptInfos,
                         archiveEntryInfo->cryptAlgorithms,
                         SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms),
-                         decryptKey,
+                        decryptKey,
 NULL,//                         password,
                         archiveHandle->cryptSalt,
                         sizeof(archiveHandle->cryptSalt)
@@ -8062,7 +8055,9 @@ NULL,//                         password,
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->cryptMode|CRYPT_MODE_CBC,
+//TODO: not CTS for data!
+//                         archiveHandle->cryptMode|CRYPT_MODE_CBC,
+                         (archiveHandle->cryptMode & ~CRYPT_MODE_CTS)|CRYPT_MODE_CBC,
                          decryptKey,
                          archiveHandle->cryptSalt,
                          sizeof(archiveHandle->cryptSalt)
@@ -8600,7 +8595,7 @@ NULL,//                         password,
   }
   AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->image.deltaBuffer,{ free(archiveEntryInfo->image.deltaBuffer); });
 
-  // try to read image entry with all passwords
+  // try to read image entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->image.chunkImage.info,&index);
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
@@ -8683,7 +8678,9 @@ NULL,//                         password,
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->cryptMode|CRYPT_MODE_CBC,
+//TODO: not CTS for data!
+//                         archiveHandle->cryptMode|CRYPT_MODE_CBC,
+                         (archiveHandle->cryptMode & ~CRYPT_MODE_CTS)|CRYPT_MODE_CBC,
                          decryptKey,
                          archiveHandle->cryptSalt,
                          sizeof(archiveHandle->cryptSalt)
@@ -9536,7 +9533,7 @@ NULL,//                         password,
     return error;
   }
 
-  // try to read link entry with all passwords
+  // try to read link entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->link.chunkLink.info,&index);
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
@@ -10003,7 +10000,7 @@ NULL,//                         password,
   }
   AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->hardLink.deltaBuffer,{ free(archiveEntryInfo->hardLink.deltaBuffer); });
 
-  // try to read hard link entry with all passwords
+  // try to read hard link entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->hardLink.chunkHardLink.info,&index);
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
@@ -10112,7 +10109,9 @@ NULL,//                         password,
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->cryptMode|CRYPT_MODE_CBC,
+//TODO: not CTS for data!
+//                         archiveHandle->cryptMode|CRYPT_MODE_CBC,
+                         (archiveHandle->cryptMode & ~CRYPT_MODE_CTS)|CRYPT_MODE_CBC,
                          decryptKey,
                          archiveHandle->cryptSalt,
                          sizeof(archiveHandle->cryptSalt)
@@ -10638,7 +10637,7 @@ NULL,//                         password,
     return error;
   }
 
-  // try to read special entry with all passwords
+  // try to read special entry with all decrypt keys
   AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->special.chunkSpecial.info,&index);
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
@@ -12302,7 +12301,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               else
               {
                 // no data decompressed -> error in inflate
-                return ERROR_INFLATE_FAIL;
+                return ERRORX_(INFLATE_FAIL,0,"not data");
               }
             }
             else
@@ -12454,7 +12453,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               else
               {
                 // no data decompressed -> error in inflate
-                return ERROR_INFLATE_FAIL;
+                return ERRORX_(INFLATE_FAIL,0,"no data");
               }
             }
             else
@@ -12610,7 +12609,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               else
               {
                 // no data decompressed -> error in inflate
-                return ERROR_INFLATE_FAIL;
+                return ERRORX_(INFLATE_FAIL,0,"no data");
               }
             }
             else
