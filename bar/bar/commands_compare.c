@@ -78,11 +78,12 @@ typedef struct
 // entry message send to compare threads
 typedef struct
 {
-  StorageInfo       *storageInfo;
-  byte              cryptSalt[CRYPT_SALT_LENGTH];
-  uint              cryptMode;
-  ArchiveEntryTypes archiveEntryType;
-  uint64            offset;
+  StorageInfo         *storageInfo;
+  byte                cryptSalt[CRYPT_SALT_LENGTH];
+  uint                cryptMode;
+  CryptKeyDeriveTypes cryptKeyDeriveType;
+  ArchiveEntryTypes   archiveEntryType;
+  uint64              offset;
 } EntryMsg;
 
 /***************************** Variables *******************************/
@@ -118,46 +119,51 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 /***********************************************************************\
 * Name   : initCompareInfo
 * Purpose: initialize compare info
-* Input  : compareInfo                - compare info variable
-*          storageSpecifier           - storage specifier structure
-*          includeEntryList           - include entry list
-*          excludePatternList         - exclude pattern list
-*          deltaSourceList            - delta source list
-*          jobOptions                 - job options
-*          pauseTestFlag              - pause creation flag (can be
-*                                       NULL)
-*          requestedAbortFlag         - request abort flag (can be NULL)
-*          logHandle                  - log handle (can be NULL)
+* Input  : compareInfo         - compare info variable
+*          storageSpecifier    - storage specifier structure
+*          includeEntryList    - include entry list
+*          excludePatternList  - exclude pattern list
+*          deltaSourceList     - delta source list
+*          jobOptions          - job options
+*          getPasswordFunction - get password call back
+*          getPasswordUserData - user data for get password call back
+*          pauseTestFlag       - pause creation flag (can be NULL)
+*          requestedAbortFlag  - request abort flag (can be NULL)
+*          logHandle           - log handle (can be NULL)
 * Output : createInfo - initialized compare info variable
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initCompareInfo(CompareInfo       *compareInfo,
-                           FragmentList      *fragmentList,
-                           StorageSpecifier  *storageSpecifier,
-                           const EntryList   *includeEntryList,
-                           const PatternList *excludePatternList,
-                           DeltaSourceList   *deltaSourceList,
-                           const JobOptions  *jobOptions,
-                           bool              *pauseTestFlag,
-                           bool              *requestedAbortFlag,
-                           LogHandle         *logHandle
+LOCAL void initCompareInfo(CompareInfo         *compareInfo,
+                           FragmentList        *fragmentList,
+                           StorageSpecifier    *storageSpecifier,
+                           const EntryList     *includeEntryList,
+                           const PatternList   *excludePatternList,
+                           DeltaSourceList     *deltaSourceList,
+                           const JobOptions    *jobOptions,
+                           GetPasswordFunction getPasswordFunction,
+                           void                *getPasswordUserData,
+                           bool                *pauseTestFlag,
+                           bool                *requestedAbortFlag,
+                           LogHandle           *logHandle
                           )
 {
   assert(compareInfo != NULL);
 
   // init variables
-  compareInfo->fragmentList       = fragmentList;
-  compareInfo->storageSpecifier   = storageSpecifier;
-  compareInfo->includeEntryList   = includeEntryList;
-  compareInfo->excludePatternList = excludePatternList;
-  compareInfo->deltaSourceList    = deltaSourceList;
-  compareInfo->jobOptions         = jobOptions;
-  compareInfo->pauseTestFlag      = pauseTestFlag;
-  compareInfo->requestedAbortFlag = requestedAbortFlag;
-  compareInfo->logHandle          = logHandle;
-  compareInfo->failError          = ERROR_NONE;
+  compareInfo->fragmentList        = fragmentList;
+  compareInfo->storageSpecifier    = storageSpecifier;
+  compareInfo->includeEntryList    = includeEntryList;
+  compareInfo->excludePatternList  = excludePatternList;
+  compareInfo->deltaSourceList     = deltaSourceList;
+  compareInfo->jobOptions          = jobOptions;
+  compareInfo->getPasswordFunction = getPasswordFunction;
+  compareInfo->getPasswordUserData = getPasswordUserData;
+  compareInfo->pauseTestFlag       = pauseTestFlag;
+  compareInfo->requestedAbortFlag  = requestedAbortFlag;
+  compareInfo->logHandle           = logHandle;
+  compareInfo->failError           = ERROR_NONE;
 
   // init entry name queue, storage queue
   if (!MsgQueue_init(&compareInfo->entryMsgQueue,MAX_ENTRY_MSG_QUEUE))
@@ -1640,7 +1646,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
     // open archive
     error = Archive_open(&archiveHandle,
                          entryMsg.storageInfo,
-                         NULL,  // fileName,
+                         NULL,  // archiveName
                          compareInfo->deltaSourceList,
                          compareInfo->getPasswordFunction,
                          compareInfo->getPasswordUserData,
@@ -1656,8 +1662,9 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
       break;
     }
 
-    // set crypt salt and crypt mode
+    // set crypt salt, crypt key derive type, and crypt mode
     Archive_setCryptSalt(&archiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
+    Archive_setCryptKeyDeriveType(&archiveHandle,entryMsg.cryptKeyDeriveType);
     Archive_setCryptMode(&archiveHandle,entryMsg.cryptMode);
 
     // seek to start of entry
@@ -1886,6 +1893,8 @@ NULL, // masterSocketHandle
                   excludePatternList,
                   deltaSourceList,
                   jobOptions,
+                  getPasswordFunction,
+                  getPasswordUserData,
 //TODO
 NULL,  //               pauseTestFlag,
 NULL,  //               requestedAbortFlag,
@@ -1954,11 +1963,12 @@ NULL,  //               requestedAbortFlag,
     DEBUG_TESTCODE() { failError = DEBUG_TESTCODE_ERROR(); break; }
 
     // send entry to test threads
-    entryMsg.storageInfo      = &storageInfo;
+    entryMsg.storageInfo        = &storageInfo;
     memCopyFast(entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt),archiveHandle.cryptSalt,sizeof(archiveHandle.cryptSalt));
-    entryMsg.cryptMode        = archiveHandle.cryptMode;
-    entryMsg.archiveEntryType = archiveEntryType;
-    entryMsg.offset           = offset;
+    entryMsg.cryptKeyDeriveType = archiveHandle.cryptKeyDeriveType;
+    entryMsg.cryptMode          = archiveHandle.cryptMode;
+    entryMsg.archiveEntryType   = archiveEntryType;
+    entryMsg.offset             = offset;
     if (!MsgQueue_put(&compareInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
     {
       HALT_INTERNAL_ERROR("Send message to compare threads fail!");

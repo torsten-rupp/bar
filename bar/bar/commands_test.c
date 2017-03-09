@@ -75,11 +75,12 @@ typedef struct
 // entry message send to test threads
 typedef struct
 {
-  StorageInfo       *storageInfo;
-  byte              cryptSalt[CRYPT_SALT_LENGTH];
-  uint              cryptMode;
-  ArchiveEntryTypes archiveEntryType;
-  uint64            offset;
+  StorageInfo         *storageInfo;
+  byte                cryptSalt[CRYPT_SALT_LENGTH];
+  CryptKeyDeriveTypes cryptKeyDeriveType;
+  uint                cryptMode;
+  ArchiveEntryTypes   archiveEntryType;
+  uint64              offset;
 } EntryMsg;
 
 /***************************** Variables *******************************/
@@ -115,46 +116,51 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 /***********************************************************************\
 * Name   : initTestInfo
 * Purpose: initialize test info
-* Input  : testInfo                   - test info variable
-*          storageSpecifier           - storage specifier structure
-*          includeEntryList           - include entry list
-*          excludePatternList         - exclude pattern list
-*          deltaSourceList            - delta source list
-*          jobOptions                 - job options
-*          pauseTestFlag              - pause creation flag (can be
-*                                       NULL)
-*          requestedAbortFlag         - request abort flag (can be NULL)
-*          logHandle                  - log handle (can be NULL)
+* Input  : testInfo            - test info variable
+*          storageSpecifier    - storage specifier structure
+*          includeEntryList    - include entry list
+*          excludePatternList  - exclude pattern list
+*          deltaSourceList     - delta source list
+*          jobOptions          - job options
+*          getPasswordFunction - get password call back
+*          getPasswordUserData - user data for get password call back
+*          pauseTestFlag       - pause creation flag (can be NULL)
+*          requestedAbortFlag  - request abort flag (can be NULL)
+*          logHandle           - log handle (can be NULL)
 * Output : createInfo - initialized test info variable
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initTestInfo(TestInfo          *testInfo,
-                        FragmentList      *fragmentList,
-                        StorageSpecifier  *storageSpecifier,
-                        const EntryList   *includeEntryList,
-                        const PatternList *excludePatternList,
-                        DeltaSourceList   *deltaSourceList,
-                        const JobOptions  *jobOptions,
-                        bool              *pauseTestFlag,
-                        bool              *requestedAbortFlag,
-                        LogHandle         *logHandle
+LOCAL void initTestInfo(TestInfo            *testInfo,
+                        FragmentList        *fragmentList,
+                        StorageSpecifier    *storageSpecifier,
+                        const EntryList     *includeEntryList,
+                        const PatternList   *excludePatternList,
+                        DeltaSourceList     *deltaSourceList,
+                        const JobOptions    *jobOptions,
+                        GetPasswordFunction getPasswordFunction,
+                        void                *getPasswordUserData,
+                        bool                *pauseTestFlag,
+                        bool                *requestedAbortFlag,
+                        LogHandle           *logHandle
                        )
 {
   assert(testInfo != NULL);
 
   // init variables
-  testInfo->fragmentList       = fragmentList;
-  testInfo->storageSpecifier   = storageSpecifier;
-  testInfo->includeEntryList   = includeEntryList;
-  testInfo->excludePatternList = excludePatternList;
-  testInfo->deltaSourceList    = deltaSourceList;
-  testInfo->jobOptions         = jobOptions;
-  testInfo->pauseTestFlag      = pauseTestFlag;
-  testInfo->requestedAbortFlag = requestedAbortFlag;
-  testInfo->logHandle          = logHandle;
-  testInfo->failError          = ERROR_NONE;
+  testInfo->fragmentList        = fragmentList;
+  testInfo->storageSpecifier    = storageSpecifier;
+  testInfo->includeEntryList    = includeEntryList;
+  testInfo->excludePatternList  = excludePatternList;
+  testInfo->deltaSourceList     = deltaSourceList;
+  testInfo->jobOptions          = jobOptions;
+  testInfo->getPasswordFunction = getPasswordFunction;
+  testInfo->getPasswordUserData = getPasswordUserData;
+  testInfo->pauseTestFlag       = pauseTestFlag;
+  testInfo->requestedAbortFlag  = requestedAbortFlag;
+  testInfo->logHandle           = logHandle;
+  testInfo->failError           = ERROR_NONE;
 
   // init entry name queue, storage queue
   if (!MsgQueue_init(&testInfo->entryMsgQueue,MAX_ENTRY_MSG_QUEUE))
@@ -267,6 +273,8 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
       n = (ulong)MIN(fragmentSize-length,bufferSize);
 
       // read archive file
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
       error = Archive_readData(&archiveEntryInfo,buffer,n);
       if (error != ERROR_NONE)
       {
@@ -1051,7 +1059,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     // open archive
     error = Archive_open(&archiveHandle,
                          entryMsg.storageInfo,
-                         NULL,  // fileName,
+                         NULL,  // archiveName,
                          testInfo->deltaSourceList,
                          testInfo->getPasswordFunction,
                          testInfo->getPasswordUserData,
@@ -1068,8 +1076,9 @@ LOCAL void testThreadCode(TestInfo *testInfo)
       break;
     }
 
-    // set crypt salt and crypt mode
+    // set crypt salt, crypt key derive type, and crypt mode
     Archive_setCryptSalt(&archiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
+    Archive_setCryptKeyDeriveType(&archiveHandle,entryMsg.cryptKeyDeriveType);
     Archive_setCryptMode(&archiveHandle,entryMsg.cryptMode);
 
     // seek to start of entry
@@ -1291,6 +1300,8 @@ NULL, // masterSocketHandle
                excludePatternList,
                deltaSourceList,
                jobOptions,
+               getPasswordFunction,
+               getPasswordUserData,
 //TODO
 NULL,  //               pauseTestFlag,
 NULL,  //               requestedAbortFlag,
@@ -1355,11 +1366,12 @@ NULL,  //               requestedAbortFlag,
     }
 
     // send entry to test threads
-    entryMsg.storageInfo      = &storageInfo;
+    entryMsg.storageInfo        = &storageInfo;
     memCopyFast(entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt),archiveHandle.cryptSalt,sizeof(archiveHandle.cryptSalt));
-    entryMsg.cryptMode        = archiveHandle.cryptMode;
-    entryMsg.archiveEntryType = archiveEntryType;
-    entryMsg.offset           = offset;
+    entryMsg.cryptKeyDeriveType = archiveHandle.cryptKeyDeriveType;
+    entryMsg.cryptMode          = archiveHandle.cryptMode;
+    entryMsg.archiveEntryType   = archiveEntryType;
+    entryMsg.offset             = offset;
     if (!MsgQueue_put(&testInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
     {
       HALT_INTERNAL_ERROR("Send message to test threads fail!");
