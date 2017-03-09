@@ -829,14 +829,13 @@ bool Password_inputVerify(const Password *password,
   return equalFlag;
 }
 
-#if 0
-void Password_dump(const char *text, Password *password)
+#ifndef NDEBUG
+void Password_dump(Password *password)
 {
   uint i;
 
   assert(password != NULL);
 
-  fprintf(stderr,text);
   for (i = 0; i < password->dataLength; i++)
   {
     #ifdef HAVE_GCRYPT
@@ -845,10 +844,18 @@ void Password_dump(const char *text, Password *password)
       fprintf(stderr,"%02x",(byte)(password->data[i]^obfuscator[z]));
     #endif /* HAVE_GCRYPT */
   }
-  fprintf(stderr,"\n");
+  fputs("\n",stderr);
+  for (i = 0; i < password->dataLength; i++)
+  {
+    #ifdef HAVE_GCRYPT
+      fprintf(stderr,"%c ",isprint(password->data[i]) ? password->data[i] : "");
+    #else /* not HAVE_GCRYPT */
+      fprintf(stderr,"%c ",isprint(password->data[i]^obfuscator[z]) ? password->data[i]^obfuscator[z] : "");
+    #endif /* HAVE_GCRYPT */
+  }
+  fputs("\n",stderr);
 }
-#endif /* 0 */
-
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }

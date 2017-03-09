@@ -392,6 +392,19 @@ bool Password_inputVerify(const Password *password,
                           uint           modes
                          );
 
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : Password_dump
+* Purpose: dump password
+* Input  : password - password
+* Output : -
+* Return : -
+* Notes  : Debug only!
+\***********************************************************************/
+
+void Password_dump(Password *password);
+#endif /* not NDEBUG */
+
 #ifdef __cplusplus
   }
 #endif
