@@ -1002,19 +1002,6 @@ Errors Crypt_getDecryptKey(CryptKey       *cryptKey,
                            uint           encryptedKeyLength
                           );
 
-/***********************************************************************\
-* Name   : Crypt_dumpKey
-* Purpose: dump key to stdout
-* Input  : cryptKey - crypt key
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#ifndef NDEBUG
-void Crypt_dumpKey(const CryptKey *cryptKey);
-#endif /* NDEBUG */
-
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
@@ -1290,6 +1277,28 @@ bool Crypt_verifyMAC(const CryptMAC *cryptMAC,
                      void           *mac,
                      uint           macLength
                     );
+
+#ifdef __cplusplus
+  }
+#endif
+
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : Crypt_dumpKey, Crypt_dumpHash, Crypt_dumpMAC
+* Purpose: dump key/hash/MAC
+* Input  : text      - text
+*          cryptKey  - crypt key
+*          cryptHash - crypt hash
+*          cryptMAC  - crypt MAC
+* Output : -
+* Return : -
+* Notes  : Debug only!
+\***********************************************************************/
+
+void Crypt_dumpKey(const CryptKey *cryptKey);
+void Crypt_dumpHash(const CryptHash *cryptHash);
+void Crypt_dumpMAC(const CryptMAC *cryptMAC);
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }
