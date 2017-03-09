@@ -211,7 +211,7 @@ ERROR COMPRESS_EOF                     "end of compressed file"
 ERROR DELTA_SOURCE_NOT_FOUND
   if (!stringIsEmpty(ERROR_TEXT))
   {
-    stringFormat(errorText,sizeof(errorText),"Xdelta source '%s' not found",ERROR_TEXT);
+    stringFormat(errorText,sizeof(errorText),"delta source '%s' not found",ERROR_TEXT);
   }
   else
   {
