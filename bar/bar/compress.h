@@ -211,7 +211,6 @@ typedef struct
 
       struct
       {
-        CompressModes compressMode;
         uint          compressionLevel;         // used compression level
         #ifdef LZ4_STREAM
           union

@@ -258,6 +258,8 @@ LOCAL_INLINE int lz4DecompressBlock(CompressInfo *compressInfo,
   assert(outputBuffer != NULL);
   assert(outputBufferLength != NULL);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
   #ifdef LZ4_STREAM
     result = LZ4_decompress_safe_continue(compressInfo->stream.decompress,
                                           (const char*)inputBuffer,
@@ -279,6 +281,8 @@ LOCAL_INLINE int lz4DecompressBlock(CompressInfo *compressInfo,
   #else /* not LZ4_STREAM */
     UNUSED_VARIABLE(compressInfo);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+debugDumpMemory(inputBuffer,inputBufferLength,0);
     result = LZ4_decompress_safe((const char*)inputBuffer,
                                  (char*)outputBuffer,
                                  (int)inputBufferLength,
@@ -681,7 +685,7 @@ LOCAL Errors CompressLZ4_decompressData(CompressInfo *compressInfo)
                                           );
             if (lz4Result != LZ4_OK)
             {
-              return ERROR_INFLATE_FAIL;
+              return ERROR_(INFLATE_FAIL,lz4Result);
             }
             assert(length <= compressInfo->lz4.outputBufferSize);
 
@@ -929,7 +933,6 @@ LOCAL Errors CompressLZ4_init(CompressInfo       *compressInfo,
 {
   assert(compressInfo != NULL);
 
-  compressInfo->lz4.compressMode       = compressMode;
   compressInfo->lz4.inputBufferIndex   = 0;
   compressInfo->lz4.inputBufferLength  = 0;
   compressInfo->lz4.inputBufferSize    = 4+LZ4_compressBound(LZ4_BLOCK_SIZE);  // length/flags prefix+max. size of a LZ4 data block
@@ -1021,7 +1024,7 @@ LOCAL void CompressLZ4_done(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
-  switch (compressInfo->lz4.compressMode)
+  switch (compressInfo->compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
       #ifdef LZ4_STREAM
