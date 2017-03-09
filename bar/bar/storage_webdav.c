@@ -2003,6 +2003,19 @@ LOCAL Errors StorageWebDAV_seek(StorageHandle *storageHandle,
   return error;
 }
 
+LOCAL Errors StorageWebDAV_rename(const StorageInfo *storageInfo,
+                                  ConstString       fromArchiveName,
+                                  ConstString       toArchiveName
+                                 )
+{
+  Errors error;
+
+  assert(storageInfo != NULL);
+  assert(storageInfo->type == STORAGE_TYPE_WEBDAV);
+
+  return error;
+}
+
 LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
                                   ConstString       archiveName
                                  )

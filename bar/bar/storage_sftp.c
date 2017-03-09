@@ -1376,6 +1376,19 @@ LOCAL Errors StorageSFTP_seek(StorageHandle *storageHandle,
   return error;
 }
 
+LOCAL Errors StorageSFTP_rename(const StorageInfo *storageInfo,
+                                ConstString       fromArchiveName,
+                                ConstString       toArchiveName
+                               )
+{
+  Errors error;
+
+  assert(storageInfo != NULL);
+  assert(storageInfo->type == STORAGE_TYPE_SFTP);
+
+  return error;
+}
+
 LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
                                 ConstString       archiveName
                                )

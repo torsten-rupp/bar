@@ -1417,6 +1417,22 @@ Errors Storage_seek(StorageHandle *storageHandle,
 uint64 Storage_getSize(StorageHandle *storageHandle);
 
 /***********************************************************************\
+* Name   : Storage_rename
+* Purpose: rename storage file
+* Input  : storageInfo     - storage
+*          fromArchiveName - archive names (can be NULL)
+*          toArchiveName   - new archive name
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_rename(const StorageInfo *storageInfo,
+                      ConstString       fromArchiveName,
+                      ConstString       toArchiveName
+                     );
+
+/***********************************************************************\
 * Name   : Storage_delete
 * Purpose: delete storage file
 * Input  : storageInfo - storage

@@ -1406,6 +1406,19 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 }
 
+LOCAL Errors StorageSCP_rename(const StorageInfo *storageInfo,
+                               ConstString       fromArchiveName,
+                               ConstString       toArchiveName
+                              )
+{
+  Errors error;
+
+  assert(storageInfo != NULL);
+  assert(storageInfo->type == STORAGE_TYPE_SCP);
+
+  return error;
+}
+
 LOCAL Errors StorageSCP_delete(const StorageInfo *storageInfo,
                                ConstString       archiveName
                               )

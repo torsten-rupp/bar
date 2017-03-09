@@ -3136,6 +3136,19 @@ LOCAL uint64 StorageFTP_getSize(StorageHandle *storageHandle)
   return size;
 }
 
+LOCAL Errors StorageFTP_rename(const StorageInfo *storageInfo,
+                               ConstString       fromArchiveName,
+                               ConstString       toArchiveName
+                              )
+{
+  Errors error;
+
+  assert(storageInfo != NULL);
+  assert(storageInfo->type == STORAGE_TYPE_FTP);
+
+  return error;
+}
+
 LOCAL Errors StorageFTP_delete(StorageInfo  *storageInfo,
                                 ConstString archiveName
                                )

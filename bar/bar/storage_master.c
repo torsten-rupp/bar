@@ -490,6 +490,19 @@ LOCAL uint64 StorageMaster_getSize(StorageHandle *storageHandle)
   return storageHandle->master.size;
 }
 
+LOCAL Errors StorageMaster_rename(const StorageInfo *storageInfo,
+                                  ConstString       fromArchiveName,
+                                  ConstString       toArchiveName
+                                 )
+{
+  Errors error;
+
+  assert(storageInfo != NULL);
+  assert(storageInfo->type == STORAGE_TYPE_MASTER);
+
+  return error;
+}
+
 LOCAL Errors StorageMaster_delete(const StorageInfo *storageInfo,
                                   ConstString       fileName
                                  )

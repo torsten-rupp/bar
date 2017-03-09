@@ -1952,6 +1952,19 @@ LOCAL uint64 StorageOptical_getSize(StorageHandle *storageHandle)
   return size;
 }
 
+LOCAL Errors StorageOptical_rename(const StorageInfo *storageInfo,
+                                   ConstString       fromArchiveName,
+                                   ConstString       toArchiveName
+                                  )
+{
+  Errors error;
+
+  assert(storageInfo != NULL);
+  assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
+
+  return error;
+}
+
 LOCAL Errors StorageOptical_delete(const StorageInfo *storageInfo,
                                    ConstString       archiveName
                                   )

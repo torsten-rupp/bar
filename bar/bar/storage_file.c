@@ -571,6 +571,19 @@ LOCAL uint64 StorageFile_getSize(StorageHandle *storageHandle)
   return size;
 }
 
+LOCAL Errors StorageFile_rename(const StorageInfo *storageInfo,
+                                ConstString       fromArchiveName,
+                                ConstString       toArchiveName
+                               )
+{
+  Errors error;
+
+  assert(storageInfo != NULL);
+  assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
+
+  return error;
+}
+
 LOCAL Errors StorageFile_delete(const StorageInfo *storageInfo,
                                 ConstString       fileName
                                )

@@ -2687,6 +2687,72 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   return size;
 }
 
+Errors Storage_rename(const StorageInfo *storageInfo,
+                      ConstString       fromArchiveName,
+                      ConstString       toArchiveName
+                     )
+{
+  Errors error;
+
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
+
+  // get archive names
+  if (fromArchiveName == NULL) fromArchiveName = storageInfo->storageSpecifier.archiveName;
+  if (toArchiveName == NULL) toArchiveName = storageInfo->storageSpecifier.archiveName;
+  if (String_isEmpty(fromArchiveName) || String_isEmpty(toArchiveName))
+  {
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
+
+  error = ERROR_UNKNOWN;
+  switch (storageInfo->type)
+  {
+    case STORAGE_TYPE_NONE:
+      break;
+    case STORAGE_TYPE_FILESYSTEM:
+      error = StorageFile_rename(storageInfo,fromArchiveName,toArchiveName);
+      break;
+    case STORAGE_TYPE_FTP:
+      error = StorageFTP_rename(storageInfo,fromArchiveName,toArchiveName);
+      break;
+    case STORAGE_TYPE_SSH:
+      #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+      #else /* not HAVE_SSH2 */
+      #endif /* HAVE_SSH2 */
+      break;
+    case STORAGE_TYPE_SCP:
+      error = StorageSCP_rename(storageInfo,fromArchiveName,toArchiveName);
+      break;
+    case STORAGE_TYPE_SFTP:
+      error = StorageSFTP_rename(storageInfo,fromArchiveName,toArchiveName);
+      break;
+    case STORAGE_TYPE_WEBDAV:
+      error = StorageWebDAV_rename(storageInfo,fromArchiveName,toArchiveName);
+      break;
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+      error = StorageOptical_rename(storageInfo,fromArchiveName,toArchiveName);
+      break;
+    case STORAGE_TYPE_DEVICE:
+      error = StorageDevice_rename(storageInfo,fromArchiveName,toArchiveName);
+      break;
+    case STORAGE_TYPE_MASTER:
+error = ERROR_(STILL_NOT_IMPLEMENTED,0);
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+  assert(error != ERROR_UNKNOWN);
+
+  return error;
+}
+
 Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName)
 {
   Errors error;
