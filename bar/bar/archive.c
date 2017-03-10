@@ -610,9 +610,6 @@ LOCAL CryptKey *addDecryptKeyNode(const Password      *password,
   assert(password != NULL);
   assert(keyLength > 0);
 
-fprintf(stderr,"%s, %d: cryptKeyDeriveType=%d\n",__FILE__,__LINE__,cryptKeyDeriveType);
-Password_dump(password);
-
   // find/add decrypt key
   decryptKeyNode = LIST_FIND(&decryptKeyList,decryptKeyNode,Password_equals(decryptKeyNode->password,password));
   if (decryptKeyNode == NULL)
@@ -5499,7 +5496,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   DEBUG_TESTCODE() { Compress_done(&archiveEntryInfo->file.deltaCompressInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->file.deltaCompressInfo); });
 
-  // init byte compress
+  // init byte compress (if no byte-compression is enabled, use identity-compressor)
   error = Compress_init(&archiveEntryInfo->file.byteCompressInfo,
                         COMPRESS_MODE_DEFLATE,
                         archiveEntryInfo->file.byteCompressAlgorithm,
@@ -5887,7 +5884,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->image.deltaCompressInfo); });
 
-  // init byte compress
+  // init byte compress (if no byte-compression is enabled, use identity-compressor)
   error = Compress_init(&archiveEntryInfo->image.byteCompressInfo,
                         COMPRESS_MODE_DEFLATE,
                         archiveEntryInfo->image.byteCompressAlgorithm,
@@ -6825,7 +6822,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->hardLink.deltaCompressInfo); });
 
-  // init byte compress
+  // init byte compress (if no byte-compression is enabled, use identity-compressor)
   error = Compress_init(&archiveEntryInfo->hardLink.byteCompressInfo,
                         COMPRESS_MODE_DEFLATE,
                         archiveEntryInfo->hardLink.byteCompressAlgorithm,
@@ -8055,9 +8052,7 @@ NULL,//                         password,
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-//TODO: not CTS for data!
-//                         archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         (archiveHandle->cryptMode & ~CRYPT_MODE_CTS)|CRYPT_MODE_CBC,
+                         archiveHandle->cryptMode|CRYPT_MODE_CBC,
                          decryptKey,
                          archiveHandle->cryptSalt,
                          sizeof(archiveHandle->cryptSalt)
@@ -8269,7 +8264,7 @@ NULL,//                         password,
             }
             break;
           case CHUNK_ID_FILE_DATA:
-            // read file data chunk
+            // read file data chunk (only header)
             assert(Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_FILE_DATA,archiveEntryInfo->file.chunkFileData.info.alignment));
             error = Chunk_open(&archiveEntryInfo->file.chunkFileData.info,
                                &subChunkHeader,
@@ -8366,7 +8361,7 @@ NULL,//                         password,
   }
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->file.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->file.deltaCompressInfo); });
 
-  // init byte decompress
+  // init byte decompress (if no byte-compression is enabled, use identity-compressor)
   error = Compress_init(&archiveEntryInfo->file.byteCompressInfo,
                         COMPRESS_MODE_INFLATE,
                         archiveEntryInfo->file.byteCompressAlgorithm,
@@ -8678,9 +8673,7 @@ NULL,//                         password,
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-//TODO: not CTS for data!
-//                         archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         (archiveHandle->cryptMode & ~CRYPT_MODE_CTS)|CRYPT_MODE_CBC,
+                         archiveHandle->cryptMode|CRYPT_MODE_CBC,
                          decryptKey,
                          archiveHandle->cryptSalt,
                          sizeof(archiveHandle->cryptSalt)
@@ -8834,7 +8827,7 @@ NULL,//                         password,
             }
             break;
           case CHUNK_ID_IMAGE_DATA:
-            // read image data chunk
+            // read image data chunk (only header)
             assert(Chunk_getSize(&archiveEntryInfo->image.chunkImageData.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_IMAGE_DATA,archiveEntryInfo->image.chunkImageData.info.alignment));
             error = Chunk_open(&archiveEntryInfo->image.chunkImageData.info,
                                &subChunkHeader,
@@ -8929,7 +8922,7 @@ NULL,//                         password,
   }
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->image.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->image.deltaCompressInfo); });
 
-  // init byte decompress
+  // init byte decompress (if no byte-compression is enabled, use identity-compressor)
   error = Compress_init(&archiveEntryInfo->image.byteCompressInfo,
                         COMPRESS_MODE_INFLATE,
                         archiveEntryInfo->image.byteCompressAlgorithm,
@@ -10109,9 +10102,7 @@ NULL,//                         password,
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-//TODO: not CTS for data!
-//                         archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         (archiveHandle->cryptMode & ~CRYPT_MODE_CTS)|CRYPT_MODE_CBC,
+                         archiveHandle->cryptMode|CRYPT_MODE_CBC,
                          decryptKey,
                          archiveHandle->cryptSalt,
                          sizeof(archiveHandle->cryptSalt)
@@ -10360,7 +10351,7 @@ NULL,//                         password,
             }
             break;
           case CHUNK_ID_HARDLINK_DATA:
-            // read hard link data chunk
+            // read hard link data chunk (only header)
             assert(Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkData.info,NULL,0) == ALIGN(CHUNK_FIXED_SIZE_HARDLINK_DATA,archiveEntryInfo->hardLink.chunkHardLinkData.info.alignment));
             error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                                &subChunkHeader,
@@ -10456,7 +10447,7 @@ NULL,//                         password,
   }
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->hardLink.deltaCompressInfo,{ Compress_done(&archiveEntryInfo->hardLink.deltaCompressInfo); });
 
-  // init byte decompress
+  // init byte decompress (if no byte-compression is enabled, use identity-compressor)
   error = Compress_init(&archiveEntryInfo->hardLink.byteCompressInfo,
                         COMPRESS_MODE_INFLATE,
                         archiveEntryInfo->hardLink.byteCompressAlgorithm,
