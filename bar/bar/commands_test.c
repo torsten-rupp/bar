@@ -273,8 +273,6 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
       n = (ulong)MIN(fragmentSize-length,bufferSize);
 
       // read archive file
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
       error = Archive_readData(&archiveEntryInfo,buffer,n);
       if (error != ERROR_NONE)
       {
@@ -285,6 +283,7 @@ asm("int3");
                   );
         break;
       }
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(buffer,n,0);
 
       length += (uint64)n;
 
