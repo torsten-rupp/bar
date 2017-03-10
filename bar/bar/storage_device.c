@@ -305,8 +305,9 @@ LOCAL bool StorageDevice_equalSpecifiers(const StorageSpecifier *storageSpecifie
          && String_equals(archiveName1,archiveName2);
 }
 
-LOCAL String StorageDevice_getName(StorageSpecifier *storageSpecifier,
-                                   ConstString      archiveName
+LOCAL String StorageDevice_getName(String                 string,
+                                   const StorageSpecifier *storageSpecifier,
+                                   ConstString            archiveName
                                   )
 {
   ConstString storageFileName;
@@ -327,29 +328,29 @@ LOCAL String StorageDevice_getName(StorageSpecifier *storageSpecifier,
     storageFileName = storageSpecifier->archiveName;
   }
 
-  String_appendCString(storageSpecifier->storageName,"device://");
+  String_appendCString(string,"device://");
   if (!String_isEmpty(storageSpecifier->deviceName))
   {
-    String_append(storageSpecifier->storageName,storageSpecifier->deviceName);
-    String_appendChar(storageSpecifier->storageName,':');
+    String_append(string,storageSpecifier->deviceName);
+    String_appendChar(string,':');
   }
   if (!String_isEmpty(storageFileName))
   {
-    String_appendChar(storageSpecifier->storageName,'/');
-    String_append(storageSpecifier->storageName,storageFileName);
+    String_appendChar(string,'/');
+    String_append(string,storageFileName);
   }
 
-  return storageSpecifier->storageName;
+  return string;
 }
 
-LOCAL void StorageDevice_getPrintableName(String                 printableStorageName,
+LOCAL void StorageDevice_getPrintableName(String                 string,
                                           const StorageSpecifier *storageSpecifier,
                                           ConstString            archiveName
                                          )
 {
   ConstString storageFileName;
 
-  assert(printableStorageName != NULL);
+  assert(string != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_DEVICE);
 
@@ -367,16 +368,16 @@ LOCAL void StorageDevice_getPrintableName(String                 printableStorag
     storageFileName = storageSpecifier->archiveName;
   }
 
-  String_appendCString(printableStorageName,"device://");
+  String_appendCString(string,"device://");
   if (!String_isEmpty(storageSpecifier->deviceName))
   {
-    String_append(printableStorageName,storageSpecifier->deviceName);
-    String_appendChar(printableStorageName,':');
+    String_append(string,storageSpecifier->deviceName);
+    String_appendChar(string,':');
   }
   if (!String_isEmpty(storageFileName))
   {
-    String_appendChar(printableStorageName,'/');
-    String_append(printableStorageName,storageFileName);
+    String_appendChar(string,'/');
+    String_append(string,storageFileName);
   }
 }
 

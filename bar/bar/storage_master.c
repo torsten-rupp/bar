@@ -85,8 +85,9 @@ LOCAL bool StorageMaster_equalSpecifiers(const StorageSpecifier *storageSpecifie
   return String_equals(archiveName1,archiveName2);
 }
 
-LOCAL String StorageMaster_getName(StorageSpecifier *storageSpecifier,
-                                   ConstString      archiveName
+LOCAL String StorageMaster_getName(String                 string,
+                                   const StorageSpecifier *storageSpecifier,
+                                   ConstString            archiveName
                                   )
 {
   ConstString storageFileName;
@@ -107,23 +108,23 @@ LOCAL String StorageMaster_getName(StorageSpecifier *storageSpecifier,
     storageFileName = storageSpecifier->archiveName;
   }
 
-  String_clear(storageSpecifier->storageName);
+  String_clear(string);
   if (!String_isEmpty(storageFileName))
   {
-    String_append(storageSpecifier->storageName,storageFileName);
+    String_append(string,storageFileName);
   }
 
-  return storageSpecifier->storageName;
+  return string;
 }
 
-LOCAL void StorageMaster_getPrintableName(String                 printableStorageName,
+LOCAL void StorageMaster_getPrintableName(String                 string,
                                           const StorageSpecifier *storageSpecifier,
                                           ConstString            archiveName
                                          )
 {
   ConstString storageFileName;
 
-  assert(printableStorageName != NULL);
+  assert(string != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_MASTER);
 
@@ -143,7 +144,7 @@ LOCAL void StorageMaster_getPrintableName(String                 printableStorag
 
   if (!String_isEmpty(storageFileName))
   {
-    String_append(printableStorageName,storageFileName);
+    String_append(string,storageFileName);
   }
 }
 

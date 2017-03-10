@@ -250,8 +250,9 @@ LOCAL bool StorageSCP_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
          && String_equals(archiveName1,archiveName2);
 }
 
-LOCAL String StorageSCP_getName(StorageSpecifier *storageSpecifier,
-                                ConstString      archiveName
+LOCAL String StorageSCP_getName(String                 string,
+                                const StorageSpecifier *storageSpecifier,
+                                ConstString            archiveName
                                )
 {
   ConstString storageFileName;
@@ -274,37 +275,37 @@ LOCAL String StorageSCP_getName(StorageSpecifier *storageSpecifier,
     storageFileName = storageSpecifier->archiveName;
   }
 
-  String_appendCString(storageSpecifier->storageName,"scp://");
+  String_appendCString(string,"scp://");
   if (!String_isEmpty(storageSpecifier->loginName))
   {
-    String_append(storageSpecifier->storageName,storageSpecifier->loginName);
+    String_append(string,storageSpecifier->loginName);
     if (!Password_isEmpty(storageSpecifier->loginPassword))
     {
-      String_appendChar(storageSpecifier->storageName,':');
+      String_appendChar(string,':');
       plainPassword = Password_deploy(storageSpecifier->loginPassword);
-      String_appendCString(storageSpecifier->storageName,plainPassword);
+      String_appendCString(string,plainPassword);
       Password_undeploy(storageSpecifier->loginPassword,plainPassword);
     }
-    String_appendChar(storageSpecifier->storageName,'@');
+    String_appendChar(string,'@');
   }
-  String_append(storageSpecifier->storageName,storageSpecifier->hostName);
+  String_append(string,storageSpecifier->hostName);
   if (!String_isEmpty(storageFileName))
   {
-    String_appendChar(storageSpecifier->storageName,'/');
-    String_append(storageSpecifier->storageName,storageFileName);
+    String_appendChar(string,'/');
+    String_append(string,storageFileName);
   }
 
-  return storageSpecifier->storageName;
+  return string;
 }
 
-LOCAL void StorageSCP_getPrintableName(String                 printableStorageName,
+LOCAL void StorageSCP_getPrintableName(String                 string,
                                        const StorageSpecifier *storageSpecifier,
                                        ConstString            fileName
                                       )
 {
   ConstString storageFileName;
 
-  assert(printableStorageName != NULL);
+  assert(string != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_SCP);
 
@@ -322,16 +323,16 @@ LOCAL void StorageSCP_getPrintableName(String                 printableStorageNa
     storageFileName = storageSpecifier->archiveName;
   }
 
-  String_appendCString(printableStorageName,"scp://");
-  String_append(printableStorageName,storageSpecifier->hostName);
+  String_appendCString(string,"scp://");
+  String_append(string,storageSpecifier->hostName);
   if ((storageSpecifier->hostPort != 0) && (storageSpecifier->hostPort != 22))
   {
-    String_format(printableStorageName,":%d",storageSpecifier->hostPort);
+    String_format(string,":%d",storageSpecifier->hostPort);
   }
   if (!String_isEmpty(storageFileName))
   {
-    String_appendChar(printableStorageName,'/');
-    String_append(printableStorageName,storageFileName);
+    String_appendChar(string,'/');
+    String_append(string,storageFileName);
   }
 }
 

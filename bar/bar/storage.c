@@ -1428,33 +1428,33 @@ String Storage_getName(String           string,
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
-      StorageFile_getName(storageSpecifier,archiveName);
+      StorageFile_getName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_FTP:
-      StorageFTP_getName(storageSpecifier,archiveName);
+      StorageFTP_getName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_SSH:
       if (!String_isEmpty(archiveName))
       {
-        String_append(storageSpecifier->storageName,archiveName);
+        String_append(string,archiveName);
       }
       break;
     case STORAGE_TYPE_SCP:
-      StorageSCP_getName(storageSpecifier,archiveName);
+      StorageSCP_getName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_SFTP:
-      StorageSFTP_getName(storageSpecifier,archiveName);
+      StorageSFTP_getName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_WEBDAV:
-      StorageWebDAV_getName(storageSpecifier,archiveName);
+      StorageWebDAV_getName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      StorageOptical_getName(storageSpecifier,archiveName);
+      StorageOptical_getName(string,storageSpecifier,archiveName);
       break;
     case STORAGE_TYPE_DEVICE:
-      StorageDevice_getName(storageSpecifier,archiveName);
+      StorageDevice_getName(string,storageSpecifier,archiveName);
       break;
     default:
       #ifndef NDEBUG
@@ -1463,7 +1463,7 @@ String Storage_getName(String           string,
       break;
   }
 
-  return storageSpecifier->storageName;
+  return string;
 }
 
 String Storage_getPrintableName(String                 string,
