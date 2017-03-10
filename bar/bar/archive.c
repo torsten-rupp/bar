@@ -416,7 +416,7 @@ LOCAL Errors getCryptPassword(Password            *password,
 
 LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 {
-  bool           semaphoreLock;
+  SemaphoreLock  semaphoreLock;
   const Password *password;
   String         printableStorageName;
   Password       newPassword;
@@ -524,16 +524,24 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
                                               void                *getPasswordUserData
                                              )
 {
+  SemaphoreLock  semaphoreLock;
+  const Password *password;
+
   assert(passwordHandle != NULL);
 
-  passwordHandle->archiveHandle       = archiveHandle;
-  passwordHandle->jobCryptPassword    = jobOptions->cryptPassword;
-  passwordHandle->passwordMode        = (passwordMode != PASSWORD_MODE_DEFAULT) ? passwordMode : jobOptions->cryptPasswordMode;
-  passwordHandle->passwordNode        = decryptPasswordList.head;
-  passwordHandle->getPasswordFunction = getPasswordFunction;
-  passwordHandle->getPasswordUserData = getPasswordUserData;
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&passwordHandle->archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    passwordHandle->archiveHandle       = archiveHandle;
+    passwordHandle->jobCryptPassword    = jobOptions->cryptPassword;
+    passwordHandle->passwordMode        = (passwordMode != PASSWORD_MODE_DEFAULT) ? passwordMode : jobOptions->cryptPasswordMode;
+    passwordHandle->passwordNode        = decryptPasswordList.head;
+    passwordHandle->getPasswordFunction = getPasswordFunction;
+    passwordHandle->getPasswordUserData = getPasswordUserData;
 
-  return getNextDecryptPassword(passwordHandle);
+    password = getNextDecryptPassword(passwordHandle);
+  }
+
+  return password;
 }
 
 /***********************************************************************\
@@ -594,7 +602,8 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
 *          saltLength         - salt length [bytes]
 * Output : -
 * Return : crypt key or NULL
-* Notes  : -
+* Notes  : It is safe to add a decrypt key at the list end. Other
+*          iterators will get aware of new added decrypt keys.
 \***********************************************************************/
 
 LOCAL CryptKey *addDecryptKeyNode(const Password      *password,
@@ -609,6 +618,7 @@ LOCAL CryptKey *addDecryptKeyNode(const Password      *password,
 
   assert(password != NULL);
   assert(keyLength > 0);
+  assert(Semaphore_isLocked(&decryptKeyList.lock));
 
   // find/add decrypt key
   decryptKeyNode = LIST_FIND(&decryptKeyList,decryptKeyNode,Password_equals(decryptKeyNode->password,password));
@@ -707,8 +717,6 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
   assert(decryptKeyIterator->archiveHandle->storageInfo != NULL);
 
   decryptKey = NULL;
-//TODO: password lock on input?
-//  SEMAPHORE_LOCKED_DO(semaphoreLock,&cryptKeyHandle->archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     while ((decryptKey == NULL) && (decryptKeyIterator->passwordMode != PASSWORD_MODE_NONE))
@@ -855,21 +863,29 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator
                                          uint                saltLength
                                         )
 {
+  SemaphoreLock semaphoreLock;
+  CryptKey      *decryptKey;
+
   assert(decryptKeyIterator != NULL);
 
-  decryptKeyIterator->archiveHandle       = archiveHandle;
-  decryptKeyIterator->passwordMode        = passwordMode;
-  decryptKeyIterator->jobCryptPassword    = cryptPassword;
-  decryptKeyIterator->getPasswordFunction = getPasswordFunction;
-  decryptKeyIterator->getPasswordUserData = getPasswordUserData;
-  decryptKeyIterator->nextDecryptKeyNode  = (DecryptKeyNode*)List_first(&decryptKeyList);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    decryptKeyIterator->archiveHandle       = archiveHandle;
+    decryptKeyIterator->passwordMode        = passwordMode;
+    decryptKeyIterator->jobCryptPassword    = cryptPassword;
+    decryptKeyIterator->getPasswordFunction = getPasswordFunction;
+    decryptKeyIterator->getPasswordUserData = getPasswordUserData;
+    decryptKeyIterator->nextDecryptKeyNode  = (DecryptKeyNode*)List_first(&decryptKeyList);
 
-  return getNextDecryptKey(decryptKeyIterator,
-                           keyLength,
-                           cryptKeyDeriveType,
-                           salt,
-                           saltLength
-                          );
+    decryptKey = getNextDecryptKey(decryptKeyIterator,
+                                   keyLength,
+                                   cryptKeyDeriveType,
+                                   salt,
+                                   saltLength
+                                  );
+  }
+
+  return decryptKey;
 }
 
 /***********************************************************************\
