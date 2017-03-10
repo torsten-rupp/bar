@@ -107,19 +107,26 @@
 #
 # Notes:
 #   - all data types except array data and 'data' are stored in
-#     big-endian format,
+#     big-endian format
 #   - fixed data in chunks (all except 'data') is padded to a
 #     multiple of the size of the encryption block size resp. 4 bytes,
 #     then the 'data' part follow a block size boundary
 #   - encrypted 'data' is padded with 0-bytes to a multiple of the
-#     size of the encryption block size resp. 4 bytes.
-#
-# Current version notes:
+#     size of the encryption block size resp. 4 bytes
 #   - encrypted meta data is read/written with cipher block chaining
-#     mode enabled,
+#     mode enabled
+#
+# Version notes:
+#
+# BAR0
 #   - encrypted meta data (all except 'data') is read/written with
 #     cipher text stealing (CTS) mode enabled. Encrypted data is
-#     read/written _without_ cipher text stealing mode enabled!
+#     read/written _without_ cipher text stealing mode enabled. This
+#     means chunk headers are read/written with CTS enabled, while
+#     the 'data' part is read/written with CTS disabled!
+# BAR1
+#   - encrypted is read/written with cipher text stealing (CTS)
+#     mode disabled.
 
 # ----------------------------------------------------------------------
 
