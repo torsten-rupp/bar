@@ -258,8 +258,6 @@ LOCAL_INLINE int lz4DecompressBlock(CompressInfo *compressInfo,
   assert(outputBuffer != NULL);
   assert(outputBufferLength != NULL);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
   #ifdef LZ4_STREAM
     result = LZ4_decompress_safe_continue(compressInfo->stream.decompress,
                                           (const char*)inputBuffer,
@@ -281,8 +279,6 @@ asm("int3");
   #else /* not LZ4_STREAM */
     UNUSED_VARIABLE(compressInfo);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-debugDumpMemory(inputBuffer,inputBufferLength,0);
     result = LZ4_decompress_safe((const char*)inputBuffer,
                                  (char*)outputBuffer,
                                  (int)inputBufferLength,
