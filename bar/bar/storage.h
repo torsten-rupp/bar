@@ -173,19 +173,20 @@ typedef enum
 typedef struct
 {
   StorageTypes type;                                         // storage type
+
   String       hostName;                                     // host name
   uint         hostPort;                                     // host port
   bool         sslFlag;                                      // TRUE for SSL
   String       loginName;                                    // login name
   Password     *loginPassword;                               // login name
   String       deviceName;                                   // device name
-  String       archiveName;                                  // archive name
 
+  String       archiveName;                                  // archive name
   String       archivePatternString;                         // archive pattern string or NULL if no pattern
   Pattern      archivePattern;
 
-  String       storageName;                                  // storage name (returned by Storage_getStorageName())
-  String       printableStorageName;                         // printable storage name without password (returned by Storage_getPrintableStorageName())
+  String       storageName;                                  // storage name (returned by Storage_getName())
+  String       printableStorageName;                         // printable storage name without password (returned by Storage_getPrintableName())
 } StorageSpecifier;
 
 // volume states
@@ -1029,21 +1030,24 @@ bool Storage_equalNames(ConstString storageName1,
 /***********************************************************************\
 * Name   : Storage_getName
 * Purpose: get storage name
-* Input  : storageSpecifierString - storage specifier string
+* Input  : string                 - name variable (can be NULL)
+*          storageSpecifierString - storage specifier string
 *          archiveName            - archive name (can be NULL)
 * Output : -
 * Return : storage name
 * Notes  : if archiveName is NULL file name from storageSpecifier is used
 \***********************************************************************/
 
-String Storage_getName(StorageSpecifier *storageSpecifier,
+String Storage_getName(String           string,
+                       StorageSpecifier *storageSpecifier,
                        ConstString      archiveName
                       );
 
 /***********************************************************************\
 * Name   : Storage_getPrintableName
 * Purpose: get printable storage name (without password)
-* Input  : storageSpecifierString - storage specifier string
+* Input  : string                 - name variable (can be NULL)
+*          storageSpecifierString - storage specifier string
 *          archiveName            - archive name (can be NULL)
 * Output : -
 * Return : printable storage name

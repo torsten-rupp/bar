@@ -2312,7 +2312,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add file info to list
-                      addListFileInfo(Storage_getName(storageSpecifier,NULL),
+                      addListFileInfo(Storage_getName(NULL,storageSpecifier,NULL),
                                       fileName,
                                       fileInfo.size,
                                       fileInfo.timeModified,
@@ -2429,7 +2429,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add image info to list
-                      addListImageInfo(Storage_getName(storageSpecifier,NULL),
+                      addListImageInfo(Storage_getName(NULL,storageSpecifier,NULL),
                                        deviceName,
                                        deviceInfo.size,
                                        archiveEntryInfo.image.chunkImageData.info.size,
@@ -2526,7 +2526,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add directory info to list
-                      addListDirectoryInfo(Storage_getName(storageSpecifier,NULL),
+                      addListDirectoryInfo(Storage_getName(NULL,storageSpecifier,NULL),
                                            directoryName,
                                            fileInfo.timeModified,
                                            fileInfo.userId,
@@ -2616,7 +2616,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add link info to list
-                      addListLinkInfo(Storage_getName(storageSpecifier,NULL),
+                      addListLinkInfo(Storage_getName(NULL,storageSpecifier,NULL),
                                       linkName,
                                       fileName,
                                       fileInfo.timeModified,
@@ -2722,7 +2722,7 @@ NULL, // masterSocketHandle
                       if (globalOptions.groupFlag)
                       {
                         // add file info to list
-                        addListHardLinkInfo(Storage_getName(storageSpecifier,NULL),
+                        addListHardLinkInfo(Storage_getName(NULL,storageSpecifier,NULL),
                                             fileName,
                                             fileInfo.size,
                                             fileInfo.timeModified,
@@ -2826,7 +2826,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add special info to list
-                      addListSpecialInfo(Storage_getName(storageSpecifier,NULL),
+                      addListSpecialInfo(Storage_getName(NULL,storageSpecifier,NULL),
                                          fileName,
                                          fileInfo.userId,
                                          fileInfo.groupId,
@@ -3262,7 +3262,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add file info to list
-                      addListFileInfo(Storage_getName(storageSpecifier,NULL),
+                      addListFileInfo(Storage_getName(NULL,storageSpecifier,NULL),
                                       fileName,
                                       fileSize,
                                       dateTime,
@@ -3361,7 +3361,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add file info to list
-                      addListImageInfo(Storage_getName(storageSpecifier,NULL),
+                      addListImageInfo(Storage_getName(NULL,storageSpecifier,NULL),
                                       imageName,
                                       imageSize,
                                       archiveFileSize,
@@ -3443,7 +3443,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add directory info to list
-                      addListDirectoryInfo(Storage_getName(storageSpecifier,NULL),
+                      addListDirectoryInfo(Storage_getName(NULL,storageSpecifier,NULL),
                                            directoryName,
                                            dateTime,
                                            userId,
@@ -3516,7 +3516,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add linkinfo to list
-                      addListLinkInfo(Storage_getName(storageSpecifier,NULL),
+                      addListLinkInfo(Storage_getName(NULL,storageSpecifier,NULL),
                                       linkName,
                                       fileName,
                                       dateTime,
@@ -3606,7 +3606,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add file info to list
-                      addListHardLinkInfo(Storage_getName(storageSpecifier,NULL),
+                      addListHardLinkInfo(Storage_getName(NULL,storageSpecifier,NULL),
                                           fileName,
                                           fileSize,
                                           dateTime,
@@ -3698,7 +3698,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add special info to list
-                      addListSpecialInfo(Storage_getName(storageSpecifier,NULL),
+                      addListSpecialInfo(Storage_getName(NULL,storageSpecifier,NULL),
                                          fileName,
                                          userId,
                                          groupId,

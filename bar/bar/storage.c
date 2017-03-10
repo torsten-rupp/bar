@@ -1395,13 +1395,19 @@ bool Storage_equalNames(ConstString storageName1,
   return result;
 }
 
-//TODO: add storageName parameter?
-String Storage_getName(StorageSpecifier *storageSpecifier,
+String Storage_getName(String           string,
+                       StorageSpecifier *storageSpecifier,
                        ConstString      archiveName
                       )
 {
   assert(storageSpecifier != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
+
+  // get result variable to use
+  if (string == NULL)
+  {
+    string = storageSpecifier->storageName;
+  }
 
   // get file to use
   if (archiveName == NULL)
@@ -3334,7 +3340,7 @@ Errors Storage_forAll(ConstString     storagePatternString,
   StorageSpecifier           storageSpecifier;
   JobOptions                 jobOptions;
   StringList                 directoryList;
-  String                     fileName;
+  String                     archiveName;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
   FileInfo                   fileInfo;
@@ -3345,7 +3351,7 @@ Errors Storage_forAll(ConstString     storagePatternString,
   Storage_initSpecifier(&storageSpecifier);
   initJobOptions(&jobOptions);
   StringList_init(&directoryList);
-  fileName = String_new();
+  archiveName = String_new();
 
   error = Storage_parseName(&storageSpecifier,storagePatternString);
   if (error == ERROR_NONE)
@@ -3354,12 +3360,12 @@ Errors Storage_forAll(ConstString     storagePatternString,
     StringList_append(&directoryList,storageSpecifier.archiveName);
     while (!StringList_isEmpty(&directoryList))
     {
-      StringList_removeLast(&directoryList,fileName);
+      StringList_removeLast(&directoryList,archiveName);
 
       // open directory
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
-                                        fileName,
+                                        archiveName,
                                         &jobOptions,
                                         SERVER_CONNECTION_PRIORITY_LOW
                                        );
@@ -3372,7 +3378,7 @@ Errors Storage_forAll(ConstString     storagePatternString,
               )
         {
           // read next directory entry
-          error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
+          error = Storage_readDirectoryList(&storageDirectoryListHandle,archiveName,&fileInfo);
           if (error != ERROR_NONE)
           {
             continue;
@@ -3381,16 +3387,16 @@ Errors Storage_forAll(ConstString     storagePatternString,
           // check if sub-directory
           if (fileInfo.type == FILE_TYPE_DIRECTORY)
           {
-            StringList_append(&directoryList,fileName);
+            StringList_append(&directoryList,archiveName);
           }
 
           // match pattern and call callback
-          if (   ((storageSpecifier.archivePatternString == NULL) && String_equals(storageSpecifier.archiveName,fileName))
-              || ((storageSpecifier.archivePatternString != NULL) && Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT))
+          if (   ((storageSpecifier.archivePatternString == NULL) && String_equals(storageSpecifier.archiveName,archiveName))
+              || ((storageSpecifier.archivePatternString != NULL) && Pattern_match(&storageSpecifier.archivePattern,archiveName,PATTERN_MATCH_MODE_EXACT))
              )
           {
             // callback
-            error = storageFunction(Storage_getName(&storageSpecifier,fileName),&fileInfo,storageUserData);
+            error = storageFunction(Storage_getName(NULL,&storageSpecifier,archiveName),&fileInfo,storageUserData);
           }
         }
 
@@ -3401,7 +3407,7 @@ Errors Storage_forAll(ConstString     storagePatternString,
   }
 
   // free resources
-  String_delete(fileName);
+  String_delete(archiveName);
   StringList_done(&directoryList);
   doneJobOptions(&jobOptions);
   Storage_doneSpecifier(&storageSpecifier);
