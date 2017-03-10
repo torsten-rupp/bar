@@ -283,7 +283,6 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
                   );
         break;
       }
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(buffer,n,0);
 
       length += (uint64)n;
 
