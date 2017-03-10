@@ -1274,7 +1274,6 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
   uLong       crc;
   uint        i;
   void        *p;
-  char        errorText[64];
 
   assert(chunkIO != NULL);
   assert(chunkIO->tell != NULL);
@@ -1552,8 +1551,7 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
                   arrayData = realloc(arrayData,(ulong)arrayLength*size);
                   if (arrayData == NULL)
                   {
-                    snprintf(errorText,sizeof(errorText),"insufficient memory: %lubytes",(ulong)arrayLength*size);
-                    error = ERRORX_(CORRUPT_DATA,0,"%s",errorText);
+                    error = ERRORX_(CORRUPT_DATA,0,"insufficient memory: %lubytes",(ulong)arrayLength*size);
                     break;
                   }
                   memcpy(arrayData,p,(ulong)arrayLength*size);
@@ -1573,8 +1571,7 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
                   strings = realloc(strings,(ulong)arrayLength*sizeof(String));
                   if (strings == NULL)
                   {
-                    snprintf(errorText,sizeof(errorText),"insufficient memory: %lubytes",(ulong)arrayLength*sizeof(String));
-                    error = ERRORX_(CORRUPT_DATA,0,"%s",errorText);
+                    error = ERRORX_(CORRUPT_DATA,0,"insufficient memory: %lubytes",(ulong)arrayLength*sizeof(String));
                     break;
                   }
 
@@ -1617,8 +1614,7 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
             // check crc
             if (n != crc)
             {
-              snprintf(errorText,sizeof(errorText),"%llu",offset);
-              error = ERRORX_(CRC_,0,"%s",errorText);
+              error = ERRORX_(CRC_,0,"%llu",offset);
               break;
             }
 
