@@ -69,6 +69,7 @@ typedef enum
 #define CRYPT_MODE_SIMPLE_KEY (1 << 0)   // use simple function to generate password
 #define CRYPT_MODE_CBC        (1 << 1)   // cipher block chaining
 #define CRYPT_MODE_CTS        (1 << 2)   // cipher text stealing
+#define CRYPT_MODE_CTS_DATA   (1 << 3)   // cipher text stealing for data (Crypt_encryptBytes()/Crypt_decryptBytes)
 
 #define CRYPT_MODE_NONE 0
 
@@ -138,10 +139,14 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
+// crypt mode set (see CRYPT_MODES_*)
+typedef uint CryptMode;
+
 // crypt info block
 typedef struct
 {
   CryptAlgorithms  cryptAlgorithm;
+  CryptMode        cryptMode;
   byte             salt[CRYPT_SALT_LENGTH];
   uint             saltLength;
   uint             blockLength;
@@ -260,12 +265,12 @@ typedef struct
   ((uint16)(cryptMACAlgorithm))
 
 #ifndef NDEBUG
-  #define Crypt_init(...)     __Crypt_init(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_done(...)     __Crypt_done(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_init(...)     __Crypt_init    (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_done(...)     __Crypt_done    (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Crypt_initHash(...) __Crypt_initHash(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Crypt_doneHash(...) __Crypt_doneHash(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_initMAC(...)  __Crypt_initMAC(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_doneMAC(...)  __Crypt_doneMAC(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_initMAC(...)  __Crypt_initMAC (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_doneMAC(...)  __Crypt_doneMAC (__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -524,7 +529,7 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 #ifdef NDEBUG
 Errors Crypt_init(CryptInfo       *cryptInfo,
                   CryptAlgorithms cryptAlgorithm,
-                  uint            cryptMode,
+                  CryptMode       cryptMode,
                   const CryptKey  *cryptKey,
                   const byte      *salt,
                   uint            saltLength
@@ -534,7 +539,7 @@ Errors __Crypt_init(const char      *__fileName__,
                     ulong           __lineNb__,
                     CryptInfo       *cryptInfo,
                     CryptAlgorithms cryptAlgorithm,
-                    uint            cryptMode,
+                    CryptMode       cryptMode,
                     const CryptKey  *cryptKey,
                     const byte      *salt,
                     uint            saltLength
