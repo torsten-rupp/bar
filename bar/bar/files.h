@@ -554,11 +554,11 @@ const char *File_getSystemTmpDirectory(void);
 /***********************************************************************\
 * Name   : File_getTmpFile, File_getTmpFileCString
 * Purpose: create and open a temporary file
-* Input  : fileName  - variable for temporary file name
-*          pattern   - pattern with XXXXXX or NULL
-*          directory - directory to create temporary file (can be NULL)
-* Output : fileName - temporary file name
-* Return : TRUE iff temporary file created, FALSE otherwise
+* Input  : fileHandle - variable for temporary file handle
+*          pattern    - pattern with XXXXXX or NULL
+*          directory  - directory to create temporary file (can be NULL)
+* Output : fileHandle - temporary file handle
+* Return : TRUE iff temporary file created and opened, FALSE otherwise
 * Notes  : File is deleted when closed
 \***********************************************************************/
 
@@ -590,11 +590,12 @@ const char *File_getSystemTmpDirectory(void);
 * Name   : File_getTmpFileName, File_getTmpFileNameCString
 * Purpose: create and get a temporary file name
 * Input  : fileName  - variable for temporary file name
-*          prefix    - prefix or NULL
+*          prefix    - prefix or NULL (default "tmp")
 *          directory - directory to create temporary file (can be NULL)
 * Output : fileName - temporary file name
 * Return : TRUE iff temporary file created, FALSE otherwise
-* Notes  : -
+* Notes  : if directory is NULL "tmp" is used
+*          if directory is NULL system temporary directory is used
 \***********************************************************************/
 
 Errors File_getTmpFileName(String fileName, const char *prefix, ConstString directory);
@@ -604,16 +605,17 @@ Errors File_getTmpFileNameCString(String fileName, const char *prefix, const cha
 * Name   : File_getTmpDirectoryName, File_getTmpDirectoryNameCString
 * Purpose: create and get a temporary directory name
 * Input  : directoryName - variable for temporary directory name
-*          pattern       - pattern with XXXXXX or NULL
+*          prefix        - prefix (can be NULL)
 *          directory     - directory to create temporary file (can be
 *                          NULL)
 * Output : directoryName - temporary directory name
 * Return : TRUE iff temporary directory created, FALSE otherwise
-* Notes  : -
+* Notes  : if directory is NULL "tmp" is used
+*          if directory is NULL system temporary directory is used
 \***********************************************************************/
 
-Errors File_getTmpDirectoryName(String directoryName, ConstString pattern, ConstString directory);
-Errors File_getTmpDirectoryNameCString(String directoryName, const char *pattern, ConstString directory);
+Errors File_getTmpDirectoryName(String directoryName, const char *prefix, ConstString directory);
+Errors File_getTmpDirectoryNameCString(String directoryName, const char *prefix, const char *directory);
 
 /*---------------------------------------------------------------------*/
 
@@ -1201,9 +1203,11 @@ Errors File_deleteCString(const char *fileName, bool recursiveFlag);
 *          newFileName       - new file name
 *          newBackupFileName - new backup file name (can be NULL)
 * Output : -
-* Return : TRUE if file/directory/link renamed, FALSE otherwise
-* Notes  : if files are not on the same logical device the file is
-*          copied
+* Return : TRUE if renamed, FALSE otherwise
+* Notes  : - renamed/copy new -> new backup (if backup name given)
+*            rename/copy old -> new
+*          - if files are not on the same logical device the file is
+*            copied
 \***********************************************************************/
 
 Errors File_rename(ConstString oldFileName,

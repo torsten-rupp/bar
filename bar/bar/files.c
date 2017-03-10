@@ -1509,6 +1509,7 @@ Errors File_getTmpFileNameCString(String fileName, const char *prefix, const cha
   }
   strcat(s,prefix);
   strcat(s,"-XXXXXX");
+fprintf(stderr,"%s, %d: s=%s\n",__FILE__,__LINE__,s);
 
   #ifdef HAVE_MKSTEMP
     handle = mkstemp(s);
@@ -1546,12 +1547,12 @@ Errors File_getTmpFileNameCString(String fileName, const char *prefix, const cha
   return ERROR_NONE;
 }
 
-Errors File_getTmpDirectoryName(String directoryName, ConstString pattern, ConstString directory)
+Errors File_getTmpDirectoryName(String directoryName, const char *prefix, ConstString directory)
 {
-  return File_getTmpDirectoryNameCString(directoryName,String_cString(pattern),directory);
+  return File_getTmpDirectoryNameCString(directoryName,prefix,String_cString(directory));
 }
 
-Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern, ConstString directory)
+Errors File_getTmpDirectoryNameCString(String directoryName, const char *prefix, const char *directory)
 {
   char   *s;
   #ifdef HAVE_MKDTEMP
@@ -1564,22 +1565,30 @@ Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern
 
   assert(directoryName != NULL);
 
-  if (pattern == NULL) pattern = "tmp-XXXXXX";
+  if (prefix == NULL) prefix = "tmp";
+  if (directory == NULL) directory = File_getSystemTmpDirectory();
 
-  if (!String_isEmpty(directory))
+  if (!stringIsEmpty(directory))
   {
-    String_set(directoryName,directory);
-    File_appendFileNameCString(directoryName,pattern);
+    s = (char*)malloc(strlen(directory)+strlen(FILE_SEPARATOR_STRING)+strlen(prefix)+7+1);
+    if (s == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    strcpy(s,directory);
+    strcat(s,FILE_SEPARATOR_STRING);
   }
   else
   {
-    String_setCString(directoryName,pattern);
+    s = (char*)malloc(strlen(prefix)+7+1);
+    if (s == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    s[0] = '\0';
   }
-  s = String_toCString(directoryName);
-  if (s == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
+  strcat(s,prefix);
+  strcat(s,"-XXXXXX");
 
   #ifdef HAVE_MKDTEMP
     if (mkdtemp(s) == NULL)
@@ -3372,42 +3381,110 @@ Errors File_renameCString(const char *oldFileName,
                           const char *newBackupFileName
                          )
 {
-  Errors error;
+  char       *fileName;
+  const char *tmpFileName;
+  FileStat   fileStat;
+  int        handle;
+  Errors     error;
 
   assert(oldFileName != NULL);
   assert(newFileName != NULL);
 
-  if (newBackupFileName != NULL)
+  if (LSTAT(newFileName,&fileStat) == 0)
   {
-    // try rename new -> backup
-    if (rename(newFileName,newBackupFileName) != 0)
+    // get temporary filename
+    if (newBackupFileName != NULL)
+    {
+      // use given backup file name
+      tmpFileName = newBackupFileName;
+    }
+    else
+    {
+      // create temporary file
+      fileName = (char*)malloc(strlen(newFileName)+7+1);
+      if (fileName == NULL)
+      {
+        return ERROR_INSUFFICIENT_MEMORY;
+      }
+      strcpy(fileName,newFileName);
+      strcat(fileName,"-XXXXXX");
+
+      #ifdef HAVE_MKSTEMP
+        handle = mkstemp(fileName);
+        if (handle == -1)
+        {
+          error = ERRORX_(IO_ERROR,errno,"%s",fileName);
+          free(fileName);
+          return error;
+        }
+        close(handle);
+      #elif HAVE_MKTEMP
+        // Note: there is a race-condition when mktemp() and open() is used!
+        if (strcmp(mktemp(fileName),"") == 0)
+        {
+          error = ERRORX_(IO_ERROR,errno,"%s",fileName);
+          free(tmpFileName);
+          return error;
+        }
+        handle = open(fileName,O_CREAT|O_EXCL);
+        if (handle == -1)
+        {
+          error = ERRORX_(IO_ERROR,errno,"%s",fileName);
+          free(tmpFileName);
+          return error;
+        }
+        close(handle);
+      #else /* not HAVE_MKSTEMP || HAVE_MKTEMP */
+        #error mkstemp() nor mktemp() available
+      #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
+
+      tmpFileName = fileName;
+    }
+  }
+  else
+  {
+    tmpFileName = NULL;
+  }
+
+  // try rename/copy new -> backup/temporary name
+  if (tmpFileName != NULL)
+  {
+    if (rename(newFileName,tmpFileName) != 0)
     {
       // copy to backup file
-      error = File_copyCString(newFileName,newBackupFileName);
+      error = File_copyCString(newFileName,tmpFileName);
       if (error != ERROR_NONE)
       {
+        (void)unlink(tmpFileName);
+        if (newBackupFileName == NULL) free(fileName);
         return error;
       }
 
       // delete new file
       if (unlink(newFileName) != 0)
       {
+        (void)unlink(tmpFileName);
+        if (newBackupFileName == NULL) free(fileName);
         return ERRORX_(IO_ERROR,errno,"%s",newFileName);
       }
     }
   }
 
-  // try rename old -> new
+  // try rename/copy old -> new
   if (rename(oldFileName,newFileName) != 0)
   {
     // copy to new file
     error = File_copyCString(oldFileName,newFileName);
     if (error != ERROR_NONE)
     {
-      if (newBackupFileName != NULL)
+      if (tmpFileName != NULL)
       {
-        (void)File_copyCString(newBackupFileName,newFileName);
-        (void)unlink(newBackupFileName);
+        if (rename(tmpFileName,newFileName) != 0)
+        {
+          (void)File_copyCString(tmpFileName,newFileName);
+        }
+        (void)unlink(tmpFileName);
+        if (newBackupFileName == NULL) free(fileName);
       }
       return error;
     }
@@ -3415,12 +3492,26 @@ Errors File_renameCString(const char *oldFileName,
     // delete old file
     if (unlink(oldFileName) != 0)
     {
-      if (newBackupFileName != NULL)
+      if (tmpFileName != NULL)
       {
-        (void)File_copyCString(newBackupFileName,newFileName);
-        (void)unlink(newBackupFileName);
+        if (rename(tmpFileName,newFileName) != 0)
+        {
+          (void)File_copyCString(tmpFileName,newFileName);
+        }
+        (void)unlink(tmpFileName);
+        if (newBackupFileName == NULL) free(fileName);
       }
       return ERRORX_(IO_ERROR,errno,"%s",oldFileName);
+    }
+  }
+
+  // free resources
+  if (tmpFileName != NULL)
+  {
+    if (newBackupFileName == NULL)
+    {
+      (void)unlink(tmpFileName);
+      free(fileName);
     }
   }
 
