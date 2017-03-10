@@ -1387,6 +1387,8 @@ LOCAL Errors StorageSFTP_rename(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_SFTP);
 
+error = ERROR_STILL_NOT_IMPLEMENTED;
+
   return error;
 }
 

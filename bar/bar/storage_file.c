@@ -573,14 +573,20 @@ LOCAL uint64 StorageFile_getSize(StorageHandle *storageHandle)
 }
 
 LOCAL Errors StorageFile_rename(const StorageInfo *storageInfo,
-                                ConstString       fromArchiveName,
-                                ConstString       toArchiveName
+                                ConstString       oldArchiveName,
+                                ConstString       newArchiveName
                                )
 {
+  String backupArchiveName;
+
   Errors error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: %s -> %s\n",__FILE__,__LINE__,String_cString(oldArchiveName),String_cString(newArchiveName));
+  error = File_rename(oldArchiveName,newArchiveName,NULL);
 
   return error;
 }

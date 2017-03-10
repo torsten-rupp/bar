@@ -1423,17 +1423,17 @@ uint64 Storage_getSize(StorageHandle *storageHandle);
 /***********************************************************************\
 * Name   : Storage_rename
 * Purpose: rename storage file
-* Input  : storageInfo     - storage
-*          fromArchiveName - archive names (can be NULL)
-*          toArchiveName   - new archive name
+* Input  : storageInfo    - storage
+*          oldArchiveName - archive names (can be NULL)
+*          newArchiveName - new archive name (can be NULL)
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 Errors Storage_rename(const StorageInfo *storageInfo,
-                      ConstString       fromArchiveName,
-                      ConstString       toArchiveName
+                      ConstString       oldArchiveName,
+                      ConstString       newArchiveName
                      );
 
 /***********************************************************************\

@@ -1963,6 +1963,8 @@ LOCAL Errors StorageOptical_rename(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
 
+error = ERROR_STILL_NOT_IMPLEMENTED;
+
   return error;
 }
 

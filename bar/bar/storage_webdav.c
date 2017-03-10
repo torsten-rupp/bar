@@ -2014,6 +2014,8 @@ LOCAL Errors StorageWebDAV_rename(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_WEBDAV);
 
+error = ERROR_STILL_NOT_IMPLEMENTED;
+
   return error;
 }
 
