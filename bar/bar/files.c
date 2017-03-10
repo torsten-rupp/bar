@@ -1509,7 +1509,6 @@ Errors File_getTmpFileNameCString(String fileName, const char *prefix, const cha
   }
   strcat(s,prefix);
   strcat(s,"-XXXXXX");
-fprintf(stderr,"%s, %d: s=%s\n",__FILE__,__LINE__,s);
 
   #ifdef HAVE_MKSTEMP
     handle = mkstemp(s);
