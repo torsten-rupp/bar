@@ -237,8 +237,7 @@ typedef struct
     // local file
     struct
     {
-//TODO
-String archiveName;
+      String               archiveName;                                // archive file name
       String               tmpFileName;                                // temporary archive file name
       FileHandle           tmpFileHandle;                              // temporary file handle
       bool                 openFlag;                                   // TRUE iff temporary archive file is open
@@ -246,7 +245,7 @@ String archiveName;
     // local or remote storage
     struct
     {
-      String               storageFileName;                            // storage storage name
+      String               storageFileName;                            // storage name
       StorageHandle        storageHandle;
     } storage;
   };
