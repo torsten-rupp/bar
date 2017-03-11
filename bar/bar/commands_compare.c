@@ -80,7 +80,7 @@ typedef struct
 {
   StorageInfo         *storageInfo;
   byte                cryptSalt[CRYPT_SALT_LENGTH];
-  uint                cryptMode;
+  CryptMode           cryptMode;
   CryptKeyDeriveTypes cryptKeyDeriveType;
   ArchiveEntryTypes   archiveEntryType;
   uint64              offset;

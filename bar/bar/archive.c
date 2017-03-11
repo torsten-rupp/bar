@@ -529,6 +529,7 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
 
   assert(passwordHandle != NULL);
 
+  password = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&passwordHandle->archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     passwordHandle->archiveHandle       = archiveHandle;
@@ -705,7 +706,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                                         uint                saltLength
                                        )
 {
-  bool           semaphoreLock;
+  SemaphoreLock  semaphoreLock;
   DecryptKeyNode *decryptKeyNode;
   const CryptKey *decryptKey;
   String         printableStorageName;
@@ -863,11 +864,12 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator
                                          uint                saltLength
                                         )
 {
-  SemaphoreLock semaphoreLock;
-  CryptKey      *decryptKey;
+  SemaphoreLock  semaphoreLock;
+  const CryptKey *decryptKey;
 
   assert(decryptKeyIterator != NULL);
 
+  decryptKey = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     decryptKeyIterator->archiveHandle       = archiveHandle;
@@ -4822,7 +4824,7 @@ void Archive_setCryptSalt(ArchiveHandle *archiveHandle,
 }
 
 void Archive_setCryptMode(ArchiveHandle *archiveHandle,
-                          uint          cryptMode
+                          CryptMode     cryptMode
                          )
 {
   assert(archiveHandle != NULL);
@@ -12860,6 +12862,8 @@ Errors Archive_verifySignatures(StorageInfo          *storageInfo,
   assert(cryptSignaturesState != NULL);
   assert(storageInfo != NULL);
   assert(jobOptions != NULL);
+
+  UNUSED_VARIABLE(jobOptions);
 
   // init variables
   AutoFree_init(&autoFreeList);

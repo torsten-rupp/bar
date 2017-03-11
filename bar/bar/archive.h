@@ -213,7 +213,7 @@ typedef struct
   LogHandle                *logHandle;                                 // log handle
 
   byte                     cryptSalt[CRYPT_SALT_LENGTH];               // crypt salt
-  uint                     cryptMode;                                  // crypt mode; see CRYPT_MODE_....
+  CryptMode                cryptMode;                                  // crypt mode; see CRYPT_MODE_....
   CryptKeyDeriveTypes      cryptKeyDeriveType;                         // key derive type; see CryptKeyDeriveTypes
 
   Semaphore                passwordLock;                               // input password lock
@@ -761,7 +761,7 @@ void Archive_setCryptSalt(ArchiveHandle *archiveHandle,
 \***********************************************************************/
 
 void Archive_setCryptMode(ArchiveHandle *archiveHandle,
-                          uint          cryptMode
+                          CryptMode     cryptMode
                          );
 
 /***********************************************************************\

@@ -735,7 +735,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
   bool             restoredFlag;
   Errors           error;
   FragmentNode     fragmentNode;
-  bool             semaphoreLock;
+  SemaphoreLock    semaphoreLock;
   DeltaSourceNode  *deltaSourceNode;
   String           tmpFileName;
   StorageSpecifier storageSpecifier,localStorageSpecifier;

@@ -78,7 +78,7 @@ typedef struct
   StorageInfo         *storageInfo;
   byte                cryptSalt[CRYPT_SALT_LENGTH];
   CryptKeyDeriveTypes cryptKeyDeriveType;
-  uint                cryptMode;
+  CryptMode           cryptMode;
   ArchiveEntryTypes   archiveEntryType;
   uint64              offset;
 } EntryMsg;
