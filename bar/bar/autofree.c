@@ -177,7 +177,7 @@ void __AutoFree_remove(const char   *__fileName__,
   {
     // remove resources from list
     foundFlag = FALSE;
-    autoFreeNode = autoFreeList->head;
+    autoFreeNode = autoFreeList->tail;
     while (autoFreeNode != NULL)
     {
       if (autoFreeNode->resource == resource)
@@ -188,8 +188,8 @@ void __AutoFree_remove(const char   *__fileName__,
       }
       else
       {
-        // next node
-        autoFreeNode = autoFreeNode->next;
+        // previous node
+        autoFreeNode = autoFreeNode->prev;
       }
     }
     if (!foundFlag)
@@ -225,10 +225,10 @@ void AutoFree_free(AutoFreeList *autoFreeList,
   pthread_mutex_lock(&autoFreeList->lock);
   {
     // remove resource from list
-    autoFreeNode = autoFreeList->head;
+    autoFreeNode = autoFreeList->tail;
     while ((autoFreeNode != NULL) && (autoFreeNode->resource != resource))
     {
-      autoFreeNode = autoFreeNode->next;
+      autoFreeNode = autoFreeNode->prev;
     }
     if (autoFreeNode != NULL)
     {
