@@ -328,6 +328,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
   AutoFreeList     autoFreeList;
   byte             *buffer;
   String           printableStorageName;
+  String           tmpArchiveName;
   void             *autoFreeSavePoint;
   StorageMsg       storageMsg;
   Errors           error;
@@ -350,8 +351,10 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
   printableStorageName = String_new();
+  tmpArchiveName       = String_new();
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
+  AUTOFREE_ADD(&autoFreeList,tmpArchiveName,{ String_delete(tmpArchiveName); });
 
   // store archives
   while (   (convertInfo->failError == ERROR_NONE)
@@ -416,15 +419,29 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
                  Error_getText(error)
                 );
       convertInfo->failError = error;
-
-//TODO: delete not processed storage file?
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
     }
     AUTOFREE_ADD(&autoFreeList,&fileHandle,{ File_close(&fileHandle); });
     DEBUG_TESTCODE() { convertInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
-    // create storage
+    // save original storage file
+    Storage_getTmpName(tmpArchiveName,&convertInfo->storageInfo);
+    error = Storage_rename(&convertInfo->storageInfo,convertInfo->newArchiveName,tmpArchiveName);
+    if (error != ERROR_NONE)
+    {
+      printInfo(0,"FAIL!\n");
+      printError("Cannot store '%s' (error: %s)\n",
+                 String_cString(printableStorageName),
+                 Error_getText(error)
+                );
+      convertInfo->failError = error;
+      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+      continue;
+    }
+    AUTOFREE_ADD(&autoFreeList,&tmpArchiveName,{ Storage_rename(&convertInfo->storageInfo,tmpArchiveName,convertInfo->newArchiveName); });
+
+    // create storage file
     if (!String_isEmpty(convertInfo->jobOptions->destination))
     {
       assert(convertInfo->destinationArchiveHandle.ioType == ARCHIVE_IO_TYPE_FILE);
@@ -478,8 +495,6 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
              && !File_eof(&fileHandle)
             );
 
-//TODO: on error restore to original size/delete
-
       // close local file
       File_close(&toFileHandle);
       AUTOFREE_REMOVE(&autoFreeList,&toFileHandle);
@@ -497,8 +512,8 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         retryCount++;
 
         // pause
-  //      pauseStorage(convertInfo);
-  //      if (isAborted(convertInfo)) break;
+//        pauseStorage(convertInfo);
+//        if (isAborted(convertInfo)) break;
 
         // create storage file
         error = Storage_create(&storageHandle,
@@ -531,8 +546,8 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         do
         {
           // pause
-  //        pauseStorage(convertInfo);
-  //        if (isAborted(convertInfo)) break;
+//          pauseStorage(convertInfo);
+//          if (isAborted(convertInfo)) break;
 
           // read data from local intermediate file
           error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
@@ -573,8 +588,6 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
                && !File_eof(&fileHandle)
               );
 
-//TODO: on error restore to original size/delete
-
         // close local file
         Storage_close(&storageHandle);
         AUTOFREE_REMOVE(&autoFreeList,&storageHandle);
@@ -595,6 +608,21 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     }
     AUTOFREE_ADD(&autoFreeList,convertInfo->newArchiveName,{ Storage_delete(&convertInfo->storageInfo,convertInfo->newArchiveName); });
 
+    // delete saved original storage file
+    error = Storage_delete(&convertInfo->storageInfo,tmpArchiveName);
+    if (error != ERROR_NONE)
+    {
+      printInfo(0,"FAIL!\n");
+      printError("Cannot store '%s' (error: %s)\n",
+                 String_cString(printableStorageName),
+                 Error_getText(error)
+                );
+      convertInfo->failError = error;
+      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+      continue;
+    }
+    AUTOFREE_REMOVE(&autoFreeList,&tmpArchiveName);
+
     // close file
     File_close(&fileHandle);
     AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
@@ -609,7 +637,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     }
 #endif
 
-    // rename storage files
+    // rename storage file
     error = Storage_rename(&convertInfo->storageInfo,
                            convertInfo->newArchiveName,
                            convertInfo->archiveName
@@ -663,6 +691,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
   }
 
   // free resoures
+  String_delete(tmpArchiveName);
   String_delete(printableStorageName);
   free(buffer);
   AutoFree_done(&autoFreeList);
