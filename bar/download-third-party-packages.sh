@@ -29,13 +29,14 @@ XZ="xz"
 BZIP2_VERSION=1.0.6
 LZO_VERSION=2.09
 LZ4_VERSION=r131
+MXML_VERSION=2.10
 LIBGPG_ERROR_VERSION=1.20
 LIBGCRYPT_VERSION=1.6.4
 GMP_VERSION=6.0.0a
 LIBSSH2_VERSION=1.7.0
 PCRE_VERSION=8.40
 SQLITE_VERSION=3140100
-ICU_VERSION=57.1
+ICU_VERSION=58.1
 MTX_VERSION=1.3.12
 BINUTILS_VERSION=2.25
 BREAKPAD_REVISION=1430
@@ -597,18 +598,18 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $mxmlFlag -eq 1; then
-    # mxml 2.7
+    # mxml
     (
      cd $destination/packages
-     if test ! -f mxml-2.7.tar.gz; then
-       $WGET $WGET_OPTIONS 'http://www.msweet.org/files/project3/mxml-2.7.tar.gz'
+     if test ! -f mxml-$MXML_VERSION.tar.gz; then
+       $WGET $WGET_OPTIONS 'https://github.com/michaelrsweet/mxml/releases/download/release-$MXML_VERSION/mxml-$MXML_VERSION.tar.gz'
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf mxml-2.7.tar.gz
+       $TAR xzf mxml-$MXML_VERSION.tar.gz
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT packages/mxml-2.7 mxml)
+      (cd $destination; $LN -sfT packages/mxml-$MXML_VERSION mxml)
     fi
   fi
 
