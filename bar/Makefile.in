@@ -220,15 +220,16 @@ help:
 	@$(ECHO) "  install"
 	@$(ECHO) ""
 	@$(ECHO) "  test"
-	@$(ECHO) "  test1, test_basic"
-	@$(ECHO) "  test2, test_compress"
-	@$(ECHO) "  test3, test_crypt"
-	@$(ECHO) "  test4, test_asymmetric_crypt"
-	@$(ECHO) "  test5, test_split"
-	@$(ECHO) "  test6, test_image"
-	@$(ECHO) "  test7, test_storage"
-	@$(ECHO) "  test8, test_largefile"
-	@$(ECHO) "  test9, test_dvd"
+	@$(ECHO) "  test1[-debug|-valgrind], test_basic"
+	@$(ECHO) "  test2[-debug|-valgrind], test_compress"
+	@$(ECHO) "  test3[-debug|-valgrind], test_crypt"
+	@$(ECHO) "  test4[-debug|-valgrind], test_asymmetric_crypt"
+	@$(ECHO) "  test5[-debug|-valgrind], test_signatures"
+	@$(ECHO) "  test6[-debug|-valgrind], test_split"
+	@$(ECHO) "  test7[-debug|-valgrind], test_image"
+	@$(ECHO) "  test8[-debug|-valgrind], test_storage"
+	@$(ECHO) "  test9[-debug|-valgrind], test_largefile"
+	@$(ECHO) "  test10[-debug|-valgrind], test_dvd"
 	@$(ECHO) "  test_parameters"
 	@$(ECHO) "  test_combined"
 	@$(ECHO) "  test_misc"
@@ -511,28 +512,76 @@ barserver_ssl:
 	@$(MAKE) -C bar barserver_ssl
 
 # do tests
-.PHONY: test test1 test2 test3 test4 test5 test6 test7
+.PHONY: test test1 test2 test3 test4 test5 test6 test7 test8 test9 test10
+.PHONY: test-debug test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug test10-debug
+.PHONY: test-valgrind test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind test10-valgrind
 .PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_dvd test_parameters test_combined
 test:
 	@$(MAKE) -C bar test
+test-debug:
+	@$(MAKE) -C bar test-debug
+test-valgrind:
+	@$(MAKE) -C bar test-valgrind
+test1-debug test_basic-debug:
+	@$(MAKE) -C bar test1-debug
 test1 test_basic:
 	@$(MAKE) -C bar test1
+test1-valgrind test_basic-valgrind:
+	@$(MAKE) -C bar test1-valgrind
+test2-debug test_compress-debug:
+	@$(MAKE) -C bar test2-debug
 test2 test_compress:
 	@$(MAKE) -C bar test2
+test2-valgrind test_compress-valgrind:
+	@$(MAKE) -C bar test2-valgrind
 test3 test_crypt:
 	@$(MAKE) -C bar test3
+test3-debug test_crypt-debug:
+	@$(MAKE) -C bar test3-debug
+test3-valgrind test_crypt-valgrind:
+	@$(MAKE) -C bar test3-valgrind
 test4 test_asymmetric_crypt:
 	@$(MAKE) -C bar test4
-test5 test_split:
+test4-debug test_asymmetric_crypt-debug:
+	@$(MAKE) -C bar test4-debug
+test4-valgrind test_asymmetric_crypt-valgrind:
+	@$(MAKE) -C bar test4-valgrind
+test5 test_signatures:
 	@$(MAKE) -C bar test5
-test6 test_image:
+test5-debug test_signatures-debug:
+	@$(MAKE) -C bar test5-debug
+test5-valgrind test_signatures-valgrind:
+	@$(MAKE) -C bar test5-valgrind
+test6 test_split:
 	@$(MAKE) -C bar test6
-test7 test_storage:
+test6-debug test_split-debug:
+	@$(MAKE) -C bar test6-debug
+test6-valgrind test_split-valgrind:
+	@$(MAKE) -C bar test6-valgrind
+test7 test_image:
 	@$(MAKE) -C bar test7
-test8 test_largefile:
+test7-debug test_image-debug:
+	@$(MAKE) -C bar test7-debug
+test7-valgrind test_image-valgrind:
+	@$(MAKE) -C bar test7-valgrind
+test8 test_storage:
 	@$(MAKE) -C bar test8
-test9 test_dvd:
+test8-debug test_storage-debug:
+	@$(MAKE) -C bar test8-debug
+test8-valgrind test_storage-valgrind:
+	@$(MAKE) -C bar test8-valgrind
+test9 test_largefile:
 	@$(MAKE) -C bar test9
+test9-debug test_largefile-debug:
+	@$(MAKE) -C bar test9-debug
+test9-valgrind test_largefile-valgrind:
+	@$(MAKE) -C bar test9-valgrind
+test10 test_dvd:
+	@$(MAKE) -C bar test10
+test10-debug test_dvd-debug:
+	@$(MAKE) -C bar test10-debug
+test10-valgrind test_dvd-valgrind:
+	@$(MAKE) -C bar test10-valgrind
 test_parameters:
 	@$(MAKE) -C bar test_parameters
 test_combined:
