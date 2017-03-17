@@ -2391,6 +2391,16 @@ NULL, // masterSocketHandle
   }
   AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
 
+  // check if storage exists
+  if (!Storage_exists(&storageInfo,archiveName))
+  {
+    printError("Archive not found '%s'!\n",
+               String_cString(printableStorageName)
+              );
+    AutoFree_cleanup(&autoFreeList);
+    return ERROR_ARCHIVE_NOT_FOUND;
+  }
+
   // check signatures
   if (!restoreInfo->jobOptions->skipVerifySignaturesFlag)
   {

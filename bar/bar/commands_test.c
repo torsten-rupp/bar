@@ -24,6 +24,7 @@
 #include <assert.h>
 
 #include "global.h"
+#include "autofree.h"
 #include "strings.h"
 #include "stringlists.h"
 #include "msgqueues.h"
@@ -1209,6 +1210,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                                 LogHandle           *logHandle
                                )
 {
+  AutoFreeList         autoFreeList;
   String               printableStorageName;
   Thread               *testThreads;
   uint                 testThreadCount;
@@ -1230,6 +1232,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   assert(fragmentList != NULL);
 
   // init variables
+  AutoFree_init(&autoFreeList);
   printableStorageName = String_new();
   testThreadCount      = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
   testThreads = (Thread*)malloc(testThreadCount*sizeof(Thread));
@@ -1237,6 +1240,8 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
+  AUTOFREE_ADD(&autoFreeList,testThreads,{ free(testThreads); });
 
   // get printable storage name
   Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
@@ -1258,9 +1263,20 @@ NULL, // masterSocketHandle
                String_cString(printableStorageName),
                Error_getText(error)
               );
-    free(testThreads);
-    String_delete(printableStorageName);
+    AutoFree_cleanup(&autoFreeList);
     return error;
+  }
+  DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&storageInfo,{ (void)Storage_done(&storageInfo); });
+
+  // check if storage exists
+  if (!Storage_exists(&storageInfo,archiveName))
+  {
+    printError("Archive not found '%s'!\n",
+               String_cString(printableStorageName)
+              );
+    AutoFree_cleanup(&autoFreeList);
+    return ERROR_ARCHIVE_NOT_FOUND;
   }
 
   // check signatures
@@ -1273,9 +1289,7 @@ NULL, // masterSocketHandle
                                     );
     if (error != ERROR_NONE)
     {
-      (void)Storage_done(&storageInfo);
-      free(testThreads);
-      String_delete(printableStorageName);
+      AutoFree_cleanup(&autoFreeList);
       return error;
     }
     if (!Crypt_isValidSignatureState(allCryptSignatureState))
@@ -1283,9 +1297,7 @@ NULL, // masterSocketHandle
       printError("Invalid signature in '%s'!\n",
                  String_cString(printableStorageName)
                 );
-      (void)Storage_done(&storageInfo);
-      free(testThreads);
-      String_delete(printableStorageName);
+      AutoFree_cleanup(&autoFreeList);
       return ERROR_INVALID_SIGNATURE;
     }
   }
@@ -1305,6 +1317,7 @@ NULL,  //               pauseTestFlag,
 NULL,  //               requestedAbortFlag,
                logHandle
               );
+  AUTOFREE_ADD(&autoFreeList,&testInfo,{ (void)doneTestInfo(&testInfo); });
 
   // start test threads
   for (i = 0; i < testThreadCount; i++)
@@ -1330,10 +1343,7 @@ NULL,  //               requestedAbortFlag,
                String_cString(printableStorageName),
                Error_getText(error)
               );
-    (void)Storage_done(&storageInfo);
-    doneTestInfo(&testInfo);
-    free(testThreads);
-    String_delete(printableStorageName);
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
 

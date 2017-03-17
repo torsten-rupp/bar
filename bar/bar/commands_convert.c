@@ -1843,6 +1843,7 @@ NULL,  //               pauseTestFlag,
 NULL,  //               requestedAbortFlag,
                   logHandle
                  );
+  AUTOFREE_ADD(&autoFreeList,&convertInfo,{ (void)doneConvertInfo(&convertInfo); });
 
   // get printable storage name
   Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
@@ -1869,6 +1870,16 @@ NULL,  //               requestedAbortFlag,
   }
   DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&convertInfo.storageInfo,{ (void)Storage_done(&convertInfo.storageInfo); });
+
+  // check if storage exists
+  if (!Storage_exists(&convertInfo.storageInfo,archiveName))
+  {
+    printError("Archive not found '%s'!\n",
+               String_cString(printableStorageName)
+              );
+    AutoFree_cleanup(&autoFreeList);
+    return ERROR_ARCHIVE_NOT_FOUND;
+  }
 
   // check signatures
   if (!jobOptions->skipVerifySignaturesFlag)
@@ -2097,6 +2108,7 @@ CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertI
   String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   return error;
 }
 
