@@ -46,6 +46,15 @@ case $HOST_PLATFORM in
   linux)
     JAVA_FLAGS="@JAVA_FLAGS@"
 
+    if test ! -f "$BASE_DIRECTORY/barcontrol-linux.jar"; then
+      echo >&2 "ERROR: JAR file \'$BASE_DIRECTORY/barcontrol-linux.jar\' not found!"
+      exit 1
+    fi
+    if test ! -f "$BASE_DIRECTORY/barcontrol-linux_64.jar"; then
+      echo >&2 "ERROR: JAR file \'$BASE_DIRECTORY/barcontrol-linux_64.jar\' not found!"
+      exit 1
+    fi
+
     $JAVA $JAVA_FLAGS -cp $BASE_DIRECTORY/barcontrol-linux.jar DataModel
     rc=$?
     if   test $rc -eq 32; then
@@ -64,6 +73,15 @@ case $HOST_PLATFORM in
     ;;
   macos)
     JAVA_FLAGS="@JAVA_FLAGS@ -XstartOnFirstThread"
+
+    if test ! -f "$BASE_DIRECTORY/barcontrol-macosx.jar"; then
+      echo >&2 "ERROR: JAR file \'$BASE_DIRECTORY/barcontrol-macosx.jar\' not found!"
+      exit 1
+    fi
+    if test ! -f "$BASE_DIRECTORY/barcontrol-macosx_64.jar"; then
+      echo >&2 "ERROR: JAR file \'$BASE_DIRECTORY/barcontrol-macosx_64.jar\' not found!"
+      exit 1
+    fi
 
     $JAVA $JAVA_FLAGS -cp $BASE_DIRECTORY/barcontrol-macosx.jar DataModel
     rc=$?
