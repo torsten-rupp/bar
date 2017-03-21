@@ -2209,6 +2209,7 @@ if (false) {
               homepageVersionRevision = matcher.group(1);
             }
           }
+          homepageChangeLog.clear();
           while ((line = input.readLine()) != null)
           {
 //Dprintf.dprintf("homepage2 %s",line);
