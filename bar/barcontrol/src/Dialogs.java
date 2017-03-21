@@ -580,6 +580,14 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
     return newFileInstance(file.getAbsolutePath());
   }
 
+  /** get root file instance
+   * @return root file instance
+   */
+  public T getRoot()
+  {
+    return newFileInstance("/");
+  }
+
   /** get parent file instance
    * @param file file
    * @return parent file instance
@@ -610,6 +618,7 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
   public void getShortcuts(java.util.List<T> shortcutList)
   {
     shortcutList.clear();
+    shortcutMap.put("/",getRoot());
     for (T shortcut : shortcutMap.values())
     {
       shortcutList.add(shortcut);
@@ -4255,8 +4264,8 @@ class Dialogs
                                              ListDirectory<T> listDirectory
                                             )
   {
-    if (oldFileName.isEmpty()) oldFileName = System.getProperty("user.dir");
-    return file(parentShell,type,title,(oldFileName != null) ? listDirectory.newFileInstance(oldFileName) : (T)null,fileExtensions,defaultFileExtension,flags,listDirectory);
+    T oldFile = !oldFileName.isEmpty() ? listDirectory.newFileInstance(oldFileName) : listDirectory.getRoot();
+    return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,flags,listDirectory);
   }
 
   /** open a file dialog
@@ -4300,8 +4309,8 @@ class Dialogs
                                              ListDirectory<T> listDirectory
                                             )
   {
-    if (oldFileName.isEmpty()) oldFileName = System.getProperty("user.dir");
-    return file(parentShell,type,title,(oldFileName != null) ? listDirectory.newFileInstance(oldFileName) : (T)null,fileExtensions,defaultFileExtension,listDirectory);
+    T oldFile = !oldFileName.isEmpty() ? listDirectory.newFileInstance(oldFileName) : listDirectory.getRoot();
+    return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,listDirectory);
   }
 
   /** open a file dialog
@@ -4341,8 +4350,8 @@ class Dialogs
                                              ListDirectory<T> listDirectory
                                             )
   {
-    if (oldFileName.isEmpty()) oldFileName = System.getProperty("user.dir");
-    return file(parentShell,type,title,(oldFileName != null) ? listDirectory.newFileInstance(oldFileName) : (T)null,flags,listDirectory);
+    T oldFile = !oldFileName.isEmpty() ? listDirectory.newFileInstance(oldFileName) : listDirectory.getRoot();
+    return file(parentShell,type,title,oldFile,flags,listDirectory);
   }
 
   /** open a file dialog
@@ -4378,8 +4387,8 @@ class Dialogs
                                              ListDirectory<T> listDirectory
                                             )
   {
-    if (oldFileName.isEmpty()) oldFileName = System.getProperty("user.dir");
-    return file(parentShell,type,title,(oldFileName != null) ? listDirectory.newFileInstance(oldFileName) : (T)null,listDirectory);
+    T oldFile = !oldFileName.isEmpty() ? listDirectory.newFileInstance(oldFileName) : listDirectory.getRoot();
+    return file(parentShell,type,title,oldFile,listDirectory);
   }
 
   /** open a file dialog
