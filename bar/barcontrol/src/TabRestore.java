@@ -8983,7 +8983,7 @@ Dprintf.dprintf("");
               pathName = Dialogs.file(shell,
                                       Dialogs.FileDialogTypes.DIRECTORY,
                                       BARControl.tr("Select path"),
-                                      widgetRestoreTo.getText(),
+                                      widgetRestoreToDirectory.getText(),
                                       BARServer.remoteListDirectory
                                      );
             }
@@ -8991,7 +8991,7 @@ Dprintf.dprintf("");
             {
              pathName = Dialogs.directory(shell,
                                           BARControl.tr("Select path"),
-                                          widgetRestoreTo.getText()
+                                          widgetRestoreToDirectory.getText()
                                          );
             }
             if (pathName != null)
