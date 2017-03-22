@@ -5323,7 +5323,7 @@ Dprintf.dprintf("");
       });
 
       // list
-      tab = Widgets.addTab(widgetStorageTabFolder,BARControl.tr("List"),Settings.hasExpertRole());
+      tab = Widgets.addTab(widgetStorageTabFolder,BARControl.tr("Archives"),Settings.hasExpertRole());
       tab.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,2));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
 
