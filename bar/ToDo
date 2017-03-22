@@ -133,7 +133,8 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - multi-encryption
 - set job to error if not enough inotify watches
 - server settings: set max. number of inotify watches
-
+- restore: skip leading directories
+- restore: set different permissions/owner
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
 Mon 02 Feb 2015 05:47:11 PM CET> Start job 'shares'
