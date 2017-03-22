@@ -13246,7 +13246,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
         String_delete(archiveContentNode->link.linkName);
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
-        StringList_delete(&archiveContentNode->hardLink.fileNameList);
+        StringList_done(&archiveContentNode->hardLink.fileNameList);
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         String_delete(archiveContentNode->special.fileName);
@@ -13280,6 +13280,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   String             directoryName;
   String             linkName;
   String             destinationName;
+  StringList         fileNameList;
   StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes       archiveType;
@@ -13401,6 +13402,7 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------\n
   directoryName   = String_new();
   linkName        = String_new();
   destinationName = String_new();
+  StringList_init(&fileNameList);
 //uint64 t0,t1; t0 = Misc_getTimestamp();
   while (   !Archive_eof(&archiveHandle,FALSE,FALSE)
          && (error == ERROR_NONE)
@@ -13613,13 +13615,11 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------\n
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
         {
-          StringList       fileNameList;
           ArchiveEntryInfo archiveEntryInfo;
           FileInfo         fileInfo;
           uint64           fragmentOffset,fragmentSize;
 
           // read hard link entry
-          StringList_init(&fileNameList);
           error = Archive_readHardLinkEntry(&archiveEntryInfo,
                                             &archiveHandle,
                                             NULL,  // deltaCompressAlgorithm
@@ -13636,7 +13636,6 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------\n
                                            );
           if (error != ERROR_NONE)
           {
-            StringList_done(&fileNameList);
             break;
           }
 
@@ -13647,7 +13646,8 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------\n
             HALT_INSUFFICIENT_MEMORY();
           }
           archiveContentNode->type = ARCHIVE_ENTRY_TYPE_HARDLINK;
-          StringList_move(&archiveContentNode->hardLink.fileNameList,&fileNameList);
+          StringList_init(&archiveContentNode->hardLink.fileNameList);
+          StringList_move(&fileNameList,&archiveContentNode->hardLink.fileNameList);
           archiveContentNode->hardLink.fileInfo       = fileInfo;
           archiveContentNode->hardLink.fragmentOffset = fragmentOffset;
           archiveContentNode->hardLink.fragmentSize   = fragmentSize;
@@ -13655,7 +13655,6 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------\n
 
           // close archive entry
           (void)Archive_closeEntry(&archiveEntryInfo);
-          StringList_done(&fileNameList);
         }
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
@@ -14026,6 +14025,7 @@ IndexId newEntityId;
     abortedFlag                 = (abortCallbackFunction != NULL) && abortCallbackFunction(abortCallbackUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
   }
+  StringList_done(&fileNameList);
   String_delete(destinationName);
   String_delete(linkName);
   String_delete(directoryName);
