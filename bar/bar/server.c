@@ -5606,36 +5606,33 @@ NULL, // masterIO
         }
         doneJobOptions(&jobOptions);
 
-        if (!quitFlag)
+        if (error == ERROR_NONE)
         {
-          if (error == ERROR_NONE)
-          {
-            plogMessage(NULL,  // logHandle,
-                        LOG_TYPE_INDEX,
-                        "INDEX",
-                        "Created index for '%s', %llu entries/%.1f%s (%llu bytes), %lus\n",
-                        String_cString(printableStorageName),
-                        totalEntryCount,
-                        BYTES_SHORT(totalEntrySize),
-                        BYTES_UNIT(totalEntrySize),
-                        totalEntrySize,
-                        (endTimestamp-startTimestamp)/US_PER_SECOND
-                       );
-          }
-          else if (Error_getCode(error) == ERROR_INTERRUPTED)
-          {
-            // nothing to do
-          }
-          else
-          {
-            plogMessage(NULL,  // logHandle,
-                        LOG_TYPE_INDEX,
-                        "INDEX",
-                        "Cannot create index for '%s' (error: %s)\n",
-                        String_cString(printableStorageName),
-                        Error_getText(error)
-                       );
-          }
+          plogMessage(NULL,  // logHandle,
+                      LOG_TYPE_INDEX,
+                      "INDEX",
+                      "Created index for '%s', %llu entries/%.1f%s (%llu bytes), %lus\n",
+                      String_cString(printableStorageName),
+                      totalEntryCount,
+                      BYTES_SHORT(totalEntrySize),
+                      BYTES_UNIT(totalEntrySize),
+                      totalEntrySize,
+                      (endTimestamp-startTimestamp)/US_PER_SECOND
+                     );
+        }
+        else if (Error_getCode(error) == ERROR_INTERRUPTED)
+        {
+          // nothing to do
+        }
+        else
+        {
+          plogMessage(NULL,  // logHandle,
+                      LOG_TYPE_INDEX,
+                      "INDEX",
+                      "Cannot create index for '%s' (error: %s)\n",
+                      String_cString(printableStorageName),
+                      Error_getText(error)
+                     );
         }
       }
 
