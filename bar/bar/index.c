@@ -2120,6 +2120,7 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
   va_list arguments;
   Errors  error;
   ulong   changedRowCount;
+  bool    transactionFlag;
 
   // init variables
   filterString = String_new();
@@ -2130,31 +2131,56 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
   va_end(arguments);
 
   changedRowCount = 0;
+  transactionFlag = FALSE;
   do
   {
     // only delete if index is currently not in use
     if (indexUseCount == 0)
     {
-      // delete some entries
-      BLOCK_DOX(error,
-                Database_lock(&indexHandle->databaseHandle),
-                Database_unlock(&indexHandle->databaseHandle),
+      // begin transaction
+      if (!transactionFlag)
       {
-        return Database_execute(&indexHandle->databaseHandle,
-                                CALLBACK(NULL,NULL),  // databaseRowFunction
-                                &changedRowCount,
-                                "DELETE FROM %s \
-                                 WHERE %S \
-                                 LIMIT 1000 \
-                                ",
-                                tableName,
-                                filterString
-                               );
-      });
+        error = Index_beginTransaction(indexHandle,1000L);
+        if (error == ERROR_NONE)
+        {
+          transactionFlag = TRUE;
+        }
+      }
+      else
+      {
+        error = ERROR_NONE;
+      }
+
+      if (error == ERROR_NONE)
+      {
+        // delete some entries
+        BLOCK_DOX(error,
+                  Database_lock(&indexHandle->databaseHandle),
+                  Database_unlock(&indexHandle->databaseHandle),
+        {
+          return Database_execute(&indexHandle->databaseHandle,
+                                  CALLBACK(NULL,NULL),  // databaseRowFunction
+                                  &changedRowCount,
+                                  "DELETE FROM %s \
+                                   WHERE %S \
+                                   LIMIT 1000 \
+                                  ",
+                                  tableName,
+                                  filterString
+                                 );
+        });
+      }
 //fprintf(stderr,"%s, %d: deleted from %s where filter=%s entries %lu %s\n",__FILE__,__LINE__,tableName,String_cString(filterString),changedRowCount,Error_getText(error));
     }
     else
     {
+      // end transaction
+      if (transactionFlag)
+      {
+        (void)Index_endTransaction(indexHandle);
+        transactionFlag = FALSE;
+      }
+
       // short delay
       Misc_udelay(500*US_PER_MS);
     }
@@ -2162,6 +2188,14 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
   while (   (changedRowCount >= 1000)
          && (error == ERROR_NONE)
         );
+
+
+  // end transaction
+  if (transactionFlag)
+  {
+    (void)Index_endTransaction(indexHandle);
+    transactionFlag = FALSE;
+  }
 
   // free resources
   String_delete(filterString);
@@ -2629,7 +2663,6 @@ LOCAL void indexThreadCode(void)
                                    )
             )
       {
-        error = Index_beginTransaction(&indexHandle,1000L);
         if (error == ERROR_NONE)
         {
           error = deleteFromIndex(&indexHandle,
@@ -2702,7 +2735,6 @@ LOCAL void indexThreadCode(void)
                                   databaseId
                                  );
         }
-        error = Index_endTransaction(&indexHandle);
 
         if (error == ERROR_NONE)
         {
