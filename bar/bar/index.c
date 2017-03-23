@@ -2158,7 +2158,6 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
       // short delay
       Misc_udelay(500*US_PER_MS);
     }
-
   }
   while (   (changedRowCount >= 1000)
          && (error == ERROR_NONE)
