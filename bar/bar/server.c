@@ -5611,13 +5611,14 @@ NULL, // masterIO
           plogMessage(NULL,  // logHandle,
                       LOG_TYPE_INDEX,
                       "INDEX",
-                      "Created index for '%s', %llu entries/%.1f%s (%llu bytes), %lus\n",
+                      "Created index for '%s', %llu entries/%.1f%s (%llu bytes), %lumin:%02lus\n",
                       String_cString(printableStorageName),
                       totalEntryCount,
                       BYTES_SHORT(totalEntrySize),
                       BYTES_UNIT(totalEntrySize),
                       totalEntrySize,
-                      (endTimestamp-startTimestamp)/US_PER_SECOND
+                      ((endTimestamp-startTimestamp)/US_PER_SECOND)/60,
+                      ((endTimestamp-startTimestamp)/US_PER_SECOND)%60
                      );
         }
         else if (Error_getCode(error) == ERROR_INTERRUPTED)
