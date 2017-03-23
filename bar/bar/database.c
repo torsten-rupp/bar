@@ -3188,6 +3188,16 @@ Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle)
   return ERROR_NONE;
 }
 
+Errors Database_flush(DatabaseHandle *databaseHandle)
+{
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+
+  sqlite3_wal_checkpoint(databaseHandle->handle,NULL);
+
+  return ERROR_NONE;
+}
+
 Errors Database_execute(DatabaseHandle      *databaseHandle,
                         DatabaseRowFunction databaseRowFunction,
                         void                *databaseRowUserData,

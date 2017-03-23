@@ -594,6 +594,17 @@ Errors Database_endTransaction(DatabaseHandle *databaseHandle);
 Errors Database_rollbackTransaction(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
+* Name   : Database_flush
+* Purpose: flush database
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_flush(DatabaseHandle *databaseHandle);
+
+/***********************************************************************\
 * Name   : Database_execute
 * Purpose: execute SQL statement
 * Input  : databaseHandle - database handle
