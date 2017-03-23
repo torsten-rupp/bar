@@ -513,6 +513,17 @@ Errors Index_endTransaction(IndexHandle *indexHandle);
 Errors Index_rollbackTransaction(IndexHandle *indexHandle);
 
 /***********************************************************************\
+* Name   : Index_flush
+* Purpose: flush index data
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_flush(IndexHandle *indexHandle);
+
+/***********************************************************************\
 * Name   : Index_getType
 * Purpose: get index type
 * Input  : indexId - index id

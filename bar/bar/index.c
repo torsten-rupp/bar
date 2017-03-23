@@ -2119,7 +2119,6 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
   String  filterString;
   va_list arguments;
   Errors  error;
-  bool    retryFlag;
   ulong   changedRowCount;
 
   // init variables
@@ -2133,6 +2132,7 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
   changedRowCount = 0;
   do
   {
+    // only delete if index is currently not in use
     if (indexUseCount == 0)
     {
       // delete some entries
@@ -2151,18 +2151,16 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
                                 filterString
                                );
       });
-      retryFlag = FALSE;
-//fprintf(stderr,"%s, %d: deleted entries %lu %s\n",__FILE__,__LINE__,changedRowCount,Error_getText(error));
+//fprintf(stderr,"%s, %d: deleted from %s where filter=%s entries %lu %s\n",__FILE__,__LINE__,tableName,String_cString(filterString),changedRowCount,Error_getText(error));
     }
     else
     {
-      retryFlag = TRUE;
+      // short delay
+      Misc_udelay(500*US_PER_MS);
     }
 
-    // short delay
-    Misc_udelay(500*US_PER_MS);
   }
-  while (   (retryFlag || (changedRowCount > 0))
+  while (   (changedRowCount >= 1000)
          && (error == ERROR_NONE)
         );
 
@@ -2632,6 +2630,7 @@ LOCAL void indexThreadCode(void)
                                    )
             )
       {
+        error = Index_beginTransaction(&indexHandle,1000L);
         if (error == ERROR_NONE)
         {
           error = deleteFromIndex(&indexHandle,
@@ -2704,6 +2703,8 @@ LOCAL void indexThreadCode(void)
                                   databaseId
                                  );
         }
+        error = Index_endTransaction(&indexHandle);
+
         if (error == ERROR_NONE)
         {
           if (!String_isEmpty(storageName))
@@ -2719,6 +2720,7 @@ LOCAL void indexThreadCode(void)
         }
       }
       Database_finalize(&databaseQueryHandle);
+//Database_flush(&indexHandle);
     }
 
     if (Misc_getTimestamp() > (lastCleanupTimestamp+TIME_INDEX_CLEANUP*US_PER_SECOND))
@@ -4308,6 +4310,13 @@ Errors Index_rollbackTransaction(IndexHandle *indexHandle)
   assert(indexHandle != NULL);
 
   return Database_rollbackTransaction(&indexHandle->databaseHandle);
+}
+
+Errors Index_flush(IndexHandle *indexHandle)
+{
+  assert(indexHandle != NULL);
+
+  return Database_flush(&indexHandle->databaseHandle);
 }
 
 bool Index_containsType(const IndexId indexIds[],
@@ -6719,7 +6728,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
       Database_finalize(&databaseQueryHandle);
 
       // update aggregate data
-  //fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
+//fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
@@ -6905,7 +6914,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
       Database_finalize(&databaseQueryHandle);
 
       // update newest aggregate data
-  //fprintf(stderr,"%s, %d: newest aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
+//fprintf(stderr,"%s, %d: newest aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
@@ -7201,6 +7210,8 @@ Errors Index_newStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
+//TODO
+fprintf(stderr,"%s, %d: new storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
   if (indexHandle->masterIO == NULL)
   {
     INDEX_DOX(error,
