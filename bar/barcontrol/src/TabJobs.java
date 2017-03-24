@@ -8499,6 +8499,7 @@ widgetArchivePartSize.setListVisible(true);
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
       widgetAdd = Widgets.newButton(composite,BARControl.tr("Add"));
+      widgetAdd.setEnabled(false);
       Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
@@ -8517,7 +8518,18 @@ widgetArchivePartSize.setListVisible(true);
       });
     }
 
-    // add selection listeners
+    // add listeners
+    widgetJobName.addModifyListener(new ModifyListener()
+    {
+      @Override
+      public void modifyText(ModifyEvent modifyEvent)
+      {
+        Text   widget = (Text)modifyEvent.widget;
+        String string = widget.getText().trim();
+
+        widgetAdd.setEnabled(!string.isEmpty());
+      }
+    });
     widgetJobName.addSelectionListener(new SelectionListener()
     {
       @Override
@@ -8634,14 +8646,16 @@ throw new Error("NYI");
       });
     }
 
-    // add selection listeners
+    // add listeners
     widgetJobName.addModifyListener(new ModifyListener()
     {
       @Override
       public void modifyText(ModifyEvent modifyEvent)
       {
-        Text  widget = (Text)modifyEvent.widget;
-        widgetClone.setEnabled(!widget.getText().equals(jobData.name));
+        Text   widget = (Text)modifyEvent.widget;
+        String name   = widget.getText();
+
+        widgetClone.setEnabled(!name.isEmpty() && !name.equals(jobData.name));
       }
     });
     widgetJobName.addSelectionListener(new SelectionListener()
@@ -8768,14 +8782,16 @@ throw new Error("NYI");
       });
     }
 
-    // add selection listeners
+    // add listeners
     widgetNewJobName.addModifyListener(new ModifyListener()
     {
       @Override
       public void modifyText(ModifyEvent modifyEvent)
       {
-        Text  widget = (Text)modifyEvent.widget;
-        widgetRename.setEnabled(!widget.getText().equals(jobData.name));
+        Text   widget = (Text)modifyEvent.widget;
+        String name   = widget.getText();
+
+        widgetRename.setEnabled(!name.isEmpty() && !name.equals(jobData.name));
       }
     });
     widgetNewJobName.addSelectionListener(new SelectionListener()
@@ -10162,6 +10178,7 @@ throw new Error("NYI");
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
       widgetSave = Widgets.newButton(composite,buttonText);
+      widgetSave.setEnabled(false);
       Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
       widgetSave.addSelectionListener(new SelectionListener()
       {
@@ -10193,7 +10210,18 @@ throw new Error("NYI");
       });
     }
 
-    // add selection listeners
+    // add listeners
+    widgetPattern.addModifyListener(new ModifyListener()
+    {
+      @Override
+      public void modifyText(ModifyEvent modifyEvent)
+      {
+        Text   widget  = (Text)modifyEvent.widget;
+        String pattern = widget.getText().trim();
+
+        widgetSave.setEnabled(!pattern.isEmpty());
+      }
+    });
     widgetPattern.addSelectionListener(new SelectionListener()
     {
       @Override
@@ -10491,6 +10519,7 @@ throw new Error("NYI");
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
       widgetSave = Widgets.newButton(composite,buttonText);
+      widgetSave.setEnabled((mountData.name != null) && !mountData.name.isEmpty());
       Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
       widgetSave.addSelectionListener(new SelectionListener()
       {
@@ -10523,7 +10552,18 @@ throw new Error("NYI");
       });
     }
 
-    // add selection listeners
+    // add listeners
+    widgetName.addModifyListener(new ModifyListener()
+    {
+      @Override
+      public void modifyText(ModifyEvent modifyEvent)
+      {
+        Text   widget = (Text)modifyEvent.widget;
+        String name   = widget.getText().trim();
+
+        widgetSave.setEnabled(!name.isEmpty());
+      }
+    });
     widgetName.addSelectionListener(new SelectionListener()
     {
       @Override
@@ -10850,6 +10890,7 @@ throw new Error("NYI");
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
       widgetSave = Widgets.newButton(composite,buttonText);
+      widgetSave.setEnabled((pattern[0] != null) && !pattern[0].isEmpty());
       Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
       widgetSave.addSelectionListener(new SelectionListener()
       {
@@ -10881,7 +10922,18 @@ throw new Error("NYI");
       });
     }
 
-    // add selection listeners
+    // add listeners
+    widgetPattern.addModifyListener(new ModifyListener()
+    {
+      @Override
+      public void modifyText(ModifyEvent modifyEvent)
+      {
+        Text   widget  = (Text)modifyEvent.widget;
+        String pattern = widget.getText().trim();
+
+        widgetSave.setEnabled(!pattern.isEmpty());
+      }
+    });
     widgetPattern.addSelectionListener(new SelectionListener()
     {
       @Override
@@ -11306,6 +11358,7 @@ throw new Error("NYI");
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
       widgetSave = Widgets.newButton(composite,buttonText);
+      widgetSave.setEnabled((pattern[0] != null) && !pattern[0].isEmpty());
       Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
@@ -11324,7 +11377,18 @@ throw new Error("NYI");
       });
     }
 
-    // add selection listeners
+    // add listeners
+    widgetPattern.addModifyListener(new ModifyListener()
+    {
+      @Override
+      public void modifyText(ModifyEvent modifyEvent)
+      {
+        Text   widget  = (Text)modifyEvent.widget;
+        String pattern = widget.getText().trim();
+
+        widgetSave.setEnabled(!pattern.isEmpty());
+      }
+    });
     widgetPattern.addSelectionListener(new SelectionListener()
     {
       @Override
@@ -12596,6 +12660,8 @@ throw new Error("NYI");
     Widgets.layout(composite,2,0,TableLayoutData.WE);
     {
       widgetSave = Widgets.newButton(composite,BARControl.tr("Save"));
+//TODO
+//      widgetSave.setEnabled(!storageFileNameEditor.getFileName().isEmpty());
       Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
@@ -12614,7 +12680,21 @@ throw new Error("NYI");
       });
     }
 
-    // add selection listeners
+    // add listeners
+//TODO
+/*
+    storageFileNameEditor.addModifyListener(new ModifyListener()
+    {
+      @Override
+      public void modifyText(ModifyEvent modifyEvent)
+      {
+        Text   widget      = (Text)modifyEvent.widget;
+        String storagePath = widget.getText().trim();
+
+        widgetAdd.setEnabled(!storagePath.isEmpty());
+      }
+    });
+*/
     widgetSave.addSelectionListener(new SelectionListener()
     {
       @Override
