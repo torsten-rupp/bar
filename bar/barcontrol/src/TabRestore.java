@@ -7676,16 +7676,16 @@ Dprintf.dprintf("remove");
    */
   private void addStorageIndex()
   {
-    Label      label;
-    Composite  composite;
-    Button     button;
-    final Text widgetStoragePath;
-    Button     widgetAdd;
+    Label     label;
+    Composite composite;
+    Button    button;
 
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Add storage to index database"),400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
+    final Text   widgetStoragePath;
+    final Button widgetAdd;
     composite = Widgets.newComposite(dialog);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE);
@@ -7742,6 +7742,7 @@ Dprintf.dprintf("remove");
     Widgets.layout(composite,1,0,TableLayoutData.WE);
     {
       widgetAdd = Widgets.newButton(composite,BARControl.tr("Add"));
+      widgetAdd.setEnabled(false);
       Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
@@ -7761,7 +7762,18 @@ Dprintf.dprintf("remove");
       });
     }
 
-    // add selection listeners
+    // add listeners
+    widgetStoragePath.addModifyListener(new ModifyListener()
+    {
+      @Override
+      public void modifyText(ModifyEvent modifyEvent)
+      {
+        Text   widget      = (Text)modifyEvent.widget;
+        String storagePath = widget.getText().trim();
+
+        widgetAdd.setEnabled(!storagePath.isEmpty());
+      }
+    });
     widgetAdd.addSelectionListener(new SelectionListener()
     {
       @Override
@@ -7780,7 +7792,7 @@ Dprintf.dprintf("remove");
     String storagePath = (String)Dialogs.run(dialog,null);
 
     // add storage files
-    if (storagePath != null)
+    if ((storagePath != null) && !storagePath.isEmpty())
     {
       final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Add indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
 
