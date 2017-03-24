@@ -1621,7 +1621,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   Network_getHostName(chunkMetaEntry.hostName);
   String_set(chunkMetaEntry.jobUUID,archiveHandle->jobUUID);
   String_set(chunkMetaEntry.scheduleUUID,archiveHandle->scheduleUUID);
-  chunkMetaEntry.archiveType     = archiveHandle->storageInfo->jobOptions->archiveType;
+  chunkMetaEntry.archiveType     = archiveHandle->archiveType;
   chunkMetaEntry.createdDateTime = Misc_getCurrentDateTime();
   String_set(chunkMetaEntry.comment,archiveHandle->storageInfo->jobOptions->comment);
 
@@ -13263,6 +13263,322 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
     }
   }
 
+  /***********************************************************************\
+  * Name   : deleteArchiveContentNode
+  * Purpose: delete archive entry node
+  * Input  : archiveContentNode - content node to delete
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  void deleteArchiveContentNode(ArchiveContentNode *archiveContentNode)
+  {
+    assert(archiveContentNode != NULL);
+
+    freeArchiveContentNode(archiveContentNode,NULL);
+    LIST_DELETE_NODE(archiveContentNode);
+  }
+
+
+  /***********************************************************************\
+  * Name   : flushArchiveContentList
+  * Purpose: flush archive content list
+  * Input  : archiveContentList   - archvie content list
+  *          indexHandle          - index handle
+  *          printableStorageName - printable storage name
+  *          size                 - archive size [bytes]
+  *          timeLastChanged      - time last changed variable
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  Errors flushArchiveContentList(ArchiveContentList *archiveContentList,
+                                 IndexHandle        *indexHandle,
+                                 ConstString        printableStorageName,
+                                 uint64             size,
+                                 uint64             *timeLastChanged
+                                )
+  {
+    Errors             error;
+    ArchiveContentNode *archiveContentNode;
+
+    assert(archiveContentList != NULL);
+    assert(indexHandle != NULL);
+    assert(printableStorageName != NULL);
+    assert(timeLastChanged != NULL);
+
+    // start transaction
+    error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    while (!List_isEmpty(archiveContentList))
+    {
+      archiveContentNode = List_removeFirst(archiveContentList);
+      assert(archiveContentNode != NULL);
+
+      switch (archiveContentNode->type)
+      {
+        case ARCHIVE_ENTRY_TYPE_FILE:
+          error = Index_addFile(indexHandle,
+                                storageId,
+                                archiveContentNode->file.fileName,
+                                archiveContentNode->file.fileInfo.size,
+                                archiveContentNode->file.fileInfo.timeLastAccess,
+                                archiveContentNode->file.fileInfo.timeModified,
+                                archiveContentNode->file.fileInfo.timeLastChanged,
+                                archiveContentNode->file.fileInfo.userId,
+                                archiveContentNode->file.fileInfo.groupId,
+                                archiveContentNode->file.fileInfo.permission,
+                                archiveContentNode->file.fragmentOffset,
+                                archiveContentNode->file.fragmentSize
+                               );
+          if (error != ERROR_NONE)
+          {
+            deleteArchiveContentNode(archiveContentNode);
+            (void)Index_rollbackTransaction(indexHandle);
+            return error;
+          }
+
+          // save max. time last changed
+          if ((*timeLastChanged) < archiveContentNode->file.fileInfo.timeLastChanged) (*timeLastChanged) = archiveContentNode->file.fileInfo.timeLastChanged;
+
+          pprintInfo(4,"INDEX: ","Added file '%s', %lubytes to index for '%s'\n",String_cString(archiveContentNode->file.fileName),archiveContentNode->file.fileInfo.size,String_cString(printableStorageName));
+          break;
+        case ARCHIVE_ENTRY_TYPE_IMAGE:
+          error = Index_addImage(indexHandle,
+                                 storageId,
+                                 archiveContentNode->image.imageName,
+                                 archiveContentNode->image.fileSystemType,
+                                 archiveContentNode->image.deviceInfo.size,
+                                 archiveContentNode->image.deviceInfo.blockSize,
+                                 archiveContentNode->image.blockOffset,
+                                 archiveContentNode->image.blockCount
+                                );
+          if (error != ERROR_NONE)
+          {
+            deleteArchiveContentNode(archiveContentNode);
+            (void)Index_rollbackTransaction(indexHandle);
+            return error;
+          }
+          pprintInfo(4,"INDEX: ","Added image '%s', %lubytes to index for '%s'\n",String_cString(archiveContentNode->image.imageName),archiveContentNode->image.deviceInfo.size,String_cString(printableStorageName));
+          break;
+        case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+          error = Index_addDirectory(indexHandle,
+                                     storageId,
+                                     archiveContentNode->directory.directoryName,
+                                     archiveContentNode->directory.fileInfo.timeLastAccess,
+                                     archiveContentNode->directory.fileInfo.timeModified,
+                                     archiveContentNode->directory.fileInfo.timeLastChanged,
+                                     archiveContentNode->directory.fileInfo.userId,
+                                     archiveContentNode->directory.fileInfo.groupId,
+                                     archiveContentNode->directory.fileInfo.permission
+                                    );
+          if (error != ERROR_NONE)
+          {
+            deleteArchiveContentNode(archiveContentNode);
+            (void)Index_rollbackTransaction(indexHandle);
+            return error;
+          }
+
+          // save max. time last changed
+          if ((*timeLastChanged) < archiveContentNode->directory.fileInfo.timeLastChanged) (*timeLastChanged) = archiveContentNode->directory.fileInfo.timeLastChanged;
+
+          pprintInfo(4,"INDEX: ","Added directory '%s' to index for '%s'\n",String_cString(archiveContentNode->directory.directoryName),String_cString(printableStorageName));
+          break;
+        case ARCHIVE_ENTRY_TYPE_LINK:
+          error = Index_addLink(indexHandle,
+                                storageId,
+                                archiveContentNode->link.linkName,
+                                archiveContentNode->link.destinationName,
+                                archiveContentNode->link.fileInfo.timeLastAccess,
+                                archiveContentNode->link.fileInfo.timeModified,
+                                archiveContentNode->link.fileInfo.timeLastChanged,
+                                archiveContentNode->link.fileInfo.userId,
+                                archiveContentNode->link.fileInfo.groupId,
+                                archiveContentNode->link.fileInfo.permission
+                               );
+          if (error != ERROR_NONE)
+          {
+            deleteArchiveContentNode(archiveContentNode);
+            (void)Index_rollbackTransaction(indexHandle);
+            return error;
+          }
+
+          // save max. time last changed
+          if ((*timeLastChanged) < archiveContentNode->link.fileInfo.timeLastChanged) (*timeLastChanged) = archiveContentNode->link.fileInfo.timeLastChanged;
+
+          pprintInfo(4,"INDEX: ","Added link '%s' to index for '%s'\n",String_cString(archiveContentNode->link.linkName),String_cString(printableStorageName));
+          break;
+        case ARCHIVE_ENTRY_TYPE_HARDLINK:
+          {
+            StringNode *stringNode;
+            String     fileName;
+
+            STRINGLIST_ITERATE(&archiveContentNode->hardLink.fileNameList,stringNode,fileName)
+            {
+              error = Index_addHardlink(indexHandle,
+                                        storageId,
+                                        fileName,
+                                        archiveContentNode->hardLink.fileInfo.size,
+                                        archiveContentNode->hardLink.fileInfo.timeLastAccess,
+                                        archiveContentNode->hardLink.fileInfo.timeModified,
+                                        archiveContentNode->hardLink.fileInfo.timeLastChanged,
+                                        archiveContentNode->hardLink.fileInfo.userId,
+                                        archiveContentNode->hardLink.fileInfo.groupId,
+                                        archiveContentNode->hardLink.fileInfo.permission,
+                                        archiveContentNode->hardLink.fragmentOffset,
+                                        archiveContentNode->hardLink.fragmentSize
+                                       );
+              if (error != ERROR_NONE)
+              {
+                deleteArchiveContentNode(archiveContentNode);
+                (void)Index_rollbackTransaction(indexHandle);
+                return error;
+              }
+            }
+            if (error != ERROR_NONE)
+            {
+              deleteArchiveContentNode(archiveContentNode);
+              (void)Index_rollbackTransaction(indexHandle);
+              return error;
+            }
+
+            // save max. time last changed
+            if ((*timeLastChanged) < archiveContentNode->hardLink.fileInfo.timeLastChanged) (*timeLastChanged) = archiveContentNode->hardLink.fileInfo.timeLastChanged;
+
+            pprintInfo(4,"INDEX: ","Added hard link '%s', %lubytes to index for '%s'\n",String_cString(StringList_first(&archiveContentNode->hardLink.fileNameList,NULL)),archiveContentNode->hardLink.fileInfo.size,String_cString(printableStorageName));
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_SPECIAL:
+          error = Index_addSpecial(indexHandle,
+                                   storageId,
+                                   archiveContentNode->special.fileName,
+                                   archiveContentNode->special.fileInfo.type,
+                                   archiveContentNode->special.fileInfo.timeLastAccess,
+                                   archiveContentNode->special.fileInfo.timeModified,
+                                   archiveContentNode->special.fileInfo.timeLastChanged,
+                                   archiveContentNode->special.fileInfo.userId,
+                                   archiveContentNode->special.fileInfo.groupId,
+                                   archiveContentNode->special.fileInfo.permission,
+                                   archiveContentNode->special.fileInfo.major,
+                                   archiveContentNode->special.fileInfo.minor
+                                  );
+          if (error != ERROR_NONE)
+          {
+            deleteArchiveContentNode(archiveContentNode);
+            (void)Index_rollbackTransaction(indexHandle);
+            return error;
+          }
+
+          // save max. time last changed
+          if ((*timeLastChanged) < archiveContentNode->special.fileInfo.timeLastChanged) (*timeLastChanged) = archiveContentNode->special.fileInfo.timeLastChanged;
+
+          pprintInfo(4,"INDEX: ","Added special '%s' to index for '%s'\n",String_cString(archiveContentNode->special.fileName),String_cString(printableStorageName));
+          break;
+        case ARCHIVE_ENTRY_TYPE_META:
+//TODO
+{
+IndexId newEntityId;
+fprintf(stderr,"%s, %d: jobUUID=%s scheduleUUID=%s type=%d\n",__FILE__,__LINE__,String_cString(archiveContentNode->meta.jobUUID),String_cString(archiveContentNode->meta.scheduleUUID),archiveContentNode->meta.archiveType);
+//asm("int3");
+          if (!Index_findEntity(indexHandle,
+                                archiveContentNode->meta.jobUUID,
+                                archiveContentNode->meta.scheduleUUID,
+                                archiveContentNode->meta.archiveType,
+                                archiveContentNode->meta.createdDateTime,
+                                NULL,  // uuidId
+                                &newEntityId,
+                                NULL,  // archiveType,
+                                NULL,  // createdDateTime,
+                                NULL,  // lastErrorMessage,
+                                NULL,  // totalEntryCount,
+                                NULL  // totalEntrySize
+                               )
+             )
+          {
+            // create new entity
+            error = Index_newEntity(indexHandle,
+                                    archiveContentNode->meta.jobUUID,
+                                    archiveContentNode->meta.scheduleUUID,
+                                    archiveContentNode->meta.archiveType,
+                                    archiveContentNode->meta.createdDateTime,
+                                    FALSE,  // locked
+                                    &newEntityId
+                                   );
+            if (error != ERROR_NONE)
+            {
+              deleteArchiveContentNode(archiveContentNode);
+              (void)Index_rollbackTransaction(indexHandle);
+              return error;
+            }
+fprintf(stderr,"%s, %d: newEntityId=%llu\n",__FILE__,__LINE__,newEntityId);
+          }
+
+          // update storage
+          error = Index_updateStorage(indexHandle,
+                                      storageId,
+                                      NULL,  // storageName
+                                      archiveContentNode->meta.createdDateTime,
+                                      size
+                                     );
+          if (error != ERROR_NONE)
+          {
+            deleteArchiveContentNode(archiveContentNode);
+            (void)Index_rollbackTransaction(indexHandle);
+            return error;
+          }
+
+          // assign storage to entity
+          error = Index_assignTo(indexHandle,
+                                 NULL,           // jobUUID
+                                 INDEX_ID_NONE,  // entityId
+                                 storageId,
+                                 NULL,           // toJobUUID
+                                 newEntityId,
+                                 ARCHIVE_TYPE_NONE,
+                                 INDEX_ID_NONE  // toStorageId
+                                );
+          if (error != ERROR_NONE)
+          {
+            deleteArchiveContentNode(archiveContentNode);
+            (void)Index_rollbackTransaction(indexHandle);
+            return error;
+          }
+}
+          break;
+        case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+          break;
+        default:
+fprintf(stderr,"%s, %d: archiveContentNode->type=%d\n",__FILE__,__LINE__,archiveContentNode->type);
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* NDEBUG */
+          break; /* not reached */
+      }
+
+      deleteArchiveContentNode(archiveContentNode);
+    }
+
+    // end transaction
+    error = Index_endTransaction(indexHandle);
+    if (error != ERROR_NONE)
+    {
+      (void)Index_rollbackTransaction(indexHandle);
+      return error;
+    }
+
+    // clear list
+    List_clear(archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);
+//t1 = Misc_getTimestamp(); fprintf(stderr,"%s, %d: %d dt=%llu\n",__FILE__,__LINE__,MAX_ARCHIVE_CONTENT_LIST_LENGTH,(t1-t0)/1000LL); t0 = t1;
+
+    return ERROR_NONE;
+  }
+
   #define MAX_ARCHIVE_CONTENT_LIST_LENGTH 256
 
   StorageSpecifier   storageSpecifier;
@@ -13743,244 +14059,16 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------ %
 
     if (List_count(&archiveContentList) > MAX_ARCHIVE_CONTENT_LIST_LENGTH)
     {
-      // start transaction
-      error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-
-      LIST_ITERATE(&archiveContentList,archiveContentNode)
-      {
-        // read entry
-        switch (archiveContentNode->type)
-        {
-          case ARCHIVE_ENTRY_TYPE_FILE:
-            error = Index_addFile(indexHandle,
-                                  storageId,
-                                  archiveContentNode->file.fileName,
-                                  archiveContentNode->file.fileInfo.size,
-                                  archiveContentNode->file.fileInfo.timeLastAccess,
-                                  archiveContentNode->file.fileInfo.timeModified,
-                                  archiveContentNode->file.fileInfo.timeLastChanged,
-                                  archiveContentNode->file.fileInfo.userId,
-                                  archiveContentNode->file.fileInfo.groupId,
-                                  archiveContentNode->file.fileInfo.permission,
-                                  archiveContentNode->file.fragmentOffset,
-                                  archiveContentNode->file.fragmentSize
-                                 );
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-
-            // save max. time last changed
-            if (timeLastChanged < archiveContentNode->file.fileInfo.timeLastChanged) timeLastChanged = archiveContentNode->file.fileInfo.timeLastChanged;
-
-            pprintInfo(4,"INDEX: ","Added file '%s', %lubytes to index for '%s'\n",String_cString(archiveContentNode->file.fileName),archiveContentNode->file.fileInfo.size,String_cString(printableStorageName));
-            break;
-          case ARCHIVE_ENTRY_TYPE_IMAGE:
-            error = Index_addImage(indexHandle,
-                                   storageId,
-                                   archiveContentNode->image.imageName,
-                                   archiveContentNode->image.fileSystemType,
-                                   archiveContentNode->image.deviceInfo.size,
-                                   archiveContentNode->image.deviceInfo.blockSize,
-                                   archiveContentNode->image.blockOffset,
-                                   archiveContentNode->image.blockCount
-                                  );
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-            pprintInfo(4,"INDEX: ","Added image '%s', %lubytes to index for '%s'\n",String_cString(archiveContentNode->image.imageName),archiveContentNode->image.deviceInfo.size,String_cString(printableStorageName));
-            break;
-          case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-            error = Index_addDirectory(indexHandle,
-                                       storageId,
-                                       archiveContentNode->directory.directoryName,
-                                       archiveContentNode->directory.fileInfo.timeLastAccess,
-                                       archiveContentNode->directory.fileInfo.timeModified,
-                                       archiveContentNode->directory.fileInfo.timeLastChanged,
-                                       archiveContentNode->directory.fileInfo.userId,
-                                       archiveContentNode->directory.fileInfo.groupId,
-                                       archiveContentNode->directory.fileInfo.permission
-                                      );
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-
-            // save max. time last changed
-            if (timeLastChanged < archiveContentNode->directory.fileInfo.timeLastChanged) timeLastChanged = archiveContentNode->directory.fileInfo.timeLastChanged;
-
-            pprintInfo(4,"INDEX: ","Added directory '%s' to index for '%s'\n",String_cString(archiveContentNode->directory.directoryName),String_cString(printableStorageName));
-            break;
-          case ARCHIVE_ENTRY_TYPE_LINK:
-            error = Index_addLink(indexHandle,
-                                  storageId,
-                                  archiveContentNode->link.linkName,
-                                  archiveContentNode->link.destinationName,
-                                  archiveContentNode->link.fileInfo.timeLastAccess,
-                                  archiveContentNode->link.fileInfo.timeModified,
-                                  archiveContentNode->link.fileInfo.timeLastChanged,
-                                  archiveContentNode->link.fileInfo.userId,
-                                  archiveContentNode->link.fileInfo.groupId,
-                                  archiveContentNode->link.fileInfo.permission
-                                 );
-            if (error != ERROR_NONE)
-            {
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              break;
-            }
-
-            // save max. time last changed
-            if (timeLastChanged < archiveContentNode->link.fileInfo.timeLastChanged) timeLastChanged = archiveContentNode->link.fileInfo.timeLastChanged;
-
-            pprintInfo(4,"INDEX: ","Added link '%s' to index for '%s'\n",String_cString(archiveContentNode->link.linkName),String_cString(printableStorageName));
-            break;
-          case ARCHIVE_ENTRY_TYPE_HARDLINK:
-            STRINGLIST_ITERATE(&archiveContentNode->hardLink.fileNameList,stringNode,fileName)
-            {
-              error = Index_addHardlink(indexHandle,
-                                        storageId,
-                                        fileName,
-                                        archiveContentNode->hardLink.fileInfo.size,
-                                        archiveContentNode->hardLink.fileInfo.timeLastAccess,
-                                        archiveContentNode->hardLink.fileInfo.timeModified,
-                                        archiveContentNode->hardLink.fileInfo.timeLastChanged,
-                                        archiveContentNode->hardLink.fileInfo.userId,
-                                        archiveContentNode->hardLink.fileInfo.groupId,
-                                        archiveContentNode->hardLink.fileInfo.permission,
-                                        archiveContentNode->hardLink.fragmentOffset,
-                                        archiveContentNode->hardLink.fragmentSize
-                                       );
-              if (error != ERROR_NONE)
-              {
-                break;
-              }
-            }
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-
-            // save max. time last changed
-            if (timeLastChanged < archiveContentNode->hardLink.fileInfo.timeLastChanged) timeLastChanged = archiveContentNode->hardLink.fileInfo.timeLastChanged;
-
-            pprintInfo(4,"INDEX: ","Added hard link '%s', %lubytes to index for '%s'\n",String_cString(StringList_first(&archiveContentNode->hardLink.fileNameList,NULL)),archiveContentNode->hardLink.fileInfo.size,String_cString(printableStorageName));
-            break;
-          case ARCHIVE_ENTRY_TYPE_SPECIAL:
-            error = Index_addSpecial(indexHandle,
-                                     storageId,
-                                     archiveContentNode->special.fileName,
-                                     archiveContentNode->special.fileInfo.type,
-                                     archiveContentNode->special.fileInfo.timeLastAccess,
-                                     archiveContentNode->special.fileInfo.timeModified,
-                                     archiveContentNode->special.fileInfo.timeLastChanged,
-                                     archiveContentNode->special.fileInfo.userId,
-                                     archiveContentNode->special.fileInfo.groupId,
-                                     archiveContentNode->special.fileInfo.permission,
-                                     archiveContentNode->special.fileInfo.major,
-                                     archiveContentNode->special.fileInfo.minor
-                                    );
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-
-            // save max. time last changed
-            if (timeLastChanged < archiveContentNode->special.fileInfo.timeLastChanged) timeLastChanged = archiveContentNode->special.fileInfo.timeLastChanged;
-
-            pprintInfo(4,"INDEX: ","Added special '%s' to index for '%s'\n",String_cString(archiveContentNode->special.fileName),String_cString(printableStorageName));
-            break;
-          case ARCHIVE_ENTRY_TYPE_META:
-//TODO
-{
-IndexId newEntityId;
-fprintf(stderr,"%s, %d: jobUUID=%s scheduleUUID=%s type=%d\n",__FILE__,__LINE__,String_cString(archiveContentNode->meta.jobUUID),String_cString(archiveContentNode->meta.scheduleUUID),archiveContentNode->meta.archiveType);
-//asm("int3");
-            if (!Index_findEntity(indexHandle,
-                                  archiveContentNode->meta.jobUUID,
-                                  archiveContentNode->meta.scheduleUUID,
-                                  archiveContentNode->meta.archiveType,
-                                  archiveContentNode->meta.createdDateTime,
-                                  NULL,  // uuidId
-                                  &newEntityId,
-                                  NULL,  // archiveType,
-                                  NULL,  // createdDateTime,
-                                  NULL,  // lastErrorMessage,
-                                  NULL,  // totalEntryCount,
-                                  NULL  // totalEntrySize
-                                 )
-               )
-            {
-              // create new entity
-              error = Index_newEntity(indexHandle,
-                                      archiveContentNode->meta.jobUUID,
-                                      archiveContentNode->meta.scheduleUUID,
-                                      archiveContentNode->meta.archiveType,
-                                      archiveContentNode->meta.createdDateTime,
-                                      FALSE,  // locked
-                                      &newEntityId
+      error = flushArchiveContentList(&archiveContentList,
+                                      indexHandle,
+                                      printableStorageName,
+                                      size,
+                                      &timeLastChanged
                                      );
-              if (error != ERROR_NONE)
-              {
-                break;
-              }
-fprintf(stderr,"%s, %d: newEntityId=%llu\n",__FILE__,__LINE__,newEntityId);
-            }
-
-            // update storage
-            error = Index_updateStorage(indexHandle,
-                                        storageId,
-                                        NULL,  // storageName
-                                        archiveContentNode->meta.createdDateTime,
-                                        size
-                                       );
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-
-            // assign storage to entity
-            error = Index_assignTo(indexHandle,
-                                   NULL,           // jobUUID
-                                   INDEX_ID_NONE,  // entityId
-                                   storageId,
-                                   NULL,           // toJobUUID
-                                   newEntityId,
-                                   ARCHIVE_TYPE_NONE,
-                                   INDEX_ID_NONE  // toStorageId
-                                  );
-            if (error != ERROR_NONE)
-            {
-              break;
-            }
-}
-            break;
-          case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-            error = Archive_skipNextEntry(&archiveHandle);
-            break;
-          default:
-            #ifndef NDEBUG
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            #endif /* NDEBUG */
-            break; /* not reached */
-        }
-      }
-
-      // end transaction
-      error = Index_endTransaction(indexHandle);
       if (error != ERROR_NONE)
       {
-        (void)Index_rollbackTransaction(indexHandle);
         break;
       }
-
-      // clear list
-      List_clear(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);
-//t1 = Misc_getTimestamp(); fprintf(stderr,"%s, %d: %d dt=%llu\n",__FILE__,__LINE__,MAX_ARCHIVE_CONTENT_LIST_LENGTH,(t1-t0)/1000LL); t0 = t1;
     }
     if (error != ERROR_NONE)
     {
@@ -14029,6 +14117,15 @@ fprintf(stderr,"%s, %d: newEntityId=%llu\n",__FILE__,__LINE__,newEntityId);
     // check if aborted, check if server allocation pending
     abortedFlag                 = (abortCallbackFunction != NULL) && abortCallbackFunction(abortCallbackUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
+  }
+  if (error == ERROR_NONE)
+  {
+    error = flushArchiveContentList(&archiveContentList,
+                                    indexHandle,
+                                    printableStorageName,
+                                    size,
+                                    &timeLastChanged
+                                   );
   }
   StringList_done(&fileNameList);
   String_delete(destinationName);
@@ -14132,6 +14229,7 @@ fprintf(stderr,"%s, %d: newEntityId=%llu\n",__FILE__,__LINE__,newEntityId);
     if (totalEntries != NULL) (*totalEntries) = Archive_getEntries(&archiveHandle);
     if (totalSize != NULL) (*totalSize) = Archive_getSize(&archiveHandle);
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // close archive
   Archive_close(&archiveHandle);
