@@ -574,8 +574,8 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 #endif /* NDEBUG || __INDEX_IMPLEMENTATION__ */
 
 /***********************************************************************\
-* Name   : Index_findUUIDByJobUUID
-* Purpose: find uuid info by job/schedule UUID
+* Name   : Index_findUUID
+* Purpose: find uuid info
 * Input  : indexHandle      - index handle
 *          findJobUUID      - unique job UUID to find
 *          findScheduleUUID - unique schedule UUID to find (can be NULL)
@@ -597,27 +597,29 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 * Notes  : -
 \***********************************************************************/
 
-bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
-                             ConstString  findJobUUID,
-                             ConstString  findScheduleUUID,
-                             IndexId      *uuidId,
-                             uint64       *lastExecutedDateTime,
-                             String       lastErrorMessage,
-                             ulong        *executionCount,
-                             uint64       *averageDuration,
-                             ulong        *totalEntityCount,
-                             ulong        *totalStorageCount,
-                             uint64       *totalStorageSize,
-                             ulong        *totalEntryCount,
-                             uint64       *totalEntrySize
-                            );
+bool Index_findUUID(IndexHandle  *indexHandle,
+                    ConstString  findJobUUID,
+                    ConstString  findScheduleUUID,
+                    IndexId      *uuidId,
+                    uint64       *lastExecutedDateTime,
+                    String       lastErrorMessage,
+                    ulong        *executionCount,
+                    uint64       *averageDuration,
+                    ulong        *totalEntityCount,
+                    ulong        *totalStorageCount,
+                    uint64       *totalStorageSize,
+                    ulong        *totalEntryCount,
+                    uint64       *totalEntrySize
+                   );
 
 /***********************************************************************\
-* Name   : Index_findEntityByUUID
-* Purpose: find entity info by job/schedule UUID
-* Input  : indexHandle      - index handle
-*          findJobUUID      - unique job UUID to find
-*          findScheduleUUID - unique schedule UUID to find (can be NULL)
+* Name   : Index_findEntity
+* Purpose: find entity info
+* Input  : indexHandle         - index handle
+*          findJobUUID         - unique job UUID to find
+*          findScheduleUUID    - unique schedule UUID to find (can be NULL)
+*          findArchiveType     - archive type to find
+*          findCreatedDateTime - create date/time to find
 * Output : uuidId           - index id of UUID entry (can be NULL)
 *          entityId         - index id of entity entry (can be NULL)
 *          archiveType      - archive type (can be NULL)
@@ -629,20 +631,22 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_findEntityByUUID(IndexHandle  *indexHandle,
-                            ConstString  findJobUUID,
-                            ConstString  findScheduleUUID,
-                            IndexId      *uuidId,
-                            IndexId      *entityId,
-                            ArchiveTypes *archiveType,
-                            uint64       *createdDateTime,
-                            String       lastErrorMessage,
-                            ulong        *totalEntryCount,
-                            uint64       *totalEntrySize
-                           );
+bool Index_findEntity(IndexHandle  *indexHandle,
+                      ConstString  findJobUUID,
+                      ConstString  findScheduleUUID,
+                      ArchiveTypes findArchiveType,
+                      uint64       findCreatedDateTime,
+                      IndexId      *uuidId,
+                      IndexId      *entityId,
+                      ArchiveTypes *archiveType,
+                      uint64       *createdDateTime,
+                      String       lastErrorMessage,
+                      ulong        *totalEntryCount,
+                      uint64       *totalEntrySize
+                     );
 
 /***********************************************************************\
-* Name   : Index_findByStorageId
+* Name   : Index_findStorageById
 * Purpose: find info by storage id
 * Input  : indexHandle - index handle
 *          findStorageId       - index id of storage to find
@@ -682,7 +686,7 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                           );
 
 /***********************************************************************\
-* Name   : Index_findByStorageName
+* Name   : Index_findStorageByName
 * Purpose: find info by storage name
 * Input  : indexHandle          - index handle
 *          findStorageSpecifier - storage specifier to find

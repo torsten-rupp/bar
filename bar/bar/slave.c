@@ -664,20 +664,20 @@ LOCAL void slaveCommand_indexFindUUID(SlaveInfo *slaveInfo, IndexHandle *indexHa
   // find job data
   lastErrorMessage = String_new();
 
-  if (Index_findUUIDByJobUUID(indexHandle,
-                              jobUUID,
-                              scheduleUUUID,
-                              &uuidId,
-                              &lastExecutedDateTime,
-                              lastErrorMessage,
-                              &executionCount,
-                              &averageDuration,
-                              &totalEntityCount,
-                              &totalStorageCount,
-                              &totalStorageSize,
-                              &totalEntryCount,
-                              &totalEntrySize
-                             )
+  if (Index_findUUID(indexHandle,
+                     jobUUID,
+                     scheduleUUUID,
+                     &uuidId,
+                     &lastExecutedDateTime,
+                     lastErrorMessage,
+                     &executionCount,
+                     &averageDuration,
+                     &totalEntityCount,
+                     &totalStorageCount,
+                     &totalStorageSize,
+                     &totalEntryCount,
+                     &totalEntrySize
+                    )
      )
   {
     ServerIO_sendResult(&slaveInfo->io,

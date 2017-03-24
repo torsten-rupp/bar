@@ -1592,20 +1592,20 @@ LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, co
   scheduleNode->totalEntrySize       = 0LL;
   if (indexHandle != NULL)
   {
-    (void)Index_findUUIDByJobUUID(indexHandle,
-                                  NULL, // jobUUID
-                                  scheduleNode->uuid,
-                                  NULL,  // uuidId,
-                                  &scheduleNode->lastExecutedDateTime,
-                                  scheduleNode->lastErrorMessage,
-                                  &scheduleNode->executionCount,
-                                  &scheduleNode->averageDuration,
-                                  &scheduleNode->totalEntityCount,
-                                  &scheduleNode->totalStorageCount,
-                                  &scheduleNode->totalStorageSize,
-                                  &scheduleNode->totalEntryCount,
-                                  &scheduleNode->totalEntrySize
-                                 );
+    (void)Index_findUUID(indexHandle,
+                         NULL, // jobUUID
+                         scheduleNode->uuid,
+                         NULL,  // uuidId,
+                         &scheduleNode->lastExecutedDateTime,
+                         scheduleNode->lastErrorMessage,
+                         &scheduleNode->executionCount,
+                         &scheduleNode->averageDuration,
+                         &scheduleNode->totalEntityCount,
+                         &scheduleNode->totalStorageCount,
+                         &scheduleNode->totalStorageSize,
+                         &scheduleNode->totalEntryCount,
+                         &scheduleNode->totalEntrySize
+                        );
   }
 
   // append to list
@@ -2422,20 +2422,20 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
   // update job info (if possible)
   if (indexHandle != NULL)
   {
-    (void)Index_findUUIDByJobUUID(indexHandle,
-                                  jobUUID,
-                                  scheduleUUID,
-                                  NULL,  // uuidId,
-                                  NULL, // lastExecutedDateTime
-                                  aggregateInfo->lastErrorMessage,
-                                  &aggregateInfo->executionCount,
-                                  &aggregateInfo->averageDuration,
-                                  &aggregateInfo->totalEntityCount,
-                                  &aggregateInfo->totalStorageCount,
-                                  &aggregateInfo->totalStorageSize,
-                                  &aggregateInfo->totalEntryCount,
-                                  &aggregateInfo->totalEntrySize
-                                 );
+    (void)Index_findUUID(indexHandle,
+                         jobUUID,
+                         scheduleUUID,
+                         NULL,  // uuidId,
+                         NULL, // lastExecutedDateTime
+                         aggregateInfo->lastErrorMessage,
+                         &aggregateInfo->executionCount,
+                         &aggregateInfo->averageDuration,
+                         &aggregateInfo->totalEntityCount,
+                         &aggregateInfo->totalStorageCount,
+                         &aggregateInfo->totalStorageSize,
+                         &aggregateInfo->totalEntryCount,
+                         &aggregateInfo->totalEntrySize
+                        );
   }
 }
 
@@ -3006,20 +3006,20 @@ LOCAL bool readJob(JobNode *jobNode)
       scheduleNode->totalEntrySize       = 0LL;
       if (indexHandle != NULL)
       {
-        (void)Index_findUUIDByJobUUID(indexHandle,
-                                      jobNode->uuid,
-                                      scheduleNode->uuid,
-                                      NULL,  // uuidId,
-                                      &scheduleNode->lastExecutedDateTime,
-                                      scheduleNode->lastErrorMessage,
-                                      &scheduleNode->executionCount,
-                                      &scheduleNode->averageDuration,
-                                      &scheduleNode->totalEntityCount,
-                                      &scheduleNode->totalStorageCount,
-                                      &scheduleNode->totalStorageSize,
-                                      &scheduleNode->totalEntryCount,
-                                      &scheduleNode->totalEntrySize
-                                     );
+        (void)Index_findUUID(indexHandle,
+                             jobNode->uuid,
+                             scheduleNode->uuid,
+                             NULL,  // uuidId,
+                             &scheduleNode->lastExecutedDateTime,
+                             scheduleNode->lastErrorMessage,
+                             &scheduleNode->executionCount,
+                             &scheduleNode->averageDuration,
+                             &scheduleNode->totalEntityCount,
+                             &scheduleNode->totalStorageCount,
+                             &scheduleNode->totalStorageSize,
+                             &scheduleNode->totalEntryCount,
+                             &scheduleNode->totalEntrySize
+                            );
       }
 
       // append to list (if not duplicate)
@@ -3114,20 +3114,20 @@ LOCAL bool readJob(JobNode *jobNode)
   jobNode->totalEntrySize    = 0LL;
   if (indexHandle != NULL)
   {
-    (void)Index_findUUIDByJobUUID(indexHandle,
-                                  jobNode->uuid,
-                                  NULL,  // scheduleUUID,
-                                  NULL,  // uuidId,
-                                  NULL,  // lastExecutedDateTime
-                                  jobNode->lastErrorMessage,
-                                  &jobNode->executionCount,
-                                  &jobNode->averageDuration,
-                                  &jobNode->totalEntityCount,
-                                  &jobNode->totalStorageCount,
-                                  &jobNode->totalStorageSize,
-                                  &jobNode->totalEntryCount,
-                                  &jobNode->totalEntrySize
-                                 );
+    (void)Index_findUUID(indexHandle,
+                         jobNode->uuid,
+                         NULL,  // scheduleUUID,
+                         NULL,  // uuidId,
+                         NULL,  // lastExecutedDateTime
+                         jobNode->lastErrorMessage,
+                         &jobNode->executionCount,
+                         &jobNode->averageDuration,
+                         &jobNode->totalEntityCount,
+                         &jobNode->totalStorageCount,
+                         &jobNode->totalStorageSize,
+                         &jobNode->totalEntryCount,
+                         &jobNode->totalEntrySize
+                        );
   }
 
   // read schedule info
@@ -4807,20 +4807,20 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
 
   // find UUID
-  if (!Index_findUUIDByJobUUID(indexHandle,
-                               jobUUID,
-                               NULL,  // scheduleUUID
-                               &uuidId,
-                               NULL,  // lastCreatedDateTime,
-                               NULL,  // lastErrorMessage,
-                               NULL,  // executionCount,
-                               NULL,  // averageDuration,
-                               NULL,  // totalEntityCount,
-                               NULL,  // totalStorageCount,
-                               NULL,  // totalStorageSize,
-                               NULL,  // totalEntryCount,
-                               NULL  // totalEntrySize
-                              )
+  if (!Index_findUUID(indexHandle,
+                      jobUUID,
+                      NULL,  // scheduleUUID
+                      &uuidId,
+                      NULL,  // lastCreatedDateTime,
+                      NULL,  // lastErrorMessage,
+                      NULL,  // executionCount,
+                      NULL,  // averageDuration,
+                      NULL,  // totalEntityCount,
+                      NULL,  // totalStorageCount,
+                      NULL,  // totalStorageSize,
+                      NULL,  // totalEntryCount,
+                      NULL  // totalEntrySize
+                     )
      )
   {
     return ERROR_DATABASE_INDEX_NOT_FOUND;
@@ -15884,7 +15884,6 @@ NULL, // masterIO
                                {
                                  printableStorageName = Storage_getPrintableName(String_new(),&storageSpecifier,storageName);
 
-//fprintf(stderr,"%s, %d: storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
                                  if (Index_findStorageByName(indexHandle,
                                                              &storageSpecifier,
                                                              NULL,  // archiveName

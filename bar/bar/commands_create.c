@@ -6928,20 +6928,20 @@ masterIO, // masterIO
   if (indexHandle != NULL)
   {
     // get/create index job UUID
-    if (!Index_findUUIDByJobUUID(indexHandle,
-                                 jobUUID,
-                                 NULL,  // scheduleUUID
-                                 &uuidId,
-                                 NULL,  // lastCreatedDateTime,
-                                 NULL,  // lastErrorMessage,
-                                 NULL,  // executionCount,
-                                 NULL,  // averageDuration,
-                                 NULL,  // totalEntityCount,
-                                 NULL,  // totalStorageCount,
-                                 NULL,  // totalStorageSize,
-                                 NULL,  // totalEntryCount,
-                                 NULL  // totalEntrySize
-                                )
+    if (!Index_findUUID(indexHandle,
+                        jobUUID,
+                        NULL,  // scheduleUUID
+                        &uuidId,
+                        NULL,  // lastCreatedDateTime,
+                        NULL,  // lastErrorMessage,
+                        NULL,  // executionCount,
+                        NULL,  // averageDuration,
+                        NULL,  // totalEntityCount,
+                        NULL,  // totalStorageCount,
+                        NULL,  // totalStorageSize,
+                        NULL,  // totalEntryCount,
+                        NULL  // totalEntrySize
+                       )
        )
     {
       error = Index_newUUID(indexHandle,jobUUID,&uuidId);

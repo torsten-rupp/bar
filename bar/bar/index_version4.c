@@ -515,17 +515,19 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             NULL,  // totalEntryCount
                                                             NULL  // totalEntrySize
                                                            )
-                                   && Index_findEntityByUUID(newIndexHandle,
-                                                             jobUUID,
-                                                             NULL,  // scheduleUUDI
-                                                             NULL,  // uuidId
-                                                             &entityId,
-                                                             NULL,  // createdDateTime
-                                                             NULL,  // archiveType
-                                                             NULL,  // lastErrorMessage
-                                                             NULL,  // totalEntryCount
-                                                             NULL  // totalEntrySize
-                                                               )
+                                   && Index_findEntity(newIndexHandle,
+                                                       jobUUID,
+                                                       NULL,  // scheduleUUID
+                                                       ARCHIVE_TYPE_NONE,
+                                                       0LL,
+                                                       NULL,  // uuidId
+                                                       &entityId,
+                                                       NULL,  // createdDateTime
+                                                       NULL,  // archiveType
+                                                       NULL,  // lastErrorMessage
+                                                       NULL,  // totalEntryCount
+                                                       NULL  // totalEntrySize
+                                                      )
                                   )
                                {
                                  error = ERROR_NONE;

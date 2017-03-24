@@ -13291,7 +13291,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
   assert(indexHandle != NULL);
   assert(storageInfo != NULL);
 
-fprintf(stderr,"%s, %d: ------------------------------------------------------\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: ------------------------------------------------------ %llu\n",__FILE__,__LINE__,storageId);
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   printableStorageName = String_new();
@@ -13490,7 +13490,7 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------\n
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          archiveContentNode->type = ARCHIVE_ENTRY_TYPE_FILE;
+          archiveContentNode->type                = ARCHIVE_ENTRY_TYPE_FILE;
           archiveContentNode->file.fileName       = String_duplicate(fileName);
           archiveContentNode->file.fileInfo       = fileInfo;
           archiveContentNode->file.fragmentOffset = fragmentOffset;
@@ -13533,7 +13533,7 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------\n
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          archiveContentNode->type = ARCHIVE_ENTRY_TYPE_IMAGE;
+          archiveContentNode->type                 = ARCHIVE_ENTRY_TYPE_IMAGE;
           archiveContentNode->image.imageName      = String_duplicate(imageName);
           archiveContentNode->image.deviceInfo     = deviceInfo;
           archiveContentNode->image.fileSystemType = fileSystemType;
@@ -13569,7 +13569,7 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------\n
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          archiveContentNode->type = ARCHIVE_ENTRY_TYPE_DIRECTORY;
+          archiveContentNode->type                    = ARCHIVE_ENTRY_TYPE_DIRECTORY;
           archiveContentNode->directory.directoryName = String_duplicate(directoryName);
           archiveContentNode->directory.fileInfo      = fileInfo;
           List_append(&archiveContentList,archiveContentNode);
@@ -13603,7 +13603,7 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------\n
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          archiveContentNode->type = ARCHIVE_ENTRY_TYPE_LINK;
+          archiveContentNode->type                 = ARCHIVE_ENTRY_TYPE_LINK;
           archiveContentNode->link.linkName        = String_duplicate(linkName);
           archiveContentNode->link.destinationName = String_duplicate(destinationName);
           archiveContentNode->link.fileInfo        = fileInfo;
@@ -13645,7 +13645,7 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------\n
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          archiveContentNode->type = ARCHIVE_ENTRY_TYPE_HARDLINK;
+          archiveContentNode->type                    = ARCHIVE_ENTRY_TYPE_HARDLINK;
           StringList_init(&archiveContentNode->hardLink.fileNameList);
           StringList_move(&fileNameList,&archiveContentNode->hardLink.fileNameList);
           archiveContentNode->hardLink.fileInfo       = fileInfo;
@@ -13681,7 +13681,7 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------\n
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          archiveContentNode->type = ARCHIVE_ENTRY_TYPE_SPECIAL;
+          archiveContentNode->type             = ARCHIVE_ENTRY_TYPE_SPECIAL;
           archiveContentNode->special.fileName = String_duplicate(fileName);
           archiveContentNode->special.fileInfo = fileInfo;
           List_append(&archiveContentList,archiveContentNode);
@@ -13716,7 +13716,7 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------\n
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          archiveContentNode->type = ARCHIVE_ENTRY_TYPE_META;
+          archiveContentNode->type                 = ARCHIVE_ENTRY_TYPE_META;
           archiveContentNode->meta.jobUUID         = String_duplicate(jobUUID);
           archiveContentNode->meta.scheduleUUID    = String_duplicate(scheduleUUID);
           archiveContentNode->meta.archiveType     = archiveType;
@@ -13898,25 +13898,29 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------\n
 //TODO
 {
 IndexId newEntityId;
-            if (!Index_findEntityByUUID(indexHandle,
-                                        jobUUID,
-                                        scheduleUUID,
-                                        NULL,  // uuidId
-                                        &newEntityId,
-                                        NULL,  // archiveType,
-                                        NULL,  // createdDateTime,
-                                        NULL,  // lastErrorMessage,
-                                        NULL,  // totalEntryCount,
-                                        NULL  // totalEntrySize
-                                       )
+fprintf(stderr,"%s, %d: jobUUID=%s scheduleUUID=%s type=%d\n",__FILE__,__LINE__,String_cString(archiveContentNode->meta.jobUUID),String_cString(archiveContentNode->meta.scheduleUUID),archiveContentNode->meta.archiveType);
+//asm("int3");
+            if (!Index_findEntity(indexHandle,
+                                  archiveContentNode->meta.jobUUID,
+                                  archiveContentNode->meta.scheduleUUID,
+                                  archiveContentNode->meta.archiveType,
+                                  archiveContentNode->meta.createdDateTime,
+                                  NULL,  // uuidId
+                                  &newEntityId,
+                                  NULL,  // archiveType,
+                                  NULL,  // createdDateTime,
+                                  NULL,  // lastErrorMessage,
+                                  NULL,  // totalEntryCount,
+                                  NULL  // totalEntrySize
+                                 )
                )
             {
               // create new entity
               error = Index_newEntity(indexHandle,
-                                      jobUUID,
-                                      scheduleUUID,
-                                      archiveType,
-                                      createdDateTime,
+                                      archiveContentNode->meta.jobUUID,
+                                      archiveContentNode->meta.scheduleUUID,
+                                      archiveContentNode->meta.archiveType,
+                                      archiveContentNode->meta.createdDateTime,
                                       FALSE,  // locked
                                       &newEntityId
                                      );
@@ -13924,13 +13928,14 @@ IndexId newEntityId;
               {
                 break;
               }
+fprintf(stderr,"%s, %d: newEntityId=%llu\n",__FILE__,__LINE__,newEntityId);
             }
 
             // update storage
             error = Index_updateStorage(indexHandle,
                                         storageId,
                                         NULL,  // storageName
-                                        createdDateTime,
+                                        archiveContentNode->meta.createdDateTime,
                                         size
                                        );
             if (error != ERROR_NONE)

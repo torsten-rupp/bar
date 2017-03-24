@@ -1172,7 +1172,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
                                );
   if (error != ERROR_NONE)
   {
-    Index_rollbackTransaction(indexHandle);
+    (void)Index_rollbackTransaction(indexHandle);
     String_delete(storageName);
     return error;
   }
@@ -1207,7 +1207,7 @@ LOCAL Errors cleanUpOrphanedEntries(IndexHandle *indexHandle)
     }
   }
   Index_doneList(&indexQueryHandle);
-  Index_endTransaction(indexHandle);
+  (void)Index_endTransaction(indexHandle);
 
   // clean-up *Entries without entry
   (void)Database_execute(&indexHandle->databaseHandle,
@@ -2102,9 +2102,9 @@ LOCAL Errors cleanUpDuplicateIndizes(IndexHandle *indexHandle)
 * Name   : deleteFromIndex
 * Purpose: delete from index with delay/check if index-usage
 * Input  : indexHandle - index handle
-*          condition    - append iff true
-*          columnName   - column name
-*          ordering     - database ordering
+*          tableName   - table name
+*          filter      - filter
+*          ...         - optional arguments for filter
 * Output : -
 * Return : -
 * Notes  : -
@@ -4370,20 +4370,20 @@ bool Index_containsType(const IndexId indexIds[],
   return FALSE;
 }
 
-bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
-                             ConstString  findJobUUID,
-                             ConstString  findScheduleUUID,
-                             IndexId      *uuidId,
-                             uint64       *lastExecutedDateTime,
-                             String       lastErrorMessage,
-                             ulong        *executionCount,
-                             uint64       *averageDuration,
-                             ulong        *totalEntityCount,
-                             ulong        *totalStorageCount,
-                             uint64       *totalStorageSize,
-                             ulong        *totalEntryCount,
-                             uint64       *totalEntrySize
-                            )
+bool Index_findUUID(IndexHandle  *indexHandle,
+                    ConstString  findJobUUID,
+                    ConstString  findScheduleUUID,
+                    IndexId      *uuidId,
+                    uint64       *lastExecutedDateTime,
+                    String       lastErrorMessage,
+                    ulong        *executionCount,
+                    uint64       *averageDuration,
+                    ulong        *totalEntityCount,
+                    ulong        *totalStorageCount,
+                    uint64       *totalStorageSize,
+                    ulong        *totalEntryCount,
+                    uint64       *totalEntrySize
+                   )
 {
   String              filterString;
   Errors              error;
@@ -4508,17 +4508,19 @@ bool Index_findUUIDByJobUUID(IndexHandle  *indexHandle,
   return result;
 }
 
-bool Index_findEntityByUUID(IndexHandle  *indexHandle,
-                            ConstString  findJobUUID,
-                            ConstString  findScheduleUUID,
-                            IndexId      *uuidId,
-                            IndexId      *entityId,
-                            ArchiveTypes *archiveType,
-                            uint64       *createdDateTime,
-                            String       lastErrorMessage,
-                            ulong        *totalEntryCount,
-                            uint64       *totalEntrySize
-                           )
+bool Index_findEntity(IndexHandle  *indexHandle,
+                      ConstString  findJobUUID,
+                      ConstString  findScheduleUUID,
+                      ArchiveTypes findArchiveType,
+                      uint64       findCreatedDateTime,
+                      IndexId      *uuidId,
+                      IndexId      *entityId,
+                      ArchiveTypes *archiveType,
+                      uint64       *createdDateTime,
+                      String       lastErrorMessage,
+                      ulong        *totalEntryCount,
+                      uint64       *totalEntrySize
+                     )
 {
   String              filterString;
   Errors              error;
@@ -4540,6 +4542,8 @@ bool Index_findEntityByUUID(IndexHandle  *indexHandle,
   // get filters
   filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","jobUUID=%'S",findJobUUID);
   filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","scheduleUUID=%'S",findScheduleUUID);
+  filterAppend(filterString,findArchiveType != ARCHIVE_TYPE_NONE,"AND","entities.type=%u",findArchiveType);
+  filterAppend(filterString,findCreatedDateTime != 0LL,"AND","entities.created=%llu",findCreatedDateTime);
 
 //TODO get errorMessage
   INDEX_DOX(error,
@@ -4752,8 +4756,8 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                               FROM storage \
                                 LEFT JOIN entities ON storage.entityId=entities.id \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                              GROUP BY storage.id \
                               WHERE storage.state!=%d \
+                              GROUP BY storage.id \
                              ",
                              INDEX_STATE_DELETED
                             );
@@ -7484,148 +7488,130 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM fileEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId)
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "fileEntries",
+                            "storageId=%lld",
+                            Index_getDatabaseId(storageId)
+                           );
     if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_FILE
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "entriesNewest",
+                            "storageId=%lld AND type=%d",
+                            Index_getDatabaseId(storageId),
+                            INDEX_TYPE_FILE
+                           );
     if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_FILE
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "entries",
+                            "storageId=%lld AND type=%d",
+                            Index_getDatabaseId(storageId),
+                            INDEX_TYPE_FILE
+                           );
     if (error != ERROR_NONE) return error;
 
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM imageEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId)
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "imageEntries",
+                            "storageId=%lld",
+                            Index_getDatabaseId(storageId)
+                           );
     if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_IMAGE
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "entriesNewest",
+                            "storageId=%lld AND type=%d",
+                            Index_getDatabaseId(storageId),
+                            INDEX_TYPE_IMAGE
+                           );
     if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_IMAGE
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "entries",
+                            "storageId=%lld AND type=%d",
+                            Index_getDatabaseId(storageId),
+                            INDEX_TYPE_IMAGE
+                           );
     if (error != ERROR_NONE) return error;
 
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM directoryEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId)
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "directoryEntries",
+                            "storageId=%lld",
+                            Index_getDatabaseId(storageId)
+                           );
     if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_DIRECTORY
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "entriesNewest",
+                            "storageId=%lld AND type=%d",
+                            Index_getDatabaseId(storageId),
+                            INDEX_TYPE_DIRECTORY
+                           );
     if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_DIRECTORY
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "entries",
+                            "storageId=%lld AND type=%d",
+                            Index_getDatabaseId(storageId),
+                            INDEX_TYPE_DIRECTORY
+                           );
     if (error != ERROR_NONE) return error;
 
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM linkEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId)
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "linkEntries",
+                            "storageId=%lld",
+                            Index_getDatabaseId(storageId)
+                           );
     if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_LINK
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "entriesNewest",
+                            "storageId=%lld AND type=%d",
+                            Index_getDatabaseId(storageId),
+                            INDEX_TYPE_LINK
+                           );
     if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_LINK
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "entries",
+                            "storageId=%lld AND type=%d",
+                            Index_getDatabaseId(storageId),
+                            INDEX_TYPE_LINK
+                           );
     if (error != ERROR_NONE) return error;
 
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM hardlinkEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId)
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "hardlinkEntries",
+                            "storageId=%lld",
+                            Index_getDatabaseId(storageId)
+                           );
     if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_HARDLINK
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "entriesNewest",
+                            "storageId=%lld AND type=%d",
+                            Index_getDatabaseId(storageId),
+                            INDEX_TYPE_HARDLINK
+                           );
     if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_HARDLINK
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "entries",
+                            "storageId=%lld AND type=%d",
+                            Index_getDatabaseId(storageId),
+                            INDEX_TYPE_HARDLINK
+                           );
     if (error != ERROR_NONE) return error;
 
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM specialEntries WHERE storageId=%lld",
-                             Index_getDatabaseId(storageId)
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "specialEntries",
+                            "storageId=%lld",
+                            Index_getDatabaseId(storageId)
+                           );
     if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_SPECIAL
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "entriesNewest",
+                            "storageId=%lld AND type=%d",
+                            Index_getDatabaseId(storageId),
+                            INDEX_TYPE_SPECIAL
+                           );
     if (error != ERROR_NONE) return error;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entries WHERE storageId=%lld AND type=%d",
-                             Index_getDatabaseId(storageId),
-                             INDEX_TYPE_SPECIAL
-                            );
+    error = deleteFromIndex(indexHandle,
+                            "entries",
+                            "storageId=%lld AND type=%d",
+                            Index_getDatabaseId(storageId),
+                            INDEX_TYPE_SPECIAL
+                           );
     if (error != ERROR_NONE) return error;
 
     return ERROR_NONE;
