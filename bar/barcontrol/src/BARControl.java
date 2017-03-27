@@ -2379,7 +2379,7 @@ if (false) {
 
   /** create tabs
    */
-  private void createTabs(String selectedJobName)
+  private void createTabs()
   {
     // create tabs
     tabFolder = Widgets.newTabFolder(shell);
@@ -2393,12 +2393,6 @@ if (false) {
 
     // start auto update
     tabStatus.startUpdate();
-
-    // pre-select job
-    if (selectedJobName != null)
-    {
-      tabStatus.setSelectedJob(selectedJobName);
-    }
 
     // add tab listener
     display.addFilter(SWT.KeyDown,new Listener()
@@ -2640,7 +2634,6 @@ if (false) {
                                   Settings.serverKeyFileName
                                  );
                 shell.setText("BAR control: "+BARServer.getInfo());
-
                 Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
               }
               catch (ConnectionError error)
@@ -3124,6 +3117,14 @@ if (false) {
     shell.setSize(840,600+5*(Widgets.getTextHeight(shell)+4));
     shell.open();
     shell.setSize(840,600+5*(Widgets.getTextHeight(shell)+4));
+
+    // pre-select job
+    if (Settings.selectedJobName != null)
+    {
+      JobData jobData = tabStatus.getJobByName(Settings.selectedJobName);
+
+      Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+    }
 
     // add close listener
     shell.addListener(SWT.Close,new Listener()
@@ -4266,7 +4267,7 @@ Dprintf.dprintf("still not supported");
 
           // open main window
           createWindow();
-          createTabs(Settings.selectedJobName);
+          createTabs();
           createMenu();
           Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
 

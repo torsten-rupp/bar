@@ -235,7 +235,7 @@ class JobData
    */
   public String toString()
   {
-    return "Job {"+uuid+", "+master+", "+name+", "+state+", "+slaveHostName+", "+archiveType+"}";
+    return "Job {"+uuid+", '"+master+"', '"+name+"', "+state+", '"+slaveHostName+"', "+archiveType+"}";
   }
 };
 
@@ -1723,11 +1723,9 @@ public class TabStatus
       }
     });
 
-    // start status update thread
+    // create status update thread
     tabStatusUpdateThread = new TabStatusUpdateThread(this);
     tabStatusUpdateThread.setDaemon(true);
-//TODO???
-//    tabStatusUpdateThread.start();
   }
 
   /** set jobs tab
@@ -1740,6 +1738,7 @@ public class TabStatus
 
   public void startUpdate()
   {
+    update();
     tabStatusUpdateThread.start();
   }
 
@@ -1803,8 +1802,8 @@ public class TabStatus
           else
           {
             jobData = new JobData(jobUUID,
-                                  name,
                                   master,
+                                  name,
                                   state,
                                   slaveHostName,
                                   archiveType,
@@ -1928,6 +1927,19 @@ public class TabStatus
         return;
       }
     }
+  }
+
+  /** get job by name
+   * @param name job name
+   * @return job data or null
+   */
+  public JobData getJobByName(String name)
+  {
+    for (JobData jobData : jobDataMap.values())
+    {
+      if (jobData.name.equals(name)) return jobData;
+    }
+    return null;
   }
 
   /** set selected job by UUID
@@ -2266,7 +2278,7 @@ public class TabStatus
 
   /** update status, job list, job data
    */
-  void update()
+  private void update()
   {
     // update job list
     updateStatus();

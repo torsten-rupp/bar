@@ -24,6 +24,7 @@
   * added option --info
   * BARControl: added roles basic/normal/expert
   * BARControl: pause unit s/m/h for option --pause
+  * BARControl restore tab: select job
 
 2016-12-11 0.20b
   * BARControl: fixed SSL encryption. Please re-generate
