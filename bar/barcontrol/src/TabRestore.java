@@ -4167,6 +4167,7 @@ Dprintf.dprintf("cirrect?");
   // global variable references
   private Shell                        shell;
   private Display                      display;
+  private TabStatus                    tabStatus;
 
   // widgets
   public  Composite                    widgetTab;
@@ -5111,10 +5112,15 @@ Dprintf.dprintf("cirrect?");
           TreeItem treeItem = (TreeItem)selectionEvent.item;
           if (treeItem != null)
           {
-            if (selectionEvent.detail == SWT.CHECK)
+            IndexData indexData = (IndexData)treeItem.getData();
+            if (indexData != null)
             {
-              IndexData indexData = (IndexData)treeItem.getData();
-              if (indexData != null)
+              if (indexData instanceof UUIDIndexData)
+              {
+                tabStatus.setSelectedJob(((UUIDIndexData)indexData).jobUUID);
+              }
+
+              if (selectionEvent.detail == SWT.CHECK)
               {
                 boolean isChecked = treeItem.getChecked();
 
@@ -6562,6 +6568,14 @@ Dprintf.dprintf("remove");
     // start storage/entry update threads
     updateStorageTreeTableThread.start();
     updateEntryTableThread.start();
+  }
+
+  /** set tab status reference
+   * @param tabStatus tab status object
+   */
+  public void setTabStatus(TabStatus tabStatus)
+  {
+    this.tabStatus = tabStatus;
   }
 
   //-----------------------------------------------------------------------

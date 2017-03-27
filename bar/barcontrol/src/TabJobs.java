@@ -8396,11 +8396,14 @@ widgetArchivePartSize.setListVisible(true);
   /** set tab status reference
    * @param tabStatus tab status object
    */
-  void setTabStatus(TabStatus tabStatus)
+  public void setTabStatus(TabStatus tabStatus)
   {
     this.tabStatus = tabStatus;
   }
 
+  /** update job list
+   * @param jobData job data
+   */
   public void updateJobList(final Collection<JobData> jobData)
   {
     display.syncExec(new Runnable()

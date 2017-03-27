@@ -2389,6 +2389,7 @@ if (false) {
     tabRestore = new TabRestore(tabFolder,SWT.F3);
     tabStatus.setTabJobs(tabJobs);
     tabJobs.setTabStatus(tabStatus);
+    tabRestore.setTabStatus(tabStatus);
 
     // start auto update
     tabStatus.startUpdate();
