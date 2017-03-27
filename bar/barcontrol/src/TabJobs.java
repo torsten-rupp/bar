@@ -8598,11 +8598,25 @@ throw new Error("NYI");
    */
   public boolean jobClone(final JobData jobData)
   {
+    /** dialog data
+     */
+    class Data
+    {
+      String jobName;
+
+      Data()
+      {
+        this.jobName = "";
+      }
+    };
+
     Composite composite;
     Label     label;
     Button    button;
 
     assert jobData != null;
+
+    final Data data = new Data();
 
     final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Clone job"),300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
@@ -8680,46 +8694,54 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Button widget     = (Button)selectionEvent.widget;
-        String newJobName = widgetJobName.getText();
-        if (!newJobName.equals(""))
-        {
-          try
-          {
-            String[] resultErrorMessage = new String[1];
-            ValueMap resultMap          = new ValueMap();
-            int error = BARServer.executeCommand(StringParser.format("JOB_CLONE jobUUID=%s name=%S",
-                                                                     jobData.uuid,
-                                                                     newJobName
-                                                                    ),
-                                                 0,  // debugLevel
-                                                 resultErrorMessage,
-                                                 resultMap
-                                                );
-            if (error == Errors.NONE)
-            {
-              String newJobUUID = resultMap.getString("jobUUID");
-              updateJobList();
-              setSelectedJob(newJobUUID);
-            }
-            else
-            {
-              Dialogs.error(shell,BARControl.tr("Cannot clone job ''{0}'':\n\n{1}",jobData.name,resultErrorMessage[0]));
-              return;
-            }
-
-          }
-          catch (CommunicationError error)
-          {
-            Dialogs.error(shell,BARControl.tr("Cannot clone job ''{0}'':\n\n{1}",jobData.name,error.getMessage()));
-          }
-        }
+        Button widget = (Button)selectionEvent.widget;
+        data.jobName  = widgetJobName.getText();
         Dialogs.close(dialog,true);
       }
     });
 
     Widgets.setFocus(widgetJobName);
-    return (Boolean)Dialogs.run(dialog,false);
+    if ((Boolean)Dialogs.run(dialog,false))
+    {
+      if (!data.jobName.isEmpty())
+      {
+        try
+        {
+          String[] resultErrorMessage = new String[1];
+          ValueMap resultMap          = new ValueMap();
+          int error = BARServer.executeCommand(StringParser.format("JOB_CLONE jobUUID=%s name=%S",
+                                                                   jobData.uuid,
+                                                                   data.jobName
+                                                                  ),
+                                               0,  // debugLevel
+                                               resultErrorMessage,
+                                               resultMap
+                                              );
+          if (error == Errors.NONE)
+          {
+            String newJobUUID = resultMap.getString("jobUUID");
+            updateJobList();
+            setSelectedJob(newJobUUID);
+          }
+          else
+          {
+            Dialogs.error(shell,BARControl.tr("Cannot clone job ''{0}'':\n\n{1}",jobData.name,resultErrorMessage[0]));
+            return false;
+          }
+
+        }
+        catch (CommunicationError error)
+        {
+          Dialogs.error(shell,BARControl.tr("Cannot clone job ''{0}'':\n\n{1}",jobData.name,error.getMessage()));
+          return false;
+        }
+      }
+      return true;
+    }
+    else
+    {
+      return false;
+    }
   }
 
   /** rename job
@@ -8728,11 +8750,25 @@ throw new Error("NYI");
    */
   public boolean jobRename(final JobData jobData)
   {
+    /** dialog data
+     */
+    class Data
+    {
+      String jobName;
+
+      Data()
+      {
+        this.jobName = "";
+      }
+    };
+
     Composite composite;
     Label     label;
     Button    button;
 
     assert jobData != null;
+
+    final Data data = new Data();
 
     final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Rename job"),300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
@@ -8816,41 +8852,50 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Button widget     = (Button)selectionEvent.widget;
-        String newJobName = widgetNewJobName.getText();
-        if (!newJobName.equals(""))
-        {
-          try
-          {
-            String[] resultErrorMessage = new String[1];
-            int error = BARServer.executeCommand(StringParser.format("JOB_RENAME jobUUID=%s newName=%S",
-                                                                     jobData.uuid,
-                                                                     newJobName
-                                                                    ),
-                                                 0,  // debugLevel
-                                                 resultErrorMessage
-                                                );
-            if (error == Errors.NONE)
-            {
-              updateJobList();
-              setSelectedJob(jobData.uuid);
-            }
-            else
-            {
-              Dialogs.error(shell,BARControl.tr("Cannot rename job ''{0}'':\n\n{1}",jobData.name,resultErrorMessage[0]));
-            }
-          }
-          catch (CommunicationError error)
-          {
-            Dialogs.error(shell,BARControl.tr("Cannot rename job ''{0}'':\n\n{1}",jobData.name,error.getMessage()));
-          }
-        }
+        Button widget = (Button)selectionEvent.widget;
+        data.jobName  = widget.getText();
         Dialogs.close(dialog,true);
       }
     });
 
     Widgets.setFocus(widgetNewJobName);
-    return (Boolean)Dialogs.run(dialog,false);
+    if ((Boolean)Dialogs.run(dialog,false))
+    {
+      if (!data.jobName.isEmpty())
+      {
+        try
+        {
+          String[] resultErrorMessage = new String[1];
+          int error = BARServer.executeCommand(StringParser.format("JOB_RENAME jobUUID=%s newName=%S",
+                                                                   jobData.uuid,
+                                                                   data.jobName
+                                                                  ),
+                                               0,  // debugLevel
+                                               resultErrorMessage
+                                              );
+          if (error == Errors.NONE)
+          {
+            updateJobList();
+            setSelectedJob(jobData.uuid);
+          }
+          else
+          {
+            Dialogs.error(shell,BARControl.tr("Cannot rename job ''{0}'':\n\n{1}",jobData.name,resultErrorMessage[0]));
+            return false;
+          }
+        }
+        catch (CommunicationError error)
+        {
+          Dialogs.error(shell,BARControl.tr("Cannot rename job ''{0}'':\n\n{1}",jobData.name,error.getMessage()));
+          return false;
+        }
+      }
+      return true;
+    }
+    else
+    {
+      return false;
+    }
   }
 
   /** delete job
