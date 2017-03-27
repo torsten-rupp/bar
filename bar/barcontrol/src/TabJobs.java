@@ -8473,9 +8473,23 @@ widgetArchivePartSize.setListVisible(true);
    */
   public boolean jobNew()
   {
+    /** dialog data
+     */
+    class Data
+    {
+      String jobName;
+
+      Data()
+      {
+        this.jobName = "";
+      }
+    };
+
     Composite composite;
     Label     label;
     Button    button;
+
+    final Data data = new Data();
 
     final Shell dialog = Dialogs.openModal(shell,BARControl.tr("New job"),300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
@@ -8552,44 +8566,51 @@ throw new Error("NYI");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Button widget  = (Button)selectionEvent.widget;
-        String jobName = widgetJobName.getText();
-        if (!jobName.equals(""))
-        {
-          try
-          {
-            String[] resultErrorMessage = new String[1];
-            ValueMap resultMap          = new ValueMap();
-            int error = BARServer.executeCommand(StringParser.format("JOB_NEW name=%S",jobName),
-                                                 0,  // debugLevel
-                                                 resultErrorMessage,
-                                                 resultMap
-                                                );
-            if (error == Errors.NONE)
-            {
-              String newJobUUID = resultMap.getString("jobUUID");
-              updateJobList();
-              setSelectedJob(newJobUUID);
-            }
-            else
-            {
-              Dialogs.error(shell,BARControl.tr("Cannot create new job:\n\n{0}",resultErrorMessage[0]));
-              widgetJobName.forceFocus();
-              return;
-            }
-          }
-          catch (CommunicationError error)
-          {
-            Dialogs.error(shell,BARControl.tr("Cannot create new job:\n\n{0}",error.getMessage()));
-            widgetJobName.forceFocus();
-            return;
-          }
-        }
+        Button widget = (Button)selectionEvent.widget;
+        data.jobName  = widget.getText();
         Dialogs.close(dialog,true);
       }
     });
 
-    return (Boolean)Dialogs.run(dialog,false);
+    if ((Boolean)Dialogs.run(dialog,false))
+    {
+      if (!data.jobName.isEmpty())
+      {
+        try
+        {
+          String[] resultErrorMessage = new String[1];
+          ValueMap resultMap          = new ValueMap();
+          int error = BARServer.executeCommand(StringParser.format("JOB_NEW name=%S",data.jobName),
+                                               0,  // debugLevel
+                                               resultErrorMessage,
+                                               resultMap
+                                              );
+          if (error == Errors.NONE)
+          {
+            String newJobUUID = resultMap.getString("jobUUID");
+            updateJobList();
+            setSelectedJob(newJobUUID);
+          }
+          else
+          {
+            Dialogs.error(shell,BARControl.tr("Cannot create new job:\n\n{0}",resultErrorMessage[0]));
+            widgetJobName.forceFocus();
+            return false;
+          }
+        }
+        catch (CommunicationError error)
+        {
+          Dialogs.error(shell,BARControl.tr("Cannot create new job:\n\n{0}",error.getMessage()));
+          widgetJobName.forceFocus();
+          return false;
+        }
+      }
+      return true;
+    }
+    else
+    {
+      return false;
+    }
   }
 
   /** clone job
