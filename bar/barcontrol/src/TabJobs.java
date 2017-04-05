@@ -1620,7 +1620,7 @@ public class TabJobs
   private final Color  COLOR_WHITE;
   private final Color  COLOR_RED;
   private final Color  COLOR_MODIFIED;
-  private final Color  COLOR_INFO_FORGROUND;
+  private final Color  COLOR_INFO_FOREGROUND;
   private final Color  COLOR_INFO_BACKGROUND;
 
   // images
@@ -1807,7 +1807,7 @@ public class TabJobs
     COLOR_WHITE           = display.getSystemColor(SWT.COLOR_WHITE);
     COLOR_RED             = display.getSystemColor(SWT.COLOR_RED);
     COLOR_MODIFIED        = new Color(null,0xFF,0xA0,0xA0);
-    COLOR_INFO_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+    COLOR_INFO_FOREGROUND = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
     COLOR_INFO_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 
     // get images
@@ -2306,7 +2306,7 @@ public class TabJobs
             {
               Label       label;
 
-              final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+              final Color COLOR_FOREGROUND = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
               final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 
               widgetFileTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
@@ -2332,7 +2332,7 @@ public class TabJobs
               });
 
               label = Widgets.newLabel(widgetFileTreeToolTip,BARControl.tr("Tree representation of files, directories, links and special entries.\nDouble-click to open sub-directories, right-click to open context menu.\nNote size column: numbers in red color indicates size update is still in progress."));
-              label.setForeground(COLOR_FORGROUND);
+              label.setForeground(COLOR_FOREGROUND);
               label.setBackground(COLOR_BACKGROUND);
               Widgets.layout(label,0,0,TableLayoutData.W);
 
@@ -8070,42 +8070,42 @@ widgetArchivePartSize.setListVisible(true);
               });
 
               label = Widgets.newLabel(widgetScheduleTableToolTip,BARControl.tr("Last created")+":");
-              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,0,0,TableLayoutData.W);
 
               label = Widgets.newLabel(widgetScheduleTableToolTip,(scheduleData.lastExecutedDateTime > 0) ? simpleDateFormat.format(new Date(scheduleData.lastExecutedDateTime*1000L)) : "-");
-              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,0,1,TableLayoutData.WE);
 
               label = Widgets.newLabel(widgetScheduleTableToolTip,BARControl.tr("Total entities")+":");
-              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,1,0,TableLayoutData.W);
 
               label = Widgets.newLabel(widgetScheduleTableToolTip,String.format("%d",scheduleData.totalEntities));
-              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,1,1,TableLayoutData.WE);
 
               label = Widgets.newLabel(widgetScheduleTableToolTip,BARControl.tr("Total entries")+":");
-              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,2,0,TableLayoutData.W);
 
               label = Widgets.newLabel(widgetScheduleTableToolTip,String.format("%d",scheduleData.totalEntryCount));
-              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,2,1,TableLayoutData.WE);
 
               label = Widgets.newLabel(widgetScheduleTableToolTip,BARControl.tr("Total size")+":");
-              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,3,0,TableLayoutData.W);
 
               label = Widgets.newLabel(widgetScheduleTableToolTip,String.format(BARControl.tr("%d bytes (%s)"),scheduleData.totalEntrySize,Units.formatByteSize(scheduleData.totalEntrySize)));
-              label.setForeground(COLOR_INFO_FORGROUND);
+              label.setForeground(COLOR_INFO_FOREGROUND);
               label.setBackground(COLOR_INFO_BACKGROUND);
               Widgets.layout(label,3,1,TableLayoutData.WE);
 

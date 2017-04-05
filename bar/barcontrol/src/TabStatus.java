@@ -1491,7 +1491,7 @@ public class TabStatus
 
           if (!message.getString().isEmpty())
           {
-            final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+            final Color COLOR_FOREGROUND = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
             final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 
             widgetMessageToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
@@ -1501,7 +1501,7 @@ public class TabStatus
 
             text = Widgets.newText(widgetMessageToolTip,SWT.LEFT|SWT.V_SCROLL|SWT.MULTI|SWT.WRAP);
             text.setText(message.getString());
-            text.setForeground(COLOR_FORGROUND);
+            text.setForeground(COLOR_FOREGROUND);
             text.setBackground(COLOR_BACKGROUND);
             Widgets.layout(text,0,0,TableLayoutData.NSWE,0,0,0,0,300,100);
 
@@ -2592,7 +2592,7 @@ public class TabStatus
     Label   label;
     Control control;
 
-    final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+    final Color COLOR_FOREGROUND = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
     final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 
     if (widgetJobTableToolTip != null)
@@ -2629,83 +2629,83 @@ public class TabStatus
     row = 0;
 
     label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Job")+":");
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
     label = Widgets.newLabel(widgetJobTableToolTip,jobData.name);
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
     label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Entities")+":");
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
     label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("{0}",totalEntityCount));
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
     label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Storages")+":");
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
     label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("{0}",totalStorageCount));
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
     label = Widgets.newLabel(widgetJobTableToolTip,String.format(BARControl.tr("{0} ({1} bytes)",Units.formatByteSize(totalStorageSize),totalStorageSize)));
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
     label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Entries")+":");
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
     label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("{0}",totalEntryCount));
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
     label = Widgets.newLabel(widgetJobTableToolTip,String.format(BARControl.tr("{0} ({1} bytes)",Units.formatByteSize(totalEntrySize),totalEntrySize)));
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
     label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Last executed")+":");
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
     label = Widgets.newLabel(widgetJobTableToolTip,(lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)) : "");
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
     label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Execution count")+":");
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
     label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("{0}",executionCount));
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;
 
     label = Widgets.newLabel(widgetJobTableToolTip,BARControl.tr("Average execution time")+":");
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,0,TableLayoutData.W);
     label = Widgets.newLabel(widgetJobTableToolTip,String.format("%02d:%02d:%02d",averageDuration/(60*60),averageDuration%(60*60)/60,averageDuration%60));
-    label.setForeground(COLOR_FORGROUND);
+    label.setForeground(COLOR_FOREGROUND);
     label.setBackground(COLOR_BACKGROUND);
     Widgets.layout(label,row,1,TableLayoutData.WE);
     row++;

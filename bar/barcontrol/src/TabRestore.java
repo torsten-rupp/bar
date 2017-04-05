@@ -4117,8 +4117,8 @@ Dprintf.dprintf("cirrect?");
   // --------------------------- constants --------------------------------
   // colors
   private final Color COLOR_MODIFIED;
-  private final Color COLOR_INFO_FORGROUND;
-  private final Color COLOR_WARNING_FORGROUND;
+  private final Color COLOR_INFO_FOREGROUND;
+  private final Color COLOR_WARNING_FOREGROUND;
   private final Color COLOR_INFO_BACKGROUND;
   private final Color COLOR_NO_SCHEDULE_INFO;
   private final Color COLOR_NO_JOB_INFO;
@@ -4227,11 +4227,11 @@ Dprintf.dprintf("cirrect?");
       row = 0;
 
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Name")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTreeToolTip,uuidIndexData.name);
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
@@ -4239,62 +4239,62 @@ Dprintf.dprintf("cirrect?");
       if (Settings.debugLevel > 0)
       {
         label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Id")+":");
-        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,0,TableLayoutData.W);
         label = Widgets.newLabel(widgetStorageTreeToolTip,Long.toString(uuidIndexData.id));
-        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,1,TableLayoutData.WE);
         row++;
 
         label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Job UUID")+":");
-        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,0,TableLayoutData.W);
         label = Widgets.newLabel(widgetStorageTreeToolTip,uuidIndexData.jobUUID);
-        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,1,TableLayoutData.WE);
         row++;
       }
 
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last executed")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTreeToolTip,(uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last error")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTreeToolTip,uuidIndexData.lastErrorMessage);
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("{0}",uuidIndexData.getEntryCount()));
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(uuidIndexData.getEntrySize()),uuidIndexData.getEntrySize())));
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
@@ -4372,82 +4372,82 @@ Dprintf.dprintf("cirrect?");
       if (Settings.debugLevel > 0)
       {
         label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Id")+":");
-        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,0,TableLayoutData.W);
         label = Widgets.newLabel(widgetStorageTreeToolTip,Long.toString(entityIndexData.id));
-        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,1,TableLayoutData.WE);
         row++;
 
         label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Job UUID")+":");
-        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,0,TableLayoutData.W);
         label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.jobUUID);
-        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,1,TableLayoutData.WE);
         row++;
 
         label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Schedule UUID")+":");
-        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,0,TableLayoutData.W);
         label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.scheduleUUID);
-        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,1,TableLayoutData.WE);
         row++;
       }
 
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last created")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTreeToolTip,(entityIndexData.lastCreatedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.lastCreatedDateTime*1000L)) : "-");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Last error")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTreeToolTip,entityIndexData.lastErrorMessage);
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total entries")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("{0}",entityIndexData.getEntryCount()));
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Total size")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTreeToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(entityIndexData.getEntrySize()),entityIndexData.getEntrySize())));
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Expire at")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTreeToolTip,(entityIndexData.expireDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.expireDateTime*1000L)) : "-");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
@@ -4455,20 +4455,20 @@ Dprintf.dprintf("cirrect?");
       if (entityIndexData.jobUUID.isEmpty() || entityIndexData.scheduleUUID.isEmpty())
       {
         separator = Widgets.newSeparator(widgetStorageTreeToolTip);
-        separator.setForeground(COLOR_WARNING_FORGROUND);
+        separator.setForeground(COLOR_WARNING_FOREGROUND);
         separator.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(separator,row,0,TableLayoutData.WE,0,2);
         row++;
 
         label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("Warnings")+":");
-        label.setForeground(COLOR_WARNING_FORGROUND);
+        label.setForeground(COLOR_WARNING_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,0,TableLayoutData.W);
 
         if (entityIndexData.jobUUID.isEmpty())
         {
           label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("no job info"));
-          label.setForeground(COLOR_WARNING_FORGROUND);
+          label.setForeground(COLOR_WARNING_FOREGROUND);
           label.setBackground(COLOR_INFO_BACKGROUND);
           Widgets.layout(label,row,1,TableLayoutData.WE);
           row++;
@@ -4476,7 +4476,7 @@ Dprintf.dprintf("cirrect?");
         if (entityIndexData.scheduleUUID.isEmpty())
         {
           label = Widgets.newLabel(widgetStorageTreeToolTip,BARControl.tr("no schedule info"));
-          label.setForeground(COLOR_WARNING_FORGROUND);
+          label.setForeground(COLOR_WARNING_FOREGROUND);
           label.setBackground(COLOR_INFO_BACKGROUND);
           Widgets.layout(label,row,1,TableLayoutData.WE);
           row++;
@@ -4553,21 +4553,21 @@ Dprintf.dprintf("cirrect?");
       row = 0;
 
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Job")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.jobName);
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Name")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.name);
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
@@ -4575,82 +4575,82 @@ Dprintf.dprintf("cirrect?");
       if (Settings.debugLevel > 0)
       {
         label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Id")+":");
-        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,0,TableLayoutData.W);
         label = Widgets.newLabel(widgetStorageTableToolTip,Long.toString(storageIndexData.id));
-        label.setForeground(COLOR_INFO_FORGROUND);
+        label.setForeground(COLOR_INFO_FOREGROUND);
         label.setBackground(COLOR_INFO_BACKGROUND);
         Widgets.layout(label,row,1,TableLayoutData.WE);
         row++;
       }
 
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Created")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTableToolTip,SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCreatedDateTime*1000L)));
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Type")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.archiveType.toString());
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Entries")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("{0}",storageIndexData.getEntryCount()));
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Size")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTableToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(storageIndexData.getEntrySize()),storageIndexData.getEntrySize())));
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("State")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.indexState.toString());
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Last checked")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTableToolTip,(storageIndexData.lastCheckedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.lastCheckedDateTime*1000L)) : "-");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Error")+":");
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.errorMessage);
-      label.setForeground(COLOR_INFO_FORGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
@@ -4711,7 +4711,7 @@ Dprintf.dprintf("cirrect?");
     Label   label;
     Control control;
 
-    final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+    final Color COLOR_FOREGROUND = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
     final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 
     if (widgetEntryTableToolTip != null)
@@ -4729,41 +4729,41 @@ Dprintf.dprintf("cirrect?");
       row = 0;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Job")+":");
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.jobName);
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Type")+":");
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.archiveType.toString());
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Storage")+":");
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.storageName);
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Created")+":");
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.storageDateTime*1000L)));
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
@@ -4773,41 +4773,41 @@ Dprintf.dprintf("cirrect?");
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Name")+":");
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.name);
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Type")+":");
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.entryType.toString());
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Size")+":");
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(entryIndexData.size),entryIndexData.size)));
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Date")+":");
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,(entryIndexData.dateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)) : "-");
-      label.setForeground(COLOR_FORGROUND);
+      label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
@@ -4887,12 +4887,12 @@ Dprintf.dprintf("cirrect?");
     display = shell.getDisplay();
 
     // get colors
-    COLOR_MODIFIED          = display.getSystemColor(SWT.COLOR_GRAY);
-    COLOR_INFO_FORGROUND    = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
-    COLOR_WARNING_FORGROUND = display.getSystemColor(SWT.COLOR_RED);
-    COLOR_INFO_BACKGROUND   = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
-    COLOR_NO_SCHEDULE_INFO  = new Color(null,0xFF,0xF0,0xFF);
-    COLOR_NO_JOB_INFO       = new Color(null,0xF0,0xFF,0xFF);
+    COLOR_MODIFIED           = display.getSystemColor(SWT.COLOR_GRAY);
+    COLOR_INFO_FOREGROUND    = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+    COLOR_WARNING_FOREGROUND = display.getSystemColor(SWT.COLOR_RED);
+    COLOR_INFO_BACKGROUND    = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+    COLOR_NO_SCHEDULE_INFO   = new Color(null,0xFF,0xF0,0xFF);
+    COLOR_NO_JOB_INFO        = new Color(null,0xF0,0xFF,0xFF);
 
     // get images
     IMAGE_DIRECTORY  = Widgets.loadImage(display,"directory.png");
