@@ -81,6 +81,7 @@ typedef struct DatabaseHandle
   Semaphore     lock;                       // lock (Note: do not use sqlite mutex, because of debug facilities in semaphore.c)
   sqlite3       *handle;                    // SQlite3 handle
   long          timeout;                    // timeout [ms]
+  uint64        lastCheckpointTimestamp;    // last time forced execution of a checkpoint
   sem_t         wakeUp;                     // unlock wake-up
   #ifndef NDEBUG
     char         name[256];                 // database name (file name)

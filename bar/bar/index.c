@@ -2154,6 +2154,7 @@ LOCAL Errors deleteFromIndex(IndexHandle *indexHandle,
       if (error == ERROR_NONE)
       {
         // delete some entries
+//fprintf(stderr,"%s, %d: deleteFromIndex %s: %s %s\n",__FILE__,__LINE__,Thread_getCurrentName(),tableName,String_cString(filterString));
         BLOCK_DOX(error,
                   Database_lock(&indexHandle->databaseHandle),
                   Database_unlock(&indexHandle->databaseHandle),
@@ -2648,20 +2649,34 @@ LOCAL void indexThreadCode(void)
   while (!quitFlag)
   {
     // remove deleted storages from index
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle.databaseHandle,
-                             "SELECT id,name FROM storage WHERE state=%d",
-                             INDEX_STATE_DELETED
-                            );
-    if (error == ERROR_NONE)
+    do
     {
-      while (   (error == ERROR_NONE)
-             && Database_getNextRow(&databaseQueryHandle,
-                                    "%lld %S",
-                                    &databaseId,
-                                    storageName
-                                   )
-            )
+      // find next storage to remove (Note: get single entry to remove to avoid long-running prepare!)
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle.databaseHandle,
+                               "SELECT id,name FROM storage WHERE state=%d",
+                               INDEX_STATE_DELETED
+                              );
+      if (error == ERROR_NONE)
+      {
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%lld %S",
+                                 &databaseId,
+                                 storageName
+                                )
+           )
+        {
+          databaseId = DATABASE_ID_NONE;
+        }
+        Database_finalize(&databaseQueryHandle);
+      }
+      else
+      {
+        databaseId = DATABASE_ID_NONE;
+      }
+
+      // remove from database
+      if (databaseId != DATABASE_ID_NONE)
       {
         if (error == ERROR_NONE)
         {
@@ -2735,7 +2750,6 @@ LOCAL void indexThreadCode(void)
                                   databaseId
                                  );
         }
-
         if (error == ERROR_NONE)
         {
           if (!String_isEmpty(storageName))
@@ -2750,9 +2764,8 @@ LOCAL void indexThreadCode(void)
           }
         }
       }
-      Database_finalize(&databaseQueryHandle);
-//Database_flush(&indexHandle);
     }
+    while ((databaseId != DATABASE_ID_NONE) && (error == ERROR_NONE));
 
     if (Misc_getTimestamp() > (lastCleanupTimestamp+TIME_INDEX_CLEANUP*US_PER_SECOND))
     {

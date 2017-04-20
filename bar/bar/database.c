@@ -48,9 +48,11 @@
 #define _DATABASE_DEBUG_COPY_TABLE
 
 /***************************** Constants *******************************/
+#define MAX_FORCE_CHECKPOINT_TIME (10LL*60LL*1000LL) // timeout for force execution of a checkpoint [ms]
+
 #if 1
-  #define DEBUG_WARNING_LOCK_TIME  2ULL*1000ULL    // DEBUG only: warning lock time [ms]
-  #define DEBUG_MAX_LOCK_TIME     60ULL*1000ULL    // DEBUG only: max. lock time [ms]
+  #define DEBUG_WARNING_LOCK_TIME  2ULL*1000ULL      // DEBUG only: warning lock time [ms]
+  #define DEBUG_MAX_LOCK_TIME     60ULL*1000ULL      // DEBUG only: max. lock time [ms]
 #else
   #define DEBUG_WARNING_LOCK_TIME MAX_UINT64
   #define DEBUG_MAX_LOCK_TIME     MAX_UINT64
@@ -844,6 +846,26 @@ LOCAL void delay(ulong time)
   #endif
 }
 
+/***********************************************************************\
+* Name   : executeCheckpoint
+* Purpose: force execute a checkpoint if timeout expired
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void executeCheckpoint(DatabaseHandle *databaseHandle)
+{
+  assert(databaseHandle != NULL);
+
+  if (Misc_getTimestamp() > (databaseHandle->lastCheckpointTimestamp+MAX_FORCE_CHECKPOINT_TIME*US_PER_MS))
+  {
+    (void)sqlite3_wal_checkpoint_v2(databaseHandle->handle,NULL,SQLITE_CHECKPOINT_RESTART,NULL,NULL);
+    databaseHandle->lastCheckpointTimestamp = Misc_getTimestamp();
+  }
+}
+
 #if 0
 //TODO
 /***********************************************************************\
@@ -1054,6 +1076,9 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
   assert(databaseHandle->handle != NULL);
 
   if (changedRowCount != NULL) (*changedRowCount) = 0L;
+
+  // execute checkpoint (if needed)
+  executeCheckpoint(databaseHandle);
 
   maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
   sqlCommand    = stringTrim(sqlString);
@@ -1527,11 +1552,12 @@ void Database_doneAll(void)
   // init variables
 //TODO
 #if 0
-  databaseHandle->lock     = NULL;
+  databaseHandle->lock                    = NULL;
 #else
 #endif
-  databaseHandle->handle   = NULL;
-  databaseHandle->timeout  = timeout;
+  databaseHandle->handle                  = NULL;
+  databaseHandle->timeout                 = timeout;
+  databaseHandle->lastCheckpointTimestamp = Misc_getTimestamp();
   sem_init(&databaseHandle->wakeUp,0,0);
 
   // create lock
@@ -3286,6 +3312,9 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
     databaseQueryHandle->dt        = 0LL;
   #endif /* not NDEBUG */
 
+  // execute checkpoint (if needed)
+  executeCheckpoint(databaseHandle);
+
   // prepare SQL command execution
   DATABASE_DEBUG_SQL(databaseHandle,sqlString);
 //  DATABASE_DEBUG_QUERY_PLAN(databaseHandle,sqlString);
@@ -3680,6 +3709,9 @@ bool Database_exists(DatabaseHandle *databaseHandle,
   }
   String_appendCString(sqlString," LIMIT 0,1");
 
+  // execute checkpoint (if needed)
+  executeCheckpoint(databaseHandle);
+
   // execute SQL command
   existsFlag = FALSE;
   DATABASE_DEBUG_SQLX(databaseHandle,"get int64",sqlString);
@@ -3777,6 +3809,9 @@ Errors Database_vgetId(DatabaseHandle *databaseHandle,
                     );
   }
   String_appendCString(sqlString," LIMIT 0,1");
+
+  // execute checkpoint (if needed)
+  executeCheckpoint(databaseHandle);
 
   // execute SQL command
   DATABASE_DEBUG_SQLX(databaseHandle,"get id",sqlString);
@@ -3883,6 +3918,9 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
                     );
   }
   String_appendCString(sqlString," LIMIT 0,1");
+
+  // execute checkpoint (if needed)
+  executeCheckpoint(databaseHandle);
 
   // execute SQL command
   DATABASE_DEBUG_SQLX(databaseHandle,"get int64",sqlString);
@@ -4088,6 +4126,9 @@ Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
   }
   String_appendCString(sqlString," LIMIT 0,1");
 
+  // execute checkpoint (if needed)
+  executeCheckpoint(databaseHandle);
+
   // execute SQL command
   DATABASE_DEBUG_SQLX(databaseHandle,"get double",sqlString);
   sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
@@ -4291,6 +4332,9 @@ Errors Database_vgetString(DatabaseHandle *databaseHandle,
                     );
   }
   String_appendCString(sqlString," LIMIT 0,1");
+
+  // execute checkpoint (if needed)
+  executeCheckpoint(databaseHandle);
 
   // execute SQL command
   DATABASE_DEBUG_SQLX(databaseHandle,"get string",sqlString);
