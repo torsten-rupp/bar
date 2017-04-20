@@ -386,7 +386,7 @@ if test $CERTTOOL_OK -ne 1 -a $OPENSSL_OK -ne 1; then
   printError "'$CERTTOOL' nor '$OPENSSL' found or not executable - cannot create keys!"
   exit $EXITCODE_NO_KEYTOOLS
 fi
-if test $certtoolFlag -eq 1; then
+if test $certtoolFlag -eq 1 -a $opensslFlag -eq 0; then
   if test $CERTTOOL_OK -eq 1; then
     OPENSSL_OK=0
   else
