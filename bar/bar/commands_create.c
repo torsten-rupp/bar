@@ -1381,7 +1381,7 @@ LOCAL String formatIncrementalFileName(String                 fileName,
         if (i < String_length(storageSpecifier->archiveName))
         {
           // removed previous separator characters
-          String_trimRight(fileName,SEPARATOR_CHARS);
+          String_trimEnd(fileName,SEPARATOR_CHARS);
 
           ch = String_index(storageSpecifier->archiveName,i);
           switch (ch)
@@ -4929,8 +4929,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
                                  &createInfo->archiveHandle,
                                  indexHandle,
                                  createInfo->jobOptions->compressAlgorithms.delta,
-                                 createInfo->jobOptions->compressAlgorithms.byte,
-                                 createInfo->jobOptions->cryptAlgorithms[0],
+                                 createInfo->jobOptions->compressAlgorithms.byte.value,
+                                 createInfo->jobOptions->cryptAlgorithms[0].value,
 CRYPT_TYPE_SYMMETRIC, //TODO
                                  fileName,
                                  &fileInfo,
@@ -5105,8 +5105,8 @@ CRYPT_TYPE_SYMMETRIC, //TODO
     }
 
     // ratio info
-    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
-        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
+    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta     ))
+        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte.value))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
@@ -5336,8 +5336,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                                   &createInfo->archiveHandle,
                                   indexHandle,
                                   createInfo->jobOptions->compressAlgorithms.delta,
-                                  createInfo->jobOptions->compressAlgorithms.byte,
-                                  createInfo->jobOptions->cryptAlgorithms[0],
+                                  createInfo->jobOptions->compressAlgorithms.byte.value,
+                                  createInfo->jobOptions->cryptAlgorithms[0].value,
 CRYPT_TYPE_SYMMETRIC, //TODO
                                   deviceName,
                                   &deviceInfo,
@@ -5517,8 +5517,8 @@ CRYPT_TYPE_SYMMETRIC, //TODO
     }
 
     // ratio info
-    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
-        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
+    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta     ))
+        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte.value))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
@@ -5675,7 +5675,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
                                       &createInfo->archiveHandle,
                                       indexHandle,
-                                      createInfo->jobOptions->cryptAlgorithms[0],
+                                      createInfo->jobOptions->cryptAlgorithms[0].value,
 CRYPT_TYPE_SYMMETRIC, //TODO
                                       directoryName,
                                       &fileInfo,
@@ -5874,7 +5874,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     error = Archive_newLinkEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
                                  indexHandle,
-                                 createInfo->jobOptions->cryptAlgorithms[0],
+                                 createInfo->jobOptions->cryptAlgorithms[0].value,
 CRYPT_TYPE_SYMMETRIC, //TODO
                                  linkName,
                                  fileName,
@@ -6108,8 +6108,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                      &createInfo->archiveHandle,
                                      indexHandle,
                                      createInfo->jobOptions->compressAlgorithms.delta,
-                                     createInfo->jobOptions->compressAlgorithms.byte,
-                                     createInfo->jobOptions->cryptAlgorithms[0],
+                                     createInfo->jobOptions->compressAlgorithms.byte.value,
+                                     createInfo->jobOptions->cryptAlgorithms[0].value,
 CRYPT_TYPE_SYMMETRIC, //TODO
                                      fileNameList,
                                      &fileInfo,
@@ -6258,8 +6258,8 @@ CRYPT_TYPE_SYMMETRIC, //TODO
     }
 
     // ratio info
-    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
-        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
+    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta     ))
+        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte.value))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
@@ -6424,7 +6424,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     error = Archive_newSpecialEntry(&archiveEntryInfo,
                                     &createInfo->archiveHandle,
                                     indexHandle,
-                                    createInfo->jobOptions->cryptAlgorithms[0],
+                                    createInfo->jobOptions->cryptAlgorithms[0].value,
 CRYPT_TYPE_SYMMETRIC, //TODO
                                     fileName,
                                     &fileInfo,

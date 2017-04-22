@@ -1030,7 +1030,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
        )
     {
       String_sub(string,storageName,6,nextIndex-6);
-      String_trimRight(string,"/");
+      String_trimEnd(string,"/");
       if (!Storage_parseFTPSpecifier(string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
@@ -1061,7 +1061,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
        )
     {
       String_sub(string,storageName,6,nextIndex-6);
-      String_trimRight(string,"/");
+      String_trimEnd(string,"/");
       if (!Storage_parseSSHSpecifier(string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
@@ -1091,7 +1091,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
        )
     {
       String_sub(string,storageName,6,nextIndex-6);
-      String_trimRight(string,"/");
+      String_trimEnd(string,"/");
       if (!Storage_parseSSHSpecifier(string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
@@ -1121,7 +1121,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
        )
     {
       String_sub(string,storageName,7,nextIndex-7);
-      String_trimRight(string,"/");
+      String_trimEnd(string,"/");
       if (!Storage_parseSSHSpecifier(string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
@@ -1150,7 +1150,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
        )
     {
       String_sub(string,storageName,9,nextIndex-9);
-      String_trimRight(string,"/");
+      String_trimEnd(string,"/");
       if (!Storage_parseWebDAVSpecifier(string,
                                         storageSpecifier->hostName,
                                         storageSpecifier->loginName,
@@ -1176,7 +1176,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     if (String_matchCString(storageName,5,"^[^:]*:",&nextIndex,NULL,NULL))  // cd://<device>:<file name>
     {
       String_sub(string,storageName,5,nextIndex-5);
-      String_trimRight(string,"/");
+      String_trimEnd(string,"/");
       if (!Storage_parseOpticalSpecifier(string,
                                          NULL,  // defaultDeviceName
                                          storageSpecifier->deviceName
@@ -1201,7 +1201,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     if (String_matchCString(storageName,6,"^[^:]*:",&nextIndex,NULL,NULL))  // dvd://<device>:<file name>
     {
       String_sub(string,storageName,6,nextIndex-6);
-      String_trimRight(string,"/");
+      String_trimEnd(string,"/");
       if (!Storage_parseOpticalSpecifier(string,
                                          NULL,  // defaultDeviceName
                                          storageSpecifier->deviceName
@@ -1226,7 +1226,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     if (String_matchCString(storageName,5,"^[^:]*:",&nextIndex,NULL,NULL))  // bd://<device>:<file name>
     {
       String_sub(string,storageName,5,nextIndex-5);
-      String_trimRight(string,"/");
+      String_trimEnd(string,"/");
       if (!Storage_parseOpticalSpecifier(string,
                                          NULL,  // defaultDeviceName
                                          storageSpecifier->deviceName
@@ -1251,7 +1251,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     if (String_matchCString(storageName,9,"^[^:]*:",&nextIndex,NULL,NULL))  // device://<device>:<file name>
     {
       String_sub(string,storageName,9,nextIndex-9);
-      String_trimRight(string,"/");
+      String_trimEnd(string,"/");
       if (!Storage_parseDeviceSpecifier(string,
                                         NULL,
                                         storageSpecifier->deviceName
