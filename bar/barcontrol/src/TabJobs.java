@@ -627,7 +627,7 @@ public class TabJobs
       {
         this.name      = name;
         this.forceFlag = forceFlag;
-        this.depth     = StringUtils.split(name,BARServer.fileSeparator,true).length;
+        this.depth     = StringUtils.splitArray(name,BARServer.fileSeparator,true).length;
         this.timeout   = timeout;
         this.treeItem  = treeItem;
       }
@@ -4638,7 +4638,7 @@ widgetArchivePartSize.setListVisible(true);
               @Override
               public void modified(Control control, WidgetVariable archivePartSizeFlag)
               {
-                String[] s = StringUtils.split(cryptAlgorithm.getString(),"+");
+                String[] s = StringUtils.splitArray(cryptAlgorithm.getString(),"+");
 
                 int i = 0;
 //TODO: multi crypt
@@ -9066,7 +9066,7 @@ throw new Error("NYI");
       archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"archive-part-size"),0));
       archivePartSizeFlag.set(archivePartSize.getLong() > 0);
 
-      String[] compressAlgorithms = StringUtils.split(BARServer.getStringJobOption(jobData.uuid,"compress-algorithm"),"+");
+      String[] compressAlgorithms = StringUtils.splitArray(BARServer.getStringJobOption(jobData.uuid,"compress-algorithm"),"+");
       deltaCompressAlgorithm.set((compressAlgorithms.length >= 1) ? compressAlgorithms[0] : "");
       byteCompressAlgorithm.set((compressAlgorithms.length >= 2) ? compressAlgorithms[1] : "");
       cryptAlgorithm.set(BARServer.getStringJobOption(jobData.uuid,"crypt-algorithm"));
@@ -9232,7 +9232,7 @@ throw new Error("NYI");
       TreeItem[] treeItems = widgetFileTree.getItems();
 
       StringBuilder buffer = new StringBuilder();
-      for (String part : StringUtils.split(entryData.pattern,BARServer.fileSeparator,true))
+      for (String part : StringUtils.splitArray(entryData.pattern,BARServer.fileSeparator,true))
       {
         // expand name
         if ((buffer.length() == 0) || (buffer.charAt(buffer.length()-1) != BARServer.fileSeparator)) buffer.append(BARServer.fileSeparator);
