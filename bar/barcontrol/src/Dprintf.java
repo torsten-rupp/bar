@@ -110,10 +110,10 @@ public class Dprintf
   {
     if (debugLevel >= level)
     {
-      /* get stack trace */
+      // get stack trace
       StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
 
-      /* detect group if DEBUG_GROUP is declared and accessable */
+      // detect group if DEBUG_GROUP is declared and accessable
       if (group == null)
       {
         try
@@ -136,7 +136,7 @@ public class Dprintf
         }
       }
 
-      /* output */
+      // output
       if (group.enabled)
       {
         System.err.print(stackTrace[stackLevel].getFileName()+", "+stackTrace[stackLevel].getLineNumber()+": ");
@@ -182,7 +182,7 @@ public class Dprintf
    */
   static public void dprintf(int level, String format, Object... args)
   {
-    output(3,level,null,format,args);
+    output(3,level,(Group)null,format,args);
   }
 
   /** output debug data
@@ -191,7 +191,7 @@ public class Dprintf
    */
   static public void dprintf(int level, Object object)
   {
-    output(3,level,null,"%s",object);
+    output(3,level,(Group)null,"%s",object);
   }
 
   /** output debug data
@@ -200,7 +200,7 @@ public class Dprintf
    */
   static public void dprintf(String format, Object... args)
   {
-    output(3,0,null,format,args);
+    output(3,0,(Group)null,format,args);
   }
 
   /** output debug data
@@ -208,7 +208,7 @@ public class Dprintf
    */
   static public void dprintf(Object object)
   {
-    output(3,0,null,"%s",object);
+    output(3,0,(Group)null,"%s",object);
   }
 
   /** output debug data
@@ -216,6 +216,36 @@ public class Dprintf
   static public void dprintf()
   {
     output(3,0,GROUP_ANY,"");
+  }
+
+  /** output debug data and halt
+   * @param format printf-format string
+   * @param args optional arguments
+   */
+  static public void halt(String format, Object... args)
+  {
+    output(3,0,GROUP_ANY,"HALT: "+format,args);
+    System.exit(1);
+  }
+
+  /** output debug data and halt
+   * @param format printf-format string
+   * @param args optional arguments
+   */
+  static public void halt(Object object)
+  {
+    output(3,0,GROUP_ANY,"HALT: %s",object);
+    System.exit(1);
+  }
+
+  /** output debug data and halt
+   * @param format printf-format string
+   * @param args optional arguments
+   */
+  static public void halt()
+  {
+    output(3,0,GROUP_ANY,"HALT");
+    System.exit(1);
   }
 
   /** print a stack trace
