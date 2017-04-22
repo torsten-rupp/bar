@@ -826,40 +826,197 @@ public class StringParser
     argumentIndex = 0;
     while (formatIndex < format.length())
     {
-      // skip spaces in line, format
-      while ((index < string.length()) && Character.isSpaceChar(string.charAt(index)))
+//Dprintf.dprintf("index=%d %d",index,string.length());
+//Dprintf.dprintf("format=%s formatIndex=%d %d",format,formatIndex,format.length());
+      if      (format.charAt(formatIndex) == '%')
       {
-        index++;
-      }
-      while ((formatIndex < format.length()) && Character.isSpaceChar(format.charAt(formatIndex)))
-      {
-        formatIndex++;
-      }
-
-      if (formatIndex < format.length())
-      {
-        if (format.charAt(formatIndex) == '%')
+        // get format token
+        formatIndex = getNextFormatToken(format,formatIndex,formatToken);
+        if (formatIndex < 0)
         {
-          // get format token
-          formatIndex = getNextFormatToken(format,formatIndex,formatToken);
-          if (formatIndex < 0)
-          {
-            return -1;
-          }
+          return -1;
+        }
 
-          // parse string and store values
-          switch (formatToken.conversionChar)
-          {
-            case 'i':
-            case 'd':
-            case 'u':
-              // get data
-              buffer = new StringBuilder();
-              if ((index < string.length()) && ((string.charAt(index) == '+') || (string.charAt(index) == '-')))
+        // skip spaces in line
+        while ((index < string.length()) && Character.isSpaceChar(string.charAt(index)))
+        {
+          index++;
+        }
+
+        // parse string and store values
+        switch (formatToken.conversionChar)
+        {
+          case 'i':
+          case 'd':
+          case 'u':
+            // get data
+            buffer = new StringBuilder();
+            if ((index < string.length()) && ((string.charAt(index) == '+') || (string.charAt(index) == '-')))
+            {
+              buffer.append(string.charAt(index));
+              index++;
+            }
+            while (   (index < string.length())
+                   && Character.isDigit(string.charAt(index))
+                  )
+            {
+              buffer.append(string.charAt(index));
+              index++;
+            }
+            if (buffer.length() <= 0)
+            {
+              return -1;
+            }
+
+            // convert
+            try
+            {
+              switch (formatToken.lengthType)
               {
-                buffer.append(string.charAt(index));
-                index++;
+                case INTEGER:
+                  arguments[argumentIndex] = Integer.parseInt(buffer.toString(),10);
+                  break;
+                case LONG:
+                  arguments[argumentIndex] = Long.parseLong(buffer.toString(),10);
+                  break;
+                case DOUBLE:
+                  try
+                  {
+                    arguments[argumentIndex] = NumberFormat.getInstance(Locale.ENGLISH).parse(buffer.toString()).doubleValue();
+                  }
+                  catch (ParseException exception)
+                  {
+                    return -1;
+                  }
+                  break;
               }
+              argumentIndex++;
+            }
+            catch (NumberFormatException exception)
+            {
+              return -1;
+            }
+            break;
+          case 'c':
+            // get data
+            if (index < string.length())
+            {
+              ch = string.charAt(index);
+              index++;
+            }
+            else
+            {
+              return -1;
+            }
+
+            // convert
+            arguments[argumentIndex] = ch;
+            argumentIndex++;
+            break;
+          case 'o':
+            // get data
+            buffer = new StringBuilder();
+            while (   (index < string.length())
+                   && (string.charAt(index) >= '0')
+                   && (string.charAt(index) <= '7')
+                  )
+            {
+              buffer.append(string.charAt(index));
+              index++;
+            }
+            if (buffer.length() <= 0)
+            {
+              return -1;
+            }
+
+            // convert
+            try
+            {
+              switch (formatToken.lengthType)
+              {
+                case INTEGER:
+                  arguments[argumentIndex] = Integer.parseInt(buffer.toString(),8);
+                  break;
+                case LONG:
+                  arguments[argumentIndex] = Long.parseLong(buffer.toString(),8);
+                  break;
+                case DOUBLE:
+                  break;
+              }
+              argumentIndex++;
+            }
+            catch (NumberFormatException exception)
+            {
+              return -1;
+            }
+            break;
+          case 'x':
+          case 'X':
+            // get data
+            buffer = new StringBuilder();
+            if (((index+1) < string.length()) && (string.charAt(index+0) == '0') && (string.charAt(index+0) == 'x'))
+            {
+              index+=2;
+            }
+            while (   (index < string.length())
+                   && Character.isDigit(string.charAt(index))
+                  )
+            {
+              buffer.append(string.charAt(index));
+              index++;
+            }
+            if (buffer.length() <= 0)
+            {
+              return -1;
+            }
+
+            // convert
+            try
+            {
+              switch (formatToken.lengthType)
+              {
+                case INTEGER:
+                  arguments[argumentIndex] = Integer.parseInt(buffer.toString(),16);
+                  break;
+                case LONG:
+                  arguments[argumentIndex] = Long.parseLong(buffer.toString(),16);
+                  break;
+                case DOUBLE:
+                  break;
+              }
+              argumentIndex++;
+            }
+            catch (NumberFormatException exception)
+            {
+              return -1;
+            }
+            break;
+          case 'e':
+          case 'E':
+          case 'f':
+          case 'F':
+          case 'g':
+          case 'G':
+          case 'a':
+          case 'A':
+            // get data
+            buffer = new StringBuilder();
+            if ((index < string.length()) && ((string.charAt(index) == '+') || (string.charAt(index) == '-')))
+            {
+              buffer.append(string.charAt(index));
+              index++;
+            }
+            while (   (index < string.length())
+                   && Character.isDigit(string.charAt(index))
+                  )
+            {
+              buffer.append(string.charAt(index));
+              index++;
+            }
+            if ((index < string.length()) && (string.charAt(index) == '.'))
+            {
+              buffer.append(string.charAt(index));
+              index++;
               while (   (index < string.length())
                      && Character.isDigit(string.charAt(index))
                     )
@@ -867,405 +1024,270 @@ public class StringParser
                 buffer.append(string.charAt(index));
                 index++;
               }
-              if (buffer.length() <= 0)
-              {
-                return -1;
-              }
+            }
+            if (buffer.length() <= 0)
+            {
+              return -1;
+            }
 
-              // convert
+            // convert
+            try
+            {
               try
               {
-                switch (formatToken.lengthType)
-                {
-                  case INTEGER:
-                    arguments[argumentIndex] = Integer.parseInt(buffer.toString(),10);
-                    break;
-                  case LONG:
-                    arguments[argumentIndex] = Long.parseLong(buffer.toString(),10);
-                    break;
-                  case DOUBLE:
-                    try
-                    {
-                      arguments[argumentIndex] = NumberFormat.getInstance(Locale.ENGLISH).parse(buffer.toString()).doubleValue();
-                    }
-                    catch (ParseException exception)
-                    {
-                      return -1;
-                    }
-                    break;
-                }
-                argumentIndex++;
+                arguments[argumentIndex] = NumberFormat.getInstance(Locale.ENGLISH).parse(buffer.toString()).doubleValue();
               }
-              catch (NumberFormatException exception)
+              catch (ParseException exception)
               {
                 return -1;
               }
-              break;
-            case 'c':
-              // get data
-              if (index < string.length())
+              argumentIndex++;
+            }
+            catch (NumberFormatException exception)
+            {
+              return -1;
+            }
+            break;
+          case 's':
+            // get data
+            buffer = new StringBuilder();
+            while (   (index < string.length())
+                   && (formatToken.blankFlag || ((formatIndex >= format.length()) && formatToken.greedyFlag) || !Character.isSpaceChar((string.charAt(index))))
+                   && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
+                  )
+            {
+              if (   !formatToken.greedyFlag
+                  && ((index+1) < string.length())
+                  && (string.charAt(index) == '\\')
+                  && (stringQuotes != null)
+                  && (stringQuotes.indexOf(string.charAt(index+1)) >= 0)
+                 )
               {
-                ch = string.charAt(index);
-                index++;
+                // quoted quote
+                if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
+                {
+                  buffer.append(string.charAt(index+1));
+                }
+                index+=2;
               }
               else
               {
-                return -1;
-              }
-
-              // convert
-              arguments[argumentIndex] = ch;
-              argumentIndex++;
-              break;
-            case 'o':
-              // get data
-              buffer = new StringBuilder();
-              while (   (index < string.length())
-                     && (string.charAt(index) >= '0')
-                     && (string.charAt(index) <= '7')
-                    )
-              {
-                buffer.append(string.charAt(index));
-                index++;
-              }
-              if (buffer.length() <= 0)
-              {
-                return -1;
-              }
-
-              // convert
-              try
-              {
-                switch (formatToken.lengthType)
-                {
-                  case INTEGER:
-                    arguments[argumentIndex] = Integer.parseInt(buffer.toString(),8);
-                    break;
-                  case LONG:
-                    arguments[argumentIndex] = Long.parseLong(buffer.toString(),8);
-                    break;
-                  case DOUBLE:
-                    break;
-                }
-                argumentIndex++;
-              }
-              catch (NumberFormatException exception)
-              {
-                return -1;
-              }
-              break;
-            case 'x':
-            case 'X':
-              // get data
-              buffer = new StringBuilder();
-              if (((index+1) < string.length()) && (string.charAt(index+0) == '0') && (string.charAt(index+0) == 'x'))
-              {
-                index+=2;
-              }
-              while (   (index < string.length())
-                     && Character.isDigit(string.charAt(index))
-                    )
-              {
-                buffer.append(string.charAt(index));
-                index++;
-              }
-              if (buffer.length() <= 0)
-              {
-                return -1;
-              }
-
-              // convert
-              try
-              {
-                switch (formatToken.lengthType)
-                {
-                  case INTEGER:
-                    arguments[argumentIndex] = Integer.parseInt(buffer.toString(),16);
-                    break;
-                  case LONG:
-                    arguments[argumentIndex] = Long.parseLong(buffer.toString(),16);
-                    break;
-                  case DOUBLE:
-                    break;
-                }
-                argumentIndex++;
-              }
-              catch (NumberFormatException exception)
-              {
-                return -1;
-              }
-              break;
-            case 'e':
-            case 'E':
-            case 'f':
-            case 'F':
-            case 'g':
-            case 'G':
-            case 'a':
-            case 'A':
-              // get data
-              buffer = new StringBuilder();
-              if ((index < string.length()) && ((string.charAt(index) == '+') || (string.charAt(index) == '-')))
-              {
-                buffer.append(string.charAt(index));
-                index++;
-              }
-              while (   (index < string.length())
-                     && Character.isDigit(string.charAt(index))
-                    )
-              {
-                buffer.append(string.charAt(index));
-                index++;
-              }
-              if ((index < string.length()) && (string.charAt(index) == '.'))
-              {
-                buffer.append(string.charAt(index));
-                index++;
-                while (   (index < string.length())
-                       && Character.isDigit(string.charAt(index))
-                      )
+                if ((formatToken.width == 0) || (buffer.length() < (formatToken.width-1)))
                 {
                   buffer.append(string.charAt(index));
-                  index++;
                 }
+                index++;
               }
-              if (buffer.length() <= 0)
-              {
-                return -1;
-              }
+            }
 
-              // convert
+            if (formatToken.enumClassName != null)
+            {
+              // enum class
               try
               {
-                try
-                {
-                  arguments[argumentIndex] = NumberFormat.getInstance(Locale.ENGLISH).parse(buffer.toString()).doubleValue();
-                }
-                catch (ParseException exception)
+                // find enum class
+                Class enumClass = Class.forName(formatToken.enumClassName);
+                if (!enumClass.isEnum())
                 {
                   return -1;
                 }
-                argumentIndex++;
+
+                // convert to enum
+                arguments[argumentIndex] = Enum.valueOf(enumClass,buffer.toString());
               }
-              catch (NumberFormatException exception)
+              catch (ClassNotFoundException exception)
               {
+//Dprintf.dprintf(""+exception);
+                throw new Error("Enumeration class '"+formatToken.enumClassName+"' not found",exception);
+              }
+              catch (IllegalArgumentException exception)
+              {
+//Dprintf.dprintf(""+exception);
                 return -1;
               }
-              break;
-            case 's':
-              // get data
-              buffer = new StringBuilder();
-              while (   (index < string.length())
-                     && (formatToken.blankFlag || ((formatIndex >= format.length()) && formatToken.greedyFlag) || !Character.isSpaceChar((string.charAt(index))))
-                     && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
-                    )
+            }
+            else
+            {
+              // store string
+              arguments[argumentIndex] = buffer.toString();
+            }
+            argumentIndex++;
+            break;
+          case 'p':
+          case 'n':
+            break;
+          case 'S':
+            // get data
+            buffer = new StringBuilder();
+            while (   (index < string.length())
+                   && (formatToken.blankFlag || ((formatIndex >= format.length()) && formatToken.greedyFlag) || !Character.isSpaceChar(string.charAt(index)))
+                   && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
+                  )
+            {
+              if (   ((index+1) < string.length())
+                  && (string.charAt(index) == '\\')
+                  && (stringQuotes != null)
+                  && (stringQuotes.indexOf(string.charAt(index+1)) >= 0)
+                 )
               {
-                if (   !formatToken.greedyFlag
-                    && ((index+1) < string.length())
-                    && (string.charAt(index) == '\\')
-                    && (stringQuotes != null)
-                    && (stringQuotes.indexOf(string.charAt(index+1)) >= 0)
-                   )
+                // quoted quote
+                if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
                 {
-                  // quoted quote
-                  if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
+                  buffer.append(string.charAt(index+1));
+                }
+                index+=2;
+              }
+              else
+              {
+                // check for string quote
+                char stringQuote;
+
+                stringQuote = getQuoteChar(string,index,formatToken,stringQuotes);
+                if (stringQuote != '\0')
+                {
+                  do
                   {
-                    buffer.append(string.charAt(index+1));
+                    // skip quote-char
+                    index++;
+
+                    // get string
+                    while ((index < string.length()) && (string.charAt(index) != stringQuote))
+                    {
+                      if (   ((index+1) < string.length())
+                          && (string.charAt(index) == '\\')
+                          && (stringQuotes != null)
+                          && (stringQuotes.indexOf(string.charAt(index+1)) >= 0)
+                         )
+                      {
+                        // quoted quote
+                        if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
+                        {
+                          buffer.append(string.charAt(index+1));
+                        }
+                        index+=2;
+                      }
+                      else
+                      {
+                        if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
+                        {
+                          buffer.append(string.charAt(index));
+                        }
+                        index++;
+                      }
+                    }
+
+                    // skip quote-char
+                    if (index < string.length())
+                    {
+                      index++;
+                    }
+
+                    // check for string quote
+                    stringQuote = getQuoteChar(string,index,formatToken,stringQuotes);
                   }
-                  index+=2;
+                  while (stringQuote != '\0');
                 }
                 else
                 {
-                  if ((formatToken.width == 0) || (buffer.length() < (formatToken.width-1)))
+                  if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
                   {
                     buffer.append(string.charAt(index));
                   }
                   index++;
                 }
               }
-
-              if (formatToken.enumClassName != null)
-              {
-                // enum class
-                try
-                {
-                  // find enum class
-                  Class enumClass = Class.forName(formatToken.enumClassName);
-                  if (!enumClass.isEnum())
-                  {
-                    return -1;
-                  }
-
-                  // convert to enum
-                  arguments[argumentIndex] = Enum.valueOf(enumClass,buffer.toString());
-                }
-                catch (ClassNotFoundException exception)
-                {
-//Dprintf.dprintf(""+exception);
-                  throw new Error("Enumeration class '"+formatToken.enumClassName+"' not found",exception);
-                }
-                catch (IllegalArgumentException exception)
-                {
-//Dprintf.dprintf(""+exception);
-                  return -1;
-                }
-              }
-              else
-              {
-                // store string
-                arguments[argumentIndex] = buffer.toString();
-              }
-              argumentIndex++;
-              break;
-            case 'p':
-            case 'n':
-              break;
-            case 'S':
+            }
+            arguments[argumentIndex] = buffer.toString();
+            argumentIndex++;
+            break;
+          case 'y':
+            {
               // get data
               buffer = new StringBuilder();
               while (   (index < string.length())
-                     && (formatToken.blankFlag || ((formatIndex >= format.length()) && formatToken.greedyFlag) || !Character.isSpaceChar(string.charAt(index)))
-                     && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
+                     && !Character.isSpaceChar(string.charAt(index))
                     )
               {
-                if (   ((index+1) < string.length())
-                    && (string.charAt(index) == '\\')
-                    && (stringQuotes != null)
-                    && (stringQuotes.indexOf(string.charAt(index+1)) >= 0)
-                   )
-                {
-                  // quoted quote
-                  if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
-                  {
-                    buffer.append(string.charAt(index+1));
-                  }
-                  index+=2;
-                }
-                else
-                {
-                  // check for string quote
-                  char stringQuote;
-
-                  stringQuote = getQuoteChar(string,index,formatToken,stringQuotes);
-                  if (stringQuote != '\0')
-                  {
-                    do
-                    {
-                      // skip quote-char
-                      index++;
-
-                      // get string
-                      while ((index < string.length()) && (string.charAt(index) != stringQuote))
-                      {
-                        if (   ((index+1) < string.length())
-                            && (string.charAt(index) == '\\')
-                            && (stringQuotes != null)
-                            && (stringQuotes.indexOf(string.charAt(index+1)) >= 0)
-                           )
-                        {
-                          // quoted quote
-                          if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
-                          {
-                            buffer.append(string.charAt(index+1));
-                          }
-                          index+=2;
-                        }
-                        else
-                        {
-                          if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
-                          {
-                            buffer.append(string.charAt(index));
-                          }
-                          index++;
-                        }
-                      }
-
-                      // skip quote-char
-                      if (index < string.length())
-                      {
-                        index++;
-                      }
-
-                      // check for string quote
-                      stringQuote = getQuoteChar(string,index,formatToken,stringQuotes);
-                    }
-                    while (stringQuote != '\0');
-                  }
-                  else
-                  {
-                    if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
-                    {
-                      buffer.append(string.charAt(index));
-                    }
-                    index++;
-                  }
-                }
+                buffer.append(string.charAt(index));
+                index++;
               }
-              arguments[argumentIndex] = buffer.toString();
-              argumentIndex++;
-              break;
-            case 'y':
+
+              // convert
+              boolean foundFlag = false;
+              i = 0;
+              while (!foundFlag && (i < trueStrings.length))
               {
-                // get data
-                buffer = new StringBuilder();
-                while (   (index < string.length())
-                       && !Character.isSpaceChar(string.charAt(index))
-                      )
+                if (trueStrings[i].contentEquals(buffer))
                 {
-                  buffer.append(string.charAt(index));
-                  index++;
+                  arguments[argumentIndex] = true;
+                  foundFlag = true;
                 }
-
-                // convert
-                boolean foundFlag = false;
-                i = 0;
-                while (!foundFlag && (i < trueStrings.length))
-                {
-                  if (trueStrings[i].contentEquals(buffer))
-                  {
-                    arguments[argumentIndex] = true;
-                    foundFlag = true;
-                  }
-                  i++;
-                }
-                i = 0;
-                while (!foundFlag && (i < falseStrings.length))
-                {
-                  if (falseStrings[i].contentEquals(buffer))
-                  {
-                    arguments[argumentIndex] = false;
-                    foundFlag = true;
-                  }
-                  i++;
-                }
-
-                if (!foundFlag)
-                {
-                  return -1;
-                }
-                argumentIndex++;
+                i++;
               }
-              break;
-            case '%':
-              if ((index >= string.length()) || (string.charAt(index) != '%'))
+              i = 0;
+              while (!foundFlag && (i < falseStrings.length))
+              {
+                if (falseStrings[i].contentEquals(buffer))
+                {
+                  arguments[argumentIndex] = false;
+                  foundFlag = true;
+                }
+                i++;
+              }
+
+              if (!foundFlag)
               {
                 return -1;
               }
-              index++;
-              break;
-            default:
+              argumentIndex++;
+            }
+            break;
+          case '%':
+            if ((index >= string.length()) || (string.charAt(index) != '%'))
+            {
               return -1;
-          }
-        }
-        else
-        {
-          if ((index >= string.length()) || (string.charAt(index) != format.charAt(formatIndex)))
-          {
+            }
+            index++;
+            break;
+          default:
             return -1;
-          }
+        }
+      }
+      else if (Character.isSpaceChar(format.charAt(formatIndex)))
+      {
+        // check if at least one space character
+        if ((index >= string.length()) || !Character.isSpaceChar(string.charAt(index)))
+        {
+          return -1;
+        }
+        index++;
+        formatIndex++;
+
+        // skip further spaces in line, format
+        while ((index < string.length()) && Character.isSpaceChar(string.charAt(index)))
+        {
           index++;
+        }
+        while ((formatIndex < format.length()) && Character.isSpaceChar(format.charAt(formatIndex)))
+        {
           formatIndex++;
         }
+      }
+      else
+      {
+        // skip spaces in line
+        while ((index < string.length()) && Character.isSpaceChar(string.charAt(index)))
+        {
+          index++;
+        }
+
+        // compare non-format characters
+        if ((index >= string.length()) || (string.charAt(index) != format.charAt(formatIndex)))
+        {
+          return -1;
+        }
+        index++;
+        formatIndex++;
       }
     }
 
@@ -1286,7 +1308,7 @@ public class StringParser
    */
   public static int parse(String string, int index, String format, Object arguments[])
   {
-    return parse(string,index,format,arguments,null);
+    return parse(string,index,format,arguments,(String)null);
   }
 
   /** parse string
@@ -1308,7 +1330,7 @@ public class StringParser
    */
   public static boolean parse(String string, String format, Object arguments[])
   {
-    return parse(string,format,arguments,null);
+    return parse(string,format,arguments,(String)null);
   }
 
   /** get quote char
