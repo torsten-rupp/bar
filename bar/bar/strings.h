@@ -772,8 +772,8 @@ String String_toLower(String string);
 String String_toUpper(String string);
 
 /***********************************************************************\
-* Name   : String_trim, String_trimRight, String_trimLeft
-* Purpose: trim string right/left
+* Name   : String_trim, String_trimBegin, String_trimEnd
+* Purpose: trim string begin/end
 * Input  : string - string
 *          chars  - chars to trim
 * Output : -
@@ -782,8 +782,8 @@ String String_toUpper(String string);
 \***********************************************************************/
 
 String String_trim(String string, const char *chars);
-String String_trimRight(String string, const char *chars);
-String String_trimLeft(String string, const char *chars);
+String String_trimBegin(String string, const char *chars);
+String String_trimEnd(String string, const char *chars);
 
 /***********************************************************************\
 * Name   : String_escape

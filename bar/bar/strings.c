@@ -4357,13 +4357,13 @@ String String_trim(String string, const char *chars)
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
-  String_trimRight(string,chars);
-  String_trimLeft(string,chars);
+  String_trimBegin(string,chars);
+  String_trimEnd(string,chars);
 
   return string;
 }
 
-String String_trimRight(String string, const char *chars)
+String String_trimBegin(String string, const char *chars)
 {
   ulong n;
 
@@ -4388,7 +4388,7 @@ String String_trimRight(String string, const char *chars)
   return string;
 }
 
-String String_trimLeft(String string, const char *chars)
+String String_trimEnd(String string, const char *chars)
 {
   ulong i,n;
 
