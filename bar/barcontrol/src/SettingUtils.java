@@ -15,6 +15,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.TYPE;
@@ -30,6 +31,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -84,467 +87,550 @@ interface SettingMigrate
   String value() default "";                     // section value
 }
 
-/** setting value adapter
- */
-abstract class SettingValueAdapter<String,Value>
-{
-  /** convert to value
-   * @param string string
-   * @return value
-   */
-  abstract public Value toValue(String string)throws Exception;
-
-  /** convert to string
-   * @param value value
-   * @return string
-   */
-  abstract public String toString(Value value) throws Exception;
-
-  /** check if equals
-   * @param value0,value1 values to compare
-   * @return true if value0==value1
-   */
-  public boolean equals(Value value0, Value value1)
-  {
-    return false;
-  }
-
-  /** migrate values
-   */
-  public void Xmigrate(Object value)
-  {
-  }
-}
-
-/** simple integer array
- */
-class SimpleIntegerArray
-{
-  public final int[] intArray;
-
-  /** create simple integer array
-   * @param int integer array
-   */
-  SimpleIntegerArray(int[] intArray)
-  {
-    this.intArray = intArray;
-  }
-
-  /** create simple integer array
-   */
-  SimpleIntegerArray()
-  {
-    this.intArray = null;
-  }
-
-  /** create simple integer array
-   * @param intList integer list
-   */
-  SimpleIntegerArray(ArrayList<Integer> intList)
-  {
-    this.intArray = new int[intList.size()];
-    for (int i = 0; i < intList.size(); i++)
-    {
-      this.intArray[i] = intList.get(i);
-    }
-  }
-
-  /** get integer
-   * @param index index (0..n-1)
-   * @return integer
-   */
-  public int get(int index)
-  {
-    return (index < intArray.length) ? intArray[index] : null;
-  }
-
-  /** get int array
-   * @return int array
-   */
-  public int[] get()
-  {
-    return intArray;
-  }
-
-  /** convert data to string
-   * @return string
-   */
-  public String toString()
-  {
-    StringBuilder buffer = new StringBuilder();
-    for (int i : intArray)
-    {
-      if (buffer.length() > 0) buffer.append(',');
-      buffer.append(Integer.toString(i));
-    }
-    return "Integers {"+buffer.toString()+"}";
-  }
-}
-
-/** config value adapter String <-> integer array
- */
-class SettingValueAdapterSimpleIntegerArray extends SettingValueAdapter<String,SimpleIntegerArray>
-{
-  /** convert to value
-   * @param string string
-   * @return value
-   */
-  public SimpleIntegerArray toValue(String string) throws Exception
-  {
-    StringTokenizer tokenizer = new StringTokenizer(string,",");
-    ArrayList<Integer> integerList = new ArrayList<Integer>();
-    while (tokenizer.hasMoreTokens())
-    {
-      integerList.add(Integer.parseInt(tokenizer.nextToken()));
-    }
-    return new SimpleIntegerArray(integerList);
-  }
-
-  /** convert to string
-   * @param value value
-   * @return string
-   */
-  public String toString(SimpleIntegerArray simpleIntegerArray) throws Exception
-  {
-    StringBuilder buffer = new StringBuilder();
-    for (int i : simpleIntegerArray.get())
-    {
-      if (buffer.length() > 0) buffer.append(',');
-      buffer.append(Integer.toString(i));
-    }
-    return buffer.toString();
-  }
-}
-
-/** long array
- */
-class SimpleLongArray
-{
-  public final long[] longArray;
-
-  /** create simple long array
-   * @param longArray long array
-   */
-  SimpleLongArray(long[] longArray)
-  {
-    this.longArray = longArray;
-  }
-
-  /** create simple long array
-   */
-  SimpleLongArray()
-  {
-    this.longArray = null;
-  }
-
-  /** create simple long array
-   * @param widthList with list
-   */
-  SimpleLongArray(ArrayList<Long> longList)
-  {
-    this.longArray = new long[longList.size()];
-    for (int i = 0; i < longList.size(); i++)
-    {
-      this.longArray[i] = longList.get(i);
-    }
-  }
-
-  /** get long
-   * @param index index (0..n-1)
-   * @return long
-   */
-  public long get(int index)
-  {
-    return (index < longArray.length) ? longArray[index] : null;
-  }
-
-  /** get long array
-   * @return long array
-   */
-  public long[] get()
-  {
-    return longArray;
-  }
-
-  /** convert data to string
-   * @return string
-   */
-  public String toString()
-  {
-    StringBuilder buffer = new StringBuilder();
-    for (long l : longArray)
-    {
-      if (buffer.length() > 0) buffer.append(',');
-      buffer.append(Long.toString(l));
-    }
-    return "Longs {"+buffer.toString()+"}";
-  }
-}
-
-/** config value adapter String <-> long array
- */
-class SettingValueAdapterSimpleLongArray extends SettingValueAdapter<String,SimpleLongArray>
-{
-  /** convert to value
-   * @param string string
-   * @return value
-   */
-  public SimpleLongArray toValue(String string) throws Exception
-  {
-    StringTokenizer tokenizer = new StringTokenizer(string,",");
-    ArrayList<Long> longList = new ArrayList<Long>();
-    while (tokenizer.hasMoreTokens())
-    {
-      longList.add(Long.parseLong(tokenizer.nextToken()));
-    }
-    return new SimpleLongArray(longList);
-  }
-
-  /** convert to string
-   * @param value value
-   * @return string
-   */
-  public String toString(SimpleLongArray simpleLongArray) throws Exception
-  {
-    StringBuilder buffer = new StringBuilder();
-    for (long l : simpleLongArray.get())
-    {
-      if (buffer.length() > 0) buffer.append(',');
-      buffer.append(Long.toString(l));
-    }
-    return buffer.toString();
-  }
-}
-
-/** double array
- */
-class SimpleDoubleArray
-{
-  public final double[] doubleArray;
-
-  /** create simple double array
-   * @param doubleArray double array
-   */
-  SimpleDoubleArray(double[] doubleArray)
-  {
-    this.doubleArray = doubleArray;
-  }
-
-  /** create simple double array
-   */
-  SimpleDoubleArray()
-  {
-    this.doubleArray = null;
-  }
-
-  /** create simple double array
-   * @param widthList with list
-   */
-  SimpleDoubleArray(ArrayList<Double> doubleList)
-  {
-    this.doubleArray = new double[doubleList.size()];
-    for (int i = 0; i < doubleList.size(); i++)
-    {
-      this.doubleArray[i] = doubleList.get(i);
-    }
-  }
-
-  /** get double
-   * @param index index (0..n-1)
-   * @return string
-   */
-  public double get(int index)
-  {
-    return (index < doubleArray.length) ? doubleArray[index] : null;
-  }
-
-  /** get double array
-   * @return double array
-   */
-  public double[] get()
-  {
-    return doubleArray;
-  }
-
-  /** convert data to string
-   * @return string
-   */
-  public String toString()
-  {
-    StringBuilder buffer = new StringBuilder();
-    for (double d : doubleArray)
-    {
-      if (buffer.length() > 0) buffer.append(',');
-      buffer.append(Double.toString(d));
-    }
-    return "Doubles {"+buffer.toString()+"}";
-  }
-}
-
-/** config value adapter String <-> string array
- */
-class SettingValueAdapterSimpleDoubleArray extends SettingValueAdapter<String,SimpleDoubleArray>
-{
-  /** convert to value
-   * @param string string
-   * @return value
-   */
-  public SimpleDoubleArray toValue(String string) throws Exception
-  {
-    StringTokenizer tokenizer = new StringTokenizer(string,",");
-    ArrayList<Double> doubleList = new ArrayList<Double>();
-    while (tokenizer.hasMoreTokens())
-    {
-      doubleList.add(Double.parseDouble(tokenizer.nextToken()));
-    }
-    return new SimpleDoubleArray(doubleList);
-  }
-
-  /** convert to string
-   * @param value value
-   * @return string
-   */
-  public String toString(SimpleDoubleArray simpleDoubleArray) throws Exception
-  {
-    StringBuilder buffer = new StringBuilder();
-    for (double d : simpleDoubleArray.get())
-    {
-      if (buffer.length() > 0) buffer.append(',');
-      buffer.append(Double.toString(d));
-    }
-    return buffer.toString();
-  }
-}
-
-/** simple string array
- */
-class SimpleStringArray
-{
-  public final String[] stringArray;
-
-  /** create simple string array
-   * @param width width array
-   */
-  SimpleStringArray(String[] stringArray)
-  {
-    this.stringArray = stringArray;
-  }
-
-  /** create simple string array
-   */
-  SimpleStringArray()
-  {
-    this.stringArray = null;
-  }
-
-  /** create simple string array
-   * @param widthList with list
-   */
-  SimpleStringArray(ArrayList<String> stringList)
-  {
-    this.stringArray = stringList.toArray(new String[stringList.size()]);
-  }
-
-  /** get string
-   * @param index index (0..n-1)
-   * @return string or null
-   */
-  public String get(int index)
-  {
-    return (index < stringArray.length) ? stringArray[index] : null;
-  }
-
-  /** get string array
-   * @return string array
-   */
-  public String[] get()
-  {
-    return stringArray;
-  }
-
-  /** get mapped indizes
-   * @return indizes
-   */
-  public int[] getMap(String strings[])
-  {
-    int indizes[] = new int[strings.length];
-    for (int i = 0; i < strings.length; i++)
-    {
-      indizes[i] = i;
-    }
-    if (stringArray != null)
-    {
-      for (int i = 0; i < stringArray.length; i++)
-      {
-        int j = StringUtils.indexOf(strings,stringArray[i]);
-        if (j >= 0)
-        {
-          indizes[i] = j;
-        }
-      }
-    }
-
-    return indizes;
-  }
-
-  /** convert data to string
-   * @return string
-   */
-  public String toString()
-  {
-    StringBuilder buffer = new StringBuilder();
-    for (String string : stringArray)
-    {
-      if (buffer.length() > 0) buffer.append(',');
-      buffer.append(string);
-    }
-    return "Strings {"+buffer.toString()+"}";
-  }
-}
-
-/** config value adapter String <-> string array
- */
-class SettingValueAdapterSimpleStringArray extends SettingValueAdapter<String,SimpleStringArray>
-{
-  /** convert to value
-   * @param string string
-   * @return value
-   */
-  public SimpleStringArray toValue(String string) throws Exception
-  {
-    StringTokenizer tokenizer = new StringTokenizer(string,",");
-    ArrayList<String> stringList = new ArrayList<String>();
-    while (tokenizer.hasMoreTokens())
-    {
-      stringList.add(tokenizer.nextToken());
-    }
-    return new SimpleStringArray(stringList);
-  }
-
-  /** convert to string
-   * @param value value
-   * @return string
-   */
-  public String toString(SimpleStringArray simpleStringArray) throws Exception
-  {
-    StringBuilder buffer = new StringBuilder();
-    String strings[] = simpleStringArray.get();
-    if (strings != null)
-    {
-      for (String string : strings)
-      {
-        if (buffer.length() > 0) buffer.append(',');
-        buffer.append((string != null) ? string : "");
-      }
-    }
-    return buffer.toString();
-  }
-}
-
 /** setting utils
  */
 public class SettingUtils
 {
+  /** value set
+   */
+  static class ValueSet<T> extends HashMap<String,T>
+  {
+    /** create value set
+     * @param defaultValue default value
+     */
+    ValueSet(T defaultValue)
+    {
+      super();
+      super.put("",defaultValue);
+    }
+
+    /** check if value exists
+     * @param name name
+     * @return true iff value exists
+     */
+    public boolean contains(String name)
+    {
+      return super.containsKey(name);
+    }
+
+    /** get default value
+     * @param defaultValue default value
+     * @return default value
+     */
+    public T get()
+    {
+      return super.get("");
+    }
+
+    /** set default value
+     * @param defaultValue default value
+     */
+    public void set(T defaultValue)
+    {
+      super.put("",defaultValue);
+    }
+
+    /** get value
+     * @param name name
+     * @return value or default value
+     */
+    public T get(String name)
+    {
+      return contains(name) ? super.get(name) : super.get("");
+    }
+
+    /** set value
+     * @param name name
+     * @param value value
+     */
+    public void set(String name, T value)
+    {
+      super.put(name,value);
+    }
+
+    /** get sorted names including default
+     * @return names
+     */
+    public String[] names()
+    {
+      HashSet<String> nameSet = new HashSet<String>();
+      for (String key : keySet())
+      {
+        nameSet.add(key);
+      }
+
+      String[] names = nameSet.toArray(new String[nameSet.size()]);
+      Arrays.sort(names);
+
+      return names;
+    }
+
+    /** get default value as string
+     * @return string
+     */
+    public String toString()
+    {
+      return get("").toString();
+    }
+  }
+
+  /** value adapter
+   */
+  abstract static class ValueAdapter<String,Value>
+  {
+    /** convert to value
+     * @param string string
+     * @return value
+     */
+    abstract public Value toValue(String string)throws Exception;
+
+    /** convert to string
+     * @param value value
+     * @return string
+     */
+    abstract public String toString(Value value) throws Exception;
+
+    /** check if equals
+     * @param value0,value1 values to compare
+     * @return true if value0==value1
+     */
+    public boolean equals(Value value0, Value value1)
+    {
+      return false;
+    }
+
+    /** migrate values
+     */
+    public void Xmigrate(Object value)
+    {
+    }
+  }
+
+  /** simple integer array
+   */
+  static class SimpleIntegerArray
+  {
+    public final int[] intArray;
+
+    /** create simple integer array
+     * @param int integer array
+     */
+    SimpleIntegerArray(int[] intArray)
+    {
+      this.intArray = intArray;
+    }
+
+    /** create simple integer array
+     */
+    SimpleIntegerArray()
+    {
+      this.intArray = null;
+    }
+
+    /** create simple integer array
+     * @param intList integer list
+     */
+    SimpleIntegerArray(ArrayList<Integer> intList)
+    {
+      this.intArray = new int[intList.size()];
+      for (int i = 0; i < intList.size(); i++)
+      {
+        this.intArray[i] = intList.get(i);
+      }
+    }
+
+    /** get integer
+     * @param index index (0..n-1)
+     * @return integer
+     */
+    public int get(int index)
+    {
+      return (index < intArray.length) ? intArray[index] : null;
+    }
+
+    /** get int array
+     * @return int array
+     */
+    public int[] get()
+    {
+      return intArray;
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      StringBuilder buffer = new StringBuilder();
+      for (int i : intArray)
+      {
+        if (buffer.length() > 0) buffer.append(',');
+        buffer.append(Integer.toString(i));
+      }
+      return "Integers {"+buffer.toString()+"}";
+    }
+  }
+
+  /** config value adapter String <-> integer array
+   */
+  static class ValueAdapterSimpleIntegerArray extends ValueAdapter<String,SimpleIntegerArray>
+  {
+    /** convert to value
+     * @param string string
+     * @return value
+     */
+    public SimpleIntegerArray toValue(String string) throws Exception
+    {
+      StringTokenizer tokenizer = new StringTokenizer(string,",");
+      ArrayList<Integer> integerList = new ArrayList<Integer>();
+      while (tokenizer.hasMoreTokens())
+      {
+        integerList.add(Integer.parseInt(tokenizer.nextToken()));
+      }
+      return new SimpleIntegerArray(integerList);
+    }
+
+    /** convert to string
+     * @param value value
+     * @return string
+     */
+    public String toString(SimpleIntegerArray simpleIntegerArray) throws Exception
+    {
+      StringBuilder buffer = new StringBuilder();
+      for (int i : simpleIntegerArray.get())
+      {
+        if (buffer.length() > 0) buffer.append(',');
+        buffer.append(Integer.toString(i));
+      }
+      return buffer.toString();
+    }
+  }
+
+  /** long array
+   */
+  static class SimpleLongArray
+  {
+    public final long[] longArray;
+
+    /** create simple long array
+     * @param longArray long array
+     */
+    SimpleLongArray(long[] longArray)
+    {
+      this.longArray = longArray;
+    }
+
+    /** create simple long array
+     */
+    SimpleLongArray()
+    {
+      this.longArray = null;
+    }
+
+    /** create simple long array
+     * @param widthList with list
+     */
+    SimpleLongArray(ArrayList<Long> longList)
+    {
+      this.longArray = new long[longList.size()];
+      for (int i = 0; i < longList.size(); i++)
+      {
+        this.longArray[i] = longList.get(i);
+      }
+    }
+
+    /** get long
+     * @param index index (0..n-1)
+     * @return long
+     */
+    public long get(int index)
+    {
+      return (index < longArray.length) ? longArray[index] : null;
+    }
+
+    /** get long array
+     * @return long array
+     */
+    public long[] get()
+    {
+      return longArray;
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      StringBuilder buffer = new StringBuilder();
+      for (long l : longArray)
+      {
+        if (buffer.length() > 0) buffer.append(',');
+        buffer.append(Long.toString(l));
+      }
+      return "Longs {"+buffer.toString()+"}";
+    }
+  }
+
+  /** config value adapter String <-> long array
+   */
+  static class ValueAdapterSimpleLongArray extends ValueAdapter<String,SimpleLongArray>
+  {
+    /** convert to value
+     * @param string string
+     * @return value
+     */
+    public SimpleLongArray toValue(String string) throws Exception
+    {
+      StringTokenizer tokenizer = new StringTokenizer(string,",");
+      ArrayList<Long> longList = new ArrayList<Long>();
+      while (tokenizer.hasMoreTokens())
+      {
+        longList.add(Long.parseLong(tokenizer.nextToken()));
+      }
+      return new SimpleLongArray(longList);
+    }
+
+    /** convert to string
+     * @param value value
+     * @return string
+     */
+    public String toString(SimpleLongArray simpleLongArray) throws Exception
+    {
+      StringBuilder buffer = new StringBuilder();
+      for (long l : simpleLongArray.get())
+      {
+        if (buffer.length() > 0) buffer.append(',');
+        buffer.append(Long.toString(l));
+      }
+      return buffer.toString();
+    }
+  }
+
+  /** double array
+   */
+  static class SimpleDoubleArray
+  {
+    public final double[] doubleArray;
+
+    /** create simple double array
+     * @param doubleArray double array
+     */
+    SimpleDoubleArray(double[] doubleArray)
+    {
+      this.doubleArray = doubleArray;
+    }
+
+    /** create simple double array
+     */
+    SimpleDoubleArray()
+    {
+      this.doubleArray = null;
+    }
+
+    /** create simple double array
+     * @param widthList with list
+     */
+    SimpleDoubleArray(ArrayList<Double> doubleList)
+    {
+      this.doubleArray = new double[doubleList.size()];
+      for (int i = 0; i < doubleList.size(); i++)
+      {
+        this.doubleArray[i] = doubleList.get(i);
+      }
+    }
+
+    /** get double
+     * @param index index (0..n-1)
+     * @return string
+     */
+    public double get(int index)
+    {
+      return (index < doubleArray.length) ? doubleArray[index] : null;
+    }
+
+    /** get double array
+     * @return double array
+     */
+    public double[] get()
+    {
+      return doubleArray;
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      StringBuilder buffer = new StringBuilder();
+      for (double d : doubleArray)
+      {
+        if (buffer.length() > 0) buffer.append(',');
+        buffer.append(Double.toString(d));
+      }
+      return "Doubles {"+buffer.toString()+"}";
+    }
+  }
+
+  /** config value adapter String <-> string array
+   */
+  static class ValueAdapterSimpleDoubleArray extends ValueAdapter<String,SimpleDoubleArray>
+  {
+    /** convert to value
+     * @param string string
+     * @return value
+     */
+    public SimpleDoubleArray toValue(String string) throws Exception
+    {
+      StringTokenizer tokenizer = new StringTokenizer(string,",");
+      ArrayList<Double> doubleList = new ArrayList<Double>();
+      while (tokenizer.hasMoreTokens())
+      {
+        doubleList.add(Double.parseDouble(tokenizer.nextToken()));
+      }
+      return new SimpleDoubleArray(doubleList);
+    }
+
+    /** convert to string
+     * @param value value
+     * @return string
+     */
+    public String toString(SimpleDoubleArray simpleDoubleArray) throws Exception
+    {
+      StringBuilder buffer = new StringBuilder();
+      for (double d : simpleDoubleArray.get())
+      {
+        if (buffer.length() > 0) buffer.append(',');
+        buffer.append(Double.toString(d));
+      }
+      return buffer.toString();
+    }
+  }
+
+  /** simple string array
+   */
+  static class SimpleStringArray
+  {
+    public final String[] stringArray;
+
+    /** create simple string array
+     * @param width width array
+     */
+    SimpleStringArray(String[] stringArray)
+    {
+      this.stringArray = stringArray;
+    }
+
+    /** create simple string array
+     */
+    SimpleStringArray()
+    {
+      this.stringArray = null;
+    }
+
+    /** create simple string array
+     * @param widthList with list
+     */
+    SimpleStringArray(ArrayList<String> stringList)
+    {
+      this.stringArray = stringList.toArray(new String[stringList.size()]);
+    }
+
+    /** get string
+     * @param index index (0..n-1)
+     * @return string or null
+     */
+    public String get(int index)
+    {
+      return (index < stringArray.length) ? stringArray[index] : null;
+    }
+
+    /** get string array
+     * @return string array
+     */
+    public String[] get()
+    {
+      return stringArray;
+    }
+
+    /** get mapped indizes
+     * @return indizes
+     */
+    public int[] getMap(String strings[])
+    {
+      int indizes[] = new int[strings.length];
+      for (int i = 0; i < strings.length; i++)
+      {
+        indizes[i] = i;
+      }
+      if (stringArray != null)
+      {
+        for (int i = 0; i < stringArray.length; i++)
+        {
+          int j = StringUtils.indexOf(strings,stringArray[i]);
+          if (j >= 0)
+          {
+            indizes[i] = j;
+          }
+        }
+      }
+
+      return indizes;
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      StringBuilder buffer = new StringBuilder();
+      for (String string : stringArray)
+      {
+        if (buffer.length() > 0) buffer.append(',');
+        buffer.append(string);
+      }
+      return "Strings {"+buffer.toString()+"}";
+    }
+  }
+
+  /** config value adapter String <-> string array
+   */
+  static class ValueAdapterSimpleStringArray extends ValueAdapter<String,SimpleStringArray>
+  {
+    /** convert to value
+     * @param string string
+     * @return value
+     */
+    public SimpleStringArray toValue(String string) throws Exception
+    {
+      StringTokenizer tokenizer = new StringTokenizer(string,",");
+      ArrayList<String> stringList = new ArrayList<String>();
+      while (tokenizer.hasMoreTokens())
+      {
+        stringList.add(tokenizer.nextToken());
+      }
+      return new SimpleStringArray(stringList);
+    }
+
+    /** convert to string
+     * @param value value
+     * @return string
+     */
+    public String toString(SimpleStringArray simpleStringArray) throws Exception
+    {
+      StringBuilder buffer = new StringBuilder();
+      String strings[] = simpleStringArray.get();
+      if (strings != null)
+      {
+        for (String string : strings)
+        {
+          if (buffer.length() > 0) buffer.append(',');
+          buffer.append((string != null) ? string : "");
+        }
+      }
+      return buffer.toString();
+    }
+  }
+
   // --------------------------- constants --------------------------------
 
   // --------------------------- variables --------------------------------
@@ -573,7 +659,10 @@ public class SettingUtils
         // read file
         int      lineNb = 0;
         String   line;
-        Object[] data = new Object[2];
+        Object[] data = new Object[3];
+        String   name;
+        String   valueSetName;
+        String   string;
         while ((line = input.readLine()) != null)
         {
           line = line.trim();
@@ -586,386 +675,491 @@ public class SettingUtils
           }
 
           // parse
-          if (StringParser.parse(line,"%s = % s",data))
+          if      (StringParser.parse(line,"%s[% s]=% s",data))
           {
-            String name   = (String)data[0];
-            String string = (String)data[1];
+            name         = (String)data[0];
+            valueSetName = (String)data[1];
+            string       = (String)data[2];
+          }
+          else if (StringParser.parse(line,"%s=% s",data))
+          {
+            name         = (String)data[0];
+            valueSetName = null;
+            string       = (String)data[1];
+          }
+          else
+          {
+            BARControl.printWarning("Unknown configuration value '%s' in line %d - skipped",line,lineNb);
+            continue;
+          }
 
-            for (Class clazz : settingClasses)
+          // store value
+          for (Class clazz : settingClasses)
+          {
+            for (Field field : clazz.getDeclaredFields())
             {
-              for (Field field : clazz.getDeclaredFields())
+              for (Annotation annotation : field.getDeclaredAnnotations())
               {
-                for (Annotation annotation : field.getDeclaredAnnotations())
+                if (annotation instanceof SettingValue)
                 {
-                  if (annotation instanceof SettingValue)
-                  {
-                    SettingValue settingValue = (SettingValue)annotation;
+                  SettingValue settingValue = (SettingValue)annotation;
 
-                    if (((!settingValue.name().isEmpty()) ? settingValue.name() : field.getName()).equals(name))
+                  if (((!settingValue.name().isEmpty()) ? settingValue.name() : field.getName()).equals(name))
+                  {
+                    try
                     {
-                      try
+                      Class type = field.getType();
+                      if      (type.isArray())
                       {
-                        Class type = field.getType();
-                        if      (type.isArray())
+                        // array type
+                        type = type.getComponentType();
+                        if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
                         {
-                          // array type
-                          type = type.getComponentType();
-                          if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
+                          // instantiate config adapter class
+                          ValueAdapter settingValueAdapter;
+                          Class enclosingClass = settingValue.type().getEnclosingClass();
+                          if (   (enclosingClass == Settings.class)
+                              && settingValue.type().isMemberClass()
+                              && !Modifier.isStatic(settingValue.type().getModifiers())
+                             )
+                          {
+                            Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
+                            settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
+                          }
+                          else
+                          {
+                            settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
+                          }
+
+                          // convert to value
+                          Object value = settingValueAdapter.toValue(string);
+                          field.set(null,addArrayUniq((Object[])field.get(null),value,settingValueAdapter));
+                        }
+                        else if (type == int.class)
+                        {
+                          int value = Integer.parseInt(string);
+                          field.set(null,addArrayUniq((int[])field.get(null),value));
+                        }
+                        else if (type == Integer.class)
+                        {
+                          int value = Integer.parseInt(string);
+                          field.set(null,addArrayUniq((Integer[])field.get(null),value));
+                        }
+                        else if (type == long.class)
+                        {
+                          long value = Long.parseLong(string);
+                          field.set(null,addArrayUniq((long[])field.get(null),value));
+                        }
+                        else if (type == Long.class)
+                        {
+                          long value = Long.parseLong(string);
+                          field.set(null,addArrayUniq((Long[])field.get(null),value));
+                        }
+                        else if (type == double.class)
+                        {
+                          double value = Double.parseDouble(string);
+                          field.set(null,addArrayUniq((double[])field.get(null),value));
+                        }
+                        else if (type == Double.class)
+                        {
+                          double value = Double.parseDouble(string);
+                          field.set(null,addArrayUniq((Double[])field.get(null),value));
+                        }
+                        else if (type == boolean.class)
+                        {
+                          boolean value = StringUtils.parseBoolean(string);
+                          field.set(null,addArrayUniq((boolean[])field.get(null),value));
+                        }
+                        else if (type == Boolean.class)
+                        {
+                          boolean value = StringUtils.parseBoolean(string);
+                          field.set(null,addArrayUniq((Boolean[])field.get(null),value));
+                        }
+                        else if (type == String.class)
+                        {
+                          field.set(null,addArray((String[])field.get(null),StringUtils.unescape(string)));
+                        }
+                        else if (type == EnumSet.class)
+                        {
+                          field.set(null,addArrayUniq((EnumSet[])field.get(null),StringUtils.parseEnumSet(type,string)));
+                        }
+                        else if (type.isEnum())
+                        {
+                          field.set(null,addArrayUniq((Enum[])field.get(null),StringUtils.parseEnum(type,string)));
+                        }
+                        else
+                        {
+Dprintf.dprintf("field.getType()=%s",type);
+                        }
+                      }
+                      else if (type == HashSet.class)
+                      {
+                        type = type.getComponentType();
+                        if (type != null)
+                        {
+                          if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
                           {
                             // instantiate config adapter class
-                            SettingValueAdapter settingValueAdapter;
+                            ValueAdapter settingValueAdapter;
                             Class enclosingClass = settingValue.type().getEnclosingClass();
-                            if (enclosingClass == Settings.class)
+                            if (   (enclosingClass == Settings.class)
+                                && settingValue.type().isMemberClass()
+                                && !Modifier.isStatic(settingValue.type().getModifiers())
+                               )
                             {
                               Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
-                              settingValueAdapter = (SettingValueAdapter)constructor.newInstance(new Settings());
+                              settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
                             }
                             else
                             {
-                              settingValueAdapter = (SettingValueAdapter)settingValue.type().newInstance();
+                              settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
                             }
 
                             // convert to value
                             Object value = settingValueAdapter.toValue(string);
-                            field.set(null,addArrayUniq((Object[])field.get(null),value,settingValueAdapter));
-                          }
-                          else if (type == int.class)
-                          {
-                            int value = Integer.parseInt(string);
-                            field.set(null,addArrayUniq((int[])field.get(null),value));
+                            HashSet<Object> hashSet = (HashSet<Object>)field.get(null);
+                            hashSet.add(value);
                           }
                           else if (type == Integer.class)
                           {
                             int value = Integer.parseInt(string);
-                            field.set(null,addArrayUniq((Integer[])field.get(null),value));
-                          }
-                          else if (type == long.class)
-                          {
-                            long value = Long.parseLong(string);
-                            field.set(null,addArrayUniq((long[])field.get(null),value));
+                            HashSet<Integer> hashSet = (HashSet<Integer>)field.get(null);
+                            hashSet.add(value);
                           }
                           else if (type == Long.class)
                           {
                             long value = Long.parseLong(string);
-                            field.set(null,addArrayUniq((Long[])field.get(null),value));
-                          }
-                          else if (type == double.class)
-                          {
-                            double value = Double.parseDouble(string);
-                            field.set(null,addArrayUniq((double[])field.get(null),value));
-                          }
-                          else if (type == Double.class)
-                          {
-                            double value = Double.parseDouble(string);
-                            field.set(null,addArrayUniq((Double[])field.get(null),value));
-                          }
-                          else if (type == boolean.class)
-                          {
-                            boolean value = StringUtils.parseBoolean(string);
-                            field.set(null,addArrayUniq((boolean[])field.get(null),value));
+                            HashSet<Long> hashSet = (HashSet<Long>)field.get(null);
+                            hashSet.add(value);
                           }
                           else if (type == Boolean.class)
                           {
                             boolean value = StringUtils.parseBoolean(string);
-                            field.set(null,addArrayUniq((Boolean[])field.get(null),value));
+                            HashSet<Boolean> hashSet = (HashSet<Boolean>)field.get(null);
+                            hashSet.add(value);
                           }
                           else if (type == String.class)
                           {
-                            field.set(null,addArray((String[])field.get(null),StringUtils.unescape(string)));
-                          }
-                          else if (type == EnumSet.class)
-                          {
-                            field.set(null,addArrayUniq((EnumSet[])field.get(null),StringUtils.parseEnumSet(type,string)));
+                            String value = StringUtils.unescape(string);
+                            HashSet<String> hashSet = (HashSet<String>)field.get(null);
+                            hashSet.add(value);
                           }
                           else if (type.isEnum())
                           {
-                            field.set(null,addArrayUniq((Enum[])field.get(null),StringUtils.parseEnum(type,string)));
-                          }
-                          else
-                          {
-Dprintf.dprintf("field.getType()=%s",type);
-                          }
-                        }
-                        else if (Set.class.isAssignableFrom(type))
-                        {
-                          // Set type
-                          Class<?> setType = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
-
-                          if (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
-                          {
-                            // instantiate config adapter class
-                            SettingValueAdapter settingValueAdapter;
-                            Class enclosingClass = settingValue.type().getEnclosingClass();
-                            if (enclosingClass == Settings.class)
-                            {
-                              Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
-                              settingValueAdapter = (SettingValueAdapter)constructor.newInstance(new Settings());
-                            }
-                            else
-                            {
-                              settingValueAdapter = (SettingValueAdapter)settingValue.type().newInstance();
-                            }
-
-                            // convert to value
-                            Object value = settingValueAdapter.toValue(string);
-                            ((Set)field.get(null)).add(value);
-                          }
-                          else if (setType == int.class)
-                          {
-                            int value = Integer.parseInt(string);
-                            ((Set)field.get(null)).add(value);
-                          }
-                          else if (setType == Integer.class)
-                          {
-                            int value = Integer.parseInt(string);
-                            ((Set)field.get(null)).add(value);
-                          }
-                          else if (setType == long.class)
-                          {
-                            long value = Long.parseLong(string);
-                            ((Set)field.get(null)).add(value);
-                          }
-                          else if (setType == Long.class)
-                          {
-                            long value = Long.parseLong(string);
-                            ((Set)field.get(null)).add(value);
-                          }
-                          else if (setType == double.class)
-                          {
-                            double value = Double.parseDouble(string);
-                            ((Set)field.get(null)).add(value);
-                          }
-                          else if (setType == Long.class)
-                          {
-                            double value = Double.parseDouble(string);
-                            ((Set)field.get(null)).add(value);
-                          }
-                          else if (setType == boolean.class)
-                          {
-                            boolean value = StringUtils.parseBoolean(string);
-                            ((Set)field.get(null)).add(value);
-                          }
-                          else if (setType == Boolean.class)
-                          {
-                            boolean value = StringUtils.parseBoolean(string);
-                            ((Set)field.get(null)).add(value);
-                          }
-                          else if (setType == String.class)
-                          {
-                            ((Set)field.get(null)).add(StringUtils.unescape(string));
+                            Enum value = StringUtils.parseEnum(type,string);
+                            HashSet<Enum> hashSet = (HashSet<Enum>)field.get(null);
+                            hashSet.add(value);
                           }
                           else if (type == EnumSet.class)
                           {
-                            ((Set)field.get(null)).clear();
-                            Iterator iterator = StringUtils.parseEnumSet(setType,string).iterator();
-                            while (iterator.hasNext())
-                            {
-                              ((Set)field.get(null)).add(iterator.next());
-                            }
-                          }
-                          else if (setType.isEnum())
-                          {
-//Dprintf.dprintf("type=%s",type);
-//Dprintf.dprintf("setType=%s",setType);
-                            ((Set)field.get(null)).add(StringUtils.parseEnum(setType,string));
-                          }
-                          else
-                          {
-                            throw new Error(String.format("%s: Set without value adapter %s",field,setType));
-                          }
-                        }
-                        else if (List.class.isAssignableFrom(type))
-                        {
-                          // List type
-                          Class<?> listType = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
-
-                          if (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
-                          {
-                            // instantiate config adapter class
-                            SettingValueAdapter settingValueAdapter;
-                            Class enclosingClass = settingValue.type().getEnclosingClass();
-                            if (enclosingClass == Settings.class)
-                            {
-                              Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
-                              settingValueAdapter = (SettingValueAdapter)constructor.newInstance(new Settings());
-                            }
-                            else
-                            {
-                              settingValueAdapter = (SettingValueAdapter)settingValue.type().newInstance();
-                            }
-
-                            // convert to value
-                            Object value = settingValueAdapter.toValue(string);
-                            ((List)field.get(null)).add(value);
-                          }
-                          else if (listType == int.class)
-                          {
-                            int value = Integer.parseInt(string);
-                            ((List)field.get(null)).add(value);
-                          }
-                          else if (listType == Integer.class)
-                          {
-                            int value = Integer.parseInt(string);
-                            ((List)field.get(null)).add(value);
-                          }
-                          else if (listType == long.class)
-                          {
-                            long value = Long.parseLong(string);
-                            ((List)field.get(null)).add(value);
-                          }
-                          else if (listType == Long.class)
-                          {
-                            long value = Long.parseLong(string);
-                            ((List)field.get(null)).add(value);
-                          }
-                          else if (listType == double.class)
-                          {
-                            double value = Double.parseDouble(string);
-                            ((List)field.get(null)).add(value);
-                          }
-                          else if (listType == Long.class)
-                          {
-                            double value = Double.parseDouble(string);
-                            ((List)field.get(null)).add(value);
-                          }
-                          else if (listType == boolean.class)
-                          {
-                            boolean value = StringUtils.parseBoolean(string);
-                            ((List)field.get(null)).add(value);
-                          }
-                          else if (listType == Boolean.class)
-                          {
-                            boolean value = StringUtils.parseBoolean(string);
-                            ((List)field.get(null)).add(value);
-                          }
-                          else if (listType == String.class)
-                          {
-                            ((List)field.get(null)).add(StringUtils.unescape(string));
-                          }
-                          else if (type == EnumSet.class)
-                          {
-                            ((Set)field.get(null)).clear();
-                            Iterator iterator = StringUtils.parseEnumSet(listType,string).iterator();
-                            while (iterator.hasNext())
-                            {
-                              ((List)field.get(null)).add(iterator.next());
-                            }
-                          }
-                          else if (listType.isEnum())
-                          {
-                            ((List)field.get(null)).add(StringUtils.parseEnum(type,string));
-                          }
-                          else
-                          {
-                            throw new Error(String.format("%s: List without value adapter %s",field,listType));
+                            EnumSet value = StringUtils.parseEnumSet(type,string);
+                            HashSet<EnumSet> hashSet = (HashSet<EnumSet>)field.get(null);
+                            hashSet.add(value);
                           }
                         }
                         else
                         {
-                          // primitiv type
-                          if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
-                          {
-                            // instantiate config adapter class
-                            SettingValueAdapter settingValueAdapter;
-                            Class enclosingClass = settingValue.type().getEnclosingClass();
-                            if (enclosingClass == Settings.class)
-                            {
-                              Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
-                              settingValueAdapter = (SettingValueAdapter)constructor.newInstance(new Settings());
-                            }
-                            else
-                            {
-                              settingValueAdapter = (SettingValueAdapter)settingValue.type().newInstance();
-                            }
+Dprintf.dprintf("field.getType()=null");
+                        }
+                      }
+                      else if (type == ValueSet.class)
+                      {
+                        String value = StringUtils.unescape(string);
+                        ValueSet valueSet = (ValueSet)field.get(null);
+                        if (valueSetName != null)
+                        {
+                          valueSet.put(valueSetName,value);
+                        }
+                        else
+                        {
+                          valueSet.set(value);
+                        }
+                      }
+                      else if (Set.class.isAssignableFrom(type))
+                      {
+                        // Set type
+                        Class<?> setType = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
 
-                            // convert to value
-                            Object value = settingValueAdapter.toValue(string);
-                            field.set(null,value);
-                          }
-                          else if (type == int.class)
+                        if (ValueAdapter.class.isAssignableFrom(settingValue.type()))
+                        {
+                          // instantiate config adapter class
+                          ValueAdapter settingValueAdapter;
+                          Class enclosingClass = settingValue.type().getEnclosingClass();
+                          if (   (enclosingClass == Settings.class)
+                              && settingValue.type().isMemberClass()
+                              && !Modifier.isStatic(settingValue.type().getModifiers())
+                             )
                           {
-                            int value = Integer.parseInt(string);
-                            field.setInt(null,value);
-                          }
-                          else if (type == Integer.class)
-                          {
-                            int value = Integer.parseInt(string);
-                            field.set(null,new Integer(value));
-                          }
-                          else if (type == long.class)
-                          {
-                            long value = Long.parseLong(string);
-                            field.setLong(null,value);
-                          }
-                          else if (type == Long.class)
-                          {
-                            long value = Long.parseLong(string);
-                            field.set(null,new Long(value));
-                          }
-                          else if (type == double.class)
-                          {
-                            double value = Double.parseDouble(string);
-                            field.setDouble(null,value);
-                          }
-                          else if (type == Double.class)
-                          {
-                            double value = Double.parseDouble(string);
-                            field.set(null,new Double(value));
-                          }
-                          else if (type == boolean.class)
-                          {
-                            boolean value = StringUtils.parseBoolean(string);
-                            field.setBoolean(null,value);
-                          }
-                          else if (type == Boolean.class)
-                          {
-                            boolean value = StringUtils.parseBoolean(string);
-                            field.set(null,new Boolean(value));
-                          }
-                          else if (type == String.class)
-                          {
-                            field.set(null,StringUtils.unescape(string));
-                          }
-                          else if (type == EnumSet.class)
-                          {
-                            Class enumClass = settingValue.type();
-                            if (!enumClass.isEnum())
-                            {
-                              throw new Error(enumClass+" is not an enum class!");
-                            }
-                            field.set(null,StringUtils.parseEnumSet(enumClass,string));
-                          }
-                          else if (type.isEnum())
-                          {
-                            field.set(null,StringUtils.parseEnum(type,string));
+                            Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
+                            settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
                           }
                           else
                           {
-Dprintf.dprintf("field.getType()=%s",type);
+                            settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
+                          }
+
+                          // convert to value
+                          Object value = settingValueAdapter.toValue(string);
+                          ((Set)field.get(null)).add(value);
+                        }
+                        else if (setType == int.class)
+                        {
+                          int value = Integer.parseInt(string);
+                          ((Set)field.get(null)).add(value);
+                        }
+                        else if (setType == Integer.class)
+                        {
+                          int value = Integer.parseInt(string);
+                          ((Set)field.get(null)).add(value);
+                        }
+                        else if (setType == long.class)
+                        {
+                          long value = Long.parseLong(string);
+                          ((Set)field.get(null)).add(value);
+                        }
+                        else if (setType == Long.class)
+                        {
+                          long value = Long.parseLong(string);
+                          ((Set)field.get(null)).add(value);
+                        }
+                        else if (setType == double.class)
+                        {
+                          double value = Double.parseDouble(string);
+                          ((Set)field.get(null)).add(value);
+                        }
+                        else if (setType == Long.class)
+                        {
+                          double value = Double.parseDouble(string);
+                          ((Set)field.get(null)).add(value);
+                        }
+                        else if (setType == boolean.class)
+                        {
+                          boolean value = StringUtils.parseBoolean(string);
+                          ((Set)field.get(null)).add(value);
+                        }
+                        else if (setType == Boolean.class)
+                        {
+                          boolean value = StringUtils.parseBoolean(string);
+                          ((Set)field.get(null)).add(value);
+                        }
+                        else if (setType == String.class)
+                        {
+                          ((Set)field.get(null)).add(StringUtils.unescape(string));
+                        }
+                        else if (type == EnumSet.class)
+                        {
+                          ((Set)field.get(null)).clear();
+                          Iterator iterator = StringUtils.parseEnumSet(setType,string).iterator();
+                          while (iterator.hasNext())
+                          {
+                            ((Set)field.get(null)).add(iterator.next());
                           }
                         }
+                        else if (setType.isEnum())
+                        {
+//Dprintf.dprintf("type=%s",type);
+//Dprintf.dprintf("setType=%s",setType);
+                          ((Set)field.get(null)).add(StringUtils.parseEnum(setType,string));
+                        }
+                        else
+                        {
+                          throw new Error(String.format("%s: Set without value adapter %s",field,setType));
+                        }
                       }
-                      catch (NumberFormatException exception)
+                      else if (List.class.isAssignableFrom(type))
                       {
-                        BARControl.printWarning("Cannot parse number '%s' for configuration value '%s' in line %d",string,name,lineNb);
+                        // List type
+                        Class<?> listType = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
+
+                        if (ValueAdapter.class.isAssignableFrom(settingValue.type()))
+                        {
+                          // instantiate config adapter class
+                          ValueAdapter settingValueAdapter;
+                          Class enclosingClass = settingValue.type().getEnclosingClass();
+                          if (   (enclosingClass == Settings.class)
+                              && settingValue.type().isMemberClass()
+                              && !Modifier.isStatic(settingValue.type().getModifiers())
+                             )
+                          {
+                            Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
+                            settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
+                          }
+                          else
+                          {
+                            settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
+                          }
+
+                          // convert to value
+                          Object value = settingValueAdapter.toValue(string);
+                          ((List)field.get(null)).add(value);
+                        }
+                        else if (listType == int.class)
+                        {
+                          int value = Integer.parseInt(string);
+                          ((List)field.get(null)).add(value);
+                        }
+                        else if (listType == Integer.class)
+                        {
+                          int value = Integer.parseInt(string);
+                          ((List)field.get(null)).add(value);
+                        }
+                        else if (listType == long.class)
+                        {
+                          long value = Long.parseLong(string);
+                          ((List)field.get(null)).add(value);
+                        }
+                        else if (listType == Long.class)
+                        {
+                          long value = Long.parseLong(string);
+                          ((List)field.get(null)).add(value);
+                        }
+                        else if (listType == double.class)
+                        {
+                          double value = Double.parseDouble(string);
+                          ((List)field.get(null)).add(value);
+                        }
+                        else if (listType == Long.class)
+                        {
+                          double value = Double.parseDouble(string);
+                          ((List)field.get(null)).add(value);
+                        }
+                        else if (listType == boolean.class)
+                        {
+                          boolean value = StringUtils.parseBoolean(string);
+                          ((List)field.get(null)).add(value);
+                        }
+                        else if (listType == Boolean.class)
+                        {
+                          boolean value = StringUtils.parseBoolean(string);
+                          ((List)field.get(null)).add(value);
+                        }
+                        else if (listType == String.class)
+                        {
+                          ((List)field.get(null)).add(StringUtils.unescape(string));
+                        }
+                        else if (type == EnumSet.class)
+                        {
+                          ((Set)field.get(null)).clear();
+                          Iterator iterator = StringUtils.parseEnumSet(listType,string).iterator();
+                          while (iterator.hasNext())
+                          {
+                            ((List)field.get(null)).add(iterator.next());
+                          }
+                        }
+                        else if (listType.isEnum())
+                        {
+                          ((List)field.get(null)).add(StringUtils.parseEnum(type,string));
+                        }
+                        else
+                        {
+                          throw new Error(String.format("%s: List without value adapter %s",field,listType));
+                        }
                       }
-                      catch (Exception exception)
+                      else
                       {
-Dprintf.dprintf("exception=%s",exception);
-exception.printStackTrace();
+                        // primitiv type
+                        if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
+                        {
+                          // instantiate config adapter class
+                          ValueAdapter settingValueAdapter;
+                          Class enclosingClass = settingValue.type().getEnclosingClass();
+                          if (   (enclosingClass == Settings.class)
+                              && settingValue.type().isMemberClass()
+                              && !Modifier.isStatic(settingValue.type().getModifiers())
+                             )
+                          {
+                            Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
+                            settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
+                          }
+                          else
+                          {
+                            settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
+                          }
+
+                          // convert to value
+                          Object value = settingValueAdapter.toValue(string);
+                          field.set(null,value);
+                        }
+                        else if (type == int.class)
+                        {
+                          int value = Integer.parseInt(string);
+                          field.setInt(null,value);
+                        }
+                        else if (type == Integer.class)
+                        {
+                          int value = Integer.parseInt(string);
+                          field.set(null,new Integer(value));
+                        }
+                        else if (type == long.class)
+                        {
+                          long value = Long.parseLong(string);
+                          field.setLong(null,value);
+                        }
+                        else if (type == Long.class)
+                        {
+                          long value = Long.parseLong(string);
+                          field.set(null,new Long(value));
+                        }
+                        else if (type == double.class)
+                        {
+                          double value = Double.parseDouble(string);
+                          field.setDouble(null,value);
+                        }
+                        else if (type == Double.class)
+                        {
+                          double value = Double.parseDouble(string);
+                          field.set(null,new Double(value));
+                        }
+                        else if (type == boolean.class)
+                        {
+                          boolean value = StringUtils.parseBoolean(string);
+                          field.setBoolean(null,value);
+                        }
+                        else if (type == Boolean.class)
+                        {
+                          boolean value = StringUtils.parseBoolean(string);
+                          field.set(null,new Boolean(value));
+                        }
+                        else if (type == String.class)
+                        {
+                          field.set(null,StringUtils.unescape(string));
+                        }
+                        else if (type == EnumSet.class)
+                        {
+                          Class enumClass = settingValue.type();
+                          if (!enumClass.isEnum())
+                          {
+                            throw new Error(enumClass+" is not an enum class!");
+                          }
+                          field.set(null,StringUtils.parseEnumSet(enumClass,string));
+                        }
+                        else if (type.isEnum())
+                        {
+                          field.set(null,StringUtils.parseEnum(type,string));
+                        }
+                        else
+                        {
+Dprintf.dprintf("field.getType()=%s",type);
+                        }
                       }
                     }
+                    catch (NumberFormatException exception)
+                    {
+                      BARControl.printWarning("Cannot parse number '%s' for configuration value '%s' in line %d",string,name,lineNb);
+                    }
+                    catch (Exception exception)
+                    {
+Dprintf.dprintf("line=%d exception=%s",lineNb,exception);
+exception.printStackTrace();
+System.exit(1);
+                    }
                   }
-                  else
-                  {
-                  }
+                }
+                else
+                {
                 }
               }
             }
-          }
-          else
-          {
-            BARControl.printWarning("Unknown configuration value '%s' in line %d",line,lineNb);
           }
         }
 
@@ -1068,19 +1262,22 @@ exception.printStackTrace();
                 {
                   // array type
                   type = type.getComponentType();
-                  if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
+                  if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
                   {
                     // instantiate config adapter class
-                    SettingValueAdapter settingValueAdapter;
+                    ValueAdapter settingValueAdapter;
                     Class enclosingClass = settingValue.type().getEnclosingClass();
-                    if (enclosingClass == Settings.class)
+                    if (   (enclosingClass == Settings.class)
+                        && settingValue.type().isMemberClass()
+                        && !Modifier.isStatic(settingValue.type().getModifiers())
+                       )
                     {
                       Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
-                      settingValueAdapter = (SettingValueAdapter)constructor.newInstance(new Settings());
+                      settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
                     }
                     else
                     {
-                      settingValueAdapter = (SettingValueAdapter)settingValue.type().newInstance();
+                      settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
                     }
 
                     // convert to string
@@ -1172,24 +1369,128 @@ exception.printStackTrace();
 Dprintf.dprintf("field.getType()=%s",type);
                   }
                 }
+                else if (type == HashSet.class)
+                {
+                  type = type.getComponentType();
+                  if     (type != null)
+                  {
+                    if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
+                    {
+                      // instantiate config adapter class
+                      ValueAdapter settingValueAdapter;
+                      Class enclosingClass = settingValue.type().getEnclosingClass();
+                      if (   (enclosingClass == Settings.class)
+                          && settingValue.type().isMemberClass()
+                          && !Modifier.isStatic(settingValue.type().getModifiers())
+                         )
+                      {
+                        Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
+                        settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
+                      }
+                      else
+                      {
+                        settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
+                      }
+
+                      // convert to string
+                      HashSet<Object> hashSet = (HashSet<Object>)field.get(null);
+                      for (Object object : hashSet)
+                      {
+                        String value = (String)settingValueAdapter.toString(object);
+                        output.printf("%s = %s\n",name,value);
+                      }
+                    }
+                    else if (type == Integer.class)
+                    {
+                      HashSet<Integer> hashSet = (HashSet<Integer>)field.get(null);
+                      for (int value : hashSet)
+                      {
+                        output.printf("%s = %d\n",name,value);
+                      }
+                    }
+                    else if (type == Long.class)
+                    {
+                      HashSet<Long> hashSet = (HashSet<Long>)field.get(null);
+                      for (long value : hashSet)
+                      {
+                        output.printf("%s = %ld\n",name,value);
+                      }
+                    }
+                    else if (type == Boolean.class)
+                    {
+                      HashSet<Boolean> hashSet = (HashSet<Boolean>)field.get(null);
+                      for (boolean value : hashSet)
+                      {
+                        output.printf("%s = %s\n",name,value ? "yes" : "no");
+                      }
+                    }
+                    else if (type == String.class)
+                    {
+                      HashSet<String> hashSet = (HashSet<String>)field.get(null);
+                      for (String value : hashSet)
+                      {
+                        output.printf("%s = %s\n",name,StringUtils.escape(value));
+                      }
+                    }
+                    else if (type.isEnum())
+                    {
+                      HashSet<Enum> hashSet = (HashSet<Enum>)field.get(null);
+                      for (Enum value : hashSet)
+                      {
+                        output.printf("%s = %s\n",name,value.toString());
+                      }
+                    }
+                    else if (type == EnumSet.class)
+                    {
+                      HashSet<EnumSet> hashSet = (HashSet<EnumSet>)field.get(null);
+                      for (EnumSet enumSet : hashSet)
+                      {
+                        output.printf("%s = %s\n",name,StringUtils.join(enumSet,","));
+                      }
+                    }
+                    else
+                    {
+Dprintf.dprintf("field=%s, type=%s",field,type);
+                    }
+                  }
+                  else
+                  {
+Dprintf.dprintf("type.getComponentType()=null");
+                  }
+                }
+                else if (type == ValueSet.class)
+                {
+                  ValueSet<String> valueSet = (ValueSet<String>)field.get(null);
+                  if (!valueSet.get().isEmpty())
+                  {
+                    output.printf("%s = %s\n",name,valueSet.get());
+                  }
+                  for (String key : valueSet.keySet())
+                  {
+                    output.printf("%s[%s] = %s\n",name,key,valueSet.get(key));
+                  }
+                }
                 else if (Set.class.isAssignableFrom(type))
                 {
                   // Set type
                   Class<?> setType = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
 
-                  if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
+                  if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
                   {
                     // instantiate config adapter class
-                    SettingValueAdapter settingValueAdapter;
+                    ValueAdapter settingValueAdapter;
                     Class enclosingClass = settingValue.type().getEnclosingClass();
-                    if (enclosingClass == Settings.class)
+                    if (   (enclosingClass == Settings.class)
+                        && settingValue.type().isMemberClass()
+                        && !Modifier.isStatic(settingValue.type().getModifiers())
+                       )
                     {
                       Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
-                      settingValueAdapter = (SettingValueAdapter)constructor.newInstance(new Settings());
+                      settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
                     }
                     else
                     {
-                      settingValueAdapter = (SettingValueAdapter)settingValue.type().newInstance();
+                      settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
                     }
 
                     // convert to string
@@ -1283,19 +1584,22 @@ Dprintf.dprintf("field.getType()=%s",type);
                   // List type
                   Class<?> listType = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
 
-                  if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
+                  if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
                   {
                     // instantiate config adapter class
-                    SettingValueAdapter settingValueAdapter;
+                    ValueAdapter settingValueAdapter;
                     Class enclosingClass = settingValue.type().getEnclosingClass();
-                    if (enclosingClass == Settings.class)
+                    if (   (enclosingClass == Settings.class)
+                        && settingValue.type().isMemberClass()
+                        && !Modifier.isStatic(settingValue.type().getModifiers())
+                       )
                     {
                       Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
-                      settingValueAdapter = (SettingValueAdapter)constructor.newInstance(new Settings());
+                      settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
                     }
                     else
                     {
-                      settingValueAdapter = (SettingValueAdapter)settingValue.type().newInstance();
+                      settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
                     }
 
                     // convert to string
@@ -1390,19 +1694,22 @@ Dprintf.dprintf("field.getType()=%s",type);
                 else
                 {
                   // primitiv type
-                  if      (SettingValueAdapter.class.isAssignableFrom(settingValue.type()))
+                  if      (ValueAdapter.class.isAssignableFrom(settingValue.type()))
                   {
                     // instantiate config adapter class
-                    SettingValueAdapter settingValueAdapter;
+                    ValueAdapter settingValueAdapter;
                     Class enclosingClass = settingValue.type().getEnclosingClass();
-                    if (enclosingClass == Settings.class)
+                    if (   (enclosingClass == Settings.class)
+                        && settingValue.type().isMemberClass()
+                        && !Modifier.isStatic(settingValue.type().getModifiers())
+                       )
                     {
                       Constructor constructor = settingValue.type().getDeclaredConstructor(Settings.class);
-                      settingValueAdapter = (SettingValueAdapter)constructor.newInstance(new Settings());
+                      settingValueAdapter = (ValueAdapter)constructor.newInstance(new Settings());
                     }
                     else
                     {
-                      settingValueAdapter = (SettingValueAdapter)settingValue.type().newInstance();
+                      settingValueAdapter = (ValueAdapter)settingValue.type().newInstance();
                     }
 
                     // convert to string
@@ -1792,7 +2099,7 @@ exception.printStackTrace();
    * @param settingAdapter setting adapter (use equals() function)
    * @return extended array or array
    */
-  private static Object[] addArrayUniq(Object[] array, Object object, SettingValueAdapter settingValueAdapter)
+  private static Object[] addArrayUniq(Object[] array, Object object, ValueAdapter settingValueAdapter)
   {
     int z = 0;
     while ((z < array.length) && !settingValueAdapter.equals(array[z],object))
