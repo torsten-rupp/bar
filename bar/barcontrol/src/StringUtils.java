@@ -9,7 +9,10 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Iterator;
@@ -343,41 +346,69 @@ public class StringUtils
     return unescape(string,true);
   }
 
+  /** enclose in quote character if string contain special characters
+   * @param string string
+   * @param quoteChar quote character
+   * @return quoted string
+   */
+  public static String quote(String string, String specialChars, char quoteChar)
+  {
+    StringBuilder buffer = new StringBuilder();
+
+    boolean containSpecialCharacters = false;
+    if (specialChars != null)
+    {
+      for (int i = 0; i < specialChars.length(); i++)
+      {
+        if (string.indexOf(specialChars.charAt(i)) >= 0)
+        {
+          containSpecialCharacters = true;
+          break;
+        }
+      }
+    }
+
+    if ((specialChars == null) || containSpecialCharacters)
+    {
+      buffer.append(quoteChar);
+      if (string != null)
+      {
+        for (int i = 0; i < string.length(); i++)
+        {
+          char ch = string.charAt(i);
+
+          if      (ch == quoteChar)
+          {
+            buffer.append("\\"+quoteChar);
+          }
+          else
+          {
+            buffer.append(ch);
+          }
+        }
+      }
+      buffer.append(quoteChar);
+
+      return buffer.toString();
+    }
+    else
+    {
+      return string;
+    }
+  }
+
   /** enclose in quote character
    * @param string string
-   * @param enclosingQuotes true to add enclosing quotes "
    * @param quoteChar quote character
    * @return quoted string
    */
   public static String quote(String string, char quoteChar)
   {
-    StringBuilder buffer = new StringBuilder();
-
-    buffer.append(quoteChar);
-    if (string != null)
-    {
-      for (int index = 0; index < string.length(); index++)
-      {
-        char ch = string.charAt(index);
-
-        if      (ch == quoteChar)
-        {
-          buffer.append("\\"+quoteChar);
-        }
-        else
-        {
-          buffer.append(ch);
-        }
-      }
-    }
-    buffer.append(quoteChar);
-
-    return buffer.toString();
+    return quote(string,(String)null,quoteChar);
   }
 
   /** enclose in "
    * @param string string
-   * @param enclosingQuotes true to add enclosing quotes "
    * @return quoted string
    */
   public static String quote(String string)
@@ -558,6 +589,170 @@ public class StringUtils
     return join(collection,joinString,'\0');
   }
 
+  /** join object list
+   * @param objects objects to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @param quoteChar quote char
+   * @return string
+   */
+  public static <T> String join(List<T> objects, int index, int count, String joinString, char quoteChar)
+  {
+    StringBuilder buffer = new StringBuilder();
+    String        string;
+
+    if (index < 0) throw new IndexOutOfBoundsException();
+
+    if ((objects != null) && (index < objects.size()))
+    {
+      if (count > objects.size()) throw new IndexOutOfBoundsException();
+
+      if (count < 0)
+      {
+        count = objects.size()-index;
+      }
+
+      for (int i = 0; i < count; i++)
+      {
+        Object object = objects.get(index+i);
+
+        if (object != null)
+        {
+          if (buffer.length() > 0) buffer.append(joinString);
+          string = object.toString();
+          buffer.append((quoteChar != '\0') ? escape(string,true,quoteChar) : string);
+        }
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  /** join object list
+   * @param objects objects to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @param quoteChar quote char
+   * @return string
+   */
+  public static <T> String join(List<T> objects, String joinString, char quoteChar)
+  {
+    return join(objects,0,-1,joinString,quoteChar);
+  }
+
+  /** join object list
+   * @param objects objects to join (convert to string with toString())
+   * @param joinChar character used to join two strings
+   * @param quoteChar quote char
+   * @return string
+   */
+  public static <T> String join(List<T> objects, int index, int count, char joinChar, char quoteChar)
+  {
+    return join(objects,index,count,Character.toString(joinChar),quoteChar);
+  }
+
+  /** join object list
+   * @param objects objects to join (convert to string with toString())
+   * @param joinChar character used to join two strings
+   * @param quoteChar quote char
+   * @return string
+   */
+  public static <T> String join(List<T> objects, char joinChar, char quoteChar)
+  {
+    return join(objects,0,-1,joinChar,quoteChar);
+  }
+
+  /** join object list
+   * @param objects objects to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @param quoteFlag true iff escape strings
+   * @return string
+   */
+  public static <T> String join(List<T> objects, int index, int count, String joinString, boolean quoteFlag)
+  {
+    return join(objects,index,count,joinString,(quoteFlag) ? '"' : '\0');
+  }
+
+  /** join object list
+   * @param objects objects to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @param quoteFlag true iff escape strings
+   * @return string
+   */
+  public static <T> String join(List<T> objects, String joinString, boolean quoteFlag)
+  {
+    return join(objects,0,-1,joinString,(quoteFlag) ? '"' : '\0');
+  }
+
+  /** join object list
+   * @param objects objects to join (convert to string with toString())
+   * @param joinChar character used to join two strings
+   * @param quoteFlag true iff escape strings
+   * @return string
+   */
+  public static <T> String join(List<T> objects, int index, int count, char joinChar, boolean quoteFlag)
+  {
+    return join(objects,index,count,Character.toString(joinChar),quoteFlag);
+  }
+
+  /** join object list
+   * @param objects objects to join (convert to string with toString())
+   * @param joinChar character used to join two strings
+   * @param quoteFlag true iff escape strings
+   * @return string
+   */
+  public static <T> String join(List<T> objects, char joinChar, boolean quoteFlag)
+  {
+    return join(objects,0,-1,Character.toString(joinChar),quoteFlag);
+  }
+
+  /** join object list
+   * @param objects objects to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @return string
+   */
+  public static <T> String join(List<T> objects, int index, int count, String joinString)
+  {
+    return join(objects,index,count,joinString,'\0');
+  }
+
+  /** join object list
+   * @param objects objects to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @return string
+   */
+  public static <T> String join(List<T> objects, String joinString)
+  {
+    return join(objects,0,-1,joinString);
+  }
+
+  /** join object list
+   * @param objects objects to join (convert to string with toString())
+   * @param joinChar character used to join two strings
+   * @return string
+   */
+  public static <T> String join(List<T> objects, int index, int count, char joinChar)
+  {
+    return join(objects,index,count,Character.toString(joinChar));
+  }
+
+  /** join object list
+   * @param objects objects to join (convert to string with toString())
+   * @param joinChar character used to join two strings
+   * @return string
+   */
+  public static <T> String join(List<T> objects, char joinChar)
+  {
+    return join(objects,0,-1,joinChar);
+  }
+
+  /** join object list with single space
+   * @param objects objects to join (convert to string with toString())
+   * @return string
+   */
+  public static <T> String join(List<T> objects)
+  {
+    return join(objects,0,-1," ");
+  }
+
   /** join object array
    * @param objects objects to join (convert to string with toString())
    * @param joinString string used to join two strings
@@ -711,6 +906,15 @@ public class StringUtils
   public static String join(Object[] objects, char joinChar)
   {
     return join(objects,0,-1,joinChar);
+  }
+
+  /** join string array with single space
+   * @param objects objects to join (convert to string with toString())
+   * @return string
+   */
+  public static String join(Object[] objects)
+  {
+    return join(objects,0,-1," ");
   }
 
   /** join string array with single space
@@ -930,11 +1134,14 @@ public class StringUtils
    * @param quoteChars quote characters (can be null)
    * @param escapeChar escape character (can be null)
    * @param emptyFlag true to return empty parts, false to skip empty parts
-   * @return string array
+   * @return string list
    */
-  public static String[] split(String string, String splitChars, String spaceChars, String quoteChars, Character escapeChar, boolean emptyFlag)
+  private static <T extends AbstractList<String> > T split(T stringList, String string, String splitChars, String spaceChars, String quoteChars, Character escapeChar, boolean emptyFlag)
   {
-    ArrayList<String> stringList = new ArrayList<String>();
+//    Class<T> clazz = T.getClass();
+//    T<String> stringList = new T<String>();
+//    T stringList = clazz.newInstance();
+//    T stringList;// = new T();
 //Dprintf.dprintf("string=%s splitChars=%s spaceChars=%s quoteChars=%s em=%s",string,splitChars,spaceChars,quoteChars,emptyFlag);
 
     char[]        chars  = string.toCharArray();
@@ -1000,7 +1207,136 @@ public class StringUtils
       }
     }
 
-    return stringList.toArray(new String[0]);
+    return stringList;
+  }
+
+  /** split string
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @param spaceChars spaces characters to skip (can be null)
+   * @param quoteChars quote characters (can be null)
+   * @param emptyFlag true to return empty parts, false to skip empty parts
+   * @return string list
+   */
+  public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, String splitChars, String spaceChars, String quoteChars, boolean emptyFlag)
+  {
+    return split(stringList,string,splitChars,spaceChars,quoteChars,(Character)null,emptyFlag);
+  }
+
+  /** split string
+   * @param string string to split
+   * @param splitChar character used for splitting
+   * @param spaceChars spaces characters to skip (can be null)
+   * @param quoteChars quote characters (can be null)
+   * @param emptyFlag true to return empty parts, false to skip empty parts
+   * @return string list
+   */
+  public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, char splitChar, String spaceChars, String quoteChars, boolean emptyFlag)
+  {
+    return split(stringList,string,new String(new char[]{splitChar}),spaceChars,quoteChars,emptyFlag);
+  }
+
+  /** split string, discard white spaces between strings
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @param quoteChars quote characters
+   * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
+   * @return string list
+   */
+  public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, String splitChars, String quoteChars, boolean emptyFlag)
+  {
+    return split(stringList,string,splitChars,WHITE_SPACES,quoteChars,emptyFlag);
+  }
+
+  /** split string, discard white spaces between strings
+   * @param string string to split
+   * @param splitChar characters used for splitting
+   * @param quoteChars quote characters
+   * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
+   * @return string list
+   */
+  public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, char splitChar, String quoteChars, boolean emptyFlag)
+  {
+    return split(stringList,string,splitChar,WHITE_SPACES,quoteChars,emptyFlag);
+  }
+
+  /** split string, discard white spaces between strings
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @param quoteChars quote characters
+   * @return string list
+   */
+  public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, String splitChars, String quoteChars)
+  {
+    return split(stringList,string,splitChars,WHITE_SPACES,quoteChars,true);
+  }
+
+  /** split string (no quotes)
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
+   * @return string list
+   */
+  public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, String splitChars, boolean emptyFlag)
+  {
+    return split(stringList,string,splitChars,(String)null,(String)null,emptyFlag);
+  }
+
+  /** split string (no quotes)
+   * @param string string to split
+   * @param splitChar character used for splitting
+   * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
+   * @return string list
+   */
+  public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, char splitChar, boolean emptyFlag)
+  {
+    return split(stringList,string,splitChar,(String)null,(String)null,emptyFlag);
+  }
+
+  /** split string (no quotes)
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @return string list
+   */
+  public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, String splitChars)
+  {
+    return split(stringList,string,splitChars,true);
+  }
+
+  /** split string (no quotes)
+   * @param string string to split
+   * @param splitChar character used for splitting
+   * @return string list
+   */
+  public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, char splitChar)
+  {
+    return split(stringList,string,splitChar,true);
+  }
+
+  /** split string (no quotes) at white-spaces
+   * @param string string to split
+   * @return string list
+   */
+  public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string)
+  {
+    return split(stringList,string,WHITE_SPACES);
+  }
+
+  /** split string
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @param spaceChars spaces characters to skip (can be null)
+   * @param quoteChars quote characters (can be null)
+   * @param escapeChar escape character (can be null)
+   * @param emptyFlag true to return empty parts, false to skip empty parts
+   * @return string array
+   */
+  public static String[] splitArray(String string, String splitChars, String spaceChars, String quoteChars, Character escapeChar, boolean emptyFlag)
+  {
+    ArrayList<String> stringList = new ArrayList<String>();
+    StringUtils.split(stringList,string,splitChars,spaceChars,quoteChars,escapeChar,emptyFlag);
+
+    return stringList.toArray(new String[stringList.size()]);
   }
 
   /** split string
@@ -1011,9 +1347,9 @@ public class StringUtils
    * @param emptyFlag true to return empty parts, false to skip empty parts
    * @return string array
    */
-  public static String[] split(String string, String splitChars, String spaceChars, String quoteChars, boolean emptyFlag)
+  public static String[] splitArray(String string, String splitChars, String spaceChars, String quoteChars, boolean emptyFlag)
   {
-    return split(string,splitChars,spaceChars,quoteChars,null,emptyFlag);
+    return splitArray(string,splitChars,spaceChars,quoteChars,(Character)null,emptyFlag);
   }
 
   /** split string
@@ -1024,9 +1360,9 @@ public class StringUtils
    * @param emptyFlag true to return empty parts, false to skip empty parts
    * @return string array
    */
-  public static String[] split(String string, char splitChar, String spaceChars, String quoteChars, boolean emptyFlag)
+  public static String[] splitArray(String string, char splitChar, String spaceChars, String quoteChars, boolean emptyFlag)
   {
-    return split(string,new String(new char[]{splitChar}),spaceChars,quoteChars,emptyFlag);
+    return splitArray(string,new String(new char[]{splitChar}),spaceChars,quoteChars,emptyFlag);
   }
 
   /** split string, discard white spaces between strings
@@ -1036,9 +1372,9 @@ public class StringUtils
    * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
    * @return string array
    */
-  public static String[] split(String string, String splitChars, String quoteChars, boolean emptyFlag)
+  public static String[] splitArray(String string, String splitChars, String quoteChars, boolean emptyFlag)
   {
-    return split(string,splitChars,WHITE_SPACES,quoteChars,emptyFlag);
+    return splitArray(string,splitChars,WHITE_SPACES,quoteChars,emptyFlag);
   }
 
   /** split string, discard white spaces between strings
@@ -1048,9 +1384,9 @@ public class StringUtils
    * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
    * @return string array
    */
-  public static String[] split(String string, char splitChar, String quoteChars, boolean emptyFlag)
+  public static String[] splitArray(String string, char splitChar, String quoteChars, boolean emptyFlag)
   {
-    return split(string,splitChar,WHITE_SPACES,quoteChars,emptyFlag);
+    return splitArray(string,splitChar,WHITE_SPACES,quoteChars,emptyFlag);
   }
 
   /** split string, discard white spaces between strings
@@ -1059,9 +1395,9 @@ public class StringUtils
    * @param quoteChars quote characters
    * @return string array
    */
-  public static String[] split(String string, String splitChars, String quoteChars)
+  public static String[] splitArray(String string, String splitChars, String quoteChars)
   {
-    return split(string,splitChars,WHITE_SPACES,quoteChars,true);
+    return splitArray(string,splitChars,WHITE_SPACES,quoteChars,true);
   }
 
   /** split string, discard white spaces between strings
@@ -1070,9 +1406,9 @@ public class StringUtils
    * @param quoteChars quote characters
    * @return string array
    */
-  public static String[] split(String string, char splitChar, String quoteChars)
+  public static String[] splitArray(String string, char splitChar, String quoteChars)
   {
-    return split(string,splitChar,WHITE_SPACES,quoteChars,true);
+    return splitArray(string,splitChar,WHITE_SPACES,quoteChars,true);
   }
 
   /** split string (no quotes)
@@ -1081,9 +1417,9 @@ public class StringUtils
    * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
    * @return string array
    */
-  public static String[] split(String string, String splitChars, boolean emptyFlag)
+  public static String[] splitArray(String string, String splitChars, boolean emptyFlag)
   {
-    return split(string,splitChars,null,null,emptyFlag);
+    return splitArray(string,splitChars,null,null,emptyFlag);
   }
 
   /** split string (no quotes)
@@ -1092,9 +1428,9 @@ public class StringUtils
    * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
    * @return string array
    */
-  public static String[] split(String string, char splitChar, boolean emptyFlag)
+  public static String[] splitArray(String string, char splitChar, boolean emptyFlag)
   {
-    return split(string,splitChar,null,null,emptyFlag);
+    return splitArray(string,splitChar,null,null,emptyFlag);
   }
 
   /** split string (no quotes)
@@ -1102,9 +1438,9 @@ public class StringUtils
    * @param splitChars characters used for splitting
    * @return string array
    */
-  public static String[] split(String string, String splitChars)
+  public static String[] splitArray(String string, String splitChars)
   {
-    return split(string,splitChars,true);
+    return splitArray(string,splitChars,true);
   }
 
   /** split string (no quotes)
@@ -1112,18 +1448,18 @@ public class StringUtils
    * @param splitChar character used for splitting
    * @return string array
    */
-  public static String[] split(String string, char splitChar)
+  public static String[] splitArray(String string, char splitChar)
   {
-    return split(string,splitChar,true);
+    return splitArray(string,splitChar,true);
   }
 
   /** split string (no quotes) at white-spaces
    * @param string string to split
    * @return string array
    */
-  public static String[] split(String string)
+  public static String[] splitArray(String string)
   {
-    return split(string,WHITE_SPACES);
+    return splitArray(string,WHITE_SPACES);
   }
 
   /** replace string in stringn array
@@ -1289,7 +1625,8 @@ public class StringUtils
     EnumSet enumSet = EnumSet.noneOf(enumClass);
 
     Enum[] enumConstants = (Enum[])enumClass.getEnumConstants();
-    for (String value : split(string,",",false))
+    Class<ArrayList<String>> type;
+    for (String value : StringUtils.splitArray(string,",",false))
     {
       int n;
       try
