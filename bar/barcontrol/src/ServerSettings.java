@@ -1608,13 +1608,13 @@ public class ServerSettings
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             return values.contains("errors");
                                           }
                                           public void setChecked(WidgetVariable widgetVariable, boolean checked)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             if (checked)
                                             {
@@ -1642,13 +1642,13 @@ public class ServerSettings
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             return values.contains("warnings");
                                           }
                                           public void setChecked(WidgetVariable widgetVariable, boolean checked)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             if (checked)
                                             {
@@ -1676,13 +1676,13 @@ public class ServerSettings
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             return values.contains("info");
                                           }
                                           public void setChecked(WidgetVariable widgetVariable, boolean checked)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             if (checked)
                                             {
@@ -1710,13 +1710,13 @@ public class ServerSettings
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             return values.contains("ok");
                                           }
                                           public void setChecked(WidgetVariable widgetVariable, boolean checked)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             if (checked)
                                             {
@@ -1744,13 +1744,13 @@ public class ServerSettings
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             return values.contains("unknown");
                                           }
                                           public void setChecked(WidgetVariable widgetVariable, boolean checked)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             if (checked)
                                             {
@@ -1778,13 +1778,13 @@ public class ServerSettings
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             return values.contains("skipped");
                                           }
                                           public void setChecked(WidgetVariable widgetVariable, boolean checked)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             if (checked)
                                             {
@@ -1812,13 +1812,13 @@ public class ServerSettings
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             return values.contains("missing");
                                           }
                                           public void setChecked(WidgetVariable widgetVariable, boolean checked)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             if (checked)
                                             {
@@ -1846,13 +1846,13 @@ public class ServerSettings
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             return values.contains("incomplete");
                                           }
                                           public void setChecked(WidgetVariable widgetVariable, boolean checked)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             if (checked)
                                             {
@@ -1880,13 +1880,13 @@ public class ServerSettings
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             return values.contains("excluded");
                                           }
                                           public void setChecked(WidgetVariable widgetVariable, boolean checked)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             if (checked)
                                             {
@@ -1914,13 +1914,13 @@ public class ServerSettings
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             return values.contains("storage");
                                           }
                                           public void setChecked(WidgetVariable widgetVariable, boolean checked)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             if (checked)
                                             {
@@ -1948,13 +1948,13 @@ public class ServerSettings
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             return values.contains("index");
                                           }
                                           public void setChecked(WidgetVariable widgetVariable, boolean checked)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             if (checked)
                                             {
@@ -1982,13 +1982,13 @@ public class ServerSettings
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             return values.contains("continuous");
                                           }
                                           public void setChecked(WidgetVariable widgetVariable, boolean checked)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             if (checked)
                                             {
@@ -2016,7 +2016,7 @@ public class ServerSettings
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
                                           {
-                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.split(widgetVariable.getString(),",")));
+                                            HashSet<String> values = new HashSet<String>(Arrays.asList(StringUtils.splitArray(widgetVariable.getString(),",")));
 
                                             return values.contains("all");
                                           }
