@@ -44,14 +44,14 @@ public class BusyDialog
 
   // busy dialog flags
   public final static int NONE          = 0;
-  public final static int TEXT0         = 1 <<  0;
-  public final static int TEXT1         = 1 <<  1;
-  public final static int PROGRESS_BAR0 = 1 <<  2;
-  public final static int PROGRESS_BAR1 = 1 <<  3;
-  public final static int LIST          = 1 <<  4;
-  public final static int ABORT_CLOSE   = 1 <<  5;
+  public final static int TEXT0         = 1 <<  0;   // show text line 0
+  public final static int TEXT1         = 1 <<  1;   // show text line 1
+  public final static int PROGRESS_BAR0 = 1 <<  2;   // show progress bar 0
+  public final static int PROGRESS_BAR1 = 1 <<  3;   // show progress bar 1
+  public final static int LIST          = 1 <<  4;   // show list
+  public final static int ABORT_CLOSE   = 1 <<  5;   // enable abort button
 
-  public final static int AUTO_ANIMATE  = 1 << 24;
+  public final static int AUTO_ANIMATE  = 1 << 24;   // auto animate
 
   // --------------------------- variables --------------------------------
   private static I18n i18n;
@@ -76,6 +76,7 @@ public class BusyDialog
   private boolean     doneFlag;
   private boolean     abortedFlag;
   private boolean     resizedFlag;
+  private boolean     listEmptyFlag;
 
   // ------------------------ native functions ----------------------------
 
@@ -138,7 +139,9 @@ public class BusyDialog
     dialog.setText(title);
     tableLayout = new TableLayout(new double[]{1.0,0.0},1.0);
     tableLayout.minWidth  = width;
+    tableLayout.maxWidth  = width;
     tableLayout.minHeight = height;
+    tableLayout.maxHeight = height;
     dialog.setLayout(tableLayout);
     dialog.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
 
@@ -368,9 +371,10 @@ public class BusyDialog
     }
 
     // run dialog
-    doneFlag    = false;
-    abortedFlag = false;
-    resizedFlag = false;
+    doneFlag      = false;
+    abortedFlag   = false;
+    resizedFlag   = (width != SWT.DEFAULT) || (height != SWT.DEFAULT);
+    listEmptyFlag = true;
     dialog.open();
     widgetAbortCloseButton.setFocus();
     display.update();
@@ -486,7 +490,7 @@ public class BusyDialog
    */
   public BusyDialog(Shell parentShell, String title, String message, int flags, int maxListLength)
   {
-    this(parentShell,title,300,150,message,flags,maxListLength);
+    this(parentShell,title,600,400,message,flags,maxListLength);
   }
 
   /** create busy dialog
@@ -497,7 +501,7 @@ public class BusyDialog
    */
   public BusyDialog(Shell parentShell, String title, String message, int flags)
   {
-    this(parentShell,title,300,150,message,flags,100);
+    this(parentShell,title,600,400,message,flags,100);
   }
 
   /** create busy dialog
@@ -791,10 +795,10 @@ public class BusyDialog
 
   /** update busy dialog progress bar
    * @param i index 0|1
-   * @param n progress value
+   * @param value progress value
    * @return true if closed, false otherwise
    */
-  public boolean updateProgressBar(final int i, final double n)
+  public boolean updateProgressBar(final int i, final double value)
   {
     if (!dialog.isDisposed())
     {
@@ -813,10 +817,13 @@ public class BusyDialog
           }
           if (   (widgetProgressBar != null)
               && !widgetProgressBar.isDisposed()
-              && (n != widgetProgressBar.getSelection())
              )
           {
-            widgetProgressBar.setSelection(n);
+            double n = Math.min(Math.max(value,widgetProgressBar.getMinimum()),widgetProgressBar.getMaximum());
+            if (n != widgetProgressBar.getSelection())
+            {
+              widgetProgressBar.setSelection(n);
+            }
           }
 
           display.update();
@@ -890,7 +897,7 @@ public class BusyDialog
               }
               widgetList.setSelection(widgetList.getItemCount()-1);
               widgetList.showSelection();
-
+              listEmptyFlag = false;
 
               // resize dialog (it not manually changed)
               if (!resizedFlag)
@@ -920,9 +927,17 @@ public class BusyDialog
    * @param string string
    * @return true if update done, false otherwise
    */
-  public boolean updateList(final String string)
+  public boolean updateList(String string)
   {
     return updateList("%s",string);
+  }
+
+  /** check if dialog list is empty
+   * @return true iff dialog list is empty
+   */
+  public boolean isListEmpty()
+  {
+    return listEmptyFlag;
   }
 
   /** set animate interval
