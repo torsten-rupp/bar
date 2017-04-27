@@ -106,7 +106,7 @@ public class Dprintf
    * @param format printf-format string
    * @param args optional arguments
    */
-  static private void output(int stackLevel, int level, Group group, String format, Object... args)
+  static private void printOutput(int stackLevel, int level, Group group, String format, Object... args)
   {
     if (debugLevel >= level)
     {
@@ -146,6 +146,18 @@ public class Dprintf
     }
   }
 
+  /** output stack trace
+   * @param stackLevel stack level to trace back
+   */
+  static private void printStackTrace(int stackLevel)
+  {
+    StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+    for (int i = stackLevel+1; i < stackTrace.length; i++)
+    {
+      System.err.println("  "+stackTrace[i]);
+    }
+  }
+
   /** add debug group
    * @param name group name
    * @return group
@@ -172,7 +184,7 @@ public class Dprintf
    */
   static public void dprintf(int level, Group group, String format, Object... args)
   {
-    output(3,level,group,format,args);
+    printOutput(3,level,group,format,args);
   }
 
   /** output debug data
@@ -182,7 +194,7 @@ public class Dprintf
    */
   static public void dprintf(int level, String format, Object... args)
   {
-    output(3,level,(Group)null,format,args);
+    printOutput(3,level,(Group)null,format,args);
   }
 
   /** output debug data
@@ -191,7 +203,7 @@ public class Dprintf
    */
   static public void dprintf(int level, Object object)
   {
-    output(3,level,(Group)null,"%s",object);
+    printOutput(3,level,(Group)null,"%s",object);
   }
 
   /** output debug data
@@ -200,7 +212,7 @@ public class Dprintf
    */
   static public void dprintf(String format, Object... args)
   {
-    output(3,0,(Group)null,format,args);
+    printOutput(3,0,(Group)null,format,args);
   }
 
   /** output debug data
@@ -208,14 +220,14 @@ public class Dprintf
    */
   static public void dprintf(Object object)
   {
-    output(3,0,(Group)null,"%s",object);
+    printOutput(3,0,(Group)null,"%s",object);
   }
 
   /** output debug data
    */
   static public void dprintf()
   {
-    output(3,0,GROUP_ANY,"");
+    printOutput(3,0,GROUP_ANY,"");
   }
 
   /** output debug data and halt
@@ -224,7 +236,8 @@ public class Dprintf
    */
   static public void halt(String format, Object... args)
   {
-    output(3,0,GROUP_ANY,"HALT: "+format,args);
+    printOutput(3,0,GROUP_ANY,"HALT: "+format,args);
+    printStackTrace();
     System.exit(1);
   }
 
@@ -234,7 +247,8 @@ public class Dprintf
    */
   static public void halt(Object object)
   {
-    output(3,0,GROUP_ANY,"HALT: %s",object);
+    printOutput(3,0,GROUP_ANY,"HALT: %s",object);
+    printStackTrace();
     System.exit(1);
   }
 
@@ -244,7 +258,8 @@ public class Dprintf
    */
   static public void halt()
   {
-    output(3,0,GROUP_ANY,"HALT");
+    printOutput(3,0,GROUP_ANY,"HALT");
+    printStackTrace();
     System.exit(1);
   }
 
