@@ -65,10 +65,11 @@ interface SettingMigrate
 @Retention(RetentionPolicy.RUNTIME)
 @interface SettingValue
 {
-  String  name()         default "";              // name of value
-  String  defaultValue() default "";              // default value
-  Class   type()         default DEFAULT.class;   // adapter class
-  boolean obsolete()     default false;           // true iff obsolete setting
+  String   name()            default "";              // name of value
+  String   defaultValue()    default "";              // default value
+  String[] deprecatedNames() default "";              // deprecated names
+  Class    type()            default DEFAULT.class;   // adapter class
+  boolean  obsolete()        default false;           // true iff obsolete setting
 
   Class migrate() default DEFAULT.class;
 
@@ -704,7 +705,9 @@ public class SettingUtils
                 {
                   SettingValue settingValue = (SettingValue)annotation;
 
-                  if (((!settingValue.name().isEmpty()) ? settingValue.name() : field.getName()).equals(name))
+                    if (   ((!settingValue.name().isEmpty()) ? settingValue.name() : field.getName()).equals(name)
+                        || nameEquals(settingValue.deprecatedNames(),name)
+                       )
                   {
                     try
                     {
@@ -1847,6 +1850,20 @@ exception.printStackTrace();
     }
 
     return classList.toArray(new Class[classList.size()]);
+  }
+
+  /** check if some name equals
+   * @param names name array
+   * @param string string
+   * @return true if string equals some name
+   */
+  private static boolean nameEquals(String names[], String string)
+  {
+    for (String name : names)
+    {
+      if (name.equals(string)) return true;
+    }
+    return false;
   }
 
   /** unique add element to int array
