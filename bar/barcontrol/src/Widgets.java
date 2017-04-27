@@ -1521,6 +1521,26 @@ class Widgets
    * @param control control
    * @return max. size [w,h] of all texts
    */
+  public static Point getTextSize(GC gc, java.util.List<String> texts)
+  {
+    Point size;
+    Point point;
+
+    size = new Point(0,0);
+    for (String text : texts)
+    {
+      point = getTextSize(gc,text);
+      size.x = Math.max(size.x,point.x);
+      size.y = Math.max(size.y,point.y);
+    }
+
+    return size;
+  }
+
+  /** get max. text size
+   * @param control control
+   * @return max. size [w,h] of all texts
+   */
   public static Point getTextSize(GC gc, String[] texts)
   {
     Point size;
@@ -1533,6 +1553,21 @@ class Widgets
       size.x = Math.max(size.x,point.x);
       size.y = Math.max(size.y,point.y);
     }
+
+    return size;
+  }
+
+  /** get max. text size
+   * @param control control
+   * @return max. size [w,h] of all texts
+   */
+  public static Point getTextSize(Control control, java.util.List<String> texts)
+  {
+    Point size;
+
+    GC gc = new GC(control);
+    size = getTextSize(gc,texts);
+    gc.dispose();
 
     return size;
   }
@@ -1574,9 +1609,27 @@ class Widgets
    * @param control control
    * @return max. width of all texts
    */
+  public static int getTextWidth(GC gc, java.util.List<String> texts)
+  {
+    return getTextSize(gc,texts).x;
+  }
+
+  /** get max. text width
+   * @param control control
+   * @return max. width of all texts
+   */
   public static int getTextWidth(GC gc, String[] texts)
   {
     return getTextSize(gc,texts).x;
+  }
+
+  /** get max. text width
+   * @param control control
+   * @return max. width of all texts
+   */
+  public static int getTextWidth(Control control, java.util.List<String> texts)
+  {
+    return getTextSize(control,texts).x;
   }
 
   /** get max. text width
