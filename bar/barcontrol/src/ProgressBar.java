@@ -117,12 +117,28 @@ public class ProgressBar extends Canvas
     return new Point(width,height);
   }
 
+  /** get minimal progress value
+   * @return minimum value
+   */
+  public double getMinimum()
+  {
+    return this.minimum;
+  }
+
   /** set minimal progress value
    * @param n value
    */
   public void setMinimum(double n)
   {
     this.minimum = n;
+  }
+
+  /** get maximal progress value
+   * @return maxium value
+   */
+  public double getMaximum()
+  {
+    return this.maximum;
   }
 
   /** set maximal progress value
@@ -163,9 +179,9 @@ public class ProgressBar extends Canvas
       value    = Math.min(Math.max(((maximum-minimum) > 0.0)
                                      ? (n-minimum)/(maximum-minimum)
                                      : 0.0,
-                                   minimum
+                                   0.0
                                   ),
-                          maximum
+                          1.0
                          );
       subValue = 0.0;
 
@@ -193,14 +209,16 @@ public class ProgressBar extends Canvas
   {
     GC gc;
 
+    assert subValueCount > 0;
+
     if (!isDisposed())
     {
       subValue = Math.min(Math.max(((maximum-minimum) > 0.0)
                                      ? ((value+n/(double)subValueCount)-minimum)/(maximum-minimum)
                                      : 0.0,
-                                   minimum
+                                   0.0
                                   ),
-                          maximum
+                          1.0
                          );
 
       gc = new GC(this);
