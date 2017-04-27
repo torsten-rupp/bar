@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-27 10:58+0200\n"
+"POT-Creation-Date: 2017-04-27 22:57+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -216,7 +216,7 @@ msgid "Start"
 msgstr ""
 
 #: src/BARControl.java:2686 src/BARControl.java:3254 src/BusyDialog.java:264
-#: src/Dialogs.java:163 src/TabRestore.java:8374 src/TabRestore.java:9522
+#: src/Dialogs.java:163 src/TabRestore.java:8374 src/TabRestore.java:9523
 #: src/TabStatus.java:842 src/TabStatus.java:1595 src/TabStatus.java:2394
 #: src/TabStatus.java:2514
 msgid "Abort"
@@ -406,7 +406,7 @@ msgstr ""
 msgid "No"
 msgstr ""
 
-#: src/Dialogs.java:2162 src/TabRestore.java:8372 src/TabRestore.java:9517
+#: src/Dialogs.java:2162 src/TabRestore.java:8372 src/TabRestore.java:9518
 #: src/TabStatus.java:2301
 msgid "Confirmation"
 msgstr ""
@@ -3322,7 +3322,7 @@ msgstr ""
 msgid "{0} login password"
 msgstr ""
 
-#: src/TabRestore.java:9518
+#: src/TabRestore.java:9519
 #, java-format
 msgid ""
 "Cannot restore:\n"
@@ -3332,19 +3332,19 @@ msgid ""
 "Reason: {1}"
 msgstr ""
 
-#: src/TabRestore.java:9522
+#: src/TabRestore.java:9523
 msgid "Skip"
 msgstr ""
 
-#: src/TabRestore.java:9522
+#: src/TabRestore.java:9523
 msgid "Skip all"
 msgstr ""
 
-#: src/TabRestore.java:9581
+#: src/TabRestore.java:9582
 msgid "Aborting"
 msgstr ""
 
-#: src/TabRestore.java:9597
+#: src/TabRestore.java:9598
 #, java-format
 msgid ""
 "Cannot restore!\n"
@@ -3352,7 +3352,7 @@ msgid ""
 "(error: {0})"
 msgstr ""
 
-#: src/TabRestore.java:9624
+#: src/TabRestore.java:9625
 #, java-format
 msgid ""
 "Error while restoring:\n"
@@ -3360,7 +3360,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabRestore.java:9637
+#: src/TabRestore.java:9638
 #, java-format
 msgid ""
 "Connection error while restoring\n"
