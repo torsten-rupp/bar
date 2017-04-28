@@ -711,7 +711,7 @@ class WidgetModifyListener
         if (text == null)
         {
           if      (variable.getType() == Boolean.class) text = Boolean.toString(variable.getBoolean());
-          else if (variable.getType() == Integer.class) text = Long.toString(variable.getInteger());
+          else if (variable.getType() == Integer.class) text = Integer.toString(variable.getInteger());
           else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
           else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
           else if (variable.getType() == String.class ) text = variable.getString();
@@ -780,7 +780,7 @@ class WidgetModifyListener
 
         int value = 0;
         if      (variable.getType() == Integer.class) value = variable.getInteger();
-        if      (variable.getType() == Long.class   ) value = (int)variable.getLong();
+        else if (variable.getType() == Long.class   ) value = (int)variable.getLong();
         else if (variable.getType() == Double.class ) value = (int)variable.getDouble();
         widgetSpinner.setSelection(value);
       }
@@ -800,7 +800,7 @@ class WidgetModifyListener
 
         int value = 0;
         if      (variable.getType() == Integer.class) value = variable.getInteger();
-        if      (variable.getType() == Long.class   ) value = (int)variable.getLong();
+        else if (variable.getType() == Long.class   ) value = (int)variable.getLong();
         else if (variable.getType() == Double.class ) value = (int)variable.getDouble();
         widgetScale.setSelection(value);
       }
@@ -810,7 +810,7 @@ class WidgetModifyListener
 
         double value = 0.0;
         if      (variable.getType() == Integer.class) value = (double)variable.getInteger();
-        if      (variable.getType() == Long.class   ) value = (double)variable.getLong();
+        else if (variable.getType() == Long.class   ) value = (double)variable.getLong();
         else if (variable.getType() == Double.class ) value = variable.getDouble();
         widgetProgressBar.setSelection(value);
       }
