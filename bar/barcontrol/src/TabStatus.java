@@ -1768,7 +1768,7 @@ public class TabStatus
         {
           // get data
           String         jobUUID                = resultMap.getString("jobUUID"                       );
-          String         master                 = resultMap.getString("master"                        );
+          String         master                 = resultMap.getString("master",""                     );
           String         name                   = resultMap.getString("name"                          );
           JobData.States state                  = resultMap.getEnum  ("state",JobData.States.class    );
           String         slaveHostName          = resultMap.getString("slaveHostName",""              );
