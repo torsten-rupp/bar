@@ -570,7 +570,9 @@ public class SettingUtils
           int j = StringUtils.indexOf(strings,stringArray[i]);
           if (j >= 0)
           {
+            int n = indizes[i];
             indizes[i] = j;
+            indizes[j] = n;
           }
         }
       }
