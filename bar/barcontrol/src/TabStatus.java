@@ -598,7 +598,7 @@ public class TabStatus
         {
           names[i] = COLUMN_NAMES[columnOrder[i]];
         }
-        Settings.jobListColumnOrder = new Settings.SimpleStringArray(names);
+        Settings.jobListColumnOrder = new SettingUtils.SimpleStringArray(names);
       }
     };
     Listener jobListColumnResizeListener = new Listener()
