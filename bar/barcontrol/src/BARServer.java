@@ -1246,7 +1246,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // connection established => done
               socket = sslSocket;
-              if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with PEM+startSSL (CA: "+caFile.getPath()+", Certificate: "+certificateFile.getPath()+", Key: "+keyFile.getPath()+")");
+              if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with PEM key+startSSL (CA: "+caFile.getPath()+", Certificate: "+certificateFile.getPath()+", Key: "+keyFile.getPath()+")");
               break;
             }
             catch (ConnectionError exception)
@@ -1350,7 +1350,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // connection established => done
               socket = sslSocket;
-              if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with PEM ("+caFile.getPath()+")");
+              if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with PEM key ("+caFile.getPath()+")");
               break;
             }
             catch (SocketTimeoutException exception)
@@ -1465,7 +1465,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // connection established => done
               socket = sslSocket;
-              if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with JKS+startSSL");
+              if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with JKS key+startSSL");
               break;
             }
             catch (ConnectionError exception)
@@ -1564,7 +1564,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // connection established => done
               socket = sslSocket;
-              if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with JKS");
+              if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with JKS key");
               break;
             }
             catch (SocketTimeoutException exception)
@@ -1671,7 +1671,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         throw new ConnectionError("Cannot get protocol version for '"+name+((socket.getPort() != Settings.DEFAULT_SERVER_PORT) ? ":"+socket.getPort() : "")+"': "+errorMessage[0]);
       }
-      if (valueMap.getInt("major") != PROTOCOL_VERSION_MAJOR)
+      if ((valueMap.getInt("major") != PROTOCOL_VERSION_MAJOR) && !Settings.debugIgnoreProtocolVersion)
       {
         throw new CommunicationError("Incompatible protocol version for '"+name+((socket.getPort() != Settings.DEFAULT_SERVER_PORT) ? ":"+socket.getPort() : "")+"': expected "+PROTOCOL_VERSION_MAJOR+", got "+valueMap.getInt("major"));
       }

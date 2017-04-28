@@ -1447,47 +1447,48 @@ public class BARControl
 
   private static final Option[] OPTIONS =
   {
-    new Option("--password",                    null,Options.Types.STRING,     "serverPassword"),
-    new Option("--port",                        "-p",Options.Types.INTEGER,    "serverPort"),
-    new Option("--tls-port",                    null,Options.Types.INTEGER,    "serverTLSPort"),
-    new Option("--ca-file",                     null,Options.Types.STRING,     "serverCAFileName"),
-    new Option("--cert-file",                   null,Options.Types.STRING,     "serverCertificateFileName"),
-    new Option("--key-file",                    null,Options.Types.STRING,     "serverKeyFileName"),
-    new Option("--force-ssl",                   null,Options.Types.BOOLEAN,    "serverForceSSL"),
-    new Option("--select-job",                  null,Options.Types.STRING,     "selectedJobName"),
-    new Option("--login-dialog",                null,Options.Types.BOOLEAN,    "loginDialogFlag"),
+    new Option("--password",                     null,Options.Types.STRING,     "serverPassword"),
+    new Option("--port",                         "-p",Options.Types.INTEGER,    "serverPort"),
+    new Option("--tls-port",                     null,Options.Types.INTEGER,    "serverTLSPort"),
+    new Option("--ca-file",                      null,Options.Types.STRING,     "serverCAFileName"),
+    new Option("--cert-file",                    null,Options.Types.STRING,     "serverCertificateFileName"),
+    new Option("--key-file",                     null,Options.Types.STRING,     "serverKeyFileName"),
+    new Option("--force-ssl",                    null,Options.Types.BOOLEAN,    "serverForceSSL"),
+    new Option("--select-job",                   null,Options.Types.STRING,     "selectedJobName"),
+    new Option("--login-dialog",                 null,Options.Types.BOOLEAN,    "loginDialogFlag"),
 
-    new Option("--job",                         "-j",Options.Types.STRING,     "runJobName"),
-    new Option("--archive-type",                null,Options.Types.ENUMERATION,"archiveType",ARCHIVE_TYPE_ENUMERATION),
-    new Option("--abort",                       null,Options.Types.STRING,     "abortJobName"),
-    new Option("--pause",                       "-t",Options.Types.INTEGER,    "pauseTime",new Object[]{"s",1,"m",60,"h",60*60}),
-    new Option("--ping",                        "-i",Options.Types.BOOLEAN,    "pingFlag"),
-    new Option("--suspend",                     "-s",Options.Types.BOOLEAN,    "suspendFlag"),
-    new Option("--continue",                    "-c",Options.Types.BOOLEAN,    "continueFlag"),
-    new Option("--list",                        "-l",Options.Types.BOOLEAN,    "listFlag"),
+    new Option("--job",                          "-j",Options.Types.STRING,     "runJobName"),
+    new Option("--archive-type",                 null,Options.Types.ENUMERATION,"archiveType",ARCHIVE_TYPE_ENUMERATION),
+    new Option("--abort",                        null,Options.Types.STRING,     "abortJobName"),
+    new Option("--pause",                        "-t",Options.Types.INTEGER,    "pauseTime",new Object[]{"s",1,"m",60,"h",60*60}),
+    new Option("--ping",                         "-i",Options.Types.BOOLEAN,    "pingFlag"),
+    new Option("--suspend",                      "-s",Options.Types.BOOLEAN,    "suspendFlag"),
+    new Option("--continue",                     "-c",Options.Types.BOOLEAN,    "continueFlag"),
+    new Option("--list",                         "-l",Options.Types.BOOLEAN,    "listFlag"),
 
-    new Option("--index-database-add",          null,Options.Types.STRING,     "indexDatabaseAddStorageName"),
-    new Option("--index-database-remove",       null,Options.Types.STRING,     "indexDatabaseRemoveStorageName"),
-    new Option("--index-database-refresh",      null,Options.Types.STRING,     "indexDatabaseRefreshStorageName"),
-    new Option("--index-database-entities-list","-n",Options.Types.STRING,     "indexDatabaseEntitiesListName"),
-    new Option("--index-database-storages-list","-a",Options.Types.STRING,     "indexDatabaseStoragesListName"),
-    new Option("--index-database-entries-list", "-e",Options.Types.STRING,     "indexDatabaseEntriesListName"),
+    new Option("--index-database-add",           null,Options.Types.STRING,     "indexDatabaseAddStorageName"),
+    new Option("--index-database-remove",        null,Options.Types.STRING,     "indexDatabaseRemoveStorageName"),
+    new Option("--index-database-refresh",       null,Options.Types.STRING,     "indexDatabaseRefreshStorageName"),
+    new Option("--index-database-entities-list", "-n",Options.Types.STRING,     "indexDatabaseEntitiesListName"),
+    new Option("--index-database-storages-list", "-a",Options.Types.STRING,     "indexDatabaseStoragesListName"),
+    new Option("--index-database-entries-list",  "-e",Options.Types.STRING,     "indexDatabaseEntriesListName"),
 
-    new Option("--restore",                     null,Options.Types.STRING,     "restoreStorageName"),
-    new Option("--destination",                 null,Options.Types.STRING,     "destination"),
-    new Option("--overwrite-entries",           null,Options.Types.BOOLEAN,    "overwriteEntriesFlag"),
+    new Option("--restore",                      null,Options.Types.STRING,     "restoreStorageName"),
+    new Option("--destination",                  null,Options.Types.STRING,     "destination"),
+    new Option("--overwrite-entries",            null,Options.Types.BOOLEAN,    "overwriteEntriesFlag"),
 
-    new Option("--role",                        null,Options.Types.ENUMERATION,"role",ROLE_ENUMERATION),
+    new Option("--role",                         null,Options.Types.ENUMERATION,"role",ROLE_ENUMERATION),
 
-    new Option("--version",                     null,Options.Types.BOOLEAN,    "versionFlag"),
-    new Option("--help",                        "-h",Options.Types.BOOLEAN,    "helpFlag"),
-    new Option("--xhelp",                       null,Options.Types.BOOLEAN,    "xhelpFlag"),
+    new Option("--version",                      null,Options.Types.BOOLEAN,    "versionFlag"),
+    new Option("--help",                         "-h",Options.Types.BOOLEAN,    "helpFlag"),
+    new Option("--xhelp",                        null,Options.Types.BOOLEAN,    "xhelpFlag"),
 
-    new Option("--debug",                       "-d",Options.Types.INCREMENT,  "debugLevel"),
-    new Option("--debug-quit-server",           null,Options.Types.BOOLEAN,    "debugQuitServerFlag"),
+    new Option("--debug",                        "-d",Options.Types.INCREMENT,  "debugLevel"),
+    new Option("--debug-ignore-protocol-version",null,Options.Types.BOOLEAN,    "debugIgnoreProtocolVersion"),
+    new Option("--debug-quit-server",            null,Options.Types.BOOLEAN,    "debugQuitServerFlag"),
 
     // ignored
-    new Option("--swing",                       null, Options.Types.BOOLEAN,   null),
+    new Option("--swing",                        null, Options.Types.BOOLEAN,   null),
   };
 
   // --------------------------- variables --------------------------------
@@ -1699,6 +1700,7 @@ public class BARControl
     {
       System.out.println("");
       System.out.println("         -d|--debug                                 - enable debug mode");
+      System.out.println("         --debug-ignore-protocol-version            - ignore protocol version");
       System.out.println("         --debug-quit-server                        - send quit-command to server");
     }
   }
