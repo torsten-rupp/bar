@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-04-28 09:43+0200\n"
+"POT-Creation-Date: 2017-04-28 13:01+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -217,10 +217,9 @@ msgstr "接続ミス"
 msgid "Start"
 msgstr "スタート"
 
-#: src/BARControl.java:2688 src/BARControl.java:3256 src/BusyDialog.java:267
-#: src/Dialogs.java:163 src/TabRestore.java:8374 src/TabRestore.java:9523
-#: src/TabStatus.java:842 src/TabStatus.java:1595 src/TabStatus.java:2394
-#: src/TabStatus.java:2514
+#: src/BARControl.java:2688 src/BusyDialog.java:270 src/Dialogs.java:163
+#: src/TabRestore.java:8374 src/TabRestore.java:9523 src/TabStatus.java:842
+#: src/TabStatus.java:1595 src/TabStatus.java:2394 src/TabStatus.java:2514
 msgid "Abort"
 msgstr "中止"
 
@@ -299,8 +298,8 @@ msgid "Connection lost"
 msgstr "接続ミス"
 
 #: src/BARControl.java:3159 src/BARControl.java:3183 src/BARControl.java:3191
-#: src/BARControl.java:3225 src/BARControl.java:3233 src/BARControl.java:3256
-#: src/BARControl.java:4203 src/BARControl.java:4237 src/BARControl.java:4256
+#: src/BARControl.java:3225 src/BARControl.java:3233 src/BARControl.java:4203
+#: src/BARControl.java:4237 src/BARControl.java:4256
 msgid "Error: "
 msgstr "エラー："
 
@@ -312,7 +311,7 @@ msgstr "再試行"
 
 #: src/BARControl.java:3256
 #, fuzzy
-msgid "Internal error"
+msgid "Internal error: %s"
 msgstr "拡張エラー:"
 
 #: src/BARControl.java:3994 src/TabRestore.java:9447
@@ -392,7 +391,7 @@ msgstr ""
 msgid "Select file"
 msgstr "ソースファイル選択"
 
-#: src/BusyDialog.java:581 src/Dialogs.java:1461 src/Dialogs.java:1626
+#: src/BusyDialog.java:584 src/Dialogs.java:1461 src/Dialogs.java:1626
 #: src/Dialogs.java:1807
 msgid "Close"
 msgstr "閉じる"

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-04-28 09:45+0200\n"
+"POT-Creation-Date: 2017-04-28 13:01+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -215,10 +215,9 @@ msgstr ""
 msgid "Start"
 msgstr ""
 
-#: src/BARControl.java:2688 src/BARControl.java:3256 src/BusyDialog.java:267
-#: src/Dialogs.java:163 src/TabRestore.java:8374 src/TabRestore.java:9523
-#: src/TabStatus.java:842 src/TabStatus.java:1595 src/TabStatus.java:2394
-#: src/TabStatus.java:2514
+#: src/BARControl.java:2688 src/BusyDialog.java:270 src/Dialogs.java:163
+#: src/TabRestore.java:8374 src/TabRestore.java:9523 src/TabStatus.java:842
+#: src/TabStatus.java:1595 src/TabStatus.java:2394 src/TabStatus.java:2514
 msgid "Abort"
 msgstr ""
 
@@ -294,8 +293,8 @@ msgid "Connection lost"
 msgstr ""
 
 #: src/BARControl.java:3159 src/BARControl.java:3183 src/BARControl.java:3191
-#: src/BARControl.java:3225 src/BARControl.java:3233 src/BARControl.java:3256
-#: src/BARControl.java:4203 src/BARControl.java:4237 src/BARControl.java:4256
+#: src/BARControl.java:3225 src/BARControl.java:3233 src/BARControl.java:4203
+#: src/BARControl.java:4237 src/BARControl.java:4256
 msgid "Error: "
 msgstr ""
 
@@ -306,7 +305,7 @@ msgid "Try again"
 msgstr ""
 
 #: src/BARControl.java:3256
-msgid "Internal error"
+msgid "Internal error: %s"
 msgstr ""
 
 #: src/BARControl.java:3994 src/TabRestore.java:9447
@@ -372,7 +371,7 @@ msgstr ""
 msgid "Select file"
 msgstr ""
 
-#: src/BusyDialog.java:581 src/Dialogs.java:1461 src/Dialogs.java:1626
+#: src/BusyDialog.java:584 src/Dialogs.java:1461 src/Dialogs.java:1626
 #: src/Dialogs.java:1807
 msgid "Close"
 msgstr ""
