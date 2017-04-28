@@ -3250,10 +3250,10 @@ if (false) {
       {
         if (Settings.debugLevel > 0)
         {
-          System.err.println("ERROR: "+throwable.getMessage());
+          System.err.println("INTERNAL ERROR: "+throwable.getMessage());
           printStackTrace(throwable);
         }
-        Dialogs.error(new Shell(),BARControl.tr("Internal error"),BARControl.tr("Error: ")+throwable.getMessage(),BARControl.tr("Abort"));
+        Dialogs.error(new Shell(),BARControl.tr("Internal error: %s"),throwable.toString());
         quitFlag = true;
         break;
       }
