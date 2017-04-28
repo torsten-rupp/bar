@@ -807,7 +807,7 @@ public class BusyDialog
     {
       progressValues[i] = value;
 
-      display.syncExec(new Runnable()
+      display.asyncExec(new Runnable()
       {
         public void run()
         {
