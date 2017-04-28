@@ -1774,7 +1774,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       if (Settings.debugLevel > 0)
       {
-        System.err.println("ERROR: "+throwable.getMessage());
+        System.err.println("INTERNAL ERROR: "+throwable.getMessage());
         BARControl.printStackTrace(throwable);
         System.exit(1);
       }
@@ -1806,7 +1806,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         if (Settings.debugLevel > 0)
         {
-          System.err.println("ERROR: "+throwable.getMessage());
+          System.err.println("INTERNAL ERROR: "+throwable.getMessage());
           BARControl.printStackTrace(throwable);
           System.exit(1);
         }
