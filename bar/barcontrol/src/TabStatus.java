@@ -423,7 +423,7 @@ public class TabStatus
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
-          System.err.println("ERROR: "+throwable.getMessage());
+          System.err.println("INTERNAL ERROR: "+throwable.getMessage());
           BARControl.printStackTrace(throwable);
           System.exit(1);
         }
