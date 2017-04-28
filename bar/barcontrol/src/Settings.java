@@ -35,7 +35,7 @@ public class Settings
 {
   /** config value adapter String <-> linked string hash set
    */
-  class SettingValueAdapterStringSet extends SettingValueAdapter<String,LinkedHashSet<String> >
+  class SettingValueAdapterStringSet extends SettingUtils.ValueAdapter<String,LinkedHashSet<String> >
   {
     /** convert to value
      * @param string string
@@ -60,126 +60,6 @@ public class Settings
     {
       StringBuilder buffer = new StringBuilder();
       for (String string : stringSet)
-      {
-        if (buffer.length() > 0) buffer.append(',');
-        buffer.append(string);
-      }
-      return buffer.toString();
-    }
-  }
-
-  /** column sizes
-   */
-  static class SimpleStringArray
-  {
-    public final String[] stringArray;
-
-    /** create simple string array
-     */
-    SimpleStringArray()
-    {
-      this.stringArray = new String[0];
-    }
-
-    /** create simple string array
-     * @param width width array
-     */
-    SimpleStringArray(String[] stringArray)
-    {
-      this.stringArray = stringArray;
-    }
-
-    /** create simple string array
-     * @param widthList with list
-     */
-    SimpleStringArray(ArrayList<String> stringList)
-    {
-      this.stringArray = stringList.toArray(new String[stringList.size()]);
-    }
-
-    /** get string
-     * @param index index (0..n-1)
-     * @return string or null
-     */
-    public String get(int index)
-    {
-      return (index < stringArray.length) ? stringArray[index] : null;
-    }
-
-    /** get string array
-     * @return string array
-     */
-    public String[] get()
-    {
-      return stringArray;
-    }
-
-    /** get mapped indizes
-     * @return indizes
-     */
-    public int[] getMap(String strings[])
-    {
-      int indizes[] = new int[stringArray.length];
-      for (int i = 0; i < stringArray.length; i++)
-      {
-        indizes[i] = i;
-      }
-      for (int i = 0; i < stringArray.length; i++)
-      {
-        int j = StringUtils.indexOf(strings,stringArray[i]);
-        if (j >= 0)
-        {
-          int n = indizes[i];
-          indizes[i] = j;
-          indizes[j] = n;
-        }
-      }
-
-      return indizes;
-    }
-
-    /** convert data to string
-     * @return string
-     */
-    public String toString()
-    {
-      StringBuilder buffer = new StringBuilder();
-      for (String string : stringArray)
-      {
-        if (buffer.length() > 0) buffer.append(',');
-        buffer.append(string);
-      }
-      return "Strings {"+buffer.toString()+"}";
-    }
-  }
-
-  /** config value adapter String <-> column width array
-   */
-  class SettingValueAdapterSimpleStringArray extends SettingValueAdapter<String,SimpleStringArray>
-  {
-    /** convert to value
-     * @param string string
-     * @return value
-     */
-    public SimpleStringArray toValue(String string) throws Exception
-    {
-      StringTokenizer tokenizer = new StringTokenizer(string,",");
-      ArrayList<String> stringList = new ArrayList<String>();
-      while (tokenizer.hasMoreTokens())
-      {
-        stringList.add(tokenizer.nextToken());
-      }
-      return new SimpleStringArray(stringList);
-    }
-
-    /** convert to string
-     * @param value value
-     * @return string
-     */
-    public String toString(SimpleStringArray simpleStringArray) throws Exception
-    {
-      StringBuilder buffer = new StringBuilder();
-      for (String string : simpleStringArray.get())
       {
         if (buffer.length() > 0) buffer.append(',');
         buffer.append(string);
@@ -252,7 +132,7 @@ public class Settings
 
   /** config value adapter String <-> column width array
    */
-  class SettingValueAdapterWidthArray extends SettingValueAdapter<String,ColumnSizes>
+  class SettingValueAdapterWidthArray extends SettingUtils.ValueAdapter<String,ColumnSizes>
   {
     /** convert to value
      * @param string string
@@ -368,7 +248,7 @@ public class Settings
 
   /** config value adapter String <-> server
    */
-  class SettingValueAdapterServer extends SettingValueAdapter<String,Server>
+  class SettingValueAdapterServer extends SettingUtils.ValueAdapter<String,Server>
   {
     /** convert to value
      * @param string string
@@ -467,94 +347,94 @@ public class Settings
   @SettingComment(text={"BARControl configuration",""})
 
   // program settings
-  @SettingValue(type=SettingValueAdapterSimpleStringArray.class)
-  public static SimpleStringArray     jobListColumnOrder              = new SimpleStringArray();
+  @SettingValue(type=SettingUtils.ValueAdapterSimpleStringArray.class)
+  public static SettingUtils.SimpleStringArray jobListColumnOrder              = new SettingUtils.SimpleStringArray();
   @SettingValue(type=SettingValueAdapterWidthArray.class)
-  public static ColumnSizes           jobListColumns                  = new ColumnSizes(110,130,90,90,80,80,100,150,120);
+  public static ColumnSizes                    jobListColumns                  = new ColumnSizes(110,130,90,90,80,80,100,150,120);
 
   @SettingComment(text={"","Pause default settings"})
   @SettingValue
-  public static boolean               pauseCreateFlag                 = true;
+  public static boolean                        pauseCreateFlag                 = true;
   @SettingValue
-  public static boolean               pauseStorageFlag                = false;
+  public static boolean                        pauseStorageFlag                = false;
   @SettingValue
-  public static boolean               pauseRestoreFlag                = true;
+  public static boolean                        pauseRestoreFlag                = true;
   @SettingValue
-  public static boolean               pauseIndexUpdateFlag            = false;
+  public static boolean                        pauseIndexUpdateFlag            = false;
 
   // server settings
   @SettingComment(text={"","Server settings"})
   @SettingValue(name="server",type=SettingValueAdapterServer.class,migrate=SettingMigrateServer.class)
-  public static LinkedHashSet<Server> servers                         = new LinkedHashSet<Server>();
+  public static LinkedHashSet<Server>          servers                         = new LinkedHashSet<Server>();
   @SettingValue(name="serverName",type=String.class,obsolete=true)
-  public static LinkedHashSet<String> serverNames                     = new LinkedHashSet<String>();
+  public static LinkedHashSet<String>          serverNames                     = new LinkedHashSet<String>();
   @SettingValue
-  public static String                serverCAFileName                = null;
+  public static String                         serverCAFileName                = null;
   @SettingValue
-  public static String                serverCertificateFileName       = null;
+  public static String                         serverCertificateFileName       = null;
   @SettingValue
-  public static String                serverKeyFileName               = null;
+  public static String                         serverKeyFileName               = null;
   @SettingValue
-  public static boolean               forceSSL                        = false;
+  public static boolean                        forceSSL                        = false;
   @SettingValue
-  public static BARControl.Roles      role                            = BARControl.Roles.BASIC;
+  public static BARControl.Roles               role                            = BARControl.Roles.BASIC;
 
   // file requester shortcuts
   @SettingComment(text={"","Shortcuts"})
   @SettingValue(name="shortcut")
-  public static HashSet<String>       shortcuts                       = new HashSet<String>();
+  public static HashSet<String>                shortcuts                       = new HashSet<String>();
 
-  public static String                selectedJobName                 = null;
-  public static boolean               loginDialogFlag                 = false;
+  public static String                         selectedJobName                 = null;
+  public static boolean                        loginDialogFlag                 = false;
 
   // commands and data
-  public static String                runJobName                      = null;
-  public static ArchiveTypes          archiveType                     = ArchiveTypes.NORMAL;
-  public static String                abortJobName                    = null;
-  public static int                   pauseTime                       = 0;
-  public static boolean               pingFlag                        = false;
-  public static boolean               suspendFlag                     = false;
-  public static boolean               continueFlag                    = false;
-  public static boolean               listFlag                        = false;
+  public static String                         runJobName                      = null;
+  public static ArchiveTypes                   archiveType                     = ArchiveTypes.NORMAL;
+  public static String                         abortJobName                    = null;
+  public static int                            pauseTime                       = 0;
+  public static boolean                        pingFlag                        = false;
+  public static boolean                        suspendFlag                     = false;
+  public static boolean                        continueFlag                    = false;
+  public static boolean                        listFlag                        = false;
 
-  public static String                indexDatabaseAddStorageName     = null;
-  public static String                indexDatabaseRemoveStorageName  = null;
-  public static String                indexDatabaseRefreshStorageName = null;
-  public static String                indexDatabaseEntitiesListName   = null;
-  public static String                indexDatabaseStoragesListName   = null;
-  public static String                indexDatabaseEntriesListName    = null;
+  public static String                         indexDatabaseAddStorageName     = null;
+  public static String                         indexDatabaseRemoveStorageName  = null;
+  public static String                         indexDatabaseRefreshStorageName = null;
+  public static String                         indexDatabaseEntitiesListName   = null;
+  public static String                         indexDatabaseStoragesListName   = null;
+  public static String                         indexDatabaseEntriesListName    = null;
 
-  public static String                restoreStorageName              = null;
-  public static String                destination                     = "";
-  public static boolean               overwriteEntriesFlag            = false;
+  public static String                         restoreStorageName              = null;
+  public static String                         destination                     = "";
+  public static boolean                        overwriteEntriesFlag            = false;
 
   // flags
 //TODO: preference file
-  public static boolean               showEntriesExceededInfo         = true;
+  public static boolean                        showEntriesExceededInfo         = true;
 //TODO: preference file
-  public static boolean               showEntriesMarkInfo             = true;
+  public static boolean                        showEntriesMarkInfo             = true;
   @SettingValue
-  public static Boolean               showNewVersionInformation       = new Boolean(true);;
+  public static Boolean                        showNewVersionInformation       = new Boolean(true);;
 
   // version, help
-  public static boolean               versionFlag                     = false;
-  public static boolean               helpFlag                        = false;
-  public static boolean               xhelpFlag                       = false;
+  public static boolean                        versionFlag                     = false;
+  public static boolean                        helpFlag                        = false;
+  public static boolean                        xhelpFlag                       = false;
 
   // debug
-  public static int                   debugLevel                      = 0;
-  public static boolean               debugQuitServerFlag             = false;
+  public static int                            debugLevel                      = 0;
+  public static boolean                        debugQuitServerFlag             = false;
 
   // server name
-  public static String                serverName                      = null;
+  public static String                         serverName                      = null;
 
   // obsolete
   @SettingValue(obsolete=true)
-  public static String                serverPassword                  = null;
+  public static String                         serverPassword                  = null;
   @SettingValue(obsolete=true)
-  public static int                   serverPort                      = -1;
+  public static int                            serverPort                      = -1;
   @SettingValue(obsolete=true)
-  public static int                   serverTLSPort                   = -1;
+  public static int                            serverTLSPort                   = -1;
 
   // ------------------------ native functions ----------------------------
 
