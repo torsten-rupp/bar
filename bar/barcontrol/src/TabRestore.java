@@ -1974,7 +1974,7 @@ Dprintf.dprintf("cirrect?");
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
-          System.err.println("ERROR: "+throwable.getMessage());
+          System.err.println("INTERNAL ERROR: "+throwable.getMessage());
           BARControl.printStackTrace(throwable);
           System.exit(1);
         }
@@ -3481,7 +3481,7 @@ Dprintf.dprintf("cirrect?");
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
-          System.err.println("ERROR: "+throwable.getMessage());
+          System.err.println("INTERNAL ERROR: "+throwable.getMessage());
           BARControl.printStackTrace(throwable);
           System.exit(1);
         }
@@ -8043,7 +8043,7 @@ Dprintf.dprintf("remove");
             catch (Throwable throwable)
             {
               BARServer.disconnect();
-              System.err.println("ERROR: "+throwable.getMessage());
+              System.err.println("INTERNAL ERROR: "+throwable.getMessage());
               BARControl.printStackTrace(throwable);
               System.exit(1);
             }
@@ -8196,7 +8196,7 @@ Dprintf.dprintf("remove");
               catch (Throwable throwable)
               {
                 BARServer.disconnect();
-                System.err.println("ERROR: "+throwable.getMessage());
+                System.err.println("INTERNAL ERROR: "+throwable.getMessage());
                 BARControl.printStackTrace(throwable);
                 System.exit(1);
               }
@@ -8542,7 +8542,7 @@ Dprintf.dprintf("remove");
             catch (Throwable throwable)
             {
               BARServer.disconnect();
-              System.err.println("ERROR: "+throwable.getMessage());
+              System.err.println("INTERNAL ERROR: "+throwable.getMessage());
               BARControl.printStackTrace(throwable);
               System.exit(1);
             }
@@ -9112,7 +9112,7 @@ Dprintf.dprintf("");
 
     Dialogs.show(dialog);
 
-    // get number/size of archievs/entries to restore
+    // get number/size of archives/entries to restore
     new BackgroundTask((BusyDialog)null,new Object[]{indexIdSet})
     {
       @Override
@@ -9642,7 +9642,7 @@ System.exit(1);
           catch (Throwable throwable)
           {
             BARServer.disconnect();
-            System.err.println("ERROR: "+throwable.getMessage());
+            System.err.println("INTERNAL ERROR: "+throwable.getMessage());
             BARControl.printStackTrace(throwable);
             System.exit(1);
           }
