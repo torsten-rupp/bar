@@ -40,8 +40,11 @@ public class ProgressBar extends Canvas
   private double maximum;
   private int    subValueCount;
   private double value,subValue;
-  private Point  textSize;
   private String text;
+  private Point  textSize;
+
+  private String currentText;
+  private int    currentBarWidth;
 
   private Color  colorBlack;
   private Color  colorWhite;
@@ -61,6 +64,15 @@ public class ProgressBar extends Canvas
   ProgressBar(Composite composite, int style)
   {
     super(composite,style);
+
+    this.minimum              = 0.0;
+    this.maximum              = 1.0;
+    this.value                = 0.0;
+    this.text                 = "";
+    this.textSize             = new Point(0,0);
+
+    this.currentText          = "";
+    this.currentBarWidth      = 0;
 
     this.subValueCount        = 1;
     this.colorBlack           = getDisplay().getSystemColor(SWT.COLOR_BLACK);
@@ -176,21 +188,27 @@ public class ProgressBar extends Canvas
 
     if (!isDisposed())
     {
-      value    = Math.min(Math.max(((maximum-minimum) > 0.0)
-                                     ? (n-minimum)/(maximum-minimum)
-                                     : 0.0,
-                                   0.0
-                                  ),
-                          1.0
-                         );
-      subValue = 0.0;
+      double newValue = Math.min(Math.max(((maximum-minimum) > 0.0)
+                                            ? (n-minimum)/(maximum-minimum)
+                                            : 0.0,
+                                          0.0
+                                         ),
+                                 1.0
+                                );
+      String newText  = String.format("%.1f%%",value*100.0);
 
-      gc = new GC(this);
-      text = String.format("%.1f%%",(value+subValue)*100.0);
-      textSize = gc.stringExtent(text);
-      gc.dispose();
+      if (isRedrawRequired(newValue,newText))
+      {
+        value    = newValue;
+        subValue = 0.0;
+        text     = newText;
 
-      redraw();
+        gc = new GC(this);
+        textSize = gc.stringExtent(text);
+        gc.dispose();
+
+        redraw();
+      }
     }
   }
 
@@ -238,6 +256,25 @@ public class ProgressBar extends Canvas
     colorBarSet.dispose();
   }
 
+  /** check if redraw of progress bar is required (bar value change/text change)
+   * @param newValue new value
+   * @param newText new text
+   */
+  private boolean isRedrawRequired(double newValue, String newText)
+  {
+    Rectangle bounds;
+    int       w;
+    int       newBarWidth;
+
+    bounds = getBounds();
+    w = bounds.width;
+
+    newBarWidth = (int)((double)(w-4)*newValue);
+
+    return    (newBarWidth != currentBarWidth)  // bar width changed
+           || !currentText.equals(newText);     // text changed
+  }
+
   /** paint progress bar
    * @param paintEvent paint event
    */
@@ -246,13 +283,18 @@ public class ProgressBar extends Canvas
     GC        gc;
     Rectangle bounds;
     int       x,y,w,h;
+    int       barWidth;
 
+    // get bounds
     gc = paintEvent.gc;
     bounds = getBounds();
     x = 0;
     y = 0;
     w = bounds.width;
     h = bounds.height;
+
+    // get bar width
+    barWidth = (int)((double)(w-4)*value);
 
     // shadow
     gc.setForeground(colorNormalShadow);
@@ -273,6 +315,10 @@ public class ProgressBar extends Canvas
     // draw percentage text
     gc.setForeground(colorBlack);
     gc.drawString(text,(w-textSize.x)/2,(h-textSize.y)/2,true);
+
+    // save current
+    currentText     = text;
+    currentBarWidth = barWidth;
   }
 }
 

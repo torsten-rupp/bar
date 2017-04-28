@@ -73,6 +73,9 @@ public class BusyDialog
   private Button      widgetAbortCloseButton;
   private int         maxListLength;
 
+  private final String textValues[] = new String[]{"","",""};
+  private final double progressValues[] = new double[]{0.0,0.0};
+
   private boolean     doneFlag;
   private boolean     abortedFlag;
   private boolean     resizedFlag;
@@ -702,20 +705,20 @@ public class BusyDialog
    * @param args optional arguments
    * @return true if closed, false otherwise
    */
-  public boolean updateText(final int i, final String format, final Object... args)
+  public boolean updateText(final int i, String format, Object... args)
   {
     if (!display.isDisposed() && !dialog.isDisposed())
     {
+      textValues[i] = (format != null) ? String.format(format,args) : null;
+
       display.asyncExec(new Runnable()
       {
         public void run()
         {
           animate();
 
-          if (format != null)
+          if (textValues[i] != null)
           {
-            String text = String.format(format,args);
-
             // set message text
             Label widgetText = null;
             switch (i)
@@ -726,17 +729,17 @@ public class BusyDialog
             }
             if (   (widgetText != null)
                 && !widgetText.isDisposed()
-                && !text.equals(widgetText.getText())
+                && !textValues[i].equals(widgetText.getText())
                )
             {
               // set text
-              widgetText.setText(text);
+              widgetText.setText(textValues[i]);
 
               // resize dialog (it not manually changed)
               if (!resizedFlag)
               {
                 GC gc = new GC(widgetText);
-                int width = gc.stringExtent(text).x;
+                int width = gc.stringExtent(textValues[i]).x;
                 gc.dispose();
 
                 if (widgetText.getSize().x < width) dialog.pack();
@@ -802,7 +805,9 @@ public class BusyDialog
   {
     if (!dialog.isDisposed())
     {
-      display.asyncExec(new Runnable()
+      progressValues[i] = value;
+
+      display.syncExec(new Runnable()
       {
         public void run()
         {
@@ -819,11 +824,7 @@ public class BusyDialog
               && !widgetProgressBar.isDisposed()
              )
           {
-            double n = Math.min(Math.max(value,widgetProgressBar.getMinimum()),widgetProgressBar.getMaximum());
-            if (n != widgetProgressBar.getSelection())
-            {
-              widgetProgressBar.setSelection(n);
-            }
+            widgetProgressBar.setSelection(progressValues[i]);
           }
 
           display.update();
