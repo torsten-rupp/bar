@@ -1152,9 +1152,9 @@ Dprintf.dprintf("field.getType()=%s",type);
                     }
                     catch (Exception exception)
                     {
-Dprintf.dprintf("line=%d exception=%s",lineNb,exception);
-exception.printStackTrace();
-System.exit(1);
+                      System.err.println("INTERNAL ERROR at '"+file.getAbsolutePath()+"', line "+lineNb+": "+exception.getMessage());
+                      exception.printStackTrace();
+                      System.exit(127);
                     }
                   }
                 }
@@ -1209,10 +1209,10 @@ System.exit(1);
               }
               catch (Exception exception)
               {
-Dprintf.dprintf("exception=%s",exception);
-exception.printStackTrace();
+                System.err.println("INTERNAL ERROR: migrate value '"+settingValue.name()+"': "+exception.getMessage());
+                exception.printStackTrace();
+                System.exit(127);
               }
-
             }
           }
         }
