@@ -1805,20 +1805,71 @@ static inline char* stringAppend(char *destination, const char *source, size_t n
 }
 
 /***********************************************************************\
-* Name   : stringTrim
+* Name   : stringTrimBegin
 * Purpose: trim spaces at beginning of string
 * Input  : string - string
 * Output : -
-* Return : string
+* Return : trimmed string
 * Notes  : -
 \***********************************************************************/
 
-static inline const char* stringTrim(const char *string)
+static inline const char* stringTrimBegin(const char *string)
 {
   while (isspace(*string))
   {
     string++;
   }
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : stringTrimEnd
+* Purpose: trim spaces at end of string
+* Input  : string - string
+* Output : -
+* Return : trimmed string
+* Notes  : -
+\***********************************************************************/
+
+static inline char* stringTrimEnd(char *string)
+{
+  char *s;
+
+  s = string+strlen(string)-1;
+  while ((s >= string) && isspace(*s))
+  {
+    s--;
+  }
+  if (s >= string) s[0] = '\0';
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : stringTrim
+* Purpose: trim spaces at beginning and end of string
+* Input  : string - string
+* Output : -
+* Return : trimmed string
+* Notes  : -
+\***********************************************************************/
+
+static inline char* stringTrim(char *string)
+{
+  char *s;
+
+  while (isspace(*string))
+  {
+    string++;
+  }
+
+  s = string+strlen(string)-1;
+  while ((s >= string) && isspace(*s))
+  {
+    s--;
+  }
+  if (s >= string) s[0] = '\0';
 
   return string;
 }
