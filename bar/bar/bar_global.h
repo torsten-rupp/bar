@@ -491,8 +491,25 @@ typedef struct
 typedef struct
 {
   CompressAlgorithms delta;                                   // delta compress algorithm to use
-  CompressAlgorithms byte;                                    // byte compress algorithm to use
+  struct
+  {
+    CompressAlgorithms value;                                 // byte compress algorithm to use
+    bool               set;                                   // TRUE if byte compress algorithm option set
+  } byte;
 } JobOptionsCompressAlgorithms;
+
+// job crypt algorithm
+typedef struct
+{
+  CryptAlgorithms              value;                         // crypt algorithm to use
+  bool                         set;                           // TRUE if byte crypt algorithm option set
+} JobOptionCryptAlgorithm;
+
+typedef struct
+{
+  Password                     *value;                        // crypt password
+  bool                         set;                           // TRUE if byte compress password option set
+} JobOptionCryptPassword;
 
 // see forward declaration in forward.h
 struct JobOptions
@@ -512,9 +529,10 @@ struct JobOptions
   JobOptionsCompressAlgorithms compressAlgorithms;            // compress algorithms
 
   CryptTypes                   cryptType;                     // crypt type (symmetric, asymmetric)
-  CryptAlgorithms              cryptAlgorithms[4];            // crypt algorithms to use
+  JobOptionCryptAlgorithm      cryptAlgorithms[4];            // crypt algorithms to use
   PasswordModes                cryptPasswordMode;             // crypt password mode
   Password                     *cryptPassword;                // crypt password
+  bool                         cryptPasswordSet    ;          // TRUE if byte compress password option set
   Key                          cryptPublicKey;
   Key                          cryptPrivateKey;
 
