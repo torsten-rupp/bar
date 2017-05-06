@@ -2857,6 +2857,7 @@ LOCAL void writeModifiedJobs(void)
 
 LOCAL bool readJob(JobNode *jobNode)
 {
+  uint       i;
   Errors     error;
   FileHandle fileHandle;
   bool       failFlag;
@@ -2878,45 +2879,47 @@ LOCAL bool readJob(JobNode *jobNode)
   PatternList_clear(&jobNode->compressExcludePatternList);
   DeltaSourceList_clear(&jobNode->deltaSourceList);
   List_clear(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-  jobNode->jobOptions.archiveType                  = ARCHIVE_TYPE_NORMAL;
-  jobNode->jobOptions.archivePartSize              = 0LL;
+  jobNode->jobOptions.archiveType                   = ARCHIVE_TYPE_NORMAL;
+  jobNode->jobOptions.archivePartSize               = 0LL;
   String_clear(jobNode->jobOptions.incrementalListFileName);
-  jobNode->jobOptions.directoryStripCount          = DIRECTORY_STRIP_NONE;
+  jobNode->jobOptions.directoryStripCount           = DIRECTORY_STRIP_NONE;
   String_clear(jobNode->jobOptions.destination);
-  jobNode->jobOptions.patternType                  = PATTERN_TYPE_GLOB;
-  jobNode->jobOptions.compressAlgorithms.delta     = COMPRESS_ALGORITHM_NONE;
-  jobNode->jobOptions.compressAlgorithms.byte      = COMPRESS_ALGORITHM_NONE;
-  jobNode->jobOptions.cryptAlgorithms[0]           = CRYPT_ALGORITHM_NONE;
-  jobNode->jobOptions.cryptAlgorithms[1]           = CRYPT_ALGORITHM_NONE;
-  jobNode->jobOptions.cryptAlgorithms[2]           = CRYPT_ALGORITHM_NONE;
-  jobNode->jobOptions.cryptAlgorithms[3]           = CRYPT_ALGORITHM_NONE;
+  jobNode->jobOptions.patternType                   = PATTERN_TYPE_GLOB;
+  jobNode->jobOptions.compressAlgorithms.delta      = COMPRESS_ALGORITHM_NONE;
+  jobNode->jobOptions.compressAlgorithms.byte.value = COMPRESS_ALGORITHM_NONE;
+  jobNode->jobOptions.compressAlgorithms.byte.set   = FALSE;
+  for (i = 0; i < 4; i++)
+  {
+    jobNode->jobOptions.cryptAlgorithms[i].value = CRYPT_ALGORITHM_NONE;
+    jobNode->jobOptions.cryptAlgorithms[i].set   = FALSE;
+  }
   #ifdef HAVE_GCRYPT
-    jobNode->jobOptions.cryptType                  = CRYPT_TYPE_SYMMETRIC;
+    jobNode->jobOptions.cryptType                   = CRYPT_TYPE_SYMMETRIC;
   #else /* not HAVE_GCRYPT */
-    jobNode->jobOptions.cryptType                  = CRYPT_TYPE_NONE;
+    jobNode->jobOptions.cryptType                   = CRYPT_TYPE_NONE;
   #endif /* HAVE_GCRYPT */
-  jobNode->jobOptions.cryptPasswordMode            = PASSWORD_MODE_DEFAULT;
-  jobNode->jobOptions.cryptPublicKey.data          = NULL;
-  jobNode->jobOptions.cryptPublicKey.length        = 0;
+  jobNode->jobOptions.cryptPasswordMode             = PASSWORD_MODE_DEFAULT;
+  jobNode->jobOptions.cryptPublicKey.data           = NULL;
+  jobNode->jobOptions.cryptPublicKey.length         = 0;
   String_clear(jobNode->jobOptions.ftpServer.loginName);
   if (jobNode->jobOptions.ftpServer.password != NULL) Password_clear(jobNode->jobOptions.ftpServer.password);
-  jobNode->jobOptions.sshServer.port               = 0;
+  jobNode->jobOptions.sshServer.port                = 0;
   String_clear(jobNode->jobOptions.sshServer.loginName);
   if (jobNode->jobOptions.sshServer.password != NULL) Password_clear(jobNode->jobOptions.sshServer.password);
   clearKey(&jobNode->jobOptions.sshServer.publicKey);
   clearKey(&jobNode->jobOptions.sshServer.privateKey);
   String_clear(jobNode->jobOptions.preProcessScript);
   String_clear(jobNode->jobOptions.postProcessScript);
-  jobNode->jobOptions.device.volumeSize            = 0LL;
-  jobNode->jobOptions.waitFirstVolumeFlag          = FALSE;
-  jobNode->jobOptions.errorCorrectionCodesFlag     = FALSE;
-  jobNode->jobOptions.blankFlag                    = FALSE;
-  jobNode->jobOptions.skipUnreadableFlag           = FALSE;
-  jobNode->jobOptions.rawImagesFlag                = FALSE;
-  jobNode->jobOptions.archiveFileMode              = ARCHIVE_FILE_MODE_STOP;
-  jobNode->jobOptions.archiveFileModeOverwriteFlag = FALSE;
-  jobNode->modifiedFlag                            = FALSE;
-  jobNode->scheduleModifiedFlag                    = TRUE;
+  jobNode->jobOptions.device.volumeSize             = 0LL;
+  jobNode->jobOptions.waitFirstVolumeFlag           = FALSE;
+  jobNode->jobOptions.errorCorrectionCodesFlag      = FALSE;
+  jobNode->jobOptions.blankFlag                     = FALSE;
+  jobNode->jobOptions.skipUnreadableFlag            = FALSE;
+  jobNode->jobOptions.rawImagesFlag                 = FALSE;
+  jobNode->jobOptions.archiveFileMode               = ARCHIVE_FILE_MODE_STOP;
+  jobNode->jobOptions.archiveFileModeOverwriteFlag  = FALSE;
+  jobNode->modifiedFlag                             = FALSE;
+  jobNode->scheduleModifiedFlag                     = TRUE;
 
   // open file
   error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
@@ -9172,10 +9175,10 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                                                     ),
                           jobNode->jobOptions.archivePartSize,
                           Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.delta),
-                          Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.byte),
+                          Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.byte.value),
 //TODO
-                          (jobNode->jobOptions.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_algorithmToString(jobNode->jobOptions.cryptAlgorithms[0],"unknown") : "none",
-                          (jobNode->jobOptions.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->jobOptions.cryptType) : "none",
+                          Crypt_algorithmToString(jobNode->jobOptions.cryptAlgorithms[0].value,"unknown"),
+                          (jobNode->jobOptions.cryptAlgorithms[0].value != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->jobOptions.cryptType) : "none",
                           ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->jobOptions.cryptPasswordMode,NULL),
                           jobNode->lastExecutedDateTime,
                           jobNode->runningInfo.estimatedRestTime
