@@ -150,6 +150,7 @@ CREATE TRIGGER AFTER UPDATE OF name ON storage
 // --- entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entries(
   id              INTEGER PRIMARY KEY,
+
   storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,
   name            TEXT NOT NULL,
   type            INTEGER,
