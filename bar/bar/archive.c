@@ -911,7 +911,7 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle)
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if (   Crypt_isEncrypted(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0])
+    if (   Crypt_isEncrypted(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0].value)
         && (archiveHandle->cryptPassword == NULL)
        )
     {
@@ -1579,14 +1579,14 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
   chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
 #else
-  chunkMeta.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
+  chunkMeta.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0].value);
 #endif
 
   // init crypt
   error = Crypt_init(&cryptInfo,
 //TODO: MULTI_CRYPT
 //TODO: CBC, CTS?
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0].value,
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
                      archiveHandle->cryptSalt,
@@ -4422,7 +4422,7 @@ UNUSED_VARIABLE(storageInfo);
 
   Semaphore_init(&archiveHandle->passwordLock);
 //TODO: multi crypt
-  archiveHandle->cryptType               = Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0]) ? storageInfo->jobOptions->cryptType : CRYPT_TYPE_NONE;
+  archiveHandle->cryptType               = Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0].value) ? storageInfo->jobOptions->cryptType : CRYPT_TYPE_NONE;
   Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
@@ -4460,7 +4460,7 @@ UNUSED_VARIABLE(storageInfo);
   Crypt_randomize(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
 
   // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms[0],&archiveHandle->blockLength);
+  error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms[0].value,&archiveHandle->blockLength);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -4472,7 +4472,7 @@ UNUSED_VARIABLE(storageInfo);
     AutoFree_cleanup(&autoFreeList);
     return ERROR_UNSUPPORTED_BLOCK_LENGTH;
   }
-  error = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms[0],&keyLength);
+  error = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms[0].value,&keyLength);
   if (error != ERROR_NONE)
   {
     return error;
