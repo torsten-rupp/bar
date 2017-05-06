@@ -195,7 +195,7 @@ public class ProgressBar extends Canvas
                                          ),
                                  1.0
                                 );
-      String newText  = String.format("%.1f%%",value*100.0);
+      String newText  = String.format("%.1f%%",newValue*100.0);
 
       if (isRedrawRequired(newValue,newText))
       {
@@ -231,20 +231,26 @@ public class ProgressBar extends Canvas
 
     if (!isDisposed())
     {
-      subValue = Math.min(Math.max(((maximum-minimum) > 0.0)
-                                     ? ((value+n/(double)subValueCount)-minimum)/(maximum-minimum)
-                                     : 0.0,
-                                   0.0
-                                  ),
-                          1.0
-                         );
+      double newSubValue = Math.min(Math.max(((maximum-minimum) > 0.0)
+                                               ? ((value+n/(double)subValueCount)-minimum)/(maximum-minimum)
+                                               : 0.0,
+                                             0.0
+                                            ),
+                                    1.0
+                                   );
+      String newText     = String.format("%.1f%%",(value+newSubValue)*100.0);
 
-      gc = new GC(this);
-      text = String.format("%.1f%%",(value+subValue)*100.0);
-      textSize = gc.stringExtent(text);
-      gc.dispose();
+      if (isRedrawRequired(value+newSubValue,newText))
+      {
+        subValue = newSubValue;
+        text     = newText;
 
-      redraw();
+        gc = new GC(this);
+        textSize = gc.stringExtent(text);
+        gc.dispose();
+
+        redraw();
+      }
     }
   }
 
@@ -269,7 +275,7 @@ public class ProgressBar extends Canvas
     bounds = getBounds();
     w = bounds.width;
 
-    newBarWidth = (int)((double)(w-4)*newValue);
+    newBarWidth = (int)((double)(w-4)*(value+subValue));
 
     return    (newBarWidth != currentBarWidth)  // bar width changed
            || !currentText.equals(newText);     // text changed
@@ -294,7 +300,7 @@ public class ProgressBar extends Canvas
     h = bounds.height;
 
     // get bar width
-    barWidth = (int)((double)(w-4)*value);
+    barWidth = (int)((double)(w-4)*(value+subValue));
 
     // shadow
     gc.setForeground(colorNormalShadow);
@@ -310,7 +316,7 @@ public class ProgressBar extends Canvas
     gc.setBackground(colorBar);
     gc.fillRectangle(x+2,y+2,w-4,h-4);
     gc.setBackground(colorBarSet);
-    gc.fillRectangle(x+2,y+2,(int)((double)(w-4)*(value+subValue)),h-4);
+    gc.fillRectangle(x+2,y+2,barWidth,h-4);
 
     // draw percentage text
     gc.setForeground(colorBlack);
