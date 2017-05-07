@@ -517,14 +517,10 @@ LOCAL Errors initFileHandle(const char  *__fileName__,
       debugFileNode->lineNb                = __lineNb__;
       #ifdef HAVE_BACKTRACE
         debugFileNode->stackTraceSize      = backtrace((void*)debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
-      #else /* not HAVE_BACKTRACE */
-        debugFileNode->stackTraceSize      = 0;
       #endif /* HAVE_BACKTRACE */
       debugFileNode->closeFileName         = NULL;
       debugFileNode->closeLineNb           = 0;
       #ifdef HAVE_BACKTRACE
-        debugFileNode->closeStackTraceSize = 0;
-      #else /* not HAVE_BACKTRACE */
         debugFileNode->closeStackTraceSize = 0;
       #endif /* HAVE_BACKTRACE */
       debugFileNode->fileHandle            = fileHandle;
@@ -591,8 +587,6 @@ LOCAL void doneFileHandle(const char  *__fileName__,
         debugFileNode->closeLineNb           = __lineNb__;
         #ifdef HAVE_BACKTRACE
           debugFileNode->closeStackTraceSize = backtrace((void*)debugFileNode->closeStackTrace,SIZE_OF_ARRAY(debugFileNode->closeStackTrace));
-        #else /* not HAVE_BACKTRACE */
-          debugFileNode->closeStackTraceSize = 0;
         #endif /* HAVE_BACKTRACE */
         List_append(&debugClosedFileList,debugFileNode);
 
@@ -1402,8 +1396,6 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
       {
         #ifdef HAVE_BACKTRACE
           debugDumpStackTrace(stderr,0,debugFileNode->stackTrace,debugFileNode->stackTraceSize,0);
-        #else /* not HAVE_BACKTRACE */
-          debugFileNode->stackTraceSize = 0;
         #endif /* HAVE_BACKTRACE */
         if (debugFileNode->fileHandle->name != NULL)
         {
@@ -1451,14 +1443,10 @@ Errors __File_getTmpFileCString(const char  *__fileName__,
       debugFileNode->lineNb                = __lineNb__;
       #ifdef HAVE_BACKTRACE
         debugFileNode->stackTraceSize      = backtrace((void*)debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
-      #else /* not HAVE_BACKTRACE */
-        debugFileNode->stackTraceSize      = 0;
       #endif /* HAVE_BACKTRACE */
       debugFileNode->closeFileName         = NULL;
       debugFileNode->closeLineNb           = 0;
       #ifdef HAVE_BACKTRACE
-        debugFileNode->closeStackTraceSize = 0;
-      #else /* not HAVE_BACKTRACE */
         debugFileNode->closeStackTraceSize = 0;
       #endif /* HAVE_BACKTRACE */
       debugFileNode->fileHandle            = fileHandle;

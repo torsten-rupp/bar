@@ -1686,9 +1686,12 @@ or
         serverSocketHandle->keyLength  = keyLength;
       }
       #else /* not HAVE_GNU_TLS */
-        UNUSED_VARIABLE(caFileName);
-        UNUSED_VARIABLE(certFileName);
-        UNUSED_VARIABLE(keyFileName);
+        UNUSED_VARIABLE(caData);
+        UNUSED_VARIABLE(caLength);
+        UNUSED_VARIABLE(certData);
+        UNUSED_VARIABLE(certLength);
+        UNUSED_VARIABLE(keyData);
+        UNUSED_VARIABLE(keyLength);
       #endif /* HAVE_GNU_TLS */
       break;
     #ifndef NDEBUG

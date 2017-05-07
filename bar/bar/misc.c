@@ -929,7 +929,7 @@ String Misc_getCurrentUserName(String string)
       String_clear(string);
     }
   #else
-    String_setCString(string,getlogin();
+    String_setCString(string,getlogin());
   #endif
 
   return string;
