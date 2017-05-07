@@ -41,6 +41,15 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+// architecture
+#if   defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__)
+  #define ARCHTECTURE_X86
+#elif defined(__arm__)
+  #define ARCHTECTURE_ARM
+#else
+  #define ARCHTECTURE_UNKNOWN
+#endif
+
 #define DEBUG_LEVEL 8                          // debug level
 
 // definition of boolean values

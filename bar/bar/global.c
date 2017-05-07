@@ -304,7 +304,9 @@ void *__wrap_malloc(size_t size)
 
   if (size > ALLOC_LIMIT)
   {
-    asm("int3");
+    #ifdef ARCHTECTURE_X86
+      asm("int3");
+    #endif
   }
 
   return __real_malloc(size);
@@ -326,7 +328,9 @@ void *__wrap_calloc(size_t nmemb, size_t size)
 
   if (nmemb*size > ALLOC_LIMIT)
   {
-    asm("int3");
+    #ifdef ARCHTECTURE_X86
+      asm("int3");
+    #endif
   }
 
   return __real_calloc(nmemb,size);
@@ -348,7 +352,9 @@ void *__wrap_realloc(void *ptr, size_t size)
 
   if (size > ALLOC_LIMIT)
   {
-    asm("int3");
+    #ifdef ARCHTECTURE_X86
+      asm("int3");
+    #endif
   }
 
   return __real_realloc(ptr,size);
