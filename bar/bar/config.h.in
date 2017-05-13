@@ -97,8 +97,14 @@
 /* fseeko64() available */
 #undef HAVE_FSEEKO64
 
+/* FS_APPEND_FL available */
+#undef HAVE_FS_APPEND_FL
+
 /* FS_COMPR_FL available */
 #undef HAVE_FS_COMPR_FL
+
+/* FS_IMMUTABLE_FL available */
+#undef HAVE_FS_IMMUTABLE_FL
 
 /* FS_IOC_GETFLAGS available */
 #undef HAVE_FS_IOC_GETFLAGS

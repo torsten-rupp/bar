@@ -152,6 +152,7 @@ typedef struct
   {
     const char *text;
   } comment;
+  bool(*parsed)(void *userData, void *variable, char errorMessage[], uint errorMessageSize);
 } ConfigValue;
 
 /* example
@@ -414,10 +415,11 @@ typedef struct
     {},\
     {NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL},\
-    {NULL}\
+    {NULL},\
+NULL\
   }
 #define CONFIG_STRUCT_VALUE_INTEGER(name,type,member,min,max,units) \
-  CONFIG_VALUE_INTEGER(name,NULL,offsetof(type,member),min,max,units)
+  CONFIG_VALUE_INTEGER(name,NULL,offsetof(type,member),min,max,units,NULL)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_INTEGER64, CONFIG_STRUCT_VALUE_INTEGER64
@@ -454,7 +456,7 @@ typedef struct
     {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_INTEGER64(name,type,member,min,max,units) \
-  CONFIG_VALUE_INTEGER64(name,NULL,offsetof(type,member),min,max,units)
+  CONFIG_VALUE_INTEGER64(name,NULL,offsetof(type,member),min,max,units,NULL)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_DOUBLE, CONFIG_STRUCT_VALUE_DOUBLE
