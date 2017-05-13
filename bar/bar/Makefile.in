@@ -578,16 +578,19 @@ help:
 	@$(ECHO) ""
 	@$(ECHO) "  po"
 	@$(ECHO) ""
-	@$(ECHO) "  run"
+	@$(ECHO) "  run                                       run server"
 	@$(ECHO) "  run_en"
 	@$(ECHO) "  run_de"
 	@$(ECHO) "  run_jp"
-	@$(ECHO) "  run_ssl"
-	@$(ECHO) "  rundev"
-	@$(ECHO) "  rundevd"
-	@$(ECHO) "  rundevddd"
-	@$(ECHO) "  rundevgcov"
-	@$(ECHO) "  rundevvalgrind"
+	@$(ECHO) "  run_ssl                                   run server with SSL"
+	@$(ECHO) ""
+	@$(ECHO) "  rundev                                    run development server"
+	@$(ECHO) "  rundevd, rundevd1                         run development server with debug"
+	@$(ECHO) "  rundevd2                                  run development server 2 with debug"
+	@$(ECHO) "  rundevd_slave                             run development server slave with debug"
+	@$(ECHO) "  rundevddd                                 run development server with DDD"
+	@$(ECHO) "  rundevgcov                                run development server with gcov"
+	@$(ECHO) "  rundevvalgrind                            run development server with Valgrind"
 	@$(ECHO) "  rundev_en"
 	@$(ECHO) "  rundev_de"
 	@$(ECHO) "  rundev_jp"
@@ -891,30 +894,35 @@ bar-sqlite3: bar-sqlite3.o debug/global.o debug/lists.o debug/strings.o debug/st
 run runserver: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D \
+        --server-mode=master \
         --index-database=bar-index.db \
         --server-jobs-directory=jobs
 
 run_en runserver_en: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=en_US nice ./bar@EXEEXT@ --daemon -D \
+        --server-mode=master \
         --index-database=bar-index.db \
         --server-jobs-directory=jobs
 
 run_de runserver_de: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=de_DE nice ./bar@EXEEXT@ --daemon -D \
+        --server-mode=master \
         --index-database=bar-index.db \
         --server-jobs-directory=jobs
 
 run_jp runserver_jp: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=ja_JP nice ./bar@EXEEXT@ --daemon -D \
+        --server-mode=master \
         --index-database=bar-index.db \
         --server-jobs-directory=jobs
 
 run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D \
+        --server-mode=master \
         --index-database=bar-index.db \
         --server-jobs-directory=jobs \
         --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem
@@ -924,6 +932,7 @@ rundev: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	$(INSTALL) bar.cfg /tmp/bar.cfg
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+        --server-mode=master \
         --index-database=bar-index.db --index-database-keep-time=365days \
         --server-jobs-directory=jobs \
         --server-port=39909 --server-tls-port=39910 \
@@ -934,6 +943,7 @@ rundev1 rundevd: bar-debug@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-s
 	$(INSTALL) -d jobs
 	$(INSTALL) bar.cfg /tmp/bar.cfg
 	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+        --server-mode=master \
         --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
         --server-jobs-directory=jobs \
         --server-port=39909 --server-tls-port=39910 \
@@ -944,9 +954,21 @@ rundevd2: bar-debug@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-k
 	$(INSTALL) -d jobs
 	$(INSTALL) bar.cfg /tmp/bar.cfg
 	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+        --server-mode=master \
         --continuous-database=bar-continuous2.db --index-database=bar-index2.db --index-database-keep-time=365days \
         --server-jobs-directory=jobs2 \
         --server-port=39999 --server-tls-port=0 \
+        --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+        --log-file=/tmp/bar2.log --log=all --server-debug
+
+rundevd_slave: bar-debug@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	$(INSTALL) bar.cfg /tmp/bar.cfg
+	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+        --server-mode=slave \
+        --continuous-database=bar-continuous2.db --index-database=bar-index2.db --index-database-keep-time=365days \
+        --server-jobs-directory=jobs2 \
+        --server-port=39911 --server-tls-port=39912 \
         --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
         --log-file=/tmp/bar2.log --log=all --server-debug
 
@@ -954,6 +976,7 @@ rundevddd: bar-debug@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-
 	$(INSTALL) -d jobs
 	$(INSTALL) bar.cfg /tmp/bar.cfg
 	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+        --server-mode=master \
         --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
         --server-jobs-directory=jobs \
         --server-port=39909 --server-tls-port=39910 \
@@ -964,6 +987,7 @@ rundevvalgrind: bar-valgrind ../bar-ca.pem ../bar-server-cert.pem ../bar-server-
 	$(INSTALL) -d jobs
 	$(INSTALL) bar.cfg /tmp/bar.cfg
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) ./bar-valgrind --daemon -D --no-default-config --config=/tmp/bar.cfg \
+        --server-mode=master \
         --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
         --server-jobs-directory=jobs \
         --server-port=39909 --server-tls-port=39910 \
@@ -974,6 +998,7 @@ rundev_en: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pe
 	$(INSTALL) -d jobs
 	$(INSTALL) bar.cfg /tmp/bar.cfg
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=en_US nice ./bar@EXEEXT@ --daemon -D \
+        --server-mode=master \
         --index-database=bar-index.db --index-database-keep-time=365days \
         --server-jobs-directory=jobs \
         --server-port=39909 --server-tls-port=39910 \
@@ -984,6 +1009,7 @@ rundev_de: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pe
 	$(INSTALL) -d jobs
 	$(INSTALL) bar.cfg /tmp/bar.cfg
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=de_DE nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+        --server-mode=master \
         --index-database=bar-index.db \
         --server-jobs-directory=jobs \
         --server-port=39909 --server-tls-port=39910 \
@@ -994,6 +1020,7 @@ rundev_jp: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pe
 	$(INSTALL) -d jobs
 	$(INSTALL) bar.cfg /tmp/bar.cfg
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=ja_JP nice ./bar@EXEEXT@ --daemon -D \
+        --server-mode=master \
         --index-database=bar-index.db --index-database-keep-time=365days \
         --server-jobs-directory=jobs \
         --server-port=39909 --server-tls-port=39910 \
@@ -1004,6 +1031,7 @@ rundev_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.p
 	$(INSTALL) -d jobs
 	$(INSTALL) bar.cfg /tmp/bar.cfg
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+        --server-mode=master \
         --index-database=bar-index.db --index-database-keep-time=365days \
         --server-jobs-directory=jobs \
         --server-port=39909 --server-tls-port=39910 \
@@ -1014,6 +1042,7 @@ rundev_test: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	$(INSTALL) bar.cfg /tmp/bar.cfg
 	nice ./bar --daemon -D --no-default-config --config=/tmp/bar.cfg \
+        --server-mode=master \
         --index-database=test/index.db \
         --server-jobs-directory=test/jobs \
         --server-port=39909 --server-tls-port=39910 \
@@ -1051,7 +1080,9 @@ functionSlaveCopy = \
 #   images
 #   dvd
 #
-# For image tests some sudo-commands are required:
+# For special file and image tests some sudo-commands are required:
+#  sudo chattr +i <file>
+#  sudo chattr +a <file>
 #  sudo losetup <loop device> <file>
 #  sudo losetup -d <loop device>
 #  sudo chmod o+rw <loop device>
@@ -1090,6 +1121,8 @@ TEST_FILE_NAMES = \
   file664.dat \
   file666.dat \
   nodump.dat \
+  immutable.dat \
+  append-only.dat \
   fifo \
   data\'.dat \
   data\".dat \
