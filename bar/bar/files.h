@@ -208,6 +208,16 @@ typedef enum
 #else
   #define FILE_ATTRIBUTE_NO_COMPRESS 0LL
 #endif
+#ifdef HAVE_FS_IMMUTABLE_FL
+  #define FILE_ATTRIBUTE_IMMUTABLE   FS_IMMUTABLE_FL
+#else
+  #define FILE_ATTRIBUTE_IMMUTABLE   0LL
+#endif
+#ifdef HAVE_FS_APPEND_FL
+  #define FILE_ATTRIBUTE_APPEND      FS_APPEND_FL
+#else
+  #define FILE_ATTRIBUTE_APPEND      0LL
+#endif
 #ifdef HAVE_FS_NODUMP_FL
   #define FILE_ATTRIBUTE_NO_DUMP     FS_NODUMP_FL
 #else

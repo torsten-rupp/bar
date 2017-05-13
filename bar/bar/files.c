@@ -728,6 +728,8 @@ LOCAL Errors getAttributes(ConstString fileName, FileAttributes *fileAttributes)
   (*fileAttributes) = 0LL;
   if ((attributes & FILE_ATTRIBUTE_COMPRESS   ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_COMPRESS;
   if ((attributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_NO_COMPRESS;
+  if ((attributes & FILE_ATTRIBUTE_IMMUTABLE  ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_IMMUTABLE;
+  if ((attributes & FILE_ATTRIBUTE_APPEND     ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_APPEND;
   if ((attributes & FILE_ATTRIBUTE_NO_DUMP    ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_NO_DUMP;
 
   return ERROR_NONE;
@@ -780,9 +782,11 @@ LOCAL Errors setAttributes(ConstString fileName, FileAttributes fileAttributes)
       close(handle);
       return error;
     }
-    attributes &= ~(FILE_ATTRIBUTE_COMPRESS|FILE_ATTRIBUTE_NO_COMPRESS|FILE_ATTRIBUTE_NO_DUMP);
+    attributes &= ~(FILE_ATTRIBUTE_COMPRESS|FILE_ATTRIBUTE_NO_COMPRESS|FILE_ATTRIBUTE_IMMUTABLE|FILE_ATTRIBUTE_APPEND|FILE_ATTRIBUTE_NO_DUMP);
     if ((fileAttributes & FILE_ATTRIBUTE_COMPRESS) != 0LL) attributes |= FILE_ATTRIBUTE_COMPRESS;
     if ((fileAttributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) attributes |= FILE_ATTRIBUTE_NO_COMPRESS;
+    if ((fileAttributes & FILE_ATTRIBUTE_IMMUTABLE) != 0LL) attributes |= FILE_ATTRIBUTE_IMMUTABLE;
+    if ((fileAttributes & FILE_ATTRIBUTE_APPEND) != 0LL) attributes |= FILE_ATTRIBUTE_APPEND;
     if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP) != 0LL) attributes |= FILE_ATTRIBUTE_NO_DUMP;
     if (ioctl(handle,FS_IOC_SETFLAGS,&attributes) != 0)
     {
