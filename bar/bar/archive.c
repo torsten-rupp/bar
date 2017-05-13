@@ -7668,6 +7668,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
             {
               break;
             }
+            AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->meta.chunkMetaEntry.info,{ Chunk_close(&archiveEntryInfo->meta.chunkMetaEntry.info); });
 
             // get meta data
             if (userName        != NULL) String_set(userName,archiveEntryInfo->meta.chunkMetaEntry.userName);
@@ -9262,6 +9263,7 @@ NULL,//                         password,
             {
               break;
             }
+            AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->directory.chunkDirectoryEntry.info,{ Chunk_close(&archiveEntryInfo->directory.chunkDirectoryEntry.info); });
 
             // get directory meta data
             String_set(directoryName,archiveEntryInfo->directory.chunkDirectoryEntry.name);
@@ -9683,6 +9685,7 @@ NULL,//                         password,
             {
               break;
             }
+            AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->link.chunkLinkEntry.info,{ Chunk_close(&archiveEntryInfo->link.chunkLinkEntry.info); });
 
             // get link meta data
             String_set(linkName,archiveEntryInfo->link.chunkLinkEntry.name);
@@ -10788,6 +10791,7 @@ NULL,//                         password,
             {
               break;
             }
+            AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->special.chunkSpecialEntry.info,{ Chunk_close(&archiveEntryInfo->special.chunkSpecialEntry.info); });
 
             // get special meta data
             String_set(specialName,archiveEntryInfo->special.chunkSpecialEntry.name);
