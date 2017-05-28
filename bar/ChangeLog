@@ -1,4 +1,4 @@
-2016-12-xx 0.21
+2017-06-xx 0.21
   * parallel test, compare
   * fragmented processing of huge files (size > 128M by default;
     see option --fragment-size). Speed-up storage of huge files
@@ -18,6 +18,7 @@
   * hardend encryption: use key derivation function (Note: this
     required a new archive format BAR1; the old format BAR0
     can still be read)
+  * support immutable, append-only file attributes
   * BARControl: read keys from .pem files, JKS is now
     obsolete
   * added option --comment
@@ -25,6 +26,8 @@
   * BARControl: added roles basic/normal/expert
   * BARControl: pause unit s/m/h for option --pause
   * BARControl restore tab: select job
+  * fixed memory leak if archive is broken and cannot be read
+    completely
 
 2016-12-11 0.20b
   * BARControl: fixed SSL encryption. Please re-generate
