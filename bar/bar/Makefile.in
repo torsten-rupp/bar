@@ -618,7 +618,9 @@ help:
 	@$(ECHO) "  test_parameters[-debug|-valgrind]"
 	@$(ECHO) "  test_misc[-debug|-valgrind]"
 	@$(ECHO) "  test_all[-debug|-valgrind]"
-	@$(ECHO) "  test_clean"
+	@$(ECHO) "  test_data"
+	@$(ECHO) "  test_data_clean"
+	@$(ECHO) "  test_data_dist_clean"
 	@$(ECHO) ""
 	@$(ECHO) "  test_file_operations"
 	@$(ECHO) "  test_file_operations_dryrun"
@@ -1081,8 +1083,8 @@ functionSlaveCopy = \
 #   dvd
 #
 # For special file and image tests some sudo-commands are required:
-#  sudo chattr +i <file>
-#  sudo chattr +a <file>
+#  sudo chattr +i|-i <file>
+#  sudo chattr +a|-a <file>
 #  sudo losetup <loop device> <file>
 #  sudo losetup -d <loop device>
 #  sudo chmod o+rw <loop device>
@@ -1093,7 +1095,7 @@ functionSlaveCopy = \
 #  sudo dd <loop device> <file>
 #  sudo diff -r <mount point> <mount point>
 
-# different test files
+# test files
 TEST_FILE_NAMES = \
   zero128.dat \
   zero1024.dat \
@@ -1141,6 +1143,7 @@ endif
 
 TEST_FILES = $(foreach z,$(TEST_FILE_NAMES),$(TEST_DATA_DIR)/data/$z)
 
+# huge test files
 TEST_HUGEFILE_NAMES = \
   zero5G.dat \
   random5G.dat \
@@ -1196,7 +1199,8 @@ TEST_TIMEOUT = $(TIMEOUT) --signal=KILL 600 timeout --signal=ABRT 300
 .PHONY: test_storage_file-debug test_storage_ftp-debug test_storage_scp-debug test_storage_sftp-debug test_storage_webdav-debug
 .PHONY: test_storage_file-valgrind test_storage_ftp-valgrind test_storage_scp-valgrind test_storage_sftp-valgrind test_storage_webdav-valgrind
 .PHONY: test_all test_all-debug test_all-valgrind
-.PHONY: test_clean show_debug_test_code run_debug_test_code
+.PHONY: test_data test_data_clean test_data_dist_clean
+.PHONY: show_debug_test_code run_debug_test_code
 test:
 	@$(MAKE) QUIET=1 --no-print-directory -s \
           test_basic \
@@ -1226,9 +1230,18 @@ test_win: \
 test-win-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test-win
 
-test_clean:
+test_data: \
+  $(TEST_FILES)
+
+test_data_clean:
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(RMF)  $(TEST_CONFIG) $(TEST_SERVER_CONFIG) $(TEST_KEYS)
+
+test_data_dist_clean: \
+  test_data_clean
+	if test -f $(TEST_DATA_DIR)/data/append-only.dat; then $(SUDO) $(CHATTR) -a $(TEST_DATA_DIR)/data/append-only.dat; fi
+	if test -f $(TEST_DATA_DIR)/data/immutable.dat; then $(SUDO) $(CHATTR) -i $(TEST_DATA_DIR)/data/immutable.dat; fi
+	$(RMRF) $(TEST_DATA_DIR)/data
 
 test1 test_basic: \
   $(TEST_BAR) \
@@ -2141,6 +2154,12 @@ $(TEST_DATA_DIR)/data/hardlinkdata_extended_attribute.dat $(TEST_DATA_DIR)/data/
 	($(CD) $(@D); $(RMF) hardlink_extended_attribute.dat; $(LN) hardlinkdata_extended_attribute.dat hardlink_extended_attribute.dat); $(SETFATTR) -s foo1 -V test $(TEST_DATA_DIR)/data/hardlink_extended_attribute.dat 1>/dev/null; $(ATTR) -n foo2 -v "Hello World" $(TEST_DATA_DIR)/data/hardlink_extended_attribute.dat 1>/dev/null
 endif
 endif
+$(TEST_DATA_DIR)/data/immutable.dat:
+	$(INSTALL) -d $(@D)
+	$(ECHO) An immutable file >$@; $(SUDO) $(CHATTR) +i $@ 1>/dev/null
+$(TEST_DATA_DIR)/data/append-only.dat:
+	$(INSTALL) -d $(@D)
+	$(ECHO) Append-only file >$@; $(SUDO) $(CHATTR) +a $@ 1>/dev/null
 $(TEST_DATA_DIR)/data/fifo:
 	$(INSTALL) -d $(@D)
 	($(CD) $(TEST_DATA_DIR)/data; $(MKFIFO) fifo)
