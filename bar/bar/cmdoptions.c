@@ -583,13 +583,13 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
            )
         {
           if (outputHandle != NULL) fprintf(outputHandle,
-                                                 "%sValue '%s' out of range %d..%d for option '%s'!\n",
-                                                 (errorPrefix != NULL) ? errorPrefix : "",
-                                                 value,
-                                                 commandLineOption->integerOption.min,
-                                                 commandLineOption->integerOption.max,
-                                                 option
-                                                );
+                                            "%sValue '%s' out of range %d..%d for option '%s'!\n",
+                                            (errorPrefix != NULL) ? errorPrefix : "",
+                                            value,
+                                            commandLineOption->integerOption.min,
+                                            commandLineOption->integerOption.max,
+                                            option
+                                           );
           return FALSE;
         }
       }
@@ -618,13 +618,13 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
            )
         {
           if (outputHandle != NULL) fprintf(outputHandle,
-                                                 "%sValue '%s' out of range %lld..%lld for option '%s'!\n",
-                                                 (errorPrefix != NULL) ? errorPrefix : "",
-                                                 value,
-                                                 commandLineOption->integer64Option.min,
-                                                 commandLineOption->integer64Option.max,
-                                                 option
-                                                );
+                                            "%sValue '%s' out of range %lld..%lld for option '%s'!\n",
+                                            (errorPrefix != NULL) ? errorPrefix : "",
+                                            value,
+                                            commandLineOption->integer64Option.min,
+                                            commandLineOption->integer64Option.max,
+                                            option
+                                           );
           return FALSE;
         }
       }
@@ -715,13 +715,13 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
            )
         {
           if (outputHandle != NULL) fprintf(outputHandle,
-                                                 "%sValue '%s' out of range %lf..%lf for float option '%s'!\n",
-                                                 (errorPrefix != NULL)?errorPrefix:"",
-                                                 value,
-                                                 commandLineOption->doubleOption.min,
-                                                 commandLineOption->doubleOption.max,
-                                                 option
-                                                );
+                                            "%sValue '%s' out of range %lf..%lf for float option '%s'!\n",
+                                            (errorPrefix != NULL)?errorPrefix:"",
+                                            value,
+                                            commandLineOption->doubleOption.min,
+                                            commandLineOption->doubleOption.max,
+                                            option
+                                           );
           return FALSE;
         }
       }
