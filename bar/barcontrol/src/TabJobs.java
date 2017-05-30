@@ -13305,7 +13305,7 @@ Dprintf.dprintf("line=%s",line);
                                                              "2 weeks",14,
                                                              "3 weeks",21,
                                                              "4 weeks",28,
-                                                             "2 monthss",60,
+                                                             "2 months",60,
                                                              "3 months",90,
                                                              "6 months",180
                                                             }
