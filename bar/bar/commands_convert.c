@@ -724,8 +724,9 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   Errors                    error;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CompressAlgorithms        deltaCompressAlgorithm,byteCompressAlgorithm;
-  CryptAlgorithms           cryptAlgorithm;
   CryptTypes                cryptType;
+  CryptAlgorithms           cryptAlgorithm;
+  Password                  *cryptPassword;
   String                    fileName;
   FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
@@ -768,6 +769,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   // get new compression, crypt settings
   if (jobOptions->compressAlgorithms.isSet) byteCompressAlgorithm = jobOptions->compressAlgorithms.value.byte;
   if (jobOptions->cryptAlgorithms.isSet   ) cryptAlgorithm        = jobOptions->cryptAlgorithms.values[0];
+  cryptPassword = jobOptions->cryptNewPassword;
 
   // create new file entry
   error = Archive_newFileEntry(&destinationArchiveEntryInfo,
@@ -775,9 +777,10 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                                NULL,  // indexHandle,
                                deltaCompressAlgorithm,
                                byteCompressAlgorithm,
-                               cryptAlgorithm,
 //TODO
 cryptType,
+                               cryptAlgorithm,
+                               cryptPassword,
                                fileName,
                                &fileInfo,
                                &fileExtendedAttributeList,
@@ -914,8 +917,9 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   Errors             error;
   ArchiveEntryInfo   sourceArchiveEntryInfo;
   CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
-  CryptAlgorithms    cryptAlgorithm;
   CryptTypes         cryptType;
+  CryptAlgorithms    cryptAlgorithm;
+  Password           *cryptPassword;
   String             deviceName;
   DeviceInfo         deviceInfo;
   ArchiveEntryInfo   destinationArchiveEntryInfo;
@@ -967,6 +971,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   // get new compression, crypt settings
   if (jobOptions->compressAlgorithms.isSet) byteCompressAlgorithm = jobOptions->compressAlgorithms.value.byte;
   if (jobOptions->cryptAlgorithms.isSet   ) cryptAlgorithm        = jobOptions->cryptAlgorithms.values[0];
+  cryptPassword = jobOptions->cryptNewPassword;
 
   // create new image entry
   error = Archive_newImageEntry(&destinationArchiveEntryInfo,
@@ -974,9 +979,10 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                                 NULL,  // indexHandle,
                                 deltaCompressAlgorithm,
                                 byteCompressAlgorithm,
-                                cryptAlgorithm,
 //TODO
 cryptType,
+                                cryptAlgorithm,
+                                cryptPassword,
                                 deviceName,
                                 &deviceInfo,
                                 fileSystemType,
@@ -1105,8 +1111,9 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   FileExtendedAttributeList fileExtendedAttributeList;
   Errors                    error;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
-  CryptAlgorithms           cryptAlgorithm;
   CryptTypes                cryptType;
+  CryptAlgorithms           cryptAlgorithm;
+  Password                  *cryptPassword;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
 
@@ -1139,14 +1146,16 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
 
   // get new crypt settings
   if (jobOptions->cryptAlgorithms.isSet) cryptAlgorithm = jobOptions->cryptAlgorithms.values[0];
+  cryptPassword = jobOptions->cryptNewPassword;
 
   // create new directory entry
   error = Archive_newDirectoryEntry(&destinationArchiveEntryInfo,
                                     destinationArchiveHandle,
                                     NULL,  // indexHandle,
-                                    cryptAlgorithm,
 //TODO
 cryptType,
+                                    cryptAlgorithm,
+                                    cryptPassword,
                                     directoryName,
                                     &fileInfo,
                                     &fileExtendedAttributeList
@@ -1220,8 +1229,9 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 {
   String                    linkName;
   String                    fileName;
-  CryptAlgorithms           cryptAlgorithm;
   CryptTypes                cryptType;
+  CryptAlgorithms           cryptAlgorithm;
+  Password                  *cryptPassword;
   FileExtendedAttributeList fileExtendedAttributeList;
   Errors                    error;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
@@ -1260,14 +1270,16 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 
   // get new crypt settings
   if (jobOptions->cryptAlgorithms.isSet) cryptAlgorithm = jobOptions->cryptAlgorithms.values[0];
+  cryptPassword = jobOptions->cryptNewPassword;
 
   // create new link entry
   error = Archive_newLinkEntry(&destinationArchiveEntryInfo,
                                destinationArchiveHandle,
                                NULL,  // indexHandle,
-                               cryptAlgorithm,
 //TODO
 cryptType,
+                               cryptAlgorithm,
+                               cryptPassword,
                                linkName,
                                fileName,
                                &fileInfo,
@@ -1351,8 +1363,9 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   Errors                    error;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CompressAlgorithms        deltaCompressAlgorithm,byteCompressAlgorithm;
-  CryptAlgorithms           cryptAlgorithm;
   CryptTypes                cryptType;
+  CryptAlgorithms           cryptAlgorithm;
+  Password                  *cryptPassword;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
   uint64                    fragmentOffset,fragmentSize;
@@ -1393,6 +1406,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   // get new compression, crypt settings
   if (jobOptions->compressAlgorithms.isSet) byteCompressAlgorithm = jobOptions->compressAlgorithms.value.byte;
   if (jobOptions->cryptAlgorithms.isSet   ) cryptAlgorithm        = jobOptions->cryptAlgorithms.values[0];
+  cryptPassword = jobOptions->cryptNewPassword;
 
   // create new hard link entry
   error = Archive_newHardLinkEntry(&destinationArchiveEntryInfo,
@@ -1400,9 +1414,10 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                                    NULL,  // indexHandle,
                                    deltaCompressAlgorithm,
                                    byteCompressAlgorithm,
-                                   cryptAlgorithm,
 //TODO
 cryptType,
+                                   cryptAlgorithm,
+                                   cryptPassword,
                                    &fileNameList,
                                    &fileInfo,
                                    &fileExtendedAttributeList,
@@ -1527,8 +1542,9 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   FileExtendedAttributeList fileExtendedAttributeList;
   Errors                    error;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
-  CryptAlgorithms           cryptAlgorithm;
   CryptTypes                cryptType;
+  CryptAlgorithms           cryptAlgorithm;
+  Password                  *cryptPassword;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
 
@@ -1561,14 +1577,16 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
 
   // get new crypt settings
   if (jobOptions->cryptAlgorithms.isSet) cryptAlgorithm = jobOptions->cryptAlgorithms.values[0];
+  cryptPassword = jobOptions->cryptNewPassword;
 
   // create new special entry
   error = Archive_newSpecialEntry(&destinationArchiveEntryInfo,
                                   destinationArchiveHandle,
                                   NULL,  // indexHandle,
-                                  cryptAlgorithm,
 //TODO
 cryptType,
+                                  cryptAlgorithm,
+                                  cryptPassword,
                                   fileName,
                                   &fileInfo,
                                   &fileExtendedAttributeList

@@ -566,6 +566,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms,                      &jobOptions.cryptAlgorithms.isSet,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                       "select crypt algorithms to use"                                           ),
   CMD_OPTION_SELECT       ("crypt-type",                   0,  0,2,jobOptions.cryptType,                            NULL,COMMAND_LINE_OPTIONS_CRYPT_TYPES,                            "select crypt type"                                                        ),
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,2,&globalOptions.cryptPassword,                    NULL,cmdOptionParsePassword,NULL,                                 "crypt password (use with care!)","password"                               ),
+  CMD_OPTION_SPECIAL      ("crypt-new-password",           0,  0,2,&jobOptions.cryptNewPassword,                    NULL,cmdOptionParsePassword,NULL,                                 "new crypt password (use with care!)","password"                           ),
   CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,2,&jobOptions.cryptPublicKey,                      NULL,cmdOptionParseKeyData,NULL,                                  "public key for asymmetric encryption","file name|data"                    ),
   CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,2,&jobOptions.cryptPrivateKey,                     NULL,cmdOptionParseKeyData,NULL,                                  "private key for asymmetric decryption","file name|data"                   ),
   CMD_OPTION_SPECIAL      ("signature-public-key",         0,  0,1,&globalOptions.signaturePublicKey,               NULL,cmdOptionParseCryptKey,NULL,                                 "public key for signature check","file name|data"                          ),
@@ -987,7 +988,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 //  CONFIG_VALUE_SELECT            ("crypt-algorithm",              jobOptions.cryptAlgorithms,-1,                                 CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_VALUE_SELECT            ("crypt-type",                   &jobOptions.cryptType,-1,                                      CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_VALUE_SELECT            ("crypt-password-mode",          &jobOptions.cryptPasswordMode,-1,                              CONFIG_VALUE_PASSWORD_MODES),
-  CONFIG_VALUE_SPECIAL           ("crypt-password",               &globalOptions.cryptPassword,-1,                               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_VALUE_SPECIAL           ("crypt-password",               &jobOptions.cryptPassword,-1,                                  configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
   CONFIG_VALUE_SPECIAL           ("crypt-public-key",             &jobOptions.cryptPublicKey,-1,                                 configValueParseKeyData,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("crypt-private-key",            &jobOptions.cryptPrivateKey,-1,                                configValueParseKeyData,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("signature-public-key",         &globalOptions.signaturePublicKey,-1,                          configValueParseKeyData,NULL,NULL,NULL,NULL),
@@ -5104,6 +5105,8 @@ void initJobOptions(JobOptions *jobOptions)
     jobOptions->cryptType                     = CRYPT_TYPE_NONE;
   #endif /* HAVE_GCRYPT */
   jobOptions->cryptPasswordMode               = PASSWORD_MODE_DEFAULT;
+  jobOptions->cryptPassword                   = NULL;
+  jobOptions->cryptNewPassword                = NULL;
   initKey(&jobOptions->cryptPublicKey);
   initKey(&jobOptions->cryptPrivateKey);
   jobOptions->preProcessScript                = NULL;
@@ -5142,6 +5145,7 @@ void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOp
   jobOptions->destination                         = String_duplicate(fromJobOptions->destination);
 
   jobOptions->cryptPassword                       = Password_duplicate(fromJobOptions->cryptPassword);
+  jobOptions->cryptNewPassword                    = Password_duplicate(fromJobOptions->cryptNewPassword);
   duplicateKey(&jobOptions->cryptPublicKey,&fromJobOptions->cryptPublicKey);
   duplicateKey(&jobOptions->cryptPrivateKey,&fromJobOptions->cryptPrivateKey);
 
@@ -5246,6 +5250,7 @@ void doneJobOptions(JobOptions *jobOptions)
 
   doneKey(&jobOptions->cryptPrivateKey);
   doneKey(&jobOptions->cryptPublicKey);
+  Password_delete(jobOptions->cryptNewPassword);
   Password_delete(jobOptions->cryptPassword);
 
   String_delete(jobOptions->destination);

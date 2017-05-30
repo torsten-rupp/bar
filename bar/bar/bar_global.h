@@ -415,7 +415,8 @@ typedef struct
   ulong                  compressMinFileSize;                 // min. size of file for using compression
   uint64                 continuousMaxSize;                   // max. entry size for continuous backup
 
-  Password               *cryptPassword;                      // default password for encryption/decryption
+//TODO: only in job options?
+  Password               *cryptPassword;                      // default crypt password
 
   CryptKey               signaturePublicKey;
   CryptKey               signaturePrivateKey;
@@ -528,6 +529,7 @@ struct JobOptions
   PasswordModes                cryptPasswordMode;             // crypt password mode
 //TODO: used?
   Password                     *cryptPassword;                // crypt password
+  Password                     *cryptNewPassword;             // new crypt password
   bool                         cryptPasswordSet    ;          // TRUE if byte compress password option set
   Key                          cryptPublicKey;
   Key                          cryptPrivateKey;

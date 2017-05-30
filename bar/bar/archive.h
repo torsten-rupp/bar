@@ -828,8 +828,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 *          indexHandle               - index handle (can be NULL)
 *          deltaCompressAlgorithm    - used delta compression algorithm
 *          byteCompressAlgorithm     - used byte compression algorithm
-*          cryptAlgorithm            - used crypt algorithm
 *          cryptType                 - used crypt type
+*          cryptAlgorithm            - used crypt algorithm
+*          cryptPassword             - used crypt password (can be NULL)
 *          fileName                  - file name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -852,8 +853,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                               IndexHandle                     *indexHandle,
                               CompressAlgorithms              deltaCompressAlgorithm,
                               CompressAlgorithms              byteCompressAlgorithm,
-                              CryptAlgorithms                 cryptAlgorithm,
                               CryptTypes                      cryptType,
+                              CryptAlgorithms                 cryptAlgorithm,
+                              Password                        *cryptPassword,
                               ConstString                     fileName,
                               const FileInfo                  *fileInfo,
                               const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -870,8 +872,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                 IndexHandle                     *indexHandle,
                                 CompressAlgorithms              deltaCompressAlgorithm,
                                 CompressAlgorithms              byteCompressAlgorithm,
-                                CryptAlgorithms                 cryptAlgorithm,
                                 CryptTypes                      cryptType,
+                                CryptAlgorithms                 cryptAlgorithm,
+                                Password                        *cryptPassword,
                                 ConstString                     fileName,
                                 const FileInfo                  *fileInfo,
                                 const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -890,8 +893,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 *          indexHandle            - index handle (can be NULL)
 *          deltaCompressAlgorithm - used delta compression algorithm
 *          byteCompressAlgorithm  - used byte compression algorithm
-*          cryptAlgorithm         - used crypt algorithm
 *          cryptType              - used crypt type
+*          cryptAlgorithm         - used crypt algorithm
+*          cryptPassword          - used crypt password (can be NULL)
 *          deviceName             - special device name
 *          deviceInfo             - device info
 *          fragmentOffset         - fragment offset [blocks]
@@ -912,8 +916,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                IndexHandle        *indexHandle,
                                CompressAlgorithms deltaCompressAlgorithm,
                                CompressAlgorithms byteCompressAlgorithm,
-                               CryptAlgorithms    cryptAlgorithm,
                                CryptTypes         cryptType,
+                               CryptAlgorithms    cryptAlgorithm,
+                               Password           *cryptPassword,
                                ConstString        deviceName,
                                const DeviceInfo   *deviceInfo,
                                FileSystemTypes    fileSystemType,
@@ -930,8 +935,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                  IndexHandle        *indexHandle,
                                  CompressAlgorithms deltaCompressAlgorithm,
                                  CompressAlgorithms byteCompressAlgorithm,
-                                 CryptAlgorithms    cryptAlgorithm,
                                  CryptTypes         cryptType,
+                                 CryptAlgorithms    cryptAlgorithm,
+                                 Password           *cryptPassword,
                                  ConstString        deviceName,
                                  const DeviceInfo   *deviceInfo,
                                  FileSystemTypes    fileSystemType,
@@ -949,8 +955,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 *                                      variable
 *          archiveHandle             - archive handle
 *          indexHandle               - index handle (can be NULL)
-*          cryptAlgorithm            - used crypt algorithm
 *          cryptType                 - used crypt type
+*          cryptAlgorithm            - used crypt algorithm
+*          cryptPassword             - used crypt password (can be NULL)
 *          directoryName             - directory name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -964,8 +971,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
   Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
                                    IndexHandle                     *indexHandle,
-                                   CryptAlgorithms                 cryptAlgorithm,
                                    CryptTypes                      cryptType,
+                                   CryptAlgorithms                 cryptAlgorithm,
+                                   Password                        *cryptPassword,
                                    ConstString                     directoryName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -976,8 +984,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                      ArchiveEntryInfo                *archiveEntryInfo,
                                      ArchiveHandle                   *archiveHandle,
                                      IndexHandle                     *indexHandle,
-                                     CryptAlgorithms                 cryptAlgorithm,
                                      CryptTypes                      cryptType,
+                                     CryptAlgorithms                 cryptAlgorithm,
+                                     Password                        *cryptPassword,
                                      ConstString                     directoryName,
                                      const FileInfo                  *fileInfo,
                                      const FileExtendedAttributeList *fileExtendedAttributeList
@@ -990,8 +999,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 * Input  : archiveEntryInfo          - archive link entry variable
 *          archiveHandle             - archive handle
 *          indexHandle               - index handle (can be NULL)
-*          cryptAlgorithm            - used crypt algorithm
 *          cryptType                 - used crypt type
+*          cryptAlgorithm            - used crypt algorithm
+*          cryptPassword             - used crypt password (can be NULL)
 *          fileName                  - link name
 *          destinationName           - name of referenced file
 *          fileInfo                  - file info
@@ -1006,8 +1016,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
   Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveHandle                   *archiveHandle,
                               IndexHandle                     *indexHandle,
-                              CryptAlgorithms                 cryptAlgorithm,
                               CryptTypes                      cryptType,
+                              CryptAlgorithms                 cryptAlgorithm,
+                              Password                        *cryptPassword,
                               ConstString                     linkName,
                               ConstString                     destinationName,
                               const FileInfo                  *fileInfo,
@@ -1019,8 +1030,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveHandle                   *archiveHandle,
                                 IndexHandle                     *indexHandle,
-                                CryptAlgorithms                 cryptAlgorithm,
                                 CryptTypes                      cryptType,
+                                CryptAlgorithms                 cryptAlgorithm,
+                                Password                        *cryptPassword,
                                 ConstString                     linkName,
                                 ConstString                     destinationName,
                                 const FileInfo                  *fileInfo,
@@ -1037,8 +1049,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 *          indexHandle               - index handle (can be NULL)
 *          deltaCompressAlgorithm    - used delta compression algorithm
 *          byteCompressAlgorithm     - used byte compression algorithm
-*          cryptAlgorithm            - used crypt algorithm
 *          cryptType                 - used crypt type
+*          cryptAlgorithm            - used crypt algorithm
+*          cryptPassword             - used crypt password (can be NULL)
 *          fileNameList              - list of file names
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -1061,8 +1074,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                   IndexHandle                     *indexHandle,
                                   CompressAlgorithms              deltaCompressAlgorithm,
                                   CompressAlgorithms              byteCompressAlgorithm,
-                                  CryptAlgorithms                 cryptAlgorithm,
                                   CryptTypes                      cryptType,
+                                  CryptAlgorithms                 cryptAlgorithm,
+                                  Password                        *cryptPassword,
                                   const StringList                *fileNameList,
                                   const FileInfo                  *fileInfo,
                                   const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -1079,8 +1093,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                     IndexHandle                     *indexHandle,
                                     CompressAlgorithms              deltaCompressAlgorithm,
                                     CompressAlgorithms              byteCompressAlgorithm,
-                                    CryptAlgorithms                 cryptAlgorithm,
                                     CryptTypes                      cryptType,
+                                    CryptAlgorithms                 cryptAlgorithm,
+                                    Password                        *cryptPassword,
                                     const StringList                *fileNameList,
                                     const FileInfo                  *fileInfo,
                                     const FileExtendedAttributeList *fileExtendedAttributeList,
@@ -1098,8 +1113,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 *                                      variable
 *          archiveHandle             - archive handle
 *          indexHandle               - index handle (can be NULL)
-*          cryptAlgorithm            - used crypt algorithm
 *          cryptType                 - used crypt type
+*          cryptAlgorithm            - used crypt algorithm
+*          cryptPassword             - used crypt password (can be NULL)
 *          specialName               - special name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -1113,8 +1129,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
   Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                  ArchiveHandle                   *archiveHandle,
                                  IndexHandle                     *indexHandle,
-                                 CryptAlgorithms                 cryptAlgorithm,
                                  CryptTypes                      cryptType,
+                                 CryptAlgorithms                 cryptAlgorithm,
+                                 Password                        *cryptPassword,
                                  ConstString                     specialName,
                                  const FileInfo                  *fileInfo,
                                  const FileExtendedAttributeList *fileExtendedAttributeList
@@ -1125,8 +1142,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                    ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
                                    IndexHandle                     *indexHandle,
-                                   CryptAlgorithms                 cryptAlgorithm,
                                    CryptTypes                      cryptType,
+                                   CryptAlgorithms                 cryptAlgorithm,
+                                   Password                        *cryptPassword,
                                    ConstString                     specialName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -1214,9 +1232,9 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 *                                      (can be NULL)
 *          byteCompressAlgorithm     - used byte compression algorithm
 *                                      (can be NULL)
+*          cryptType                 - used crypt type (can be NULL)
 *          cryptAlgorithm            - used crypt algorithm (can be
 *                                      NULL)
-*          cryptType                 - used crypt type (can be NULL)
 *          fileName                  - file name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -1236,8 +1254,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
                                ArchiveHandle             *archiveHandle,
                                CompressAlgorithms        *deltaCompressAlgorithm,
                                CompressAlgorithms        *byteCompressAlgorithm,
-                               CryptAlgorithms           *cryptAlgorithm,
                                CryptTypes                *cryptType,
+                               CryptAlgorithms           *cryptAlgorithm,
                                String                    fileName,
                                FileInfo                  *fileInfo,
                                FileExtendedAttributeList *fileExtendedAttributeList,
@@ -1253,8 +1271,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
                                  ArchiveHandle             *archiveHandle,
                                  CompressAlgorithms        *deltaCompressAlgorithm,
                                  CompressAlgorithms        *byteCompressAlgorithm,
-                                 CryptAlgorithms           *cryptAlgorithm,
                                  CryptTypes                *cryptType,
+                                 CryptAlgorithms           *cryptAlgorithm,
                                  String                    fileName,
                                  FileInfo                  *fileInfo,
                                  FileExtendedAttributeList *fileExtendedAttributeList,
@@ -1274,8 +1292,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 *                                   (can be NULL)
 *          byteCompressAlgorithm  - used byte compression algorithm (can
 *                                   be NULL)
-*          cryptAlgorithm         - used crypt algorithm (can be NULL)
 *          cryptType              - used crypt type (can be NULL)
+*          cryptAlgorithm         - used crypt algorithm (can be NULL)
 *          deviceName             - image name
 *          deviceInfo             - device info (can be NULL)
 *          fileSystemType         - file system type (can be NULL)
@@ -1293,8 +1311,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
                                 ArchiveHandle      *archiveHandle,
                                 CompressAlgorithms *deltaCompressAlgorithm,
                                 CompressAlgorithms *byteCompressAlgorithm,
-                                CryptAlgorithms    *cryptAlgorithm,
                                 CryptTypes         *cryptType,
+                                CryptAlgorithms    *cryptAlgorithm,
                                 String             deviceName,
                                 DeviceInfo         *deviceInfo,
                                 FileSystemTypes    *fileSystemType,
@@ -1310,8 +1328,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
                                   ArchiveHandle      *archiveHandle,
                                   CompressAlgorithms *deltaCompressAlgorithm,
                                   CompressAlgorithms *byteCompressAlgorithm,
-                                  CryptAlgorithms    *cryptAlgorithm,
                                   CryptTypes         *cryptType,
+                                  CryptAlgorithms    *cryptAlgorithm,
                                   String             deviceName,
                                   DeviceInfo         *deviceInfo,
                                   FileSystemTypes    *fileSystemType,
@@ -1327,8 +1345,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 * Purpose: read directory info from archive
 * Input  : archiveEntryInfo - archive directory info
 *          archiveHandle    - archive handle
-* Output : cryptAlgorithm            - used crypt algorithm (can be NULL)
-*          cryptType                 - used crypt type (can be NULL)
+* Output : cryptType                 - used crypt type (can be NULL)
+*          cryptAlgorithm            - used crypt algorithm (can be NULL)
 *          directoryName             - directory name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -1340,8 +1358,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 #ifdef NDEBUG
   Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
                                     ArchiveHandle             *archiveHandle,
-                                    CryptAlgorithms           *cryptAlgorithm,
                                     CryptTypes                *cryptType,
+                                    CryptAlgorithms           *cryptAlgorithm,
                                     String                    directoryName,
                                     FileInfo                  *fileInfo,
                                     FileExtendedAttributeList *fileExtendedAttributeList
@@ -1351,8 +1369,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
                                       ulong                     __lineNb__,
                                       ArchiveEntryInfo          *archiveEntryInfo,
                                       ArchiveHandle             *archiveHandle,
-                                      CryptAlgorithms           *cryptAlgorithm,
                                       CryptTypes                *cryptType,
+                                      CryptAlgorithms           *cryptAlgorithm,
                                       String                    directoryName,
                                       FileInfo                  *fileInfo,
                                       FileExtendedAttributeList *fileExtendedAttributeList
@@ -1364,8 +1382,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 * Purpose: read link info from archive
 * Input  : archiveEntryInfo - archive link entry info
 *          archiveHandle    - archive handle
-* Output : cryptAlgorithm            - used crypt algorithm (can be NULL)
-*          cryptType                 - used crypt type (can be NULL)
+* Output : cryptType                 - used crypt type (can be NULL)
+*          cryptAlgorithm            - used crypt algorithm (can be NULL)
 *          linkName                  - link name
 *          destinationName           - name of referenced file
 *          fileInfo                  - file info
@@ -1378,8 +1396,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 #ifdef NDEBUG
   Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                                ArchiveHandle             *archiveHandle,
-                               CryptAlgorithms           *cryptAlgorithm,
                                CryptTypes                *cryptType,
+                               CryptAlgorithms           *cryptAlgorithm,
                                String                    linkName,
                                String                    destinationName,
                                FileInfo                  *fileInfo,
@@ -1390,8 +1408,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
                                  ulong                     __lineNb__,
                                  ArchiveEntryInfo          *archiveEntryInfo,
                                  ArchiveHandle             *archiveHandle,
-                                 CryptAlgorithms           *cryptAlgorithm,
                                  CryptTypes                *cryptType,
+                                 CryptAlgorithms           *cryptAlgorithm,
                                  String                    linkName,
                                  String                    destinationName,
                                  FileInfo                  *fileInfo,
@@ -1408,8 +1426,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 *                                      (can be NULL)
 *          byteCompressAlgorithm     - used byte compression algorithm
 *                                      (can be NULL)
-*          cryptAlgorithm            - used crypt algorithm (can be NULL)
 *          cryptType                 - used crypt type (can be NULL)
+*          cryptAlgorithm            - used crypt algorithm (can be NULL)
 *          fileNameList              - list of file names
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -1429,8 +1447,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
                                    ArchiveHandle             *archiveHandle,
                                    CompressAlgorithms        *deltaCompressAlgorithm,
                                    CompressAlgorithms        *byteCompressAlgorithm,
-                                   CryptAlgorithms           *cryptAlgorithm,
                                    CryptTypes                *cryptType,
+                                   CryptAlgorithms           *cryptAlgorithm,
                                    StringList                *fileNameList,
                                    FileInfo                  *fileInfo,
                                    FileExtendedAttributeList *fileExtendedAttributeList,
@@ -1446,8 +1464,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
                                      ArchiveHandle             *archiveHandle,
                                      CompressAlgorithms        *deltaCompressAlgorithm,
                                      CompressAlgorithms        *byteCompressAlgorithm,
-                                     CryptAlgorithms           *cryptAlgorithm,
                                      CryptTypes                *cryptType,
+                                     CryptAlgorithms           *cryptAlgorithm,
                                      StringList                *fileNameList,
                                      FileInfo                  *fileInfo,
                                      FileExtendedAttributeList *fileExtendedAttributeList,
@@ -1463,8 +1481,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 * Purpose: read special device info from archive
 * Input  : archiveEntryInfo - archive special entry info
 *          archiveHandle    - archive handle
-* Output : cryptAlgorithm            - used crypt algorithm (can be NULL)
-*          cryptType                 - used crypt type (can be NULL)
+* Output : cryptType                 - used crypt type (can be NULL)
+*          cryptAlgorithm            - used crypt algorithm (can be NULL)
 *          name                      - link name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -1476,8 +1494,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 #ifdef NDEBUG
   Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
                                   ArchiveHandle             *archiveHandle,
-                                  CryptAlgorithms           *cryptAlgorithm,
                                   CryptTypes                *cryptType,
+                                  CryptAlgorithms           *cryptAlgorithm,
                                   String                    specialName,
                                   FileInfo                  *fileInfo,
                                   FileExtendedAttributeList *fileExtendedAttributeList
@@ -1487,8 +1505,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
                                     ulong                     __lineNb__,
                                     ArchiveEntryInfo          *archiveEntryInfo,
                                     ArchiveHandle             *archiveHandle,
-                                    CryptAlgorithms           *cryptAlgorithm,
                                     CryptTypes                *cryptType,
+                                    CryptAlgorithms           *cryptAlgorithm,
                                     String                    specialName,
                                     FileInfo                  *fileInfo,
                                     FileExtendedAttributeList *fileExtendedAttributeList

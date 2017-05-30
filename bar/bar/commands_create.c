@@ -4930,8 +4930,9 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
                                  indexHandle,
                                  createInfo->jobOptions->compressAlgorithms.value.delta,
                                  createInfo->jobOptions->compressAlgorithms.value.byte,
-                                 createInfo->jobOptions->cryptAlgorithms.values[0],
 CRYPT_TYPE_SYMMETRIC, //TODO
+                                 createInfo->jobOptions->cryptAlgorithms.values[0],
+                                 NULL,  // cryptPassword
                                  fileName,
                                  &fileInfo,
                                  &fileExtendedAttributeList,
@@ -5337,8 +5338,9 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                                   indexHandle,
                                   createInfo->jobOptions->compressAlgorithms.value.delta,
                                   createInfo->jobOptions->compressAlgorithms.value.byte,
-                                  createInfo->jobOptions->cryptAlgorithms.values[0],
 CRYPT_TYPE_SYMMETRIC, //TODO
+                                  createInfo->jobOptions->cryptAlgorithms.values[0],
+                                  NULL,  // cryptPassword
                                   deviceName,
                                   &deviceInfo,
                                   fileSystemHandle.type,
@@ -5675,8 +5677,9 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
                                       &createInfo->archiveHandle,
                                       indexHandle,
-                                      createInfo->jobOptions->cryptAlgorithms.values[0],
 CRYPT_TYPE_SYMMETRIC, //TODO
+                                      createInfo->jobOptions->cryptAlgorithms.values[0],
+                                      NULL,  // cryptPassword
                                       directoryName,
                                       &fileInfo,
                                       &fileExtendedAttributeList
@@ -5874,8 +5877,9 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     error = Archive_newLinkEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
                                  indexHandle,
-                                 createInfo->jobOptions->cryptAlgorithms.values[0],
 CRYPT_TYPE_SYMMETRIC, //TODO
+                                 createInfo->jobOptions->cryptAlgorithms.values[0],
+                                 NULL,  // cryptPassword
                                  linkName,
                                  fileName,
                                  &fileInfo,
@@ -6109,8 +6113,9 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                      indexHandle,
                                      createInfo->jobOptions->compressAlgorithms.value.delta,
                                      createInfo->jobOptions->compressAlgorithms.value.byte,
-                                     createInfo->jobOptions->cryptAlgorithms.values[0],
 CRYPT_TYPE_SYMMETRIC, //TODO
+                                     createInfo->jobOptions->cryptAlgorithms.values[0],
+                                     NULL,  // cryptPassword
                                      fileNameList,
                                      &fileInfo,
                                      &fileExtendedAttributeList,
@@ -6424,8 +6429,9 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     error = Archive_newSpecialEntry(&archiveEntryInfo,
                                     &createInfo->archiveHandle,
                                     indexHandle,
-                                    createInfo->jobOptions->cryptAlgorithms.values[0],
 CRYPT_TYPE_SYMMETRIC, //TODO
+                                    createInfo->jobOptions->cryptAlgorithms.values[0],
+                                    NULL,  // cryptPassword
                                     fileName,
                                     &fileInfo,
                                     &fileExtendedAttributeList
