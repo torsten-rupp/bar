@@ -103,7 +103,7 @@ CLASSPATH          = $(subst $() $(),:,classes $(SWT_JARS) $(GETTEXT_JARS) $(BOU
 
 ENVIRONMENT        = SWT_GTK3=0
 
-BARCONTROL_OPTIONS = --port=39909 --key-file=../bar-key.pem --ca-file=../bar-ca.pem --cert-file=../bar-certificate.pem 
+BARCONTROL_OPTIONS = --port=39909 --key-file=../bar-key.pem --ca-file=../bar-ca.pem --cert-file=../bar-certificate.pem --role=expert
 
 #---------------------------------- commands----------------------------------
 
@@ -562,42 +562,42 @@ endif
 .PHONY: run runde runjp rundebug runxdebug runxxdebug
 run: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(OPTIONS)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 runde: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=de -classpath $(CLASSPATH) BARControl $(OPTIONS)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=de -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 runjp: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=jp -classpath $(CLASSPATH) BARControl $(OPTIONS)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=jp -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 rundebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug=1 $(OPTIONS)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=1 $(OPTIONS)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 runxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug=2 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=2 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 runxxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug=3 $(OPTIONS) $(O)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=3 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 
-.PHONY: rundev rundevdebug rundevxdebug rundevxxdebug
+.PHONY: rundev rundevd rundevdebug rundevxdebug rundevxxdebug
 .PHONY: rundev-basic rundevdebug-basic rundevxdebug-basic rundevxxdebug-basic
 .PHONY: rundev-normal rundevdebug-normal rundevxdebug-normal rundevxxdebug-normal
 .PHONY: rundev-expert rundevdebug-expert rundevxdebug-expert rundevxxdebug-expert
@@ -614,17 +614,17 @@ rundev-normal: $(OBJECTS)
 rundev-expert: $(OBJECTS)
 	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=expert"
 
-rundevdebug: $(OBJECTS)
+rundevdebug rundevd: $(OBJECTS)
 ifneq ($(JAVA),)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=1 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
-rundevdebug-basic: $(OBJECTS)
+rundevdebug-basic rundevd-basic: $(OBJECTS)
 	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=basic"
-rundevdebug-normal: $(OBJECTS)
+rundevdebug-normal rundevd-normal: $(OBJECTS)
 	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=normal"
-rundevdebug-expert: $(OBJECTS)
+rundevdebug-expert rundevd-expert: $(OBJECTS)
 	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=expert"
 
 rundevxdebug: $(OBJECTS)
