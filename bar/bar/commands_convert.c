@@ -333,7 +333,6 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
   StorageMsg       storageMsg;
   Errors           error;
   FileInfo         fileInfo;
-  Server           server;
   FileHandle       fileHandle;
   uint             retryCount;
   FileHandle       toFileHandle;
@@ -592,7 +591,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         Storage_close(&storageHandle);
         AUTOFREE_REMOVE(&autoFreeList,&storageHandle);
 
-        DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+        DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); error = DEBUG_TESTCODE_ERROR(); }
       }
       while (   (convertInfo->failError == ERROR_NONE)                            // no eror
   //           && !isAborted(convertInfo)                                           // not aborted
@@ -766,10 +765,9 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
 
   printInfo(1,"  Convert file '%s'...",String_cString(fileName));
 
-//TODO
-if (jobOptions->compressAlgorithms.byte != COMPRESS_ALGORITHM_NONE) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
-if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
-cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+  // get new compression, crypt settings
+  if (jobOptions->compressAlgorithms.isSet) byteCompressAlgorithm = jobOptions->compressAlgorithms.value.byte;
+  if (jobOptions->cryptAlgorithms.isSet   ) cryptAlgorithm        = jobOptions->cryptAlgorithms.values[0];
 
   // create new file entry
   error = Archive_newFileEntry(&destinationArchiveEntryInfo,
@@ -778,6 +776,7 @@ cryptAlgorithm = jobOptions->cryptAlgorithms[0];
                                deltaCompressAlgorithm,
                                byteCompressAlgorithm,
                                cryptAlgorithm,
+//TODO
 cryptType,
                                fileName,
                                &fileInfo,
@@ -965,10 +964,9 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
 
   printInfo(1,"  Convert image '%s'...",String_cString(deviceName));
 
-//TODO
-if (jobOptions->compressAlgorithms.byte != COMPRESS_ALGORITHM_NONE) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
-if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
-cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+  // get new compression, crypt settings
+  if (jobOptions->compressAlgorithms.isSet) byteCompressAlgorithm = jobOptions->compressAlgorithms.value.byte;
+  if (jobOptions->cryptAlgorithms.isSet   ) cryptAlgorithm        = jobOptions->cryptAlgorithms.values[0];
 
   // create new image entry
   error = Archive_newImageEntry(&destinationArchiveEntryInfo,
@@ -977,6 +975,7 @@ cryptAlgorithm = jobOptions->cryptAlgorithms[0];
                                 deltaCompressAlgorithm,
                                 byteCompressAlgorithm,
                                 cryptAlgorithm,
+//TODO
 cryptType,
                                 deviceName,
                                 &deviceInfo,
@@ -1138,15 +1137,15 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
 
   printInfo(1,"  Convert directory '%s'...",String_cString(directoryName));
 
-//TODO
-if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
-cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+  // get new crypt settings
+  if (jobOptions->cryptAlgorithms.isSet) cryptAlgorithm = jobOptions->cryptAlgorithms.values[0];
 
   // create new directory entry
   error = Archive_newDirectoryEntry(&destinationArchiveEntryInfo,
                                     destinationArchiveHandle,
                                     NULL,  // indexHandle,
                                     cryptAlgorithm,
+//TODO
 cryptType,
                                     directoryName,
                                     &fileInfo,
@@ -1259,15 +1258,15 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 
   printInfo(1,"  Convert link '%s'...",String_cString(linkName));
 
-//TODO
-if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
-cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+  // get new crypt settings
+  if (jobOptions->cryptAlgorithms.isSet) cryptAlgorithm = jobOptions->cryptAlgorithms.values[0];
 
   // create new link entry
   error = Archive_newLinkEntry(&destinationArchiveEntryInfo,
                                destinationArchiveHandle,
                                NULL,  // indexHandle,
                                cryptAlgorithm,
+//TODO
 cryptType,
                                linkName,
                                fileName,
@@ -1391,10 +1390,9 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 
   printInfo(1,"  Convert hard link '%s'...",String_cString(StringList_first(&fileNameList,NULL)));
 
-//TODO
-if (jobOptions->compressAlgorithms.byte != COMPRESS_ALGORITHM_NONE) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
-if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
-cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+  // get new compression, crypt settings
+  if (jobOptions->compressAlgorithms.isSet) byteCompressAlgorithm = jobOptions->compressAlgorithms.value.byte;
+  if (jobOptions->cryptAlgorithms.isSet   ) cryptAlgorithm        = jobOptions->cryptAlgorithms.values[0];
 
   // create new hard link entry
   error = Archive_newHardLinkEntry(&destinationArchiveEntryInfo,
@@ -1403,6 +1401,7 @@ cryptAlgorithm = jobOptions->cryptAlgorithms[0];
                                    deltaCompressAlgorithm,
                                    byteCompressAlgorithm,
                                    cryptAlgorithm,
+//TODO
 cryptType,
                                    &fileNameList,
                                    &fileInfo,
@@ -1560,15 +1559,15 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
 
   printInfo(1,"  Convert special device '%s'...",String_cString(fileName));
 
-//TODO
-if (jobOptions->cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
-cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+  // get new crypt settings
+  if (jobOptions->cryptAlgorithms.isSet) cryptAlgorithm = jobOptions->cryptAlgorithms.values[0];
 
   // create new special entry
   error = Archive_newSpecialEntry(&destinationArchiveEntryInfo,
                                   destinationArchiveHandle,
                                   NULL,  // indexHandle,
                                   cryptAlgorithm,
+//TODO
 cryptType,
                                   fileName,
                                   &fileInfo,
@@ -1926,7 +1925,7 @@ NULL,  //               requestedAbortFlag,
   AUTOFREE_ADD(&autoFreeList,&sourceArchiveHandle,{ Archive_close(&sourceArchiveHandle); });
 
   // create destination archive
-  baseName = File_getFileBaseName(String_new(),(archiveName != NULL) ? archiveName : storageSpecifier->archiveName);
+  baseName = File_getBaseName(String_new(),(archiveName != NULL) ? archiveName : storageSpecifier->archiveName);
   if (!String_isEmpty(jobOptions->destination))
   {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(baseName));
