@@ -970,6 +970,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       }
       break;
   }
+  if (commandLineOption->isSetVariable != NULL) (*commandLineOption->isSetVariable) = TRUE;
 
   return TRUE;
 }
