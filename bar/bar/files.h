@@ -449,7 +449,7 @@ String File_appendFileNameChar(String fileName, char ch);
 String File_appendFileNameBuffer(String fileName, const char *buffer, ulong bufferLength);
 
 /***********************************************************************\
-* Name   : File_getFilePathName, File_getFilePathNameCString
+* Name   : File_getDirectoryName, File_getDirectoryNameCString
 * Purpose: get path of filename
 * Input  : path     - path variable
 *          fileName - file name
@@ -458,11 +458,11 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
 * Notes  : -
 \***********************************************************************/
 
-String File_getFilePathName(String path, ConstString fileName);
-String File_getFilePathNameCString(String path, const char *fileName);
+String File_getDirectoryName(String path, ConstString fileName);
+String File_getDirectoryNameCString(String path, const char *fileName);
 
 /***********************************************************************\
-* Name   : File_getFileBaseName, File_getFileBaseNameCString
+* Name   : File_getBaseName, File_getBaseNameCString
 * Purpose: get basename of file (name without directory)
 * Input  : baseName - basename variable
 *          fileName - file name
@@ -471,11 +471,11 @@ String File_getFilePathNameCString(String path, const char *fileName);
 * Notes  : -
 \***********************************************************************/
 
-String File_getFileBaseName(String baseName, ConstString fileName);
-String File_getFileBaseNameCString(String baseName, const char *fileName);
+String File_getBaseName(String baseName, ConstString fileName);
+String File_getBaseNameCString(String baseName, const char *fileName);
 
 /***********************************************************************\
-* Name   : File_getRootFileName, File_getRootFileNameCString
+* Name   : File_getRootName, File_getRootNameCString
 * Purpose: get root of file
 * Input  : rootName - rootname variable
 *          fileName - file name
@@ -484,8 +484,8 @@ String File_getFileBaseNameCString(String baseName, const char *fileName);
 * Notes  : -
 \***********************************************************************/
 
-String File_getRootFileName(String rootName, ConstString fileName);
-String File_getRootFileNameCString(String rootName, const char *fileName);
+String File_getRootName(String rootName, ConstString fileName);
+String File_getRootNameCString(String rootName, const char *fileName);
 
 /***********************************************************************\
 * Name   : File_getAbsoluteFileName, File_getAbsoluteFileNameCString
@@ -504,13 +504,13 @@ String File_getAbsoluteFileNameCString(String absoluteFileName, const char *file
 * Name   : File_splitFileName
 * Purpose: split file name into path name and base name
 * Input  : fileName - file name
-* Output : pathName - path name (allocated string)
-*          baseName - base name (allocated string)
+* Output : directoryName - directory name (allocated string)
+*          baseName      - base name (allocated string)
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void File_splitFileName(ConstString fileName, String *pathName, String *baseName);
+void File_splitFileName(ConstString fileName, String *directoryName, String *baseName);
 
 /***********************************************************************\
 * Name   : File_initSplitFileName, File_doneSplitFileName
@@ -1041,17 +1041,17 @@ Errors File_readRootList(RootListHandle *rootListHandle,
 * Name   : File_openDirectoryList
 * Purpose: open directory for reading
 * Input  : directoryListHandle - directory list handle
-*          pathName            - path name
+*          directoryName       - directory name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors File_openDirectoryList(DirectoryListHandle *directoryListHandle,
-                              ConstString         pathName
+                              ConstString         directoryName
                              );
 Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
-                                     const char          *pathName
+                                     const char          *directoryName
                                     );
 
 /***********************************************************************\

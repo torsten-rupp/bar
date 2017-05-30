@@ -993,14 +993,14 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
   return fileName;
 }
 
-String File_getFilePathName(String pathName, ConstString fileName)
+String File_getDirectoryName(String pathName, ConstString fileName)
 {
   assert(pathName != NULL);
 
-  return File_getFilePathNameCString(pathName,String_cString(fileName));
+  return File_getDirectoryNameCString(pathName,String_cString(fileName));
 }
 
-String File_getFilePathNameCString(String pathName, const char *fileName)
+String File_getDirectoryNameCString(String pathName, const char *fileName)
 {
   const char *lastPathSeparator;
 
@@ -1029,14 +1029,14 @@ String File_getFilePathNameCString(String pathName, const char *fileName)
   return pathName;
 }
 
-String File_getFileBaseName(String baseName, ConstString fileName)
+String File_getBaseName(String baseName, ConstString fileName)
 {
   assert(baseName != NULL);
 
-  return File_getFileBaseNameCString(baseName,String_cString(fileName));
+  return File_getBaseNameCString(baseName,String_cString(fileName));
 }
 
-String File_getFileBaseNameCString(String baseName, const char *fileName)
+String File_getBaseNameCString(String baseName, const char *fileName)
 {
   const char *lastPathSeparator;
 
@@ -1065,14 +1065,14 @@ String File_getFileBaseNameCString(String baseName, const char *fileName)
   return baseName;
 }
 
-String File_getRootFileName(String rootName, ConstString fileName)
+String File_getRootName(String rootName, ConstString fileName)
 {
   assert(rootName != NULL);
 
-  return File_getRootFileNameCString(rootName,String_cString(fileName));
+  return File_getRootNameCString(rootName,String_cString(fileName));
 }
 
-String File_getRootFileNameCString(String rootName, const char *fileName)
+String File_getRootNameCString(String rootName, const char *fileName)
 {
   size_t n;
 
@@ -1153,8 +1153,8 @@ void File_splitFileName(ConstString fileName, String *pathName, String *baseName
   assert(pathName != NULL);
   assert(baseName != NULL);
 
-  (*pathName) = File_getFilePathName(File_newFileName(),fileName);
-  (*baseName) = File_getFileBaseName(File_newFileName(),fileName);
+  (*pathName) = File_getDirectoryName(File_newFileName(),fileName);
+  (*baseName) = File_getBaseName(File_newFileName(),fileName);
 }
 
 void File_initSplitFileName(StringTokenizer *stringTokenizer, ConstString fileName)
@@ -1746,7 +1746,7 @@ Errors __File_openCString(const char *__fileName__,
   #else /* not HAVE_O_NOATIME */
     struct stat stat;
   #endif /* HAVE_O_NOATIME */
-  String  pathName;
+  String  directoryName;
 
   assert(fileHandle != NULL);
   assert(fileName != NULL);
@@ -1860,21 +1860,21 @@ Errors __File_openCString(const char *__fileName__,
       break;
     case FILE_OPEN_WRITE:
       // create directory if needed
-      pathName = File_getFilePathNameCString(File_newFileName(),fileName);
-      if (!String_isEmpty(pathName) && !File_exists(pathName))
+      directoryName = File_getDirectoryNameCString(File_newFileName(),fileName);
+      if (!String_isEmpty(directoryName) && !File_exists(directoryName))
       {
-        error = File_makeDirectory(pathName,
+        error = File_makeDirectory(directoryName,
                                    FILE_DEFAULT_USER_ID,
                                    FILE_DEFAULT_GROUP_ID,
                                    FILE_DEFAULT_PERMISSION
                                   );
         if (error != ERROR_NONE)
         {
-          File_deleteFileName(pathName);
+          File_deleteFileName(directoryName);
           return error;
         }
       }
-      File_deleteFileName(pathName);
+      File_deleteFileName(directoryName);
 
       // open file for writing
       fileDescriptor = open(fileName,O_RDWR|O_CREAT|O_LARGEFILE,0666);
@@ -1907,21 +1907,21 @@ Errors __File_openCString(const char *__fileName__,
       break;
     case FILE_OPEN_APPEND:
       // create directory if needed
-      pathName = File_getFilePathNameCString(File_newFileName(),fileName);
-      if (!String_isEmpty(pathName) && !File_exists(pathName))
+      directoryName = File_getDirectoryNameCString(File_newFileName(),fileName);
+      if (!String_isEmpty(directoryName) && !File_exists(directoryName))
       {
-        error = File_makeDirectory(pathName,
+        error = File_makeDirectory(directoryName,
                                    FILE_DEFAULT_USER_ID,
                                    FILE_DEFAULT_GROUP_ID,
                                    FILE_DEFAULT_PERMISSION
                                   );
         if (error != ERROR_NONE)
         {
-          File_deleteFileName(pathName);
+          File_deleteFileName(directoryName);
           return error;
         }
       }
-      File_deleteFileName(pathName);
+      File_deleteFileName(directoryName);
 
       // open file for append
       fileDescriptor = open(fileName,O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE,0666);
@@ -2640,17 +2640,17 @@ Errors File_readRootList(RootListHandle *rootListHandle,
 }
 
 Errors File_openDirectoryList(DirectoryListHandle *directoryListHandle,
-                              ConstString         pathName
+                              ConstString         directoryName
                              )
 {
   assert(directoryListHandle != NULL);
-  assert(pathName != NULL);
+  assert(directoryName != NULL);
 
-  return File_openDirectoryListCString(directoryListHandle,String_cString(pathName));
+  return File_openDirectoryListCString(directoryListHandle,String_cString(directoryName));
 }
 
 Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
-                                     const char          *pathName
+                                     const char          *directoryName
                                     )
 {
   #ifdef HAVE_O_NOATIME
@@ -2660,29 +2660,29 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
   #endif /* HAVE_O_NOATIME */
 
   assert(directoryListHandle != NULL);
-  assert(pathName != NULL);
+  assert(directoryName != NULL);
 
   #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
     #ifdef HAVE_O_NOATIME
       // open directory (try first with O_NOATIME)
-      handle = open(pathName,O_RDONLY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
+      handle = open(directoryName,O_RDONLY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
       if (handle == -1)
       {
-        handle = open(pathName,O_RDONLY|O_NOCTTY|O_DIRECTORY,0);
+        handle = open(directoryName,O_RDONLY|O_NOCTTY|O_DIRECTORY,0);
       }
       if (handle == -1)
       {
-        return ERRORX_(OPEN_DIRECTORY,errno,"%s",pathName);
+        return ERRORX_(OPEN_DIRECTORY,errno,"%s",directoryName);
       }
 
       // create directory handle
       directoryListHandle->dir = fdopendir(handle);
     #else /* not HAVE_O_NOATIME */
       // open directory
-      directoryListHandle->handle = open(pathName,O_RDONLY|O_NOCTTY|O_DIRECTORY,0);
+      directoryListHandle->handle = open(directoryName,O_RDONLY|O_NOCTTY|O_DIRECTORY,0);
       if (directoryListHandle->handle == -1)
       {
-        return ERRORX_(OPEN_DIRECTORY,errno,"%s",pathName);
+        return ERRORX_(OPEN_DIRECTORY,errno,"%s",directoryName);
       }
 
       // store atime
@@ -2705,7 +2705,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
       directoryListHandle->dir = fdopendir(directoryListHandle->handle);
     #endif /* HAVE_O_NOATIME */
   #else /* not HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
-    directoryListHandle->dir = opendir(pathName);
+    directoryListHandle->dir = opendir(directoryName);
   #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
   if (directoryListHandle->dir == NULL)
   {
@@ -2714,10 +2714,10 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
         (void)setAccessTime(directoryListHandle->handle,&directoryListHandle->atime);
       #endif /* not HAVE_O_NOATIME */
     #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
-    return ERRORX_(OPEN_DIRECTORY,errno,"%s",pathName);
+    return ERRORX_(OPEN_DIRECTORY,errno,"%s",directoryName);
   }
 
-  directoryListHandle->name  = String_newCString(pathName);
+  directoryListHandle->name  = String_newCString(directoryName);
   directoryListHandle->entry = NULL;
 
   return ERROR_NONE;
