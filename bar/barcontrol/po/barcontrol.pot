@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-04-28 15:52+0200\n"
+"POT-Creation-Date: 2017-05-06 09:02+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -215,7 +215,7 @@ msgstr ""
 msgid "Start"
 msgstr ""
 
-#: src/BARControl.java:2688 src/BusyDialog.java:270 src/Dialogs.java:163
+#: src/BARControl.java:2688 src/BusyDialog.java:271 src/Dialogs.java:163
 #: src/TabRestore.java:8374 src/TabRestore.java:9523 src/TabStatus.java:842
 #: src/TabStatus.java:1595 src/TabStatus.java:2394 src/TabStatus.java:2514
 msgid "Abort"
@@ -371,7 +371,7 @@ msgstr ""
 msgid "Select file"
 msgstr ""
 
-#: src/BusyDialog.java:584 src/Dialogs.java:1461 src/Dialogs.java:1626
+#: src/BusyDialog.java:591 src/Dialogs.java:1461 src/Dialogs.java:1626
 #: src/Dialogs.java:1807
 msgid "Close"
 msgstr ""
