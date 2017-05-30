@@ -483,33 +483,27 @@ typedef struct
 // job options
 typedef struct
 {
-  uint32 userId;                                              // restore user id
-  uint32 groupId;                                             // restore group id
+  uint32 userId;                                              // user id
+  uint32 groupId;                                             // group id
 } JobOptionsOwner;
 
 // job compress algorithms
 typedef struct
 {
-  CompressAlgorithms delta;                                   // delta compress algorithm to use
   struct
   {
-    CompressAlgorithms value;                                 // byte compress algorithm to use
-    bool               set;                                   // TRUE if byte compress algorithm option set
-  } byte;
+    CompressAlgorithms delta;                                 // delta compress algorithm to use
+    CompressAlgorithms byte;                                  // byte compress algorithm to use
+  } value;
+  bool               isSet;                                   // TRUE if byte compress algorithm command line option is set
 } JobOptionsCompressAlgorithms;
 
 // job crypt algorithm
 typedef struct
 {
-  CryptAlgorithms              value;                         // crypt algorithm to use
-  bool                         set;                           // TRUE if byte crypt algorithm option set
-} JobOptionCryptAlgorithm;
-
-typedef struct
-{
-  Password                     *value;                        // crypt password
-  bool                         set;                           // TRUE if byte compress password option set
-} JobOptionCryptPassword;
+  CryptAlgorithms              values[4];                     // crypt algorithms to use
+  bool                         isSet;                         // TRUE if byte crypt algorithm command line option is set
+} JobOptionCryptAlgorithms;
 
 // see forward declaration in forward.h
 struct JobOptions
@@ -523,14 +517,16 @@ struct JobOptions
   int                          directoryStripCount;           // number of directories to strip in restore or DIRECTORY_STRIP_ANY for all
   String                       destination;                   // destination for restore
   JobOptionsOwner              owner;                         // restore owner
+  FilePermission               permissions;                   // restore permissions
 
   PatternTypes                 patternType;                   // pattern type
 
   JobOptionsCompressAlgorithms compressAlgorithms;            // compress algorithms
 
   CryptTypes                   cryptType;                     // crypt type (symmetric, asymmetric)
-  JobOptionCryptAlgorithm      cryptAlgorithms[4];            // crypt algorithms to use
+  JobOptionCryptAlgorithms     cryptAlgorithms;               // crypt algorithms to use
   PasswordModes                cryptPasswordMode;             // crypt password mode
+//TODO: used?
   Password                     *cryptPassword;                // crypt password
   bool                         cryptPasswordSet    ;          // TRUE if byte compress password option set
   Key                          cryptPublicKey;
