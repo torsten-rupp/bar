@@ -1489,7 +1489,7 @@ LOCAL bool StorageFTP_exists(const StorageInfo *storageInfo, ConstString archive
   bool existsFlag;
   #if   defined(HAVE_CURL)
     CURL            *curlHandle;
-    String          pathName,baseName;
+    String          directoryName,baseName;
     String          url;
     CURLcode        curlCode;
     StringTokenizer nameTokenizer;
@@ -1519,14 +1519,14 @@ LOCAL bool StorageFTP_exists(const StorageInfo *storageInfo, ConstString archive
       return ERROR_FTP_SESSION_FAIL;
     }
 
-    // get pathname, basename
-    pathName = File_getFilePathName(String_new(),archiveName);
-    baseName = File_getFileBaseName(String_new(),archiveName);
+    // get directory name, base name
+    directoryName = File_getDirectoryName(String_new(),archiveName);
+    baseName      = File_getBaseName(String_new(),archiveName);
 
     // get URL
     url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
     if (storageInfo->storageSpecifier.hostPort != 0) String_format(url,":d",storageInfo->storageSpecifier.hostPort);
-    File_initSplitFileName(&nameTokenizer,pathName);
+    File_initSplitFileName(&nameTokenizer,directoryName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_appendChar(url,'/');
@@ -1546,7 +1546,7 @@ LOCAL bool StorageFTP_exists(const StorageInfo *storageInfo, ConstString archive
     {
       String_delete(url);
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
       (void)curl_easy_cleanup(curlHandle);
       return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
     }
@@ -1565,7 +1565,7 @@ LOCAL bool StorageFTP_exists(const StorageInfo *storageInfo, ConstString archive
     // free resources
     String_delete(url);
     String_delete(baseName);
-    String_delete(pathName);
+    String_delete(directoryName);
   #elif defined(HAVE_FTP)
     // initialize variables
 
@@ -1695,7 +1695,7 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
                               )
 {
   #if   defined(HAVE_CURL)
-    String          pathName,baseName;
+    String          directoryName,baseName;
     String          url;
     CURLcode        curlCode;
     CURLMcode       curlMCode;
@@ -1703,8 +1703,8 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     ConstString     token;
     int             runningHandles;
   #elif defined(HAVE_FTP)
-    String          pathName;
-    String          directoryName;
+    String          directoryName,baseName;
+    String          newDirectoryName;
     StringTokenizer pathNameTokenizer;
     ConstString     token;
     const char      *plainPassword;
@@ -1741,14 +1741,14 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
       return ERROR_FTP_SESSION_FAIL;
     }
 
-    // get pathname, basename
-    pathName = File_getFilePathName(String_new(),fileName);
-    baseName = File_getFileBaseName(String_new(),fileName);
+    // get directory name, base name
+    directoryName = File_getDirectoryName(String_new(),fileName);
+    baseName      = File_getBaseName(String_new(),fileName);
 
     // get URL
     url = String_format(String_new(),"ftp://%S",storageHandle->storageInfo->storageSpecifier.hostName);
     if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
-    File_initSplitFileName(&nameTokenizer,pathName);
+    File_initSplitFileName(&nameTokenizer,directoryName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_appendChar(url,'/');
@@ -1774,7 +1774,7 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
       {
         String_delete(url);
         String_delete(baseName);
-        String_delete(pathName);
+        String_delete(directoryName);
         (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
         (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
         return ERRORX_(CREATE_DIRECTORY,0,"%s",curl_easy_strerror(curlCode));
@@ -1799,7 +1799,7 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
       {
         String_delete(url);
         String_delete(baseName);
-        String_delete(pathName);
+        String_delete(directoryName);
         (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
         (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
         return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_multi_strerror(curlMCode));
@@ -1818,7 +1818,7 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
       {
         String_delete(url);
         String_delete(baseName);
-        String_delete(pathName);
+        String_delete(directoryName);
         (void)curl_multi_remove_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
         (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
         (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
@@ -1828,7 +1828,7 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
       // free resources
       String_delete(url);
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
     }
 
     DEBUG_ADD_RESOURCE_TRACE(&storageHandle->ftp,sizeof(storageHandle->ftp));
@@ -1869,21 +1869,21 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     if ((storageInfo->jobOptions == NULL) || !storageInfo->jobOptions->dryRunFlag)
     {
       // create directory (try it and ignore errors)
-      pathName      = File_getFilePathName(String_new(),archiveName);
-      directoryName = File_newFileName();
-      File_initSplitFileName(&pathNameTokenizer,pathName);
+      directoryName    = File_getDirectoryName(String_new(),archiveName);
+      newDirectoryName = File_newFileName();
+      File_initSplitFileName(&pathNameTokenizer,directoryName);
       if (File_getNextSplitFileName(&pathNameTokenizer,&token))
       {
         // create root-directory
         if (!String_isEmpty(token))
         {
-          File_setFileName(directoryName,token);
+          File_setFileName(newDirectoryName,token);
         }
         else
         {
-          File_setFileNameChar(directoryName,FILES_PATHNAME_SEPARATOR_CHAR);
+          File_setFileNameChar(newDirectoryName,FILES_PATHNAME_SEPARATOR_CHAR);
         }
-        (void)FtpMkdir(String_cString(directoryName),storageHandle->ftp.control);
+        (void)FtpMkdir(String_cString(newDirectoryName),storageHandle->ftp.control);
 
         // create sub-directories
         while (File_getNextSplitFileName(&pathNameTokenizer,&token))
@@ -1891,16 +1891,16 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
           if (!String_isEmpty(token))
           {
             // get sub-directory
-            File_appendFileName(directoryName,token);
+            File_appendFileName(newDirectoryName,token);
 
             // create sub-directory
-            (void)FtpMkdir(String_cString(directoryName),storageHandle->ftp.control);
+            (void)FtpMkdir(String_cString(newDirectoryName),storageHandle->ftp.control);
           }
         }
       }
       File_doneSplitFileName(&pathNameTokenizer);
+      File_deleteFileName(newDirectoryName);
       File_deleteFileName(directoryName);
-      File_deleteFileName(pathName);
 
       // set timeout callback (120s) to avoid infinite waiting on read/write
       if (FtpOptions(FTPLIB_IDLETIME,
@@ -1964,7 +1964,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
                             )
 {
   #if   defined(HAVE_CURL)
-    String          pathName,baseName;
+    String          directoryName,baseName;
     String          url;
     CURLcode        curlCode;
     CURLMcode       curlMCode;
@@ -2021,13 +2021,13 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     }
 
     // get pathname, basename
-    pathName = File_getFilePathName(String_new(),archiveName);
-    baseName = File_getFileBaseName(String_new(),archiveName);
+    directoryName = File_getDirectoryName(String_new(),archiveName);
+    baseName      = File_getBaseName(String_new(),archiveName);
 
     // get URL
     url = String_format(String_new(),"ftp://%S",storageHandle->storageInfo->storageSpecifier.hostName);
     if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_format(url,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
-    File_initSplitFileName(&nameTokenizer,pathName);
+    File_initSplitFileName(&nameTokenizer,directoryName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_appendChar(url,'/');
@@ -2047,7 +2047,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     {
       String_delete(url);
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
       (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
       (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
       free(storageHandle->ftp.readAheadBuffer.data);
@@ -2064,7 +2064,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     {
       String_delete(url);
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
       (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
       (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
       free(storageHandle->ftp.readAheadBuffer.data);
@@ -2079,7 +2079,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     {
       String_delete(url);
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
       (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
       (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
       free(storageHandle->ftp.readAheadBuffer.data);
@@ -2101,7 +2101,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     {
       String_delete(url);
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
       (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
       (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
       free(storageHandle->ftp.readAheadBuffer.data);
@@ -2112,7 +2112,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     {
       String_delete(url);
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
       (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
       (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
       free(storageHandle->ftp.readAheadBuffer.data);
@@ -2131,7 +2131,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     {
       String_delete(url);
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
       (void)curl_multi_remove_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
       (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
       (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
@@ -2142,7 +2142,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     // free resources
     String_delete(url);
     String_delete(baseName);
-    String_delete(pathName);
+    String_delete(directoryName);
 
     DEBUG_ADD_RESOURCE_TRACE(&storageHandle->ftp,sizeof(storageHandle->ftp));
 
@@ -3159,7 +3159,7 @@ LOCAL Errors StorageFTP_delete(StorageInfo  *storageInfo,
   Errors      error;
   #if   defined(HAVE_CURL)
     CURL              *curlHandle;
-    String            pathName,baseName;
+    String            directoryName,baseName;
     String            url;
     CURLcode          curlCode;
     StringTokenizer   nameTokenizer;
@@ -3181,14 +3181,14 @@ LOCAL Errors StorageFTP_delete(StorageInfo  *storageInfo,
     curlHandle = curl_easy_init();
     if (curlHandle != NULL)
     {
-      // get pathname, basename
-      pathName = File_getFilePathName(String_new(),archiveName);
-      baseName = File_getFileBaseName(String_new(),archiveName);
+      // get directory name, base name
+      directoryName = File_getDirectoryName(String_new(),archiveName);
+      baseName      = File_getBaseName(String_new(),archiveName);
 
       // get URL
       url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
       if (storageInfo->storageSpecifier.hostPort != 0) String_format(url,":d",storageInfo->storageSpecifier.hostPort);
-      File_initSplitFileName(&nameTokenizer,pathName);
+      File_initSplitFileName(&nameTokenizer,directoryName);
       while (File_getNextSplitFileName(&nameTokenizer,&token))
       {
         String_appendChar(url,'/');
@@ -3240,7 +3240,7 @@ LOCAL Errors StorageFTP_delete(StorageInfo  *storageInfo,
       // free resources
       String_delete(url);
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
       (void)curl_easy_cleanup(curlHandle);
     }
     else
@@ -3283,7 +3283,7 @@ LOCAL Errors StorageFTP_getFileInfo(const StorageInfo *storageInfo,
   #if   defined(HAVE_CURL)
     Server            server;
     CURL              *curlHandle;
-    String            pathName,baseName;
+    String            directoryName,baseName;
     String            url;
     CURLcode          curlCode;
     const char        *plain;
@@ -3328,9 +3328,9 @@ LOCAL Errors StorageFTP_getFileInfo(const StorageInfo *storageInfo,
       return = ERROR_FTP_SESSION_FAIL;
     }
 
-    // get pathname, basename
-    pathName = File_getFilePathName(String_new(),infoFileName);
-    baseName = File_getFileBaseName(String_new(),infoFileName);
+    // get directory name, base name
+    directoryName = File_getDirectoryName(String_new(),infoFileName);
+    baseName      = File_getBaseName(String_new(),infoFileName);
 
     // get URL
     url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);

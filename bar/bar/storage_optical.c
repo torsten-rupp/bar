@@ -994,7 +994,7 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
   {
     // store a copy of BAR executable on medium (ignore errors)
     sourceFileName = String_newCString(globalOptions.barExecutable);
-    fileBaseName = File_getFileBaseName(String_new(),sourceFileName);
+    fileBaseName = File_getBaseName(String_new(),sourceFileName);
     destinationFileName = File_appendFileName(String_duplicate(storageInfo->opticalDisk.write.directory),fileBaseName);
     File_copy(sourceFileName,destinationFileName);
     StringList_append(&storageInfo->opticalDisk.write.fileNameList,destinationFileName);
@@ -1549,7 +1549,7 @@ LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     // create directory if not existing
-    directoryName = File_getFilePathName(String_new(),storageHandle->opticalDisk.write.fileName);
+    directoryName = File_getDirectoryName(String_new(),storageHandle->opticalDisk.write.fileName);
     if (!String_isEmpty(directoryName) && !File_exists(directoryName))
     {
       error = File_makeDirectory(directoryName,

@@ -309,13 +309,21 @@ LOCAL bool StorageFile_exists(const StorageInfo *storageInfo, ConstString fileNa
 
 LOCAL Errors StorageFile_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
+  String directoryName,baseName;
+  bool   result;
+
   assert(archiveName != NULL);
   assert(!String_isEmpty(archiveName) != NULL);
   assert(storageInfo != NULL);
 
   UNUSED_VARIABLE(storageInfo);
 
-  return File_getTmpFileName(archiveName,String_cString(archiveName),NULL);
+  File_splitFileName(archiveName,&directoryName,&baseName);
+  result = File_getTmpFileName(archiveName,String_cString(baseName),directoryName);
+  String_delete(baseName);
+  String_delete(directoryName);
+
+  return result;
 }
 
 LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
@@ -347,7 +355,7 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
   if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
   {
     // create directory if not existing
-    directoryName = File_getFilePathName(String_new(),fileName);
+    directoryName = File_getDirectoryName(String_new(),fileName);
     if (!String_isEmpty(directoryName) && !File_exists(directoryName))
     {
       error = File_makeDirectory(directoryName,

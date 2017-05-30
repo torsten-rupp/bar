@@ -2823,7 +2823,7 @@ error = ERROR_(STILL_NOT_IMPLEMENTED,0);
 
 Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString archiveName)
 {
-  String                     name;
+  String                     directoryName;
   bool                       isEmpty;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
@@ -2835,14 +2835,14 @@ Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString archiveNam
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
-  name = File_getFilePathName(String_new(),archiveName);
+  directoryName = File_getDirectoryName(String_new(),archiveName);
   do
   {
     // check if directory is empty
     isEmpty = FALSE;
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                       &storageInfo->storageSpecifier,
-                                      name,
+                                      directoryName,
                                       NULL,  // jobOptions
                                       SERVER_CONNECTION_PRIORITY_LOW
                                      );
@@ -2859,10 +2859,10 @@ Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString archiveNam
           case STORAGE_TYPE_NONE:
             break;
           case STORAGE_TYPE_FILESYSTEM:
-            error = StorageFile_delete(storageInfo,name);
+            error = StorageFile_delete(storageInfo,directoryName);
             break;
           case STORAGE_TYPE_FTP:
-            error = StorageFTP_delete(storageInfo,name);
+            error = StorageFTP_delete(storageInfo,directoryName);
             break;
           case STORAGE_TYPE_SSH:
             #ifdef HAVE_SSH2
@@ -2871,21 +2871,21 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             #endif /* HAVE_SSH2 */
             break;
           case STORAGE_TYPE_SCP:
-            error = StorageSCP_delete(storageInfo,name);
+            error = StorageSCP_delete(storageInfo,directoryName);
             break;
           case STORAGE_TYPE_SFTP:
-            error = StorageSFTP_delete(storageInfo,name);
+            error = StorageSFTP_delete(storageInfo,directoryName);
             break;
           case STORAGE_TYPE_WEBDAV:
-            error = StorageWebDAV_delete(storageInfo,name);
+            error = StorageWebDAV_delete(storageInfo,directoryName);
             break;
           case STORAGE_TYPE_CD:
           case STORAGE_TYPE_DVD:
           case STORAGE_TYPE_BD:
-            error = StorageOptical_delete(storageInfo,name);
+            error = StorageOptical_delete(storageInfo,directoryName);
             break;
           case STORAGE_TYPE_DEVICE:
-            error = StorageDevice_delete(storageInfo,name);
+            error = StorageDevice_delete(storageInfo,directoryName);
             break;
           case STORAGE_TYPE_MASTER:
 error = ERROR_(STILL_NOT_IMPLEMENTED,0);
@@ -2900,13 +2900,13 @@ error = ERROR_(STILL_NOT_IMPLEMENTED,0);
     }
 
     // get parent directory
-    File_getFilePathName(name,name);
+    File_getDirectoryName(directoryName,directoryName);
   }
   while (   (error == ERROR_NONE)
          && isEmpty
-         && !String_isEmpty(name)
+         && !String_isEmpty(directoryName)
         );
-  String_delete(name);
+  String_delete(directoryName);
 
   return error;
 }

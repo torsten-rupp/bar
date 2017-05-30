@@ -934,6 +934,9 @@ LOCAL Errors StorageWebDAV_postProcess(const StorageInfo *storageInfo,
 
 LOCAL bool StorageWebDAV_exists(const StorageInfo*storageInfo, ConstString archiveName)
 {
+  String directoryName,baseName;
+  bool   result;
+
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
 
@@ -947,6 +950,9 @@ return ERROR_STILL_NOT_IMPLEMENTED;
 
 LOCAL Errors StorageWebDAV_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
+  String directoryName,baseName;
+  bool   result;
+
   assert(archiveName != NULL);
   assert(!String_isEmpty(archiveName) != NULL);
   assert(storageInfo != NULL);
@@ -955,7 +961,12 @@ LOCAL Errors StorageWebDAV_getTmpName(String archiveName, const StorageInfo *sto
 
 //TODO
 return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_getTmpFileName(archiveName,String_cString(archiveName),NULL);
+  File_splitFileName(archiveName,&directoryName,&baseName);
+  result = File_getTmpFileName(archiveName,String_cString(baseName),directoryName);
+  String_delete(baseName);
+  String_delete(directoryName);
+
+  return result;
 }
 
 LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
@@ -968,7 +979,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
     CURLcode        curlCode;
     CURLMcode       curlMCode;
     String          url;
-    String          pathName,baseName;
+    String          directoryName,baseName;
     StringTokenizer nameTokenizer;
     ConstString     token;
     int             runningHandles;
@@ -1012,16 +1023,16 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
 
     if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
-      // get pathname, basename
-      pathName = File_getFilePathName(String_new(),fileName);
-      baseName = File_getFileBaseName(String_new(),fileName);
+      // get directory name, base name
+      directoryName = File_getDirectoryNameCString(String_new(),fileName);
+      baseName      = File_getBaseName(String_new(),fileName);
 
       // create directories if necessary
-      if (!String_isEmpty(pathName))
+      if (!String_isEmpty(directoryName))
       {
         curlCode = CURLE_OK;
         url = String_format(String_duplicate(baseURL),"/");
-        File_initSplitFileName(&nameTokenizer,pathName);
+        File_initSplitFileName(&nameTokenizer,directoryName);
         while (File_getNextSplitFileName(&nameTokenizer,&token))
         {
           String_append(url,token);
@@ -1070,7 +1081,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
         {
           String_delete(url);
           String_delete(baseName);
-          String_delete(pathName);
+          String_delete(directoryName);
           String_delete(baseURL);
           (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
           (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
@@ -1088,7 +1099,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
       {
         // get URL
         url = String_format(String_duplicate(baseURL),"/");
-        File_initSplitFileName(&nameTokenizer,pathName);
+        File_initSplitFileName(&nameTokenizer,directoryName);
         while (File_getNextSplitFileName(&nameTokenizer,&token))
         {
           String_append(url,token);
@@ -1137,7 +1148,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
           {
             String_delete(url);
             String_delete(baseName);
-            String_delete(pathName);
+            String_delete(directoryName);
             String_delete(baseURL);
             (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
             (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
@@ -1151,7 +1162,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
 
       // init WebDAV upload
       url = String_format(String_duplicate(baseURL),"/");
-      File_initSplitFileName(&nameTokenizer,pathName);
+      File_initSplitFileName(&nameTokenizer,directoryName);
       while (File_getNextSplitFileName(&nameTokenizer,&token))
       {
         String_append(url,token);
@@ -1194,7 +1205,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
       {
         String_delete(url);
         String_delete(baseName);
-        String_delete(pathName);
+        String_delete(directoryName);
         String_delete(baseURL);
         (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
         (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
@@ -1205,7 +1216,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
       {
         String_delete(url);
         String_delete(baseName);
-        String_delete(pathName);
+        String_delete(directoryName);
         String_delete(baseURL);
         (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
         (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
@@ -1224,7 +1235,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
       if (curlMCode != CURLM_OK)
       {
         String_delete(baseName);
-        String_delete(pathName);
+        String_delete(directoryName);
         String_delete(baseURL);
         (void)curl_multi_remove_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
         (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
@@ -1234,7 +1245,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
 
       // free resources
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
     }
 
     // free resources
@@ -1261,7 +1272,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     CURLcode        curlCode;
     CURLMcode       curlMCode;
     String          url;
-    String          pathName,baseName;
+    String          directoryName,baseName;
     StringTokenizer nameTokenizer;
     ConstString     token;
     double          fileSize;
@@ -1313,13 +1324,13 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     baseURL = String_format(String_new(),"http://%S",storageHandle->storageInfo->storageSpecifier.hostName);
     if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
 
-    // get pathname, basename
-    pathName = File_getFilePathName(String_new(),archiveName);
-    baseName = File_getFileBaseName(String_new(),archiveName);
+    // get directory name, base name
+    directoryName = File_getDirectoryNameCString(String_new(),archiveName);
+    baseName      = File_getBaseName(String_new(),archiveName);
 
     // get url
     url = String_format(String_duplicate(baseURL),"/");
-    File_initSplitFileName(&nameTokenizer,pathName);
+    File_initSplitFileName(&nameTokenizer,directoryName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_append(url,token);
@@ -1347,7 +1358,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     {
       String_delete(url);
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
       String_delete(baseURL);
       (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
       (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
@@ -1363,7 +1374,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
        )
     {
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
       String_delete(baseURL);
       (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
       (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
@@ -1374,7 +1385,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
 
     // init WebDAV download
     url = String_format(String_duplicate(baseURL),"/");
-    File_initSplitFileName(&nameTokenizer,pathName);
+    File_initSplitFileName(&nameTokenizer,directoryName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_append(url,token);
@@ -1408,7 +1419,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     if (curlCode != CURLE_OK)
     {
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
       String_delete(baseURL);
       (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
       (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
@@ -1419,7 +1430,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     if (curlMCode != CURLM_OK)
     {
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
       String_delete(baseURL);
       (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
       (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
@@ -1439,7 +1450,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     if (curlMCode != CURLM_OK)
     {
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
       String_delete(baseURL);
       (void)curl_multi_remove_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
       (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
@@ -1450,7 +1461,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
 
     // free resources
     String_delete(baseName);
-    String_delete(pathName);
+    String_delete(directoryName);
     String_delete(baseURL);
 
     DEBUG_ADD_RESOURCE_TRACE(&storageHandle->webdav,sizeof(storageHandle->webdav));
@@ -2028,7 +2039,7 @@ LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
     CURL            *curlHandle;
     String          baseURL;
     CURLcode        curlCode;
-    String          pathName,baseName;
+    String          directoryName,baseName;
     String          url;
     StringTokenizer nameTokenizer;
     ConstString     token;
@@ -2049,13 +2060,13 @@ LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
       baseURL = String_format(String_new(),"http://%S",storageInfo->storageSpecifier.hostName);
       if (storageInfo->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageInfo->storageSpecifier.hostPort);
 
-      // get pathname, basename
-      pathName = File_getFilePathName(String_new(),archiveName);
-      baseName = File_getFileBaseName(String_new(),archiveName);
+      // get directory name, base name
+      directoryName = File_getDirectoryNameCString(String_new(),archiveName);
+      baseName      = File_getBaseName(String_new(),archiveName);
 
       // get URL
       url = String_format(String_duplicate(baseURL),"/");
-      File_initSplitFileName(&nameTokenizer,pathName);
+      File_initSplitFileName(&nameTokenizer,directoryName);
       while (File_getNextSplitFileName(&nameTokenizer,&token))
       {
         String_append(url,token);
@@ -2133,7 +2144,7 @@ LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
       // free resources
       String_delete(url);
       String_delete(baseName);
-      String_delete(pathName);
+      String_delete(directoryName);
       String_delete(baseURL);
       (void)curl_easy_cleanup(curlHandle);
     }
@@ -2167,7 +2178,7 @@ LOCAL Errors StorageWebDAV_getFileInfo(const StorageInfo *storageInfo,
     String            baseURL;
     const char        *plainPassword;
     CURLcode          curlCode;
-    String            pathName,baseName;
+    String            directoryName,baseName;
     String            url;
     StringTokenizer   nameTokenizer;
     ConstString       token;
@@ -2209,13 +2220,13 @@ LOCAL Errors StorageWebDAV_getFileInfo(const StorageInfo *storageInfo,
     baseURL = String_format(String_new(),"http://%S",storageInfo->storageSpecifier.hostName);
     if (storageInfo->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageInfo->storageSpecifier.hostPort);
 
-    // get pathname, basename
-    pathName = File_getFilePathName(String_new(),infoFileName);
-    baseName = File_getFileBaseName(String_new(),infoFileName);
+    // get directory name, base name
+    directoryName = File_getDirectoryNameCString(String_new(),infoFileName);
+    baseName      = File_getBaseName(String_new(),infoFileName);
 
     // get URL
     url = String_format(String_duplicate(baseURL),"/");
-    File_initSplitFileName(&nameTokenizer,pathName);
+    File_initSplitFileName(&nameTokenizer,directoryName);
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_append(url,token);
@@ -2256,7 +2267,7 @@ LOCAL Errors StorageWebDAV_getFileInfo(const StorageInfo *storageInfo,
     // free resources
     String_delete(url);
     String_delete(baseName);
-    String_delete(pathName);
+    String_delete(directoryName);
     String_delete(baseURL);
     (void)curl_easy_cleanup(curlHandle);
     freeServer(&server);
