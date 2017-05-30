@@ -803,7 +803,7 @@ LOCAL void dirname(sqlite3_context *context, int argc, sqlite3_value *argv[])
   string = (const char*)sqlite3_value_text(argv[0]);
 
   // get directory
-  directoryName = File_getFilePathNameCString(String_new(),string);
+  directoryName = File_getDirectoryNameCString(String_new(),string);
 
   // store result
   sqlite3_result_text(context,String_cString(directoryName),-1,SQLITE_TRANSIENT);
@@ -1539,7 +1539,7 @@ void Database_doneAll(void)
                         )
 #endif /* NDEBUG */
 {
-  String directory;
+  String directoryName;
   Errors error;
   int    sqliteMode;
   int    sqliteResult;
@@ -1576,25 +1576,25 @@ void Database_doneAll(void)
   // create directory if needed
   if (fileName != NULL)
   {
-    directory = File_getFilePathNameCString(String_new(),fileName);
-    if (   !String_isEmpty(directory)
-        && !File_isDirectory(directory)
+    directoryName = File_getDirectoryNameCString(String_new(),fileName);
+    if (   !String_isEmpty(directoryName)
+        && !File_isDirectory(directoryName)
        )
     {
-      error = File_makeDirectory(directory,
+      error = File_makeDirectory(directoryName,
                                  FILE_DEFAULT_USER_ID,
                                  FILE_DEFAULT_GROUP_ID,
                                  FILE_DEFAULT_PERMISSION
                                 );
       if (error != ERROR_NONE)
       {
-        File_deleteFileName(directory);
+        File_deleteFileName(directoryName);
         Semaphore_done(&databaseHandle->lock);
         sem_destroy(&databaseHandle->wakeUp);
         return error;
       }
     }
-    String_delete(directory);
+    String_delete(directoryName);
   }
 
   // get mode

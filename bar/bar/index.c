@@ -2519,7 +2519,7 @@ LOCAL void indexThreadCode(void)
 {
   IndexHandle         indexHandle;
   String              absoluteFileName;
-  String              pathName;
+  String              directoryName;
   Errors              error;
   DirectoryListHandle directoryListHandle;
   uint                i;
@@ -2552,11 +2552,11 @@ LOCAL void indexThreadCode(void)
   absoluteFileName = File_getAbsoluteFileNameCString(String_new(),indexDatabaseFileName);
 
   // open directory where database is located
-  pathName = File_getFilePathName(String_new(),absoluteFileName);
-  error = File_openDirectoryList(&directoryListHandle,pathName);
+  directoryName = File_getDirectoryName(String_new(),absoluteFileName);
+  error = File_openDirectoryList(&directoryListHandle,directoryName);
   if (error != ERROR_NONE)
   {
-    String_delete(pathName);
+    String_delete(directoryName);
     closeIndex(&indexHandle);
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_ERROR,
@@ -2567,7 +2567,7 @@ LOCAL void indexThreadCode(void)
                );
     return;
   }
-  String_delete(pathName);
+  String_delete(directoryName);
 
   // process all *.oldNNN files
   i                   = 0;
@@ -3158,7 +3158,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                                              )
 {
   DatabaseId databaseId;
-  String     path;
+  String     directoryName;
   Errors     error;
 
   assert(indexHandle != NULL);
@@ -3178,10 +3178,9 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
     return error;
   }
 
-  path = File_getFilePathName(String_new(),fileName);
-
+  directoryName = File_getDirectoryName(String_new(),fileName);
   error = ERROR_NONE;
-  while ((error == ERROR_NONE) && !String_isEmpty(path))
+  while ((error == ERROR_NONE) && !String_isEmpty(directoryName))
   {
 //fprintf(stderr,"%s, %d: path=%s %llu\n",__FILE__,__LINE__,String_cString(path),size);
     error = Database_execute(&indexHandle->databaseHandle,
@@ -3195,7 +3194,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                              ",
                              size,
                              Index_getDatabaseId(storageId),
-                             path
+                             directoryName
                             );
     if (error != ERROR_NONE)
     {
@@ -3215,7 +3214,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                                ",
                                size,
                                Index_getDatabaseId(storageId),
-                               path
+                               directoryName
                               );
       if (error != ERROR_NONE)
       {
@@ -3223,10 +3222,9 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
       }
     }
 
-    File_getFilePathName(path,path);
+    File_getDirectoryName(directoryName,directoryName);
   }
-
-  String_delete(path);
+  String_delete(directoryName);
 
   return ERROR_NONE;
 }

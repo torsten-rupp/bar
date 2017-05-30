@@ -2048,7 +2048,7 @@ LOCAL JobNode *copyJob(const JobNode *jobNode,
 
   newJobNode->uuid                           = String_new();
   newJobNode->jobType                        = jobNode->jobType;
-  newJobNode->name                           = File_getFileBaseName(String_new(),fileName);
+  newJobNode->name                           = File_getBaseName(String_new(),fileName);
   newJobNode->slaveHost.name                 = String_duplicate(jobNode->slaveHost.name);
   newJobNode->slaveHost.port                 = jobNode->slaveHost.port;
   newJobNode->slaveHost.forceSSL             = jobNode->slaveHost.forceSSL;
@@ -2879,47 +2879,47 @@ LOCAL bool readJob(JobNode *jobNode)
   PatternList_clear(&jobNode->compressExcludePatternList);
   DeltaSourceList_clear(&jobNode->deltaSourceList);
   List_clear(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-  jobNode->jobOptions.archiveType                   = ARCHIVE_TYPE_NORMAL;
-  jobNode->jobOptions.archivePartSize               = 0LL;
+  jobNode->jobOptions.archiveType                    = ARCHIVE_TYPE_NORMAL;
+  jobNode->jobOptions.archivePartSize                = 0LL;
   String_clear(jobNode->jobOptions.incrementalListFileName);
-  jobNode->jobOptions.directoryStripCount           = DIRECTORY_STRIP_NONE;
+  jobNode->jobOptions.directoryStripCount            = DIRECTORY_STRIP_NONE;
   String_clear(jobNode->jobOptions.destination);
-  jobNode->jobOptions.patternType                   = PATTERN_TYPE_GLOB;
-  jobNode->jobOptions.compressAlgorithms.delta      = COMPRESS_ALGORITHM_NONE;
-  jobNode->jobOptions.compressAlgorithms.byte.value = COMPRESS_ALGORITHM_NONE;
-  jobNode->jobOptions.compressAlgorithms.byte.set   = FALSE;
+  jobNode->jobOptions.patternType                    = PATTERN_TYPE_GLOB;
+  jobNode->jobOptions.compressAlgorithms.value.delta = COMPRESS_ALGORITHM_NONE;
+  jobNode->jobOptions.compressAlgorithms.value.byte  = COMPRESS_ALGORITHM_NONE;
+  jobNode->jobOptions.compressAlgorithms.isSet       = FALSE;
   for (i = 0; i < 4; i++)
   {
-    jobNode->jobOptions.cryptAlgorithms[i].value = CRYPT_ALGORITHM_NONE;
-    jobNode->jobOptions.cryptAlgorithms[i].set   = FALSE;
+    jobNode->jobOptions.cryptAlgorithms.values[i] = CRYPT_ALGORITHM_NONE;
   }
+  jobNode->jobOptions.cryptAlgorithms.isSet          = FALSE;
   #ifdef HAVE_GCRYPT
-    jobNode->jobOptions.cryptType                   = CRYPT_TYPE_SYMMETRIC;
+    jobNode->jobOptions.cryptType                    = CRYPT_TYPE_SYMMETRIC;
   #else /* not HAVE_GCRYPT */
-    jobNode->jobOptions.cryptType                   = CRYPT_TYPE_NONE;
+    jobNode->jobOptions.cryptType                    = CRYPT_TYPE_NONE;
   #endif /* HAVE_GCRYPT */
-  jobNode->jobOptions.cryptPasswordMode             = PASSWORD_MODE_DEFAULT;
-  jobNode->jobOptions.cryptPublicKey.data           = NULL;
-  jobNode->jobOptions.cryptPublicKey.length         = 0;
+  jobNode->jobOptions.cryptPasswordMode              = PASSWORD_MODE_DEFAULT;
+  jobNode->jobOptions.cryptPublicKey.data            = NULL;
+  jobNode->jobOptions.cryptPublicKey.length          = 0;
   String_clear(jobNode->jobOptions.ftpServer.loginName);
   if (jobNode->jobOptions.ftpServer.password != NULL) Password_clear(jobNode->jobOptions.ftpServer.password);
-  jobNode->jobOptions.sshServer.port                = 0;
+  jobNode->jobOptions.sshServer.port                 = 0;
   String_clear(jobNode->jobOptions.sshServer.loginName);
   if (jobNode->jobOptions.sshServer.password != NULL) Password_clear(jobNode->jobOptions.sshServer.password);
   clearKey(&jobNode->jobOptions.sshServer.publicKey);
   clearKey(&jobNode->jobOptions.sshServer.privateKey);
   String_clear(jobNode->jobOptions.preProcessScript);
   String_clear(jobNode->jobOptions.postProcessScript);
-  jobNode->jobOptions.device.volumeSize             = 0LL;
-  jobNode->jobOptions.waitFirstVolumeFlag           = FALSE;
-  jobNode->jobOptions.errorCorrectionCodesFlag      = FALSE;
-  jobNode->jobOptions.blankFlag                     = FALSE;
-  jobNode->jobOptions.skipUnreadableFlag            = FALSE;
-  jobNode->jobOptions.rawImagesFlag                 = FALSE;
-  jobNode->jobOptions.archiveFileMode               = ARCHIVE_FILE_MODE_STOP;
-  jobNode->jobOptions.archiveFileModeOverwriteFlag  = FALSE;
-  jobNode->modifiedFlag                             = FALSE;
-  jobNode->scheduleModifiedFlag                     = TRUE;
+  jobNode->jobOptions.device.volumeSize              = 0LL;
+  jobNode->jobOptions.waitFirstVolumeFlag            = FALSE;
+  jobNode->jobOptions.errorCorrectionCodesFlag       = FALSE;
+  jobNode->jobOptions.blankFlag                      = FALSE;
+  jobNode->jobOptions.skipUnreadableFlag             = FALSE;
+  jobNode->jobOptions.rawImagesFlag                  = FALSE;
+  jobNode->jobOptions.archiveFileMode                = ARCHIVE_FILE_MODE_STOP;
+  jobNode->jobOptions.archiveFileModeOverwriteFlag   = FALSE;
+  jobNode->modifiedFlag                              = FALSE;
+  jobNode->scheduleModifiedFlag                      = TRUE;
 
   // open file
   error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
@@ -3181,7 +3181,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
     }
 
     // get base name
-    File_getFileBaseName(baseName,fileName);
+    File_getBaseName(baseName,fileName);
 
     // check if readable file and not ".*"
     if (File_isFile(fileName) && File_isReadable(fileName) && !String_startsWithChar(baseName,'.'))
@@ -4018,7 +4018,7 @@ fprintf(stderr,"%s, %d: XXXXXXx start %d\n",__FILE__,__LINE__,jobNode->requested
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
           TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeName(archiveType),NULL);
-          TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
+          TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
           TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
           script = expandTemplate(String_cString(jobNode->jobOptions.preProcessScript),
                                   EXPAND_MACRO_MODE_STRING,
@@ -4153,7 +4153,7 @@ NULL,//                                                        scheduleTitle,
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
           TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeName(archiveType),NULL);
-          TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getFilePathName(directory,storageSpecifier.archiveName),NULL);
+          TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
           TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
           script = expandTemplate(String_cString(jobNode->jobOptions.postProcessScript),
                                   EXPAND_MACRO_MODE_STRING,
@@ -5669,27 +5669,27 @@ NULL, // masterIO
 
 LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 {
-  String        storagePathName;
+  String        storageDirectoryName;
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
 
   // collect storage locations to check for BAR files
-  storagePathName = String_new();
+  storageDirectoryName = String_new();
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
-      File_getFilePathName(storagePathName,jobNode->archiveName);
-      if (!String_isEmpty(storagePathName))
+      File_getDirectoryName(storageDirectoryName,jobNode->archiveName);
+      if (!String_isEmpty(storageDirectoryName))
       {
-        if (!StringList_contains(storageDirectoryList,storagePathName))
+        if (!StringList_contains(storageDirectoryList,storageDirectoryName))
         {
-          StringList_append(storageDirectoryList,storagePathName);
+          StringList_append(storageDirectoryList,storageDirectoryName);
         }
       }
     }
   }
-  String_delete(storagePathName);
+  String_delete(storageDirectoryName);
 }
 
 /***********************************************************************\
@@ -5795,7 +5795,7 @@ LOCAL void autoIndexThreadCode(void)
               }
               else
               {
-                File_getFilePathName(baseName,baseName);
+                File_getDirectoryName(baseName,baseName);
               }
             }
             while ((error != ERROR_NONE) && !String_isEmpty(baseName));
@@ -9174,11 +9174,11 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                                                      NULL
                                                     ),
                           jobNode->jobOptions.archivePartSize,
-                          Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.delta),
-                          Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.byte.value),
+                          Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.value.delta),
+                          Compress_algorithmToString(jobNode->jobOptions.compressAlgorithms.value.byte),
 //TODO
-                          Crypt_algorithmToString(jobNode->jobOptions.cryptAlgorithms[0].value,"unknown"),
-                          (jobNode->jobOptions.cryptAlgorithms[0].value != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->jobOptions.cryptType) : "none",
+                          Crypt_algorithmToString(jobNode->jobOptions.cryptAlgorithms.values[0],"unknown"),
+                          (jobNode->jobOptions.cryptAlgorithms.values[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->jobOptions.cryptType) : "none",
                           ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->jobOptions.cryptPasswordMode,NULL),
                           jobNode->lastExecutedDateTime,
                           jobNode->runningInfo.estimatedRestTime
