@@ -55,7 +55,7 @@
 #   [SEAT]
 # SIG0
 #
-# The ordering of the chunks BAR*, KEY*, MTA* and SIG* must as as listed above.
+# The ordering of the chunks BAR*, KEY*, MTA* and SIG* must be as listed above.
 # The ordering of the chunks FIL*, IMG*, DIR*, LNK*, HLN*, SPE* is arbitrary.
 # Sub-chunks should be ordered as listed above.
 #
@@ -358,6 +358,8 @@ CHUNK FILE_ENTRY "FENT" FileEntry
   uint32 userId
   uint32 groupId
   uint32 permission
+#TODO
+#uint32 attributes
   string name
   crc32  crc
 
