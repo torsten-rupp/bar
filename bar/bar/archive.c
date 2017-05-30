@@ -911,7 +911,7 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle)
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if (   Crypt_isEncrypted(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0].value)
+    if (   Crypt_isEncrypted(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0])
         && (archiveHandle->cryptPassword == NULL)
        )
     {
@@ -1574,19 +1574,19 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
     return error;
   }
 #ifdef MULTI_CRYPT
-  chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
-  chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
-  chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
-  chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+  chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[0]);
+  chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[1]);
+  chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[2]);
+  chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[3]);
 #else
-  chunkMeta.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0].value);
+  chunkMeta.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0]);
 #endif
 
   // init crypt
   error = Crypt_init(&cryptInfo,
 //TODO: MULTI_CRYPT
 //TODO: CBC, CTS?
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0].value,
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->cryptKey,
                      archiveHandle->cryptSalt,
@@ -4422,7 +4422,7 @@ UNUSED_VARIABLE(storageInfo);
 
   Semaphore_init(&archiveHandle->passwordLock);
 //TODO: multi crypt
-  archiveHandle->cryptType               = Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0].value) ? storageInfo->jobOptions->cryptType : CRYPT_TYPE_NONE;
+  archiveHandle->cryptType               = Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms.values[0]) ? storageInfo->jobOptions->cryptType : CRYPT_TYPE_NONE;
   Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->cryptPassword           = NULL;
   archiveHandle->cryptPasswordReadFlag   = FALSE;
@@ -4460,7 +4460,7 @@ UNUSED_VARIABLE(storageInfo);
   Crypt_randomize(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
 
   // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms[0].value,&archiveHandle->blockLength);
+  error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms.values[0],&archiveHandle->blockLength);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -4472,7 +4472,7 @@ UNUSED_VARIABLE(storageInfo);
     AutoFree_cleanup(&autoFreeList);
     return ERROR_UNSUPPORTED_BLOCK_LENGTH;
   }
-  error = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms[0].value,&keyLength);
+  error = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms.values[0],&keyLength);
   if (error != ERROR_NONE)
   {
     return error;
@@ -5220,7 +5220,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 );
 #else
 #endif
-  memCopyFast(archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
+  memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength                    = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType               = ARCHIVE_ENTRY_TYPE_FILE;
@@ -5645,7 +5645,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->indexHandle                     = indexHandle;
   archiveEntryInfo->mode                            = ARCHIVE_MODE_WRITE;
 
-  memCopyFast(archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
+  memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength                     = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType                = ARCHIVE_ENTRY_TYPE_IMAGE;
@@ -6013,7 +6013,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->indexHandle      = indexHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
-  memCopyFast(archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
+  memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
@@ -6036,10 +6036,10 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     return error;
   }
 #ifdef MULTI_CRYPT
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[0]);
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[1]);
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[2]);
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[3]);
 #else
   archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(cryptAlgorithm);
 #endif
@@ -6261,7 +6261,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->indexHandle      = indexHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
-  memCopyFast(archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
+  memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
@@ -6521,7 +6521,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->indexHandle                        = indexHandle;
   archiveEntryInfo->mode                               = ARCHIVE_MODE_WRITE;
 
-  memCopyFast(archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
+  memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength                        = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType                   = ARCHIVE_ENTRY_TYPE_HARDLINK;
@@ -6966,7 +6966,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->indexHandle      = indexHandle;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
-  memCopyFast(archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
+  memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;

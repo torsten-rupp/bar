@@ -542,7 +542,7 @@ LOCAL Errors writeIncrementalList(ConstString fileName,
                                   Dictionary  *namesDictionary
                                  )
 {
-  String                    directory;
+  String                    directoryName;
   String                    tmpFileName;
   Errors                    error;
   FileHandle                fileHandle;
@@ -560,35 +560,35 @@ LOCAL Errors writeIncrementalList(ConstString fileName,
   assert(namesDictionary != NULL);
 
   // get directory of .bid file
-  directory = File_getFilePathName(String_new(),fileName);
+  directoryName = File_getDirectoryName(String_new(),fileName);
 
   // create directory if not existing
-  if (!String_isEmpty(directory))
+  if (!String_isEmpty(directoryName))
   {
-    if      (!File_exists(directory))
+    if      (!File_exists(directoryName))
     {
-      error = File_makeDirectory(directory,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
+      error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
       if (error != ERROR_NONE)
       {
-        String_delete(directory);
+        String_delete(directoryName);
         return error;
       }
     }
-    else if (!File_isDirectory(directory))
+    else if (!File_isDirectory(directoryName))
     {
-      error = ERRORX_(NOT_A_DIRECTORY,0,"%s",String_cString(directory));
-      String_delete(directory);
+      error = ERRORX_(NOT_A_DIRECTORY,0,"%s",String_cString(directoryName));
+      String_delete(directoryName);
       return error;
     }
   }
 
   // get temporary name for new .bid file
   tmpFileName = String_new();
-  error = File_getTmpFileName(tmpFileName,"bid",directory);
+  error = File_getTmpFileName(tmpFileName,"bid",directoryName);
   if (error != ERROR_NONE)
   {
     String_delete(tmpFileName);
-    String_delete(directory);
+    String_delete(directoryName);
     return error;
   }
 
@@ -598,7 +598,7 @@ LOCAL Errors writeIncrementalList(ConstString fileName,
   {
     File_delete(tmpFileName,FALSE);
     String_delete(tmpFileName);
-    String_delete(directory);
+    String_delete(directoryName);
     return error;
   }
 
@@ -611,7 +611,7 @@ LOCAL Errors writeIncrementalList(ConstString fileName,
     File_close(&fileHandle);
     File_delete(tmpFileName,FALSE);
     String_delete(tmpFileName);
-    String_delete(directory);
+    String_delete(directoryName);
     return error;
   }
   version = INCREMENTAL_LIST_FILE_VERSION;
@@ -621,7 +621,7 @@ LOCAL Errors writeIncrementalList(ConstString fileName,
     File_close(&fileHandle);
     File_delete(tmpFileName,FALSE);
     String_delete(tmpFileName);
-    String_delete(directory);
+    String_delete(directoryName);
     return error;
   }
 
@@ -667,7 +667,7 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
     File_delete(tmpFileName,FALSE);
     File_delete(tmpFileName,FALSE);
     String_delete(tmpFileName);
-    String_delete(directory);
+    String_delete(directoryName);
     return error;
   }
 
@@ -677,13 +677,13 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
   {
     File_delete(tmpFileName,FALSE);
     String_delete(tmpFileName);
-    String_delete(directory);
+    String_delete(directoryName);
     return error;
   }
 
   // free resources
   String_delete(tmpFileName);
-  String_delete(directory);
+  String_delete(directoryName);
 
   return ERROR_NONE;
 }
@@ -4022,13 +4022,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   SemaphoreLock    semaphoreLock;
   String           pattern;
 
-  String           pathName;
+  String           directoryName;
   IndexQueryHandle indexQueryHandle;
   IndexId          storageId;
   IndexId          existingEntityId;
   IndexId          existingStorageId;
   String           existingStorageName;
-  String           existingPathName;
+  String           existingDirectoryName;
   StorageSpecifier existingStorageSpecifier;
 
   assert(createInfo != NULL);
@@ -4041,16 +4041,16 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  printableStorageName = String_new();
-  pathName             = String_new();
-  existingStorageName  = String_new();
-  existingPathName     = String_new();
+  printableStorageName  = String_new();
+  directoryName         = String_new();
+  existingStorageName   = String_new();
+  existingDirectoryName = String_new();
   Storage_initSpecifier(&existingStorageSpecifier);
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
-  AUTOFREE_ADD(&autoFreeList,pathName,{ String_delete(printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,pathName,{ String_delete(pathName); });
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
+  AUTOFREE_ADD(&autoFreeList,directoryName,{ String_delete(directoryName); });
   AUTOFREE_ADD(&autoFreeList,existingStorageName,{ String_delete(existingStorageName); });
-  AUTOFREE_ADD(&autoFreeList,existingPathName,{ String_delete(existingPathName); });
+  AUTOFREE_ADD(&autoFreeList,existingDirectoryName,{ String_delete(existingDirectoryName); });
   AUTOFREE_ADD(&autoFreeList,&existingStorageSpecifier,{ Storage_doneSpecifier(&existingStorageSpecifier); });
 
   // initial storage pre-processing
@@ -4448,7 +4448,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
 
           // find matching entity and assign storage to entity
-          File_getFilePathName(pathName,storageMsg.archiveName);
+          File_getDirectoryName(directoryName,storageMsg.archiveName);
           error = Index_initListStorages(&indexQueryHandle,
                                          createInfo->indexHandle,
                                          storageMsg.uuidId,
@@ -4490,10 +4490,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                      )
                 )
           {
-            File_getFilePathName(existingPathName,existingStorageName);
+            File_getDirectoryName(existingDirectoryName,existingStorageName);
             if (   (storageId != existingStorageId)
                 && (Storage_parseName(&existingStorageSpecifier,existingStorageName) == ERROR_NONE)
-                && Storage_equalSpecifiers(&existingStorageSpecifier,pathName,&existingStorageSpecifier,existingPathName)
+                && Storage_equalSpecifiers(&existingStorageSpecifier,directoryName,&existingStorageSpecifier,existingDirectoryName)
                )
             {
 //fprintf(stderr,"%s, %d: assign to existingStorageName=%s\n",__FILE__,__LINE__,String_cString(existingStorageName));
@@ -4706,9 +4706,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   // free resoures
   Storage_doneSpecifier(&existingStorageSpecifier);
-  String_delete(existingPathName);
+  String_delete(existingDirectoryName);
   String_delete(existingStorageName);
-  String_delete(pathName);
+  String_delete(directoryName);
   String_delete(printableStorageName);
   free(buffer);
   AutoFree_done(&autoFreeList);
@@ -4922,15 +4922,15 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
     // check if file data should be delta compressed
     tryDeltaCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
-                           && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta);
+                           && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta);
 
     // create new archive file entry
     error = Archive_newFileEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
                                  indexHandle,
-                                 createInfo->jobOptions->compressAlgorithms.delta,
-                                 createInfo->jobOptions->compressAlgorithms.byte.value,
-                                 createInfo->jobOptions->cryptAlgorithms[0].value,
+                                 createInfo->jobOptions->compressAlgorithms.value.delta,
+                                 createInfo->jobOptions->compressAlgorithms.value.byte,
+                                 createInfo->jobOptions->cryptAlgorithms.values[0],
 CRYPT_TYPE_SYMMETRIC, //TODO
                                  fileName,
                                  &fileInfo,
@@ -5105,8 +5105,8 @@ CRYPT_TYPE_SYMMETRIC, //TODO
     }
 
     // ratio info
-    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta     ))
-        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte.value))
+    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
+        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
@@ -5329,15 +5329,15 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 
     // check if file data should be delta compressed
     tryDeltaCompressFlag =    (deviceInfo.size > globalOptions.compressMinFileSize)
-                           && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta);
+                           && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta);
 
     // create new archive image entry
     error = Archive_newImageEntry(&archiveEntryInfo,
                                   &createInfo->archiveHandle,
                                   indexHandle,
-                                  createInfo->jobOptions->compressAlgorithms.delta,
-                                  createInfo->jobOptions->compressAlgorithms.byte.value,
-                                  createInfo->jobOptions->cryptAlgorithms[0].value,
+                                  createInfo->jobOptions->compressAlgorithms.value.delta,
+                                  createInfo->jobOptions->compressAlgorithms.value.byte,
+                                  createInfo->jobOptions->cryptAlgorithms.values[0],
 CRYPT_TYPE_SYMMETRIC, //TODO
                                   deviceName,
                                   &deviceInfo,
@@ -5517,8 +5517,8 @@ CRYPT_TYPE_SYMMETRIC, //TODO
     }
 
     // ratio info
-    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta     ))
-        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte.value))
+    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
+        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
@@ -5675,7 +5675,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
                                       &createInfo->archiveHandle,
                                       indexHandle,
-                                      createInfo->jobOptions->cryptAlgorithms[0].value,
+                                      createInfo->jobOptions->cryptAlgorithms.values[0],
 CRYPT_TYPE_SYMMETRIC, //TODO
                                       directoryName,
                                       &fileInfo,
@@ -5874,7 +5874,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     error = Archive_newLinkEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
                                  indexHandle,
-                                 createInfo->jobOptions->cryptAlgorithms[0].value,
+                                 createInfo->jobOptions->cryptAlgorithms.values[0],
 CRYPT_TYPE_SYMMETRIC, //TODO
                                  linkName,
                                  fileName,
@@ -6101,15 +6101,15 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
     // check if file data should be delta compressed
     tryDeltaCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
-                           && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta);
+                           && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta);
 
     // create new archive hard link entry
     error = Archive_newHardLinkEntry(&archiveEntryInfo,
                                      &createInfo->archiveHandle,
                                      indexHandle,
-                                     createInfo->jobOptions->compressAlgorithms.delta,
-                                     createInfo->jobOptions->compressAlgorithms.byte.value,
-                                     createInfo->jobOptions->cryptAlgorithms[0].value,
+                                     createInfo->jobOptions->compressAlgorithms.value.delta,
+                                     createInfo->jobOptions->compressAlgorithms.value.byte,
+                                     createInfo->jobOptions->cryptAlgorithms.values[0],
 CRYPT_TYPE_SYMMETRIC, //TODO
                                      fileNameList,
                                      &fileInfo,
@@ -6258,8 +6258,8 @@ CRYPT_TYPE_SYMMETRIC, //TODO
     }
 
     // ratio info
-    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta     ))
-        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte.value))
+    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
+        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
@@ -6424,7 +6424,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     error = Archive_newSpecialEntry(&archiveEntryInfo,
                                     &createInfo->archiveHandle,
                                     indexHandle,
-                                    createInfo->jobOptions->cryptAlgorithms[0].value,
+                                    createInfo->jobOptions->cryptAlgorithms.values[0],
 CRYPT_TYPE_SYMMETRIC, //TODO
                                     fileName,
                                     &fileInfo,

@@ -520,7 +520,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     // create parent directories if not existing
     if (!restoreInfo->jobOptions->dryRunFlag)
     {
-      parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
+      parentDirectoryName = File_getDirectoryName(String_new(),destinationFileName);
       if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
       {
         // create directory
@@ -914,7 +914,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     // create parent directories if not existing
     if (!restoreInfo->jobOptions->dryRunFlag)
     {
-      parentDirectoryName = File_getFilePathName(String_new(),destinationDeviceName);
+      parentDirectoryName = File_getDirectoryName(String_new(),destinationDeviceName);
       if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
       {
         // create directory
@@ -1474,7 +1474,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     // create parent directories if not existing
     if (!restoreInfo->jobOptions->dryRunFlag)
     {
-      parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
+      parentDirectoryName = File_getDirectoryName(String_new(),destinationFileName);
       if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
       {
         // create directory
@@ -1730,7 +1730,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
       // create parent directories if not existing
       if (!restoreInfo->jobOptions->dryRunFlag)
       {
-        parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
+        parentDirectoryName = File_getDirectoryName(String_new(),destinationFileName);
         if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
         {
           // create directory
@@ -2162,7 +2162,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     // create parent directories if not existing
     if (!restoreInfo->jobOptions->dryRunFlag)
     {
-      parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
+      parentDirectoryName = File_getDirectoryName(String_new(),destinationFileName);
       if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
       {
         // create directory
