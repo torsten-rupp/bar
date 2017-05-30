@@ -270,6 +270,7 @@ LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char 
 LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 //TODO: multi crypt
 //LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
@@ -465,50 +466,51 @@ LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES[] = 
 
 LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_ENUM         ("create",                       'c',0,1,command,                                         COMMAND_CREATE_FILES,                                        "create new files archives"                                                ),
-  CMD_OPTION_ENUM         ("image",                        'm',0,1,command,                                         COMMAND_CREATE_IMAGES,                                       "create new images archives"                                               ),
-  CMD_OPTION_ENUM         ("list",                         'l',0,1,command,                                         COMMAND_LIST,                                                "list contents of archives"                                                ),
-  CMD_OPTION_ENUM         ("test",                         't',0,1,command,                                         COMMAND_TEST,                                                "test contents of archives"                                                ),
-  CMD_OPTION_ENUM         ("compare",                      'd',0,1,command,                                         COMMAND_COMPARE,                                             "compare contents of archive swith files and images"                       ),
-  CMD_OPTION_ENUM         ("extract",                      'x',0,1,command,                                         COMMAND_RESTORE,                                             "restore archives"                                                         ),
-  CMD_OPTION_ENUM         ("convert",                      0,  0,1,command,                                         COMMAND_CONVERT,                                             "convert archives"                                                         ),
-  CMD_OPTION_ENUM         ("generate-keys",                0,  0,1,command,                                         COMMAND_GENERATE_ENCRYPTION_KEYS,                            "generate new public/private key pair for encryption"                      ),
-  CMD_OPTION_ENUM         ("generate-signature-keys",      0,  0,1,command,                                         COMMAND_GENERATE_SIGNATURE_KEYS,                             "generate new public/private key pair for signature"                       ),
-//  CMD_OPTION_ENUM         ("new-key-password",             0,  1,1,command,                                         COMMAND_NEW_KEY_PASSWORD,                                   "set new private key password"                                             ),
-  CMD_OPTION_INTEGER      ("generate-keys-bits",           0,  1,1,keyBits,                                         MIN_ASYMMETRIC_CRYPT_KEY_BITS,
-                                                                                                                    MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS,       "key bits",NULL                                                            ),
-  CMD_OPTION_STRING       ("job",                          0,  0,1,jobName,                                                                                                      "execute job","name"                                                       ),
+  CMD_OPTION_ENUM         ("create",                       'c',0,1,command,                                         NULL,COMMAND_CREATE_FILES,                                        "create new files archives"                                                ),
+  CMD_OPTION_ENUM         ("image",                        'm',0,1,command,                                         NULL,COMMAND_CREATE_IMAGES,                                       "create new images archives"                                               ),
+  CMD_OPTION_ENUM         ("list",                         'l',0,1,command,                                         NULL,COMMAND_LIST,                                                "list contents of archives"                                                ),
+  CMD_OPTION_ENUM         ("test",                         't',0,1,command,                                         NULL,COMMAND_TEST,                                                "test contents of archives"                                                ),
+  CMD_OPTION_ENUM         ("compare",                      'd',0,1,command,                                         NULL,COMMAND_COMPARE,                                             "compare contents of archive swith files and images"                       ),
+  CMD_OPTION_ENUM         ("extract",                      'x',0,1,command,                                         NULL,COMMAND_RESTORE,                                             "restore archives"                                                         ),
+  CMD_OPTION_ENUM         ("convert",                      0,  0,1,command,                                         NULL,COMMAND_CONVERT,                                             "convert archives"                                                         ),
+  CMD_OPTION_ENUM         ("generate-keys",                0,  0,1,command,                                         NULL,COMMAND_GENERATE_ENCRYPTION_KEYS,                            "generate new public/private key pair for encryption"                      ),
+  CMD_OPTION_ENUM         ("generate-signature-keys",      0,  0,1,command,                                         NULL,COMMAND_GENERATE_SIGNATURE_KEYS,                             "generate new public/private key pair for signature"                       ),
+//  CMD_OPTION_ENUM         ("new-key-password",             0,  1,1,command,                                         NULL,COMMAND_NEW_KEY_PASSWORD,                                   "set new private key password"                                             ),
+  CMD_OPTION_INTEGER      ("generate-keys-bits",           0,  1,1,keyBits,                                         NULL,MIN_ASYMMETRIC_CRYPT_KEY_BITS,
+                                                                                                                         MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS,       "key bits",NULL                                                            ),
+  CMD_OPTION_STRING       ("job",                          0,  0,1,jobName,                                         NULL,                                                             "execute job","name"                                                       ),
 
-  CMD_OPTION_ENUM         ("normal",                       0,  1,2,jobOptions.archiveType,                          ARCHIVE_TYPE_NORMAL,                                         "create normal archive (no incremental list file)"                         ),
-  CMD_OPTION_ENUM         ("full",                         'f',0,2,jobOptions.archiveType,                          ARCHIVE_TYPE_FULL,                                           "create full archive and incremental list file"                            ),
-  CMD_OPTION_ENUM         ("incremental",                  'i',0,2,jobOptions.archiveType,                          ARCHIVE_TYPE_INCREMENTAL,                                    "create incremental archive"                                               ),
-  CMD_OPTION_SPECIAL      ("incremental-list-file",        'I',1,2,&jobOptions.incrementalListFileName,             cmdOptionParseString,NULL,                                   "incremental list file name (default: <archive name>.bid)","file name"     ),
-  CMD_OPTION_ENUM         ("differential",                 0,  1,2,jobOptions.archiveType,                          ARCHIVE_TYPE_DIFFERENTIAL,                                   "create differential archive"                                              ),
+  CMD_OPTION_ENUM         ("normal",                       0,  1,2,jobOptions.archiveType,                          NULL,ARCHIVE_TYPE_NORMAL,                                         "create normal archive (no incremental list file)"                         ),
+  CMD_OPTION_ENUM         ("full",                         'f',0,2,jobOptions.archiveType,                          NULL,ARCHIVE_TYPE_FULL,                                           "create full archive and incremental list file"                            ),
+  CMD_OPTION_ENUM         ("incremental",                  'i',0,2,jobOptions.archiveType,                          NULL,ARCHIVE_TYPE_INCREMENTAL,                                    "create incremental archive"                                               ),
+  CMD_OPTION_SPECIAL      ("incremental-list-file",        'I',1,2,&jobOptions.incrementalListFileName,             NULL,cmdOptionParseString,NULL,                                   "incremental list file name (default: <archive name>.bid)","file name"     ),
+  CMD_OPTION_ENUM         ("differential",                 0,  1,2,jobOptions.archiveType,                          NULL,ARCHIVE_TYPE_DIFFERENTIAL,                                   "create differential archive"                                              ),
 
-  CMD_OPTION_SELECT       ("pattern-type",                 0,  1,2,jobOptions.patternType,                          COMMAND_LINE_OPTIONS_PATTERN_TYPES,                          "select pattern type"                                                      ),
+  CMD_OPTION_SELECT       ("pattern-type",                 0,  1,2,jobOptions.patternType,                          NULL,COMMAND_LINE_OPTIONS_PATTERN_TYPES,                          "select pattern type"                                                      ),
 
-  CMD_OPTION_SPECIAL      ("include",                      '#',0,3,&includeEntryList,                               cmdOptionParseEntryPattern,NULL,                             "include pattern","pattern"                                                ),
-  CMD_OPTION_CSTRING      ("include-file-command",         0,  1,3,includeFileCommand,                                                                                           "include file pattern command","command"                                   ),
-  CMD_OPTION_CSTRING      ("include-image-command",        0,  1,3,includeImageCommand,                                                                                          "include image pattern command","command"                                  ),
-  CMD_OPTION_SPECIAL      ("exclude",                      '!',0,3,&excludePatternList,                             cmdOptionParsePattern,NULL,                                  "exclude pattern","pattern"                                                ),
-  CMD_OPTION_CSTRING      ("exclude-command",              0,  1,3,excludeCommand,                                                                                               "exclude pattern command","command"                                        ),
-  CMD_OPTION_SPECIAL      ("mount",                        0  ,1,3,&mountList,                                      cmdOptionParseMount,NULL,                                    "mount device","name"                                                      ),
+  CMD_OPTION_SPECIAL      ("include",                      '#',0,3,&includeEntryList,                               NULL,cmdOptionParseEntryPattern,NULL,                             "include pattern","pattern"                                                ),
+  CMD_OPTION_CSTRING      ("include-file-command",         0,  1,3,includeFileCommand,                              NULL,                                                             "include file pattern command","command"                                   ),
+  CMD_OPTION_CSTRING      ("include-image-command",        0,  1,3,includeImageCommand,                             NULL,                                                             "include image pattern command","command"                                  ),
+  CMD_OPTION_SPECIAL      ("exclude",                      '!',0,3,&excludePatternList,                             NULL,cmdOptionParsePattern,NULL,                                  "exclude pattern","pattern"                                                ),
+  CMD_OPTION_CSTRING      ("exclude-command",              0,  1,3,excludeCommand,                                  NULL,                                                             "exclude pattern command","command"                                        ),
+  CMD_OPTION_SPECIAL      ("mount",                        0  ,1,3,&mountList,                                      NULL,cmdOptionParseMount,NULL,                                    "mount device","name"                                                      ),
 
-  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,3,&deltaSourceList,                                cmdOptionParseDeltaSource,NULL,                              "source pattern","pattern"                                                 ),
+  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,3,&deltaSourceList,                                NULL,cmdOptionParseDeltaSource,NULL,                              "source pattern","pattern"                                                 ),
 
-  CMD_OPTION_SPECIAL      ("config",                       0,  1,2,NULL,                                            cmdOptionParseConfigFile,NULL,                               "configuration file","file name"                                           ),
+  CMD_OPTION_SPECIAL      ("config",                       0,  1,2,NULL,                                            NULL,cmdOptionParseConfigFile,NULL,                               "configuration file","file name"                                           ),
 
-  CMD_OPTION_STRING       ("tmp-directory",                0,  1,1,globalOptions.tmpDirectory,                                                                                   "temporary directory","path"                                               ),
-  CMD_OPTION_INTEGER64    ("max-tmp-size",                 0,  1,1,globalOptions.maxTmpSize,                        0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,                    "max. size of temporary files","unlimited"                                 ),
+  CMD_OPTION_STRING       ("tmp-directory",                0,  1,1,globalOptions.tmpDirectory,                      NULL,                                                             "temporary directory","path"                                               ),
+  CMD_OPTION_INTEGER64    ("max-tmp-size",                 0,  1,1,globalOptions.maxTmpSize,                        NULL,0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,                    "max. size of temporary files","unlimited"                                 ),
 
-  CMD_OPTION_INTEGER64    ("archive-part-size",            's',0,2,jobOptions.archivePartSize,                      0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,                    "approximated archive part size","unlimited"                               ),
-  CMD_OPTION_INTEGER64    ("fragment-size",                0,  0,3,globalOptions.fragmentSize,                      0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,                    "fragment size","unlimited"                                                ),
+  CMD_OPTION_INTEGER64    ("archive-part-size",            's',0,2,jobOptions.archivePartSize,                      NULL,0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,                    "approximated archive part size","unlimited"                               ),
+  CMD_OPTION_INTEGER64    ("fragment-size",                0,  0,3,globalOptions.fragmentSize,                      NULL,0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,                    "fragment size","unlimited"                                                ),
 
-  CMD_OPTION_INTEGER      ("directory-strip",              'p',1,2,jobOptions.directoryStripCount,                  -1,MAX_INT,NULL,                                             "number of directories to strip on extract",NULL                           ),
-  CMD_OPTION_STRING       ("destination",                  0,  0,2,jobOptions.destination,                                                                                       "destination to restore entries","path"                                    ),
-  CMD_OPTION_SPECIAL      ("owner",                        0,  0,2,&jobOptions.owner,                               cmdOptionParseOwner,NULL,                                    "user and group of restored files","user:group"                            ),
+  CMD_OPTION_INTEGER      ("directory-strip",              'p',1,2,jobOptions.directoryStripCount,                  NULL,-1,MAX_INT,NULL,                                             "number of directories to strip on extract",NULL                           ),
+  CMD_OPTION_STRING       ("destination",                  0,  0,2,jobOptions.destination,                          NULL,                                                             "destination to restore entries","path"                                    ),
+  CMD_OPTION_SPECIAL      ("owner",                        0,  0,2,&jobOptions.owner,                               NULL,cmdOptionParseOwner,NULL,                                    "user and group of restored files","user:group"                            ),
+  CMD_OPTION_SPECIAL      ("permissions",                  0,  0,2,&jobOptions.permissions,                         NULL,cmdOptionParsePermissions,NULL,                              "permissions of restored files","<owner>:<group>:<world>|<number>"         ),
 
-  CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,2,&jobOptions.compressAlgorithms,                  cmdOptionParseCompressAlgorithms,NULL,                       "select compress algorithms to use\n"
+  CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,2,&jobOptions.compressAlgorithms.value,            &jobOptions.compressAlgorithms.isSet,cmdOptionParseCompressAlgorithms,NULL,                       "select compress algorithms to use\n"
                                                                                                                                                                                  "  none         : no compression (default)\n"
                                                                                                                                                                                  "  zip0..zip9   : ZIP compression level 0..9"
                                                                                                                                                                                  #ifdef HAVE_BZ2
@@ -534,12 +536,12 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
                                                                                                                                                                                  #endif
                                                                                                                                                                                  ,
                                                                                                                                                                                  "algorithm|xdelta+algorithm"                                               ),
-  CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,2,globalOptions.compressMinFileSize,               0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                          "minimal size of file for compression",NULL                                ),
-  CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,3,&compressExcludePatternList,                     cmdOptionParsePattern,NULL,                                  "exclude compression pattern","pattern"                                    ),
+  CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,2,globalOptions.compressMinFileSize,               NULL,0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                          "minimal size of file for compression",NULL                                ),
+  CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,3,&compressExcludePatternList,                     NULL,cmdOptionParsePattern,NULL,                                  "exclude compression pattern","pattern"                                    ),
 
 // TODO
 #if MULTI_CRYPT
-  CMD_OPTION_SPECIAL      ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms,                      cmdOptionParseCryptAlgorithms,NULL,                          "select crypt algorithms to use\n"
+  CMD_OPTION_SPECIAL      ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms.values,               &jobOptions.cryptAlgorithms.isSet,cmdOptionParseCryptAlgorithms,NULL,                          "select crypt algorithms to use\n"
                                                                                                                                                                                  "  none (default)"
                                                                                                                                                                                  #ifdef HAVE_GCRYPT
                                                                                                                                                                                  "\n"
@@ -561,217 +563,217 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
                                                                                                                                                                                  ,
                                                                                                                                                                                  "algorithm"                                                                ),
 #endif
-  CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms,                      COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                       "select crypt algorithms to use"                                           ),
-  CMD_OPTION_SELECT       ("crypt-type",                   0,  0,2,jobOptions.cryptType,                            COMMAND_LINE_OPTIONS_CRYPT_TYPES,                            "select crypt type"                                                        ),
-  CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,2,&globalOptions.cryptPassword,                    cmdOptionParsePassword,NULL,                                 "crypt password (use with care!)","password"                               ),
-  CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,2,&jobOptions.cryptPublicKey,                      cmdOptionParseKeyData,NULL,                                  "public key for asymmetric encryption","file name|data"                    ),
-  CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,2,&jobOptions.cryptPrivateKey,                     cmdOptionParseKeyData,NULL,                                  "private key for asymmetric decryption","file name|data"                   ),
-  CMD_OPTION_SPECIAL      ("signature-public-key",         0,  0,1,&globalOptions.signaturePublicKey,               cmdOptionParseCryptKey,NULL,                                 "public key for signature check","file name|data"                          ),
-  CMD_OPTION_SPECIAL      ("signature-private-key",        0,  0,2,&globalOptions.signaturePrivateKey,              cmdOptionParseCryptKey,NULL,                                 "private key for signature generation","file name|data"                    ),
+  CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,2,jobOptions.cryptAlgorithms,                      &jobOptions.cryptAlgorithms.isSet,COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                       "select crypt algorithms to use"                                           ),
+  CMD_OPTION_SELECT       ("crypt-type",                   0,  0,2,jobOptions.cryptType,                            NULL,COMMAND_LINE_OPTIONS_CRYPT_TYPES,                            "select crypt type"                                                        ),
+  CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,2,&globalOptions.cryptPassword,                    NULL,cmdOptionParsePassword,NULL,                                 "crypt password (use with care!)","password"                               ),
+  CMD_OPTION_SPECIAL      ("crypt-public-key",             0,  0,2,&jobOptions.cryptPublicKey,                      NULL,cmdOptionParseKeyData,NULL,                                  "public key for asymmetric encryption","file name|data"                    ),
+  CMD_OPTION_SPECIAL      ("crypt-private-key",            0,  0,2,&jobOptions.cryptPrivateKey,                     NULL,cmdOptionParseKeyData,NULL,                                  "private key for asymmetric decryption","file name|data"                   ),
+  CMD_OPTION_SPECIAL      ("signature-public-key",         0,  0,1,&globalOptions.signaturePublicKey,               NULL,cmdOptionParseCryptKey,NULL,                                 "public key for signature check","file name|data"                          ),
+  CMD_OPTION_SPECIAL      ("signature-private-key",        0,  0,2,&globalOptions.signaturePrivateKey,              NULL,cmdOptionParseCryptKey,NULL,                                 "private key for signature generation","file name|data"                    ),
 
 //TODO
-//  CMD_OPTION_INTEGER64    ("file-max-storage-size",         0,  0,2,defaultFileServer.maxStorageSize,                 0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on file server","unlimited"                  ),
+//  CMD_OPTION_INTEGER64    ("file-max-storage-size",         0,  0,2,defaultFileServer.maxStorageSize,                 NULL,0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on file server","unlimited"                  ),
 
-  CMD_OPTION_STRING       ("ftp-login-name",               0,  0,2,defaultFTPServer.ftp.loginName,                                                                               "ftp login name","name"                                                    ),
-  CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,2,&defaultFTPServer.ftp.password,                  cmdOptionParsePassword,NULL,                                 "ftp password (use with care!)","password"                                 ),
-  CMD_OPTION_INTEGER      ("ftp-max-connections",          0,  0,2,defaultFTPServer.maxConnectionCount,             0,MAX_INT,NULL,                                              "max. number of concurrent ftp connections","unlimited"                    ),
+  CMD_OPTION_STRING       ("ftp-login-name",               0,  0,2,defaultFTPServer.ftp.loginName,                  NULL,                                                             "ftp login name","name"                                                    ),
+  CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,2,&defaultFTPServer.ftp.password,                  NULL,cmdOptionParsePassword,NULL,                                 "ftp password (use with care!)","password"                                 ),
+  CMD_OPTION_INTEGER      ("ftp-max-connections",          0,  0,2,defaultFTPServer.maxConnectionCount,             NULL,0,MAX_INT,NULL,                                              "max. number of concurrent ftp connections","unlimited"                    ),
 //TODO
-//  CMD_OPTION_INTEGER64    ("ftp-max-storage-size",         0,  0,2,defaultFTPServer.maxStorageSize,                 0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on ftp server","unlimited"                  ),
+//  CMD_OPTION_INTEGER64    ("ftp-max-storage-size",         0,  0,2,defaultFTPServer.maxStorageSize,                 NULL,0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on ftp server","unlimited"                  ),
 
-  CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,2,defaultSSHServer.ssh.port,                       0,65535,NULL,                                                "ssh port",NULL                                                            ),
-  CMD_OPTION_STRING       ("ssh-login-name",               0,  0,2,defaultSSHServer.ssh.loginName,                                                                               "ssh login name","name"                                                    ),
-  CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,2,&defaultSSHServer.ssh.password,                  cmdOptionParsePassword,NULL,                                 "ssh password (use with care!)","password"                                 ),
-  CMD_OPTION_SPECIAL      ("ssh-public-key",               0,  1,2,&defaultSSHServer.ssh.publicKey,                 cmdOptionParseKeyData,NULL,                                  "ssh public key file name","file name|data"                                ),
-  CMD_OPTION_SPECIAL      ("ssh-private-key",              0,  1,2,&defaultSSHServer.ssh.privateKey,                cmdOptionParseKeyData,NULL,                                  "ssh private key file name","file name|data"                               ),
-  CMD_OPTION_INTEGER      ("ssh-max-connections",          0,  0,2,defaultSSHServer.maxConnectionCount,             0,MAX_INT,NULL,                                              "max. number of concurrent ssh connections","unlimited"                    ),
+  CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,2,defaultSSHServer.ssh.port,                       NULL,0,65535,NULL,                                                "ssh port",NULL                                                            ),
+  CMD_OPTION_STRING       ("ssh-login-name",               0,  0,2,defaultSSHServer.ssh.loginName,                  NULL,                                                             "ssh login name","name"                                                    ),
+  CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,2,&defaultSSHServer.ssh.password,                  NULL,cmdOptionParsePassword,NULL,                                 "ssh password (use with care!)","password"                                 ),
+  CMD_OPTION_SPECIAL      ("ssh-public-key",               0,  1,2,&defaultSSHServer.ssh.publicKey,                 NULL,cmdOptionParseKeyData,NULL,                                  "ssh public key file name","file name|data"                                ),
+  CMD_OPTION_SPECIAL      ("ssh-private-key",              0,  1,2,&defaultSSHServer.ssh.privateKey,                NULL,cmdOptionParseKeyData,NULL,                                  "ssh private key file name","file name|data"                               ),
+  CMD_OPTION_INTEGER      ("ssh-max-connections",          0,  0,2,defaultSSHServer.maxConnectionCount,             NULL,0,MAX_INT,NULL,                                              "max. number of concurrent ssh connections","unlimited"                    ),
 //TODO
-//  CMD_OPTION_INTEGER64    ("ssh-max-storage-size",         0,  0,2,defaultSSHServer.maxStorageSize,                 0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on ssh server","unlimited"                  ),
+//  CMD_OPTION_INTEGER64    ("ssh-max-storage-size",         0,  0,2,defaultSSHServer.maxStorageSize,                 NULL,0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on ssh server","unlimited"                  ),
 
-//  CMD_OPTION_INTEGER      ("webdav-port",                  0,  0,2,defaultWebDAVServer.webDAV.port,               0,65535,NULL,                                                  "WebDAV port",NULL                                                         ),
-  CMD_OPTION_STRING       ("webdav-login-name",            0,  0,2,defaultWebDAVServer.webDAV.loginName,                                                                         "WebDAV login name","name"                                                 ),
-  CMD_OPTION_SPECIAL      ("webdav-password",              0,  0,2,&defaultWebDAVServer.webDAV.password,            cmdOptionParsePassword,NULL,                                 "WebDAV password (use with care!)","password"                              ),
-  CMD_OPTION_INTEGER      ("webdav-max-connections",       0,  0,2,defaultWebDAVServer.maxConnectionCount,          0,MAX_INT,NULL,                                              "max. number of concurrent WebDAV connections","unlimited"                 ),
+//  CMD_OPTION_INTEGER      ("webdav-port",                  0,  0,2,defaultWebDAVServer.webDAV.port,               NULL,0,65535,NULL,                                                  "WebDAV port",NULL                                                         ),
+  CMD_OPTION_STRING       ("webdav-login-name",            0,  0,2,defaultWebDAVServer.webDAV.loginName,            NULL,                                                             "WebDAV login name","name"                                                 ),
+  CMD_OPTION_SPECIAL      ("webdav-password",              0,  0,2,&defaultWebDAVServer.webDAV.password,            NULL,cmdOptionParsePassword,NULL,                                 "WebDAV password (use with care!)","password"                              ),
+  CMD_OPTION_INTEGER      ("webdav-max-connections",       0,  0,2,defaultWebDAVServer.maxConnectionCount,          NULL,0,MAX_INT,NULL,                                              "max. number of concurrent WebDAV connections","unlimited"                 ),
 //TODO
-//  CMD_OPTION_INTEGER64    ("webdav-max-storage-size",      0,  0,2,defaultWebDAVServer.maxStorageSize,              0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on WebDAV server","unlimited"               ),
+//  CMD_OPTION_INTEGER64    ("webdav-max-storage-size",      0,  0,2,defaultWebDAVServer.maxStorageSize,              NULL,0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on WebDAV server","unlimited"               ),
 
-  CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                                                                                   "run in daemon mode"                                                       ),
-  CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                                                                                 "do not detach in daemon mode"                                             ),
-  CMD_OPTION_SELECT       ("server-mode",                  0,  1,1,serverMode,                                      COMMAND_LINE_OPTIONS_SERVER_MODES,                           "select server mode"                                                       ),
-  CMD_OPTION_INTEGER      ("server-port",                  0,  1,1,serverPort,                                      0,65535,NULL,                                                "server port",NULL                                                         ),
-  CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,1,serverTLSPort,                                   0,65535,NULL,                                                "TLS (SSL) server port",NULL                                               ),
-  CMD_OPTION_SPECIAL      ("server-ca-file",               0,  1,1,&serverCA,                                       cmdOptionReadCertificateFile,NULL,                           "TLS (SSL) server certificate authority file (CA file)","file name"        ),
-  CMD_OPTION_SPECIAL      ("server-cert-file",             0,  1,1,&serverCert,                                     cmdOptionReadCertificateFile,NULL,                           "TLS (SSL) server certificate file","file name"                            ),
-  CMD_OPTION_SPECIAL      ("server-key-file",              0,  1,1,&serverKey,                                      cmdOptionParseKeyData,NULL,                                      "TLS (SSL) server key file","file name|data"                               ),
-  CMD_OPTION_SPECIAL      ("server-password",              0,  1,1,&serverPassword,                                 cmdOptionParsePassword,NULL,                                 "server password (use with care!)","password"                              ),
-  CMD_OPTION_INTEGER      ("server-max-connections",       0,  1,1,serverMaxConnections,                            0,65535,NULL,                                                "max. concurrent connections to server",NULL                               ),
-  CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,1,serverJobsDirectory,                                                                                          "server job directory","path name"                                         ),
+  CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                      NULL,                                                             "run in daemon mode"                                                       ),
+  CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                    NULL,                                                             "do not detach in daemon mode"                                             ),
+  CMD_OPTION_SELECT       ("server-mode",                  0,  1,1,serverMode,                                      NULL,COMMAND_LINE_OPTIONS_SERVER_MODES,                           "select server mode"                                                       ),
+  CMD_OPTION_INTEGER      ("server-port",                  0,  1,1,serverPort,                                      NULL,0,65535,NULL,                                                "server port",NULL                                                         ),
+  CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,1,serverTLSPort,                                   NULL,0,65535,NULL,                                                "TLS (SSL) server port",NULL                                               ),
+  CMD_OPTION_SPECIAL      ("server-ca-file",               0,  1,1,&serverCA,                                       NULL,cmdOptionReadCertificateFile,NULL,                           "TLS (SSL) server certificate authority file (CA file)","file name"        ),
+  CMD_OPTION_SPECIAL      ("server-cert-file",             0,  1,1,&serverCert,                                     NULL,cmdOptionReadCertificateFile,NULL,                           "TLS (SSL) server certificate file","file name"                            ),
+  CMD_OPTION_SPECIAL      ("server-key-file",              0,  1,1,&serverKey,                                      NULL,cmdOptionParseKeyData,NULL,                                      "TLS (SSL) server key file","file name|data"                               ),
+  CMD_OPTION_SPECIAL      ("server-password",              0,  1,1,&serverPassword,                                 NULL,cmdOptionParsePassword,NULL,                                 "server password (use with care!)","password"                              ),
+  CMD_OPTION_INTEGER      ("server-max-connections",       0,  1,1,serverMaxConnections,                            NULL,0,65535,NULL,                                                "max. concurrent connections to server",NULL                               ),
+  CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,1,serverJobsDirectory,                             NULL,                                                             "server job directory","path name"                                         ),
 
-  CMD_OPTION_INTEGER      ("nice-level",                   0,  1,1,globalOptions.niceLevel,                         0,19,NULL,                                                   "general nice level of processes/threads",NULL                             ),
-  CMD_OPTION_INTEGER      ("max-threads",                  0,  1,1,globalOptions.maxThreads,                        0,65535,NULL,                                                "max. number of concurrent compress/encryption threads","cpu cores"        ),
+  CMD_OPTION_INTEGER      ("nice-level",                   0,  1,1,globalOptions.niceLevel,                         NULL,0,19,NULL,                                                   "general nice level of processes/threads",NULL                             ),
+  CMD_OPTION_INTEGER      ("max-threads",                  0,  1,1,globalOptions.maxThreads,                        NULL,0,65535,NULL,                                                "max. number of concurrent compress/encryption threads","cpu cores"        ),
 
-  CMD_OPTION_SPECIAL      ("max-band-width",               0,  1,1,&globalOptions.maxBandWidthList,                 cmdOptionParseBandWidth,NULL,                                "max. network band width to use [bits/s]","number or file name"            ),
+  CMD_OPTION_SPECIAL      ("max-band-width",               0,  1,1,&globalOptions.maxBandWidthList,                 NULL,cmdOptionParseBandWidth,NULL,                                "max. network band width to use [bits/s]","number or file name"            ),
 
-  CMD_OPTION_BOOLEAN      ("batch",                        0,  2,1,batchFlag,                                                                                                    "run in batch mode"                                                        ),
-  CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,1,&globalOptions.remoteBARExecutable,              cmdOptionParseString,NULL,                                   "remote BAR executable","file name"                                        ),
+  CMD_OPTION_BOOLEAN      ("batch",                        0,  2,1,batchFlag,                                       NULL,                                                             "run in batch mode"                                                        ),
+  CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,1,&globalOptions.remoteBARExecutable,              NULL,cmdOptionParseString,NULL,                                   "remote BAR executable","file name"                                        ),
 
-  CMD_OPTION_STRING       ("pre-command",                  0,  1,1,jobOptions.preProcessScript,                                                                                  "pre-process command","command"                                            ),
-  CMD_OPTION_STRING       ("post-command",                 0,  1,1,jobOptions.postProcessScript,                                                                                 "post-process command","command"                                           ),
+  CMD_OPTION_STRING       ("pre-command",                  0,  1,1,jobOptions.preProcessScript,                     NULL,                                                             "pre-process command","command"                                            ),
+  CMD_OPTION_STRING       ("post-command",                 0,  1,1,jobOptions.postProcessScript,                    NULL,                                                             "post-process command","command"                                           ),
 
-  CMD_OPTION_STRING       ("file-write-pre-command",       0,  1,1,globalOptions.file.writePreProcessCommand,                                                                    "write file pre-process command","command"                                 ),
-  CMD_OPTION_STRING       ("file-write-post-command",      0,  1,1,globalOptions.file.writePostProcessCommand,                                                                   "write file post-process command","command"                                ),
+  CMD_OPTION_STRING       ("file-write-pre-command",       0,  1,1,globalOptions.file.writePreProcessCommand,       NULL,                                                             "write file pre-process command","command"                                 ),
+  CMD_OPTION_STRING       ("file-write-post-command",      0,  1,1,globalOptions.file.writePostProcessCommand,      NULL,                                                             "write file post-process command","command"                                ),
 
-  CMD_OPTION_STRING       ("ftp-write-pre-command",        0,  1,1,globalOptions.ftp.writePreProcessCommand,                                                                     "write FTP pre-process command","command"                                  ),
-  CMD_OPTION_STRING       ("ftp-write-post-command",       0,  1,1,globalOptions.ftp.writePostProcessCommand,                                                                    "write FTP post-process command","command"                                 ),
+  CMD_OPTION_STRING       ("ftp-write-pre-command",        0,  1,1,globalOptions.ftp.writePreProcessCommand,        NULL,                                                             "write FTP pre-process command","command"                                  ),
+  CMD_OPTION_STRING       ("ftp-write-post-command",       0,  1,1,globalOptions.ftp.writePostProcessCommand,       NULL,                                                             "write FTP post-process command","command"                                 ),
 
-  CMD_OPTION_STRING       ("scp-write-pre-command",        0,  1,1,globalOptions.scp.writePreProcessCommand,                                                                     "write SCP pre-process command","command"                                  ),
-  CMD_OPTION_STRING       ("scp-write-post-command",       0,  1,1,globalOptions.scp.writePostProcessCommand,                                                                    "write SCP post-process command","command"                                 ),
+  CMD_OPTION_STRING       ("scp-write-pre-command",        0,  1,1,globalOptions.scp.writePreProcessCommand,        NULL,                                                             "write SCP pre-process command","command"                                  ),
+  CMD_OPTION_STRING       ("scp-write-post-command",       0,  1,1,globalOptions.scp.writePostProcessCommand,       NULL,                                                             "write SCP post-process command","command"                                 ),
 
-  CMD_OPTION_STRING       ("sftp-write-pre-command",       0,  1,1,globalOptions.sftp.writePreProcessCommand,                                                                    "write SFTP pre-process command","command"                                 ),
-  CMD_OPTION_STRING       ("sftp-write-post-command",      0,  1,1,globalOptions.sftp.writePostProcessCommand,                                                                   "write SFTP post-process command","command"                                ),
+  CMD_OPTION_STRING       ("sftp-write-pre-command",       0,  1,1,globalOptions.sftp.writePreProcessCommand,       NULL,                                                             "write SFTP pre-process command","command"                                 ),
+  CMD_OPTION_STRING       ("sftp-write-post-command",      0,  1,1,globalOptions.sftp.writePostProcessCommand,      NULL,                                                             "write SFTP post-process command","command"                                ),
 
-  CMD_OPTION_STRING       ("webdav-write-pre-command",     0,  1,1,globalOptions.webdav.writePreProcessCommand,                                                                  "write WebDAV pre-process command","command"                               ),
-  CMD_OPTION_STRING       ("webdav-write-post-command",    0,  1,1,globalOptions.webdav.writePostProcessCommand,                                                                 "write WebDAV post-process command","command"                              ),
+  CMD_OPTION_STRING       ("webdav-write-pre-command",     0,  1,1,globalOptions.webdav.writePreProcessCommand,     NULL,                                                             "write WebDAV pre-process command","command"                               ),
+  CMD_OPTION_STRING       ("webdav-write-post-command",    0,  1,1,globalOptions.webdav.writePostProcessCommand,    NULL,                                                             "write WebDAV post-process command","command"                              ),
 
-  CMD_OPTION_STRING       ("cd-device",                    0,  1,1,globalOptions.cd.deviceName,                                                                                  "default CD device","device name"                                          ),
-  CMD_OPTION_STRING       ("cd-request-volume-command",    0,  1,1,globalOptions.cd.requestVolumeCommand,                                                                        "request new CD volume command","command"                                  ),
-  CMD_OPTION_STRING       ("cd-unload-volume-command",     0,  1,1,globalOptions.cd.unloadVolumeCommand,                                                                         "unload CD volume command","command"                                       ),
-  CMD_OPTION_STRING       ("cd-load-volume-command",       0,  1,1,globalOptions.cd.loadVolumeCommand,                                                                           "load CD volume command","command"                                         ),
-  CMD_OPTION_INTEGER64    ("cd-volume-size",               0,  1,1,globalOptions.cd.volumeSize,                     0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "CD volume size","unlimited"                                               ),
-  CMD_OPTION_STRING       ("cd-image-pre-command",         0,  1,1,globalOptions.cd.imagePreProcessCommand,                                                                      "make CD image pre-process command","command"                              ),
-  CMD_OPTION_STRING       ("cd-image-post-command",        0,  1,1,globalOptions.cd.imagePostProcessCommand,                                                                     "make CD image post-process command","command"                             ),
-  CMD_OPTION_STRING       ("cd-image-command",             0,  1,1,globalOptions.cd.imageCommand,                                                                                "make CD image command","command"                                          ),
-  CMD_OPTION_STRING       ("cd-ecc-pre-command",           0,  1,1,globalOptions.cd.eccPreProcessCommand,                                                                        "make CD error-correction codes pre-process command","command"             ),
-  CMD_OPTION_STRING       ("cd-ecc-post-command",          0,  1,1,globalOptions.cd.eccPostProcessCommand,                                                                       "make CD error-correction codes post-process command","command"            ),
-  CMD_OPTION_STRING       ("cd-ecc-command",               0,  1,1,globalOptions.cd.eccCommand,                                                                                  "make CD error-correction codes command","command"                         ),
-  CMD_OPTION_STRING       ("cd-blank-command",             0,  1,1,globalOptions.cd.blankCommand,                                                                                "blank CD medium command","command"                                        ),
-  CMD_OPTION_STRING       ("cd-write-pre-command",         0,  1,1,globalOptions.cd.writePreProcessCommand,                                                                      "write CD pre-process command","command"                                   ),
-  CMD_OPTION_STRING       ("cd-write-post-command",        0,  1,1,globalOptions.cd.writePostProcessCommand,                                                                     "write CD post-process command","command"                                  ),
-  CMD_OPTION_STRING       ("cd-write-command",             0,  1,1,globalOptions.cd.writeCommand,                                                                                "write CD command","command"                                               ),
-  CMD_OPTION_STRING       ("cd-write-image-command",       0,  1,1,globalOptions.cd.writeImageCommand,                                                                           "write CD image command","command"                                         ),
+  CMD_OPTION_STRING       ("cd-device",                    0,  1,1,globalOptions.cd.deviceName,                     NULL,                                                             "default CD device","device name"                                          ),
+  CMD_OPTION_STRING       ("cd-request-volume-command",    0,  1,1,globalOptions.cd.requestVolumeCommand,           NULL,                                                             "request new CD volume command","command"                                  ),
+  CMD_OPTION_STRING       ("cd-unload-volume-command",     0,  1,1,globalOptions.cd.unloadVolumeCommand,            NULL,                                                             "unload CD volume command","command"                                       ),
+  CMD_OPTION_STRING       ("cd-load-volume-command",       0,  1,1,globalOptions.cd.loadVolumeCommand,              NULL,                                                             "load CD volume command","command"                                         ),
+  CMD_OPTION_INTEGER64    ("cd-volume-size",               0,  1,1,globalOptions.cd.volumeSize,                     NULL,0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "CD volume size","unlimited"                                               ),
+  CMD_OPTION_STRING       ("cd-image-pre-command",         0,  1,1,globalOptions.cd.imagePreProcessCommand,         NULL,                                                             "make CD image pre-process command","command"                              ),
+  CMD_OPTION_STRING       ("cd-image-post-command",        0,  1,1,globalOptions.cd.imagePostProcessCommand,        NULL,                                                             "make CD image post-process command","command"                             ),
+  CMD_OPTION_STRING       ("cd-image-command",             0,  1,1,globalOptions.cd.imageCommand,                   NULL,                                                             "make CD image command","command"                                          ),
+  CMD_OPTION_STRING       ("cd-ecc-pre-command",           0,  1,1,globalOptions.cd.eccPreProcessCommand,           NULL,                                                             "make CD error-correction codes pre-process command","command"             ),
+  CMD_OPTION_STRING       ("cd-ecc-post-command",          0,  1,1,globalOptions.cd.eccPostProcessCommand,          NULL,                                                             "make CD error-correction codes post-process command","command"            ),
+  CMD_OPTION_STRING       ("cd-ecc-command",               0,  1,1,globalOptions.cd.eccCommand,                     NULL,                                                             "make CD error-correction codes command","command"                         ),
+  CMD_OPTION_STRING       ("cd-blank-command",             0,  1,1,globalOptions.cd.blankCommand,                   NULL,                                                             "blank CD medium command","command"                                        ),
+  CMD_OPTION_STRING       ("cd-write-pre-command",         0,  1,1,globalOptions.cd.writePreProcessCommand,         NULL,                                                             "write CD pre-process command","command"                                   ),
+  CMD_OPTION_STRING       ("cd-write-post-command",        0,  1,1,globalOptions.cd.writePostProcessCommand,        NULL,                                                             "write CD post-process command","command"                                  ),
+  CMD_OPTION_STRING       ("cd-write-command",             0,  1,1,globalOptions.cd.writeCommand,                   NULL,                                                             "write CD command","command"                                               ),
+  CMD_OPTION_STRING       ("cd-write-image-command",       0,  1,1,globalOptions.cd.writeImageCommand,              NULL,                                                             "write CD image command","command"                                         ),
 
-  CMD_OPTION_STRING       ("dvd-device",                   0,  1,1,globalOptions.dvd.deviceName,                                                                                 "default DVD device","device name"                                         ),
-  CMD_OPTION_STRING       ("dvd-request-volume-command",   0,  1,1,globalOptions.dvd.requestVolumeCommand,                                                                       "request new DVD volume command","command"                                 ),
-  CMD_OPTION_STRING       ("dvd-unload-volume-command",    0,  1,1,globalOptions.dvd.unloadVolumeCommand,                                                                        "unload DVD volume command","command"                                      ),
-  CMD_OPTION_STRING       ("dvd-load-volume-command",      0,  1,1,globalOptions.dvd.loadVolumeCommand,                                                                          "load DVD volume command","command"                                        ),
-  CMD_OPTION_INTEGER64    ("dvd-volume-size",              0,  1,1,globalOptions.dvd.volumeSize,                    0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "DVD volume size","unlimited"                                              ),
-  CMD_OPTION_STRING       ("dvd-image-pre-command",        0,  1,1,globalOptions.dvd.imagePreProcessCommand,                                                                     "make DVD image pre-process command","command"                             ),
-  CMD_OPTION_STRING       ("dvd-image-post-command",       0,  1,1,globalOptions.dvd.imagePostProcessCommand,                                                                    "make DVD image post-process command","command"                            ),
-  CMD_OPTION_STRING       ("dvd-image-command",            0,  1,1,globalOptions.dvd.imageCommand,                                                                               "make DVD image command","command"                                         ),
-  CMD_OPTION_STRING       ("dvd-ecc-pre-command",          0,  1,1,globalOptions.dvd.eccPreProcessCommand,                                                                       "make DVD error-correction codes pre-process command","command"            ),
-  CMD_OPTION_STRING       ("dvd-ecc-post-command",         0,  1,1,globalOptions.dvd.eccPostProcessCommand,                                                                      "make DVD error-correction codes post-process command","command"           ),
-  CMD_OPTION_STRING       ("dvd-ecc-command",              0,  1,1,globalOptions.dvd.eccCommand,                                                                                 "make DVD error-correction codes command","command"                        ),
-  CMD_OPTION_STRING       ("dvd-blank-command",            0,  1,1,globalOptions.dvd.blankCommand,                                                                               "blank DVD mediumcommand","command"                                        ),
-  CMD_OPTION_STRING       ("dvd-write-pre-command",        0,  1,1,globalOptions.dvd.writePreProcessCommand,                                                                     "write DVD pre-process command","command"                                  ),
-  CMD_OPTION_STRING       ("dvd-write-post-command",       0,  1,1,globalOptions.dvd.writePostProcessCommand,                                                                    "write DVD post-process command","command"                                 ),
-  CMD_OPTION_STRING       ("dvd-write-command",            0,  1,1,globalOptions.dvd.writeCommand,                                                                               "write DVD command","command"                                              ),
-  CMD_OPTION_STRING       ("dvd-write-image-command",      0,  1,1,globalOptions.dvd.writeImageCommand,                                                                          "write DVD image command","command"                                        ),
+  CMD_OPTION_STRING       ("dvd-device",                   0,  1,1,globalOptions.dvd.deviceName,                    NULL,                                                             "default DVD device","device name"                                         ),
+  CMD_OPTION_STRING       ("dvd-request-volume-command",   0,  1,1,globalOptions.dvd.requestVolumeCommand,          NULL,                                                             "request new DVD volume command","command"                                 ),
+  CMD_OPTION_STRING       ("dvd-unload-volume-command",    0,  1,1,globalOptions.dvd.unloadVolumeCommand,           NULL,                                                             "unload DVD volume command","command"                                      ),
+  CMD_OPTION_STRING       ("dvd-load-volume-command",      0,  1,1,globalOptions.dvd.loadVolumeCommand,             NULL,                                                             "load DVD volume command","command"                                        ),
+  CMD_OPTION_INTEGER64    ("dvd-volume-size",              0,  1,1,globalOptions.dvd.volumeSize,                    NULL,0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "DVD volume size","unlimited"                                              ),
+  CMD_OPTION_STRING       ("dvd-image-pre-command",        0,  1,1,globalOptions.dvd.imagePreProcessCommand,        NULL,                                                             "make DVD image pre-process command","command"                             ),
+  CMD_OPTION_STRING       ("dvd-image-post-command",       0,  1,1,globalOptions.dvd.imagePostProcessCommand,       NULL,                                                             "make DVD image post-process command","command"                            ),
+  CMD_OPTION_STRING       ("dvd-image-command",            0,  1,1,globalOptions.dvd.imageCommand,                  NULL,                                                             "make DVD image command","command"                                         ),
+  CMD_OPTION_STRING       ("dvd-ecc-pre-command",          0,  1,1,globalOptions.dvd.eccPreProcessCommand,          NULL,                                                             "make DVD error-correction codes pre-process command","command"            ),
+  CMD_OPTION_STRING       ("dvd-ecc-post-command",         0,  1,1,globalOptions.dvd.eccPostProcessCommand,         NULL,                                                             "make DVD error-correction codes post-process command","command"           ),
+  CMD_OPTION_STRING       ("dvd-ecc-command",              0,  1,1,globalOptions.dvd.eccCommand,                    NULL,                                                             "make DVD error-correction codes command","command"                        ),
+  CMD_OPTION_STRING       ("dvd-blank-command",            0,  1,1,globalOptions.dvd.blankCommand,                  NULL,                                                             "blank DVD mediumcommand","command"                                        ),
+  CMD_OPTION_STRING       ("dvd-write-pre-command",        0,  1,1,globalOptions.dvd.writePreProcessCommand,        NULL,                                                             "write DVD pre-process command","command"                                  ),
+  CMD_OPTION_STRING       ("dvd-write-post-command",       0,  1,1,globalOptions.dvd.writePostProcessCommand,       NULL,                                                             "write DVD post-process command","command"                                 ),
+  CMD_OPTION_STRING       ("dvd-write-command",            0,  1,1,globalOptions.dvd.writeCommand,                  NULL,                                                             "write DVD command","command"                                              ),
+  CMD_OPTION_STRING       ("dvd-write-image-command",      0,  1,1,globalOptions.dvd.writeImageCommand,             NULL,                                                             "write DVD image command","command"                                        ),
 
-  CMD_OPTION_STRING       ("bd-device",                    0,  1,1,globalOptions.bd.deviceName,                                                                                  "default BD device","device name"                                          ),
-  CMD_OPTION_STRING       ("bd-request-volume-command",    0,  1,1,globalOptions.bd.requestVolumeCommand,                                                                        "request new BD volume command","command"                                  ),
-  CMD_OPTION_STRING       ("bd-unload-volume-command",     0,  1,1,globalOptions.bd.unloadVolumeCommand,                                                                         "unload BD volume command","command"                                       ),
-  CMD_OPTION_STRING       ("bd-load-volume-command",       0,  1,1,globalOptions.bd.loadVolumeCommand,                                                                           "load BD volume command","command"                                         ),
-  CMD_OPTION_INTEGER64    ("bd-volume-size",               0,  1,1,globalOptions.bd.volumeSize,                     0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "BD volume size","unlimited"                                               ),
-  CMD_OPTION_STRING       ("bd-image-pre-command",         0,  1,1,globalOptions.bd.imagePreProcessCommand,                                                                      "make BD image pre-process command","command"                              ),
-  CMD_OPTION_STRING       ("bd-image-post-command",        0,  1,1,globalOptions.bd.imagePostProcessCommand,                                                                     "make BD image post-process command","command"                             ),
-  CMD_OPTION_STRING       ("bd-image-command",             0,  1,1,globalOptions.bd.imageCommand,                                                                                "make BD image command","command"                                          ),
-  CMD_OPTION_STRING       ("bd-ecc-pre-command",           0,  1,1,globalOptions.bd.eccPreProcessCommand,                                                                        "make BD error-correction codes pre-process command","command"             ),
-  CMD_OPTION_STRING       ("bd-ecc-post-command",          0,  1,1,globalOptions.bd.eccPostProcessCommand,                                                                       "make BD error-correction codes post-process command","command"            ),
-  CMD_OPTION_STRING       ("bd-ecc-command",               0,  1,1,globalOptions.bd.eccCommand,                                                                                  "make BD error-correction codes command","command"                         ),
-  CMD_OPTION_STRING       ("bd-blank-command",             0,  1,1,globalOptions.bd.blankCommand,                                                                                "blank BD medium command","command"                                        ),
-  CMD_OPTION_STRING       ("bd-write-pre-command",         0,  1,1,globalOptions.bd.writePreProcessCommand,                                                                      "write BD pre-process command","command"                                   ),
-  CMD_OPTION_STRING       ("bd-write-post-command",        0,  1,1,globalOptions.bd.writePostProcessCommand,                                                                     "write BD post-process command","command"                                  ),
-  CMD_OPTION_STRING       ("bd-write-command",             0,  1,1,globalOptions.bd.writeCommand,                                                                                "write BD command","command"                                               ),
-  CMD_OPTION_STRING       ("bd-write-image-command",       0,  1,1,globalOptions.bd.writeImageCommand,                                                                           "write BD image command","command"                                         ),
+  CMD_OPTION_STRING       ("bd-device",                    0,  1,1,globalOptions.bd.deviceName,                     NULL,                                                             "default BD device","device name"                                          ),
+  CMD_OPTION_STRING       ("bd-request-volume-command",    0,  1,1,globalOptions.bd.requestVolumeCommand,           NULL,                                                             "request new BD volume command","command"                                  ),
+  CMD_OPTION_STRING       ("bd-unload-volume-command",     0,  1,1,globalOptions.bd.unloadVolumeCommand,            NULL,                                                             "unload BD volume command","command"                                       ),
+  CMD_OPTION_STRING       ("bd-load-volume-command",       0,  1,1,globalOptions.bd.loadVolumeCommand,              NULL,                                                             "load BD volume command","command"                                         ),
+  CMD_OPTION_INTEGER64    ("bd-volume-size",               0,  1,1,globalOptions.bd.volumeSize,                     NULL,0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "BD volume size","unlimited"                                               ),
+  CMD_OPTION_STRING       ("bd-image-pre-command",         0,  1,1,globalOptions.bd.imagePreProcessCommand,         NULL,                                                             "make BD image pre-process command","command"                              ),
+  CMD_OPTION_STRING       ("bd-image-post-command",        0,  1,1,globalOptions.bd.imagePostProcessCommand,        NULL,                                                             "make BD image post-process command","command"                             ),
+  CMD_OPTION_STRING       ("bd-image-command",             0,  1,1,globalOptions.bd.imageCommand,                   NULL,                                                             "make BD image command","command"                                          ),
+  CMD_OPTION_STRING       ("bd-ecc-pre-command",           0,  1,1,globalOptions.bd.eccPreProcessCommand,           NULL,                                                             "make BD error-correction codes pre-process command","command"             ),
+  CMD_OPTION_STRING       ("bd-ecc-post-command",          0,  1,1,globalOptions.bd.eccPostProcessCommand,          NULL,                                                             "make BD error-correction codes post-process command","command"            ),
+  CMD_OPTION_STRING       ("bd-ecc-command",               0,  1,1,globalOptions.bd.eccCommand,                     NULL,                                                             "make BD error-correction codes command","command"                         ),
+  CMD_OPTION_STRING       ("bd-blank-command",             0,  1,1,globalOptions.bd.blankCommand,                   NULL,                                                             "blank BD medium command","command"                                        ),
+  CMD_OPTION_STRING       ("bd-write-pre-command",         0,  1,1,globalOptions.bd.writePreProcessCommand,         NULL,                                                             "write BD pre-process command","command"                                   ),
+  CMD_OPTION_STRING       ("bd-write-post-command",        0,  1,1,globalOptions.bd.writePostProcessCommand,        NULL,                                                             "write BD post-process command","command"                                  ),
+  CMD_OPTION_STRING       ("bd-write-command",             0,  1,1,globalOptions.bd.writeCommand,                   NULL,                                                             "write BD command","command"                                               ),
+  CMD_OPTION_STRING       ("bd-write-image-command",       0,  1,1,globalOptions.bd.writeImageCommand,              NULL,                                                             "write BD image command","command"                                         ),
 
-  CMD_OPTION_STRING       ("device",                       0,  1,1,defaultDevice.name,                                                                                           "default device","device name"                                             ),
-  CMD_OPTION_STRING       ("device-request-volume-command",0,  1,1,defaultDevice.requestVolumeCommand,                                                                           "request new volume command","command"                                     ),
-  CMD_OPTION_STRING       ("device-load-volume-command",   0,  1,1,defaultDevice.loadVolumeCommand,                                                                              "load volume command","command"                                            ),
-  CMD_OPTION_STRING       ("device-unload-volume-command", 0,  1,1,defaultDevice.unloadVolumeCommand,                                                                            "unload volume command","command"                                          ),
-  CMD_OPTION_INTEGER64    ("device-volume-size",           0,  1,1,defaultDevice.volumeSize,                        0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "volume size","unlimited"                                                  ),
-  CMD_OPTION_STRING       ("device-image-pre-command",     0,  1,1,defaultDevice.imagePreProcessCommand,                                                                         "make image pre-process command","command"                                 ),
-  CMD_OPTION_STRING       ("device-image-post-command",    0,  1,1,defaultDevice.imagePostProcessCommand,                                                                        "make image post-process command","command"                                ),
-  CMD_OPTION_STRING       ("device-image-command",         0,  1,1,defaultDevice.imageCommand,                                                                                   "make image command","command"                                             ),
-  CMD_OPTION_STRING       ("device-ecc-pre-command",       0,  1,1,defaultDevice.eccPreProcessCommand,                                                                           "make error-correction codes pre-process command","command"                ),
-  CMD_OPTION_STRING       ("device-ecc-post-command",      0,  1,1,defaultDevice.eccPostProcessCommand,                                                                          "make error-correction codes post-process command","command"               ),
-  CMD_OPTION_STRING       ("device-ecc-command",           0,  1,1,defaultDevice.eccCommand,                                                                                     "make error-correction codes command","command"                            ),
-  CMD_OPTION_STRING       ("device-blank-command",         0,  1,1,defaultDevice.blankCommand,                                                                                   "blank device medium command","command"                                    ),
-  CMD_OPTION_STRING       ("device-write-pre-command",     0,  1,1,defaultDevice.writePreProcessCommand,                                                                         "write device pre-process command","command"                               ),
-  CMD_OPTION_STRING       ("device-write-post-command",    0,  1,1,defaultDevice.writePostProcessCommand,                                                                        "write device post-process command","command"                              ),
-  CMD_OPTION_STRING       ("device-write-command",         0,  1,1,defaultDevice.writeCommand,                                                                                   "write device command","command"                                           ),
+  CMD_OPTION_STRING       ("device",                       0,  1,1,defaultDevice.name,                              NULL,                                                             "default device","device name"                                             ),
+  CMD_OPTION_STRING       ("device-request-volume-command",0,  1,1,defaultDevice.requestVolumeCommand,              NULL,                                                             "request new volume command","command"                                     ),
+  CMD_OPTION_STRING       ("device-load-volume-command",   0,  1,1,defaultDevice.loadVolumeCommand,                 NULL,                                                             "load volume command","command"                                            ),
+  CMD_OPTION_STRING       ("device-unload-volume-command", 0,  1,1,defaultDevice.unloadVolumeCommand,               NULL,                                                             "unload volume command","command"                                          ),
+  CMD_OPTION_INTEGER64    ("device-volume-size",           0,  1,1,defaultDevice.volumeSize,                        NULL,0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "volume size","unlimited"                                                  ),
+  CMD_OPTION_STRING       ("device-image-pre-command",     0,  1,1,defaultDevice.imagePreProcessCommand,            NULL,                                                             "make image pre-process command","command"                                 ),
+  CMD_OPTION_STRING       ("device-image-post-command",    0,  1,1,defaultDevice.imagePostProcessCommand,           NULL,                                                             "make image post-process command","command"                                ),
+  CMD_OPTION_STRING       ("device-image-command",         0,  1,1,defaultDevice.imageCommand,                      NULL,                                                             "make image command","command"                                             ),
+  CMD_OPTION_STRING       ("device-ecc-pre-command",       0,  1,1,defaultDevice.eccPreProcessCommand,              NULL,                                                             "make error-correction codes pre-process command","command"                ),
+  CMD_OPTION_STRING       ("device-ecc-post-command",      0,  1,1,defaultDevice.eccPostProcessCommand,             NULL,                                                             "make error-correction codes post-process command","command"               ),
+  CMD_OPTION_STRING       ("device-ecc-command",           0,  1,1,defaultDevice.eccCommand,                        NULL,                                                             "make error-correction codes command","command"                            ),
+  CMD_OPTION_STRING       ("device-blank-command",         0,  1,1,defaultDevice.blankCommand,                      NULL,                                                             "blank device medium command","command"                                    ),
+  CMD_OPTION_STRING       ("device-write-pre-command",     0,  1,1,defaultDevice.writePreProcessCommand,            NULL,                                                             "write device pre-process command","command"                               ),
+  CMD_OPTION_STRING       ("device-write-post-command",    0,  1,1,defaultDevice.writePostProcessCommand,           NULL,                                                             "write device post-process command","command"                              ),
+  CMD_OPTION_STRING       ("device-write-command",         0,  1,1,defaultDevice.writeCommand,                      NULL,                                                             "write device command","command"                                           ),
 
-  CMD_OPTION_INTEGER64    ("max-storage-size",             0,  1,2,jobOptions.maxStorageSize,                       0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "max. storage size","unlimited"                                            ),
+  CMD_OPTION_INTEGER64    ("max-storage-size",             0,  1,2,jobOptions.maxStorageSize,                       NULL,0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "max. storage size","unlimited"                                            ),
 //TODO
 #if 0
-  CMD_OPTION_INTEGER      ("min-keep",                     0,  1,2,jobOptions.minKeep,                              0,MAX_INT,NULL,                                              "min. keep","unlimited"                                                    ),
-  CMD_OPTION_INTEGER      ("max-keep",                     0,  1,2,jobOptions.maxKeep,                              0,MAX_INT,NULL,                                              "max. keep","unlimited"                                                    ),
-  CMD_OPTION_INTEGER      ("max-age",                      0,  1,2,jobOptions.maxAge,                               0,MAX_INT,NULL,                                              "max. age [days]","unlimited"                                              ),
+  CMD_OPTION_INTEGER      ("min-keep",                     0,  1,2,jobOptions.minKeep,                              NULL,0,MAX_INT,NULL,                                              "min. keep","unlimited"                                                    ),
+  CMD_OPTION_INTEGER      ("max-keep",                     0,  1,2,jobOptions.maxKeep,                              NULL,0,MAX_INT,NULL,                                              "max. keep","unlimited"                                                    ),
+  CMD_OPTION_INTEGER      ("max-age",                      0,  1,2,jobOptions.maxAge,                               NULL,0,MAX_INT,NULL,                                              "max. age [days]","unlimited"                                              ),
 #endif
-  CMD_OPTION_INTEGER64    ("volume-size",                  0,  1,2,jobOptions.volumeSize,                           0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "volume size","unlimited"                                                  ),
-  CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,2,jobOptions.errorCorrectionCodesFlag,                                                                          "add error-correction codes with 'dvdisaster' tool"                        ),
-  CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,2,jobOptions.alwaysCreateImageFlag,                                                                             "always create image for CD/DVD/BD/device"                                 ),
-  CMD_OPTION_BOOLEAN      ("blank",                        0,  1,2,jobOptions.blankFlag,                                                                                         "blank medium before writing"                                              ),
+  CMD_OPTION_INTEGER64    ("volume-size",                  0,  1,2,jobOptions.volumeSize,                           NULL,0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "volume size","unlimited"                                                  ),
+  CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,2,jobOptions.errorCorrectionCodesFlag,             NULL,                                                             "add error-correction codes with 'dvdisaster' tool"                        ),
+  CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,2,jobOptions.alwaysCreateImageFlag,                NULL,                                                             "always create image for CD/DVD/BD/device"                                 ),
+  CMD_OPTION_BOOLEAN      ("blank",                        0,  1,2,jobOptions.blankFlag,                            NULL,                                                             "blank medium before writing"                                              ),
 
-  CMD_OPTION_STRING       ("comment",                      0,  1,1,jobOptions.comment,                                                                                           "comment","text"                                                           ),
+  CMD_OPTION_STRING       ("comment",                      0,  1,1,jobOptions.comment,                              NULL,                                                             "comment","text"                                                           ),
 
-  CMD_OPTION_CSTRING      ("continuous-database",          0,  2,1,continuousDatabaseFileName,                                                                                   "continuous database file name (default: in memory)","file name"           ),
-  CMD_OPTION_INTEGER64    ("continuous-max-size",          0,  1,2,globalOptions.continuousMaxSize,                 0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "max. continuous size","unlimited"                                         ),
+  CMD_OPTION_CSTRING      ("continuous-database",          0,  2,1,continuousDatabaseFileName,                      NULL,                                                             "continuous database file name (default: in memory)","file name"           ),
+  CMD_OPTION_INTEGER64    ("continuous-max-size",          0,  1,2,globalOptions.continuousMaxSize,                 NULL,0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "max. continuous size","unlimited"                                         ),
 
-  CMD_OPTION_CSTRING      ("index-database",               0,  1,1,indexDatabaseFileName,                                                                                        "index database file name","file name"                                     ),
-  CMD_OPTION_BOOLEAN      ("index-database-auto-update",   0,  1,1,globalOptions.indexDatabaseAutoUpdateFlag,                                                                    "enabled automatic update index database"                                  ),
-  CMD_OPTION_SPECIAL      ("index-database-max-band-width",0,  1,1,&globalOptions.indexDatabaseMaxBandWidthList,    cmdOptionParseBandWidth,NULL,                                "max. band width to use for index updates [bis/s]","number or file name"   ),
-  CMD_OPTION_INTEGER      ("index-database-keep-time",     0,  1,1,globalOptions.indexDatabaseKeepTime,             0,MAX_INT,COMMAND_LINE_TIME_UNITS,                           "time to keep index data of not existing storages",NULL                    ),
+  CMD_OPTION_CSTRING      ("index-database",               0,  1,1,indexDatabaseFileName,                           NULL,                                                             "index database file name","file name"                                     ),
+  CMD_OPTION_BOOLEAN      ("index-database-auto-update",   0,  1,1,globalOptions.indexDatabaseAutoUpdateFlag,       NULL,                                                             "enabled automatic update index database"                                  ),
+  CMD_OPTION_SPECIAL      ("index-database-max-band-width",0,  1,1,&globalOptions.indexDatabaseMaxBandWidthList,    NULL,cmdOptionParseBandWidth,NULL,                                "max. band width to use for index updates [bis/s]","number or file name"   ),
+  CMD_OPTION_INTEGER      ("index-database-keep-time",     0,  1,1,globalOptions.indexDatabaseKeepTime,             NULL,0,MAX_INT,COMMAND_LINE_TIME_UNITS,                           "time to keep index data of not existing storages",NULL                    ),
 
-  CMD_OPTION_SET          ("log",                          0,  1,1,logTypes,                                        COMMAND_LINE_OPTIONS_LOG_TYPES,                              "log types"                                                                ),
-  CMD_OPTION_CSTRING      ("log-file",                     0,  1,1,logFileName,                                                                                                  "log file name","file name"                                                ),
-  CMD_OPTION_CSTRING      ("log-format",                   0,  1,1,logFormat,                                                                                                    "log format","format"                                                      ),
-  CMD_OPTION_CSTRING      ("log-post-command",             0,  1,1,logPostCommand,                                                                                               "log file post-process command","command"                                  ),
+  CMD_OPTION_SET          ("log",                          0,  1,1,logTypes,                                        NULL,COMMAND_LINE_OPTIONS_LOG_TYPES,                              "log types"                                                                ),
+  CMD_OPTION_CSTRING      ("log-file",                     0,  1,1,logFileName,                                     NULL,                                                             "log file name","file name"                                                ),
+  CMD_OPTION_CSTRING      ("log-format",                   0,  1,1,logFormat,                                       NULL,                                                             "log format","format"                                                      ),
+  CMD_OPTION_CSTRING      ("log-post-command",             0,  1,1,logPostCommand,                                  NULL,                                                             "log file post-process command","command"                                  ),
 
-  CMD_OPTION_CSTRING      ("pid-file",                     0,  1,1,pidFileName,                                                                                                  "process id file name","file name"                                         ),
+  CMD_OPTION_CSTRING      ("pid-file",                     0,  1,1,pidFileName,                                     NULL,                                                             "process id file name","file name"                                         ),
 
-  CMD_OPTION_BOOLEAN      ("info",                         0  ,0,1,globalOptions.metaInfoFlag,                                                                                   "show meta info"                                                           ),
+  CMD_OPTION_BOOLEAN      ("info",                         0  ,0,1,globalOptions.metaInfoFlag,                      NULL,                                                             "show meta info"                                                           ),
 
-  CMD_OPTION_BOOLEAN      ("group",                        'g',0,1,globalOptions.groupFlag,                                                                                      "group files in list"                                                      ),
-  CMD_OPTION_BOOLEAN      ("all",                          0,  0,1,globalOptions.allFlag,                                                                                        "show all files"                                                           ),
-  CMD_OPTION_BOOLEAN      ("long-format",                  'L',0,1,globalOptions.longFormatFlag,                                                                                 "list in long format"                                                      ),
-  CMD_OPTION_BOOLEAN      ("human-format",                 'H',0,1,globalOptions.humanFormatFlag,                                                                                "list in human readable format"                                            ),
-  CMD_OPTION_BOOLEAN      ("numeric-uid-gid",              0,  0,1,globalOptions.numericUIDGIDFlag,                                                                              "print numeric user/group ids"                                             ),
-  CMD_OPTION_BOOLEAN      ("numeric-permission",           0,  0,1,globalOptions.numericPermissionFlag,                                                                          "print numeric file/directory permissions"                                 ),
-  CMD_OPTION_BOOLEAN      ("no-header-footer",             0,  0,1,globalOptions.noHeaderFooterFlag,                                                                             "no header/footer output in list"                                          ),
-  CMD_OPTION_BOOLEAN      ("delete-old-archive-files",     0,  1,1,globalOptions.deleteOldArchiveFilesFlag,                                                                      "delete old archive files after creating new files"                        ),
-  CMD_OPTION_BOOLEAN      ("ignore-no-backup-file",        0,  1,2,globalOptions.ignoreNoBackupFileFlag,                                                                         "ignore .nobackup/.NOBACKUP file"                                          ),
-  CMD_OPTION_BOOLEAN      ("ignore-no-dump",               0,  1,2,jobOptions.ignoreNoDumpAttributeFlag,                                                                         "ignore 'no dump' attribute of files"                                      ),
+  CMD_OPTION_BOOLEAN      ("group",                        'g',0,1,globalOptions.groupFlag,                         NULL,                                                             "group files in list"                                                      ),
+  CMD_OPTION_BOOLEAN      ("all",                          0,  0,1,globalOptions.allFlag,                           NULL,                                                             "show all files"                                                           ),
+  CMD_OPTION_BOOLEAN      ("long-format",                  'L',0,1,globalOptions.longFormatFlag,                    NULL,                                                             "list in long format"                                                      ),
+  CMD_OPTION_BOOLEAN      ("human-format",                 'H',0,1,globalOptions.humanFormatFlag,                   NULL,                                                             "list in human readable format"                                            ),
+  CMD_OPTION_BOOLEAN      ("numeric-uid-gid",              0,  0,1,globalOptions.numericUIDGIDFlag,                 NULL,                                                             "print numeric user/group ids"                                             ),
+  CMD_OPTION_BOOLEAN      ("numeric-permission",           0,  0,1,globalOptions.numericPermissionFlag,             NULL,                                                             "print numeric file/directory permissions"                                 ),
+  CMD_OPTION_BOOLEAN      ("no-header-footer",             0,  0,1,globalOptions.noHeaderFooterFlag,                NULL,                                                             "no header/footer output in list"                                          ),
+  CMD_OPTION_BOOLEAN      ("delete-old-archive-files",     0,  1,1,globalOptions.deleteOldArchiveFilesFlag,         NULL,                                                             "delete old archive files after creating new files"                        ),
+  CMD_OPTION_BOOLEAN      ("ignore-no-backup-file",        0,  1,2,globalOptions.ignoreNoBackupFileFlag,            NULL,                                                             "ignore .nobackup/.NOBACKUP file"                                          ),
+  CMD_OPTION_BOOLEAN      ("ignore-no-dump",               0,  1,2,jobOptions.ignoreNoDumpAttributeFlag,            NULL,                                                             "ignore 'no dump' attribute of files"                                      ),
 
-  CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,2,jobOptions.skipUnreadableFlag,                                                                                "skip unreadable files"                                                    ),
-  CMD_OPTION_BOOLEAN      ("force-delta-compression",      0,  0,2,jobOptions.forceDeltaCompressionFlag,                                                                         "force delta compression of files. Stop on error"                          ),
-  CMD_OPTION_BOOLEAN      ("raw-images",                   0,  1,2,jobOptions.rawImagesFlag,                                                                                     "store raw images (store all image blocks)"                                ),
-  CMD_OPTION_BOOLEAN      ("no-fragments-check",           0,  1,2,jobOptions.noFragmentsCheckFlag,                                                                              "do not check completeness of file fragments"                              ),
-  CMD_OPTION_BOOLEAN      ("no-index-database",            0,  1,1,jobOptions.noIndexDatabaseFlag,                                                                               "do not store index database for archives"                                 ),
-  CMD_OPTION_SELECT       ("archive-file-mode",            0,  1,2,jobOptions.archiveFileMode,                      COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES,                     "select archive files write mode"                                          ),
+  CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,2,jobOptions.skipUnreadableFlag,                   NULL,                                                             "skip unreadable files"                                                    ),
+  CMD_OPTION_BOOLEAN      ("force-delta-compression",      0,  0,2,jobOptions.forceDeltaCompressionFlag,            NULL,                                                             "force delta compression of files. Stop on error"                          ),
+  CMD_OPTION_BOOLEAN      ("raw-images",                   0,  1,2,jobOptions.rawImagesFlag,                        NULL,                                                             "store raw images (store all image blocks)"                                ),
+  CMD_OPTION_BOOLEAN      ("no-fragments-check",           0,  1,2,jobOptions.noFragmentsCheckFlag,                 NULL,                                                             "do not check completeness of file fragments"                              ),
+  CMD_OPTION_BOOLEAN      ("no-index-database",            0,  1,1,jobOptions.noIndexDatabaseFlag,                  NULL,                                                             "do not store index database for archives"                                 ),
+  CMD_OPTION_SELECT       ("archive-file-mode",            0,  1,2,jobOptions.archiveFileMode,                      NULL,COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES,                     "select archive files write mode"                                          ),
   // Note: shortcut for --archive-file-mode=overwrite
-  CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,2,jobOptions.archiveFileModeOverwriteFlag,                                                                      "overwrite existing archive files"                                         ),
-  CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,2,jobOptions.overwriteEntriesFlag,                                                                              "overwrite existing entries"                                               ),
-  CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,2,jobOptions.waitFirstVolumeFlag,                                                                               "wait for first volume"                                                    ),
-  CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,2,jobOptions.dryRunFlag,                                                                                        "do dry-run (skip storage/restore, incremental data, index database)"      ),
-  CMD_OPTION_BOOLEAN      ("no-signature",                 0  ,1,2,globalOptions.noSignatureFlag,                                                                                "do not create signatures"                                                 ),
-  CMD_OPTION_BOOLEAN      ("skip-verify-signatures",       0,  0,2,jobOptions.skipVerifySignaturesFlag,                                                                            "do not verify signatures of archives"                                     ),
-  CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,2,jobOptions.noStorageFlag,                                                                                     "do not store archives (skip storage, index database)"                     ),
-  CMD_OPTION_BOOLEAN      ("no-bar-on-medium",             0,  1,2,jobOptions.noBAROnMediumFlag,                                                                                 "do not store a copy of BAR on medium"                                     ),
-  CMD_OPTION_BOOLEAN      ("no-stop-on-error",             0,  1,2,jobOptions.noStopOnErrorFlag,                                                                                 "do not immediately stop on error"                                         ),
+  CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,2,jobOptions.archiveFileModeOverwriteFlag,         NULL,                                                             "overwrite existing archive files"                                         ),
+  CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,2,jobOptions.overwriteEntriesFlag,                 NULL,                                                             "overwrite existing entries"                                               ),
+  CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,2,jobOptions.waitFirstVolumeFlag,                  NULL,                                                             "wait for first volume"                                                    ),
+  CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,2,jobOptions.dryRunFlag,                           NULL,                                                             "do dry-run (skip storage/restore, incremental data, index database)"      ),
+  CMD_OPTION_BOOLEAN      ("no-signature",                 0  ,1,2,globalOptions.noSignatureFlag,                   NULL,                                                             "do not create signatures"                                                 ),
+  CMD_OPTION_BOOLEAN      ("skip-verify-signatures",       0,  0,2,jobOptions.skipVerifySignaturesFlag,             NULL,                                                               "do not verify signatures of archives"                                     ),
+  CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,2,jobOptions.noStorageFlag,                        NULL,                                                             "do not store archives (skip storage, index database)"                     ),
+  CMD_OPTION_BOOLEAN      ("no-bar-on-medium",             0,  1,2,jobOptions.noBAROnMediumFlag,                    NULL,                                                             "do not store a copy of BAR on medium"                                     ),
+  CMD_OPTION_BOOLEAN      ("no-stop-on-error",             0,  1,2,jobOptions.noStopOnErrorFlag,                    NULL,                                                             "do not immediately stop on error"                                         ),
 
-  CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,1,globalOptions.noDefaultConfigFlag,                                                                            "do not read configuration files " CONFIG_DIR "/bar.cfg and ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
-  CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,1,globalOptions.quietFlag,                                                                                      "suppress any output"                                                      ),
-  CMD_OPTION_INTEGER_RANGE("verbose",                      'v',3,1,globalOptions.verboseLevel,                      0,6,NULL,                                                    "verbosity level",NULL                                                     ),
+  CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,1,globalOptions.noDefaultConfigFlag,               NULL,                                                             "do not read configuration files " CONFIG_DIR "/bar.cfg and ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
+  CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,1,globalOptions.quietFlag,                         NULL,                                                             "suppress any output"                                                      ),
+  CMD_OPTION_INTEGER_RANGE("verbose",                      'v',3,1,globalOptions.verboseLevel,                      NULL,0,6,NULL,                                                    "verbosity level",NULL                                                     ),
 
-  CMD_OPTION_BOOLEAN      ("server-debug",                 0,  2,1,globalOptions.serverDebugFlag,                                                                                "enable debug mode for server"                                             ),
+  CMD_OPTION_BOOLEAN      ("server-debug",                 0,  2,1,globalOptions.serverDebugFlag,                   NULL,                                                             "enable debug mode for server"                                             ),
 
-  CMD_OPTION_BOOLEAN      ("version",                      0  ,0,0,versionFlag,                                                                                                  "output version"                                                           ),
-  CMD_OPTION_BOOLEAN      ("help",                         'h',0,0,helpFlag,                                                                                                     "output this help"                                                         ),
-  CMD_OPTION_BOOLEAN      ("xhelp",                        0,  0,0,xhelpFlag,                                                                                                    "output help to extended options"                                          ),
-  CMD_OPTION_BOOLEAN      ("help-internal",                0,  1,0,helpInternalFlag,                                                                                             "output help to internal options"                                          ),
+  CMD_OPTION_BOOLEAN      ("version",                      0  ,0,0,versionFlag,                                     NULL,                                                             "output version"                                                           ),
+  CMD_OPTION_BOOLEAN      ("help",                         'h',0,0,helpFlag,                                        NULL,                                                             "output this help"                                                         ),
+  CMD_OPTION_BOOLEAN      ("xhelp",                        0,  0,0,xhelpFlag,                                       NULL,                                                             "output help to extended options"                                          ),
+  CMD_OPTION_BOOLEAN      ("help-internal",                0,  1,0,helpInternalFlag,                                NULL,                                                             "output help to internal options"                                          ),
 
   // deprecated
-  CMD_OPTION_DEPRECATED   ("mount-device",                 0,  1,2,&mountList,                                      cmdOptionParseDeprecatedMountDevice,NULL,                    "device to mount/unmount"                                                  ),
-  CMD_OPTION_DEPRECATED   ("stop-on-error",                0,  1,2,&jobOptions.noStopOnErrorFlag,                   cmdOptionParseDeprecatedStopOnError,NULL,                    "no-stop-on-error"                                                         ),
+  CMD_OPTION_DEPRECATED   ("mount-device",                 0,  1,2,&mountList,                                      NULL,cmdOptionParseDeprecatedMountDevice,NULL,                    "device to mount/unmount"                                                  ),
+  CMD_OPTION_DEPRECATED   ("stop-on-error",                0,  1,2,&jobOptions.noStopOnErrorFlag,                   NULL,cmdOptionParseDeprecatedStopOnError,NULL,                    "no-stop-on-error"                                                         ),
 };
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
@@ -982,7 +984,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
 // multi crypt
 //  CONFIG_VALUE_SPECIAL           ("crypt-algorithm",              jobOptions.cryptAlgorithms,-1,                                 configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
-  CONFIG_VALUE_SELECT            ("crypt-algorithm",              jobOptions.cryptAlgorithms,-1,                                 CONFIG_VALUE_CRYPT_ALGORITHMS),
+//  CONFIG_VALUE_SELECT            ("crypt-algorithm",              jobOptions.cryptAlgorithms,-1,                                 CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_VALUE_SELECT            ("crypt-type",                   &jobOptions.cryptType,-1,                                      CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_VALUE_SELECT            ("crypt-password-mode",          &jobOptions.cryptPasswordMode,-1,                              CONFIG_VALUE_PASSWORD_MODES),
   CONFIG_VALUE_SPECIAL           ("crypt-password",               &globalOptions.cryptPassword,-1,                               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
@@ -1153,7 +1155,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_STRING   ("ssh-write-post-command",       Server,writePostProcessCommand                                 ),
   CONFIG_VALUE_END_SECTION(),
 
-//  CONFIG_VALUE_INTEGER           ("webdav-port",                  &defaultWebDAVServer.webDAV.port,-1,                           0,65535,NULL),
+//  CONFIG_VALUE_INTEGER           ("webdav-port",                  &defaultWebDAVServer.webDAV.port,-1,                           0,65535,NULL,NULL),
   CONFIG_VALUE_STRING            ("webdav-login-name",            &defaultWebDAVServer.webDAV.loginName,-1                       ),
   CONFIG_VALUE_SPECIAL           ("webdav-password",              &defaultWebDAVServer.webDAV.password,-1,                       configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
   CONFIG_VALUE_INTEGER           ("webdav-max-connections",       &defaultWebDAVServer.maxConnectionCount,-1,                    0,MAX_INT,NULL),
@@ -2620,8 +2622,8 @@ LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, cons
   }
 
   // store compress algorithm values
-  ((JobOptionsCompressAlgorithms*)variable)->delta = compressAlgorithmDelta;
-  ((JobOptionsCompressAlgorithms*)variable)->byte  = compressAlgorithmByte;
+  ((JobOptionsCompressAlgorithms*)variable)->value.delta = compressAlgorithmDelta;
+  ((JobOptionsCompressAlgorithms*)variable)->value.byte  = compressAlgorithmByte;
 
   return TRUE;
 }
@@ -2868,7 +2870,80 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
   return TRUE;
 }
 
-#ifdef MULTI_CRYPT
+/***********************************************************************\
+* Name   : cmdOptionParsePermissions
+* Purpose: command line option call back for parsing permissions
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  char           user[4],group[4],world[4];
+  uint           n;
+  FilePermission permission;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+
+  // parse
+  permission = FILE_PERMISSION_NONE;
+  if      (String_scanCString(value,"%4s:%4s:%4s",user,group,world))
+  {
+    n = strlen(user);
+    if      ((n >= 1) && (toupper(user[0]) == 'R')) permission |= FILE_PERMISSION_USER_READ;
+    else if ((n >= 2) && (toupper(user[1]) == 'W')) permission |= FILE_PERMISSION_USER_WRITE;
+    else if ((n >= 3) && (toupper(user[2]) == 'X')) permission |= FILE_PERMISSION_USER_EXECUTE;
+    n = strlen(group);
+    if      ((n >= 1) && (toupper(group[0]) == 'R')) permission |= FILE_PERMISSION_GROUP_READ;
+    else if ((n >= 2) && (toupper(group[1]) == 'W')) permission |= FILE_PERMISSION_GROUP_WRITE;
+    else if ((n >= 3) && (toupper(group[2]) == 'X')) permission |= FILE_PERMISSION_GROUP_EXECUTE;
+    n = strlen(world);
+    if      ((n >= 1) && (toupper(world[0]) == 'R')) permission |= FILE_PERMISSION_OTHER_READ;
+    else if ((n >= 2) && (toupper(world[1]) == 'W')) permission |= FILE_PERMISSION_OTHER_WRITE;
+    else if ((n >= 3) && (toupper(world[2]) == 'X')) permission |= FILE_PERMISSION_OTHER_EXECUTE;
+  }
+  else if (String_scanCString(value,"%4s:%4s",user,group))
+  {
+    n = strlen(user);
+    if      ((n >= 1) && (toupper(user[0]) == 'R')) permission |= FILE_PERMISSION_USER_READ;
+    else if ((n >= 2) && (toupper(user[1]) == 'W')) permission |= FILE_PERMISSION_USER_WRITE;
+    else if ((n >= 3) && (toupper(user[2]) == 'X')) permission |= FILE_PERMISSION_USER_EXECUTE;
+    n = strlen(group);
+    if      ((n >= 1) && (toupper(group[0]) == 'R')) permission |= FILE_PERMISSION_GROUP_READ;
+    else if ((n >= 2) && (toupper(group[1]) == 'W')) permission |= FILE_PERMISSION_GROUP_WRITE;
+    else if ((n >= 3) && (toupper(group[2]) == 'X')) permission |= FILE_PERMISSION_GROUP_EXECUTE;
+  }
+  else if (String_scanCString(value,"%4s",user))
+  {
+    n = strlen(user);
+    if      ((n >= 1) && (toupper(user[0]) == 'R')) permission |= FILE_PERMISSION_USER_READ;
+    else if ((n >= 2) && (toupper(user[1]) == 'W')) permission |= FILE_PERMISSION_USER_WRITE;
+    else if ((n >= 3) && (toupper(user[2]) == 'X')) permission |= FILE_PERMISSION_USER_EXECUTE;
+  }
+  else if (String_scanCString(value,"%o",permission))
+  {
+    permission = (FilePermission)atol(value);
+  }
+  else
+  {
+    stringFormat(errorMessage,errorMessageSize,"Unknown permissions value '%s'",value);
+    return FALSE;
+  }
+
+  // store owner values
+  (*((FilePermission*)variable)) = permission;
+
+  return TRUE;
+}
+
+//#ifdef MULTI_CRYPT
 /***********************************************************************\
 * Name   : cmdOptionParseCryptAlgorithms
 * Purpose: command line option call back for parsing crypt algorithms
@@ -2907,13 +2982,15 @@ LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const c
       String_doneTokenizer(&stringTokenizer);
       return FALSE;
     }
-    if (!Crypt_parseAlgorithm(String_cString(token),&((CryptAlgorithms*)variable)[cryptAlgorithmCount]))
+
+    if (!Crypt_parseAlgorithm(String_cString(token),&((JobOptionCryptAlgorithms*)variable)->values[cryptAlgorithmCount]))
     {
       stringFormat(errorMessage,errorMessageSize,"Unknown crypt algorithm '%s'",String_cString(token));
       String_doneTokenizer(&stringTokenizer);
       return FALSE;
     }
-    if (((CryptAlgorithms*)variable)[cryptAlgorithmCount] != CRYPT_ALGORITHM_NONE)
+
+    if (((JobOptionCryptAlgorithms*)variable)->values[cryptAlgorithmCount] != CRYPT_ALGORITHM_NONE)
     {
       cryptAlgorithmCount++;
     }
@@ -2921,13 +2998,13 @@ LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const c
   String_doneTokenizer(&stringTokenizer);
   while (cryptAlgorithmCount < 4)
   {
-    ((CryptAlgorithms*)variable)[cryptAlgorithmCount] = CRYPT_ALGORITHM_NONE;
+    ((JobOptionCryptAlgorithms*)variable)->values[cryptAlgorithmCount] = CRYPT_ALGORITHM_NONE;
     cryptAlgorithmCount++;
   }
 
   return TRUE;
 }
-#endif /* MULTI_CRYPT */
+//#endif /* MULTI_CRYPT */
 
 
 /***********************************************************************\
@@ -4994,8 +5071,14 @@ void logPostProcess(LogHandle        *logHandle,
   }
 }
 
+#define xx(a,b,c) A=a , ## b , ## c
+
 void initJobOptions(JobOptions *jobOptions)
 {
+  uint i;
+
+//xx(1,,2);
+
   assert(jobOptions != NULL);
 
   memset(jobOptions,0,sizeof(JobOptions));
@@ -5007,12 +5090,14 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->owner.userId                    = FILE_DEFAULT_USER_ID;
   jobOptions->owner.groupId                   = FILE_DEFAULT_GROUP_ID;
   jobOptions->patternType                     = PATTERN_TYPE_GLOB;
-  jobOptions->compressAlgorithms.delta        = COMPRESS_ALGORITHM_NONE;
-  jobOptions->compressAlgorithms.byte         = COMPRESS_ALGORITHM_NONE;
-  jobOptions->cryptAlgorithms[0]              = CRYPT_ALGORITHM_NONE;
-  jobOptions->cryptAlgorithms[1]              = CRYPT_ALGORITHM_NONE;
-  jobOptions->cryptAlgorithms[2]              = CRYPT_ALGORITHM_NONE;
-  jobOptions->cryptAlgorithms[3]              = CRYPT_ALGORITHM_NONE;
+  jobOptions->compressAlgorithms.value.delta  = COMPRESS_ALGORITHM_NONE;
+  jobOptions->compressAlgorithms.value.byte   = COMPRESS_ALGORITHM_NONE;
+  jobOptions->compressAlgorithms.isSet        = FALSE;
+  for (i = 0; i < 4; i++)
+  {
+    jobOptions->cryptAlgorithms.values[i] = CRYPT_ALGORITHM_NONE;
+  }
+  jobOptions->cryptAlgorithms.isSet           = FALSE;
   #ifdef HAVE_GCRYPT
     jobOptions->cryptType                     = CRYPT_TYPE_SYMMETRIC;
   #else /* not HAVE_GCRYPT */
@@ -6549,13 +6634,16 @@ bool configValueParseCryptAlgorithms(void *userData, void *variable, const char 
       String_doneTokenizer(&stringTokenizer);
       return FALSE;
     }
-    if (!Crypt_parseAlgorithm(String_cString(token),&((CryptAlgorithms*)variable)[i]))
+
+    if (!Crypt_parseAlgorithm(String_cString(token),&((JobOptionsCompressAlgorithm*)variable)[i]->cryptAlgorithm))
     {
       stringFormat(errorMessage,errorMessageSize,"Unknown crypt algorithm '%s'",String_cString(token));
       String_doneTokenizer(&stringTokenizer);
       return FALSE;
     }
-    if (((CryptAlgorithms*)variable)[i] != CRYPT_ALGORITHM_NONE)
+    ((JobOptionsCompressAlgorithm*)variable)[cryptAlgorithmCount]->cryptAlgorithmSet = TRUE;
+
+    if (((JobOptionsCompressAlgorithm*)variable)[i]->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
     {
       i++;
     }
@@ -7318,8 +7406,8 @@ bool configValueParseCompressAlgorithms(void *userData, void *variable, const ch
   }
 
   // store compress algorithm values
-  ((JobOptionsCompressAlgorithms*)variable)->delta = compressAlgorithmDelta;
-  ((JobOptionsCompressAlgorithms*)variable)->byte  = compressAlgorithmByte;
+  ((JobOptionsCompressAlgorithms*)variable)->value.delta = compressAlgorithmDelta;
+  ((JobOptionsCompressAlgorithms*)variable)->value.byte  = compressAlgorithmByte;
 
   return TRUE;
 }
@@ -7353,8 +7441,8 @@ bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, 
   {
     String_format(line,
                   "%s+%s",
-                  CmdOption_selectToString(COMPRESS_ALGORITHMS_DELTA,jobOptionsCompressAlgorithms->delta,NULL),
-                  CmdOption_selectToString(COMPRESS_ALGORITHMS_BYTE, jobOptionsCompressAlgorithms->byte, NULL)
+                  CmdOption_selectToString(COMPRESS_ALGORITHMS_DELTA,jobOptionsCompressAlgorithms->value.delta,NULL),
+                  CmdOption_selectToString(COMPRESS_ALGORITHMS_BYTE, jobOptionsCompressAlgorithms->value.byte, NULL)
                  );
     (*formatUserData) = NULL;
 
@@ -8049,7 +8137,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   Errors   error;
   Password cryptPassword;
   CryptKey publicKey,privateKey;
-  String   pathName;
+  String   directoryName;
 
   // initialize variables
   publicKeyFileName  = String_new();
@@ -8130,14 +8218,14 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   if (keyFileBaseName != NULL)
   {
     // create directory if it does not exists
-    pathName = File_getFilePathNameCString(String_new(),keyFileBaseName);
-    if      (!File_exists(pathName))
+    directoryName = File_getDirectoryNameCString(String_new(),keyFileBaseName);
+    if      (!File_exists(directoryName))
     {
-      error = File_makeDirectory(pathName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
+      error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
       if (error != ERROR_NONE)
       {
-        printError("Cannot create directory '%s' (error: %s)!\n",String_cString(pathName),Error_getText(error));
-        String_delete(pathName);
+        printError("Cannot create directory '%s' (error: %s)!\n",String_cString(directoryName),Error_getText(error));
+        String_delete(directoryName);
         Password_done(&cryptPassword);
         String_delete(data);
         String_delete(privateKeyFileName);
@@ -8145,17 +8233,17 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
         return error;
       }
     }
-    else if (!File_isDirectory(pathName))
+    else if (!File_isDirectory(directoryName))
     {
-      printError("'%s' is not a directory!\n",String_cString(pathName));
-      String_delete(pathName);
+      printError("'%s' is not a directory!\n",String_cString(directoryName));
+      String_delete(directoryName);
       Password_done(&cryptPassword);
       String_delete(data);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
     }
-    String_delete(pathName);
+    String_delete(directoryName);
 
     // write encryption public key
     error = Crypt_writePublicPrivateKeyFile(&publicKey,
@@ -8274,7 +8362,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   String   keyString;
   Errors   error;
   CryptKey publicKey,privateKey;
-  String   pathName;
+  String   directoryName;
 
   // initialize variables
   publicKeyFileName  = String_new();
@@ -8325,14 +8413,14 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   if (keyFileBaseName != NULL)
   {
     // create directory if it does not exists
-    pathName = File_getFilePathNameCString(String_new(),keyFileBaseName);
-    if      (!File_exists(pathName))
+    directoryName = File_getDirectoryNameCString(String_new(),keyFileBaseName);
+    if      (!File_exists(directoryName))
     {
-      error = File_makeDirectory(pathName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
+      error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
       if (error != ERROR_NONE)
       {
-        printError("Cannot create directory '%s' (error: %s)!\n",String_cString(pathName),Error_getText(error));
-        String_delete(pathName);
+        printError("Cannot create directory '%s' (error: %s)!\n",String_cString(directoryName),Error_getText(error));
+        String_delete(directoryName);
         Crypt_doneKey(&privateKey);
         Crypt_doneKey(&publicKey);
         String_delete(keyString);
@@ -8341,10 +8429,10 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
         return error;
       }
     }
-    else if (!File_isDirectory(pathName))
+    else if (!File_isDirectory(directoryName))
     {
-      printError("'%s' is not a directory!\n",String_cString(pathName));
-      String_delete(pathName);
+      printError("'%s' is not a directory!\n",String_cString(directoryName));
+      String_delete(directoryName);
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(keyString);
@@ -8352,7 +8440,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       String_delete(publicKeyFileName);
       return error;
     }
-    String_delete(pathName);
+    String_delete(directoryName);
 
     // write signature public key
     error = Crypt_writePublicPrivateKeyFile(&publicKey,
