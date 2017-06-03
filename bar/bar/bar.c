@@ -985,7 +985,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
 // multi crypt
 //  CONFIG_VALUE_SPECIAL           ("crypt-algorithm",              jobOptions.cryptAlgorithms,-1,                                 configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
-//  CONFIG_VALUE_SELECT            ("crypt-algorithm",              jobOptions.cryptAlgorithms,-1,                                 CONFIG_VALUE_CRYPT_ALGORITHMS),
+  CONFIG_VALUE_SELECT            ("crypt-algorithm",              jobOptions.cryptAlgorithms.values,-1,                          CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_VALUE_SELECT            ("crypt-type",                   &jobOptions.cryptType,-1,                                      CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_VALUE_SELECT            ("crypt-password-mode",          &jobOptions.cryptPasswordMode,-1,                              CONFIG_VALUE_PASSWORD_MODES),
   CONFIG_VALUE_SPECIAL           ("crypt-password",               &jobOptions.cryptPassword,-1,                                  configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),

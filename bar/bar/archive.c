@@ -915,25 +915,42 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle)
         && (archiveHandle->cryptPassword == NULL)
        )
     {
-      // get crypt password
+      // allocate crypt password
       cryptPassword = Password_new();
       if (cryptPassword == NULL)
       {
         Semaphore_unlock(&archiveHandle->passwordLock);
         return ERROR_NO_CRYPT_PASSWORD;
       }
-      error = getCryptPassword(cryptPassword,
-                               archiveHandle,
-                               archiveHandle->storageInfo->jobOptions,
-                               archiveHandle->getPasswordFunction,
-                               archiveHandle->getPasswordUserData
-                              );
-      if (error != ERROR_NONE)
+
+      if      (archiveHandle->storageInfo->jobOptions->cryptNewPassword != NULL)
       {
-        Password_delete(cryptPassword);
-        Semaphore_unlock(&archiveHandle->passwordLock);
-        return error;
+        // use new crypt password
+        Password_set(cryptPassword,archiveHandle->storageInfo->jobOptions->cryptNewPassword);
       }
+      else if (archiveHandle->storageInfo->jobOptions->cryptPassword != NULL)
+      {
+        // use crypt password
+        Password_set(cryptPassword,archiveHandle->storageInfo->jobOptions->cryptPassword);
+      }
+      else
+      {
+        // get crypt password
+        error = getCryptPassword(cryptPassword,
+                                 archiveHandle,
+                                 archiveHandle->storageInfo->jobOptions,
+                                 archiveHandle->getPasswordFunction,
+                                 archiveHandle->getPasswordUserData
+                                );
+        if (error != ERROR_NONE)
+        {
+          Password_delete(cryptPassword);
+          Semaphore_unlock(&archiveHandle->passwordLock);
+          return error;
+        }
+      }
+
+      // set crypt password
       archiveHandle->cryptPassword = cryptPassword;
     }
   }
