@@ -2392,10 +2392,11 @@ test_convert_operations: \
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --compress-algorithm=zip9 --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) | $(GREP) -i zip9`")
 	#
 ifeq (@HAVE_GCRYPT@,1)
 	$(RMRF) $(TEST_FILES_CLEAN)
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --crypt-algorithm=none --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-new-password='$(TEST_PASSWORD_CRYPT)' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-new-password='test' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))

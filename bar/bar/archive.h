@@ -853,6 +853,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                               IndexHandle                     *indexHandle,
                               CompressAlgorithms              deltaCompressAlgorithm,
                               CompressAlgorithms              byteCompressAlgorithm,
+//TOOD: use archiveHandle
                               CryptTypes                      cryptType,
                               CryptAlgorithms                 cryptAlgorithm,
                               Password                        *cryptPassword,
