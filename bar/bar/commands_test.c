@@ -1417,6 +1417,7 @@ NULL,  //               requestedAbortFlag,
   // free resources
   free(testThreads);
   String_delete(printableStorageName);
+  AutoFree_done(&autoFreeList);
 
   return ERROR_NONE;
 }

@@ -2016,6 +2016,7 @@ NULL,  //               requestedAbortFlag,
   // free resources
   free(compareThreads);
   String_delete(printableStorageName);
+  AutoFree_done(&autoFreeList);
 
   return error;
 }
