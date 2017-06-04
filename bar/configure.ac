@@ -3487,8 +3487,11 @@ AC_CONFIG_COMMANDS(SET_PACKAGE_IN_CONFIG_H,
 dnl make files
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(bar/Makefile)
+AC_CONFIG_FILES(bar/test/Makefile)
 AC_CONFIG_FILES(bar/po/Makefile)
 AC_CONFIG_FILES(barcontrol/Makefile)
+AC_CONFIG_FILES(barcontrol/test/Makefile)
+AC_CONFIG_FILES(test/Makefile)
 
 dnl config files
 AC_CONFIG_FILES(barcontrol/src/Config.java)
