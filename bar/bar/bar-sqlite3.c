@@ -265,7 +265,7 @@ LOCAL void dirname(sqlite3_context *context, int argc, sqlite3_value *argv[])
   string = (const char*)sqlite3_value_text(argv[0]);
 
   // get directory
-  directoryName = File_getFilePathNameCString(String_new(),string);
+  directoryName = File_getDirectoryNameCString(String_new(),string);
 
   // store result
   sqlite3_result_text(context,String_cString(directoryName),-1,SQLITE_TRANSIENT);
@@ -1581,7 +1581,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
                                 // update directory content count/size aggregates in all directories
-                                while (!String_isEmpty(File_getFilePathName(name,name)))
+                                while (!String_isEmpty(File_getDirectoryName(name,name)))
                                 {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                   sqliteResult = sqlExecute(databaseHandle,
@@ -1645,7 +1645,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                                 // update directory content count/size aggregates in all directories
-                                while (!String_isEmpty(File_getFilePathName(name,name)))
+                                while (!String_isEmpty(File_getDirectoryName(name,name)))
                                 {
                                   sqliteResult = sqlExecute(databaseHandle,
                                                             &errorMessage,
@@ -1705,7 +1705,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                                 // update directory content count/size aggregates in all directories
-                                while (!String_isEmpty(File_getFilePathName(name,name)))
+                                while (!String_isEmpty(File_getDirectoryName(name,name)))
                                 {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                   sqliteResult = sqlExecute(databaseHandle,
@@ -1770,7 +1770,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
                                 // update directory content count/size aggregates in all directories
-                                while (!String_isEmpty(File_getFilePathName(name,name)))
+                                while (!String_isEmpty(File_getDirectoryName(name,name)))
                                 {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                   sqliteResult = sqlExecute(databaseHandle,
@@ -1833,7 +1833,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                                 // update directory content count/size aggregates in all directories
-                                while (!String_isEmpty(File_getFilePathName(name,name)))
+                                while (!String_isEmpty(File_getDirectoryName(name,name)))
                                 {
                                   sqliteResult = sqlExecute(databaseHandle,
                                                             &errorMessage,
