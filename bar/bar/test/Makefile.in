@@ -355,7 +355,7 @@ $(BAR_DIR)/bar@EXEEXT@:
 
 .PHONY: $(BAR_DIR)/bar-debug@EXEEXT@
 $(BAR_DIR)/bar-debug@EXEEXT@:
-	echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX $(MAKE) -C $(@D) $(@F)
+	$(MAKE) -C $(@D) $(@F)
 
 .PHONY: $(BAR_DIR)/bar-sqlite3@EXEEXT@
 $(BAR_DIR)/bar-sqlite3@EXEEXT@:
