@@ -60,8 +60,8 @@ LOCAL bool helpFlag    = FALSE;
 
 LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_BOOLEAN("version",0  ,0,0,versionFlag,"print version"  ),
-  CMD_OPTION_BOOLEAN("help",   'h',0,0,helpFlag,   "print this help"),
+  CMD_OPTION_BOOLEAN("version",0  ,0,0,versionFlag,NULL,"print version"  ),
+  CMD_OPTION_BOOLEAN("help",   'h',0,0,helpFlag,   NULL,"print this help"),
 };
 
 /****************************** Macros *********************************/
