@@ -983,6 +983,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SPECIAL           ("compress-algorithm",           &jobOptions.compressAlgorithms,-1,                             configValueParseCompressAlgorithms,NULL,NULL,NULL,&jobOptions),
 
+//TODO
 // multi crypt
 //  CONFIG_VALUE_SPECIAL           ("crypt-algorithm",              jobOptions.cryptAlgorithms,-1,                                 configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
   CONFIG_VALUE_SELECT            ("crypt-algorithm",              jobOptions.cryptAlgorithms.values,-1,                          CONFIG_VALUE_CRYPT_ALGORITHMS),
@@ -8206,6 +8207,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   }
 
   // generate new key pair for encryption
+  printInfo(1,"Create keys (collecting entropie)...");
   error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE,CRYPT_KEY_MODE_NONE);
   if (error != ERROR_NONE)
   {
@@ -8218,6 +8220,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   }
 //fprintf(stderr,"%s, %d: public %d \n",__FILE__,__LINE__,publicKey.dataLength); debugDumpMemory(publicKey.data,publicKey.dataLength,0);
 //fprintf(stderr,"%s, %d: private %d\n",__FILE__,__LINE__,privateKey.dataLength); debugDumpMemory(privateKey.data,privateKey.dataLength,0);
+  printInfo(1,"OK\n");
 
   // output keys
   if (keyFileBaseName != NULL)
