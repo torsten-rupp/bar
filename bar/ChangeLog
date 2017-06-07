@@ -23,6 +23,7 @@
     obsolete
   * added option --comment
   * added option --info
+  * added option --generate-keys-mode
   * BARControl: added roles basic/normal/expert
   * BARControl: pause unit s/m/h for option --pause
   * BARControl restore tab: select job
