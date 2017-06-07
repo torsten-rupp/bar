@@ -155,7 +155,7 @@ LOCAL const byte NO_SALT[512/8] = {0,0,0,0,
 
 typedef struct
 {
-  uint32 crc;
+  uint32 crc;                     // CRC encrypted key data
   uint32 dataLength;              // encrypted key data length (big endian)
   byte   data[0];                 // encrypted key data
 } EncryptedKeyInfo;
@@ -1545,15 +1545,6 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
     // get encrypted key info
     encryptedKeyInfo = (EncryptedKeyInfo*)encryptedKeyData;
 
-    // check CRC
-    crc = crc32(crc32(0,Z_NULL,0),(Bytef*)encryptedKeyInfo->data,alignedDataLength);
-fprintf(stderr,"%s, %d: length=%d crc=%x %x\n",__FILE__,__LINE__,ntohl(encryptedKeyInfo->dataLength),ntohl(encryptedKeyInfo->crc),crc);
-    if (crc != ntohl(encryptedKeyInfo->crc))
-    {
-fprintf(stderr,"%s, %d: crc\n",__FILE__,__LINE__);
-      return ERROR_INVALID_KEY;
-    }
-
     // get key length
     dataLength        = ntohl(encryptedKeyInfo->dataLength);
     alignedDataLength = ALIGN(dataLength,blockLength);
@@ -1563,13 +1554,23 @@ fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,dataLength,encryptedKeyDat
       return ERROR_INVALID_KEY;
     }
 
+    // check CRC
+    crc = crc32(crc32(0,Z_NULL,0),(Bytef*)encryptedKeyInfo->data,alignedDataLength);
+fprintf(stderr,"%s, %d: length=%d read crc=%x crc=%x alignedDataLength=%d\n",__FILE__,__LINE__,ntohl(encryptedKeyInfo->dataLength),ntohl(encryptedKeyInfo->crc),crc,alignedDataLength);
+    if (crc != ntohl(encryptedKeyInfo->crc))
+    {
+fprintf(stderr,"%s, %d: crc\n",__FILE__,__LINE__);
+      return ERROR_INVALID_KEY;
+    }
+
     // allocate secure memory and get key data
     data = Password_allocSecure(alignedDataLength);
     if (data == NULL)
     {
       return ERROR_INSUFFICIENT_MEMORY;
     }
-    memCopyFast(data,alignedDataLength,encryptedKeyInfo->data,alignedDataLength);
+    memClear(data,alignedDataLength);
+    memCopyFast(data,alignedDataLength,encryptedKeyInfo->data,dataLength);
 #ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: encrypted private key\n",__FILE__,__LINE__); debugDumpMemory(data,alignedDataLength,FALSE);
 #endif
@@ -1581,6 +1582,7 @@ fprintf(stderr,"%s, %d: encrypted private key\n",__FILE__,__LINE__); debugDumpMe
       error = Crypt_getKeyLength(SECRET_KEY_CRYPT_ALGORITHM,&keyLength);
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         Password_freeSecure(data);
         return error;
       }
@@ -1596,6 +1598,7 @@ fprintf(stderr,"%s, %d: encrypted private key\n",__FILE__,__LINE__); debugDumpMe
                              );
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         Crypt_doneKey(&encryptKey);
         Password_freeSecure(data);
         return error;
@@ -1614,6 +1617,7 @@ fprintf(stderr,"%s, %d: derived key %d\n",__FILE__,__LINE__,encryptKey.dataLengt
                         );
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         Crypt_doneKey(&encryptKey);
         Password_freeSecure(data);
         return error;
@@ -1623,6 +1627,7 @@ fprintf(stderr,"%s, %d: derived key %d\n",__FILE__,__LINE__,encryptKey.dataLengt
       error = Crypt_decrypt(&cryptInfo,data,alignedDataLength);
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         Crypt_done(&cryptInfo);
         Password_freeSecure(data);
         return error;
@@ -1649,6 +1654,7 @@ fprintf(stderr,"%s, %d: decrypted private key\n",__FILE__,__LINE__); debugDumpMe
                                );
     if (gcryptError != 0)
     {
+fprintf(stderr,"%s, %d: gcry_sexp_new %d %d\n",__FILE__,__LINE__,dataLength,gcryptError);
       Password_freeSecure(data);
       return ERROR_INVALID_KEY;
     }

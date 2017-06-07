@@ -600,6 +600,7 @@ bool setCertificate(Certificate *certificate, const void *certificateData, uint 
 
 bool setCertificateString(Certificate *kecertificatey, ConstString string);
 
+//TODO: remove
 #if 0
 /***********************************************************************\
 * Name   : readCAFile
@@ -612,30 +613,6 @@ bool setCertificateString(Certificate *kecertificatey, ConstString string);
 \***********************************************************************/
 
 Errors readCAFile(Certificate *certificate, const char *fileName);
-
-/***********************************************************************\
-* Name   : readCertificateFile
-* Purpose: read certificate file
-* Input  : certificate - certificate variable
-*          fileName    - file name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors readCertificateFile(Certificate *certificate, const char *fileName);
-
-/***********************************************************************\
-* Name   : readKeyFile
-* Purpose: read public/private key file
-* Input  : key      - key variable
-*          fileName - file name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors readKeyFile(Key *key, const char *fileName);
 #endif
 
 /***********************************************************************\

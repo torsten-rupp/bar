@@ -2058,6 +2058,16 @@ LOCAL Errors readCAFile(Certificate *certificate, const char *fileName)
 }
 #endif
 
+/***********************************************************************\
+* Name   : readCertificateFile
+* Purpose: read certificate file
+* Input  : certificate - certificate variable
+*          fileName    - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors readCertificateFile(Certificate *certificate, const char *fileName)
 {
   Errors     error;
@@ -2116,6 +2126,16 @@ LOCAL Errors readCertificateFile(Certificate *certificate, const char *fileName)
 
   return ERROR_NONE;
 }
+
+/***********************************************************************\
+* Name   : readKeyFile
+* Purpose: read public/private key file
+* Input  : key      - key variable
+*          fileName - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL Errors readKeyFile(Key *key, const char *fileName)
 {
@@ -3088,10 +3108,13 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
 
 LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
-  Key    *key = (Key*)variable;
-  Errors error;
-  uint   dataLength;
-  void   *data;
+  Key        *key = (Key*)variable;
+  FileHandle fileHandle;
+  Errors     error;
+  uint64     bufferSize;
+  char       *buffer;
+  uint       dataLength;
+  void       *data;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -3102,18 +3125,88 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
 
   if (File_existsCString(value))
   {
-    // read key data from file
+    // read key data from file and decode base64 encoded key data
+fprintf(stderr,"%s, %d: ++++++++++++++++++++ %s\n",__FILE__,__LINE__,value);
 
-    error = readKeyFile(key,value);
+    // open file
+    error = File_openCString(&fileHandle,value,FILE_OPEN_READ);
     if (error != ERROR_NONE)
     {
-      stringSet(errorMessage,Error_getText(error),errorMessageSize);
-      return error;
+      return FALSE;
     }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+    // get file size
+    bufferSize = File_getSize(&fileHandle);
+    if (bufferSize == 0LL)
+    {
+      (void)File_close(&fileHandle);
+      return FALSE;
+    }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+    // allocate secure memory
+    buffer = Password_allocSecure((size_t)bufferSize+1);
+    if (buffer == NULL)
+    {
+      (void)File_close(&fileHandle);
+      return FALSE;
+    }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+    // read file data
+    error = File_read(&fileHandle,
+                      buffer,
+                      bufferSize,
+                      NULL
+                     );
+    if (error != ERROR_NONE)
+    {
+      Password_freeSecure(buffer);
+      (void)File_close(&fileHandle);
+      return FALSE;
+    }
+    buffer[bufferSize] = '\0';
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+    // close file
+    (void)File_close(&fileHandle);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+    // get key data length
+    dataLength = Misc_base64DecodeLengthCString(buffer);
+fprintf(stderr,"%s, %d: dataLength=%d\n",__FILE__,__LINE__,dataLength);
+    if (dataLength > 0)
+    {
+      // allocate key memory
+      data = Password_allocSecure(dataLength);
+      if (data == NULL)
+      {
+        stringSet(errorMessage,"insufficient secure memory",errorMessageSize);
+        return FALSE;
+      }
+
+      // decode base64
+      if (!Misc_base64DecodeCString((byte*)data,dataLength,buffer))
+      {
+        stringSet(errorMessage,"decode base64 fail",errorMessageSize);
+        Password_freeSecure(data);
+        return FALSE;
+      }
+
+      // set key data
+      if (key->data != NULL) Password_freeSecure(key->data);
+      key->data   = data;
+      key->length = dataLength;
+    }
+    fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+    // free resources
+    Password_freeSecure(buffer);
   }
   else if (stringStartsWith(value,"base64:"))
   {
-    // decode base64 encoded key data
+    // get key data from string and decode base64 encoded key data
 
     // get key data length
     dataLength = Misc_base64DecodeLengthCString(&value[7]);
@@ -8262,7 +8355,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     }
     String_delete(directoryName);
 
-    // write encryption public key
+    // write encryption public key file
     error = Crypt_writePublicPrivateKeyFile(&publicKey,
                                             publicKeyFileName,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -8284,7 +8377,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     }
     printf("Created public encryption key '%s'\n",String_cString(publicKeyFileName));
 
-    // write encryption private key
+    // write encryption private key file
     error = Crypt_writePublicPrivateKeyFile(&privateKey,
                                             privateKeyFileName,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -8308,7 +8401,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
   }
   else
   {
-    // output encryption public key
+    // output encryption public key to stdout
     error = Crypt_getPublicPrivateKeyString(&publicKey,
                                             data,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -8330,7 +8423,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
     }
     printf("crypt-public-key = base64:%s\n",String_cString(data));
 
-    // output encryption private key
+    // output encryption private key to stdout
     error = Crypt_getPublicPrivateKeyString(&privateKey,
                                             data,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
@@ -9044,7 +9137,7 @@ exit(1);
   // parse command line: pre-options
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                       0,1,
+                       1,1,
                        stderr,"ERROR: ","Warning: "
                       )
      )
@@ -9087,7 +9180,7 @@ exit(1);
   // parse command line: post-options
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                       0,2,
+                       2,2,
                        stderr,"ERROR: ","Warning: "
                       )
      )
@@ -9148,7 +9241,7 @@ exit(1);
   // parse command line: all
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                       0,CMD_PRIORITY_ANY,
+                       3,CMD_PRIORITY_ANY,
                        stderr,"ERROR: ","Warning: "
                       )
      )

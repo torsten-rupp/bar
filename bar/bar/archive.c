@@ -4545,7 +4545,7 @@ UNUSED_VARIABLE(storageInfo);
                                            );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageInfo->jobOptions->cryptPublicKey.length);
         Crypt_doneKey(&publicCryptKey);
         AutoFree_cleanup(&autoFreeList);
         return error;
