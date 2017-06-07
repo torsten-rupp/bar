@@ -1481,6 +1481,7 @@ fprintf(stderr,"%s, %d: %d encrypted key\n",__FILE__,__LINE__,dataLength); debug
 
     // calculate CRC
     encryptedKeyInfo->crc = htonl(crc32(crc32(0,Z_NULL,0),encryptedKeyInfo->data,alignedDataLength));
+fprintf(stderr,"%s, %d: length=%d crc=%x\n",__FILE__,__LINE__,dataLength,encryptedKeyInfo->crc);
 
     (*encryptedKeyData      ) = encryptedKeyInfo;
     (*encryptedKeyDataLength) = sizeof(EncryptedKeyInfo)+alignedDataLength;
@@ -1544,13 +1545,21 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
     // get encrypted key info
     encryptedKeyInfo = (EncryptedKeyInfo*)encryptedKeyData;
 
+    // check CRC
+    crc = crc32(crc32(0,Z_NULL,0),(Bytef*)encryptedKeyInfo->data,alignedDataLength);
+fprintf(stderr,"%s, %d: length=%d crc=%x %x\n",__FILE__,__LINE__,ntohl(encryptedKeyInfo->dataLength),ntohl(encryptedKeyInfo->crc),crc);
+    if (crc != ntohl(encryptedKeyInfo->crc))
+    {
+fprintf(stderr,"%s, %d: crc\n",__FILE__,__LINE__);
+      return ERROR_INVALID_KEY;
+    }
+
     // get key length
     dataLength        = ntohl(encryptedKeyInfo->dataLength);
     alignedDataLength = ALIGN(dataLength,blockLength);
-
-    // check encrypted key info length
     if ((dataLength <= 0) || (encryptedKeyDataLength < sizeof(EncryptedKeyInfo)+alignedDataLength))
     {
+fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,dataLength,encryptedKeyDataLength,sizeof(EncryptedKeyInfo)+alignedDataLength);
       return ERROR_INVALID_KEY;
     }
 
@@ -1564,14 +1573,6 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
 #ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: encrypted private key\n",__FILE__,__LINE__); debugDumpMemory(data,alignedDataLength,FALSE);
 #endif
-
-    // check CRC
-    crc = crc32(crc32(0,Z_NULL,0),(Bytef*)data,alignedDataLength);
-    if (crc != ntohl(encryptedKeyInfo->crc))
-    {
-      Password_freeSecure(data);
-      return ERROR_INVALID_KEY;
-    }
 
     // decrypt key
     if (password != NULL)
