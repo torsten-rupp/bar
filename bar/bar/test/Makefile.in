@@ -17,36 +17,12 @@ TESTCODE_EXITCODE       = 124
 #------------------------------------ paths ----------------------------------
 
 BASE_DIR           = $(CURDIR)
-SOURCE_DIR         = @srcdir@
 BAR_DIR            = $(CURDIR)/..
-CONFIG_DIR         = @CONFIG_DIR@
-TLS_DIR            = @TLS_DIR@
-
-ifeq ($(DESTDIR),)
-INSTALL_DIR        = $(if $(prefix),$(prefix),@INSTALL_DIR@)
-INSTALL_BIN_DIR    = $(if $(bindir),$(bindir),@INSTALL_BIN_DIR@)
-INSTALL_LOCALE_DIR = $(if $(datadir),$(datadir)/locale,@LOCALE_DIR@)
-INSTALL_ETC_DIR    = $(if $(sysconfdir),$(sysconfdir),/etc)
-INSTALL_CONFIG_DIR = $(if $(sysconfdir),$(sysconfdir)/bar,@CONFIG_DIR@)
-INSTALL_MAN_DIR    = $(if $(mandir),$(mandir),@MAN_DIR@)
-else
-INSTALL_DIR        = @INSTALL_DIR@
-INSTALL_BIN_DIR    = @INSTALL_BIN_DIR@
-INSTALL_LOCALE_DIR = @LOCALE_DIR@
-INSTALL_ETC_DIR    = /etc
-INSTALL_CONFIG_DIR = @CONFIG_DIR@
-INSTALL_MAN_DIR    = @MAN_DIR@
-endif
-INSTALL_TLS_DIR    = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
 # shell in Makefile must be bash
 SHELL                  = bash
-
-SVNVERSION             = @SVNVERSION@
-
-DUMP_SYMS              = @DUMP_SYMS@
 
 #------------------------------- test commands--------------------------------
 
@@ -1334,19 +1310,19 @@ run_debug_test_code:
 
 $(TEST_KEY_CRYPT_PUBLIC) $(TEST_KEY_CRYPT_PRIVATE): $(TEST_BAR)
 	$(RMF) $(TEST_KEY_CRYPT_PUBLIC) $(TEST_KEY_CRYPT_PRIVATE)
-	$(TEST_BAR) --generate-keys --crypt-password="$(TEST_PASSWORD_CRYPT)" intermediate/key-crypt
+	$(TEST_BAR) --generate-keys --generate-keys-mode=transient --crypt-password="$(TEST_PASSWORD_CRYPT)" intermediate/key-crypt
 
 $(TEST_KEY_CRYPT_OTHER_PUBLIC) $(TEST_KEY_CRYPT_OTHER_PRIVATE): $(TEST_BAR)
 	$(RMF) $(TEST_KEY_CRYPT_OTHER_PUBLIC) $(TEST_KEY_CRYPT_OTHER_PRIVATE)
-	$(TEST_BAR) --generate-keys --crypt-password="$(TEST_PASSWORD_CRYPT)" intermediate/key-crypt-other
+	$(TEST_BAR) --generate-keys --generate-keys-mode=transient --crypt-password="$(TEST_PASSWORD_CRYPT)" intermediate/key-crypt-other
 
 $(TEST_KEY_SIGNATURE_PUBLIC) $(TEST_KEY_SIGNATURE_PRIVATE): $(TEST_BAR)
 	$(RMF) $(TEST_KEY_SIGNATURE_PUBLIC) $(TEST_KEY_SIGNATURE_PRIVATE)
-	$(TEST_BAR) --generate-signature-keys intermediate/key-signature
+	$(TEST_BAR) --generate-signature-keys --generate-keys-mode=transient intermediate/key-signature
 
 $(TEST_KEY_SIGNATURE_OTHER_PUBLIC) $(TEST_KEY_SIGNATURE_OTHER_PRIVATE): $(TEST_BAR)
 	$(RMF) $(TEST_KEY_SIGNATURE_OTHER_PUBLIC) $(TEST_KEY_SIGNATURE_OTHER_PRIVATE)
-	$(TEST_BAR) --generate-signature-keys intermediate/key-signature-other
+	$(TEST_BAR) --generate-signature-keys --generate-keys-mode=transient intermediate/key-signature-other
 
 data/zero128.dat:
 	$(INSTALL) -d $(@D)
@@ -1645,9 +1621,9 @@ test_file_operations_incremental: \
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c intermediate/$(BAR_FILE)-full.bar --full --incremental-list-file=intermediate/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	$(INSTALL) -d intermediate/new; $(CP) data/random1024.dat intermediate/new/random1024-new.dat
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c intermediate/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=intermediate/$(BAR_FILE).bid $(TEST_FILES) intermediate/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t intermediate/$(BAR_FILE)-full.bar intermediate/$(BAR_FILE)-incremental.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d intermediate/$(BAR_FILE)-full.bar intermediate/$(BAR_FILE)-incremental.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -x intermediate/$(BAR_FILE)-full.bar intermediate/$(BAR_FILE)-incremental.bar $(BAR_OPTIONS) --destination restore $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t intermediate/$(BAR_PATTERN)-full.bar intermediate/$(BAR_PATTERN)-incremental.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d intermediate/$(BAR_PATTERN)-full.bar intermediate/$(BAR_PATTERN)-incremental.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -x intermediate/$(BAR_PATTERN)-full.bar intermediate/$(BAR_PATTERN)-incremental.bar $(BAR_OPTIONS) --destination restore $(if $(QUIET),</dev/null 1>/dev/null))
 
 test_file_operations_differential: \
   $(TEST_BAR) \
@@ -1662,9 +1638,9 @@ test_file_operations_differential: \
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c intermediate/$(BAR_FILE)-full.bar --full --incremental-list-file=intermediate/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	$(INSTALL) -d intermediate/new; $(CP) data/random1024.dat intermediate/new/random1024-new.dat
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c intermediate/$(BAR_FILE)-differential.bar --differential --incremental-list-file=intermediate/$(BAR_FILE).bid $(TEST_FILES) intermediate/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t intermediate/$(BAR_FILE)-full.bar intermediate/$(BAR_FILE)-differential.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d intermediate/$(BAR_FILE)-full.bar intermediate/$(BAR_FILE)-differential.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -x intermediate/$(BAR_FILE)-full.bar intermediate/$(BAR_FILE)-differential.bar $(BAR_OPTIONS) --destination restore $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t intermediate/$(BAR_PATTERN)-full.bar intermediate/$(BAR_PATTERN)-differential.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d intermediate/$(BAR_PATTERN)-full.bar intermediate/$(BAR_PATTERN)-differential.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -x intermediate/$(BAR_PATTERN)-full.bar intermediate/$(BAR_PATTERN)-differential.bar $(BAR_OPTIONS) --destination restore $(if $(QUIET),</dev/null 1>/dev/null))
 
 .PHONY: test_file_operations_destroyed
 test_file_operations_destroyed: \
@@ -1699,17 +1675,17 @@ test_convert_operations: \
 	@#
 	$(RMRF) $(TEST_FILES_CLEAN)
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(BAR_OPTIONS) --compress-algorithm=zip9 --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(BAR_OPTIONS) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(BAR_OPTIONS) | $(GREP) -i zip9`")
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --compress-algorithm=zip9 --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) | $(GREP) -i zip9`")
 	#
 ifeq (@HAVE_GCRYPT@,1)
 	$(RMRF) $(TEST_FILES_CLEAN)
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --crypt-algorithm=none --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-new-password='$(TEST_PASSWORD_CRYPT)' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-new-password='test' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='test' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-new-password='$(TEST_PASSWORD_CRYPT)' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-new-password='test' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='test' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 endif
 
 # helper function to create a test device

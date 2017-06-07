@@ -143,14 +143,6 @@ TIMEOUT        = timeout
 TOUCH          = touch
 ULIMIT         = ulimit
 
-# for tests only (create test devices)
-FSCK           = fsck
-LOSETUP        = /sbin/losetup
-MKFS           = /sbin/mkfs
-MOUNT          = /bin/mount
-UMOUNT         = /bin/umount
-SUDO           = sudo
-
 LCOV           = lcov
 GENHTML        = genhtml
 
@@ -231,15 +223,11 @@ OPTIONS ?=
 TEST_IMAGE_OPERATIONS = test_image_operations
 
 # test settings
-TEST_CONFIG                      = test/bar.cfg
-TEST_KEY_CRYPT_PUBLIC            = test/key-crypt.public
-TEST_KEY_CRYPT_PRIVATE           = test/key-crypt.private
-TEST_KEY_CRYPT_OTHER_PUBLIC      = test/key-crypt-other.public
-TEST_KEY_CRYPT_OTHER_PRIVATE     = test/key-crypt-other.private
-TEST_KEY_SIGNATURE_PUBLIC        = test/key-signature.public
-TEST_KEY_SIGNATURE_PRIVATE       = test/key-signature.private
-TEST_KEY_SIGNATURE_OTHER_PUBLIC  = test/key-signature-other.public
-TEST_KEY_SIGNATURE_OTHER_PRIVATE = test/key-signature-other.private
+TEST_CONFIG                      = intermediate/bar.cfg
+TEST_KEY_CRYPT_PUBLIC            = intermediate/key-crypt.public
+TEST_KEY_CRYPT_PRIVATE           = intermediate/key-crypt.private
+TEST_KEY_SIGNATURE_PUBLIC        = intermediate/signature-key.public
+TEST_KEY_SIGNATURE_PRIVATE       = intermediate/signature-key.private
 
 TEST_SERVER_PORT                 = 39909
 TEST_SERVER_SSL_PORT             = 39910
@@ -284,39 +272,15 @@ TEST_SLAVE_HOST                  =
 TEST_SLAVE_PORT                  = 39911
 TEST_SLAVE_USERNAME              ?= test
 TEST_SLAVE_PASSWORD              ?= test
-TEST_SLAVE_DIRECTORY             = test/slave
+TEST_SLAVE_DIRECTORY             = slave
 TEST_SLAVE_CONFIG                = $(TEST_SLAVE_DIRECTORY)/bar.cfg
 TEST_SLAVE_PID_FILE              = $(TEST_SLAVE_DIRECTORY)/barserver.pid
 TEST_SLAVE_JOBS                  = $(TEST_SLAVE_DIRECTORY)/jobs
 TEST_SLAVE_DATABASE              = $(TEST_SLAVE_DIRECTORY)/index.db
 TEST_SLAVE_LOG_FILE              = $(TEST_SLAVE_DIRECTORY)/bar.log
 
-# crypt/compress used for all-test (do not select all available compress and
-# crypt algorithms, because this would take a long time)
-TEST_COMBINED_COMPRESS_NAMES=zip9
-ifeq (@HAVE_BZ2@,1)
-TEST_COMBINED_COMPRESS_NAMES += bzip9
-endif
-ifeq (@HAVE_LZMA@,1)
-TEST_COMBINED_COMPRESS_NAMES += lzma9
-endif
-TEST_COMBINED_CRYPT_NAMES=none
-ifeq (@HAVE_GCRYPT@,1)
-TEST_COMBINED_CRYPT_NAMES += AES256
-endif
-
 # languages
 LANGUAGES = de jp
-
-# for tests only
-LOOP0          = /dev/loop0
-LOOP1          = /dev/loop1
-DEVICE_ZERO    = /dev/zero
-DEVICE_RANDOM  = /dev/urandom
-
-# memory limits for tests
-MEMORY_LIMIT     = $(shell $(ECHO) 10*1024*1024|$(BC))    # 10G
-MEMORY_LIMIT_LOW = $(shell $(ECHO) 70*1024|$(BC))         # 50M
 
 #---------------------------------- rules ------------------------------------
 
@@ -549,7 +513,8 @@ all: $(TARGETS)
 # clean
 clean: \
   testcode_clean \
-  gcov_clean
+  gcov_clean \
+  test_clean
 	$(RMF) $(BAR_OBJECTS_RELEASE)
 	$(RMF) $(BAR_OBJECTS_DEBUG)
 	$(RMF) $(BAR_OBJECTS_VALGRIND)
@@ -559,10 +524,10 @@ clean: \
 	$(RMF) $(INTERMEDIATE)
 	$(RMF) bar-gcov.info
 	$(RMF) $(TARGETS)
-	$(RMRF) test
 
 distclean: \
-  clean
+  clean \
+  test_distclean
 	$(RMF) Makefile Makefile.depend
 	$(RMF) config.h
 	$(RMRF) release debug valgrind
@@ -597,40 +562,7 @@ help:
 	@$(ECHO) "  rundev_ssl"
 	@$(ECHO) "  rundev_test"
 	@$(ECHO) ""
-	@$(ECHO) "  test[-debug|-valgrind]"
-	@$(ECHO) "  test1[-debug|-valgrind], test_basic[-debug|-valgrind]"
-	@$(ECHO) "  test2[-debug|-valgrind], test_compress[-debug], test_delta_compress[-debug|-valgrind]"
-	@$(ECHO) "  test3[-debug|-valgrind], test_crypt[-debug|-valgrind]"
-	@$(ECHO) "  test4[-debug|-valgrind], test_asymmetric_crypt[-debug|-valgrind]"
-	@$(ECHO) "  test5[-debug|-valgrind], test_signatures[-debug|-valgrind]"
-	@$(ECHO) "  test6[-debug|-valgrind], test_split[-debug|-valgrind]"
-	@$(ECHO) "  test7[-debug|-valgrind], test_convert[-debug|-valgrind]"
-	@$(ECHO) "  test8[-debug|-valgrind], test_image[-debug|-valgrind]"
-	@$(ECHO) "  test9[-debug|-valgrind], test_storage[-debug|-valgrind]"
-	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav)[-debug|-valgrind]"
-	@$(ECHO) "  test10[-debug|-valgrind], test_hugefiles[-debug|-valgrind]"
-	@$(ECHO) "  test11[-debug|-valgrind], test_dvd[-debug|-valgrind]"
-	@$(ECHO) "  test12[-debug|-valgrind], test_server[-debug|-valgrind]"
-	@$(ECHO) "  test13[-debug|-valgrind], test_master_slave[-debug|-valgrind]"
-	@$(ECHO) "  test13_master[-debug|-valgrind], test_master[-debug|-valgrind]"
-	@$(ECHO) "  test13_slave[-debug|-valgrind], test_slave[-debug|-valgrind]"
-	@$(ECHO) "  test_combined[-debug|-valgrind]"
-	@$(ECHO) "  test_parameters[-debug|-valgrind]"
-	@$(ECHO) "  test_misc[-debug|-valgrind]"
-	@$(ECHO) "  test_all[-debug|-valgrind]"
-	@$(ECHO) "  test_data"
-	@$(ECHO) "  test_data_clean"
-	@$(ECHO) "  test_data_dist_clean"
-	@$(ECHO) ""
-	@$(ECHO) "  test_file_operations"
-	@$(ECHO) "  test_file_operations_dryrun"
-	@$(ECHO) ""
-	@$(ECHO) "  test_image_operations"
-	@$(ECHO) "  test_image_operations_raw"
-	@$(ECHO) "  test_image_operations_ext"
-	@$(ECHO) "  test_image_operations_fat"
-	@$(ECHO) "  test_image_operations_reiserfs"
-	@$(ECHO) "  test_image_operations_dryrun"
+	@$(MAKE) -C test --no-print-directory -s help_output
 	@$(ECHO) ""
 	@$(ECHO) "  show_debug_test_code"
 	@$(ECHO) "  run_debug_test_code"
@@ -1045,8 +977,8 @@ rundev_test: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) bar.cfg /tmp/bar.cfg
 	nice ./bar --daemon -D --no-default-config --config=/tmp/bar.cfg \
         --server-mode=master \
-        --index-database=test/index.db \
-        --server-jobs-directory=test/jobs \
+        --index-database=intermediate/index.db \
+        --server-jobs-directory=intermediate/jobs \
         --server-port=39909 --server-tls-port=39910 \
         --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
         --verbose=0
@@ -1056,966 +988,32 @@ rundev_test: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 
 # ----------------------------------------------------------------------------
 
+# tests
+.PHONY: test test_clean test_distclean
+test:
+	@$(MAKE) -C test $@
+test%:
+	@$(MAKE) -C test $@
+
+test_clean:
+	@$(MAKE) -C test clean
+
+test_distclean:
+	@$(MAKE) -C test distclean
+
+# ----------------------------------------------------------------------------
+
 # helper function to check valid exitcode
 # call functionTestCheckExitcode,<min. valid exitcode>,<max. valid exitcode>,<command>
 functionTestCheckExitcode = \
   $3 2>/dev/null; if test $$? -lt $1 -o $$? -gt $2; then false; fi
 
-# helper functions for slave tests
-functionSlaveExecute = \
-  $(SSHPASS) -p $(TEST_SLAVE_PASSWORD) $(SSH) $(TEST_SLAVE_USERNAME)@$(TEST_SLAVE_HOST) "$1"
-functionSlaveCopy = \
-  $(SSHPASS) -p $(TEST_SLAVE_PASSWORD) $(SCP) $1 $(TEST_SLAVE_USERNAME)@$(TEST_SLAVE_HOST):$2
-
-# do tests
-#
-# Tests:
-#   create, list, test, compare, extract
-#   with compression defined in COMPRESS_NAMES
-#   with encryption defined in CRYPT_NAMES
-#   asymmetric crypt
-#   signature
-#   splitting
-#   everything together
-#   parameters and errors
-#   convert
-#   images
-#   dvd
-#
-# For special file and image tests some sudo-commands are required:
-#  sudo chattr +i|-i <file>
-#  sudo chattr +a|-a <file>
-#  sudo losetup <loop device> <file>
-#  sudo losetup -d <loop device>
-#  sudo chmod o+rw <loop device>
-#  sudo mkfs <options> <loop device>
-#  sudo mount <loop device> test/dev
-#  sudo umount <loop device>
-#  sudo cp $(TEST_DATA_DIR)/data test/dev
-#  sudo dd <loop device> <file>
-#  sudo diff -r <mount point> <mount point>
-
-# test files
-TEST_FILE_NAMES = \
-  zero128.dat \
-  zero1024.dat \
-  zero512k.dat \
-  random128.dat \
-  random1024.dat \
-  random512k.dat \
-  zero-random512k.dat \
-  zero.dat \
-  readonly.dat \
-  readonly512k.dat \
-  unreadable.dat \
-  smallfile.dat \
-  sub_dir \
-  sub_ignore_dir \
-  linkdata.dat \
-  link.dat \
-  link_not_existing_file.dat \
-  circular_link.dat.marker \
-  hardlinkdata.dat \
-  hardlink.dat \
-  file400.dat \
-  file640.dat \
-  file644.dat \
-  file664.dat \
-  file666.dat \
-  nodump.dat \
-  immutable.dat \
-  append-only.dat \
-  fifo \
-  data\'.dat \
-  data\".dat \
-  data\\.dat \
-  data\\n.dat \
-  data%d%f%s%p.dat \
-  delta1/test.dat \
-  delta2/test.dat
-ifneq ($(ATTR)$(SETFATTR),)
-TEST_FILE_NAMES += \
-  extended_attribute.dat \
-  sub_dir_extended_attribute \
-  hardlink_extended_attribute.dat \
-  hardlinkdata_extended_attribute.dat
-endif
-
-TEST_FILES = $(foreach z,$(TEST_FILE_NAMES),$(TEST_DATA_DIR)/data/$z)
-
-# huge test files
-TEST_HUGEFILE_NAMES = \
-  zero5G.dat \
-  random5G.dat \
-
-TEST_HUGEFILES = $(foreach z,$(TEST_HUGEFILE_NAMES),$(TEST_DATA_DIR)/data_huge/$z)
-
-# temporary test files
-TEST_FILES_CLEAN = \
-  test/*.bar \
-  test/*.bar_destroyed \
-  test/*.bid \
-  test/new \
-  test/restore \
-  test/*.image \
-  test/index.db
-
-# test bar executables
-TEST_BAR          ?= ./bar@EXEEXT@
-TEST_BAR_DEBUG    = ./bar-debug@EXEEXT@
-TEST_BAR_GCOV     = ./bar-gcov@EXEEXT@
-TEST_BAR_VALGRIND = ./bar-valgrind@EXEEXT@
-TEST_BAR_SQLITE3  = ./bar-sqlite3
-TEST_DESTROYER    = ./destroyer@EXEEXT@
-
-# test keys
-TEST_KEYS = $(TEST_KEY_CRYPT_PUBLIC) \
-            $(TEST_KEY_CRYPT_PRIVATE) \
-            $(TEST_KEY_CRYPT_OTHER_PUBLIC) \
-            $(TEST_KEY_CRYPT_OTHER_PRIVATE) \
-            $(TEST_KEY_SIGNATURE_PUBLIC) \
-            $(TEST_KEY_SIGNATURE_PRIVATE) \
-            $(TEST_KEY_SIGNATURE_OTHER_PUBLIC) \
-            $(TEST_KEY_SIGNATURE_OTHER_PRIVATE)
-
-# default test options
-TEST_OPTIONS = --no-default-config --config=$(CURDIR)/$(TEST_CONFIG)
+# bar executables
+BAR_GCOV     = ./bar-gcov@EXEEXT@
+BAR_VALGRIND = ./bar-valgrind@EXEEXT@
 
 # test environment variables
 TEST_ENVIRONMENT = DISPLAY= SSH_ASKPASS=
-
-# test timeout command (Note: older versions of the timeout command may not support --kill-after)
-TEST_TIMEOUT = $(TIMEOUT) --signal=KILL 600 timeout --signal=ABRT 300
-
-.PHONY: test test_win
-.PHONY: test-debug test_win-debug
-.PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test13_master test13_slave
-.PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug test10-debug test11-debug test12-debug test13-debug test13_master-debug test13_slave-debug
-.PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind test10-valgrind test11-valgrind test12-valgrind test13-valgrind test13_master-valgrind test13_slave-valgrind
-.PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_signatures test_split test_image test_storage test_dvd test_combined test_server test_slave test_parameters test_misc
-.PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_signatures-debug test_split-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_server-debug test_slave-debug test_parameters-debug test_misc-debug
-.PHONY: test_basic-valgrind test_compress-valgrind test_crypt-valgrind test_asymmetric_crypt-valgrind test_signatures_crypt-valgrind test_split-valgrind test_image-valgrind test_storage-valgrind test_dvd-valgrind test_combined-valgrind test_server-valgrind test_slave-valgrind test_parameters-valgrind test_misc-valgrind
-.PHONY: test_storage_file test_storage_ftp test_storage_scp test_storage_sftp test_storage_webdav
-.PHONY: test_storage_file-debug test_storage_ftp-debug test_storage_scp-debug test_storage_sftp-debug test_storage_webdav-debug
-.PHONY: test_storage_file-valgrind test_storage_ftp-valgrind test_storage_scp-valgrind test_storage_sftp-valgrind test_storage_webdav-valgrind
-.PHONY: test_all test_all-debug test_all-valgrind
-.PHONY: test_data test_data_clean test_data_dist_clean
-.PHONY: show_debug_test_code run_debug_test_code
-test:
-	@$(MAKE) QUIET=1 --no-print-directory -s \
-          test_basic \
-          test_compress \
-          test_crypt \
-          test_asymmetric_crypt \
-          test_signatures \
-          test_split \
-          test_image \
-          test_combined \
-          test_server \
-          test_parameters \
-          test_misc
-
-test-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test
-
-test-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_VALGRIND) test
-
-test_win: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	$(TEST_BAR) -o -c c:\\tmp\\x.bar -# c:\\users\\torsten
-	$(TEST_BAR) -L c:\\tmp\\x.bar 
-
-test-win-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test-win
-
-test_data: \
-  $(TEST_FILES)
-
-test_data_clean:
-	$(RMRF) $(TEST_FILES_CLEAN)
-	$(RMF)  $(TEST_CONFIG) $(TEST_SERVER_CONFIG) $(TEST_KEYS)
-
-test_data_dist_clean: \
-  test_data_clean
-	if test -f $(TEST_DATA_DIR)/data/append-only.dat; then $(SUDO) $(CHATTR) -a $(TEST_DATA_DIR)/data/append-only.dat; fi
-	if test -f $(TEST_DATA_DIR)/data/immutable.dat; then $(SUDO) $(CHATTR) -i $(TEST_DATA_DIR)/data/immutable.dat; fi
-	$(RMRF) $(TEST_DATA_DIR)/data
-
-test1 test_basic: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 1: basic..."
-	@$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=${PWD}/test/index.db --max-threads=1 $(OPTIONS)" \
-          test_file_operations \
-          ;
-	@$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=${PWD}/test/index.db $(OPTIONS)" \
-          test_file_operations \
-          ;
-	@$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=${PWD}/test/index.db $(OPTIONS)" \
-          test_file_operations_dryrun \
-          ;
-	@$(ECHO) "ok"
-
-test1-debug test_basic-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_basic
-
-test1-valgrind test_basic-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_basic
-
-test2 test_compress: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 2: compress..."
-	for compress in $(COMPRESS_NAMES); do \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
-            test_file_operations \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none $(OPTIONS)" \
-            test_file_operations \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none $(OPTIONS)" \
-            test_file_operations_dryrun \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-        done
-	@$(ECHO) "ok"
-
-test2-debug test_compress-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_compress
-
-test2-valgrind test_compress-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_compress
-
-test_delta_compress: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 2: delta compress..."
-	for compress in $(COMPRESS_NAMES); do \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress+xdelta9 --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
-            test_file_operations_delta \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress+xdelta9 --crypt-algorithm=none $(OPTIONS)" \
-            test_file_operations_delta \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-        done
-	@$(ECHO) "ok"
-
-test_delta_compress-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_delta_compress
-
-test_delta_compress-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_delta_compress
-
-test3 test_crypt: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 3: crypt..."
-	for crypt in $(CRYPT_NAMES); do \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password='$(TEST_PASSWORD_CRYPT)' --max-threads=1 $(OPTIONS)" \
-            test_file_operations \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) $(OPTIONS)" \
-            test_file_operations \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) $(OPTIONS)" \
-            test_file_operations_dryrun \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-        done
-	@$(ECHO) "ok"
-
-# multi-crypt
-#	$(MAKE) \
-#          BAR_FILE="test" \
-#          BAR_PATTERN="test" \
-#          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=3DES+CAST5+AES256+CAMELLIA256 --crypt-password='$(TEST_PASSWORD_CRYPT)' --max-threads=1 $(OPTIONS)" \
-#          test_file_operations \
-#          ;
-
-test3-debug test_crypt-debug: $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_crypt
-
-test3-valgrind test_crypt-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_crypt
-
-test4 test_asymmetric_crypt: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	@$(ECHO_NO_LF) "Test 4: asymmetric crypt..."
-	for crypt in $(CRYPT_NAMES); do \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --max-threads=1 $(OPTIONS)" \
-            test_file_operations \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) $(OPTIONS)" \
-            test_file_operations \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) $(OPTIONS)" \
-            test_file_operations_dryrun \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-        done
-	# wrong public key
-	for crypt in $(CRYPT_NAMES); do \
-          if test ! $$crypt = "none"; then \
-            $(RMF) test/test.bar; \
-            $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_OTHER_PUBLIC) -c test/test.bar test/data; \
-            rc=$$?; \
-            if test $$rc -ne 0; then \
-              exit $$rc; \
-            fi; \
-            $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) test/test.bar); \
-            rc=$$?; \
-            if test $$rc -ne 0; then \
-              exit $$rc; \
-            fi; \
-          fi; \
-        done
-	@$(ECHO) "ok"
-
-test4-debug test_asymmetric_crypt-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_asymmetric_crypt
-
-test4-valgrind test_asymmetric-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_asymmetric_crypt
-
-test5 test_signatures: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS)
-	@$(ECHO_NO_LF) "Test 5: signatures..."
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --max-threads=1 $(OPTIONS)" \
-          test_file_operations \
-          ;
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) $(OPTIONS)" \
-          test_file_operations \
-          ;
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) $(OPTIONS)" \
-          test_file_operations_dryrun \
-          ;
-	# wrong signature
-	@$(RMRF) $(TEST_FILES_CLEAN)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) -c test/test.bar test/data
-	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_OTHER_PUBLIC) --info test/test.bar)
-	@$(ECHO) "ok"
-
-test5-debug test_signatures-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_signatures
-
-test5-valgrind signatures-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_signatures
-
-test6 test_split: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 6: split..."
-	$(MAKE) \
-          BAR_FILE="test-###" \
-          BAR_PATTERN="test-*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
-          test_file_operations \
-          ;
-	$(MAKE) \
-          BAR_FILE="test-###" \
-          BAR_PATTERN="test-*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
-          test_file_operations \
-          ;
-	$(MAKE) \
-          BAR_FILE="test-###" \
-          BAR_PATTERN="test-*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
-          test_file_operations_dryrun \
-          ;
-	@$(ECHO) "ok"
-
-test6-debug test_split-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_split
-
-test6-valgrind test_split-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_split
-
-test7 test_convert: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 7: convert..."
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --max-threads=1 $(OPTIONS)" \
-          test_convert_operations \
-          ;
-	@$(ECHO) "ok"
-
-test7-debug test_convert-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_convert
-
-test7-valgrind test_convert-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_convert
-
-test8 test_image: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 8: image..."
-	for compress in none zip9; do \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
-            $(TEST_IMAGE_OPERATIONS) \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none $(OPTIONS)" \
-            $(TEST_IMAGE_OPERATIONS) \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-        done
-	@$(ECHO) "ok"
-
-test8-debug test_image-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_image
-
-test8-valgrind test_image-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_image
-
-test9 test_storage: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 9: storage..."
-	@$(MAKE) test_storage_file \
-	         test_storage_ftp \
-	         test_storage_scp \
-	         test_storage_sftp \
-	         test_storage_webdav
-
-test9-debug test_storage-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage
-
-test9-valgrind test_storage-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage
-
-test_storage_file: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	$(MAKE) \
-          BAR_STORAGE="file://test/" \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
-          ;
-	$(MAKE) \
-          BAR_STORAGE="file://test/" \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
-          test_file_operations_base \
-          ;
-# delta test?
-
-test_storage_file-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_file
-
-test_storage_file-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_file
-
-test_storage_ftp: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(call functionVerifyParameter,TEST_PASSWORD_FTP,parameter TEST_PASSWORD_FTP nor TEST_PASSWORD set)
-	$(MAKE) \
-          BAR_STORAGE="ftp://$(TEST_HOST_FTP)/test/" \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-password='$(TEST_PASSWORD_FTP)' --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
-          ;
-	$(MAKE) \
-          BAR_STORAGE="ftp://$(TEST_HOST_FTP)/test/" \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-password='$(TEST_PASSWORD_FTP)' $(OPTIONS)" \
-          test_file_operations_base \
-          ;
-
-test_storage_ftp-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_ftp
-
-test_storage_ftp-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_ftp
-
-test_storage_scp: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(call functionVerifyParameter,TEST_PASSWORD_SCP,parameter TEST_PASSWORD_SCP nor TEST_PASSWORD set)
-	@$(call functionVerifyParameter,TEST_PUBLIC_KEY_SCP,parameter TEST_PUBLIC_KEY_SCP nor TEST_PUBLIC_KEY_SSH set)
-	@$(call functionVerifyParameter,TEST_PRIVATE_KEY_SCP,parameter TEST_PRIVATE_KEY_SCP nor TEST_PRIVATE_KEY_SSH set)
-	$(MAKE) \
-          BAR_STORAGE="scp://$(TEST_HOST_SCP)/test/" \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-public-key=$(TEST_PUBLIC_KEY_SCP) --ssh-private-key=$(TEST_PRIVATE_KEY_SCP) --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
-          ;
-	$(MAKE) \
-          BAR_STORAGE="scp://$(TEST_HOST_SCP)/test/" \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SCP) --ssh-public-key=$(TEST_PUBLIC_KEY_SCP) --ssh-private-key=$(TEST_PRIVATE_KEY_SCP) --ssh-password='$(TEST_PASSWORD_SCP)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' $(OPTIONS)" \
-          test_file_operations_base \
-          ;
-
-test_storage_scp-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_scp
-
-test_storage_scp-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_scp
-
-test_storage_sftp: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(call functionVerifyParameter,TEST_PASSWORD_SFTP,parameter TEST_PASSWORD_SFTP nor TEST_PASSWORD set)
-	@$(call functionVerifyParameter,TEST_PUBLIC_KEY_SFTP,parameter TEST_PUBLIC_KEY_SFTP nor TEST_PUBLIC_KEY_SSH set)
-	@$(call functionVerifyParameter,TEST_PRIVATE_KEY_SFTP,parameter TEST_PRIVATE_KEY_SFTP nor TEST_PRIVATE_KEY_SSH set)
-	$(MAKE) \
-          BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/test/" \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-password='$(TEST_PASSWORD_SFTP)' --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
-          ;
-	$(MAKE) \
-          BAR_STORAGE="sftp://$(TEST_HOST_SFTP)/test/" \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_PORT_SFTP) --ssh-public-key=$(TEST_PUBLIC_KEY_SFTP) --ssh-private-key=$(TEST_PRIVATE_KEY_SFTP) --ssh-password='$(TEST_PASSWORD_SFTP)' $(OPTIONS)" \
-          test_file_operations_base \
-          ;
-
-test_storage_sftp-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_sftp
-
-test_storage_sftp-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_sftp
-
-test_storage_webdav: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(call functionVerifyParameter,TEST_PASSWORD_WEBDAV,parameter TEST_PASSWORD_WEBDAV nor TEST_PASSWORD set)
-	$(MAKE) \
-          BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/test/" \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-password='$(TEST_PASSWORD_WEBDAV)' --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
-          ;
-	$(MAKE) \
-          BAR_STORAGE="webdav://$(TEST_HOST_WEBDAV)/test/" \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-password='$(TEST_PASSWORD_WEBDAV)' $(OPTIONS)" \
-          test_file_operations_base \
-          ;
-	@$(ECHO) "ok"
-
-test_storage_webdav-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_webdav
-
-test_storage_webdav-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_webdav
-
-test10 test_hugefiles: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 10: huge files..."
-	for compress in $(COMPRESS_NAMES_HUGE); do \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none $(OPTIONS)" \
-            test_hugefiles_operations \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-        done
-	@$(ECHO) "ok"
-
-test10-debug test_hugefiles-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_hugefiles
-
-test10-valgrind test_hugefiles-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_hugefiles
-
-test11 test_dvd: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 11: dvd..."
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
-          test_dvd_operations \
-          ;
-	@$(ECHO) "ok"
-
-test11-debug test_dvd-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_dvd
-
-test11-valgrind test_dvd-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_dvd
-
-test12 test_server: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 12: server..."
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=master --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
-          test_server_operations \
-          ;
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=slave --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
-          test_server_operations \
-          ;
-	@$(ECHO) "ok"
-
-test12-debug test_server-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_server
-
-test12-valgrind test_server-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_server
-
-test13: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 13: slave..."
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
-          test_master_slave_operations \
-          ;
-	@$(ECHO) "ok"
-
-test13-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_slave
-
-test13-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_slave
-
-test13_master test_master: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 13: master..."
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
-          test_master_slave_operations_master \
-          ;
-	@$(ECHO) "ok"
-
-test13_master-debug test_master-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_master
-
-test13_master-valgrind test_master-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_master
-
-test13_slave test_slave: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG)
-	@$(ECHO_NO_LF) "Test 13: slave..."
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none $(OPTIONS)" \
-          test_master_slave_operations_slave \
-          ;
-	@$(ECHO) "ok"
-
-test13_slave-debug test_slave-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_slave
-
-test13_slave-valgrind test_slave-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_slave
-
-test_combined: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS)
-	@$(ECHO_NO_LF) "Test combined..."
-	for compress in $(TEST_COMBINED_COMPRESS_NAMES); do \
-          for crypt in $(TEST_COMBINED_CRYPT_NAMES); do \
-            $(MAKE) \
-              BAR_FILE=test-### \
-              BAR_PATTERN="test-*" \
-              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=100K $(OPTIONS)" \
-              test_file_operations \
-              ; \
-            rc=$$?; \
-            if test $$rc -ne 0; then \
-              exit $$rc; \
-            fi; \
-            $(MAKE) \
-              BAR_FILE=test-### \
-              BAR_PATTERN="test-*" \
-              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=10M $(OPTIONS)" \
-              $(TEST_IMAGE_OPERATIONS) \
-              ; \
-            rc=$$?; \
-            if test $$rc -ne 0; then \
-              exit $$rc; \
-            fi; \
-          done; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-        done; \
-        rc=$$?; \
-        if test $$rc -ne 0; then \
-          exit $$rc; \
-        fi
-	@$(ECHO) "ok"
-
-test_combined-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_combined
-
-test_combined-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_combined
-
-test_all:
-	@$(MAKE) QUIET=1 --no-print-directory -s \
-          test_basic \
-          test_compress \
-          test_crypt \
-          test_asymmetric_crypt \
-          test_split \
-          test_image \
-          test_storage \
-          test_hugefiles \
-          test_dvd \
-          test_combined \
-          test_parameters \
-          test_misc
-
-test_parameters: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_FILES)
-	@$(ECHO_NO_LF) "Test parameters..."
-	@$(RMRF) $(TEST_FILES_CLEAN)
-	@$(ECHO) "# test config" >test/test.cfg
-	#
-	# help
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -h 1>/dev/null $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --help 1>/dev/null $(if $(QUIET),</dev/null 1>/dev/null))
-	#
-	# special file names
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar not-existing-file-%d%f%p%s.dat $(if $(QUIET),</dev/null 1>/dev/null))	
-	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar not-existing-file-%d%f%p%s.dat --skip-unreadable=no $(if $(QUIET),</dev/null 1>/dev/null))	
-	#
-	# different options
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --overwrite-archive-files --comment 'Hello World!' $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar -z zip0 $(TEST_FILES) /dev/ram0 /dev/zero --overwrite-archive-files --comment 'Hello World!' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar --info $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar -g $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar -H $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar -L $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar -g -H -L $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar -g -H -L --numeric-uid-gid --numeric-permission $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar -# '*rand*' -! '*512*' $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar -g -# '*rand*' -! '*512*' $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar -H -# '*rand*' -! '*512*' $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar -L -# '*rand*' -! '*512*' $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l test/test*.bar -g -H -L -# '*rand*' -! '*512*' $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --config=test/test.cfg -l test/test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --dry-run $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l cd://test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -t cd://test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d cd://test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l dvd://test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -t dvd://test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d dvd://test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l bd://test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -t bd://test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d bd://test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c /media/ramdisk/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --mount=/media/ramdisk $(if $(QUIET),</dev/null 1>/dev/null))
-	#
-	# templates
-	# 
-	@$(RMF) test/test-????-??-??-??-??-??-#.bar; \
-        $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test-%Y-%m-%d-%H-%M-%S-%#.bar $(TEST_FILES) --overwrite-archive-files $(if $(QUIET),</dev/null 1>/dev/null)); \
-        test -f test/test-????-??-??-??-??-??-#.bar;
-	@$(RMF) test/test-????-??-??-??-??-??-#.bar
-	#
-	# scripts
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-pre-command="echo pre" --file-write-post-command="echo post" $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-pre-command="true;" $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-pre-command="false;" $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-post-command="true;" $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-post-command="false;" $(if $(QUIET),</dev/null 1>/dev/null))
-	#
-	# wrong options
-	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --not-existing-option  $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --compress-algorithm=not-existing-compress  $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --crypt-algorithm=not-existing-crypt $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --crypt-algorithm=3DES+CAST5+AES128+AES192+AES256 $(if $(QUIET),</dev/null 1>/dev/null))
-ifeq (@HAVE_XDELTA@,1)
-	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c test/test.bar $(TEST_FILES) --delta-source=does-not-exists --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files $(if $(QUIET),</dev/null 1>/dev/null))
-endif
-	$(call functionTestCheckExitcode,6,6,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=test/test-not-exists.cfg -l test/test*.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	#
-	# test not implemented functions
-	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) device://test/test.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -t device://test/test.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d device://test/test.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -x device://test/test.bar $(if $(QUIET),</dev/null 1>/dev/null))
-	#
-	@$(RMF) test/test.cfg
-	@$(ECHO) "ok"
-
-test_parameters-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_parameters
-
-test_parameters-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_parameters
-
-test_misc: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	@$(ECHO_NO_LF) "Test miscellaneous..."
-	@$(RMRF) $(TEST_FILES_CLEAN)
-	#
-	if test ! "$(TEST_BAR)" = "$(TEST_BAR_VALGRIND)"; then \
-	  $(call functionTestCheckExitcode,134,134,($(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/test.bar $(TEST_FILES) --overwrite-archive-files $(if $(QUIET),</dev/null 1>/dev/null))); \
-        fi
-
-test_misc-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_misc
-        
-test_misc-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS)" TEST_BAR=$(TEST_BAR_VALGRIND) test_misc        
-
-show_debug_test_code test_code:
-	@$(FIND) . -maxdepth 1 -type f -a \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -print | \
-          ( \
-            while read fileName; do \
-              cat $$fileName | $(PERL) -n -e 'if (/DEBUG_TEST_CODE\("(.*)"\)/) { print "'$$fileName': $$1=1\n"; };'; \
-            done; \
-          )
 
 run_debug_test_code:
 	$(call functionTestCheckExitcode,125,125,initAll1=1 $(TEST_BAR))
@@ -2030,193 +1028,6 @@ run_debug_test_code:
 	$(call functionTestCheckExitcode,125,125,initAll10=1 $(TEST_BAR))
 	$(call functionTestCheckExitcode,125,125,initAll11=1 $(TEST_BAR))
 
-$(TEST_KEY_CRYPT_PUBLIC) $(TEST_KEY_CRYPT_PRIVATE): $(TEST_BAR)
-	$(RMF) $(TEST_KEY_CRYPT_PUBLIC) $(TEST_KEY_CRYPT_PRIVATE)
-	$(TEST_BAR) --generate-keys --crypt-password="$(TEST_PASSWORD_CRYPT)" test/key-crypt
-
-$(TEST_KEY_CRYPT_OTHER_PUBLIC) $(TEST_KEY_CRYPT_OTHER_PRIVATE): $(TEST_BAR)
-	$(RMF) $(TEST_KEY_CRYPT_OTHER_PUBLIC) $(TEST_KEY_CRYPT_OTHER_PRIVATE)
-	$(TEST_BAR) --generate-keys --crypt-password="$(TEST_PASSWORD_CRYPT)" test/key-crypt-other
-
-$(TEST_KEY_SIGNATURE_PUBLIC) $(TEST_KEY_SIGNATURE_PRIVATE): $(TEST_BAR)
-	$(RMF) $(TEST_KEY_SIGNATURE_PUBLIC) $(TEST_KEY_SIGNATURE_PRIVATE)
-	$(TEST_BAR) --generate-signature-keys test/key-signature
-
-$(TEST_KEY_SIGNATURE_OTHER_PUBLIC) $(TEST_KEY_SIGNATURE_OTHER_PRIVATE): $(TEST_BAR)
-	$(RMF) $(TEST_KEY_SIGNATURE_OTHER_PUBLIC) $(TEST_KEY_SIGNATURE_OTHER_PRIVATE)
-	$(TEST_BAR) --generate-signature-keys test/key-signature-other
-
-$(TEST_DATA_DIR)/data/zero128.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1 count=128 2>/dev/null
-$(TEST_DATA_DIR)/data/zero1024.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1 count=1024 2>/dev/null
-$(TEST_DATA_DIR)/data/zero512k.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1k count=512 2>/dev/null
-$(TEST_DATA_DIR)/data/random128.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1 count=128 2>/dev/null
-$(TEST_DATA_DIR)/data/random1024.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1 count=1024 2>/dev/null
-$(TEST_DATA_DIR)/data/random512k.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=512 2>/dev/null
-$(TEST_DATA_DIR)/data/zero-random512k.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) bs=1k count=64 1>$@  2>/dev/null
-	$(DD) if=$(DEVICE_ZERO)   bs=1k count=64 1>>$@ 2>/dev/null
-	$(DD) if=$(DEVICE_RANDOM) bs=1k count=64 1>>$@ 2>/dev/null
-	$(DD) if=$(DEVICE_ZERO)   bs=1k count=64 1>>$@ 2>/dev/null
-	$(DD) if=$(DEVICE_RANDOM) bs=1k count=64 1>>$@ 2>/dev/null
-	$(DD) if=$(DEVICE_ZERO)   bs=1k count=64 1>>$@ 2>/dev/null
-	$(DD) if=$(DEVICE_RANDOM) bs=1k count=64 1>>$@ 2>/dev/null
-	$(DD) if=$(DEVICE_ZERO)   bs=1k count=64 1>>$@ 2>/dev/null
-$(TEST_DATA_DIR)/data/zero.dat:
-	$(INSTALL) -d $(@D)
-	$(RMF) $0; touch $@
-$(TEST_DATA_DIR)/data/readonly.dat:
-	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >$@; $(CHMOD) 440 $@
-$(TEST_DATA_DIR)/data/readonly512k.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=512 2>/dev/null; $(CHMOD) 440 $@
-$(TEST_DATA_DIR)/data/unreadable.dat:
-	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >$@; $(CHMOD) 000 $@
-$(TEST_DATA_DIR)/data/smallfile.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1 count=128 2>/dev/null
-$(TEST_DATA_DIR)/data/sub_dir:
-	$(INSTALL) -d $(@D)
-	$(RMRF) $@; $(INSTALL) -d $@; $(ECHO) Hello World >$@/test.dat
-$(TEST_DATA_DIR)/data/sub_ignore_dir:
-	$(INSTALL) -d $(@D)
-	$(RMRF) $@; $(INSTALL) -d $@; $(ECHO) Hello World >$@/test.dat
-	touch $@/.nobackup
-$(TEST_DATA_DIR)/data/linkdata.dat $(TEST_DATA_DIR)/data/link.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$(TEST_DATA_DIR)/data/linkdata.dat bs=1k count=512 2>/dev/null
-	($(CD) $(@D); $(RMF) link.dat; $(LN) -s linkdata.dat link.dat)
-$(TEST_DATA_DIR)/data/link_not_existing_file.dat:
-	$(INSTALL) -d $(@D)
-	($(CD) $(TEST_DATA_DIR)/data; $(RMF) link_not_existing_file.dat; $(LN) -s not-existing-file link_not_existing_file.dat)
-$(TEST_DATA_DIR)/data/circular_link.dat.marker:
-	$(INSTALL) -d $(@D)
-	($(CD) $(TEST_DATA_DIR)/data; $(LN) -s circular_link.dat circular_link.dat)
-	touch $@
-$(TEST_DATA_DIR)/data/hardlinkdata.dat $(TEST_DATA_DIR)/data/hardlink.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$(TEST_DATA_DIR)/data/hardlinkdata.dat bs=1k count=512 2>/dev/null
-	($(CD) $(@D); $(RMF) hardlink.dat; $(LN) hardlinkdata.dat hardlink.dat)
-$(TEST_DATA_DIR)/data/file400.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 400 $@
-$(TEST_DATA_DIR)/data/file640.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 640 $@
-$(TEST_DATA_DIR)/data/file644.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 644 $@
-$(TEST_DATA_DIR)/data/file664.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 664 $@
-$(TEST_DATA_DIR)/data/file666.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 666 $@
-$(TEST_DATA_DIR)/data/nodump.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 440 $@; $(CHATTR) +d $@
-ifneq ($(ATTR),)
-$(TEST_DATA_DIR)/data/extended_attribute.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(ATTR) -s foo1 -V test $@ 1>/dev/null; $(ATTR) -s foo2 -V "Hello World" $@ 1>/dev/null
-$(TEST_DATA_DIR)/data/sub_dir_extended_attribute:
-	$(INSTALL) -d $(@D)
-	$(RMRF) $@; $(INSTALL) -d $@; $(ATTR) -s foo1 -V test $@ 1>/dev/null; $(ATTR) -s foo2 -V "Hello World" $@ 1>/dev/null
-$(TEST_DATA_DIR)/data/hardlinkdata_extended_attribute.dat $(TEST_DATA_DIR)/data/hardlink_extended_attribute.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$(TEST_DATA_DIR)/data/hardlinkdata_extended_attribute.dat bs=1 count=1024 2>/dev/null
-	($(CD) $(@D); $(RMF) hardlink_extended_attribute.dat; $(LN) hardlinkdata_extended_attribute.dat hardlink_extended_attribute.dat); $(ATTR) -s foo1 -V test $(TEST_DATA_DIR)/data/hardlink_extended_attribute.dat 1>/dev/null; $(ATTR) -s foo2 -V "Hello World" $(TEST_DATA_DIR)/data/hardlink_extended_attribute.dat 1>/dev/null
-else
-ifneq ($(SETFATTR),)
-$(TEST_DATA_DIR)/data/extended_attribute.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=1 2>/dev/null; $(ATTR) -s foo1 -V test $@ 1>/dev/null; $(SETFATTR) -n foo2 -v "Hello World" $@ 1>/dev/null
-$(TEST_DATA_DIR)/data/sub_dir_extended_attribute:
-	$(INSTALL) -d $(@D)
-	$(RMRF) $@; $(INSTALL) -d $@; $(SETFATTR) -s foo1 -V test $@ 1>/dev/null; $(ATTR) -n foo2 -v "Hello World" $@ 1>/dev/null
-$(TEST_DATA_DIR)/data/hardlinkdata_extended_attribute.dat $(TEST_DATA_DIR)/data/hardlink_extended_attribute.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$(TEST_DATA_DIR)/data/hardlinkdata_extended_attribute.dat bs=1 count=1024 2>/dev/null
-	($(CD) $(@D); $(RMF) hardlink_extended_attribute.dat; $(LN) hardlinkdata_extended_attribute.dat hardlink_extended_attribute.dat); $(SETFATTR) -s foo1 -V test $(TEST_DATA_DIR)/data/hardlink_extended_attribute.dat 1>/dev/null; $(ATTR) -n foo2 -v "Hello World" $(TEST_DATA_DIR)/data/hardlink_extended_attribute.dat 1>/dev/null
-endif
-endif
-$(TEST_DATA_DIR)/data/immutable.dat:
-	$(INSTALL) -d $(@D)
-	$(ECHO) An immutable file >$@; $(SUDO) $(CHATTR) +i $@ 1>/dev/null
-$(TEST_DATA_DIR)/data/append-only.dat:
-	$(INSTALL) -d $(@D)
-	$(ECHO) Append-only file >$@; $(SUDO) $(CHATTR) +a $@ 1>/dev/null
-$(TEST_DATA_DIR)/data/fifo:
-	$(INSTALL) -d $(@D)
-	($(CD) $(TEST_DATA_DIR)/data; $(MKFIFO) fifo)
-$(TEST_DATA_DIR)/data/data\'.dat:
-	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >$@
-$(TEST_DATA_DIR)/data/data\".dat:
-	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >$@
-$(TEST_DATA_DIR)/data/data\\.dat:
-	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >$@
-$(TEST_DATA_DIR)/data/data\\n.dat:
-	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >$@
-$(TEST_DATA_DIR)/data/data%d%f%s%p.dat:
-	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >$@
-$(TEST_DATA_DIR)/data/data%d%f%s%p.dat:
-	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >$@
-$(TEST_DATA_DIR)/data/delta1/test.dat:
-	$(INSTALL) -d $(@D)
-	( \
-         $(DD) if=$(DEVICE_RANDOM) bs=1k count=512 2>/dev/null; \
-        ) >$@
-$(TEST_DATA_DIR)/data/delta2/test.dat: $(TEST_DATA_DIR)/data/delta1/test.dat
-	$(INSTALL) -d $(@D)
-	( \
-          $(DD) if=$(TEST_DATA_DIR)/data/delta1/test.dat skip=0 bs=1k count=255 2>/dev/null; \
-          $(DD) if=$(DEVICE_RANDOM) bs=1k count=1 2>/dev/null; \
-          $(DD) if=$(TEST_DATA_DIR)/data/delta1/test.dat skip=256 bs=1k count=256 2>/dev/null; \
-        ) >$@
-
-$(TEST_DATA_DIR)/data_huge/zero5G.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1M count=5120 2>/dev/null
-$(TEST_DATA_DIR)/data_huge/random5G.dat:
-	$(INSTALL) -d $(@D)
-	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1M count=5120 2>/dev/null
-
-test/bar.cfg:
-	$(INSTALL) -d $(@D)
-	( \
-          echo '# bar test configuration'; \
-        ) >$@
-	$(CHMOD) 600 $@
-
-$(TEST_SERVER_DATABASE): \
-  $(TEST_BAR_SQLITE3)
-	@$(call functionVerifyParameter,TEST_SERVER_DATABASE)
-	@
-	$(INSTALL) -d $(@D)
-	$(TEST_BAR_SQLITE3) --create $(TEST_SERVER_DATABASE) "INSERT INTO entities (id,jobUUID) VALUES (1,'test')"
-
-$(TEST_DATA_DIR)/data/zero128.dat:
-
 # helper function to check if parameter exists
 # call functionVerifyParameter,<name>[,message]
 functionVerifyParameter = \
@@ -2228,1757 +1039,6 @@ functionVerifyParameter = \
     fi; \
     exit 1; \
   fi
-
-.PHONY: test_file_operations
-test_file_operations: \
-  test_file_operations_base \
-  test_file_operations_delta \
-  test_file_operations_incremental \
-  test_file_operations_differential \
-  test_file_operations_destroyed
-
-.PHONY: test_file_operations_base test_file_operations_delta test_file_operations_dryrun test_file_operations_incremental test_file_operations_differential test_file_operations_destroyed
-test_file_operations_base: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	# normal tests
-	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,BAR_FILE)
-	#
-	$(RMRF) $(TEST_FILES_CLEAN)
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -l $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -x $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination $(TEST_DATA_DIR)/restore $(if $(QUIET),</dev/null 1>/dev/null))
-	$(DIFF) -r \
-          -x unreadable.dat \
-          -x link_not_existing_file.dat \
-          -x circular_link.dat \
-          -x circular_link.dat.marker \
-          -x fifo \
-          -x sub_ignore_dir \
-          -x nodump.dat \
-          $(TEST_DATA_DIR)/data $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data
-	$(READLINK) $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data/link.dat 2>/dev/null $(if $(QUIET),</dev/null 1>/dev/null)
-	test `$(STAT) --format "%a" $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data/file400.dat 2>/dev/null` = "400" $(if $(QUIET),</dev/null 1>/dev/null)
-	test `$(STAT) --format "%a" $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data/file640.dat 2>/dev/null` = "640" $(if $(QUIET),</dev/null 1>/dev/null)
-	test `$(STAT) --format "%a" $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data/file644.dat 2>/dev/null` = "644" $(if $(QUIET),</dev/null 1>/dev/null)
-	test `$(STAT) --format "%a" $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data/file664.dat 2>/dev/null` = "664" $(if $(QUIET),</dev/null 1>/dev/null)
-	test `$(STAT) --format "%a" $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data/file666.dat 2>/dev/null` = "666" $(if $(QUIET),</dev/null 1>/dev/null)
-	test `$(STAT) --format "%h" $(TEST_DATA_DIR)/restore/$(TEST_DATA_DIR)/data/hardlink.dat 2>/dev/null` -eq 2 $(if $(QUIET),</dev/null 1>/dev/null)
-
-test_file_operations_delta: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-ifeq (@HAVE_XDELTA@,1)
-	# delta tests
-	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,BAR_FILE)
-	@$(call functionVerifyParameter,BAR_PATTERN)
-	#
-	$(RMRF) $(TEST_FILES_CLEAN)
-	($(CD) $(TEST_DATA_DIR)/data/delta1; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-A.bar test.dat $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	#
-	$(RMF) test/$(BAR_PATTERN)-B.bar test/restore/test.dat
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar test.dat --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),</dev/null 1>/dev/null))
-	$(DIFF) $(TEST_DATA_DIR)/data/delta2/test.dat test/restore/test.dat
-	#
-	$(RMF) test/$(BAR_PATTERN)-B.bar test/restore/test.dat
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),</dev/null 1>/dev/null))
-	$(DIFF) $(TEST_DATA_DIR)/data/delta2/test.dat test/restore/test.dat
-	#
-ifeq (@HAVE_BZ2@,1)
-	$(RMF) test/$(BAR_PATTERN)-B.bar test/restore/test.dat
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),</dev/null 1>/dev/null))
-	$(DIFF) $(TEST_DATA_DIR)/data/delta2/test.dat test/restore/test.dat
-endif
-	#
-ifeq (@HAVE_LZMA@,1)
-	$(RMF) test/$(BAR_PATTERN)-B.bar test/restore/test.dat
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),</dev/null 1>/dev/null))
-	$(DIFF) $(TEST_DATA_DIR)/data/delta2/test.dat test/restore/test.dat
-endif
-endif
-
-test_file_operations_dryrun: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	# normal tests
-	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,BAR_FILE)
-	#
-	$(RMRF) $(TEST_FILES_CLEAN)
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --dry-run --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-
-test_file_operations_incremental: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	# incremental tests
-	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,BAR_FILE)
-	#
-	$(RMRF) $(TEST_FILES_CLEAN)
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	$(INSTALL) -d test/new; $(CP) $(TEST_DATA_DIR)/data/random1024.dat test/new/random1024-new.dat
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=test/$(BAR_FILE).bid $(TEST_FILES) test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),</dev/null 1>/dev/null))
-
-test_file_operations_differential: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	# differential tests
-	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,BAR_FILE)
-	#
-	$(RMRF) $(TEST_FILES_CLEAN)
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	$(INSTALL) -d test/new; $(CP) $(TEST_DATA_DIR)/data/random1024.dat test/new/random1024-new.dat
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE)-differential.bar --differential --incremental-list-file=test/$(BAR_FILE).bid $(TEST_FILES) test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),</dev/null 1>/dev/null))
-
-.PHONY: test_file_operations_destroyed
-test_file_operations_destroyed: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_DESTROYER) \
-  $(TEST_FILES)
-	# tests which must cause errors
-	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,BAR_FILE)
-	#
-	$(RMRF) $(TEST_FILES_CLEAN)
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c test/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:16:FIL0 >$${fileName}_destroyed; done
-	- `($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test*.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null)` $(if $(QUIET),</dev/null 1>/dev/null)
-	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:20:XXXX >$${fileName}_destroyed; done
-	- `($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null)` $(if $(QUIET),</dev/null 1>/dev/null)
-	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:32:XXXX >$${fileName}_destroyed; done
-	- `($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null)` $(if $(QUIET),</dev/null 1>/dev/null)
-	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName d:1000:10 >$${fileName}_destroyed; done
-	- `($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null)` $(if $(QUIET),</dev/null 1>/dev/null)
-
-.PHONY: test_convert_operations
-test_convert_operations: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,BAR_FILE)
-	#
-	$(RMRF) $(TEST_FILES_CLEAN)
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --compress-algorithm=zip9 --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) | $(GREP) -i zip9`")
-	#
-ifeq (@HAVE_GCRYPT@,1)
-	$(RMRF) $(TEST_FILES_CLEAN)
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --crypt-algorithm=none --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-new-password='$(TEST_PASSWORD_CRYPT)' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --convert $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-new-password='test' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='test' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-endif
-
-# helper function to create a test device
-# call functionTestDeviceReset
-functionTestDeviceReset = \
-  @( \
-    $(ECHO) $(SUDO) $(UMOUNT) test/dev0; \
-    $(SUDO) $(UMOUNT) test/dev0 2>/dev/null; \
-    $(ECHO) $(SUDO) $(UMOUNT) test/dev1; \
-    $(SUDO) $(UMOUNT) test/dev1 2>/dev/null; \
-    $(ECHO) $(SUDO) $(LOSETUP) -d $(LOOP0); \
-    $(SUDO) $(LOSETUP) -d $(LOOP0) 2>/dev/null; \
-    $(ECHO) $(SUDO) $(LOSETUP) -d $(LOOP1); \
-    $(SUDO) $(LOSETUP) -d $(LOOP1) 2>/dev/null; \
-    true; \
-  ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-
-# helper function to create test file with data
-# call functionCreateFileZero,<file>,<size>
-functionCreateFileZero = \
-  @( \
-    $(ECHO) $(DD) if=$(DEVICE_ZERO) of=$1 bs=$2 count=1; \
-    $(DD) if=$(DEVICE_ZERO) of=$1 bs=$2 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-  ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-
-# helper function to create huge spare test file
-# call functionCreateFileSpare,<file>,<size>
-functionCreateFileSpare = \
-  @( \
-    $(ECHO) $(DD) if=$(DEVICE_ZERO) of=$1 seek=$2 bs=1 count=1; \
-    $(DD) if=$(DEVICE_ZERO) of=$1 seek=$2 bs=1 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-  ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-
-# helper function to create test file with data
-# call functionCreateFileRandom,<file>,<size>
-functionCreateFileRandom = \
-  @( \
-    $(ECHO) $(DD) if=$(DEVICE_RANDOM) of=$1 bs=$2 count=1; \
-    $(DD) if=$(DEVICE_RANDOM) of=$1 bs=$2 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-  ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-
-# helper function to create a test device
-# call functionTestDeviceCreate,<loop device>,<image file>,<mount point>
-functionTestDeviceCreate = \
-  @( \
-    $(ECHO) $(SUDO) $(LOSETUP) $1 $2; \
-    $(SUDO) $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(ECHO) $(SUDO) $(CHMOD) o+rw $1; \
-    $(SUDO) $(CHMOD) o+rw $1; \
-  ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-
-# helper function to delete a test device
-# call functionTestDeviceDelete,<loop device>,<mount point>
-functionTestDeviceDelete = \
-  @( \
-    $(ECHO) $(SUDO) $(LOSETUP) -d $1; \
-    $(SLEEP) 5; \
-    $(SUDO) $(LOSETUP) -d $1; \
-  ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-
-# helper function to initialize file system on a test device
-# call functionInitFilesystem,<image file>,<mkfs options>[,<files>]
-functionInitFilesystem = \
-  @( \
-    $(ECHO) $(SUDO) $(LOSETUP) $(LOOP0) $1; \
-    $(SUDO) $(LOSETUP) $(LOOP0) $1; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(ECHO) $(SUDO) $(CHMOD) o+rw $(LOOP0); \
-    $(SUDO) $(CHMOD) o+rw $(LOOP0); \
-    $(ECHO) $(SUDO) $(MKFS) $2 $(LOOP0); \
-    $(SUDO) $(MKFS) $2 $(LOOP0) 1>/dev/null 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(if $3,$(ECHO) $(INSTALL) -d test/dev0; \
-            $(INSTALL) -d test/dev0; \
-            $(ECHO) $(SUDO) $(MOUNT) $(LOOP0) test/dev0; \
-            $(SUDO) $(MOUNT) $(LOOP0) test/dev0; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-            $(ECHO) $(SUDO) $(CP) -r -p $3 test/dev0; \
-            $(SUDO) $(CP) -r -p $3 test/dev0 1>/dev/null 2>/dev/null; \
-            $(SLEEP) 5; \
-            $(ECHO) $(SUDO) $(UMOUNT) test/dev0; \
-            $(SUDO) $(UMOUNT) test/dev0; \
-    ) \
-    $(ECHO) $(SUDO) $(LOSETUP) -d $(LOOP0); \
-    $(SLEEP) 5; \
-    $(SUDO) $(LOSETUP) -d $(LOOP0); \
-  ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-
-# helper function to create a test device
-# call functionDeviceMount,<loop device>,<image file>,<mount point>
-functionDeviceMount = \
-  @( \
-    $(ECHO) $(SUDO) $(LOSETUP) $1 $2; \
-    $(SUDO) $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(ECHO) $(SUDO) $(CHMOD) o+rw $1; \
-    $(SUDO) $(CHMOD) o+rw $1; \
-    $(ECHO) $(INSTALL) -d $3; \
-    $(INSTALL) -d $3; \
-    $(ECHO) $(SUDO) $(MOUNT) $1 $3; \
-    $(SUDO) $(MOUNT) $1 $3; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-  ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-
-# helper function to create a test device
-# call functionDeviceUmount,<loop device>,<mount point>
-functionDeviceUmount = \
-  @( \
-    $(ECHO) $(SUDO) $(UMOUNT) $2; \
-    $(SUDO) $(UMOUNT) $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(ECHO) $(SUDO) $(LOSETUP) -d $1; \
-    $(SLEEP) 5; \
-    $(SUDO) $(LOSETUP) -d $1; \
-  ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-
-# helper function to dump content of device to file
-# call functionTestDeviceDump,<loop device>,<file>
-functionTestDeviceDump = \
-  @( \
-    $(ECHO) $(SUDO) $(DD) if=$1 of=- \> $2; \
-    ($(SUDO) $(DD) if=$1 of=-) >$2 2>/dev/null; \
-  ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-
-.PHONY: test_image_operations
-test_image_operations: \
-  test_image_operations_raw \
-  test_image_operations_ext \
-  test_image_operations_fat \
-  test_image_operations_reiser
-
-.PHONY: test_image_operations_raw
-test_image_operations_raw:
-	# --------------------------------------------------------------
-	# raw
-	$(INSTALL) -d test
-	$(call functionTestDeviceReset)
-	@
-	# raw zero-data
-	$(call functionCreateFileZero,test/dev0.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_base
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# raw random-data
-	$(call functionCreateFileRandom,test/dev0.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_base
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# raw random-data, delta image
-	$(call functionCreateFileRandom,test/dev0a.dat,32M)
-	$(call functionCreateFileRandom,test/dev0b.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-
-.PHONY: test_image_ext test_image_ext2 test_image_ext3 test_image_ext4
-test_image_operations_ext: \
-  test_image_operations_ext2 \
-  test_image_operations_ext3 \
-  test_image_operations_ext4 
-
-# Ext2
-test_image_operations_ext2:
-ifneq (@MKFS_EXT2@,)
-	# --------------------------------------------------------------
-	# ext2
-	$(INSTALL) -d test
-	$(call functionTestDeviceReset)
-	@
-	# ext2 zero-data, default block size
-	$(call functionCreateFileZero,test/dev0.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# ext2 random-data, default block size
-	$(call functionCreateFileRandom,test/dev0.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# ext2 random-data, default block size, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext2,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext2,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-	@
-	@# ---
-	@
-	# ext2 zero-data, block size 1024 bytes
-	$(call functionCreateFileZero,test/dev0.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# ext2 random-data, block size 1024 bytes
-	$(call functionCreateFileRandom,test/dev0.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# ext2 random-data, block size 1024 bytes, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext2 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext2 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-	@
-	@# ---
-	@
-	# ext2 zero-data, block size 2048 bytes
-	$(call functionCreateFileZero,test/dev0.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# ext2 random-data, block size 2048 bytes
-	$(call functionCreateFileRandom,test/dev0.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# ext2 random-data, block size 2048 bytes, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext2 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext2 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-	@
-	@# ---
-	@
-	# ext2 zero-data, block size 4096 bytes
-	$(call functionCreateFileZero,test/dev0.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# ext2 random-data, block size 4096 bytes
-	$(call functionCreateFileRandom,test/dev0.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# ext2 random-data, block size 4096 bytes, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext2 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext2 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-endif
-
-# Ext3
-test_image_operations_ext3:
-ifneq (@MKFS_EXT3@,)
-	# --------------------------------------------------------------
-	# ext3
-	$(INSTALL) -d test
-	$(call functionTestDeviceReset)
-	#
-	# ext3 zero-data, default block size
-	$(call functionCreateFileZero,test/dev0.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# ext3 random-data, default block size
-	$(call functionCreateFileRandom,test/dev0.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# ext3 random-data, default block size, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext3,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext3,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-	@
-	@# ---
-	@
-	# ext3 zero-data, block size 1024 bytes
-	$(call functionCreateFileZero,test/dev0.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# ext3 random-data, block size 1024 bytes
-	$(call functionCreateFileRandom,test/dev0.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# ext3 random-data, default block size, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext3 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext3 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-	@
-	@# ---
-	@
-	# ext3 zero-data, block size 2048 bytes
-	$(call functionCreateFileZero,test/dev0.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# ext3 random-data, block size 2048 bytes
-	$(call functionCreateFileRandom,test/dev0.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# ext3 random-data, default block size, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext3 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext3 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-	@
-	@# ---
-	@
-	# ext3 zero-data, block size 4096 bytes
-	$(call functionCreateFileZero,test/dev0.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# ext3 random-data, block size 4096 bytes
-	$(call functionCreateFileRandom,test/dev0.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# ext3 random-data, default block size, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext3 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext3 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-endif
-
-# Ext4
-test_image_operations_ext4:
-ifneq (@MKFS_EXT4@,)
-	# --------------------------------------------------------------
-	# ext4
-	$(INSTALL) -d test
-	$(call functionTestDeviceReset)
-	#
-	# ext4 zero-data, default block size
-	$(call functionCreateFileZero,test/dev0.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# ext4 random-data, default block size
-	$(call functionCreateFileRandom,test/dev0.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# ext4 random-data, default block size, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext4,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext4,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-	@
-	@# ---
-	@
-	# ext4 zero-data, block size 1024 bytes
-	$(call functionCreateFileZero,test/dev0.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# ext4 random-data, block size 1024 bytes
-	$(call functionCreateFileRandom,test/dev0.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# ext4 random-data, default block size, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext4 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext4 -b 1024,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-	@
-	@# ---
-	@
-	# ext4 zero-data, block size 2048 bytes
-	$(call functionCreateFileZero,test/dev0.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# ext4 random-data, block size 2048 bytes
-	$(call functionCreateFileRandom,test/dev0.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# ext4 random-data, default block size, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext4 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext4 -b 2048,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-	@
-	@# ---
-	@
-	# ext4 zero-data, block size 4096 bytes
-	$(call functionCreateFileZero,test/dev0.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# ext4 random-data, block size 4096 bytes
-	$(call functionCreateFileRandom,test/dev0.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	#$(call functionCreateSpare,test/dev0.dat,512G)
-	#$(call functionCreateSpare,test/dev1.dat,512G)
-	#$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	#$(MAKE) test_image_operations_base \
-        #   DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
-	#$(call functionTestDeviceDelete,$(LOOP1),test/dev1)
-	#$(call functionTestDeviceDelete,$(LOOP0),test/dev0)
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# ext4 random-data, default block size, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t ext4 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t ext4 -b 4096,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-endif
-
-.PHONY: test_image_fat test_image_fat12 test_image_fat16 test_image_fat32
-test_image_operations_fat: \
-  test_image_operations_fat12 \
-  test_image_operations_fat16 \
-  test_image_operations_fat32
-
-# FAT 12
-test_image_operations_fat12:
-ifneq (@MKFS_MSDOS@,)
-	# --------------------------------------------------------------
-	# FAT12
-	$(INSTALL) -d test
-	$(call functionTestDeviceReset)
-	#
-	# FAT12 zero-data
-	$(call functionCreateFileZero,test/dev0.dat,1440K)
-	$(call functionCreateFileZero,test/dev1.dat,1440K)
-	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 12,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# FAT12 random-data
-	$(call functionCreateFileRandom,test/dev0.dat,1440K)
-	$(call functionCreateFileRandom,test/dev1.dat,1440K)
-	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 12,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# FAT12 random-data, default block size, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t msdos -F 12,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t msdos -F 12,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-endif
-
-# FAT 16
-test_image_operations_fat16:
-ifneq (@MKFS_MSDOS@,)
-	# --------------------------------------------------------------
-	# FAT16
-	$(INSTALL) -d test
-	$(call functionTestDeviceReset)
-	#
-	# FAT16 zero-data
-	$(call functionCreateFileZero,test/dev0.dat,20M)
-	$(call functionCreateFileZero,test/dev1.dat,20M)
-	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 16,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# FAT16 random-data
-	$(call functionCreateFileRandom,test/dev0.dat,20M)
-	$(call functionCreateFileRandom,test/dev1.dat,20M)
-	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 16,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# FAT16 random-data, default block size, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t msdos -F 16,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t msdos -F 16,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-endif
-
-# FAT 32
-test_image_operations_fat32:
-ifneq (@MKFS_MSDOS@,)
-	# --------------------------------------------------------------
-	# FAT32
-	$(INSTALL) -d test
-	$(call functionTestDeviceReset)
-	#
-	# FAT32 zero-data
-	$(call functionCreateFileZero,test/dev0.dat,40M)
-	$(call functionCreateFileZero,test/dev1.dat,40M)
-	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 32,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# FAT32 random-data
-	$(call functionCreateFileRandom,test/dev0.dat,40M)
-	$(call functionCreateFileRandom,test/dev1.dat,40M)
-	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 32,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# FAT32 random-data, default block size, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t msdos -F 32,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t msdos -F 32,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-endif
-
-.PHONY: test_image_reiser test_image_reiserfs1 test_image_reiserfs2 test_image_reiserfs3 test_image_reiser4
-test_image_operations_reiser: \
-  test_image_operations_reiserfs1 \
-  test_image_operations_reiserfs2 \
-  test_image_operations_reiserfs3 \
-  test_image_operations_reiser4
-
-test_image_operations_reiserfs1:
-ifneq (@MKFS_REISERFS@,)
-endif
-
-test_image_operations_reiserfs2:
-ifneq (@MKFS_REISERFS@,)
-endif
-
-# ReiserFS version 3 (Note: Linux only support block size 4096)
-test_image_operations_reiserfs3:
-ifneq (@MKFS_REISERFS@,)
-	# --------------------------------------------------------------
-	# ReiserFS 3
-	$(INSTALL) -d test
-	$(call functionTestDeviceReset)
-	#
-	# ReiserFS 3 zero-data
-	$(call functionCreateFileZero,test/dev0.dat,64M)
-	$(call functionCreateFileZero,test/dev1.dat,64M)
-	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.5,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          FSCK_OPTIONS="-n -y" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# ReiserFS 3 random-data
-	$(call functionCreateFileRandom,test/dev0.dat,64M)
-	$(call functionCreateFileRandom,test/dev1.dat,64M)
-	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.5,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          FSCK_OPTIONS="-n -y" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# ReiserFS 3 zero-data
-	$(call functionCreateFileZero,test/dev0.dat,64M)
-	$(call functionCreateFileZero,test/dev1.dat,64M)
-	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.6,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          FSCK_OPTIONS="-n -y" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# ReiserFS 3 random-data
-	$(call functionCreateFileRandom,test/dev0.dat,64M)
-	$(call functionCreateFileRandom,test/dev1.dat,64M)
-	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.6,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          FSCK_OPTIONS="-n -y" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# ReiserFS 3 random-data, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,64M)
-	$(call functionCreateFileZero,test/dev0b.dat,64M)
-	$(call functionCreateFileZero,test/dev1.dat,64M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t reiserfs -b 4096 -q --format 3.6,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t reiserfs -b 4096 -q --format 3.6,$(TEST_DATA_DIR)/data/random* $(TEST_DATA_DIR)/data/zero*.dat $(TEST_DATA_DIR)/data/readonly*.dat $(TEST_DATA_DIR)/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
-endif
-
-# Reiser4 (Note: not supported anymore)
-test_image_operations_reiser4:
-ifneq (@MKFS_REISER4@,)
-endif
-
-.PHONY: test_image_operations_base test_image_operations_check test_image_operations_diff_image
-test_image_operations_base: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	# normal tests
-	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,IMAGE0)
-	@$(call functionVerifyParameter,IMAGE1)
-	@$(call functionVerifyParameter,DEVICE0)
-	@$(call functionVerifyParameter,DEVICE1)
-	@$(call functionVerifyParameter,BAR_FILE)
-	@
-	@# ---
-	$(RMRF) $(TEST_FILES_CLEAN)
-	@
-	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0),test/dev0)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m test/$(BAR_FILE).bar $(DEVICE0) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null)
-	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
-	@
-	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),</dev/null 1>/dev/null)
-	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
-
-test_image_operations_delta: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	# delta tests
-	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,IMAGE0_A)
-	@$(call functionVerifyParameter,IMAGE0_B)
-	@$(call functionVerifyParameter,IMAGE1)
-	@$(call functionVerifyParameter,DEVICE0)
-	@$(call functionVerifyParameter,DEVICE1)
-	@$(call functionVerifyParameter,BAR_FILE)
-	@$(call functionVerifyParameter,BAR_PATTERN)
-	@
-	@# ---
-	$(RMRF) $(TEST_FILES_CLEAN)
-	@
-	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_A),test/dev0)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null)
-	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
-	@
-ifeq (@HAVE_XDELTA@,1)
-	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_B),test/dev0)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null)
-	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
-endif
-	@
-	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),</dev/null 1>/dev/null)
-	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
-	@
-	@# ---
-	$(RMRF) $(TEST_FILES_CLEAN)
-	@
-	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_A),test/dev0)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --compress-algorithm=zip9 --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null)
-	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
-	@
-ifeq (@HAVE_XDELTA@,1)
-	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_B),test/dev0)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null)
-	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
-endif
-	@
-	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),</dev/null 1>/dev/null)
-	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
-
-test_image_operations_check:
-	# check file systems and compare file content
-	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,IMAGE0)
-	@$(call functionVerifyParameter,IMAGE1)
-	@$(call functionVerifyParameter,DEVICE0)
-	@$(call functionVerifyParameter,DEVICE1)
-	@
-	@# ---
-	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0),test/dev0)
-	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(DEVICE0) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
-	@
-	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
-	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(DEVICE1) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
-	@
-	$(call functionDeviceMount,$(DEVICE0),$(IMAGE0),test/dev0)
-	$(call functionDeviceMount,$(DEVICE1),$(IMAGE1),test/dev1)
-	$(SUDO) $(DIFF) -r test/dev0 test/dev1 $(if $(QUIET),</dev/null 1>/dev/null)
-	$(SLEEP) 5
-	$(call functionDeviceUmount,$(DEVICE0),test/dev0)
-	$(call functionDeviceUmount,$(DEVICE1),test/dev1)
-
-test_image_operations_diff_image:
-	# compare devices
-	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,IMAGE0)
-	@$(call functionVerifyParameter,IMAGE1)
-	@$(call functionVerifyParameter,DEVICE0)
-	@$(call functionVerifyParameter,DEVICE1)
-	@
-	@# ---
-	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0),test/dev0)
-	$(call functionTestDeviceDump,$(DEVICE0),test/dev0.dump)
-	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
-	@
-	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
-	$(call functionTestDeviceDump,$(DEVICE1),test/dev1.dump)
-	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
-	@
-	$(DIFF) test/dev0.dump test/dev1.dump
-
-.PHONY: test_image_operations_dryrun
-test_image_operations_dryrun: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	# delta tests
-	@$(call functionVerifyParameter,TEST_BAR)
-	#
-	$(INSTALL) -d test
-	$(call functionTestDeviceReset)
-	@
-	# raw zero-data
-	$(call functionCreateFileZero,test/dev0.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images --dry-run) $(OPTIONS)" \
-          test_image_operations_base
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# raw random-data
-	$(call functionCreateFileRandom,test/dev0.dat,32M)
-	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images --dry- $(OPTIONS)run)" \
-          test_image_operations_base
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-
-
-.PHONY: test_hugefiles_operations
-test_hugefiles_operations: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_HUGEFILES)
-	# normal tests
-	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,BAR_FILE)
-	#
-	$(RMRF) $(TEST_FILES_CLEAN)
-	$(INSTALL) -d $(TEST_DATA_DIR)/tmp
-	for z in $(TEST_HUGEFILES); do \
-          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $$z $(BAR_OPTIONS) --overwrite-archive-files --tmp-directory=$(TEST_DATA_DIR)/tmp --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null); \
-          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -l $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null); \
-          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null); \
-          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) $(if $(QUIET),</dev/null 1>/dev/null); \
-          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -x $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),</dev/null 1>/dev/null); \
-        done
-
-.PHONY: test_dvd_operations
-test_dvd_operations: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	# create DVD
-	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,BAR_FILE)
-	@
-	@# ---
-	$(RMRF) $(TEST_FILES_CLEAN)
-	$(SLEEP) 30
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c dvd://$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) $(if $(QUIET),</dev/null 1>/dev/null)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t dvd://$(BAR_FILE).bar $(if $(QUIET),</dev/null 1>/dev/null)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d dvd://$(BAR_FILE).bar $(if $(QUIET),</dev/null 1>/dev/null)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L dvd://$(BAR_FILE).bar $(if $(QUIET),</dev/null 1>/dev/null)
-	$(SLEEP) 30
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c dvd://$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --ecc $(if $(QUIET),</dev/null 1>/dev/null)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t dvd://$(BAR_FILE).bar $(if $(QUIET),</dev/null 1>/dev/null)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d dvd://$(BAR_FILE).bar $(if $(QUIET),</dev/null 1>/dev/null)
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -L dvd://$(BAR_FILE).bar $(if $(QUIET),</dev/null 1>/dev/null)
-
-# send command to server
-functionServerCommandSocket = \
-  $(ECHO) $2; $(ECHO) 1 $2|$(NETCAT) $1|$(TAIL) -n +2
-functionServerCommandBatch = \
-  $(ECHO) 1 $1
-
-.PHONY: test_server_operations test_server_operations_socket test_server_operations_batch
-test_server_operations: \
-  test_server_operations_socket \
-
-#  test_server_operations_batch
-
-test_server_operations_socket_server: \
-  $(TEST_BAR_DEBUG) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	@$(call functionVerifyParameter,TEST_BAR_DEBUG)
-	@$(call functionVerifyParameter,BAR_FILE)
-	@
-	( \
-	  $(ULIMIT) -Sv $(MEMORY_LIMIT); \
-          \
-	  : start server; \
-          $(INSTALL) -d $(TEST_SERVER_DIRECTORY); \
-          $(INSTALL) -d $(TEST_SERVER_JOBS); \
-          $(INSTALL) bar.cfg $(TEST_SERVER_CONFIG); \
-          $(RMF) $(TEST_SERVER_JOBS)/__test__; \
-	  $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR_DEBUG) \
-	    $(TEST_OPTIONS) \
-            --daemon \
-	    --pid-file=$(TEST_SERVER_PID_FILE) \
-	    --server-port=$(TEST_SERVER_PORT) \
-	    --index-database=$(TEST_SERVER_DATABASE) \
-            --server-jobs-directory=$(TEST_SERVER_JOBS) \
-	    --server-debug \
-            --log-file=$(TEST_SERVER_LOG_FILE) \
-            --log=all \
-            --max-threads=1 \
-            $(ADDITIONAL_OPTIONS) \
-            ; \
-          if test $$? -eq 0; then \
-	    $(SLEEP) 20; \
-          else \
-            exit 1; \
-          fi; \
-        ) $(if $(QUIET),</dev/null 1>/dev/null)
-
-test_server_operations_socket_client: \
-  $(TEST_BAR_DEBUG) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	@$(call functionVerifyParameter,TEST_BAR_DEBUG)
-	@$(call functionVerifyParameter,BAR_FILE)
-	@
-	( \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),VERSION); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),STATUS); \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_LIST); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_OPTION_GET name=tmp-directory); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_OPTION_SET name=tmp-directory value=/tmp); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SERVER_OPTION_FLUSH); \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEVICE_LIST); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),ROOT_LIST); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),FILE_LIST directory=/tmp) 1>/dev/null; \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_LIST) 1>/dev/null; \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_NEW name=__test__ jobUUID=test); \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=test name=archive-part-size value=0); \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INCLUDE_LIST jobUUID=test); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),MOUNT_LIST jobUUID=test); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST jobUUID=test); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST jobUUID=test); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SOURCE_LIST jobUUID=test); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST jobUUID=test); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),ARCHIVE_LIST name=$(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar) 1>/dev/null; \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PAUSE time=300 modeMask=CREATE); \
-	  $(SLEEP) 2; \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),CONTINUE); \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DECRYPT_PASSWORD_CLEAR); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),FTP_PASSWORD encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),SSH_PASSWORD encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),WEBDAV_PASSWORD encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),CRYPT_PASSWORD jobUUID=test encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),PASSWORDS_CLEAR); \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_DELETE jobUUID=test); \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),STORAGE_LIST_CLEAR); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),STORAGE_LIST_ADD indexId=0); \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_ADD pattern=$(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar); \
-	  $(SLEEP) 2; \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_UUID_LIST indexStateSet='*' indexModeSet='*' name='*'); \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGES_INFO name='*' indexStateSet='*' indexModeSet='*'); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST name='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_ENTRIES_INFO name='*' indexType='*' newestOnly=yes); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
-	  $(SLEEP) 2; \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEBUG_PRINT_STATISTICS); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEBUG_PRINT_MEMORY_INFO); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),DEBUG_DUMP_MEMORY_INFO); \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),QUIT); \
-	  $(SLEEP) 20; \
-        ) $(if $(QUIET),</dev/null 1>/dev/null)
-
-test_server_operations_socket: \
-  $(TEST_FILES) \
-  $(TEST_SERVER_DATABASE)
-	# create test archive
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR_DEBUG) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	@$(MAKE) test_server_operations_socket_server
-	@$(MAKE) test_server_operations_socket_client
-	if test -f $(TEST_SERVER_PID_FILE); then $(KILL) -9 `$(CAT) $(TEST_SERVER_PID_FILE)` 2>/dev/null; fi; \
-
-test_server_operations_batch: \
-  $(TEST_BAR_DEBUG) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	@$(call functionVerifyParameter,TEST_BAR_DEBUG)
-	@$(call functionVerifyParameter,BAR_FILE)
-	@
-	# create test archive
-	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR_DEBUG) -c $(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
-	@
-	( \
-          $(call functionServerCommandBatch,VERSION); \
-          $(call functionServerCommandBatch,STATUS); \
-          \
-          $(call functionServerCommandBatch,JOB_LIST); \
-          \
-          $(call functionServerCommandBatch,PAUSE time=120 modeMask=ALL); \
-	  $(SLEEP) 2; \
-          $(call functionServerCommandBatch,CONTINUE); \
-          \
-          $(call functionServerCommandBatch,DECRYPT_PASSWORD_CLEAR); \
-          $(call functionServerCommandBatch,DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch,FTP_PASSWORD encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch,SSH_PASSWORD encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch,WEBDAV_PASSWORD encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch,CRYPT_PASSWORD jobUUID=test encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch,PASSWORDS_CLEAR); \
-          \
-          $(call functionServerCommandBatch,STORAGE_LIST_CLEAR); \
-          $(call functionServerCommandBatch,STORAGE_LIST_ADD uuid='*' enityId=0 storageId=0); \
-          \
-          $(call functionServerCommandBatch,INDEX_STORAGE_ADD pattern=$(if $(BAR_STORAGE),$(BAR_STORAGE),test/)$(BAR_FILE).bar); \
-	  $(SLEEP) 2; \
-          $(call functionServerCommandBatch,INDEX_UUID_LIST indexStateSet='*' indexModeSet='*' name='*'); \
-          \
-          $(call functionServerCommandBatch,INDEX_STORAGES_INFO name='*' indexStateSet='*'); \
-          $(call functionServerCommandBatch,INDEX_STORAGE_LIST entityId=0 name='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
-          \
-          $(call functionServerCommandBatch,INDEX_ENTRIES_INFO name='*' indexType='*' newestOnly=yes); \
-          $(call functionServerCommandBatch,INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
-	  $(SLEEP) 2; \
-          \
-          $(call functionServerCommandBatch,DEBUG_PRINT_STATISTICS); \
-          $(call functionServerCommandBatch,DEBUG_PRINT_MEMORY_INFO); \
-          $(call functionServerCommandBatch,DEBUG_DUMP_MEMORY_INFO); \
-          \
-          $(call functionServerCommandBatch,QUIT); \
-	  $(SLEEP) 60; \
-        ) | \
-        ( \
-	  $(ULIMIT) -Sv $(MEMORY_LIMIT); \
-	  $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR_DEBUG) \
-	    --batch \
-	    --index-database=$(TEST_SERVER_DATABASE) \
-	    --server-debug; \
-        ) $(if $(QUIET),</dev/null 1>/dev/null)
-
-.PHONY: test_master_slave_operations test_master_slave_operations_create
-test_master_slave_operations: \
-  test_master_slave_operations_create \
-
-test_master_slave_operations_master: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	@
-	( \
-	  $(ULIMIT) -Sv $(MEMORY_LIMIT); \
-          \
-	  : start master server; \
-          $(INSTALL) -d $(TEST_SERVER_DIRECTORY); \
-          $(INSTALL) -d $(TEST_SERVER_JOBS); \
-          $(INSTALL) -m 600 bar.cfg $(TEST_SERVER_CONFIG); \
-          $(RMF) $(TEST_SERVER_JOBS)/__test__; \
-	  $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
-	    $(TEST_OPTIONS) \
-            --daemon \
-            $(if $(TEST_DETACH),,-D) \
-	    --pid-file=$(TEST_SERVER_PID_FILE) \
-            --server-mode=master \
-	    --server-port=$(TEST_SERVER_PORT) \
-	    --index-database=$(TEST_SERVER_DATABASE) \
-            --server-jobs-directory=$(TEST_SERVER_JOBS) \
-	    --server-debug \
-            --log-file=$(TEST_SERVER_LOG_FILE) \
-            --log=all \
-            --max-threads=1 \
-            $(ADDITIONAL_OPTIONS) \
-            ; \
-          if test $$? -eq 0; then \
-	    $(SLEEP) 5; \
-          else \
-            exit 1; \
-          fi; \
-        ) $(if $(QUIET),</dev/null 1>/dev/null)
-
-test_master_slave_operations_slave: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	@$(call functionVerifyParameter,TEST_SLAVE_PORT)
-	@$(call functionVerifyParameter,TEST_SLAVE_USERNAME)
-	@$(call functionVerifyParameter,TEST_SLAVE_PASSWORD)
-	@
-	( \
-	  $(ULIMIT) -Sv $(MEMORY_LIMIT); \
-          \
-	  : start slave server; \
-          if test -n "$(TEST_SLAVE_HOST)"; then \
-            $(call functionSlaveExecute,$(KILLALL) $(TEST_BAR)); \
-            $(call functionSlaveCopy,$(TEST_BAR),$(TEST_BAR)); \
-            $(call functionSlaveExecute,$(INSTALL) -d $(TEST_SLAVE_DIRECTORY)); \
-            $(call functionSlaveExecute,$(INSTALL) -d $(TEST_SLAVE_JOBS)); \
-            $(call functionSlaveCopy,bar.cfg,$(TEST_SLAVE_CONFIG)); \
-            $(call functionSlaveExecute,$(RMF) $(TEST_SLAVE_JOBS)/__test__); \
-	    $(call functionSlaveExecute,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
-	      --no-default-config --config=$(TEST_SLAVE_CONFIG) \
-              --daemon \
-              $(if $(TEST_DETACH),,-D) \
-	      --pid-file=$(TEST_SLAVE_PID_FILE) \
-              --server-mode=slave \
-	      --server-port=$(TEST_SLAVE_PORT) \
-	      --index-database=$(TEST_SLAVE_DATABASE) \
-              --server-jobs-directory=$(TEST_SLAVE_JOBS) \
-	      --server-debug \
-              --log-file=$(TEST_SLAVE_LOG_FILE) \
-              --log=all \
-              --max-threads=1 \
-              $(ADDITIONAL_OPTIONS) \
-            ); \
-          else \
-            $(INSTALL) -d $(TEST_SLAVE_DIRECTORY); \
-            $(INSTALL) -d $(TEST_SLAVE_JOBS); \
-            $(INSTALL) -m 600 bar.cfg $(TEST_SLAVE_CONFIG); \
-            $(RMF) $(TEST_SLAVE_JOBS)/__test__; \
-	    $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
-	      --no-default-config --config=$(TEST_SLAVE_CONFIG) \
-              --daemon \
-              $(if $(TEST_DETACH),,-D) \
-	      --pid-file=$(TEST_SLAVE_PID_FILE) \
-              --server-mode=slave \
-	      --server-port=$(TEST_SLAVE_PORT) \
-	      --index-database=$(TEST_SLAVE_DATABASE) \
-              --server-jobs-directory=$(TEST_SLAVE_JOBS) \
-	      --server-debug \
-              --log-file=$(TEST_SLAVE_LOG_FILE) \
-              --log=all \
-              --max-threads=1 \
-              $(ADDITIONAL_OPTIONS); \
-          fi; \
-          if test $$? -eq 0; then \
-	    $(SLEEP) 5; \
-          else \
-            exit 1; \
-          fi; \
-        ) $(if $(QUIET),</dev/null 1>/dev/null)
-
-test_master_slave_operations_create: \
-  $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_FILES)
-	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,BAR_FILE)
-	$(MAKE) test_master_slave_operations_slave TEST_DETACH=1
-	$(MAKE) test_master_slave_operations_master TEST_DETACH=1
-	@
-	( \
-$(call functionSlaveExecute,"ps auxw|grep bar"); \
-        ) $(if $(QUIET),</dev/null 1>/dev/null)
-	@
-	( \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_NEW name=__test__ jobUUID=test); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=test name=remote-host-name value=test); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INCLUDE_LIST jobUUID=test); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_FLUSH); \
-          \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_START jobUUID=test archiveType=NORMAL); \
-          for i in `seq 1 100`; do \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_STATUS jobUUID=test); \
-          $(SLEEP) 2; \
-          done; \
-        ) $(if $(QUIET),</dev/null 1>/dev/null)
-	@
-	@
-	@$(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),QUIT); \
-	@$(call functionSlaveExecute,"$(KILLALL) $(TEST_BAR)"); \
-
-# ----------------------------------------------------------------------------
 
 # code coverage analysis
 .PHONY: gcov coverage
@@ -4017,53 +1077,53 @@ gcov_html:
 	ln -sfT coverage/gcov.css gcov.css
 
 gcov1 gcov_basic: \
-  $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) \
+  $(BAR_GCOV)
+	@$(MAKE) TEST_BAR=$(BAR_GCOV) \
           test_basic 2>/dev/null
 
 gcov2 gcov_compress: \
-  $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES="zip0 bzip1 lzma1 lzo1 lz4-0" \
+  $(BAR_GCOV)
+	@$(MAKE) TEST_BAR=$(BAR_GCOV) COMPRESS_NAMES="zip0 bzip1 lzma1 lzo1 lz4-0" \
           test_compress 2>/dev/null
 
 gcov3 gcov_crypt: \
-  $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) CRYPT_NAMES=AES256 \
+  $(BAR_GCOV)
+	@$(MAKE) TEST_BAR=$(BAR_GCOV) CRYPT_NAMES=AES256 \
           test_crypt 2>/dev/null
 
 gcov4 gcov_asymmetric_crypt: \
-  $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) CRYPT_NAMES=AES256 \
+  $(BAR_GCOV)
+	@$(MAKE) TEST_BAR=$(BAR_GCOV) CRYPT_NAMES=AES256 \
           test_asymmetric_crypt 2>/dev/null
 
 gcov5 gcov_split: \
-  $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 \
+  $(BAR_GCOV)
+	@$(MAKE) TEST_BAR=$(BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 \
           test_split
 
 gcov6 gcov_image: \
-  $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 TEST_IMAGE_OPERATIONS="test_image_operations_raw test_image_operations_ext2 test_image_operations_fat16 test_image_operations_reiserfs3" \
+  $(BAR_GCOV)
+	@$(MAKE) TEST_BAR=$(BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 TEST_IMAGE_OPERATIONS="test_image_operations_raw test_image_operations_ext2 test_image_operations_fat16 test_image_operations_reiserfs3" \
           test_image
 
 gcov7 gcov_storage: \
-  $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 \
+  $(BAR_GCOV)
+	@$(MAKE) TEST_BAR=$(BAR_GCOV) COMPRESS_NAMES=zip0 CRYPT_NAMES=AES256 \
           test_storage
 
 gcov8 gcov_server: \
-  $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) \
+  $(BAR_GCOV)
+	@$(MAKE) TEST_BAR=$(BAR_GCOV) \
           test_server 2>/dev/null
 
 gcov9 gcov_parameters: \
-  $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) \
+  $(BAR_GCOV)
+	@$(MAKE) TEST_BAR=$(BAR_GCOV) \
           test_parameters 2>/dev/null
 
 gcov10 gcov_misc: \
-  $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR=$(TEST_BAR_GCOV) \
+  $(BAR_GCOV)
+	@$(MAKE) TEST_BAR=$(BAR_GCOV) \
           test_misc 2>/dev/null
 
 # ----------------------------------------------------------------------------
@@ -4071,7 +1131,7 @@ gcov10 gcov_misc: \
 # valgrind checks
 .PHONY: memcheck
 memcheck: \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
@@ -4084,7 +1144,7 @@ memcheck: \
 
 .PHONY: memcheck_extended
 memcheck_extended: \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
@@ -4097,7 +1157,7 @@ memcheck_extended: \
 
 .PHONY: memcheck1 memcheck2 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7 memcheck8
 memcheck1: \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
@@ -4107,7 +1167,7 @@ memcheck1: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) --help >/dev/null
+          $(BAR_VALGRIND) --help >/dev/null
 memcheck2: \
   memcheck2a \
   memcheck2b \
@@ -4115,7 +1175,7 @@ memcheck2: \
   memcheck2d \
   memcheck2e
 memcheck2a: \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
@@ -4125,9 +1185,9 @@ memcheck2a: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
+          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 memcheck2b: \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
@@ -4137,9 +1197,9 @@ memcheck2b: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=bzip9 --overwrite-archive-files >/dev/null
+          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=bzip9 --overwrite-archive-files >/dev/null
 memcheck2c: \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
@@ -4149,9 +1209,9 @@ memcheck2c: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --overwrite-archive-files >/dev/null
+          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --overwrite-archive-files >/dev/null
 memcheck2d: \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
@@ -4161,9 +1221,9 @@ memcheck2d: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/test/signature-key.public --signature-private-key=$(CURDIR)/test/signature-key.private --overwrite-archive-files >/dev/null
+          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --overwrite-archive-files >/dev/null
 memcheck2e: \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
@@ -4173,9 +1233,9 @@ memcheck2e: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test-###.bar $(TEST_FILES) $(BAR_OPTIONS) --archive-part-size=100000 --overwrite-archive-files >/dev/null
+          $(BAR_VALGRIND) -c intermediate/test-###.bar $(TEST_FILES) $(BAR_OPTIONS) --archive-part-size=100000 --overwrite-archive-files >/dev/null
 memcheck2f: \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
@@ -4185,81 +1245,81 @@ memcheck2f: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --dry-run >/dev/null
+          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --dry-run >/dev/null
 memcheck3:  \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
-	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
+	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -l test/test*.bar $(BAR_OPTIONS) >/dev/null
+          $(BAR_VALGRIND) -l intermediate/test*.bar $(BAR_OPTIONS) >/dev/null
 memcheck4: \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
-	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
+	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -t test/test*.bar $(BAR_OPTIONS) >/dev/null
+          $(BAR_VALGRIND) -t intermediate/test*.bar $(BAR_OPTIONS) >/dev/null
 memcheck5: \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
-	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
+	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -d test/test*.bar $(BAR_OPTIONS) >/dev/null
+          $(BAR_VALGRIND) -d intermediate/test*.bar $(BAR_OPTIONS) >/dev/null
 memcheck6: \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
-	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
+	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore >/dev/null
+          $(BAR_VALGRIND) -x intermediate/test*.bar $(BAR_OPTIONS) --destination intermediate/restore >/dev/null
 memcheck7: \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
-	$(TEST_BAR_VALGRIND) -c test/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
+	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	-$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) dvd:///dev/dvd $(BAR_OPTIONS) >/dev/null
+          $(BAR_VALGRIND) dvd:///dev/dvd $(BAR_OPTIONS) >/dev/null
 	-$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) dvd:///dev/dvd: $(BAR_OPTIONS) >/dev/null
+          $(BAR_VALGRIND) dvd:///dev/dvd: $(BAR_OPTIONS) >/dev/null
 memcheck8: \
-  $(TEST_BAR_VALGRIND) \
+  $(BAR_VALGRIND) \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
@@ -4269,7 +1329,7 @@ memcheck8: \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          $(TEST_BAR_VALGRIND) \
+          $(BAR_VALGRIND) \
             --daemon \
             --no-detach \
             --no-default-config \
@@ -4307,10 +1367,10 @@ PERFORMANCE_FILES = \
 
 # temporary performance files
 PERFORMANCE_FILES_CLEAN = \
-  test/*.bar \
-  test/new \
-  test/restore \
-  test/*.image
+  intermediate/*.bar \
+  intermediate/new \
+  intermediate/restore \
+  intermediate/*.image
 
 # test bar exeuctable
 PERFORMANCE_BAR = ./bar@EXEEXT@
@@ -4349,13 +1409,13 @@ performance1 performance_none: \
   $(PERFORMANCE_FILES)
 	@$(ECHO) "None (100M zero, 100M random):"
 	@$(ECHO_NO_LF) "  Create : "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=none 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=none 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Test   : "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t test/test.bar 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t intermediate/test.bar 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Diff   : "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d test/test.bar 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d intermediate/test.bar 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Extract: "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x test/test.bar --destination=test/restore --overwrite-files 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
 
 .PHONY: performance2 performance_zip_compress
 performance2 performance_zip_compress: \
@@ -4363,13 +1423,13 @@ performance2 performance_zip_compress: \
   $(PERFORMANCE_FILES)
 	@$(ECHO) "ZIP (100M zero, 100M random):"
 	@$(ECHO_NO_LF) "  Create : "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=zip9 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=zip9 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Test   : "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t test/test.bar 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t intermediate/test.bar 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Diff   : "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d test/test.bar 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d intermediate/test.bar 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Extract: "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x test/test.bar --destination=test/restore --overwrite-files 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
 
 .PHONY: performance3 performance_bzip2_compress
 performance3 performance_bzip2_compress: \
@@ -4377,13 +1437,13 @@ performance3 performance_bzip2_compress: \
   $(PERFORMANCE_FILES)
 	@$(ECHO) "BZIP2 (100M zero, 100M random):"
 	@$(ECHO_NO_LF) "  Create : "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=bzip9 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=bzip9 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Test   : "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t test/test.bar 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t intermediate/test.bar 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Diff   : "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d test/test.bar 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d intermediate/test.bar 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Extract: "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x test/test.bar --destination=test/restore --overwrite-files 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
 
 .PHONY: performance4 performance_lzma_compress
 performance4 performance_lzma_compress: \
@@ -4391,13 +1451,13 @@ performance4 performance_lzma_compress: \
   $(PERFORMANCE_FILES)
 	@$(ECHO) "LZMA (100M zero, 100M random):"
 	@$(ECHO_NO_LF) "  Create : "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=lzma9 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=lzma9 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Test   : "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t test/test.bar 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t intermediate/test.bar 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Diff   : "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d test/test.bar 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d intermediate/test.bar 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Extract: "
-	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x test/test.bar --destination=test/restore --overwrite-files 1>/dev/null 2>/dev/null"
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
 
 .PHONY: performance5 performance_delta_compress
 performance5 performance_delta_compress: \
@@ -4430,11 +1490,13 @@ TESTCODE_COMMAND1A=$(TEST_BAR_DEBUG) \
                      --crypt-type=asymmetric \
                      --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
                      --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
                      --archive-part-size=100K \
                      --overwrite-archive-files \
                      --full \
                      --log-post-command='true' \
-                     -c test/test-\#\#\#.bar $(TEST_DATA_DIR)/data
+                     -c intermediate/test-\#\#\#.bar $(TEST_DATA_DIR)/data
 TESTCODE_COMMAND1B=$(TEST_BAR_DEBUG) \
                      --compress-algorithm=lzma9 \
                      --crypt-algorithm=AES256 \
@@ -4442,12 +1504,14 @@ TESTCODE_COMMAND1B=$(TEST_BAR_DEBUG) \
                      --crypt-type=asymmetric \
                      --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
                      --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
                      --archive-part-size=100K \
                      --overwrite-archive-files \
                      --differential \
-                     --incremental-list-file=test/test.bid \
+                     --incremental-list-file=intermediate/test.bid \
                      --log-post-command='true' \
-                     -c test/test-\#\#\#.bar $(TEST_DATA_DIR)/data
+                     -c intermediate/test-\#\#\#.bar $(TEST_DATA_DIR)/data
 TESTCODE_COMMAND1C=$(TEST_BAR_DEBUG) \
                      --compress-algorithm=lzma9 \
                      --crypt-algorithm=AES256 \
@@ -4455,36 +1519,36 @@ TESTCODE_COMMAND1C=$(TEST_BAR_DEBUG) \
                      --crypt-type=asymmetric \
                      --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
                      --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                     --signature-public-key=$(CURDIR)/test/signature-key.public \
-                     --signature-private-key=$(CURDIR)/test/signature-key.private \
+                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
                      --archive-part-size=100K \
                      --overwrite-archive-files \
                      --incremental \
-                     --incremental-list-file=test/test.bid \
+                     --incremental-list-file=intermediate/test.bid \
                      --log-post-command='true' \
-                     -c test/test-\#\#\#.bar $(TEST_DATA_DIR)/data
+                     -c intermediate/test-\#\#\#.bar $(TEST_DATA_DIR)/data
 TESTCODE_COMMAND2=$(TEST_BAR_DEBUG) \
-                    --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                    --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                    --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                    --signature-public-key=$(CURDIR)/test/signature-key.public \
-                    --signature-private-key=$(CURDIR)/test/signature-key.private \
-                    -l test/test-*.bar
+                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
+                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     -l intermediate/test-*.bar
 TESTCODE_COMMAND3=$(TEST_BAR_DEBUG) \
-                    --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                    --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                    --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                    --signature-public-key=$(CURDIR)/test/signature-key.public \
-                    --signature-private-key=$(CURDIR)/test/signature-key.private \
-                    -d test/test-*.bar
+                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
+                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     -d intermediate/test-*.bar
 TESTCODE_COMMAND4=$(TEST_BAR_DEBUG) \
-                    --crypt-password=$(TEST_PASSWORD_CRYPT) \
-                    --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
-                    --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
-                    --signature-public-key=$(CURDIR)/test/signature-key.public \
-                    --signature-private-key=$(CURDIR)/test/signature-key.private \
-                    --destination=test/restore \
-                    -x test/test-*.bar
+                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
+                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     --destination=intermediate/restore \
+                     -x intermediate/test-*.bar
 
 TESTCODE_COMMANDS = \
   TESTCODE_COMMAND1A \
