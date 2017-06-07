@@ -233,8 +233,9 @@ LOCAL bool            batchFlag;
 
 LOCAL const char      *pidFileName;
 
-LOCAL String          keyFileName;
-LOCAL uint            keyBits;
+LOCAL String          generateKeyFileName;
+LOCAL uint            generateKeyBits;
+LOCAL uint            generateKeyMode;
 
 /*---------------------------------------------------------------------*/
 
@@ -293,6 +294,12 @@ LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] = CMD_VALUE_UNIT_ARRAY
 LOCAL const CommandLineUnit COMMAND_LINE_BITS_UNITS[] = CMD_VALUE_UNIT_ARRAY
 (
   {"K",1024LL},
+);
+
+LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_GENERATE_KEY_MODES[] = CMD_VALUE_SELECT_ARRAY
+(
+  {"secure",   CRYPT_KEY_MODE_NONE,     "secure keys"                 },
+  {"transient",CRYPT_KEY_MODE_TRANSIENT,"transient keys (less secure)"},
 );
 
 LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_SERVER_MODES[] = CMD_VALUE_SELECT_ARRAY
@@ -476,8 +483,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM         ("generate-keys",                0,  0,1,command,                                         NULL,COMMAND_GENERATE_ENCRYPTION_KEYS,                            "generate new public/private key pair for encryption"                      ),
   CMD_OPTION_ENUM         ("generate-signature-keys",      0,  0,1,command,                                         NULL,COMMAND_GENERATE_SIGNATURE_KEYS,                             "generate new public/private key pair for signature"                       ),
 //  CMD_OPTION_ENUM         ("new-key-password",             0,  1,1,command,                                         NULL,COMMAND_NEW_KEY_PASSWORD,                                   "set new private key password"                                             ),
-  CMD_OPTION_INTEGER      ("generate-keys-bits",           0,  1,1,keyBits,                                         NULL,MIN_ASYMMETRIC_CRYPT_KEY_BITS,
+  CMD_OPTION_INTEGER      ("generate-keys-bits",           0,  1,1,generateKeyBits,                                 NULL,MIN_ASYMMETRIC_CRYPT_KEY_BITS,
                                                                                                                          MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS,       "key bits",NULL                                                            ),
+  CMD_OPTION_SELECT       ("generate-keys-mode",           0,  1,2,generateKeyMode,                                 NULL,COMMAND_LINE_OPTIONS_GENERATE_KEY_MODES,                     "select generate key mode mode"                                            ),
   CMD_OPTION_STRING       ("job",                          0,  0,1,jobName,                                         NULL,                                                             "execute job","name"                                                       ),
 
   CMD_OPTION_ENUM         ("normal",                       0,  1,2,jobOptions.archiveType,                          NULL,ARCHIVE_TYPE_NORMAL,                                         "create normal archive (no incremental list file)"                         ),
@@ -3672,8 +3680,8 @@ LOCAL Errors initAll(void)
 
   // initialize variables
   AutoFree_init(&autoFreeList);
-  tmpDirectory = String_new();
-  pidFileName  = NULL;
+  tmpDirectory        = String_new();
+  pidFileName         = NULL;
   AUTOFREE_ADD(&autoFreeList,tmpDirectory,{ String_delete(tmpDirectory); });
 
   Semaphore_init(&consoleLock);
@@ -3864,8 +3872,9 @@ LOCAL Errors initAll(void)
 
   batchFlag                              = FALSE;
 
-  keyFileName                            = NULL;
-  keyBits                                = MIN_ASYMMETRIC_CRYPT_KEY_BITS;
+  generateKeyFileName                    = NULL;
+  generateKeyBits                        = MIN_ASYMMETRIC_CRYPT_KEY_BITS;
+  generateKeyMode                        = CRYPT_KEY_MODE_NONE;
 
   StringList_init(&configFileNameList);
 
@@ -3965,7 +3974,7 @@ LOCAL void doneAll(void)
   Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
   String_delete(tmpDirectory);
   StringList_done(&configFileNameList);
-  String_delete(keyFileName);
+  String_delete(generateKeyFileName);
 
   // deinitialize modules
   Server_doneAll();
@@ -8208,7 +8217,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
 
   // generate new key pair for encryption
   printInfo(1,"Create keys (collecting entropie)...");
-  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE,CRYPT_KEY_MODE_NONE);
+  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,generateKeyBits,CRYPT_PADDING_TYPE_NONE,generateKeyMode);
   if (error != ERROR_NONE)
   {
     printError("Cannot create encryption key pair (error: %s)!\n",Error_getText(error));
@@ -8405,7 +8414,8 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   }
 
   // generate new key pair for signature
-  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE,CRYPT_KEY_MODE_NONE);
+  printInfo(1,"Create keys (collecting entropie)...");
+  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,generateKeyBits,CRYPT_PADDING_TYPE_NONE,generateKeyMode);
   if (error != ERROR_NONE)
   {
     printError("Cannot create signature key pair (error: %s)!\n",Error_getText(error));
@@ -8416,6 +8426,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     String_delete(publicKeyFileName);
     return error;
   }
+  printInfo(1,"OK\n");
 
   // output keys
   if (keyFileBaseName != NULL)
