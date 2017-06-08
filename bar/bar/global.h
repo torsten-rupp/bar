@@ -1374,7 +1374,7 @@ static inline void *memClear(void *p, size_t n)
 *          n0,n1 - destination/source size [bytes]
 * Output : -
 * Return : p0
-* Notes  : -
+* Notes  : clear rest of memory in p0 if n0 > n1
 \***********************************************************************/
 
 static inline void *memCopy(void *p0, size_t n0, const void *p1, size_t n1)
@@ -1397,6 +1397,7 @@ static inline void *memCopy(void *p0, size_t n0, const void *p1, size_t n1)
     // memory do not overlap
     memcpy(p0,p1,n);
   }
+  if (n0 > n1) memset((byte*)p0+n,0,n0-n);
 
   return p0;
 }
@@ -1408,7 +1409,7 @@ static inline void *memCopy(void *p0, size_t n0, const void *p1, size_t n1)
 *          n0,n1 - destination/source size [bytes]
 * Output : -
 * Return : p0
-* Notes  : -
+* Notes  : clear rest of memory in p0 if n0 > n1
 \***********************************************************************/
 
 static inline void *memCopyFast(void *p0, size_t n0, const void *p1, size_t n1)
@@ -1424,7 +1425,7 @@ static inline void *memCopyFast(void *p0, size_t n0, const void *p1, size_t n1)
          && ((p1 < p0) || ((size_t)((byte*)p1-(byte*)p0)) >= n)
         );
   memcpy(p0,p1,n);
-  memset((byte*)p0+(n0-n),0,n0-n);
+  if (n0 > n1) memset((byte*)p0+n,0,n0-n);
 
   return p0;
 }
