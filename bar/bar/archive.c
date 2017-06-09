@@ -274,6 +274,7 @@ LOCAL Errors getCryptPassword(Password            *password,
 
   assert(password != NULL);
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(jobOptions != NULL);
 
@@ -528,9 +529,12 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
   const Password *password;
 
   assert(passwordHandle != NULL);
+  assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
   password = NULL;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&passwordHandle->archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     passwordHandle->archiveHandle       = archiveHandle;
     passwordHandle->jobCryptPassword    = jobOptions->cryptPassword;
@@ -868,6 +872,8 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator
   const CryptKey *decryptKey;
 
   assert(decryptKeyIterator != NULL);
+  assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
   decryptKey = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -906,6 +912,7 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle)
   Errors        error;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
@@ -1071,6 +1078,7 @@ LOCAL Errors cryptGetBlockLength(CryptAlgorithms *cryptAlgorithms,
 LOCAL bool chunkHeaderEOF(ArchiveHandle *archiveHandle)
 {
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
   return    !archiveHandle->nextChunkHeaderReadFlag
          && Chunk_eof(archiveHandle->chunkIO,archiveHandle->chunkIOUserData);
@@ -1147,6 +1155,7 @@ LOCAL void ungetNextChunkHeader(ArchiveHandle *archiveHandle, ChunkHeader *chunk
 LOCAL_INLINE bool isSplittedArchive(const ArchiveHandle *archiveHandle)
 {
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
@@ -1171,6 +1180,7 @@ LOCAL bool isNewPartNeeded(const ArchiveHandle *archiveHandle,
   uint64 archiveFileSize;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->chunkIO != NULL);
@@ -1218,6 +1228,7 @@ LOCAL void findNextArchivePart(ArchiveHandle *archiveHandle, IndexHandle *indexH
   uint64 storageSize;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
@@ -1365,6 +1376,7 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
   ChunkBAR chunkBAR;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(chunkHeader != NULL);
   assert(chunkHeader->id == CHUNK_ID_BAR);
 
@@ -1434,6 +1446,7 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
   void     *encryptedKeyData;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(chunkHeader != NULL);
   assert(chunkHeader->id == CHUNK_ID_KEY);
 
@@ -1553,6 +1566,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   CryptInfo      cryptInfo;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
@@ -1724,6 +1738,7 @@ LOCAL Errors writeEncryptionKey(ArchiveHandle *archiveHandle)
   ChunkKey chunkKey;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(Semaphore_isOwned(&archiveHandle->chunkIOLock));
 
   // init key chunk
@@ -1937,6 +1952,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
   Errors        error;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->ioType == ARCHIVE_IO_TYPE_FILE);
@@ -2074,6 +2090,7 @@ LOCAL Errors closeArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexHa
   Errors        error;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->ioType == ARCHIVE_IO_TYPE_FILE);
@@ -2183,6 +2200,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
   Errors error;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->ioType == ARCHIVE_IO_TYPE_FILE);
   assert(Semaphore_isOwned(&archiveHandle->chunkIOLock));
 
@@ -2239,6 +2257,7 @@ LOCAL Errors transferArchiveFileData(const ArchiveHandle *archiveHandle,
   ulong   n;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->chunkIO != NULL);
   assert(archiveHandle->chunkIO->write != NULL);
   assert(fileHandle != NULL);
@@ -2311,6 +2330,7 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(!archiveEntryInfo->file.headerWrittenFlag);
 
   // create file chunk
@@ -2401,6 +2421,7 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(archiveEntryInfo->file.byteCompressInfo.blockLength != 0);
 
   do
@@ -2516,6 +2537,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(archiveEntryInfo->archiveHandle->ioType == ARCHIVE_IO_TYPE_FILE);
   assert(archiveEntryInfo->file.byteCompressInfo.blockLength != 0);
 
@@ -2930,6 +2952,7 @@ LOCAL Errors writeImageChunks(ArchiveEntryInfo *archiveEntryInfo)
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(!archiveEntryInfo->image.headerWrittenFlag);
 
   // create file chunk
@@ -2997,6 +3020,7 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(archiveEntryInfo->image.byteCompressInfo.blockLength != 0);
 
   do
@@ -3093,6 +3117,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(archiveEntryInfo->archiveHandle->ioType == ARCHIVE_IO_TYPE_FILE);
   assert(archiveEntryInfo->image.byteCompressInfo.blockLength != 0);
 
@@ -3504,6 +3529,7 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(!archiveEntryInfo->hardLink.headerWrittenFlag);
 
   // create hard link chunk
@@ -3607,6 +3633,7 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(archiveEntryInfo->hardLink.byteCompressInfo.blockLength != 0);
 
   // flush data
@@ -3702,6 +3729,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(archiveEntryInfo->archiveHandle->ioType == ARCHIVE_IO_TYPE_FILE);
   assert(archiveEntryInfo->hardLink.byteCompressInfo.blockLength != 0);
 
@@ -4678,6 +4706,7 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   archiveHandle->cryptPasswordReadFlag   = FALSE;
   archiveHandle->encryptedKeyData        = NULL;
   archiveHandle->encryptedKeyDataLength  = 0;
+//TODO: remove?
 //  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->signatureKeyDataLength  = 0;
 
@@ -4765,12 +4794,7 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   Errors error;
 
   assert(archiveHandle != NULL);
-
-  #ifndef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveHandle,sizeof(ArchiveHandle));
-  #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACE(archiveHandle,sizeof(ArchiveHandle));
-  #endif /* NDEBUG */
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
   // init variables
   error = ERROR_UNKNOWN;
@@ -4791,6 +4815,12 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
         break; /* not reached */
     #endif /* NDEBUG */
   }
+
+  #ifndef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveHandle,sizeof(ArchiveHandle));
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACE(archiveHandle,sizeof(ArchiveHandle));
+  #endif /* NDEBUG */
 
   // free resources
   if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -4836,6 +4866,7 @@ void Archive_setCryptSalt(ArchiveHandle *archiveHandle,
                          )
 {
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
   memCopyFast(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),salt,saltLength);
 }
@@ -4845,6 +4876,7 @@ void Archive_setCryptMode(ArchiveHandle *archiveHandle,
                          )
 {
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
   archiveHandle->cryptMode = cryptMode;
 }
@@ -4854,6 +4886,7 @@ void Archive_setCryptKeyDeriveType(ArchiveHandle       *archiveHandle,
                                   )
 {
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
   archiveHandle->cryptKeyDeriveType = cryptKeyDeriveType;
 }
@@ -4865,6 +4898,7 @@ Errors Archive_storageInterrupt(ArchiveHandle *archiveHandle)
   Errors        error;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
   switch (archiveHandle->ioType)
   {
@@ -4908,6 +4942,7 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle)
   Errors        error;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
   switch (archiveHandle->ioType)
   {
@@ -4976,6 +5011,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
   const Password *password;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->chunkIO != NULL);
@@ -5207,6 +5243,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->blockLength > 0);
@@ -5642,6 +5679,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->blockLength > 0);
@@ -6015,6 +6053,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->blockLength > 0);
@@ -6265,6 +6304,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->blockLength > 0);
@@ -6525,6 +6565,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->blockLength > 0);
@@ -6974,6 +7015,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->blockLength > 0);
@@ -7208,6 +7250,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
   const Password *password;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
@@ -7416,6 +7459,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   ChunkHeader chunkHeader;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
   // check for pending error
   if (archiveHandle->pendingError != ERROR_NONE)
@@ -7487,6 +7531,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
@@ -7834,6 +7879,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(fileName != NULL);
@@ -8491,6 +8537,7 @@ NULL,//                         password,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(deviceInfo != NULL);
@@ -9040,6 +9087,7 @@ NULL,//                         password,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
@@ -9463,6 +9511,7 @@ NULL,//                         password,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
@@ -9896,6 +9945,7 @@ NULL,//                         password,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(fileNameList != NULL);
@@ -10566,6 +10616,7 @@ NULL,//                         password,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
@@ -11133,6 +11184,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(archiveEntryInfo->archiveHandle->storageInfo != NULL);
   assert(archiveEntryInfo->archiveHandle->storageInfo->jobOptions != NULL);
 
@@ -11989,6 +12041,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(archiveEntryInfo->archiveHandle->storageInfo != NULL);
   assert(archiveEntryInfo->archiveHandle->storageInfo->jobOptions != NULL);
   assert(elementSize > 0);
@@ -12703,6 +12756,7 @@ bool Archive_eofData(ArchiveEntryInfo *archiveEntryInfo)
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
 
   eofFlag = FALSE;
   switch (archiveEntryInfo->mode)
@@ -12754,6 +12808,7 @@ uint64 Archive_tell(ArchiveHandle *archiveHandle)
   uint64        offset;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->chunkIO != NULL);
@@ -12800,6 +12855,7 @@ Errors Archive_seek(ArchiveHandle *archiveHandle,
   Errors        error;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->chunkIO != NULL);
@@ -12841,6 +12897,7 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle)
   uint64        size;
 
   assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->chunkIO != NULL);
