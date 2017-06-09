@@ -279,8 +279,8 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
                                 archiveHandle,
                                 &deltaCompressAlgorithm,
                                 &byteCompressAlgorithm,
-                                NULL,  // cryptAlgorithm
                                 NULL,  // cryptType
+                                NULL,  // cryptAlgorithm
                                 fileName,
                                 &fileInfo,
                                 NULL,  // fileExtendedAttributeList
@@ -549,8 +549,8 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
                                  archiveHandle,
                                  &deltaCompressAlgorithm,
                                  &byteCompressAlgorithm,
-                                 NULL,  // cryptAlgorithm
                                  NULL,  // cryptType
+                                 NULL,  // cryptAlgorithm
                                  deviceName,
                                  &deviceInfo,
                                  NULL,  // fileSystemType
@@ -874,8 +874,8 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
   directoryName = String_new();
   error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                      archiveHandle,
-                                     NULL,  // cryptAlgorithm
                                      NULL,  // cryptType
+                                     NULL,  // cryptAlgorithm
                                      directoryName,
                                      &fileInfo,
                                      NULL   // fileExtendedAttributeList
@@ -998,8 +998,8 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
   fileName = String_new();
   error = Archive_readLinkEntry(&archiveEntryInfo,
                                 archiveHandle,
-                                NULL,  // cryptAlgorithm
                                 NULL,  // cryptType
+                                NULL,  // cryptAlgorithm
                                 linkName,
                                 fileName,
                                 &fileInfo,
@@ -1178,8 +1178,8 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
                                     archiveHandle,
                                     &deltaCompressAlgorithm,
                                     &byteCompressAlgorithm,
-                                    NULL,  // cryptAlgorithm
                                     NULL,  // cryptType
+                                    NULL,  // cryptAlgorithm
                                     &fileNameList,
                                     &fileInfo,
                                     NULL,  // fileExtendedAttributeList
@@ -1475,8 +1475,8 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
   fileName = String_new();
   error = Archive_readSpecialEntry(&archiveEntryInfo,
                                    archiveHandle,
-                                   NULL,  // cryptAlgorithm
                                    NULL,  // cryptType
+                                   NULL,  // cryptAlgorithm
                                    fileName,
                                    &fileInfo,
                                    NULL   // fileExtendedAttributeList

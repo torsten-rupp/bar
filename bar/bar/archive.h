@@ -439,9 +439,10 @@ typedef bool(*ArchiveAbortCallbackFunction)(void *userData);
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Archive_create(...) __Archive_create(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Archive_open(...)   __Archive_open  (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Archive_close(...)  __Archive_close (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_create(...)     __Archive_create    (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_open(...)       __Archive_open      (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_openHandle(...) __Archive_openHandle(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_close(...)      __Archive_close     (__FILE__,__LINE__, ## __VA_ARGS__)
 
   #define Archive_newFileEntry(...)       __Archive_newFileEntry      (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_newImageEntry(...)      __Archive_newImageEntry     (__FILE__,__LINE__, ## __VA_ARGS__)
@@ -714,6 +715,28 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         void                *getPasswordUserData,
                         LogHandle           *logHandle
                        );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Archive_openHandle
+* Purpose: open archive from handle
+* Input  : archiveHandle     - archive handle
+*          fromArchiveHandle - from archive handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  Errors Archive_openHandle(ArchiveHandle       *archiveHandle,
+                            const ArchiveHandle *fromArchiveHandle
+                           );
+#else /* not NDEBUG */
+  Errors __Archive_openHandle(const char          *__fileName__,
+                              ulong               __lineNb__,
+                              ArchiveHandle       *archiveHandle,
+                              const ArchiveHandle *fromArchiveHandle
+                             );
 #endif /* NDEBUG */
 
 /***********************************************************************\

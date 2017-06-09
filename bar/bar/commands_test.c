@@ -61,6 +61,8 @@ typedef struct
   const PatternList   *excludePatternList;                // list of exclude patterns
   DeltaSourceList     *deltaSourceList;                   // delta sources
   const JobOptions    *jobOptions;
+  const ArchiveHandle *archiveHandle;
+//TODO: obsolete?
   GetPasswordFunction getPasswordFunction;
   void                *getPasswordUserData;
   LogHandle           *logHandle;                         // log handle
@@ -123,6 +125,7 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 *          excludePatternList  - exclude pattern list
 *          deltaSourceList     - delta source list
 *          jobOptions          - job options
+*          archiveHandle       - archive handle
 *          getPasswordFunction - get password call back
 *          getPasswordUserData - user data for get password call back
 *          pauseTestFlag       - pause creation flag (can be NULL)
@@ -140,6 +143,7 @@ LOCAL void initTestInfo(TestInfo            *testInfo,
                         const PatternList   *excludePatternList,
                         DeltaSourceList     *deltaSourceList,
                         const JobOptions    *jobOptions,
+                        const ArchiveHandle *archiveHandle,
                         GetPasswordFunction getPasswordFunction,
                         void                *getPasswordUserData,
                         bool                *pauseTestFlag,
@@ -156,6 +160,7 @@ LOCAL void initTestInfo(TestInfo            *testInfo,
   testInfo->excludePatternList  = excludePatternList;
   testInfo->deltaSourceList     = deltaSourceList;
   testInfo->jobOptions          = jobOptions;
+  testInfo->archiveHandle       = archiveHandle;
   testInfo->getPasswordFunction = getPasswordFunction;
   testInfo->getPasswordUserData = getPasswordUserData;
   testInfo->pauseTestFlag       = pauseTestFlag;
@@ -237,12 +242,15 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
 
   // open archive entry
   fileName = String_new();
+fprintf(stderr,"%s, %d:aaaaaaaaa \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
   error = Archive_readFileEntry(&archiveEntryInfo,
                                 archiveHandle,
                                 NULL,  // deltaCompressAlgorithm
                                 NULL,  // byteCompressAlgorithm
-                                NULL,  // cryptAlgorithm
                                 NULL,  // cryptType
+                                NULL,  // cryptAlgorithm
                                 fileName,
                                 &fileInfo,
                                 NULL,  // fileExtendedAttributeList
@@ -416,8 +424,8 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
                                  archiveHandle,
                                  NULL,  // deltaCompressAlgorithm
                                  NULL,  // byteCompressAlgorithm
-                                 NULL,  // cryptAlgorithm
                                  NULL,  // cryptType
+                                 NULL,  // cryptAlgorithm
                                  deviceName,
                                  &deviceInfo,
                                  NULL,  // fileSystemType
@@ -580,8 +588,8 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
   directoryName = String_new();
   error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                      archiveHandle,
-                                     NULL,  // cryptAlgorithm
                                      NULL,  // cryptType
+                                     NULL,  // cryptAlgorithm
                                      directoryName,
                                      &fileInfo,
                                      NULL   // fileExtendedAttributeList
@@ -672,8 +680,8 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
   fileName = String_new();
   error = Archive_readLinkEntry(&archiveEntryInfo,
                                 archiveHandle,
-                                NULL,  // cryptAlgorithm
                                 NULL,  // cryptType
+                                NULL,  // cryptAlgorithm
                                 linkName,
                                 fileName,
                                 &fileInfo,
@@ -781,8 +789,8 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
                                     archiveHandle,
                                     NULL,  // deltaCompressAlgorithm
                                     NULL,  // byteCompressAlgorithm
-                                    NULL,  // cryptAlgorithm
                                     NULL,  // cryptType
+                                    NULL,  // cryptAlgorithm
                                     &fileNameList,
                                     &fileInfo,
                                     NULL,  // fileExtendedAttributeList
@@ -958,8 +966,8 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
   fileName = String_new();
   error = Archive_readSpecialEntry(&archiveEntryInfo,
                                    archiveHandle,
-                                   NULL,  // cryptAlgorithm
                                    NULL,  // cryptType
+                                   NULL,  // cryptAlgorithm
                                    fileName,
                                    &fileInfo,
                                    NULL   // fileExtendedAttributeList
@@ -1056,14 +1064,9 @@ LOCAL void testThreadCode(TestInfo *testInfo)
   {
 //TODO: open only when changed
     // open archive
-    error = Archive_open(&archiveHandle,
-                         entryMsg.storageInfo,
-                         NULL,  // archiveName,
-                         testInfo->deltaSourceList,
-                         testInfo->getPasswordFunction,
-                         testInfo->getPasswordUserData,
-                         testInfo->logHandle
-                        );
+    error = Archive_openHandle(&archiveHandle,
+                               testInfo->archiveHandle
+                              );
     if (error != ERROR_NONE)
     {
       printError("Cannot open storage '%s' (error: %s)!\n",
@@ -1076,9 +1079,9 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     }
 
     // set crypt salt, crypt key derive type, and crypt mode
-    Archive_setCryptSalt(&archiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
-    Archive_setCryptKeyDeriveType(&archiveHandle,entryMsg.cryptKeyDeriveType);
-    Archive_setCryptMode(&archiveHandle,entryMsg.cryptMode);
+//    Archive_setCryptSalt(&archiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
+//    Archive_setCryptKeyDeriveType(&archiveHandle,entryMsg.cryptKeyDeriveType);
+//    Archive_setCryptMode(&archiveHandle,entryMsg.cryptMode);
 
     // seek to start of entry
     error = Archive_seek(&archiveHandle,entryMsg.offset);
@@ -1302,32 +1305,6 @@ NULL, // masterSocketHandle
     }
   }
 
-  // init test info
-  initTestInfo(&testInfo,
-               fragmentList,
-               storageSpecifier,
-               includeEntryList,
-               excludePatternList,
-               deltaSourceList,
-               jobOptions,
-               getPasswordFunction,
-               getPasswordUserData,
-//TODO
-NULL,  //               pauseTestFlag,
-NULL,  //               requestedAbortFlag,
-               logHandle
-              );
-  AUTOFREE_ADD(&autoFreeList,&testInfo,{ (void)doneTestInfo(&testInfo); });
-
-  // start test threads
-  for (i = 0; i < testThreadCount; i++)
-  {
-    if (!Thread_init(&testThreads[i],"BAR test",globalOptions.niceLevel,testThreadCode,&testInfo))
-    {
-      HALT_FATAL_ERROR("Cannot initialize test thread #%d!",i);
-    }
-  }
-
   // open archive
   error = Archive_open(&archiveHandle,
                        &storageInfo,
@@ -1347,6 +1324,33 @@ NULL,  //               requestedAbortFlag,
     return error;
   }
 
+  // init test info
+  initTestInfo(&testInfo,
+               fragmentList,
+               storageSpecifier,
+               includeEntryList,
+               excludePatternList,
+               deltaSourceList,
+               &archiveHandle,
+               jobOptions,
+               getPasswordFunction,
+               getPasswordUserData,
+//TODO
+NULL,  //               pauseTestFlag,
+NULL,  //               requestedAbortFlag,
+               logHandle
+              );
+  AUTOFREE_ADD(&autoFreeList,&testInfo,{ (void)doneTestInfo(&testInfo); });
+
+  // start test threads
+  for (i = 0; i < testThreadCount; i++)
+  {
+    if (!Thread_init(&testThreads[i],"BAR test",globalOptions.niceLevel,testThreadCode,&testInfo))
+    {
+      HALT_FATAL_ERROR("Cannot initialize test thread #%d!",i);
+    }
+  }
+
   // read archive entries
   printInfo(0,
             "Test storage '%s'%s",
@@ -1356,6 +1360,7 @@ NULL,  //               requestedAbortFlag,
   failError = ERROR_NONE;
   while (!Archive_eof(&archiveHandle,FALSE,isPrintInfo(3)))
   {
+fprintf(stderr,"%s, %d: +++++++++++\n",__FILE__,__LINE__);
     // get next archive entry type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
@@ -1395,9 +1400,6 @@ NULL,  //               requestedAbortFlag,
   }
   if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
-  // close archive
-  Archive_close(&archiveHandle);
-
   // wait for test threads
   MsgQueue_setEndOfMsg(&testInfo.entryMsgQueue);
   for (i = 0; i < testThreadCount; i++)
@@ -1407,6 +1409,9 @@ NULL,  //               requestedAbortFlag,
       HALT_INTERNAL_ERROR("Cannot stop test thread #%d!",i);
     }
   }
+
+  // close archive
+  Archive_close(&archiveHandle);
 
   // done storage
   (void)Storage_done(&storageInfo);

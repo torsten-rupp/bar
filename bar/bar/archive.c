@@ -4783,6 +4783,100 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
 }
 
 #ifdef NDEBUG
+  Errors Archive_openHandle(ArchiveHandle       *archiveHandle,
+                            const ArchiveHandle *fromArchiveHandle
+                           )
+#else /* not NDEBUG */
+  Errors __Archive_openHandle(const char          *__fileName__,
+                              ulong               __lineNb__,
+                              ArchiveHandle       *archiveHandle,
+                              const ArchiveHandle *fromArchiveHandle
+                             )
+#endif /* NDEBUG */
+{
+  AutoFreeList autoFreeList;
+  Errors       error;
+  ChunkHeader  chunkHeader;
+
+  assert(archiveHandle != NULL);
+  assert(fromArchiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fromArchiveHandle);
+
+  // init variables
+  AutoFree_init(&autoFreeList);
+
+  archiveHandle->storageInfo             = fromArchiveHandle->storageInfo;
+  archiveHandle->indexHandle             = NULL;
+  archiveHandle->uuidId                  = DATABASE_ID_NONE;
+  archiveHandle->entityId                = DATABASE_ID_NONE;
+  archiveHandle->storageId               = DATABASE_ID_NONE;
+
+  archiveHandle->jobUUID                 = NULL;
+  archiveHandle->scheduleUUID            = NULL;
+
+  archiveHandle->deltaSourceList         = fromArchiveHandle->deltaSourceList;
+  archiveHandle->archiveInitFunction     = NULL;
+  archiveHandle->archiveInitUserData     = NULL;
+  archiveHandle->archiveDoneFunction     = NULL;
+  archiveHandle->archiveDoneUserData     = NULL;
+  archiveHandle->archiveStoreFunction    = NULL;
+  archiveHandle->archiveStoreUserData    = NULL;
+  archiveHandle->getPasswordFunction     = fromArchiveHandle->getPasswordFunction;
+  archiveHandle->getPasswordUserData     = fromArchiveHandle->getPasswordUserData;
+  archiveHandle->logHandle               = fromArchiveHandle->logHandle;
+
+  memClear(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
+  archiveHandle->cryptMode               = fromArchiveHandle->cryptMode;
+  archiveHandle->cryptKeyDeriveType      = fromArchiveHandle->cryptKeyDeriveType;
+
+  Semaphore_init(&archiveHandle->passwordLock);
+  archiveHandle->cryptType               = fromArchiveHandle->cryptType;
+  Crypt_initKey(&archiveHandle->cryptKey,CRYPT_PADDING_TYPE_NONE);
+  archiveHandle->cryptPassword           = NULL;
+  archiveHandle->cryptPasswordReadFlag   = FALSE;
+  archiveHandle->encryptedKeyData        = NULL;
+  archiveHandle->encryptedKeyDataLength  = 0;
+//TODO: remove?
+//  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
+  archiveHandle->signatureKeyDataLength  = 0;
+
+  archiveHandle->ioType                  = ARCHIVE_IO_TYPE_STORAGE;
+//TODO: use
+  archiveHandle->printableStorageName    = String_duplicate(fromArchiveHandle->printableStorageName);
+  Semaphore_init(&archiveHandle->chunkIOLock);
+  archiveHandle->chunkIO                 = fromArchiveHandle->chunkIO;
+  archiveHandle->chunkIOUserData         = fromArchiveHandle->chunkIOUserData;
+
+  archiveHandle->entries                 = 0LL;
+  archiveHandle->archiveFileSize         = 0LL;
+  archiveHandle->partNumber              = 0;
+
+  archiveHandle->pendingError            = ERROR_NONE;
+  archiveHandle->nextChunkHeaderReadFlag = FALSE;
+
+  archiveHandle->interrupt.openFlag      = FALSE;
+  archiveHandle->interrupt.offset        = 0LL;
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->passwordLock,{ Semaphore_done(&archiveHandle->passwordLock); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptKey,{ Crypt_doneKey(&archiveHandle->cryptKey); });
+//  AUTOFREE_ADD(&autoFreeList,&archiveHandle->signatureCryptKey,{ Crypt_doneKey(&archiveHandle->signatureCryptKey); });
+//TODO: remove
+//  AUTOFREE_ADD(&autoFreeList,&archiveHandle->storage.storageSpecifier,{ Storage_doneSpecifier(&archiveHandle->storage.storageSpecifier); });
+  AUTOFREE_ADD(&autoFreeList,archiveHandle->printableStorageName,{ String_delete(archiveHandle->printableStorageName); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
+
+  // free resources
+  AutoFree_done(&autoFreeList);
+
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(archiveHandle,sizeof(ArchiveHandle));
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,archiveHandle,sizeof(ArchiveHandle));
+  #endif /* NDEBUG */
+
+  return ERROR_NONE;
+}
+
+#ifdef NDEBUG
   Errors Archive_close(ArchiveHandle *archiveHandle)
 #else /* not NDEBUG */
   Errors __Archive_close(const char    *__fileName__,

@@ -698,8 +698,7 @@ Errors __Crypt_init(const char      *__fileName__,
               #endif /* NDEBUG */
               break; /* not reached */
           }
-          gcryptMode = GCRY_CIPHER_MODE_NONE;
-          if ((cryptMode & CRYPT_MODE_CBC) == CRYPT_MODE_CBC) gcryptMode = GCRY_CIPHER_MODE_CBC;
+          gcryptMode = ((cryptMode & CRYPT_MODE_CBC) == CRYPT_MODE_CBC) ? GCRY_CIPHER_MODE_CBC : GCRY_CIPHER_MODE_NONE;
           gcryptFlags = 0;
           if ((cryptMode & CRYPT_MODE_CTS) == CRYPT_MODE_CTS) gcryptFlags |= GCRY_CIPHER_CBC_CTS;
 
@@ -808,7 +807,7 @@ Errors __Crypt_init(const char      *__fileName__,
 #ifndef WERROR
 #warning remove
 #endif
-#ifdef CBS_ONCE
+#ifdef CTS_ONCE
           gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
           if (gcryptError != 0)
           {
@@ -934,7 +933,7 @@ Errors Crypt_reset(CryptInfo *cryptInfo)
 #ifndef WERROR
 #warning remove
 #endif
-#ifdef CBS_ONCE
+#ifdef CTS_ONCE
           gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
           if (gcryptError != 0)
           {
@@ -993,7 +992,12 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
 #if 0
-#ifndef CBS_ONCE
+if ((cryptInfo->cryptMode & CRYPT_MODE_CTS) == CRYPT_MODE_CTS)
+{
+fprintf(stderr,"%s, %d: encrpyt withg tcts bufferLength=%d\n",__FILE__,__LINE__,bufferLength);
+ gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
+}
+#ifndef CTS_ONCE
         gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
         if (gcryptError != 0)
         {
@@ -1064,6 +1068,11 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
 #if 0
+if ((cryptInfo->cryptMode & CRYPT_MODE_CTS) == CRYPT_MODE_CTS)
+{
+fprintf(stderr,"%s, %d: decrpyt withg tcts bufferLength=%d\n",__FILE__,__LINE__,bufferLength);
+ gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
+}
 #ifndef CTS_ONCE
         gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
         if (gcryptError != 0)
@@ -1073,6 +1082,7 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
 #endif
 #endif
 
+fprintf(stderr,"%s, %d: decryot %d %x\n",__FILE__,__LINE__,bufferLength,bufferLength);
         gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
                                           buffer,
                                           bufferLength,
@@ -1135,11 +1145,14 @@ Errors Crypt_encryptBytes(CryptInfo *cryptInfo,
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
+//TODO: required?
+#if 1
         gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,(cryptInfo->cryptMode & CRYPT_MODE_CTS_DATA) == CRYPT_MODE_CTS_DATA);
         if (gcryptError != 0)
         {
           return ERROR_ENCRYPT_FAIL;
         }
+#endif
 
         gcryptError = gcry_cipher_encrypt(cryptInfo->gcry_cipher_hd,
                                           buffer,
@@ -1202,11 +1215,14 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
+//TODO: required?
+#if 1
         gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,(cryptInfo->cryptMode & CRYPT_MODE_CTS_DATA) == CRYPT_MODE_CTS_DATA);
         if (gcryptError != 0)
         {
           return ERROR_ENCRYPT_FAIL;
         }
+#endif
 
         gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
                                           buffer,
@@ -1396,9 +1412,10 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
       return ERROR_INVALID_KEY;
     }
 
-    // get key length
+    // get data length, aligned data length
     dataLength        = (uint)gcry_sexp_sprint(sexpToken,GCRYSEXP_FMT_ADVANCED,NULL,0);
     alignedDataLength = ALIGN(dataLength,blockLength);
+    assert(alignedDataLength >= dataLength);
 
     // allocate encrypted key info (header+aligned encryped key buffer)
     encryptedKeyInfo = (EncryptedKeyInfo*)Password_allocSecure(sizeof(EncryptedKeyInfo)+alignedDataLength);
@@ -1407,19 +1424,21 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
       gcry_sexp_release(sexpToken);
       return ERROR_INSUFFICIENT_MEMORY;
     }
-    encryptedKeyInfo->dataLength = htons(dataLength);
 
     // get key
+    encryptedKeyInfo->dataLength = htonl(dataLength);
     gcry_sexp_sprint(sexpToken,GCRYSEXP_FMT_ADVANCED,(char*)encryptedKeyInfo->data,dataLength);
     gcry_sexp_release(sexpToken);
-#ifdef DEBUG_ASYMMETRIC_CRYPT
+    memClear((byte*)encryptedKeyInfo->data+dataLength,alignedDataLength-dataLength);
+//#ifdef DEBUG_ASYMMETRIC_CRYPT
+#if 1
 fprintf(stderr,"%s, %d: %d raw key\n",__FILE__,__LINE__,dataLength); debugDumpMemory(encryptedKeyInfo->data,alignedDataLength,FALSE);
 #endif
 
     // encrypt key (if password given)
     if (password != NULL)
     {
-      // get encrypt key length
+      // get key length
       error = Crypt_getKeyLength(SECRET_KEY_CRYPT_ALGORITHM,&keyLength);
       if (error != ERROR_NONE)
       {
@@ -1443,6 +1462,7 @@ fprintf(stderr,"%s, %d: %d raw key\n",__FILE__,__LINE__,dataLength); debugDumpMe
         return error;
       }
 //fprintf(stderr,"%s, %d: derived key\n",__FILE__,__LINE__); debugDumpMemory(encryptKey.data,encryptKey.dataLength,FALSE);
+fprintf(stderr,"%s, %d: cryptMode=%x blockLength=%d\n",__FILE__,__LINE__,cryptMode,blockLength);
       error = Crypt_init(&cryptInfo,
                          SECRET_KEY_CRYPT_ALGORITHM,
                          cryptMode,
@@ -1472,16 +1492,14 @@ fprintf(stderr,"%s, %d: %d raw key\n",__FILE__,__LINE__,dataLength); debugDumpMe
       Crypt_done(&cryptInfo);
       Crypt_doneKey(&encryptKey);
     }
-#ifdef DEBUG_ASYMMETRIC_CRYPT
+//#ifdef DEBUG_ASYMMETRIC_CRYPT
+#if 1
 fprintf(stderr,"%s, %d: %d encrypted key\n",__FILE__,__LINE__,dataLength); debugDumpMemory(encryptedKeyInfo->data,alignedDataLength,FALSE);
 #endif
 
-    // get encrypted key info key length
-    encryptedKeyInfo->dataLength = htonl(dataLength);
-
     // calculate CRC
     encryptedKeyInfo->crc = htonl(crc32(crc32(0,Z_NULL,0),encryptedKeyInfo->data,alignedDataLength));
-fprintf(stderr,"%s, %d: length=%d crc=%x\n",__FILE__,__LINE__,dataLength,encryptedKeyInfo->crc);
+fprintf(stderr,"%s, %d: dataLength=%d alignedDataLength=%d crc=%x\n",__FILE__,__LINE__,dataLength,alignedDataLength,encryptedKeyInfo->crc);
 
     (*encryptedKeyData      ) = encryptedKeyInfo;
     (*encryptedKeyDataLength) = sizeof(EncryptedKeyInfo)+alignedDataLength;
@@ -1545,10 +1563,11 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
     // get encrypted key info
     encryptedKeyInfo = (EncryptedKeyInfo*)encryptedKeyData;
 
-    // get key length
+    // get data length, aligned data length
     dataLength        = ntohl(encryptedKeyInfo->dataLength);
     alignedDataLength = ALIGN(dataLength,blockLength);
-    if ((dataLength <= 0) || (encryptedKeyDataLength < sizeof(EncryptedKeyInfo)+alignedDataLength))
+    assert(alignedDataLength >= dataLength);
+    if ((dataLength <= 0) || ((sizeof(EncryptedKeyInfo)+alignedDataLength) > encryptedKeyDataLength))
     {
 fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,dataLength,encryptedKeyDataLength,sizeof(EncryptedKeyInfo)+alignedDataLength);
       return ERROR_INVALID_KEY;
@@ -1556,7 +1575,7 @@ fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,dataLength,encryptedKeyDat
 
     // check CRC
     crc = crc32(crc32(0,Z_NULL,0),(Bytef*)encryptedKeyInfo->data,alignedDataLength);
-fprintf(stderr,"%s, %d: length=%d read crc=%x crc=%x alignedDataLength=%d\n",__FILE__,__LINE__,ntohl(encryptedKeyInfo->dataLength),ntohl(encryptedKeyInfo->crc),crc,alignedDataLength);
+fprintf(stderr,"%s, %d: dataLength=%d alignedDataLength=%d read crc=%x crc=%x\n",__FILE__,__LINE__,ntohl(encryptedKeyInfo->dataLength),alignedDataLength,ntohl(encryptedKeyInfo->crc),crc);
     if (crc != ntohl(encryptedKeyInfo->crc))
     {
 fprintf(stderr,"%s, %d: crc\n",__FILE__,__LINE__);
@@ -1569,9 +1588,9 @@ fprintf(stderr,"%s, %d: crc\n",__FILE__,__LINE__);
     {
       return ERROR_INSUFFICIENT_MEMORY;
     }
-    memClear(data,alignedDataLength);
-    memCopyFast(data,alignedDataLength,encryptedKeyInfo->data,dataLength);
-#ifdef DEBUG_ASYMMETRIC_CRYPT
+    memCopyFast(data,alignedDataLength,encryptedKeyInfo->data,alignedDataLength);
+//#ifdef DEBUG_ASYMMETRIC_CRYPT
+#if 1
 fprintf(stderr,"%s, %d: encrypted private key\n",__FILE__,__LINE__); debugDumpMemory(data,alignedDataLength,FALSE);
 #endif
 
@@ -1582,7 +1601,6 @@ fprintf(stderr,"%s, %d: encrypted private key\n",__FILE__,__LINE__); debugDumpMe
       error = Crypt_getKeyLength(SECRET_KEY_CRYPT_ALGORITHM,&keyLength);
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         Password_freeSecure(data);
         return error;
       }
@@ -1598,7 +1616,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                              );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         Crypt_doneKey(&encryptKey);
         Password_freeSecure(data);
         return error;
@@ -1606,6 +1623,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 #ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: derived key %d\n",__FILE__,__LINE__,encryptKey.dataLength); debugDumpMemory(encryptKey.data,encryptKey.dataLength,FALSE);
 #endif
+fprintf(stderr,"%s, %d: cryptMode=%x blockLength=%d\n",__FILE__,__LINE__,cryptMode,blockLength);
       error = Crypt_init(&cryptInfo,
                          SECRET_KEY_CRYPT_ALGORITHM,
                          cryptMode,
@@ -1617,7 +1635,6 @@ fprintf(stderr,"%s, %d: derived key %d\n",__FILE__,__LINE__,encryptKey.dataLengt
                         );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         Crypt_doneKey(&encryptKey);
         Password_freeSecure(data);
         return error;
@@ -1627,7 +1644,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       error = Crypt_decrypt(&cryptInfo,data,alignedDataLength);
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         Crypt_done(&cryptInfo);
         Password_freeSecure(data);
         return error;
@@ -1637,7 +1653,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       Crypt_done(&cryptInfo);
       Crypt_doneKey(&encryptKey);
     }
-#ifdef DEBUG_ASYMMETRIC_CRYPT
+//#ifdef DEBUG_ASYMMETRIC_CRYPT
+#if 1
 fprintf(stderr,"%s, %d: decrypted private key\n",__FILE__,__LINE__); debugDumpMemory(data,alignedDataLength,FALSE);
 #endif
 
@@ -1649,15 +1666,16 @@ fprintf(stderr,"%s, %d: decrypted private key\n",__FILE__,__LINE__); debugDumpMe
     }
     gcryptError = gcry_sexp_new(&cryptKey->key,
                                 data,
-                                dataLength,
-                                1
+                                0,//dataLength,
+                                1  // autodetect
                                );
     if (gcryptError != 0)
     {
-fprintf(stderr,"%s, %d: gcry_sexp_new %d %d\n",__FILE__,__LINE__,dataLength,gcryptError);
+fprintf(stderr,"%s, %d: gcry_sexp_new cryptKey->key=%p %d %d: %s\n",__FILE__,__LINE__,cryptKey->key,dataLength,gcryptError,gpg_strerror(gcryptError));
       Password_freeSecure(data);
       return ERROR_INVALID_KEY;
     }
+
 
     // set key
     if (cryptKey->data != NULL) Password_freeSecure(cryptKey->data);
@@ -2047,7 +2065,7 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
     gcryptError = gcry_sexp_new(&sexpKeyParameters,
                                 String_cString(description),
                                 0,
-                                1
+                                1  // autodetect
                                );
     if (gcryptError != 0)
     {

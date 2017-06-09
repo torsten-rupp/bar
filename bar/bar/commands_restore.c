@@ -439,8 +439,8 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                                 archiveHandle,
                                 NULL,  // deltaCompressAlgorithm
                                 NULL,  // byteCompressAlgorithm
-                                NULL,  // cryptAlgorithm
                                 NULL,  // cryptType
+                                NULL,  // cryptAlgorithm
                                 fileName,
                                 &fileInfo,
                                 &fileExtendedAttributeList,
@@ -829,8 +829,8 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                                  archiveHandle,
                                  NULL,  // deltaCompressAlgorithm
                                  NULL,  // byteCompressAlgorithm
-                                 NULL,  // cryptAlgorithm
                                  NULL,  // cryptType
+                                 NULL,  // cryptAlgorithm
                                  deviceName,
                                  &deviceInfo,
                                  NULL,  // fileSystemType
@@ -1254,8 +1254,8 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
   // read directory entry
   error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                      archiveHandle,
-                                     NULL,  // cryptAlgorithm
                                      NULL,  // cryptType
+                                     NULL,  // cryptAlgorithm
                                      directoryName,
                                      &fileInfo,
                                      &fileExtendedAttributeList
@@ -1435,8 +1435,8 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
   // read link entry
   error = Archive_readLinkEntry(&archiveEntryInfo,
                                 archiveHandle,
-                                NULL,  // cryptAlgorithm
                                 NULL,  // cryptType
+                                NULL,  // cryptAlgorithm
                                 linkName,
                                 fileName,
                                 &fileInfo,
@@ -1679,8 +1679,8 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                                     archiveHandle,
                                     NULL,  // deltaCompressAlgorithm
                                     NULL,  // byteCompressAlgorithm
-                                    NULL,  // cryptAlgorithm
                                     NULL,  // cryptType
+                                    NULL,  // cryptAlgorithm
                                     &fileNameList,
                                     &fileInfo,
                                     &fileExtendedAttributeList,
@@ -2124,8 +2124,8 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
   // read special device entry
   error = Archive_readSpecialEntry(&archiveEntryInfo,
                                    archiveHandle,
-                                   NULL,  // cryptAlgorithm
                                    NULL,  // cryptType
+                                   NULL,  // cryptAlgorithm
                                    fileName,
                                    &fileInfo,
                                    &fileExtendedAttributeList

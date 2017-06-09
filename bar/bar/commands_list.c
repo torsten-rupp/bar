@@ -2281,8 +2281,8 @@ NULL, // masterSocketHandle
                                                 &archiveHandle,
                                                 &deltaCompressAlgorithm,
                                                 &byteCompressAlgorithm,
-                                                &cryptAlgorithm,
                                                 &cryptType,
+                                                &cryptAlgorithm,
                                                 fileName,
                                                 &fileInfo,
                                                 NULL,  // fileExtendedAttributeList
@@ -2398,8 +2398,8 @@ NULL, // masterSocketHandle
                                                  &archiveHandle,
                                                  &deltaCompressAlgorithm,
                                                  &byteCompressAlgorithm,
-                                                 &cryptAlgorithm,
                                                  &cryptType,
+                                                 &cryptAlgorithm,
                                                  deviceName,
                                                  &deviceInfo,
                                                  &fileSystemType,
@@ -2500,8 +2500,8 @@ NULL, // masterSocketHandle
                   directoryName = String_new();
                   error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                                      &archiveHandle,
-                                                     &cryptAlgorithm,
                                                      &cryptType,
+                                                     &cryptAlgorithm,
                                                      directoryName,
                                                      &fileInfo,
                                                      NULL   // fileExtendedAttributeList
@@ -2588,8 +2588,8 @@ NULL, // masterSocketHandle
                   fileName = String_new();
                   error = Archive_readLinkEntry(&archiveEntryInfo,
                                                 &archiveHandle,
-                                                &cryptAlgorithm,
                                                 &cryptType,
+                                                &cryptAlgorithm,
                                                 linkName,
                                                 fileName,
                                                 &fileInfo,
@@ -2689,8 +2689,8 @@ NULL, // masterSocketHandle
                                                     &archiveHandle,
                                                     &deltaCompressAlgorithm,
                                                     &byteCompressAlgorithm,
-                                                    &cryptAlgorithm,
                                                     &cryptType,
+                                                    &cryptAlgorithm,
                                                     &fileNameList,
                                                     &fileInfo,
                                                     NULL,  // fileExtendedAttributeList
@@ -2800,8 +2800,8 @@ NULL, // masterSocketHandle
                   fileName = String_new();
                   error = Archive_readSpecialEntry(&archiveEntryInfo,
                                                    &archiveHandle,
-                                                   &cryptAlgorithm,
                                                    &cryptType,
+                                                   &cryptAlgorithm,
                                                    fileName,
                                                    &fileInfo,
                                                    NULL   // fileExtendedAttributeList
