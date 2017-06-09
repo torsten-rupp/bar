@@ -1386,8 +1386,8 @@ LOCAL bool waitModified(const char *fileName,
 #ifdef NDEBUG
 bool Semaphore_init(Semaphore *semaphore)
 #else /* not NDEBUG */
-bool __Semaphore_init(const char *fileName,
-                      ulong      lineNb,
+bool __Semaphore_init(const char *__fileName__,
+                      ulong      __lineNb__,
                       const char *name,
                       Semaphore  *semaphore)
 #endif /* NDEBUG */
@@ -1436,23 +1436,29 @@ bool __Semaphore_init(const char *fileName,
     {
       if (List_contains(&debugSemaphoreList,semaphore,CALLBACK(NULL,NULL)))
       {
-        HALT_INTERNAL_ERROR_AT(fileName,lineNb,"Semaphore '%s' was already initialized at %s, line %lu!",
+        HALT_INTERNAL_ERROR_AT(__fileName__,__lineNb__,"Semaphore '%s' was already initialized at %s, line %lu!",
                                semaphore->name,
                                semaphore->fileName,
                                semaphore->lineNb
                               );
       }
 
-      semaphore->fileName       = fileName;
-      semaphore->lineNb         = lineNb;
+      semaphore->fileName       = __fileName__;
+      semaphore->lineNb         = __lineNb__;
       semaphore->name           = name;
-  //    memset(semaphore->lockedBy,0,sizeof(semaphore->lockedBy));
+//      memset(semaphore->lockedBy,0,sizeof(semaphore->lockedBy));
       semaphore->lockedByCount  = 0;
       semaphore->pendingByCount = 0;
 
       List_append(&debugSemaphoreList,semaphore);
     }
     pthread_mutex_unlock(&debugSemaphoreLock);
+  #endif /* not NDEBUG */
+
+  #ifndef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,semaphore,sizeof(Semaphore));
+  #else /* NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACE(semaphore,sizeof(Semaphore));
   #endif /* not NDEBUG */
 
   return TRUE;
@@ -1463,6 +1469,8 @@ void Semaphore_done(Semaphore *semaphore)
   bool lockedFlag;
 
   assert(semaphore != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(semaphore,sizeof(Semaphore));
 
   #ifndef NDEBUG
     pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit);
@@ -1493,8 +1501,8 @@ void Semaphore_done(Semaphore *semaphore)
 #ifdef NDEBUG
 Semaphore *Semaphore_new(void)
 #else /* not NDEBUG */
-Semaphore *__Semaphore_new(const char *fileName,
-                           ulong      lineNb,
+Semaphore *__Semaphore_new(const char *__fileName__,
+                           ulong      __lineNb__,
                            const char *name
                           )
 #endif /* NDEBUG */
@@ -1511,7 +1519,7 @@ Semaphore *__Semaphore_new(const char *fileName,
         return NULL;
       }
     #else /* not NDEBUG */
-      if (!__Semaphore_init(fileName,lineNb,name,semaphore))
+      if (!__Semaphore_init(__fileName__,__lineNb__,name,semaphore))
       {
         free(semaphore);
         return NULL;
@@ -1540,8 +1548,8 @@ bool Semaphore_lock(Semaphore          *semaphore,
                     long               timeout
                    )
 #else /* not NDEBUG */
-bool __Semaphore_lock(const char         *fileName,
-                      ulong              lineNb,
+bool __Semaphore_lock(const char         *__fileName__,
+                      ulong              __lineNb__,
                       Semaphore          *semaphore,
                       SemaphoreLockTypes semaphoreLockType,
                       long               timeout
@@ -1549,32 +1557,46 @@ bool __Semaphore_lock(const char         *fileName,
 #endif /* NDEBUG */
 {
   assert(semaphore != NULL);
+  #ifndef NDEBUG
+    DEBUG_CHECK_RESOURCE_TRACEX(__fileName__,__lineNb__,semaphore);
+  #else /* NDEBUG */
+    DEBUG_CHECK_RESOURCE_TRACE(semaphore);
+  #endif /* not NDEBUG */
 
   #ifdef NDEBUG
     return lock(semaphore,semaphoreLockType,timeout);
   #else /* not NDEBUG */
-    return lock(fileName,lineNb,semaphore,semaphoreLockType,timeout);
+    return lock(__fileName__,__lineNb__,semaphore,semaphoreLockType,timeout);
   #endif /* NDEBUG */
 }
 
 #ifdef NDEBUG
 void Semaphore_unlock(Semaphore *semaphore)
 #else /* not NDEBUG */
-void __Semaphore_unlock(const char *fileName, ulong lineNb, Semaphore *semaphore)
+void __Semaphore_unlock(const char *__fileName__,
+                        ulong      __lineNb__,
+                        Semaphore  *semaphore
+                       )
 #endif /* NDEBUG */
 {
   assert(semaphore != NULL);
+  #ifndef NDEBUG
+    DEBUG_CHECK_RESOURCE_TRACEX(__fileName__,__lineNb__,semaphore);
+  #else /* NDEBUG */
+    DEBUG_CHECK_RESOURCE_TRACE(semaphore);
+  #endif /* not NDEBUG */
 
   #ifdef NDEBUG
     unlock(semaphore);
   #else /* not NDEBUG */
-    unlock(fileName,lineNb,semaphore);
+    unlock(__fileName__,__lineNb__,semaphore);
   #endif /* NDEBUG */
 }
 
 void Semaphore_signalModified(Semaphore *semaphore)
 {
   assert(semaphore != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(semaphore);
 
   __SEMAPHORE_SIGNAL(DEBUG_FLAG_MODIFIED,"MODIFIED",&semaphore->modified);
 }
@@ -1592,6 +1614,11 @@ bool __Semaphore_waitModified(const char *__fileName__,
 #endif /* NDEBUG */
 {
   assert(semaphore != NULL);
+  #ifndef NDEBUG
+    DEBUG_CHECK_RESOURCE_TRACEX(__fileName__,__lineNb__,semaphore);
+  #else /* NDEBUG */
+    DEBUG_CHECK_RESOURCE_TRACE(semaphore);
+  #endif /* not NDEBUG */
 
   if (!semaphore->endFlag)
   {
@@ -1612,6 +1639,7 @@ bool Semaphore_isLockPending(Semaphore *semaphore, SemaphoreLockTypes semaphoreL
   bool pendingFlag;
 
   assert(semaphore != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(semaphore);
 
   pendingFlag = FALSE;
   if (!semaphore->endFlag)
@@ -1635,6 +1663,7 @@ bool Semaphore_isLockPending(Semaphore *semaphore, SemaphoreLockTypes semaphoreL
 void Semaphore_setEnd(Semaphore *semaphore)
 {
   assert(semaphore != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(semaphore);
 
   // lock
   #ifdef NDEBUG

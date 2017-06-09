@@ -167,8 +167,8 @@ typedef bool SemaphoreLock;
 #ifdef NDEBUG
 bool Semaphore_init(Semaphore *semaphore);
 #else /* not NDEBUG */
-bool __Semaphore_init(const char *fileName,
-                      ulong      lineNb,
+bool __Semaphore_init(const char *__fileName__,
+                      ulong      __lineNb__,
                       const char *name,
                       Semaphore  *semaphore);
 #endif /* NDEBUG */
@@ -230,8 +230,8 @@ bool Semaphore_lock(Semaphore          *semaphore,
                     long               timeout
                    );
 #else /* not NDEBUG */
-bool __Semaphore_lock(const char         *fileName,
-                      ulong              lineNb,
+bool __Semaphore_lock(const char         *__fileName__,
+                      ulong              __lineNb__,
                       Semaphore          *semaphore,
                       SemaphoreLockTypes semaphoreLockType,
                       long               timeout
@@ -267,23 +267,23 @@ INLINE void Semaphore_forceLock(Semaphore          *semaphore,
 }
 #endif /* NDEBUG || __SEMAPHORES_IMPLEMENTATION__ */
 #else /* not NDEBUG */
-INLINE void __Semaphore_forceLock(const char         *fileName,
-                                  ulong              lineNb,
+INLINE void __Semaphore_forceLock(const char         *__fileName__,
+                                  ulong              __lineNb__,
                                   Semaphore          *semaphore,
                                   SemaphoreLockTypes semaphoreLockType
                                  );
 #if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENTATION__)
-INLINE void __Semaphore_forceLock(const char         *fileName,
-                                  ulong              lineNb,
+INLINE void __Semaphore_forceLock(const char         *__fileName__,
+                                  ulong              __lineNb__,
                                   Semaphore          *semaphore,
                                   SemaphoreLockTypes semaphoreLockType
                                  )
 {
   assert(semaphore != NULL);
 
-  if (!__Semaphore_lock(fileName,lineNb,semaphore,semaphoreLockType,WAIT_FOREVER))
+  if (!__Semaphore_lock(__fileName__,__lineNb__,semaphore,semaphoreLockType,WAIT_FOREVER))
   {
-    HALT_INTERNAL_ERROR("Cannot lock semaphore at %s, %lu",fileName,lineNb);
+    HALT_INTERNAL_ERROR("Cannot lock semaphore at %s, %lu",__fileName__,__lineNb__);
   }
 }
 #endif /* NDEBUG || __SEMAPHORES_IMPLEMENTATION__ */
@@ -301,7 +301,10 @@ INLINE void __Semaphore_forceLock(const char         *fileName,
 #ifdef NDEBUG
 void Semaphore_unlock(Semaphore *semaphore);
 #else /* not NDEBUG */
-void __Semaphore_unlock(const char *fileName, ulong lineNb, Semaphore *semaphore);
+void __Semaphore_unlock(const char *__fileName__,
+                        ulong      __lineNb__,
+                        Semaphore  *semaphore
+                       );
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -393,8 +396,8 @@ bool Semaphore_waitModified(Semaphore *semaphore,
                             long      timeout
                            );
 #else /* not NDEBUG */
-bool __Semaphore_waitModified(const char *fileName,
-                              ulong      lineNb,
+bool __Semaphore_waitModified(const char *__fileName__,
+                              ulong      __lineNb__,
                               Semaphore  *semaphore,
                               long       timeout
                              );
