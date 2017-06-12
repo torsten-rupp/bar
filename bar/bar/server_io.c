@@ -69,6 +69,8 @@
 * Notes  : -
 \***********************************************************************/
 
+//TODO: required?
+#if 0
 LOCAL void freeCommandNode(ServerIOCommandNode *commandNode, void *userData)
 {
   assert(commandNode != NULL);
@@ -78,6 +80,7 @@ LOCAL void freeCommandNode(ServerIOCommandNode *commandNode, void *userData)
   String_delete(commandNode->data);
   String_delete(commandNode->name);
 }
+#endif
 
 /***********************************************************************\
 * Name   : freeResultNode
@@ -124,6 +127,8 @@ LOCAL void deleteResultNode(ServerIOResultNode *resultNode)
 * Notes  : -
 \***********************************************************************/
 
+//TODO: required?
+#if 0
 LOCAL void deleteCommandNode(ServerIOCommandNode *commandNode)
 {
   assert(commandNode != NULL);
@@ -131,6 +136,7 @@ LOCAL void deleteCommandNode(ServerIOCommandNode *commandNode)
   freeCommandNode(commandNode,NULL);
   LIST_DELETE_NODE(commandNode);
 }
+#endif
 
 /***********************************************************************\
 * Name   : encodeHex
@@ -266,7 +272,7 @@ assert(ch != 0);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool doneLine(ServerIO *serverIO)
+LOCAL void doneLine(ServerIO *serverIO)
 {
   String_clear(serverIO->line);
   serverIO->lineFlag = FALSE;
@@ -695,7 +701,7 @@ void ServerIO_disconnect(ServerIO *serverIO)
   disconnect(serverIO);
 }
 
-void ServerIO_sendSessionId(ServerIO *serverIO)
+Errors ServerIO_sendSessionId(ServerIO *serverIO)
 {
   String encodedId;
   String n,e;
@@ -752,6 +758,8 @@ void ServerIO_sendSessionId(ServerIO *serverIO)
   String_delete(n);
   String_delete(encodedId);
   String_delete(s);
+
+  return ERROR_NONE;
 }
 
 bool ServerIO_decryptPassword(Password       *password,
@@ -937,7 +945,6 @@ bool ServerIO_receiveData(ServerIO *serverIO)
 {
   uint   maxBytes;
   ulong  readBytes;
-  ulong  i;
   Errors error;
 
   assert(serverIO != NULL);
@@ -1490,7 +1497,7 @@ Errors ServerIO_sendMaster(const ServerIO     *serverIO,
                           )
 {
   String        s;
-uint commandId;
+//uint commandId;
   va_list       arguments;
   Errors        error;
 
@@ -1501,7 +1508,7 @@ uint commandId;
   s = String_new();
 
 error=ERROR_NONE;
-commandId = 0;
+//commandId = 0;
 UNUSED_VARIABLE(resultList);
 
     // send command

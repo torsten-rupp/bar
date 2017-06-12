@@ -237,7 +237,7 @@ INLINE bool ServerIO_isConnected(ServerIO *serverIO)
 * Purpose: send session id to client
 * Input  : serverIO - server i/o
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : send data:
 *          SESSION
 *            id=<encoded id>
@@ -246,7 +246,7 @@ INLINE bool ServerIO_isConnected(ServerIO *serverIO)
 *            e=<n>
 \***********************************************************************/
 
-void ServerIO_sendSessionId(ServerIO *serverIO);
+Errors ServerIO_sendSessionId(ServerIO *serverIO);
 
 /***********************************************************************\
 * Name   : ServerIO_decryptPassword
