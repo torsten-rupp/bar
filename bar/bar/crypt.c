@@ -1082,7 +1082,6 @@ fprintf(stderr,"%s, %d: decrpyt withg tcts bufferLength=%d\n",__FILE__,__LINE__,
 #endif
 #endif
 
-fprintf(stderr,"%s, %d: decryot %d %x\n",__FILE__,__LINE__,bufferLength,bufferLength);
         gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
                                           buffer,
                                           bufferLength,
@@ -1430,8 +1429,7 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
     gcry_sexp_sprint(sexpToken,GCRYSEXP_FMT_ADVANCED,(char*)encryptedKeyInfo->data,dataLength);
     gcry_sexp_release(sexpToken);
     memClear((byte*)encryptedKeyInfo->data+dataLength,alignedDataLength-dataLength);
-//#ifdef DEBUG_ASYMMETRIC_CRYPT
-#if 1
+#ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: %d raw key\n",__FILE__,__LINE__,dataLength); debugDumpMemory(encryptedKeyInfo->data,alignedDataLength,FALSE);
 #endif
 
@@ -1492,8 +1490,7 @@ fprintf(stderr,"%s, %d: cryptMode=%x blockLength=%d\n",__FILE__,__LINE__,cryptMo
       Crypt_done(&cryptInfo);
       Crypt_doneKey(&encryptKey);
     }
-//#ifdef DEBUG_ASYMMETRIC_CRYPT
-#if 1
+#ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: %d encrypted key\n",__FILE__,__LINE__,dataLength); debugDumpMemory(encryptedKeyInfo->data,alignedDataLength,FALSE);
 #endif
 
@@ -1569,7 +1566,6 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
     assert(alignedDataLength >= dataLength);
     if ((dataLength <= 0) || ((sizeof(EncryptedKeyInfo)+alignedDataLength) > encryptedKeyDataLength))
     {
-fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,dataLength,encryptedKeyDataLength,sizeof(EncryptedKeyInfo)+alignedDataLength);
       return ERROR_INVALID_KEY;
     }
 
@@ -1705,7 +1701,7 @@ fprintf(stderr,"%s, %d: gcry_sexp_new cryptKey->key=%p %d %d: %s\n",__FILE__,__L
 
 Errors Crypt_getPublicPrivateKeyString(CryptKey            *cryptKey,
                                        String              string,
-                                       uint                cryptMode,
+                                       CryptMode           cryptMode,
                                        CryptKeyDeriveTypes cryptKeyDeriveType,
                                        const Password      *password,
                                        const byte          *salt,
@@ -1758,7 +1754,7 @@ Errors Crypt_getPublicPrivateKeyString(CryptKey            *cryptKey,
 
 Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
                                        const String        string,
-                                       uint                cryptMode,
+                                       CryptMode           cryptMode,
                                        CryptKeyDeriveTypes cryptKeyDeriveType,
                                        const Password      *password,
                                        const byte          *salt,
@@ -1935,7 +1931,7 @@ String Crypt_getPublicPrivateKeyExponent(CryptKey *cryptKey)
 
 Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
                                       const String        fileName,
-                                      uint                cryptMode,
+                                      CryptMode           cryptMode,
                                       CryptKeyDeriveTypes cryptKeyDeriveType,
                                       const Password      *password,
                                       const byte          *salt,
@@ -1988,7 +1984,7 @@ Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
 
 Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
                                        const String        fileName,
-                                       uint                cryptMode,
+                                       CryptMode           cryptMode,
                                        CryptKeyDeriveTypes cryptKeyDeriveType,
                                        const Password      *password,
                                        const byte          *salt,

@@ -139,7 +139,7 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-// crypt mode set (see CRYPT_MODES_*)
+// crypt mode set (see CRYPT_MODE_*)
 typedef uint CryptMode;
 
 // crypt info block
@@ -750,7 +750,7 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
 Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
                                      void                **encryptedKeyData,
                                      uint                *encryptedKeyDataLength,
-                                     uint                cryptMode,
+                                     CryptMode           cryptMode,
                                      CryptKeyDeriveTypes cryptKeyDeriveType,
                                      const Password      *password,
                                      const byte          *salt,
@@ -777,7 +777,7 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
 Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
                                      const void          *encryptedKeyData,
                                      uint                encryptedKeyDataLength,
-                                     uint                cryptMode,
+                                     CryptMode           cryptMode,
                                      CryptKeyDeriveTypes cryptKeyDeriveType,
                                      const Password      *password,
                                      const byte          *salt,
@@ -802,7 +802,7 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
 
 Errors Crypt_getPublicPrivateKeyString(CryptKey            *cryptKey,
                                        String              string,
-                                       uint                cryptMode,
+                                       CryptMode           cryptMode,
                                        CryptKeyDeriveTypes cryptKeyDeriveType,
                                        const Password      *password,
                                        const byte          *salt,
@@ -827,7 +827,7 @@ Errors Crypt_getPublicPrivateKeyString(CryptKey            *cryptKey,
 
 Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
                                        const String        string,
-                                       uint                cryptMode,
+                                       CryptMode           cryptMode,
                                        CryptKeyDeriveTypes cryptKeyDeriveType,
                                        const Password      *password,
                                        const byte          *salt,
@@ -863,7 +863,7 @@ String Crypt_getPublicPrivateKeyExponent(CryptKey *cryptKey);
 
 Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
                                       const String        fileName,
-                                      uint                cryptMode,
+                                      CryptMode           cryptMode,
                                       CryptKeyDeriveTypes cryptKeyDeriveType,
                                       const Password      *password,
                                       const byte          *salt,
@@ -886,7 +886,7 @@ Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
 
 Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
                                        const String        fileName,
-                                       uint                cryptMode,
+                                       CryptMode           cryptMode,
                                        CryptKeyDeriveTypes cryptKeyDeriveType,
                                        const Password      *password,
                                        const byte          *salt,
