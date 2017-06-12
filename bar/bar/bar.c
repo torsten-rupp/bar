@@ -2973,7 +2973,7 @@ LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char 
   return TRUE;
 }
 
-//#ifdef MULTI_CRYPT
+#ifdef MULTI_CRYPT
 /***********************************************************************\
 * Name   : cmdOptionParseCryptAlgorithms
 * Purpose: command line option call back for parsing crypt algorithms
@@ -2987,7 +2987,7 @@ LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const c
 {
   StringTokenizer stringTokenizer;
   ConstString     token;
-  CryptAlgorithms cryptAlgorithms[4];
+//  CryptAlgorithms cryptAlgorithms[4];
   uint            cryptAlgorithmCount;
 
   assert(variable != NULL);
@@ -3034,7 +3034,7 @@ LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const c
 
   return TRUE;
 }
-//#endif /* MULTI_CRYPT */
+#endif /* MULTI_CRYPT */
 
 
 /***********************************************************************\
