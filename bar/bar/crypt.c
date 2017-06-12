@@ -700,7 +700,7 @@ Errors __Crypt_init(const char      *__fileName__,
           }
           gcryptMode = ((cryptMode & CRYPT_MODE_CBC) == CRYPT_MODE_CBC) ? GCRY_CIPHER_MODE_CBC : GCRY_CIPHER_MODE_NONE;
           gcryptFlags = 0;
-          if ((cryptMode & CRYPT_MODE_CTS) == CRYPT_MODE_CTS) gcryptFlags |= GCRY_CIPHER_CBC_CTS;
+//          if ((cryptMode & CRYPT_MODE_CTS) == CRYPT_MODE_CTS) gcryptFlags |= GCRY_CIPHER_CBC_CTS;
 
           // get block length, key length
           gcryptError = gcry_cipher_algo_info(gcryptAlgorithm,
