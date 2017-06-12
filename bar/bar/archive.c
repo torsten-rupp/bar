@@ -4847,8 +4847,8 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   archiveHandle->printableStorageName    = String_duplicate(fromArchiveHandle->printableStorageName);
   archiveHandle->storage.storageFileName = NULL;
   Semaphore_init(&archiveHandle->chunkIOLock);
-  archiveHandle->chunkIO                 = fromArchiveHandle->chunkIO;
-  archiveHandle->chunkIOUserData         = fromArchiveHandle->chunkIOUserData;
+  archiveHandle->chunkIO                 = &CHUNK_IO_STORAGE;
+  archiveHandle->chunkIOUserData         = &archiveHandle->storage.storageHandle;
 
   archiveHandle->entries                 = 0LL;
   archiveHandle->archiveFileSize         = 0LL;

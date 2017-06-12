@@ -58,14 +58,11 @@
 // compare info
 typedef struct
 {
-  StorageSpecifier    *storageSpecifier;                  // storage specifier structure
   FragmentList        *fragmentList;
   const EntryList     *includeEntryList;                  // list of included entries
   const PatternList   *excludePatternList;                // list of exclude patterns
   DeltaSourceList     *deltaSourceList;                   // delta sources
-  const JobOptions    *jobOptions;
-  GetPasswordFunction getPasswordFunction;
-  void                *getPasswordUserData;
+  const ArchiveHandle *archiveHandle;
   LogHandle           *logHandle;                         // log handle
 
   bool                *pauseTestFlag;                     // TRUE for pause creation
@@ -121,13 +118,10 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 * Name   : initCompareInfo
 * Purpose: initialize compare info
 * Input  : compareInfo         - compare info variable
-*          storageSpecifier    - storage specifier structure
 *          includeEntryList    - include entry list
 *          excludePatternList  - exclude pattern list
 *          deltaSourceList     - delta source list
-*          jobOptions          - job options
-*          getPasswordFunction - get password call back
-*          getPasswordUserData - user data for get password call back
+*          archiveHandle       - archive handle
 *          pauseTestFlag       - pause creation flag (can be NULL)
 *          requestedAbortFlag  - request abort flag (can be NULL)
 *          logHandle           - log handle (can be NULL)
@@ -138,13 +132,10 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 
 LOCAL void initCompareInfo(CompareInfo         *compareInfo,
                            FragmentList        *fragmentList,
-                           StorageSpecifier    *storageSpecifier,
                            const EntryList     *includeEntryList,
                            const PatternList   *excludePatternList,
                            DeltaSourceList     *deltaSourceList,
-                           const JobOptions    *jobOptions,
-                           GetPasswordFunction getPasswordFunction,
-                           void                *getPasswordUserData,
+                           const ArchiveHandle *archiveHandle,
                            bool                *pauseTestFlag,
                            bool                *requestedAbortFlag,
                            LogHandle           *logHandle
@@ -154,13 +145,10 @@ LOCAL void initCompareInfo(CompareInfo         *compareInfo,
 
   // init variables
   compareInfo->fragmentList        = fragmentList;
-  compareInfo->storageSpecifier    = storageSpecifier;
   compareInfo->includeEntryList    = includeEntryList;
   compareInfo->excludePatternList  = excludePatternList;
   compareInfo->deltaSourceList     = deltaSourceList;
-  compareInfo->jobOptions          = jobOptions;
-  compareInfo->getPasswordFunction = getPasswordFunction;
-  compareInfo->getPasswordUserData = getPasswordUserData;
+  compareInfo->archiveHandle       = archiveHandle;
   compareInfo->pauseTestFlag       = pauseTestFlag;
   compareInfo->requestedAbortFlag  = requestedAbortFlag;
   compareInfo->logHandle           = logHandle;
@@ -238,7 +226,6 @@ LOCAL_INLINE ulong compare(const void *p0, const void *p1, ulong length)
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
-*          jobOptions           - job options
 *          fragmentList         - fragment list
 *          buffer0,buffer1      - buffers for temporary data
 *          bufferSize           - size of data buffer
@@ -250,8 +237,6 @@ LOCAL_INLINE ulong compare(const void *p0, const void *p1, ulong length)
 LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
                               const EntryList   *includeEntryList,
                               const PatternList *excludePatternList,
-                              const char        *printableStorageName,
-                              const JobOptions  *jobOptions,
                               FragmentList      *fragmentList,
                               byte              *buffer0,
                               byte              *buffer1,
@@ -273,6 +258,15 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
   SemaphoreLock      semaphoreLock;
   FragmentNode       *fragmentNode;
 
+  assert(archiveHandle != NULL);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
+  assert(fragmentList != NULL);
+  assert(buffer0 != NULL);
+  assert(buffer1 != NULL);
+
   // read file
   fileName = String_new();
   error = Archive_readFileEntry(&archiveEntryInfo,
@@ -292,7 +286,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               archiveHandle->printableStorageName,
                Error_getText(error)
               );
     String_delete(fileName);
@@ -386,7 +380,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
       {
         printInfo(1,"FAIL!\n");
         printError("Cannot read content of archive '%s' (error: %s)!\n",
-                   printableStorageName,
+                   archiveHandle->printableStorageName,
                    Error_getText(error)
                   );
         break;
@@ -437,7 +431,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
     // close file
     File_close(&fileHandle);
 
-    if (!jobOptions->noFragmentsCheckFlag)
+    if (!archiveHandle->storageInfo->jobOptions->noFragmentsCheckFlag)
     {
       SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
@@ -508,7 +502,6 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
-*          jobOptions           - job options
 *          fragmentList         - fragment list
 *          buffer0,buffer1      - buffers for temporary data
 *          bufferSize           - size of data buffer
@@ -520,8 +513,6 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
 LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
                                const EntryList   *includeEntryList,
                                const PatternList *excludePatternList,
-                               const char        *printableStorageName,
-                               const JobOptions  *jobOptions,
                                FragmentList      *fragmentList,
                                byte              *buffer0,
                                byte              *buffer1,
@@ -543,6 +534,15 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
   SemaphoreLock      semaphoreLock;
   FragmentNode       *fragmentNode;
 
+  assert(archiveHandle != NULL);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
+  assert(fragmentList != NULL);
+  assert(buffer0 != NULL);
+  assert(buffer1 != NULL);
+
   // read image
   deviceName = String_new();
   error = Archive_readImageEntry(&archiveEntryInfo,
@@ -562,7 +562,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               archiveHandle->printableStorageName,
                Error_getText(error)
               );
     String_delete(deviceName);
@@ -603,7 +603,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     if (error != ERROR_NONE)
     {
       (void)Archive_closeEntry(&archiveEntryInfo);
-      if (jobOptions->skipUnreadableFlag)
+      if (archiveHandle->storageInfo->jobOptions->skipUnreadableFlag)
       {
         printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
         String_delete(deviceName);
@@ -667,7 +667,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     }
 
     // check if device contain a known file system or a raw image should be compared
-    if (!jobOptions->rawImagesFlag)
+    if (!archiveHandle->storageInfo->jobOptions->rawImagesFlag)
     {
       fileSystemFlag = (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE);
     }
@@ -706,7 +706,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
       {
         printInfo(1,"FAIL!\n");
         printError("Cannot read content of archive '%s' (error: %s)!\n",
-                   printableStorageName,
+                   archiveHandle->printableStorageName,
                    Error_getText(error)
                   );
         break;
@@ -774,7 +774,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     DEBUG_TESTCODE() { if (fileSystemFlag) { FileSystem_done(&fileSystemHandle); } Device_close(&deviceHandle); Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
     printInfo(2,"    \b\b\b\b");
 
-    if (!jobOptions->noFragmentsCheckFlag)
+    if (!archiveHandle->storageInfo->jobOptions->noFragmentsCheckFlag)
     {
       SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
@@ -847,8 +847,6 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
 * Input  : archiveHandle        - archive handle
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
-*          printableStorageName - printable storage name
-*          jobOptions           - job options
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -856,9 +854,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
 
 LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
                                    const EntryList   *includeEntryList,
-                                   const PatternList *excludePatternList,
-                                   const char        *printableStorageName,
-                                   const JobOptions  *jobOptions
+                                   const PatternList *excludePatternList
                                   )
 {
   Errors           error;
@@ -868,7 +864,11 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
 //            String   localFileName;
 //            FileInfo localFileInfo;
 
-  UNUSED_VARIABLE(jobOptions);
+  assert(archiveHandle != NULL);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
 
   // read directory
   directoryName = String_new();
@@ -883,7 +883,7 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               archiveHandle->printableStorageName,
                Error_getText(error)
               );
     String_delete(directoryName);
@@ -969,8 +969,6 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
 * Input  : archiveHandle        - archive handle
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
-*          printableStorageName - printable storage name
-*          jobOptions           - job options
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -978,9 +976,7 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
 
 LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
                               const EntryList   *includeEntryList,
-                              const PatternList *excludePatternList,
-                              const char        *printableStorageName,
-                              const JobOptions  *jobOptions
+                              const PatternList *excludePatternList
                              )
 {
   Errors           error;
@@ -991,7 +987,11 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
   String           localFileName;
 //                    FileInfo localFileInfo;
 
-  UNUSED_VARIABLE(jobOptions);
+  assert(archiveHandle != NULL);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
 
   // read link
   linkName = String_new();
@@ -1008,7 +1008,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               archiveHandle->printableStorageName,
                Error_getText(error)
               );
     String_delete(fileName);
@@ -1133,8 +1133,6 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
 * Input  : archiveHandle        - archive handle
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
-*          printableStorageName - printable storage name
-*          jobOptions           - job options
 *          fragmentList         - fragment list
 *          buffer0,buffer1      - buffers for temporary data
 *          bufferSize           - size of data buffer
@@ -1146,8 +1144,6 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
 LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
                                   const EntryList   *includeEntryList,
                                   const PatternList *excludePatternList,
-                                  const char        *printableStorageName,
-                                  const JobOptions  *jobOptions,
                                   FragmentList      *fragmentList,
                                   byte              *buffer0,
                                   byte              *buffer1,
@@ -1172,6 +1168,15 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
   SemaphoreLock      semaphoreLock;
   FragmentNode       *fragmentNode;
 
+  assert(archiveHandle != NULL);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
+  assert(fragmentList != NULL);
+  assert(buffer0 != NULL);
+  assert(buffer1 != NULL);
+
   // read hard link
   StringList_init(&fileNameList);
   error = Archive_readHardLinkEntry(&archiveEntryInfo,
@@ -1191,7 +1196,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               archiveHandle->printableStorageName,
                Error_getText(error)
               );
     StringList_done(&fileNameList);
@@ -1213,7 +1218,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
       {
         printInfo(1,"FAIL!\n");
         printError("File '%s' not found!\n",String_cString(fileName));
-        if (!jobOptions->noStopOnErrorFlag)
+        if (!archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
         {
           error = ERROR_FILE_NOT_FOUND_;
           break;
@@ -1227,7 +1232,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
       {
         printInfo(1,"FAIL!\n");
         printError("'%s' is not a hard link!\n",String_cString(fileName));
-        if (!jobOptions->noStopOnErrorFlag)
+        if (!archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
         {
           error = ERROR_WRONG_ENTRY_TYPE;
           break;
@@ -1251,7 +1256,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
                      String_cString(fileName),
                      Error_getText(error)
                     );
-          if (!jobOptions->noStopOnErrorFlag)
+          if (!archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
           {
             break;
           }
@@ -1272,7 +1277,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
                      File_getSize(&fileHandle)
                     );
           File_close(&fileHandle);
-          if (!jobOptions->noStopOnErrorFlag)
+          if (!archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
           {
             error = ERROR_ENTRIES_DIFFER;
             break;
@@ -1293,7 +1298,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
                      Error_getText(error)
                     );
           File_close(&fileHandle);
-          if (!jobOptions->noStopOnErrorFlag)
+          if (!archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
           {
             break;
           }
@@ -1320,7 +1325,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
           {
             printInfo(1,"FAIL!\n");
             printError("Cannot read content of archive '%s' (error: %s)!\n",
-                       printableStorageName,
+                       archiveHandle->printableStorageName,
                        Error_getText(error)
                       );
             break;
@@ -1367,7 +1372,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         // close file
         (void)File_close(&fileHandle);
 
-        if (!jobOptions->noFragmentsCheckFlag)
+        if (!archiveHandle->storageInfo->jobOptions->noFragmentsCheckFlag)
         {
           SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
@@ -1449,8 +1454,6 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
 * Input  : archiveHandle        - archive handle
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
-*          printableStorageName - printable storage name
-*          jobOptions           - job options
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1458,9 +1461,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
 
 LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
                                  const EntryList   *includeEntryList,
-                                 const PatternList *excludePatternList,
-                                 const char        *printableStorageName,
-                                 const JobOptions  *jobOptions
+                                 const PatternList *excludePatternList
                                 )
 {
   Errors           error;
@@ -1469,7 +1470,11 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
   FileInfo         fileInfo;
   FileInfo         localFileInfo;
 
-  UNUSED_VARIABLE(jobOptions);
+  assert(archiveHandle != NULL);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
 
   // read special
   fileName = String_new();
@@ -1484,7 +1489,7 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               archiveHandle->printableStorageName,
                Error_getText(error)
               );
     String_delete(fileName);
@@ -1611,16 +1616,17 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
 
 LOCAL void compareThreadCode(CompareInfo *compareInfo)
 {
-  String        printableStorageName;
   byte          *buffer0,*buffer1;
   ArchiveHandle archiveHandle;
   EntryMsg      entryMsg;
   Errors        error;
 
   assert(compareInfo != NULL);
+  assert(compareInfo->archiveHandle != NULL);
+  assert(compareInfo->archiveHandle->storageInfo != NULL);
+  assert(compareInfo->archiveHandle->storageInfo->jobOptions != NULL);
 
   // init variables
-  printableStorageName = String_new();
   buffer0 = (byte*)malloc(BUFFER_SIZE);
   if (buffer0 == NULL)
   {
@@ -1632,9 +1638,6 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  // get printable storage name
-  Storage_getPrintableName(printableStorageName,compareInfo->storageSpecifier,NULL);
-
   // compare entries
   while (   (compareInfo->failError == ERROR_NONE)
 //TODO
@@ -1645,18 +1648,13 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
 //fprintf(stderr,"%s, %d: %p %d %llu\n",__FILE__,__LINE__,pthread_self(),entryMsg.archiveEntryType,entryMsg.offset);
 //TODO: open only when changed
     // open archive
-    error = Archive_open(&archiveHandle,
-                         entryMsg.storageInfo,
-                         NULL,  // archiveName
-                         compareInfo->deltaSourceList,
-                         compareInfo->getPasswordFunction,
-                         compareInfo->getPasswordUserData,
-                         compareInfo->logHandle
-                        );
+    error = Archive_openHandle(&archiveHandle,
+                               compareInfo->archiveHandle
+                              );
     if (error != ERROR_NONE)
     {
       printError("Cannot open storage '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
+                 String_cString(compareInfo->archiveHandle->printableStorageName),
                  Error_getText(error)
                 );
       if (compareInfo->failError == ERROR_NONE) compareInfo->failError = error;
@@ -1673,7 +1671,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
     if (error != ERROR_NONE)
     {
       printError("Cannot read storage '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
+                 String_cString(compareInfo->archiveHandle->printableStorageName),
                  Error_getText(error)
                 );
       if (compareInfo->failError == ERROR_NONE) compareInfo->failError = error;
@@ -1686,8 +1684,6 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
         error = compareFileEntry(&archiveHandle,
                                  compareInfo->includeEntryList,
                                  compareInfo->excludePatternList,
-                                 String_cString(printableStorageName),
-                                 compareInfo->jobOptions,
                                  compareInfo->fragmentList,
                                  buffer0,
                                  buffer1,
@@ -1698,8 +1694,6 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
         error = compareImageEntry(&archiveHandle,
                                   compareInfo->includeEntryList,
                                   compareInfo->excludePatternList,
-                                  String_cString(printableStorageName),
-                                  compareInfo->jobOptions,
                                   compareInfo->fragmentList,
                                   buffer0,
                                   buffer1,
@@ -1709,25 +1703,19 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
         error = compareDirectoryEntry(&archiveHandle,
                                       compareInfo->includeEntryList,
-                                      compareInfo->excludePatternList,
-                                      String_cString(printableStorageName),
-                                      compareInfo->jobOptions
+                                      compareInfo->excludePatternList
                                      );
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
         error = compareLinkEntry(&archiveHandle,
                                  compareInfo->includeEntryList,
-                                 compareInfo->excludePatternList,
-                                 String_cString(printableStorageName),
-                                 compareInfo->jobOptions
+                                 compareInfo->excludePatternList
                                 );
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
         error = compareHardLinkEntry(&archiveHandle,
                                      compareInfo->includeEntryList,
                                      compareInfo->excludePatternList,
-                                     String_cString(printableStorageName),
-                                     compareInfo->jobOptions,
                                      compareInfo->fragmentList,
                                      buffer0,
                                      buffer1,
@@ -1737,9 +1725,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         error = compareSpecialEntry(&archiveHandle,
                                     compareInfo->includeEntryList,
-                                    compareInfo->excludePatternList,
-                                    String_cString(printableStorageName),
-                                    compareInfo->jobOptions
+                                    compareInfo->excludePatternList
                                    );
         break;
       case ARCHIVE_ENTRY_TYPE_META:
@@ -1756,7 +1742,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
     }
     if (error != ERROR_NONE)
     {
-      if (!compareInfo->jobOptions->noStopOnErrorFlag)
+      if (!compareInfo->archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
       {
         if (compareInfo->failError == ERROR_NONE) compareInfo->failError = error;
       }
@@ -1772,7 +1758,6 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
   // free resources
   free(buffer1);
   free(buffer0);
-  String_delete(printableStorageName);
 }
 
 /***********************************************************************\
@@ -1798,7 +1783,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                                    const EntryList     *includeEntryList,
                                    const PatternList   *excludePatternList,
                                    DeltaSourceList     *deltaSourceList,
-                                   JobOptions          *jobOptions,
+                                   const JobOptions    *jobOptions,
                                    GetPasswordFunction getPasswordFunction,
                                    void                *getPasswordUserData,
                                    FragmentList        *fragmentList,
@@ -1885,6 +1870,10 @@ NULL, // masterSocketHandle
     if (error != ERROR_NONE)
     {
       AutoFree_cleanup(&autoFreeList);
+      printError("Verify signature fail for archive '%s' (error: %s)!\n",
+                 String_cString(printableStorageName),
+                 Error_getText(error)
+                );
       return error;
     }
     if (!Crypt_isValidSignatureState(allCryptSignatureState))
@@ -1894,32 +1883,6 @@ NULL, // masterSocketHandle
                 );
       AutoFree_cleanup(&autoFreeList);
       return ERROR_INVALID_SIGNATURE;
-    }
-  }
-
-  // init compare info
-  initCompareInfo(&compareInfo,
-                  fragmentList,
-                  storageSpecifier,
-                  includeEntryList,
-                  excludePatternList,
-                  deltaSourceList,
-                  jobOptions,
-                  getPasswordFunction,
-                  getPasswordUserData,
-//TODO
-NULL,  //               pauseTestFlag,
-NULL,  //               requestedAbortFlag,
-                  logHandle
-                 );
-  AUTOFREE_ADD(&autoFreeList,&compareInfo,{ (void)doneCompareInfo(&compareInfo); });
-
-  // start compare threads
-  for (i = 0; i < compareThreadCount; i++)
-  {
-    if (!Thread_init(&compareThreads[i],"BAR compare",globalOptions.niceLevel,compareThreadCode,&compareInfo))
-    {
-      HALT_FATAL_ERROR("Cannot initialize comparethread #%d!",i);
     }
   }
 
@@ -1942,6 +1905,29 @@ NULL,  //               requestedAbortFlag,
     return error;
   }
   DEBUG_TESTCODE() { (void)Archive_close(&archiveHandle); (void)Storage_done(&storageInfo); return DEBUG_TESTCODE_ERROR(); }
+
+  // init compare info
+  initCompareInfo(&compareInfo,
+                  fragmentList,
+                  includeEntryList,
+                  excludePatternList,
+                  deltaSourceList,
+                  &archiveHandle,
+//TODO
+NULL,  //               pauseTestFlag,
+NULL,  //               requestedAbortFlag,
+                  logHandle
+                 );
+  AUTOFREE_ADD(&autoFreeList,&compareInfo,{ (void)doneCompareInfo(&compareInfo); });
+
+  // start compare threads
+  for (i = 0; i < compareThreadCount; i++)
+  {
+    if (!Thread_init(&compareThreads[i],"BAR compare",globalOptions.niceLevel,compareThreadCode,&compareInfo))
+    {
+      HALT_FATAL_ERROR("Cannot initialize comparethread #%d!",i);
+    }
+  }
 
   // read archive entries
   printInfo(0,
@@ -1994,9 +1980,6 @@ NULL,  //               requestedAbortFlag,
   }
   if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
-  // close archive
-  Archive_close(&archiveHandle);
-
   // wait for compare threads
   MsgQueue_setEndOfMsg(&compareInfo.entryMsgQueue);
   for (i = 0; i < compareThreadCount; i++)
@@ -2006,6 +1989,9 @@ NULL,  //               requestedAbortFlag,
       HALT_INTERNAL_ERROR("Cannot stop compare thread #%d!",i);
     }
   }
+
+  // close archive
+  Archive_close(&archiveHandle);
 
   // done storage
   (void)Storage_done(&storageInfo);

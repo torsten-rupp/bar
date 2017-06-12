@@ -55,16 +55,11 @@
 // test info
 typedef struct
 {
-  StorageSpecifier    *storageSpecifier;                  // storage specifier structure
   FragmentList        *fragmentList;
   const EntryList     *includeEntryList;                  // list of included entries
   const PatternList   *excludePatternList;                // list of exclude patterns
   DeltaSourceList     *deltaSourceList;                   // delta sources
-  const JobOptions    *jobOptions;
   const ArchiveHandle *archiveHandle;
-//TODO: obsolete?
-  GetPasswordFunction getPasswordFunction;
-  void                *getPasswordUserData;
   LogHandle           *logHandle;                         // log handle
 
   bool                *pauseTestFlag;                     // TRUE for pause creation
@@ -120,14 +115,10 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 * Name   : initTestInfo
 * Purpose: initialize test info
 * Input  : testInfo            - test info variable
-*          storageSpecifier    - storage specifier structure
 *          includeEntryList    - include entry list
 *          excludePatternList  - exclude pattern list
 *          deltaSourceList     - delta source list
 *          archiveHandle       - archive handle
-*          jobOptions          - job options
-*          getPasswordFunction - get password call back
-*          getPasswordUserData - user data for get password call back
 *          pauseTestFlag       - pause creation flag (can be NULL)
 *          requestedAbortFlag  - request abort flag (can be NULL)
 *          logHandle           - log handle (can be NULL)
@@ -138,14 +129,10 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 
 LOCAL void initTestInfo(TestInfo            *testInfo,
                         FragmentList        *fragmentList,
-                        StorageSpecifier    *storageSpecifier,
                         const EntryList     *includeEntryList,
                         const PatternList   *excludePatternList,
                         DeltaSourceList     *deltaSourceList,
                         const ArchiveHandle *archiveHandle,
-                        const JobOptions    *jobOptions,
-                        GetPasswordFunction getPasswordFunction,
-                        void                *getPasswordUserData,
                         bool                *pauseTestFlag,
                         bool                *requestedAbortFlag,
                         LogHandle           *logHandle
@@ -155,14 +142,10 @@ LOCAL void initTestInfo(TestInfo            *testInfo,
 
   // init variables
   testInfo->fragmentList        = fragmentList;
-  testInfo->storageSpecifier    = storageSpecifier;
   testInfo->includeEntryList    = includeEntryList;
   testInfo->excludePatternList  = excludePatternList;
   testInfo->deltaSourceList     = deltaSourceList;
-  testInfo->jobOptions          = jobOptions;
   testInfo->archiveHandle       = archiveHandle;
-  testInfo->getPasswordFunction = getPasswordFunction;
-  testInfo->getPasswordUserData = getPasswordUserData;
   testInfo->pauseTestFlag       = pauseTestFlag;
   testInfo->requestedAbortFlag  = requestedAbortFlag;
   testInfo->logHandle           = logHandle;
@@ -209,8 +192,6 @@ LOCAL void doneTestInfo(TestInfo *testInfo)
 * Input  : archiveHandle        - archive handle
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
-*          printableStorageName - printable storage name
-*          jobOptions           - job options
 *          fragmentList         - fragment list
 *          buffer               - buffer for temporary data
 *          bufferSize           - size of data buffer
@@ -222,8 +203,6 @@ LOCAL void doneTestInfo(TestInfo *testInfo)
 LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
                            const EntryList   *includeEntryList,
                            const PatternList *excludePatternList,
-                           const char        *printableStorageName,
-                           const JobOptions  *jobOptions,
                            FragmentList      *fragmentList,
                            byte              *buffer,
                            uint              bufferSize
@@ -240,11 +219,16 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
   FragmentNode     *fragmentNode;
   char             s[256];
 
+  assert(archiveHandle != NULL);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
+  assert(fragmentList != NULL);
+  assert(buffer != NULL);
+
   // open archive entry
   fileName = String_new();
-fprintf(stderr,"%s, %d:aaaaaaaaa \n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//asm("int3");
   error = Archive_readFileEntry(&archiveEntryInfo,
                                 archiveHandle,
                                 NULL,  // deltaCompressAlgorithm
@@ -262,7 +246,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               archiveHandle->printableStorageName,
                Error_getText(error)
               );
     String_delete(fileName);
@@ -287,7 +271,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       {
         printInfo(1,"FAIL!\n");
         printError("Cannot read content of archive '%s' (error: %s)!\n",
-                   printableStorageName,
+                   archiveHandle->printableStorageName,
                    Error_getText(error)
                   );
         break;
@@ -305,7 +289,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
     printInfo(2,"    \b\b\b\b");
 
-    if (!jobOptions->noFragmentsCheckFlag)
+    if (!archiveHandle->storageInfo->jobOptions->noFragmentsCheckFlag)
     {
       SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
@@ -389,8 +373,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 * Input  : archiveHandle        - archive handle
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
-*          printableStorageName - printable storage name
-*          jobOptions           - job options
 *          fragmentList         - fragment list
 *          buffer               - buffer for temporary data
 *          bufferSize           - size of data buffer
@@ -402,8 +384,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
                             const EntryList   *includeEntryList,
                             const PatternList *excludePatternList,
-                            const char        *printableStorageName,
-                            const JobOptions  *jobOptions,
                             FragmentList      *fragmentList,
                             byte              *buffer,
                             uint              bufferSize
@@ -418,6 +398,14 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
   ulong            bufferBlockCount;
   SemaphoreLock    semaphoreLock;
   FragmentNode     *fragmentNode;
+
+  assert(archiveHandle != NULL);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
+  assert(fragmentList != NULL);
+  assert(buffer != NULL);
 
   // open archive entry
   deviceName = String_new();
@@ -438,7 +426,7 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               archiveHandle->printableStorageName,
                Error_getText(error)
               );
     String_delete(deviceName);
@@ -474,7 +462,7 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
       {
         printInfo(1,"FAIL!\n");
         printError("Cannot read content of archive '%s' (error: %s)!\n",
-                   printableStorageName,
+                   archiveHandle->printableStorageName,
                    Error_getText(error)
                   );
         break;
@@ -492,7 +480,7 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
     }
     printInfo(2,"    \b\b\b\b");
 
-    if (!jobOptions->noFragmentsCheckFlag)
+    if (!archiveHandle->storageInfo->jobOptions->noFragmentsCheckFlag)
     {
       SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
@@ -561,11 +549,9 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
 /***********************************************************************\
 * Name   : testDirectoryEntry
 * Purpose: test a directory entry in archive
-* Input  : archiveHandle        - archive handle
-*          includeEntryList     - include entry list
-*          excludePatternList   - exclude pattern list
-*          printableStorageName - printable storage name
-*          jobOptions           - job options
+* Input  : archiveHandle      - archive handle
+*          includeEntryList   - include entry list
+*          excludePatternList - exclude pattern list
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -573,9 +559,7 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
 
 LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
                                 const EntryList   *includeEntryList,
-                                const PatternList *excludePatternList,
-                                const char        *printableStorageName,
-                                const JobOptions  *jobOptions
+                                const PatternList *excludePatternList
                                )
 {
   Errors           error;
@@ -583,7 +567,11 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
   ArchiveEntryInfo archiveEntryInfo;
   FileInfo         fileInfo;
 
-  UNUSED_VARIABLE(jobOptions);
+  assert(archiveHandle != NULL);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
 
   // open archive entry
   directoryName = String_new();
@@ -598,7 +586,7 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               archiveHandle->printableStorageName,
                Error_getText(error)
               );
     String_delete(directoryName);
@@ -651,11 +639,9 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
 /***********************************************************************\
 * Name   : testLinkEntry
 * Purpose: test a link entry in archive
-* Input  : archiveHandle        - archive handle
-*          includeEntryList     - include entry list
-*          excludePatternList   - exclude pattern list
-*          printableStorageName - printable storage name
-*          jobOptions           - job options
+* Input  : archiveHandle      - archive handle
+*          includeEntryList   - include entry list
+*          excludePatternList - exclude pattern list
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -663,9 +649,7 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
 
 LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
                            const EntryList   *includeEntryList,
-                           const PatternList *excludePatternList,
-                           const char        *printableStorageName,
-                           const JobOptions  *jobOptions
+                           const PatternList *excludePatternList
                           )
 {
   Errors           error;
@@ -674,7 +658,11 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
   ArchiveEntryInfo archiveEntryInfo;
   FileInfo         fileInfo;
 
-  UNUSED_VARIABLE(jobOptions);
+  assert(archiveHandle != NULL);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
 
   // open archive entry
   linkName = String_new();
@@ -691,7 +679,7 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               archiveHandle->printableStorageName,
                Error_getText(error)
               );
     String_delete(fileName);
@@ -748,14 +736,12 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
 /***********************************************************************\
 * Name   : testHardLinkEntry
 * Purpose: test a hardlink entry in archive
-* Input  : archiveHandle        - archive handle
-*          includeEntryList     - include entry list
-*          excludePatternList   - exclude pattern list
-*          printableStorageName - printable storage name
-*          jobOptions           - job options
-*          fragmentList         - fragment list
-*          buffer               - buffer for temporary data
-*          bufferSize           - size of data buffer
+* Input  : archiveHandle      - archive handle
+*          includeEntryList   - include entry list
+*          excludePatternList - exclude pattern list
+*          fragmentList       - fragment list
+*          buffer             - buffer for temporary data
+*          bufferSize         - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -764,8 +750,6 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
 LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
                                const EntryList   *includeEntryList,
                                const PatternList *excludePatternList,
-                               const char        *printableStorageName,
-                               const JobOptions  *jobOptions,
                                FragmentList      *fragmentList,
                                byte              *buffer,
                                uint              bufferSize
@@ -783,6 +767,14 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
   ulong            n;
   SemaphoreLock    semaphoreLock;
   FragmentNode     *fragmentNode;
+
+  assert(archiveHandle != NULL);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
+  assert(fragmentList != NULL);
+  assert(buffer != NULL);
 
   // open archive entry
   StringList_init(&fileNameList);
@@ -803,7 +795,7 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               archiveHandle->printableStorageName,
                Error_getText(error)
               );
     StringList_done(&fileNameList);
@@ -835,7 +827,7 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
           {
             printInfo(1,"FAIL!\n");
             printError("Cannot read content of archive '%s' (error: %s)!\n",
-                       printableStorageName,
+                       archiveHandle->printableStorageName,
                        Error_getText(error)
                       );
             break;
@@ -851,7 +843,7 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
         }
         printInfo(2,"    \b\b\b\b");
 
-        if (!jobOptions->noFragmentsCheckFlag)
+        if (!archiveHandle->storageInfo->jobOptions->noFragmentsCheckFlag)
         {
           SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
@@ -939,11 +931,9 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
 /***********************************************************************\
 * Name   : testSpecialEntry
 * Purpose: test a special entry in archive
-* Input  : archiveHandle        - archive handle
-*          includeEntryList     - include entry list
-*          excludePatternList   - exclude pattern list
-*          printableStorageName - printable storage name
-*          jobOptions           - job options
+* Input  : archiveHandle      - archive handle
+*          includeEntryList   - include entry list
+*          excludePatternList - exclude pattern list
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -951,9 +941,7 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
 
 LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
                               const EntryList   *includeEntryList,
-                              const PatternList *excludePatternList,
-                              const char        *printableStorageName,
-                              const JobOptions  *jobOptions
+                              const PatternList *excludePatternList
                              )
 {
   Errors           error;
@@ -961,7 +949,11 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
   ArchiveEntryInfo archiveEntryInfo;
   FileInfo         fileInfo;
 
-  UNUSED_VARIABLE(jobOptions);
+  assert(archiveHandle != NULL);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(includeEntryList != NULL);
+  assert(excludePatternList != NULL);
 
   // open archive entry
   fileName = String_new();
@@ -976,7 +968,7 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
   if (error != ERROR_NONE)
   {
     printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
-               printableStorageName,
+               archiveHandle->printableStorageName,
                Error_getText(error)
               );
     String_delete(fileName);
@@ -1037,24 +1029,22 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
 
 LOCAL void testThreadCode(TestInfo *testInfo)
 {
-  String        printableStorageName;
   byte          *buffer;
   ArchiveHandle archiveHandle;
   EntryMsg      entryMsg;
   Errors        error;
 
   assert(testInfo != NULL);
+  assert(testInfo->archiveHandle != NULL);
+  assert(testInfo->archiveHandle->storageInfo != NULL);
+  assert(testInfo->archiveHandle->storageInfo->jobOptions != NULL);
 
   // init variables
-  printableStorageName = String_new();
   buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-
-  // get printable storage name
-  Storage_getPrintableName(printableStorageName,testInfo->storageSpecifier,NULL);
 
   // test entries
   while (   (testInfo->failError == ERROR_NONE)
@@ -1071,7 +1061,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     if (error != ERROR_NONE)
     {
       printError("Cannot open storage '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
+                 String_cString(testInfo->archiveHandle->printableStorageName),
                  Error_getText(error)
                 );
       free(buffer);
@@ -1079,6 +1069,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
       break;
     }
 
+//TODO
     // set crypt salt, crypt key derive type, and crypt mode
 //    Archive_setCryptSalt(&archiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
 //    Archive_setCryptKeyDeriveType(&archiveHandle,entryMsg.cryptKeyDeriveType);
@@ -1089,7 +1080,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     if (error != ERROR_NONE)
     {
       printError("Cannot read storage '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
+                 String_cString(testInfo->archiveHandle->printableStorageName),
                  Error_getText(error)
                 );
       if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
@@ -1102,8 +1093,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         error = testFileEntry(&archiveHandle,
                               testInfo->includeEntryList,
                               testInfo->excludePatternList,
-                              String_cString(printableStorageName),
-                              testInfo->jobOptions,
                               testInfo->fragmentList,
                               buffer,
                               BUFFER_SIZE
@@ -1113,8 +1102,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         error = testImageEntry(&archiveHandle,
                                testInfo->includeEntryList,
                                testInfo->excludePatternList,
-                               String_cString(printableStorageName),
-                               testInfo->jobOptions,
                                testInfo->fragmentList,
                                buffer,
                                BUFFER_SIZE
@@ -1123,25 +1110,19 @@ LOCAL void testThreadCode(TestInfo *testInfo)
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
         error = testDirectoryEntry(&archiveHandle,
                                    testInfo->includeEntryList,
-                                   testInfo->excludePatternList,
-                                   String_cString(printableStorageName),
-                                   testInfo->jobOptions
+                                   testInfo->excludePatternList
                                   );
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
         error = testLinkEntry(&archiveHandle,
                               testInfo->includeEntryList,
-                              testInfo->excludePatternList,
-                              String_cString(printableStorageName),
-                              testInfo->jobOptions
+                              testInfo->excludePatternList
                              );
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
         error = testHardLinkEntry(&archiveHandle,
                                   testInfo->includeEntryList,
                                   testInfo->excludePatternList,
-                                  String_cString(printableStorageName),
-                                  testInfo->jobOptions,
                                   testInfo->fragmentList,
                                   buffer,
                                   BUFFER_SIZE
@@ -1150,9 +1131,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         error = testSpecialEntry(&archiveHandle,
                                  testInfo->includeEntryList,
-                                 testInfo->excludePatternList,
-                                 String_cString(printableStorageName),
-                                 testInfo->jobOptions
+                                 testInfo->excludePatternList
                                 );
         break;
       case ARCHIVE_ENTRY_TYPE_META:
@@ -1169,7 +1148,10 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     }
     if (error != ERROR_NONE)
     {
-      if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
+      if (!testInfo->archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
+      {
+        if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
+      }
     }
 
     // close archive
@@ -1181,7 +1163,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 
   // free resources
   free(buffer);
-  String_delete(printableStorageName);
 }
 
 /***********************************************************************\
@@ -1293,6 +1274,10 @@ NULL, // masterSocketHandle
                                     );
     if (error != ERROR_NONE)
     {
+      printError("Verify signature fail for archive '%s' (error: %s)!\n",
+                 String_cString(printableStorageName),
+                 Error_getText(error)
+                );
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -1328,14 +1313,10 @@ NULL, // masterSocketHandle
   // init test info
   initTestInfo(&testInfo,
                fragmentList,
-               storageSpecifier,
                includeEntryList,
                excludePatternList,
                deltaSourceList,
                &archiveHandle,
-               jobOptions,
-               getPasswordFunction,
-               getPasswordUserData,
 //TODO
 NULL,  //               pauseTestFlag,
 NULL,  //               requestedAbortFlag,
@@ -1361,7 +1342,6 @@ NULL,  //               requestedAbortFlag,
   failError = ERROR_NONE;
   while (!Archive_eof(&archiveHandle,FALSE,isPrintInfo(3)))
   {
-fprintf(stderr,"%s, %d: +++++++++++\n",__FILE__,__LINE__);
     // get next archive entry type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
@@ -1402,7 +1382,6 @@ fprintf(stderr,"%s, %d: +++++++++++\n",__FILE__,__LINE__);
   if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // wait for test threads
-fprintf(stderr,"%s, %d: wait.,,,,,,,,.......................\n",__FILE__,__LINE__);
   MsgQueue_setEndOfMsg(&testInfo.entryMsgQueue);
   for (i = 0; i < testThreadCount; i++)
   {
@@ -1506,7 +1485,8 @@ Errors Command_test(const StringList    *storageNameList,
                                        );
       if (error == ERROR_NONE)
       {
-        error = Pattern_init(&pattern,storageSpecifier.archivePatternString,
+        error = Pattern_init(&pattern,
+                             storageSpecifier.archivePatternString,
                              jobOptions->patternType,
                              PATTERN_FLAG_NONE
                             );
