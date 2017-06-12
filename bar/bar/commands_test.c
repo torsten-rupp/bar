@@ -244,7 +244,7 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
   fileName = String_new();
 fprintf(stderr,"%s, %d:aaaaaaaaa \n",__FILE__,__LINE__);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+//asm("int3");
   error = Archive_readFileEntry(&archiveEntryInfo,
                                 archiveHandle,
                                 NULL,  // deltaCompressAlgorithm
@@ -339,11 +339,12 @@ asm("int3");
         && !Archive_eofData(&archiveEntryInfo)
        )
     {
+      error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
       printInfo(1,"FAIL!\n");
       printError("unexpected data at end of file entry '%S'!\n",fileName);
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
-      return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
+      return error;
     }
 
     // get fragment info

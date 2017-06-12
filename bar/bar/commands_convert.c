@@ -451,7 +451,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
       {
         printInfo(0,"FAIL!\n");
         printError("Cannot store '%s' (error: %s)\n",
-                   String_cString(convertInfo->destinationArchiveHandle.file.archiveName),
+                   String_cString(convertInfo->destinationArchiveHandle.archiveName),
                    Error_getText(error)
                   );
         break;
@@ -722,6 +722,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                              )
 {
   Errors                    error;
+  ArchiveFlags              archiveFlags;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CompressAlgorithms        deltaCompressAlgorithm,byteCompressAlgorithm;
   CryptTypes                cryptType;
@@ -767,9 +768,31 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert file '%s'...",String_cString(fileName));
 
   // get new compression, crypt settings
+//TODO
   if (jobOptions->compressAlgorithms.isSet) byteCompressAlgorithm = jobOptions->compressAlgorithms.value.byte;
   if (jobOptions->cryptAlgorithms.isSet   ) cryptAlgorithm        = jobOptions->cryptAlgorithms.values[0];
   cryptPassword = jobOptions->cryptNewPassword;
+
+  archiveFlags = ARCHIVE_FLAG_NONE;
+
+//TODO
+#if 0
+  // check if file data should be delta compressed
+  if (   (fileInfo.size > globalOptions.compressMinFileSize)
+      && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta)
+     )
+  {
+     archiveFlags |= ARCHIVE_FLAG_TRY_DELTA_COMPRESS;
+  }
+
+  // check if file data should be byte compressed
+  if (   (fileInfo.size > globalOptions.compressMinFileSize)
+      && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+     )
+  {
+     archiveFlags |= ARCHIVE_FLAG_TRY_BYTE_COMPRESS;
+  }
+#endif
 
   // create new file entry
   error = Archive_newFileEntry(&destinationArchiveEntryInfo,
@@ -777,17 +800,12 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                                NULL,  // indexHandle,
                                deltaCompressAlgorithm,
                                byteCompressAlgorithm,
-//TODO
-cryptType,
-                               cryptAlgorithm,
-                               cryptPassword,
                                fileName,
                                &fileInfo,
                                &fileExtendedAttributeList,
                                fragmentOffset,
                                fragmentSize,
-                               TRUE,  // tryDeltaCompressFlag,
-                               TRUE  // tryByteCompressFlag
+                               archiveFlags
                               );
   if (error != ERROR_NONE)
   {
@@ -915,6 +933,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                               )
 {
   Errors             error;
+  ArchiveFlags              archiveFlags;
   ArchiveEntryInfo   sourceArchiveEntryInfo;
   CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
   CryptTypes         cryptType;
@@ -973,23 +992,39 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   if (jobOptions->cryptAlgorithms.isSet   ) cryptAlgorithm        = jobOptions->cryptAlgorithms.values[0];
   cryptPassword = jobOptions->cryptNewPassword;
 
+  archiveFlags = ARCHIVE_FLAG_NONE;
+
+//TODO
+#if 0
+  // check if file data should be delta compressed
+  if (   (fileInfo.size > globalOptions.compressMinFileSize)
+      && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta)
+     )
+  {
+     archiveFlags |= ARCHIVE_FLAG_TRY_DELTA_COMPRESS;
+  }
+
+  // check if file data should be byte compressed
+  if (   (fileInfo.size > globalOptions.compressMinFileSize)
+      && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+     )
+  {
+     archiveFlags |= ARCHIVE_FLAG_TRY_BYTE_COMPRESS;
+  }
+#endif
+
   // create new image entry
   error = Archive_newImageEntry(&destinationArchiveEntryInfo,
                                 destinationArchiveHandle,
                                 NULL,  // indexHandle,
                                 deltaCompressAlgorithm,
                                 byteCompressAlgorithm,
-//TODO
-cryptType,
-                                cryptAlgorithm,
-                                cryptPassword,
                                 deviceName,
                                 &deviceInfo,
                                 fileSystemType,
                                 blockOffset,
                                 blockCount,
-                                TRUE,  // tryDeltaCompressFlag,
-                                TRUE  // tryByteCompressFlag
+                                archiveFlags
                                );
   if (error != ERROR_NONE)
   {
@@ -1152,10 +1187,6 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   error = Archive_newDirectoryEntry(&destinationArchiveEntryInfo,
                                     destinationArchiveHandle,
                                     NULL,  // indexHandle,
-//TODO
-cryptType,
-                                    cryptAlgorithm,
-                                    cryptPassword,
                                     directoryName,
                                     &fileInfo,
                                     &fileExtendedAttributeList
@@ -1276,10 +1307,6 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   error = Archive_newLinkEntry(&destinationArchiveEntryInfo,
                                destinationArchiveHandle,
                                NULL,  // indexHandle,
-//TODO
-cryptType,
-                               cryptAlgorithm,
-                               cryptPassword,
                                linkName,
                                fileName,
                                &fileInfo,
@@ -1361,6 +1388,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   StringList                fileNameList;
   FileExtendedAttributeList fileExtendedAttributeList;
   Errors                    error;
+  ArchiveFlags              archiveFlags;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CompressAlgorithms        deltaCompressAlgorithm,byteCompressAlgorithm;
   CryptTypes                cryptType;
@@ -1408,23 +1436,39 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   if (jobOptions->cryptAlgorithms.isSet   ) cryptAlgorithm        = jobOptions->cryptAlgorithms.values[0];
   cryptPassword = jobOptions->cryptNewPassword;
 
+  archiveFlags = ARCHIVE_FLAG_NONE;
+
+//TODO
+#if 0
+  // check if file data should be delta compressed
+  if (   (fileInfo.size > globalOptions.compressMinFileSize)
+      && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta)
+     )
+  {
+     archiveFlags |= ARCHIVE_FLAG_TRY_DELTA_COMPRESS;
+  }
+
+  // check if file data should be byte compressed
+  if (   (fileInfo.size > globalOptions.compressMinFileSize)
+      && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+     )
+  {
+     archiveFlags |= ARCHIVE_FLAG_TRY_BYTE_COMPRESS;
+  }
+#endif
+
   // create new hard link entry
   error = Archive_newHardLinkEntry(&destinationArchiveEntryInfo,
                                    destinationArchiveHandle,
                                    NULL,  // indexHandle,
                                    deltaCompressAlgorithm,
                                    byteCompressAlgorithm,
-//TODO
-cryptType,
-                                   cryptAlgorithm,
-                                   cryptPassword,
                                    &fileNameList,
                                    &fileInfo,
                                    &fileExtendedAttributeList,
                                    fragmentOffset,
                                    fragmentSize,
-                                   TRUE,  // tryDeltaCompressFlag,
-                                   TRUE  // tryByteCompressFlag
+                                   archiveFlags
                                   );
 
 
@@ -1583,10 +1627,6 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   error = Archive_newSpecialEntry(&destinationArchiveEntryInfo,
                                   destinationArchiveHandle,
                                   NULL,  // indexHandle,
-//TODO
-cryptType,
-                                  cryptAlgorithm,
-                                  cryptPassword,
                                   fileName,
                                   &fileInfo,
                                   &fileExtendedAttributeList

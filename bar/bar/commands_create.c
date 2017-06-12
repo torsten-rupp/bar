@@ -4799,7 +4799,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
   FileHandle                fileHandle;
-  bool                      tryByteCompressFlag,tryDeltaCompressFlag;
+  ArchiveFlags              archiveFlags;
   ArchiveEntryInfo          archiveEntryInfo;
   SemaphoreLock             semaphoreLock;
   uint64                    entryDoneSize;
@@ -4916,13 +4916,23 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
   if (!createInfo->jobOptions->noStorageFlag)
   {
-    // check if file data should be byte compressed
-    tryByteCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
-                          && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT);
+    archiveFlags = ARCHIVE_FLAG_NONE;
 
     // check if file data should be delta compressed
-    tryDeltaCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
-                           && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta);
+    if (   (fileInfo.size > globalOptions.compressMinFileSize)
+        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta)
+       )
+    {
+       archiveFlags |= ARCHIVE_FLAG_TRY_DELTA_COMPRESS;
+    }
+
+    // check if file data should be byte compressed
+    if (   (fileInfo.size > globalOptions.compressMinFileSize)
+        && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+       )
+    {
+       archiveFlags |= ARCHIVE_FLAG_TRY_BYTE_COMPRESS;
+    }
 
     // create new archive file entry
     error = Archive_newFileEntry(&archiveEntryInfo,
@@ -4930,16 +4940,12 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
                                  indexHandle,
                                  createInfo->jobOptions->compressAlgorithms.value.delta,
                                  createInfo->jobOptions->compressAlgorithms.value.byte,
-CRYPT_TYPE_SYMMETRIC, //TODO
-                                 createInfo->jobOptions->cryptAlgorithms.values[0],
-                                 NULL,  // cryptPassword
                                  fileName,
                                  &fileInfo,
                                  &fileExtendedAttributeList,
                                  fragmentOffset,
                                  fragmentSize,
-                                 tryDeltaCompressFlag,
-                                 tryByteCompressFlag
+                                 archiveFlags
                                 );
     if (error != ERROR_NONE)
     {
@@ -5106,8 +5112,8 @@ CRYPT_TYPE_SYMMETRIC, //TODO
     }
 
     // ratio info
-    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
-        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
+    if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
+        || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
@@ -5209,7 +5215,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   DeviceHandle     deviceHandle;
   bool             fileSystemFlag;
   FileSystemHandle fileSystemHandle;
-  bool             tryByteCompressFlag,tryDeltaCompressFlag;
+  ArchiveFlags     archiveFlags;
+  ArchiveEntryInfo archiveEntryInfo;
   SemaphoreLock    semaphoreLock;
   uint64           entryDoneSize;
   uint64           block;
@@ -5219,7 +5226,6 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   uint64           doneSize;
   uint             percentageDone;
   double           compressionRatio;
-  ArchiveEntryInfo archiveEntryInfo;
   char             s1[256],s2[256];
 
   assert(createInfo != NULL);
@@ -5324,13 +5330,23 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 
   if (!createInfo->jobOptions->noStorageFlag)
   {
-    // check if image data should be byte compressed
-    tryByteCompressFlag =    (deviceInfo.size > globalOptions.compressMinFileSize)
-                          && !PatternList_match(createInfo->compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT);
+    archiveFlags = ARCHIVE_FLAG_NONE;
 
     // check if file data should be delta compressed
-    tryDeltaCompressFlag =    (deviceInfo.size > globalOptions.compressMinFileSize)
-                           && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta);
+    if (   (deviceInfo.size > globalOptions.compressMinFileSize)
+        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta)
+       )
+    {
+       archiveFlags |= ARCHIVE_FLAG_TRY_DELTA_COMPRESS;
+    }
+
+    // check if file data should be byte compressed
+    if (   (deviceInfo.size > globalOptions.compressMinFileSize)
+        && !PatternList_match(createInfo->compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
+       )
+    {
+       archiveFlags |= ARCHIVE_FLAG_TRY_BYTE_COMPRESS;
+    }
 
     // create new archive image entry
     error = Archive_newImageEntry(&archiveEntryInfo,
@@ -5338,16 +5354,12 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                                   indexHandle,
                                   createInfo->jobOptions->compressAlgorithms.value.delta,
                                   createInfo->jobOptions->compressAlgorithms.value.byte,
-CRYPT_TYPE_SYMMETRIC, //TODO
-                                  createInfo->jobOptions->cryptAlgorithms.values[0],
-                                  NULL,  // cryptPassword
                                   deviceName,
                                   &deviceInfo,
                                   fileSystemHandle.type,
                                   fragmentOffset,
                                   fragmentSize,
-                                  tryDeltaCompressFlag,
-                                  tryByteCompressFlag
+                                  archiveFlags
                                  );
     if (error != ERROR_NONE)
     {
@@ -5519,8 +5531,8 @@ CRYPT_TYPE_SYMMETRIC, //TODO
     }
 
     // ratio info
-    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
-        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
+    if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
+        || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
@@ -5677,9 +5689,6 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
                                       &createInfo->archiveHandle,
                                       indexHandle,
-CRYPT_TYPE_SYMMETRIC, //TODO
-                                      createInfo->jobOptions->cryptAlgorithms.values[0],
-                                      NULL,  // cryptPassword
                                       directoryName,
                                       &fileInfo,
                                       &fileExtendedAttributeList
@@ -5877,9 +5886,6 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     error = Archive_newLinkEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
                                  indexHandle,
-CRYPT_TYPE_SYMMETRIC, //TODO
-                                 createInfo->jobOptions->cryptAlgorithms.values[0],
-                                 NULL,  // cryptPassword
                                  linkName,
                                  fileName,
                                  &fileInfo,
@@ -5985,7 +5991,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
   FileHandle                fileHandle;
-  bool                      tryByteCompressFlag,tryDeltaCompressFlag;
+  ArchiveFlags              archiveFlags;
   ArchiveEntryInfo          archiveEntryInfo;
   SemaphoreLock             semaphoreLock;
   uint64                    entryDoneSize;
@@ -6099,13 +6105,23 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
   if (!createInfo->jobOptions->noStorageFlag)
   {
-    // check if file data should be byte compressed
-    tryByteCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
-                          && !PatternList_matchStringList(createInfo->compressExcludePatternList,fileNameList,PATTERN_MATCH_MODE_EXACT);
+    archiveFlags = ARCHIVE_FLAG_NONE;
 
     // check if file data should be delta compressed
-    tryDeltaCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
-                           && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta);
+    if (   (fileInfo.size > globalOptions.compressMinFileSize)
+        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta)
+       )
+    {
+       archiveFlags |= ARCHIVE_FLAG_TRY_DELTA_COMPRESS;
+    }
+
+    // check if file data should be byte compressed
+    if (   (fileInfo.size > globalOptions.compressMinFileSize)
+        && !PatternList_matchStringList(createInfo->compressExcludePatternList,fileNameList,PATTERN_MATCH_MODE_EXACT)
+       )
+    {
+       archiveFlags |= ARCHIVE_FLAG_TRY_BYTE_COMPRESS;
+    }
 
     // create new archive hard link entry
     error = Archive_newHardLinkEntry(&archiveEntryInfo,
@@ -6113,16 +6129,12 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                      indexHandle,
                                      createInfo->jobOptions->compressAlgorithms.value.delta,
                                      createInfo->jobOptions->compressAlgorithms.value.byte,
-CRYPT_TYPE_SYMMETRIC, //TODO
-                                     createInfo->jobOptions->cryptAlgorithms.values[0],
-                                     NULL,  // cryptPassword
                                      fileNameList,
                                      &fileInfo,
                                      &fileExtendedAttributeList,
                                      fragmentOffset,
                                      fragmentSize,
-                                     tryDeltaCompressFlag,
-                                     tryByteCompressFlag
+                                     archiveFlags
                                     );
     if (error != ERROR_NONE)
     {
@@ -6263,8 +6275,8 @@ CRYPT_TYPE_SYMMETRIC, //TODO
     }
 
     // ratio info
-    if (   (tryDeltaCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
-        || (tryByteCompressFlag  && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
+    if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
+        || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %.1f%%",compressionRatio);
@@ -6429,9 +6441,6 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     error = Archive_newSpecialEntry(&archiveEntryInfo,
                                     &createInfo->archiveHandle,
                                     indexHandle,
-CRYPT_TYPE_SYMMETRIC, //TODO
-                                    createInfo->jobOptions->cryptAlgorithms.values[0],
-                                    NULL,  // cryptPassword
                                     fileName,
                                     &fileInfo,
                                     &fileExtendedAttributeList

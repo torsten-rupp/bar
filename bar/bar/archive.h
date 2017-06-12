@@ -48,8 +48,6 @@ typedef enum
   ARCHIVE_IO_TYPE_STORAGE,
 } ArchiveIOTypes;
 
-/***************************** Datatypes *******************************/
-
 // archive entry types
 typedef enum
 {
@@ -67,6 +65,20 @@ typedef enum
 
   ARCHIVE_ENTRY_TYPE_UNKNOWN
 } ArchiveEntryTypes;
+
+// archive flags
+#define ARCHIVE_FLAG_TRY_DELTA_COMPRESS  (1 << 0)   // try delta compression
+#define ARCHIVE_FLAG_TRY_BYTE_COMPRESS   (1 << 1)   // try byte compression
+#define ARCHIVE_FLAG_KEEP_DELTA_COMPRESS (1 << 2)   // keep delta compression
+#define ARCHIVE_FLAG_KEEP_BYTE_COMPRESS  (1 << 3)   // keep byte compression
+#define ARCHIVE_FLAG_KEEP_ENCRYPTION     (1 << 4)   // keep encryption
+
+#define ARCHIVE_FLAG_NONE 0
+
+/***************************** Datatypes *******************************/
+
+// archive mode set (see ARCHIVE_FLAG_*)
+typedef uint ArchiveFlags;
 
 /***********************************************************************\
 * Name   : ArchiveInitFunction
@@ -144,7 +156,7 @@ typedef Errors(*ArchiveDoneFunction)(StorageInfo  *storageInfo,
 * Notes  : -
 \***********************************************************************/
 
-typedef uint64(*ArchiveGetSizeFunction)(StorageInfo  *storageInfo,
+typedef uint64(*ArchiveGetSizeFunction)(StorageInfo *storageInfo,
                                         IndexHandle *indexHandle,
                                         IndexId     storageId,
                                         int         partNumber,
@@ -232,12 +244,13 @@ typedef struct
   uint                     blockLength;                                // block length for crypt algorithm
 
   ArchiveIOTypes           ioType;                                     // i/o type
+  ConstString              archiveName;                                // archive file name
+  ConstString              printableStorageName;                       // printable storage name
   union
   {
     // local file
     struct
     {
-      String               archiveName;                                // archive file name
       String               tmpFileName;                                // temporary archive file name
       FileHandle           tmpFileHandle;                              // temporary file handle
       bool                 openFlag;                                   // TRUE iff temporary archive file is open
@@ -249,7 +262,6 @@ typedef struct
       StorageHandle        storageHandle;
     } storage;
   };
-  String                   printableStorageName;                       // printable storage name
   Semaphore                chunkIOLock;                                // chunk i/o functions lock
   const ChunkIO            *chunkIO;                                   // chunk i/o functions
   void                     *chunkIOUserData;                           // chunk i/o functions data
@@ -851,20 +863,13 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 *          indexHandle               - index handle (can be NULL)
 *          deltaCompressAlgorithm    - used delta compression algorithm
 *          byteCompressAlgorithm     - used byte compression algorithm
-*          cryptType                 - used crypt type
-*          cryptAlgorithm            - used crypt algorithm
-*          cryptPassword             - used crypt password (can be NULL)
 *          fileName                  - file name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
 *                                      NULL
 *          fragmentOffset            - fragment offset [bytes]
 *          fragmentSize              - fragment size [bytes]
-*          deltaCompressFlag         - TRUE for delta compression, FALSE
-*                                      otherwise
-*          byteCompressFlag          - TRUE for byte compression, FALSE
-*                                      otherwise (e. g. file is to small
-*                                      or already compressed)
+*          archiveFlags              - flags; see ARCHIVE_FLAG_...
 * Output : archiveEntryInfo - archive file entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -877,16 +882,12 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                               CompressAlgorithms              deltaCompressAlgorithm,
                               CompressAlgorithms              byteCompressAlgorithm,
 //TOOD: use archiveHandle
-                              CryptTypes                      cryptType,
-                              CryptAlgorithms                 cryptAlgorithm,
-                              Password                        *cryptPassword,
                               ConstString                     fileName,
                               const FileInfo                  *fileInfo,
                               const FileExtendedAttributeList *fileExtendedAttributeList,
                               uint64                          fragmentOffset,
                               uint64                          fragmentSize,
-                              const bool                      deltaCompressFlag,
-                              const bool                      byteCompressFlag
+                              ArchiveFlags                    archiveFlags
                              );
 #else /* not NDEBUG */
   Errors __Archive_newFileEntry(const char                      *__fileName__,
@@ -896,16 +897,12 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                 IndexHandle                     *indexHandle,
                                 CompressAlgorithms              deltaCompressAlgorithm,
                                 CompressAlgorithms              byteCompressAlgorithm,
-                                CryptTypes                      cryptType,
-                                CryptAlgorithms                 cryptAlgorithm,
-                                Password                        *cryptPassword,
                                 ConstString                     fileName,
                                 const FileInfo                  *fileInfo,
                                 const FileExtendedAttributeList *fileExtendedAttributeList,
                                 uint64                          fragmentOffset,
                                 uint64                          fragmentSize,
-                                const bool                      deltaCompressFlag,
-                                const bool                      byteCompressFlag
+                                ArchiveFlags                    archiveFlags
                                );
 #endif /* NDEBUG */
 
@@ -917,18 +914,11 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 *          indexHandle            - index handle (can be NULL)
 *          deltaCompressAlgorithm - used delta compression algorithm
 *          byteCompressAlgorithm  - used byte compression algorithm
-*          cryptType              - used crypt type
-*          cryptAlgorithm         - used crypt algorithm
-*          cryptPassword          - used crypt password (can be NULL)
 *          deviceName             - special device name
 *          deviceInfo             - device info
 *          fragmentOffset         - fragment offset [blocks]
 *          fragmentSize           - fragment size [blocks]
-*          deltaCompressFlag      - TRUE for delta compression, FALSE
-*                                   otherwise
-*          byteCompressFlag       - TRUE for byte compression, FALSE
-*                                   otherwise (e. g. file is to small or
-*                                   already compressed)
+*          archiveFlags           - flags; see ARCHIVE_FLAG_...
 * Output : archiveEntryInfo - archive image entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -940,16 +930,12 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                IndexHandle        *indexHandle,
                                CompressAlgorithms deltaCompressAlgorithm,
                                CompressAlgorithms byteCompressAlgorithm,
-                               CryptTypes         cryptType,
-                               CryptAlgorithms    cryptAlgorithm,
-                               Password           *cryptPassword,
                                ConstString        deviceName,
                                const DeviceInfo   *deviceInfo,
                                FileSystemTypes    fileSystemType,
                                uint64             fragmentOffset,
                                uint64             fragmentSize,
-                               const bool         deltaCompressFlag,
-                               const bool         byteCompressFlag
+                               ArchiveFlags       archiveFlags
                               );
 #else /* not NDEBUG */
   Errors __Archive_newImageEntry(const char         *__fileName__,
@@ -959,16 +945,12 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                  IndexHandle        *indexHandle,
                                  CompressAlgorithms deltaCompressAlgorithm,
                                  CompressAlgorithms byteCompressAlgorithm,
-                                 CryptTypes         cryptType,
-                                 CryptAlgorithms    cryptAlgorithm,
-                                 Password           *cryptPassword,
                                  ConstString        deviceName,
                                  const DeviceInfo   *deviceInfo,
                                  FileSystemTypes    fileSystemType,
                                  uint64             fragmentOffset,
                                  uint64             fragmentSize,
-                                 const bool         deltaCompressFlag,
-                                 const bool         byteCompressFlag
+                                 ArchiveFlags       archiveFlags
                                 );
 #endif /* NDEBUG */
 
@@ -995,9 +977,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
   Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
                                    IndexHandle                     *indexHandle,
-                                   CryptTypes                      cryptType,
-                                   CryptAlgorithms                 cryptAlgorithm,
-                                   Password                        *cryptPassword,
                                    ConstString                     directoryName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
@@ -1008,9 +987,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                      ArchiveEntryInfo                *archiveEntryInfo,
                                      ArchiveHandle                   *archiveHandle,
                                      IndexHandle                     *indexHandle,
-                                     CryptTypes                      cryptType,
-                                     CryptAlgorithms                 cryptAlgorithm,
-                                     Password                        *cryptPassword,
                                      ConstString                     directoryName,
                                      const FileInfo                  *fileInfo,
                                      const FileExtendedAttributeList *fileExtendedAttributeList
@@ -1023,9 +999,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 * Input  : archiveEntryInfo          - archive link entry variable
 *          archiveHandle             - archive handle
 *          indexHandle               - index handle (can be NULL)
-*          cryptType                 - used crypt type
-*          cryptAlgorithm            - used crypt algorithm
-*          cryptPassword             - used crypt password (can be NULL)
 *          fileName                  - link name
 *          destinationName           - name of referenced file
 *          fileInfo                  - file info
@@ -1040,9 +1013,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
   Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                               ArchiveHandle                   *archiveHandle,
                               IndexHandle                     *indexHandle,
-                              CryptTypes                      cryptType,
-                              CryptAlgorithms                 cryptAlgorithm,
-                              Password                        *cryptPassword,
                               ConstString                     linkName,
                               ConstString                     destinationName,
                               const FileInfo                  *fileInfo,
@@ -1054,9 +1024,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                 ArchiveEntryInfo                *archiveEntryInfo,
                                 ArchiveHandle                   *archiveHandle,
                                 IndexHandle                     *indexHandle,
-                                CryptTypes                      cryptType,
-                                CryptAlgorithms                 cryptAlgorithm,
-                                Password                        *cryptPassword,
                                 ConstString                     linkName,
                                 ConstString                     destinationName,
                                 const FileInfo                  *fileInfo,
@@ -1073,20 +1040,13 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 *          indexHandle               - index handle (can be NULL)
 *          deltaCompressAlgorithm    - used delta compression algorithm
 *          byteCompressAlgorithm     - used byte compression algorithm
-*          cryptType                 - used crypt type
-*          cryptAlgorithm            - used crypt algorithm
-*          cryptPassword             - used crypt password (can be NULL)
 *          fileNameList              - list of file names
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
 *                                      NULL
 *          fragmentOffset            - fragment offset [bytes]
 *          fragmentSize              - fragment size [bytes]
-*          deltaCompressFlag         - TRUE for delta compression, FALSE
-*                                      otherwise
-*          byteCompressFlag          - TRUE for byte compression, FALSE
-*                                      otherwise (e. g. file is to small
-*                                      or already compressed)
+*          archiveFlags              - flags; see ARCHIVE_FLAG_...
 * Output : archiveEntryInfo - archive hard link entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1098,16 +1058,12 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                   IndexHandle                     *indexHandle,
                                   CompressAlgorithms              deltaCompressAlgorithm,
                                   CompressAlgorithms              byteCompressAlgorithm,
-                                  CryptTypes                      cryptType,
-                                  CryptAlgorithms                 cryptAlgorithm,
-                                  Password                        *cryptPassword,
                                   const StringList                *fileNameList,
                                   const FileInfo                  *fileInfo,
                                   const FileExtendedAttributeList *fileExtendedAttributeList,
                                   uint64                          fragmentOffset,
                                   uint64                          fragmentSize,
-                                  const bool                      deltaCompressFlag,
-                                  const bool                      byteCompressFlag
+                                  ArchiveFlags                    archiveFlags
                                  );
 #else /* not NDEBUG */
   Errors __Archive_newHardLinkEntry(const char                      *__fileName__,
@@ -1117,16 +1073,12 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                     IndexHandle                     *indexHandle,
                                     CompressAlgorithms              deltaCompressAlgorithm,
                                     CompressAlgorithms              byteCompressAlgorithm,
-                                    CryptTypes                      cryptType,
-                                    CryptAlgorithms                 cryptAlgorithm,
-                                    Password                        *cryptPassword,
                                     const StringList                *fileNameList,
                                     const FileInfo                  *fileInfo,
                                     const FileExtendedAttributeList *fileExtendedAttributeList,
                                     uint64                          fragmentOffset,
                                     uint64                          fragmentSize,
-                                    const bool                      deltaCompressFlag,
-                                    const bool                      byteCompressFlag
+                                    ArchiveFlags                    archiveFlags
                                    );
 #endif /* NDEBUG */
 
@@ -1137,9 +1089,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 *                                      variable
 *          archiveHandle             - archive handle
 *          indexHandle               - index handle (can be NULL)
-*          cryptType                 - used crypt type
-*          cryptAlgorithm            - used crypt algorithm
-*          cryptPassword             - used crypt password (can be NULL)
 *          specialName               - special name
 *          fileInfo                  - file info
 *          fileExtendedAttributeList - file extended attribute list or
@@ -1153,9 +1102,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
   Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
                                  ArchiveHandle                   *archiveHandle,
                                  IndexHandle                     *indexHandle,
-                                 CryptTypes                      cryptType,
-                                 CryptAlgorithms                 cryptAlgorithm,
-                                 Password                        *cryptPassword,
                                  ConstString                     specialName,
                                  const FileInfo                  *fileInfo,
                                  const FileExtendedAttributeList *fileExtendedAttributeList
@@ -1166,9 +1112,6 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                    ArchiveEntryInfo                *archiveEntryInfo,
                                    ArchiveHandle                   *archiveHandle,
                                    IndexHandle                     *indexHandle,
-                                   CryptTypes                      cryptType,
-                                   CryptAlgorithms                 cryptAlgorithm,
-                                   Password                        *cryptPassword,
                                    ConstString                     specialName,
                                    const FileInfo                  *fileInfo,
                                    const FileExtendedAttributeList *fileExtendedAttributeList
