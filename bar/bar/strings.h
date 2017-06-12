@@ -318,13 +318,14 @@ String __String_copy(const char *__fileName__, ulong __lineNb__, String *string,
 * Input  : string - string to delete
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : use "ConstString" to be able to delete strings which are
+*          allocated and then marked "const"
 \***********************************************************************/
 
 #ifdef NDEBUG
-void String_delete(String string);
+void String_delete(ConstString string);
 #else /* not NDEBUG */
-void __String_delete(const char *__fileName__, ulong __lineNb__, String string);
+void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString string);
 #endif /* NDEBUG */
 
 /***********************************************************************\

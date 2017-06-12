@@ -2570,9 +2570,9 @@ String __String_copy(const char *__fileName__, ulong __lineNb__, String *string,
 }
 
 #ifdef NDEBUG
-void String_delete(String string)
+void String_delete(ConstString string)
 #else /* not NDEBUG */
-void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
+void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString string)
 #endif /* NDEBUG */
 {
   #ifndef NDEBUG
