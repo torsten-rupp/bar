@@ -1679,7 +1679,7 @@ LOCAL bool StorageFTP_exists(const StorageInfo *storageInfo, ConstString archive
 LOCAL Errors StorageFTP_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
   assert(archiveName != NULL);
-  assert(!String_isEmpty(archiveName) != NULL);
+  assert(!String_isEmpty(archiveName));
   assert(storageInfo != NULL);
 
   UNUSED_VARIABLE(storageInfo);
@@ -3147,6 +3147,8 @@ LOCAL Errors StorageFTP_rename(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_FTP);
 
+UNUSED_VARIABLE(fromArchiveName);
+UNUSED_VARIABLE(toArchiveName);
 error = ERROR_STILL_NOT_IMPLEMENTED;
 
   return error;

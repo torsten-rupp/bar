@@ -313,7 +313,7 @@ LOCAL Errors StorageFile_getTmpName(String archiveName, const StorageInfo *stora
   bool   result;
 
   assert(archiveName != NULL);
-  assert(!String_isEmpty(archiveName) != NULL);
+  assert(!String_isEmpty(archiveName));
   assert(storageInfo != NULL);
 
   UNUSED_VARIABLE(storageInfo);
@@ -585,8 +585,6 @@ LOCAL Errors StorageFile_rename(const StorageInfo *storageInfo,
                                 ConstString       newArchiveName
                                )
 {
-  String backupArchiveName;
-
   Errors error;
 
   assert(storageInfo != NULL);

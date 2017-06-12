@@ -661,7 +661,7 @@ return ERROR_STILL_NOT_IMPLEMENTED;
 LOCAL Errors StorageSFTP_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
   assert(archiveName != NULL);
-  assert(!String_isEmpty(archiveName) != NULL);
+  assert(!String_isEmpty(archiveName));
   assert(storageInfo != NULL);
 
   UNUSED_VARIABLE(storageInfo);
@@ -1387,6 +1387,8 @@ LOCAL Errors StorageSFTP_rename(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_SFTP);
 
+UNUSED_VARIABLE(fromArchiveName);
+UNUSED_VARIABLE(toArchiveName);
 error = ERROR_STILL_NOT_IMPLEMENTED;
 
   return error;

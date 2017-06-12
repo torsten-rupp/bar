@@ -934,8 +934,8 @@ LOCAL Errors StorageWebDAV_postProcess(const StorageInfo *storageInfo,
 
 LOCAL bool StorageWebDAV_exists(const StorageInfo*storageInfo, ConstString archiveName)
 {
-  String directoryName,baseName;
-  bool   result;
+//  String directoryName,baseName;
+//  bool   result;
 
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
@@ -954,7 +954,7 @@ LOCAL Errors StorageWebDAV_getTmpName(String archiveName, const StorageInfo *sto
   bool   result;
 
   assert(archiveName != NULL);
-  assert(!String_isEmpty(archiveName) != NULL);
+  assert(!String_isEmpty(archiveName));
   assert(storageInfo != NULL);
 
   UNUSED_VARIABLE(storageInfo);
@@ -1024,7 +1024,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
     if ((storageHandle->storageInfo->jobOptions == NULL) || !storageHandle->storageInfo->jobOptions->dryRunFlag)
     {
       // get directory name, base name
-      directoryName = File_getDirectoryNameCString(String_new(),fileName);
+      directoryName = File_getDirectoryName(String_new(),fileName);
       baseName      = File_getBaseName(String_new(),fileName);
 
       // create directories if necessary
@@ -1325,7 +1325,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageHandle->storageInfo->storageSpecifier.hostPort);
 
     // get directory name, base name
-    directoryName = File_getDirectoryNameCString(String_new(),archiveName);
+    directoryName = File_getDirectoryName(String_new(),archiveName);
     baseName      = File_getBaseName(String_new(),archiveName);
 
     // get url
@@ -2025,6 +2025,8 @@ LOCAL Errors StorageWebDAV_rename(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_WEBDAV);
 
+UNUSED_VARIABLE(fromArchiveName);
+UNUSED_VARIABLE(toArchiveName);
 error = ERROR_STILL_NOT_IMPLEMENTED;
 
   return error;
@@ -2061,7 +2063,7 @@ LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
       if (storageInfo->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageInfo->storageSpecifier.hostPort);
 
       // get directory name, base name
-      directoryName = File_getDirectoryNameCString(String_new(),archiveName);
+      directoryName = File_getDirectoryName(String_new(),archiveName);
       baseName      = File_getBaseName(String_new(),archiveName);
 
       // get URL

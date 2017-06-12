@@ -68,6 +68,8 @@ LOCAL void StorageMaster_doneAll(void)
 {
 }
 
+//TODO: required?
+#if 0
 LOCAL bool StorageMaster_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
                                          ConstString            archiveName1,
                                          const StorageSpecifier *storageSpecifier2,
@@ -147,6 +149,7 @@ LOCAL void StorageMaster_getPrintableName(String                 string,
     String_append(string,storageFileName);
   }
 }
+#endif
 
 LOCAL Errors StorageMaster_init(StorageInfo            *storageInfo,
                                 const StorageSpecifier *storageSpecifier,
@@ -163,6 +166,8 @@ LOCAL Errors StorageMaster_init(StorageInfo            *storageInfo,
   return ERROR_NONE;
 }
 
+//TODO: required?
+#if 0
 LOCAL Errors StorageMaster_done(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
@@ -182,6 +187,7 @@ LOCAL bool StorageMaster_isServerAllocationPending(const StorageInfo *storageInf
 
   return FALSE;
 }
+#endif
 
 LOCAL Errors StorageMaster_preProcess(const StorageInfo *storageInfo,
                                       ConstString       archiveName,
@@ -249,6 +255,8 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
   return ERROR_NONE;
 }
 
+//TODO: required?
+#if 0
 LOCAL bool StorageMaster_exists(const StorageInfo *storageInfo, ConstString fileName)
 {
   assert(storageInfo != NULL);
@@ -260,11 +268,12 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 //TODO
 return TRUE;
 }
+#endif
 
 LOCAL Errors StorageMaster_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
   assert(archiveName != NULL);
-  assert(!String_isEmpty(archiveName) != NULL);
+  assert(!String_isEmpty(archiveName));
   assert(storageInfo != NULL);
 
   UNUSED_VARIABLE(storageInfo);
@@ -311,11 +320,13 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
   return ERROR_NONE;
 }
 
+//TODO: required?
+#if 0
 LOCAL Errors StorageMaster_open(StorageHandle *storageHandle,
                                 ConstString   fileName
                                )
 {
-  Errors error;
+//  Errors error;
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
@@ -330,6 +341,7 @@ storageHandle->master.size = 0LL;
 
 return ERROR_STILL_NOT_IMPLEMENTED;
 }
+#endif
 
 LOCAL void StorageMaster_close(StorageHandle *storageHandle)
 {
@@ -354,6 +366,8 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
   }
 }
 
+//TODO: required?
+#if 0
 LOCAL bool StorageMaster_eof(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
@@ -371,7 +385,7 @@ LOCAL Errors StorageMaster_read(StorageHandle *storageHandle,
                                 ulong         *bytesRead
                                )
 {
-  Errors error;
+//  Errors error;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
@@ -380,8 +394,12 @@ LOCAL Errors StorageMaster_read(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
   assert(buffer != NULL);
 
+UNUSED_VARIABLE(buffer);
+UNUSED_VARIABLE(bufferSize);
+UNUSED_VARIABLE(bytesRead);
 return ERROR_STILL_NOT_IMPLEMENTED;
 }
+#endif
 
 LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
                                  const void    *buffer,
@@ -446,11 +464,13 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
   return error;
 }
 
+//TODO: required?
+#if 0
 LOCAL Errors StorageMaster_tell(StorageHandle *storageHandle,
                                 uint64        *offset
                                )
 {
-  Errors error;
+//  Errors error;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
@@ -467,7 +487,7 @@ LOCAL Errors StorageMaster_seek(StorageHandle *storageHandle,
                                 uint64        offset
                                )
 {
-  Errors error;
+//  Errors error;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
@@ -478,10 +498,11 @@ LOCAL Errors StorageMaster_seek(StorageHandle *storageHandle,
 
   return ERROR_NONE;
 }
+#endif
 
 LOCAL uint64 StorageMaster_getSize(StorageHandle *storageHandle)
 {
-  uint64 size;
+//  uint64 size;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
@@ -491,6 +512,8 @@ LOCAL uint64 StorageMaster_getSize(StorageHandle *storageHandle)
   return storageHandle->master.size;
 }
 
+//TODO: required?
+#if 0
 LOCAL Errors StorageMaster_rename(const StorageInfo *storageInfo,
                                   ConstString       fromArchiveName,
                                   ConstString       toArchiveName
@@ -501,6 +524,8 @@ LOCAL Errors StorageMaster_rename(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
 
+UNUSED_VARIABLE(fromArchiveName);
+UNUSED_VARIABLE(toArchiveName);
 error = ERROR_STILL_NOT_IMPLEMENTED;
 
   return error;
@@ -510,7 +535,7 @@ LOCAL Errors StorageMaster_delete(const StorageInfo *storageInfo,
                                   ConstString       fileName
                                  )
 {
-  Errors error;
+//  Errors error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
@@ -518,6 +543,7 @@ LOCAL Errors StorageMaster_delete(const StorageInfo *storageInfo,
 
 return ERROR_STILL_NOT_IMPLEMENTED;
 }
+#endif
 
 #if 0
 still not complete
@@ -541,6 +567,8 @@ LOCAL Errors StorageMaster_getFileInfo(const StorageInfo *storageInfo,
 
 /*---------------------------------------------------------------------*/
 
+//TODO: required?
+#if 0
 LOCAL Errors StorageMaster_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                              const StorageSpecifier     *storageSpecifier,
                                              ConstString                pathName,
@@ -548,7 +576,7 @@ LOCAL Errors StorageMaster_openDirectoryList(StorageDirectoryListHandle *storage
                                              ServerConnectionPriorities serverConnectionPriority
                                             )
 {
-  Errors error;
+//  Errors error;
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
@@ -584,15 +612,17 @@ LOCAL Errors StorageMaster_readDirectoryList(StorageDirectoryListHandle *storage
                                              FileInfo                   *fileInfo
                                             )
 {
-  Errors error;
+//  Errors error;
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_MASTER);
 
+UNUSED_VARIABLE(fileName);
+UNUSED_VARIABLE(fileInfo);
 return ERROR_STILL_NOT_IMPLEMENTED;
-
-  return error;
+//  return error;
 }
+#endif
 
 #ifdef __cplusplus
   }

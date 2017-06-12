@@ -1508,7 +1508,7 @@ LOCAL bool StorageOptical_exists(const StorageInfo *storageInfo, ConstString arc
 LOCAL Errors StorageOptical_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
   assert(archiveName != NULL);
-  assert(!String_isEmpty(archiveName) != NULL);
+  assert(!String_isEmpty(archiveName));
   assert(storageInfo != NULL);
 
   UNUSED_VARIABLE(storageInfo);
@@ -1963,6 +1963,8 @@ LOCAL Errors StorageOptical_rename(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
 
+UNUSED_VARIABLE(fromArchiveName);
+UNUSED_VARIABLE(toArchiveName);
 error = ERROR_STILL_NOT_IMPLEMENTED;
 
   return error;
