@@ -565,7 +565,7 @@ const char *Password_deploy(const Password *password)
   }
 }
 
-void Password_undeploy(const Password *password, char *plain)
+void Password_undeploy(const Password *password, const char *plain)
 {
   if (password != NULL)
   {
@@ -573,7 +573,7 @@ void Password_undeploy(const Password *password, char *plain)
       UNUSED_VARIABLE(password);
       UNUSED_VARIABLE(plain);
     #else /* not HAVE_GCRYPT */
-      memset(plain,0,MAX_PASSWORD_LENGTH);
+      memset((char*)plain,0,MAX_PASSWORD_LENGTH);
       Password_freeSecure(plain);
     #endif /* HAVE_GCRYPT */
   }
@@ -847,9 +847,9 @@ void Password_dump(Password *password)
   for (i = 0; i < password->dataLength; i++)
   {
     #ifdef HAVE_GCRYPT
-      fprintf(stderr,"%c ",isprint(password->data[i]) ? password->data[i] : "");
+      fprintf(stderr,"%c ",isprint(password->data[i]) ? password->data[i] : '.');
     #else /* not HAVE_GCRYPT */
-      fprintf(stderr,"%c ",isprint(password->data[i]^obfuscator[i]) ? password->data[i]^obfuscator[i] : "");
+      fprintf(stderr,"%c ",isprint(password->data[i]^obfuscator[i]) ? password->data[i]^obfuscator[i] : '.');
     #endif /* HAVE_GCRYPT */
   }
   fputs("\n",stderr);

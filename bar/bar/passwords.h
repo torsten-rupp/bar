@@ -347,7 +347,7 @@ const char *Password_deploy(const Password *password);
 * Notes  : -
 \***********************************************************************/
 
-void Password_undeploy(const Password *password, char *plain);
+void Password_undeploy(const Password *password, const char *plain);
 
 /***********************************************************************\
 * Name   : Password_equals
