@@ -124,8 +124,8 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 *          includeEntryList    - include entry list
 *          excludePatternList  - exclude pattern list
 *          deltaSourceList     - delta source list
-*          jobOptions          - job options
 *          archiveHandle       - archive handle
+*          jobOptions          - job options
 *          getPasswordFunction - get password call back
 *          getPasswordUserData - user data for get password call back
 *          pauseTestFlag       - pause creation flag (can be NULL)
@@ -142,8 +142,8 @@ LOCAL void initTestInfo(TestInfo            *testInfo,
                         const EntryList     *includeEntryList,
                         const PatternList   *excludePatternList,
                         DeltaSourceList     *deltaSourceList,
-                        const JobOptions    *jobOptions,
                         const ArchiveHandle *archiveHandle,
+                        const JobOptions    *jobOptions,
                         GetPasswordFunction getPasswordFunction,
                         void                *getPasswordUserData,
                         bool                *pauseTestFlag,
@@ -1401,6 +1401,7 @@ fprintf(stderr,"%s, %d: +++++++++++\n",__FILE__,__LINE__);
   if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // wait for test threads
+fprintf(stderr,"%s, %d: wait.,,,,,,,,.......................\n",__FILE__,__LINE__);
   MsgQueue_setEndOfMsg(&testInfo.entryMsgQueue);
   for (i = 0; i < testThreadCount; i++)
   {
