@@ -189,11 +189,11 @@ void DeltaSource_setBaseOffset(DeltaSourceHandle *sourceHandle, uint64 offset);
 \***********************************************************************/
 
 Errors DeltaSource_getEntryDataBlock(DeltaSourceHandle *sourceHandle,
-                                void         *buffer,
-                                uint64       offset,
-                                ulong        length,
-                                ulong        *bytesRead
-                               );
+                                     void              *buffer,
+                                     uint64            offset,
+                                     ulong             length,
+                                     ulong             *bytesRead
+                                    );
 
 #ifdef __cplusplus
   }
