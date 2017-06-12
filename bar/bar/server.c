@@ -2186,6 +2186,8 @@ LOCAL_INLINE bool isSlaveJob(const JobNode *jobNode)
   return !String_isEmpty(jobNode->slaveHost.name);
 }
 
+//TODO: required?
+#if 0
 /***********************************************************************\
 * Name   : isSlaveConnected
 * Purpose: check if a slave connected
@@ -2201,6 +2203,7 @@ LOCAL_INLINE bool isSlaveConnected(const JobNode *jobNode)
 
   return Slave_isConnected(&jobNode->slaveInfo);
 }
+#endif
 
 /***********************************************************************\
 * Name   : isJobWaiting
@@ -13207,8 +13210,8 @@ NULL, // masterIO
                                           &archiveHandle,
                                           &deltaCompressAlgorithm,
                                           &byteCompressAlgorithm,
-                                          &cryptAlgorithm,
                                           &cryptType,
+                                          &cryptAlgorithm,
                                           fileName,
                                           &fileInfo,
                                           NULL, // fileExtendedAttributeList
@@ -13273,8 +13276,8 @@ NULL, // masterIO
                                            &archiveHandle,
                                            &deltaCompressAlgorithm,
                                            &byteCompressAlgorithm,
-                                           &cryptAlgorithm,
                                            &cryptType,
+                                           &cryptAlgorithm,
                                            imageName,
                                            &deviceInfo,
                                            &fileSystemType,
@@ -13331,8 +13334,8 @@ NULL, // masterIO
             directoryName = String_new();
             error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                                &archiveHandle,
-                                               &cryptAlgorithm,
                                                &cryptType,
+                                               &cryptAlgorithm,
                                                directoryName,
                                                &fileInfo,
                                                NULL   // fileExtendedAttributeList
@@ -13375,8 +13378,8 @@ NULL, // masterIO
             name     = String_new();
             error = Archive_readLinkEntry(&archiveEntryInfo,
                                           &archiveHandle,
-                                          &cryptAlgorithm,
                                           &cryptType,
+                                          &cryptAlgorithm,
                                           linkName,
                                           name,
                                           NULL,  // fileInfo
@@ -13429,8 +13432,8 @@ NULL, // masterIO
                                               &archiveHandle,
                                               &deltaCompressAlgorithm,
                                               &byteCompressAlgorithm,
-                                              &cryptAlgorithm,
                                               &cryptType,
+                                              &cryptAlgorithm,
                                               &fileNameList,
                                               &fileInfo,
                                               NULL,  // fileExtendedAttributeList
@@ -13486,8 +13489,8 @@ NULL, // masterIO
             name = String_new();
             error = Archive_readSpecialEntry(&archiveEntryInfo,
                                              &archiveHandle,
-                                             &cryptAlgorithm,
                                              &cryptType,
+                                             &cryptAlgorithm,
                                              name,
                                              &fileInfo,
                                              NULL   // fileExtendedAttributeList
@@ -17534,6 +17537,8 @@ LOCAL void putCommand(ClientInfo            *clientInfo,
   (void)MsgQueue_put(&clientInfo->commandQueue,&command,sizeof(Command));
 }
 
+//TODO: required?
+#if 0
 /***********************************************************************\
 * Name   : getCommand
 * Purpose: get next command to execute
@@ -17574,6 +17579,7 @@ LOCAL bool getCommand(ClientInfo            *clientInfo,
     return FALSE;
   }
 }
+#endif
 
 /***********************************************************************\
 * Name   : networkClientThreadCode
