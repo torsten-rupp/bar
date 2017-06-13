@@ -72,20 +72,6 @@ void Server_doneAll(void);
 
 /***********************************************************************\
 * Name   : Server_runtypedef struct ResultNode
-{
-  LIST_NODE_HEADER(struct ResultNode);
-
-  uint   commandId;
-  Errors error;
-  bool   completedFlag;
-  String data;
-} ResultNode;
-
-typedef struct
-{
-  LIST_HEADER(ResultNode);
-} ResultList;
-
 * Purpose: run network server
 * Input  : mode                  - server mode; see SERVER_MODE_...
 *          port                  - server port (or 0 to disable)

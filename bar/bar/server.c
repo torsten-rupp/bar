@@ -146,23 +146,6 @@ typedef enum
   JOB_TYPE_RESTORE,
 } JobTypes;
 
-// job states
-typedef enum
-{
-  JOB_STATE_NONE,
-  JOB_STATE_WAITING,
-  JOB_STATE_RUNNING,
-  JOB_STATE_REQUEST_FTP_PASSWORD,
-  JOB_STATE_REQUEST_SSH_PASSWORD,
-  JOB_STATE_REQUEST_WEBDAV_PASSWORD,
-  JOB_STATE_REQUEST_CRYPT_PASSWORD,
-  JOB_STATE_REQUEST_VOLUME,
-  JOB_STATE_DONE,
-  JOB_STATE_ERROR,
-  JOB_STATE_ABORTED,
-  JOB_STATE_DISCONNECTED
-} JobStates;
-
 // job node
 typedef struct JobNode
 {
@@ -3795,7 +3778,7 @@ LOCAL void jobThreadCode(void)
   IndexHandle      *indexHandle;
   uint64           startDateTime,endDateTime;
   StringList       storageNameList;
-  TextMacro        textMacros[5];
+  TextMacro        textMacros[7];
   StaticString     (s,64);
   uint             n;
   Errors           error;
@@ -3946,7 +3929,7 @@ fprintf(stderr,"%s, %d: XXXXXXx start %d\n",__FILE__,__LINE__,jobNode->requested
                    "Started job '%s'%s %s%s%s\n",
                    String_cString(jobName),
                    !String_isEmpty(s) ? String_cString(s) : "",
-                   getArchiveTypeName(archiveType),
+                   getArchiveTypeText(archiveType),
                    !String_isEmpty(byName) ? " by " : "",
                    String_cString(byName)
                   );
@@ -4020,7 +4003,7 @@ fprintf(stderr,"%s, %d: XXXXXXx start %d\n",__FILE__,__LINE__,jobNode->requested
           // get script
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-          TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeName(archiveType),NULL);
+          TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeText(archiveType),NULL);
           TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
           TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
           script = expandTemplate(String_cString(jobNode->jobOptions.preProcessScript),
@@ -4144,7 +4127,14 @@ NULL,//                                                        scheduleTitle,
           }
         #endif /* SIMULATOR */
 
-        logPostProcess(&logHandle,jobName,&jobNode->jobOptions,archiveType,scheduleCustomText);
+        logPostProcess(&logHandle,
+                       &jobNode->jobOptions,
+                       archiveType,
+                       scheduleCustomText,
+                       jobName,
+                       jobNode->state,
+                       jobNode->runningInfo.message
+                      );
       }
 
       // post-process command
@@ -4155,9 +4145,11 @@ NULL,//                                                        scheduleTitle,
           // get script
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-          TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeName(archiveType),NULL);
+          TEXT_MACRO_N_STRING (textMacros[2],"%type",     getArchiveTypeText(archiveType),NULL);
           TEXT_MACRO_N_STRING (textMacros[3],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
           TEXT_MACRO_N_STRING (textMacros[4],"%file",     storageSpecifier.archiveName,NULL);
+          TEXT_MACRO_N_STRING (textMacros[5],"%state",    getJobStateText(jobNode->state,&jobNode->jobOptions),NULL);
+          TEXT_MACRO_N_STRING (textMacros[6],"%message",  String_cString(jobNode->runningInfo.message),NULL);
           script = expandTemplate(String_cString(jobNode->jobOptions.postProcessScript),
                                   EXPAND_MACRO_MODE_STRING,
                                   startDateTime,
@@ -6189,71 +6181,6 @@ LOCAL bool isCommandAborted(ClientInfo *clientInfo, uint commandId)
 }
 
 /*---------------------------------------------------------------------*/
-
-/***********************************************************************\
-* Name   : getJobStateText
-* Purpose: get text for job state
-* Input  : jobState   - job state
-*          jobOptions - job options
-* Output : -
-* Return : text
-* Notes  : -
-\***********************************************************************/
-
-LOCAL const char *getJobStateText(JobStates jobState, const JobOptions *jobOptions)
-{
-  const char *stateText;
-
-  assert(jobOptions != NULL);
-
-  stateText = "UNKNOWN";
-  switch (jobState)
-  {
-    case JOB_STATE_NONE:
-      stateText = "NONE";
-      break;
-    case JOB_STATE_WAITING:
-      stateText = "WAITING";
-      break;
-    case JOB_STATE_RUNNING:
-      stateText = (jobOptions->dryRunFlag) ? "DRY_RUNNING" : "RUNNING";
-      break;
-    case JOB_STATE_REQUEST_FTP_PASSWORD:
-      stateText = "REQUEST_FTP_PASSWORD";
-      break;
-    case JOB_STATE_REQUEST_SSH_PASSWORD:
-      stateText = "REQUEST_SSH_PASSWORD";
-      break;
-    case JOB_STATE_REQUEST_WEBDAV_PASSWORD:
-      stateText = "REQUEST_WEBDAV_PASSWORD";
-      break;
-    case JOB_STATE_REQUEST_CRYPT_PASSWORD:
-      stateText = "request_crypt_password";
-      break;
-    case JOB_STATE_REQUEST_VOLUME:
-      stateText = "REQUEST_VOLUME";
-      break;
-    case JOB_STATE_DONE:
-      stateText = "DONE";
-      break;
-    case JOB_STATE_ERROR:
-      stateText = "ERROR";
-      break;
-    case JOB_STATE_ABORTED:
-      stateText = "ABORTED";
-      break;
-    case JOB_STATE_DISCONNECTED:
-      stateText = "DISCONNECTED";
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
-  }
-
-  return stateText;
-}
 
 /***********************************************************************\
 * Name   : newDirectoryInfo
@@ -14367,7 +14294,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                   "REQUEST_PASSWORD",
                                   "name=%'S passwordType=%'s passwordText=%'s",
                                   name,
-                                  getPasswordTypeName(passwordType),
+                                  getPasswordTypeText(passwordType),
                                   text
                                  );
     if (error != ERROR_NONE)

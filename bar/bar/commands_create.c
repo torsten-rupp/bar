@@ -1220,8 +1220,8 @@ LOCAL Errors formatArchiveFileName(String           fileName,
               );
 
   // expand template
-  TEXT_MACRO_N_CSTRING(textMacros[0],"%type", getArchiveTypeName(archiveType),TEXT_MACRO_PATTERN_CSTRING);
-  TEXT_MACRO_N_CSTRING(textMacros[1],"%T",    getArchiveTypeShortName(archiveType),".");
+  TEXT_MACRO_N_CSTRING(textMacros[0],"%type", getArchiveTypeText(archiveType),TEXT_MACRO_PATTERN_CSTRING);
+  TEXT_MACRO_N_CSTRING(textMacros[1],"%T",    getArchiveTypeShortText(archiveType),".");
   TEXT_MACRO_N_CSTRING(textMacros[2],"%uuid", String_cString(uuid),TEXT_MACRO_PATTERN_CSTRING);
   TEXT_MACRO_N_CSTRING(textMacros[3],"%title",(scheduleTitle != NULL) ? String_cString(scheduleTitle) : "",TEXT_MACRO_PATTERN_CSTRING);
   TEXT_MACRO_N_CSTRING(textMacros[4],"%text", (scheduleCustomText != NULL) ? String_cString(scheduleCustomText) : "",TEXT_MACRO_PATTERN_CSTRING);

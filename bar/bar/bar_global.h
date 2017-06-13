@@ -131,9 +131,24 @@ typedef enum
   ARCHIVE_FILE_MODE_OVERWRITE
 } ArchiveFileModes;
 
-#define INDEX_TIMEOUT (10L*60L*1000L)  // index timeout [ms]
+// job states
+typedef enum
+{
+  JOB_STATE_NONE,
+  JOB_STATE_WAITING,
+  JOB_STATE_RUNNING,
+  JOB_STATE_REQUEST_FTP_PASSWORD,
+  JOB_STATE_REQUEST_SSH_PASSWORD,
+  JOB_STATE_REQUEST_WEBDAV_PASSWORD,
+  JOB_STATE_REQUEST_CRYPT_PASSWORD,
+  JOB_STATE_REQUEST_VOLUME,
+  JOB_STATE_DONE,
+  JOB_STATE_ERROR,
+  JOB_STATE_ABORTED,
+  JOB_STATE_DISCONNECTED
+} JobStates;
 
-/***************************** Datatypes *******************************/
+#define INDEX_TIMEOUT (10L*60L*1000L)  // index timeout [ms]
 
 // log types
 typedef enum
@@ -155,6 +170,8 @@ typedef enum
 
 #define LOG_TYPE_NONE 0x00000000
 #define LOG_TYPE_ALL  0xFFFFffff
+
+/***************************** Datatypes *******************************/
 
 // log handle
 typedef struct

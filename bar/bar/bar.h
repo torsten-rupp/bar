@@ -165,37 +165,49 @@ Errors updateConfig(void);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : getArchiveTypeName
-* Purpose: get archive type name
+* Name   : getArchiveTypeText
+* Purpose: get archive type text
 * Input  : archiveType - archive type
 * Output : -
 * Return : name
 * Notes  : -
 \***********************************************************************/
 
-const char *getArchiveTypeName(ArchiveTypes archiveType);
+const char *getArchiveTypeText(ArchiveTypes archiveType);
 
 /***********************************************************************\
-* Name   : getArchiveTypeShortName
-* Purpose: get archive type short name
+* Name   : getArchiveTypeShortText
+* Purpose: get archive type short text
 * Input  : archiveType - archive type
 * Output : -
 * Return : short name
 * Notes  : -
 \***********************************************************************/
 
-const char *getArchiveTypeShortName(ArchiveTypes archiveType);
+const char *getArchiveTypeShortText(ArchiveTypes archiveType);
 
 /***********************************************************************\
 * Name   : getPasswordTypeName
-* Purpose: get password type name
+* Purpose: get password type text
 * Input  : passwordType - password type
 * Output : -
 * Return : name
 * Notes  : -
 \***********************************************************************/
 
-const char *getPasswordTypeName(PasswordTypes passwordType);
+const char *getPasswordTypeText(PasswordTypes passwordType);
+
+/***********************************************************************\
+* Name   : getJobStateText
+* Purpose: get text for job state
+* Input  : jobState   - job state
+*          jobOptions - job options
+* Output : -
+* Return : text
+* Notes  : -
+\***********************************************************************/
+
+const char *getJobStateText(JobStates jobState, const JobOptions *jobOptions);
 
 // ----------------------------------------------------------------------
 
@@ -435,20 +447,24 @@ String expandTemplate(const char       *templateString,
 * Name   : logPostProcess
 * Purpose: log post processing
 * Input  : logHandle          - log handle
-*          jobName            - job name
 *          jobOptions         - job options
 *          archiveType        - archive type
 *          scheduleCustomText - schedule custom text
+*          jobName            - job name
+*          jobState           - job state
+*          message            - message
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 void logPostProcess(LogHandle        *logHandle,
-                    ConstString      jobName,
                     const JobOptions *jobOptions,
                     ArchiveTypes     archiveType,
-                    ConstString      scheduleCustomText
+                    ConstString      scheduleCustomText,
+                    ConstString      jobName,
+                    JobStates        jobState,
+                    ConstString      message
                    );
 
 // ----------------------------------------------------------------------
