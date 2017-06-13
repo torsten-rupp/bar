@@ -122,9 +122,8 @@ typedef enum
 } CryptPaddingTypes;
 
 // crypy key modes
-#define CRYPT_KEY_MODE_TRANSIENT (1 << 0)   // transient key (less secure)
-
 #define CRYPT_KEY_MODE_NONE 0
+#define CRYPT_KEY_MODE_TRANSIENT (1 << 0)   // transient key (less secure)
 
 // signatures states
 typedef enum
@@ -265,6 +264,8 @@ typedef struct
   ((uint16)(cryptMACAlgorithm))
 
 #ifndef NDEBUG
+  #define Crypt_initKey(...)  __Crypt_initKey (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_doneKey(...)  __Crypt_doneKey (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Crypt_init(...)     __Crypt_init    (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Crypt_done(...)     __Crypt_done    (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Crypt_initHash(...) __Crypt_initHash(__FILE__,__LINE__, ## __VA_ARGS__)
@@ -672,9 +673,17 @@ INLINE bool Crypt_isAsymmetricSupported(void);
 * Notes  : -
 \***********************************************************************/
 
-void Crypt_initKey(CryptKey          *cryptKey,
-                   CryptPaddingTypes cryptPaddingType
-                  );
+#ifdef NDEBUG
+  void Crypt_initKey(CryptKey          *cryptKey,
+                     CryptPaddingTypes cryptPaddingType
+                    );
+#else /* not NDEBUG */
+  void __Crypt_initKey(const char        *__fileName__,
+                       ulong             __lineNb__,
+                       CryptKey          *cryptKey,
+                       CryptPaddingTypes cryptPaddingType
+                      );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Crypt_doneKey
@@ -685,7 +694,14 @@ void Crypt_initKey(CryptKey          *cryptKey,
 * Notes  : -
 \***********************************************************************/
 
-void Crypt_doneKey(CryptKey *cryptKey);
+#ifdef NDEBUG
+  void Crypt_doneKey(CryptKey *cryptKey);
+#else /* not NDEBUG */
+  void __Crypt_doneKey(const char        *__fileName__,
+                       ulong             __lineNb__,
+                       CryptKey          *cryptKey
+                      );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Crypt_isKeyAvailable
@@ -725,6 +741,20 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
                        const byte          *salt,
                        uint                saltLength
                       );
+
+/***********************************************************************\
+* Name   : Crypt_duplicateKey
+* Purpose: duplicate public/private key
+* Input  : cryptKey     - crypt key
+*          fromCryptKey - from crypt key
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_duplicateKey(CryptKey       *cryptKey,
+                          const CryptKey *fromCryptKey
+                         );
 
 /*---------------------------------------------------------------------*/
 
@@ -852,7 +882,7 @@ String Crypt_getPublicPrivateKeyExponent(CryptKey *cryptKey);
 * Name   : Crypt_readPublicPrivateKeyFile
 * Purpose: read key from file (base64-encoded)
 * Input  : fileName   - file name
-*          cryptMode      - crypt mode; see CRYPT_MODE_...
+*          cryptMode  - crypt mode; see CRYPT_MODE_...
 *          password   - password tor decrypt key (can be NULL)
 *          salt       - encryption salt (can be NULL)
 *          saltLength - encryption salt length
@@ -875,7 +905,7 @@ Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
 * Purpose: write key to file (base64-encoded)
 * Input  : cryptKey   - crypt key
 *          fileName   - file name
-*          cryptMode      - crypt mode; see CRYPT_MODE_...
+*          cryptMode  - crypt mode; see CRYPT_MODE_...
 *          password   - password to encrypt key (can be NULL)
 *          salt       - encryption salt (can be NULL)
 *          saltLength - encryption salt length
