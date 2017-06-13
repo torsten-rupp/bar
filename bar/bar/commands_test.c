@@ -1069,7 +1069,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
       break;
     }
 
-//TODO
+//TODO: remove
     // set crypt salt, crypt key derive type, and crypt mode
 //    Archive_setCryptSalt(&archiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
 //    Archive_setCryptKeyDeriveType(&archiveHandle,entryMsg.cryptKeyDeriveType);
@@ -1089,6 +1089,9 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 
     switch (entryMsg.archiveEntryType)
     {
+      case ARCHIVE_ENTRY_TYPE_KEY:
+        error = Archive_readKeyEntry(&archiveHandle);
+        break;
       case ARCHIVE_ENTRY_TYPE_FILE:
         error = testFileEntry(&archiveHandle,
                               testInfo->includeEntryList,

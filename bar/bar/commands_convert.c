@@ -443,7 +443,8 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     // create storage file
     if (!String_isEmpty(convertInfo->jobOptions->destination))
     {
-      assert(convertInfo->destinationArchiveHandle.ioType == ARCHIVE_IO_TYPE_FILE);
+//TODO: remove?
+      assert(convertInfo->destinationArchiveHandle.mode == ARCHIVE_MODE_CREATE);
 
       // create local file
       error = File_open(&toFileHandle,convertInfo->newArchiveName,FILE_OPEN_CREATE);

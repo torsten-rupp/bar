@@ -44,14 +44,16 @@
 // archive I/O types
 typedef enum
 {
-  ARCHIVE_IO_TYPE_FILE,
-  ARCHIVE_IO_TYPE_STORAGE,
-} ArchiveIOTypes;
+  ARCHIVE_MODE_CREATE,
+  ARCHIVE_MODE_READ,
+} ArchiveModes;
 
 // archive entry types
 typedef enum
 {
   ARCHIVE_ENTRY_TYPE_NONE,
+
+  ARCHIVE_ENTRY_TYPE_KEY,
 
   ARCHIVE_ENTRY_TYPE_FILE,
   ARCHIVE_ENTRY_TYPE_IMAGE,
@@ -243,9 +245,10 @@ typedef struct
 
   uint                     blockLength;                                // block length for crypt algorithm
 
-  ArchiveIOTypes           ioType;                                     // i/o type
   ConstString              archiveName;                                // archive file name
   ConstString              printableStorageName;                       // printable storage name
+
+  ArchiveModes             mode;                                       // archive mode
   union
   {
     // local file
@@ -254,13 +257,13 @@ typedef struct
       String               tmpFileName;                                // temporary archive file name
       FileHandle           tmpFileHandle;                              // temporary file handle
       bool                 openFlag;                                   // TRUE iff temporary archive file is open
-    } file;
+    } create;
     // local or remote storage
     struct
     {
       String               storageFileName;                            // storage name
       StorageHandle        storageHandle;
-    } storage;
+    } read;
   };
   Semaphore                chunkIOLock;                                // chunk i/o functions lock
   const ChunkIO            *chunkIO;                                   // chunk i/o functions
@@ -288,12 +291,6 @@ typedef struct ArchiveEntryInfo
 
   ArchiveHandle                       *archiveHandle;                  // archive handle
   IndexHandle                         *indexHandle;                    // index handle or NULL  (owned by entry opener/creator)
-
-  enum
-  {
-    ARCHIVE_MODE_READ,
-    ARCHIVE_MODE_WRITE,
-  } mode;                                                              // read/write archive mode
 
   CryptAlgorithms                     cryptAlgorithms[4];              // crypt algorithms for entry
   uint                                blockLength;                     /* block length for file entry/file
@@ -462,7 +459,8 @@ typedef bool(*ArchiveAbortCallbackFunction)(void *userData);
   #define Archive_newLinkEntry(...)       __Archive_newLinkEntry      (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_newHardLinkEntry(...)   __Archive_newHardLinkEntry  (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_newSpecialEntry(...)    __Archive_newSpecialEntry   (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Archive_readMetaEntry(...)      __Archive_readMetaEntry   (__FILE__,__LINE__, ## __VA_ARGS__)
+
+  #define Archive_readMetaEntry(...)      __Archive_readMetaEntry     (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_readFileEntry(...)      __Archive_readFileEntry     (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_readImageEntry(...)     __Archive_readImageEntry    (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_readDirectoryEntry(...) __Archive_readDirectoryEntry(__FILE__,__LINE__, ## __VA_ARGS__)
@@ -1149,6 +1147,17 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
 Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 
 /***********************************************************************\
+* Name   : Archive_readKeyEntry
+* Purpose: read key from archive
+* Input  : archiveHandle    - archive handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle);
+
+/***********************************************************************\
 * Name   : Archive_readMetaEntry
 * Purpose: read meta info from archive
 * Input  : archiveEntryInfo - archive file entry info
@@ -1484,7 +1493,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 * Name   : Archive_verifySignatureEntry
 * Purpose: verify signatures of archive
 * Input  : archiveHandle - archive handle
-*          offset        - offset
+*          offset        - data start offset
 *          cryptSignatureState - signature state; see
 *                                CryptSignatureStates (can be NULL)
 * Output : cryptSignatureState - signature state; see

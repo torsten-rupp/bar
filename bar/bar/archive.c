@@ -283,12 +283,12 @@ LOCAL Errors getCryptPassword(Password            *password,
   error = ERROR_UNKNOWN;
 
   // get printable storage name
-  switch (archiveHandle->ioType)
+  switch (archiveHandle->mode)
   {
-    case ARCHIVE_IO_TYPE_FILE:
-      String_set(printableStorageName,archiveHandle->file.tmpFileName);
+    case ARCHIVE_MODE_CREATE:
+      String_set(printableStorageName,archiveHandle->create.tmpFileName);
       break;
-    case ARCHIVE_IO_TYPE_STORAGE:
+    case ARCHIVE_MODE_READ:
       Storage_getPrintableName(printableStorageName,&archiveHandle->storageInfo->storageSpecifier,NULL);
       break;
   }
@@ -308,7 +308,7 @@ LOCAL Errors getCryptPassword(Password            *password,
           error = getPasswordFunction(NULL,  // loginName
                                       password,
                                       PASSWORD_TYPE_CRYPT,
-                                      (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
+                                      (archiveHandle->mode == ARCHIVE_MODE_READ)
                                         ? String_cString(printableStorageName)
                                         : NULL,
                                       TRUE,  // validateFlag
@@ -336,7 +336,7 @@ LOCAL Errors getCryptPassword(Password            *password,
           error = getPasswordFunction(NULL,  // loginName
                                       password,
                                       PASSWORD_TYPE_CRYPT,
-                                      (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
+                                      (archiveHandle->mode == ARCHIVE_MODE_READ)
                                         ? String_cString(printableStorageName)
                                         : NULL,
                                       TRUE,  // validateFlag
@@ -369,7 +369,7 @@ LOCAL Errors getCryptPassword(Password            *password,
           error = getPasswordFunction(NULL,  // loginName
                                       password,
                                       PASSWORD_TYPE_CRYPT,
-                                      (archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
+                                      (archiveHandle->mode == ARCHIVE_MODE_READ)
                                         ? String_cString(printableStorageName)
                                         : NULL,
                                       TRUE,  // validateFlag
@@ -464,7 +464,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
                error = passwordHandle->getPasswordFunction(NULL,  // loginName
                                                            &newPassword,
                                                            PASSWORD_TYPE_CRYPT,
-                                                           (passwordHandle->archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
+                                                           (passwordHandle->archiveHandle->mode == ARCHIVE_MODE_READ)
                                                              ? String_cString(printableStorageName)
                                                              : NULL,
                                                            FALSE,  // validateFlag
@@ -800,7 +800,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                error = decryptKeyIterator->getPasswordFunction(NULL,  // loginName
                                                                &newPassword,
                                                                PASSWORD_TYPE_CRYPT,
-                                                               (decryptKeyIterator->archiveHandle->ioType == ARCHIVE_IO_TYPE_STORAGE)
+                                                               (decryptKeyIterator->archiveHandle->mode == ARCHIVE_MODE_READ)
                                                                  ? String_cString(printableStorageName)
                                                                  : NULL,
                                                                FALSE,  // validateFlag
@@ -1183,14 +1183,14 @@ LOCAL bool isNewPartNeeded(const ArchiveHandle *archiveHandle,
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->chunkIO != NULL);
   assert(archiveHandle->chunkIO->getSize != NULL);
-  assert(archiveHandle->ioType == ARCHIVE_IO_TYPE_FILE);
+  assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(Semaphore_isOwned(&archiveHandle->chunkIOLock));
 
   newPartFlag = FALSE;
   if (isSplittedArchive(archiveHandle))
   {
     // get current archive size
-    if (archiveHandle->file.openFlag)
+    if (archiveHandle->create.openFlag)
     {
       archiveFileSize = archiveHandle->chunkIO->getSize(archiveHandle->chunkIOUserData);
     }
@@ -1422,6 +1422,7 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
   return ERROR_NONE;
 }
 
+//TODO: remove, replaced by Archive_readKeyEntry()
 /***********************************************************************\
 * Name   : readEncryptionKey
 * Purpose: read encryption key
@@ -1433,7 +1434,7 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
+LOCAL Errors XXXreadEncryptionKey(ArchiveHandle     *archiveHandle,
                                const ChunkHeader *chunkHeader,
                                const CryptKey    *privateCryptKey
                               )
@@ -1536,6 +1537,7 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
   }
 //fprintf(stderr,"%s, %d: %d encrypted random key \n",__FILE__,__LINE__,archiveHandle->cryptKey.dataLength); debugDumpMemory(archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,0);
 
+//TODO: not required to store encrypted key when reading archives
   // set crypt data
   if (archiveHandle->encryptedKeyData != NULL) free(archiveHandle->encryptedKeyData);
   archiveHandle->encryptedKeyData       = encryptedKeyData;
@@ -1953,9 +1955,9 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
-  assert(archiveHandle->ioType == ARCHIVE_IO_TYPE_FILE);
+  assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
 
-  if (!archiveHandle->file.openFlag)
+  if (!archiveHandle->create.openFlag)
   {
     // init variables
     AutoFree_init(&autoFreeList);
@@ -1965,18 +1967,18 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
       AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_unlock(&archiveHandle->chunkIOLock); });
 
       // get intermediate data filename
-      error = File_getTmpFileName(archiveHandle->file.tmpFileName,"archive",tmpDirectory);
+      error = File_getTmpFileName(archiveHandle->create.tmpFileName,"archive",tmpDirectory);
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-      AUTOFREE_ADD(&autoFreeList,&archiveHandle->file.tmpFileName,{ File_delete(archiveHandle->file.tmpFileName,FALSE); });
+      AUTOFREE_ADD(&autoFreeList,&archiveHandle->create.tmpFileName,{ File_delete(archiveHandle->create.tmpFileName,FALSE); });
       DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
       // create tempoary file
-      error = File_open(&archiveHandle->file.tmpFileHandle,
-                        archiveHandle->file.tmpFileName,
+      error = File_open(&archiveHandle->create.tmpFileHandle,
+                        archiveHandle->create.tmpFileName,
                         FILE_OPEN_CREATE
                        );
       if (error != ERROR_NONE)
@@ -1984,7 +1986,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-      AUTOFREE_ADD(&autoFreeList,&archiveHandle->file.tmpFileHandle,{ File_close(&archiveHandle->file.tmpFileHandle); });
+      AUTOFREE_ADD(&autoFreeList,&archiveHandle->create.tmpFileHandle,{ File_close(&archiveHandle->create.tmpFileHandle); });
       DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
       // write BAR header
@@ -2061,8 +2063,8 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexH
         DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       }
 
-      // mark archive file "open"
-      archiveHandle->file.openFlag = TRUE;
+      // mark create archive file "open"
+      archiveHandle->create.openFlag = TRUE;
     }
 
     // free resources
@@ -2091,12 +2093,12 @@ LOCAL Errors closeArchiveFile(ArchiveHandle *archiveHandle, IndexHandle *indexHa
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
-  assert(archiveHandle->ioType == ARCHIVE_IO_TYPE_FILE);
+  assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
 #ifndef WERROR
 #warning TODO: nicht offen wenn keine datei archiviert wurde
 #endif
-//  assert(archiveHandle->file.openFlag);
-if (!archiveHandle->file.openFlag) return ERROR_NONE;
+//  assert(archiveHandle->create.openFlag);
+if (!archiveHandle->create.openFlag) return ERROR_NONE;
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
@@ -2106,18 +2108,18 @@ if (!archiveHandle->file.openFlag) return ERROR_NONE;
       error = writeSignature(archiveHandle);
       if (error != ERROR_NONE)
       {
-        (void)File_close(&archiveHandle->file.tmpFileHandle);
-        archiveHandle->file.openFlag = FALSE;
+        (void)File_close(&archiveHandle->create.tmpFileHandle);
+        archiveHandle->create.openFlag = FALSE;
         Semaphore_unlock(&archiveHandle->chunkIOLock);
         return error;
       }
     }
 
     // close file
-    (void)File_close(&archiveHandle->file.tmpFileHandle);
+    (void)File_close(&archiveHandle->create.tmpFileHandle);
 
-    // mark archive file "closed"
-    archiveHandle->file.openFlag = FALSE;
+    // mark created archive file "closed"
+    archiveHandle->create.openFlag = FALSE;
 
     // call-back to store archive
     if (archiveHandle->archiveStoreFunction != NULL)
@@ -2133,7 +2135,7 @@ if (!archiveHandle->file.openFlag) return ERROR_NONE;
                                                   isSplittedArchive(archiveHandle)
                                                     ? (int)archiveHandle->partNumber
                                                     : ARCHIVE_PART_NUMBER_NONE,
-                                                  archiveHandle->file.tmpFileName,
+                                                  archiveHandle->create.tmpFileName,
                                                   Archive_getSize(archiveHandle),
                                                   archiveHandle->archiveStoreUserData
                                                  );
@@ -2199,7 +2201,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
-  assert(archiveHandle->ioType == ARCHIVE_IO_TYPE_FILE);
+  assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(Semaphore_isOwned(&archiveHandle->chunkIOLock));
 
   // check if split is necessary
@@ -2208,8 +2210,8 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
                      )
      )
   {
-    // split needed -> close archive file
-    if (archiveHandle->file.openFlag)
+    // split needed -> close created archive file
+    if (archiveHandle->create.openFlag)
     {
       error = closeArchiveFile(archiveHandle,indexHandle);
       if (error != ERROR_NONE)
@@ -2536,7 +2538,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
-  assert(archiveEntryInfo->archiveHandle->ioType == ARCHIVE_IO_TYPE_FILE);
+  assert(archiveEntryInfo->archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(archiveEntryInfo->file.byteCompressInfo.blockLength != 0);
 
   do
@@ -3116,7 +3118,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
-  assert(archiveEntryInfo->archiveHandle->ioType == ARCHIVE_IO_TYPE_FILE);
+  assert(archiveEntryInfo->archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(archiveEntryInfo->image.byteCompressInfo.blockLength != 0);
 
   do
@@ -3728,7 +3730,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
-  assert(archiveEntryInfo->archiveHandle->ioType == ARCHIVE_IO_TYPE_FILE);
+  assert(archiveEntryInfo->archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(archiveEntryInfo->hardLink.byteCompressInfo.blockLength != 0);
 
   do
@@ -4474,14 +4476,14 @@ UNUSED_VARIABLE(storageInfo);
 //  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->signatureKeyDataLength  = 0;
 
-  archiveHandle->ioType                  = ARCHIVE_IO_TYPE_FILE;
+  archiveHandle->mode                    = ARCHIVE_MODE_CREATE;
   archiveHandle->archiveName             = String_duplicate(archiveName);
   archiveHandle->printableStorageName    = NULL;
-  archiveHandle->file.tmpFileName        = String_new();
-  archiveHandle->file.openFlag           = FALSE;
+  archiveHandle->create.tmpFileName      = String_new();
+  archiveHandle->create.openFlag         = FALSE;
   Semaphore_init(&archiveHandle->chunkIOLock);
   archiveHandle->chunkIO                 = &CHUNK_IO_FILE;
-  archiveHandle->chunkIOUserData         = &archiveHandle->file.tmpFileHandle;
+  archiveHandle->chunkIOUserData         = &archiveHandle->create.tmpFileHandle;
 
   archiveHandle->entries                 = 0LL;
   archiveHandle->archiveFileSize         = 0LL;
@@ -4496,7 +4498,7 @@ UNUSED_VARIABLE(storageInfo);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->cryptKey,{ Crypt_doneKey(&archiveHandle->cryptKey); });
 //  AUTOFREE_ADD(&autoFreeList,&archiveHandle->signatureCryptKey,{ Crypt_doneKey(&archiveHandle->signatureCryptKey); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->file.tmpFileName,{ String_delete(archiveHandle->file.tmpFileName); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->create.tmpFileName,{ String_delete(archiveHandle->create.tmpFileName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
 
   // get crypt salt
@@ -4708,14 +4710,14 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
 //  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->signatureKeyDataLength  = 0;
 
-  archiveHandle->ioType                  = ARCHIVE_IO_TYPE_STORAGE;
+  archiveHandle->mode                    = ARCHIVE_MODE_READ;
   archiveHandle->archiveName             = String_duplicate(archiveName);
 //TODO: required here or better create dynamic before usage?
   archiveHandle->printableStorageName    = Storage_getPrintableName(String_new(),&storageInfo->storageSpecifier,archiveName);
-  archiveHandle->storage.storageFileName = NULL;
+  archiveHandle->read.storageFileName    = NULL;
   Semaphore_init(&archiveHandle->chunkIOLock);
   archiveHandle->chunkIO                 = &CHUNK_IO_STORAGE;
-  archiveHandle->chunkIOUserData         = &archiveHandle->storage.storageHandle;
+  archiveHandle->chunkIOUserData         = &archiveHandle->read.storageHandle;
 
   archiveHandle->entries                 = 0LL;
   archiveHandle->archiveFileSize         = 0LL;
@@ -4735,7 +4737,7 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
 
   // open storage
-  error = Storage_open(&archiveHandle->storage.storageHandle,
+  error = Storage_open(&archiveHandle->read.storageHandle,
                        archiveHandle->storageInfo,
                        archiveHandle->archiveName
                       );
@@ -4744,7 +4746,7 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->storage.storageHandle,{ Storage_close(&archiveHandle->storage.storageHandle); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->read.storageHandle,{ Storage_close(&archiveHandle->read.storageHandle); });
   DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // check if BAR archive file
@@ -4839,14 +4841,14 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
 //  Crypt_initKey(&archiveHandle->signatureCryptKey,CRYPT_PADDING_TYPE_NONE);
   archiveHandle->signatureKeyDataLength  = 0;
 
-  archiveHandle->ioType                  = ARCHIVE_IO_TYPE_STORAGE;
+  archiveHandle->mode                    = ARCHIVE_MODE_READ;
 //TODO: use
   archiveHandle->archiveName             = String_duplicate(fromArchiveHandle->archiveName);
   archiveHandle->printableStorageName    = String_duplicate(fromArchiveHandle->printableStorageName);
-  archiveHandle->storage.storageFileName = NULL;
+  archiveHandle->read.storageFileName    = NULL;
   Semaphore_init(&archiveHandle->chunkIOLock);
   archiveHandle->chunkIO                 = &CHUNK_IO_STORAGE;
-  archiveHandle->chunkIOUserData         = &archiveHandle->storage.storageHandle;
+  archiveHandle->chunkIOUserData         = &archiveHandle->read.storageHandle;
 
   archiveHandle->entries                 = 0LL;
   archiveHandle->archiveFileSize         = 0LL;
@@ -4865,8 +4867,16 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   AUTOFREE_ADD(&autoFreeList,archiveHandle->printableStorageName,{ String_delete(archiveHandle->printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
 
+  // duplicate crypt key
+  error = Crypt_duplicateKey(&archiveHandle->cryptKey,&fromArchiveHandle->cryptKey);
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+
   // open storage
-  error = Storage_open(&archiveHandle->storage.storageHandle,
+  error = Storage_open(&archiveHandle->read.storageHandle,
                        archiveHandle->storageInfo,
                        archiveHandle->archiveName
                       );
@@ -4875,7 +4885,7 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->storage.storageHandle,{ Storage_close(&archiveHandle->storage.storageHandle); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->read.storageHandle,{ Storage_close(&archiveHandle->read.storageHandle); });
   DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // free resources
@@ -4908,13 +4918,13 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   error = ERROR_UNKNOWN;
 
   // close file/storage
-  switch (archiveHandle->ioType)
+  switch (archiveHandle->mode)
   {
-    case ARCHIVE_IO_TYPE_FILE:
+    case ARCHIVE_MODE_CREATE:
       error = closeArchiveFile(archiveHandle,archiveHandle->indexHandle);
       break;
-    case ARCHIVE_IO_TYPE_STORAGE:
-      Storage_close(&archiveHandle->storage.storageHandle);
+    case ARCHIVE_MODE_READ:
+      Storage_close(&archiveHandle->read.storageHandle);
       error = ERROR_NONE;
       break;
     #ifndef NDEBUG
@@ -4931,10 +4941,8 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   #endif /* NDEBUG */
 
   // free resources
-  if (archiveHandle->cryptType == CRYPT_TYPE_ASYMMETRIC)
+  if (archiveHandle->encryptedKeyData != NULL)
   {
-    assert(archiveHandle->encryptedKeyData != NULL);
-
     free(archiveHandle->encryptedKeyData);
   }
 //TODO: remove?
@@ -4946,12 +4954,12 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
 
   Semaphore_done(&archiveHandle->chunkIOLock);
   if (archiveHandle->cryptPassword  != NULL) Password_delete(archiveHandle->cryptPassword);
-  switch (archiveHandle->ioType)
+  switch (archiveHandle->mode)
   {
-    case ARCHIVE_IO_TYPE_FILE:
-      String_delete(archiveHandle->file.tmpFileName);
+    case ARCHIVE_MODE_CREATE:
+      String_delete(archiveHandle->create.tmpFileName);
       break;
-    case ARCHIVE_IO_TYPE_STORAGE:
+    case ARCHIVE_MODE_READ:
 //TODO: remove
 //      Storage_doneSpecifier(&archiveHandle->storage.storageSpecifier);
       break;
@@ -5008,9 +5016,9 @@ Errors Archive_storageInterrupt(ArchiveHandle *archiveHandle)
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
-  switch (archiveHandle->ioType)
+  switch (archiveHandle->mode)
   {
-    case ARCHIVE_IO_TYPE_FILE:
+    case ARCHIVE_MODE_CREATE:
       SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         archiveHandle->interrupt.openFlag = archiveHandle->file.openFlag;
@@ -5026,7 +5034,7 @@ Errors Archive_storageInterrupt(ArchiveHandle *archiveHandle)
         }
       }
       break;
-    case ARCHIVE_IO_TYPE_STORAGE:
+    case ARCHIVE_MODE_READ:
       error = Storage_tell(&archiveHandle->storage.storageHandle,&archiveHandle->interrupt.offset);
       if (error != ERROR_NONE)
       {
@@ -5052,9 +5060,9 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle)
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
-  switch (archiveHandle->ioType)
+  switch (archiveHandle->mode)
   {
-    case ARCHIVE_IO_TYPE_FILE:
+    case ARCHIVE_MODE_CREATE:
       SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         if (archiveHandle->interrupt.openFlag)
@@ -5076,7 +5084,7 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle)
         archiveHandle->file.openFlag = archiveHandle->interrupt.openFlag;
       }
       break;
-    case ARCHIVE_IO_TYPE_STORAGE:
+    case ARCHIVE_MODE_READ:
       error = Storage_open(&archiveHandle->storage.storageHandle,
                            archiveHandle->storage.storageInfo,
                            NULL  // archiveName
@@ -5146,6 +5154,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
     }
 
     // find next file/image/directory/link/hardlink/special/meta/signature chunk
+    scanFlag = FALSE;
     switch (chunkHeader.id)
     {
       case CHUNK_ID_BAR:
@@ -5155,8 +5164,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
         {
           return FALSE;
         }
-        scanFlag = FALSE;
         break;
+#if 0
       case CHUNK_ID_KEY:
         // check if private key available
         if (!isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
@@ -5237,13 +5246,15 @@ byte *p=archiveHandle->cryptKeyData;
 fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprintf(stderr,"%02x",p[z]); fprintf(stderr,"\n");
 }
 #endif /* 0 */
-        archiveHandle->cryptType = CRYPT_TYPE_ASYMMETRIC;
-
         // free resources
         Crypt_doneKey(&privateCryptKey);
 
-        scanFlag = FALSE;
+        // set asymmetric encryption
+        archiveHandle->cryptType = CRYPT_TYPE_ASYMMETRIC;
         break;
+#else
+      case CHUNK_ID_KEY:
+#endif
       case CHUNK_ID_FILE:
       case CHUNK_ID_IMAGE:
       case CHUNK_ID_DIRECTORY:
@@ -5253,8 +5264,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
       case CHUNK_ID_META:
       case CHUNK_ID_SIGNATURE:
         chunkHeaderFoundFlag = TRUE;
-
-        scanFlag = FALSE;
         break;
       default:
         if (skipUnknownChunksFlag)
@@ -5270,7 +5279,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
                            String_cString(archiveHandle->printableStorageName)
                           );
             }
-
             scanFlag = TRUE;
           }
 
@@ -5347,6 +5355,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->blockLength > 0);
+  assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
 
   UNUSED_VARIABLE(fragmentSize);
@@ -5365,7 +5374,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   // init archive entry info
   archiveEntryInfo->archiveHandle                  = archiveHandle;
   archiveEntryInfo->indexHandle                    = indexHandle;
-  archiveEntryInfo->mode                           = ARCHIVE_MODE_WRITE;
 
 #ifdef MULTI_CRYPT
 fprintf(stderr,"%s, %d: %d %d %d %d\n",__FILE__,__LINE__,
@@ -5775,6 +5783,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->blockLength > 0);
+  assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(deviceInfo != NULL);
   assert(deviceInfo->blockSize > 0);
 
@@ -5794,7 +5803,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // init archive entry info
   archiveEntryInfo->archiveHandle                   = archiveHandle;
   archiveEntryInfo->indexHandle                     = indexHandle;
-  archiveEntryInfo->mode                            = ARCHIVE_MODE_WRITE;
 
   memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength                     = archiveHandle->blockLength;
@@ -6144,6 +6152,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->blockLength > 0);
+  assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
 
   // init variables
@@ -6160,7 +6169,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // init archive entry info
   archiveEntryInfo->archiveHandle    = archiveHandle;
   archiveEntryInfo->indexHandle      = indexHandle;
-  archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
   memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
@@ -6389,6 +6397,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->blockLength > 0);
+  assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
 
   // init variables
@@ -6405,7 +6414,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // init archive entry info
   archiveEntryInfo->archiveHandle    = archiveHandle;
   archiveEntryInfo->indexHandle      = indexHandle;
-  archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
   memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
@@ -6642,6 +6650,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->blockLength > 0);
+  assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
 
   UNUSED_VARIABLE(fragmentSize);
@@ -6660,7 +6669,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // init archive entry info
   archiveEntryInfo->archiveHandle                      = archiveHandle;
   archiveEntryInfo->indexHandle                        = indexHandle;
-  archiveEntryInfo->mode                               = ARCHIVE_MODE_WRITE;
 
   memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength                        = archiveHandle->blockLength;
@@ -7087,6 +7095,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->blockLength > 0);
+  assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
 
   // init variables
@@ -7103,7 +7112,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // init archive entry info
   archiveEntryInfo->archiveHandle    = archiveHandle;
   archiveEntryInfo->indexHandle      = indexHandle;
-  archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
   memCopyFast(&archiveEntryInfo->cryptAlgorithms,sizeof(archiveEntryInfo->cryptAlgorithms),&archiveHandle->storageInfo->jobOptions->cryptAlgorithms,sizeof(archiveHandle->storageInfo->jobOptions->cryptAlgorithms));
   archiveEntryInfo->blockLength      = archiveHandle->blockLength;
@@ -7353,6 +7361,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
 
         scanMode = FALSE;
         break;
+#if 0
       case CHUNK_ID_KEY:
         // check if private key available
         if (!isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
@@ -7435,6 +7444,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
         scanMode = FALSE;
         break;
+#else
+      case CHUNK_ID_KEY:
+#endif
       case CHUNK_ID_FILE:
       case CHUNK_ID_IMAGE:
       case CHUNK_ID_DIRECTORY:
@@ -7483,7 +7495,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
         break;
     }
   }
-  while (   (chunkHeader.id != CHUNK_ID_FILE)
+  while (   (chunkHeader.id != CHUNK_ID_KEY)
+         && (chunkHeader.id != CHUNK_ID_FILE)
          && (chunkHeader.id != CHUNK_ID_IMAGE)
          && (chunkHeader.id != CHUNK_ID_DIRECTORY)
          && (chunkHeader.id != CHUNK_ID_LINK)
@@ -7498,6 +7511,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   {
     switch (chunkHeader.id)
     {
+      case CHUNK_ID_KEY:       (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_KEY;       break;
       case CHUNK_ID_FILE:      (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_FILE;      break;
       case CHUNK_ID_IMAGE:     (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_IMAGE;     break;
       case CHUNK_ID_DIRECTORY: (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_DIRECTORY; break;
@@ -7554,6 +7568,225 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   return ERROR_NONE;
 }
 
+Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle)
+{
+  AutoFreeList   autoFreeList;
+  CryptKey       privateCryptKey;
+  bool           decryptedFlag;
+  Errors         error;
+  ChunkKey       chunkKey;
+  PasswordHandle passwordHandle;
+  const Password *password;
+  ChunkHeader    chunkHeader;
+  uint           encryptedKeyDataLength;
+  void           *encryptedKeyData;
+
+  assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
+  assert(archiveHandle->storageInfo != NULL);
+  assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->mode == ARCHIVE_MODE_READ);
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+  // check for pending error
+  if (archiveHandle->pendingError != ERROR_NONE)
+  {
+    error = archiveHandle->pendingError;
+    archiveHandle->pendingError = ERROR_NONE;
+    return error;
+  }
+
+  // init variables
+  AutoFree_init(&autoFreeList);
+
+  // check if private key available
+  if (!isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
+  {
+    archiveHandle->pendingError = ERROR_NO_PRIVATE_CRYPT_KEY;
+    AutoFree_cleanup(&autoFreeList);
+    return FALSE;
+  }
+
+ //fprintf(stderr,"%s, %d: private key1 \n",__FILE__,__LINE__); debugDumpMemory(archiveHandle->jobOptions->cryptPrivateKey.data,archiveHandle->jobOptions->cryptPrivateKey.length,0);
+  // init private key: try with no password, then all passwords
+  Crypt_initKey(&privateCryptKey,CRYPT_PADDING_TYPE_NONE);
+  decryptedFlag = FALSE;
+  error = Crypt_setPublicPrivateKeyData(&privateCryptKey,
+                                        archiveHandle->storageInfo->jobOptions->cryptPrivateKey.data,
+                                        archiveHandle->storageInfo->jobOptions->cryptPrivateKey.length,
+                                        CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                        archiveHandle->cryptKeyDeriveType,
+                                        NULL,  // password
+                                        NULL,  // salt
+                                        0  // saltLength
+                                       );
+  if (error == ERROR_NONE)
+  {
+    decryptedFlag = TRUE;
+  }
+  else
+  {
+    password = getFirstDecryptPassword(&passwordHandle,
+                                       archiveHandle,
+                                       archiveHandle->storageInfo->jobOptions,
+                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
+                                       archiveHandle->getPasswordFunction,
+                                       archiveHandle->getPasswordUserData
+                                      );
+    while (   !decryptedFlag
+           && (password != NULL)
+          )
+    {
+      error = Crypt_setPublicPrivateKeyData(&privateCryptKey,
+                                            archiveHandle->storageInfo->jobOptions->cryptPrivateKey.data,
+                                            archiveHandle->storageInfo->jobOptions->cryptPrivateKey.length,
+                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            archiveHandle->cryptKeyDeriveType,
+                                            password,
+                                            NULL,  // salt
+                                            0  // saltLength
+                                           );
+      if (error == ERROR_NONE)
+      {
+        decryptedFlag = TRUE;
+      }
+      else
+      {
+        // next password
+        password = getNextDecryptPassword(&passwordHandle);
+      }
+    }
+  }
+  if (!decryptedFlag)
+  {
+    archiveHandle->pendingError = ERROR_KEY_ENCRYPT_FAIL;
+    Crypt_doneKey(&privateCryptKey);
+    AutoFree_cleanup(&autoFreeList);
+    return FALSE;
+  }
+  AUTOFREE_ADD(&autoFreeList,&privateCryptKey,{ Crypt_doneKey(&privateCryptKey); });
+
+  // init key chunk
+  error = Chunk_init(&chunkKey.info,
+                     NULL,  // parentChunkInfo
+                     archiveHandle->chunkIO,
+                     archiveHandle->chunkIOUserData,
+                     CHUNK_ID_KEY,
+                     CHUNK_DEFINITION_KEY,
+//TODO: DEFAULT_ALIGNMENT
+                     0,  // alignment
+                     NULL,  // cryptInfo
+                     &chunkKey
+                    );
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,&chunkKey.info,{ Chunk_done(&chunkKey.info); });
+
+  // find key chunk
+  do
+  {
+    error = getNextChunkHeader(archiveHandle,&chunkHeader);
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+
+    if (chunkHeader.id != CHUNK_ID_KEY)
+    {
+      error = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+      if (error != ERROR_NONE)
+      {
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+      continue;
+    }
+  }
+  while (chunkHeader.id != CHUNK_ID_KEY);
+
+  // check size
+  if (chunkHeader.size < CHUNK_FIXED_SIZE_KEY)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return ERROR_INVALID_CHUNK_SIZE;
+  }
+
+  // open key chunk
+  error = Chunk_open(&chunkKey.info,
+                     &chunkHeader,
+                     CHUNK_FIXED_SIZE_KEY,
+                     archiveHandle
+                    );
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,&chunkKey.info,{ Chunk_close(&chunkKey.info); });
+
+  // read key chunk
+  encryptedKeyDataLength = chunkHeader.size-CHUNK_FIXED_SIZE_KEY;
+  encryptedKeyData       = malloc(encryptedKeyDataLength);
+  if (encryptedKeyData == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  error = Chunk_readData(&chunkKey.info,
+                         encryptedKeyData,
+                         encryptedKeyDataLength,
+                         NULL  // bytesRead: read all
+                        );
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+
+  // check if all data read
+  if (!Chunk_eofSub(&chunkKey.info))
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+
+  // get decrypt key
+  error = Crypt_getDecryptKey(&archiveHandle->cryptKey,
+                              0,  // keyLength
+                              &privateCryptKey,
+                              encryptedKeyData,
+                              encryptedKeyDataLength
+                             );
+  if (error != ERROR_NONE)
+  {
+    archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+//fprintf(stderr,"%s, %d: %d encrypted random key \n",__FILE__,__LINE__,archiveHandle->cryptKey.dataLength); debugDumpMemory(archiveHandle->cryptKey.data,archiveHandle->cryptKey.dataLength,0);
+
+//TODO: not required to store encrypted key when reading archives
+  // set crypt data
+  if (archiveHandle->encryptedKeyData != NULL) free(archiveHandle->encryptedKeyData);
+  archiveHandle->encryptedKeyData       = encryptedKeyData;
+  archiveHandle->encryptedKeyDataLength = encryptedKeyDataLength;
+
+  // done resources
+  Chunk_close(&chunkKey.info);
+  Chunk_done(&chunkKey.info);
+  Crypt_doneKey(&privateCryptKey);
+  AutoFree_done(&autoFreeList);
+
+  return ERROR_NONE;
+}
+
 #ifdef NDEBUG
   Errors Archive_readMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
                                ArchiveHandle    *archiveHandle,
@@ -7602,6 +7835,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->mode == ARCHIVE_MODE_READ);
 
   // check for pending error
   if (archiveHandle->pendingError != ERROR_NONE)
@@ -7615,7 +7849,6 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   AutoFree_init(&autoFreeList1);
 
   archiveEntryInfo->archiveHandle    = archiveHandle;
-  archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_META;
 
   // init meta chunk
@@ -7896,7 +8129,6 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   #endif /* NDEBUG */
 
   return ERROR_NONE;
-
 }
 
 #ifdef NDEBUG
@@ -7950,6 +8182,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->mode == ARCHIVE_MODE_READ);
   assert(fileName != NULL);
   assert(SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms) == 4);
 
@@ -7967,7 +8200,6 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   if (deltaSourceSize != NULL) (*deltaSourceSize) = 0LL;
 
   archiveEntryInfo->archiveHandle                  = archiveHandle;
-  archiveEntryInfo->mode                           = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType               = ARCHIVE_ENTRY_TYPE_FILE;
 
   archiveEntryInfo->file.deltaSourceHandleInitFlag = FALSE;
@@ -8156,6 +8388,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
     }
 
     // init file entry/extended attribute/delta/data/file crypt
+fprintf(stderr,"%s, %d: ---------------------------------------- %p %d\n",__FILE__,__LINE__,decryptKey->data,decryptKey->dataLength);
     if (error == ERROR_NONE)
     {
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),0);
@@ -8608,6 +8841,7 @@ NULL,//                         password,
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->mode == ARCHIVE_MODE_READ);
   assert(deviceInfo != NULL);
 
   // check for pending error
@@ -8624,7 +8858,6 @@ NULL,//                         password,
   if (deltaSourceSize != NULL) (*deltaSourceSize) = 0LL;
 
   archiveEntryInfo->archiveHandle                   = archiveHandle;
-  archiveEntryInfo->mode                            = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType                = ARCHIVE_ENTRY_TYPE_IMAGE;
 
   archiveEntryInfo->image.deltaSourceHandleInitFlag = FALSE;
@@ -9158,6 +9391,7 @@ NULL,//                         password,
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->mode == ARCHIVE_MODE_READ);
 
   // check for pending error
   if (archiveHandle->pendingError != ERROR_NONE)
@@ -9171,7 +9405,6 @@ NULL,//                         password,
   AutoFree_init(&autoFreeList1);
 
   archiveEntryInfo->archiveHandle    = archiveHandle;
-  archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
 
   // init directory chunk
@@ -9582,6 +9815,7 @@ NULL,//                         password,
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->mode == ARCHIVE_MODE_READ);
 
   // check for pending error
   if (archiveHandle->pendingError != ERROR_NONE)
@@ -9595,7 +9829,6 @@ NULL,//                         password,
   AutoFree_init(&autoFreeList1);
 
   archiveEntryInfo->archiveHandle    = archiveHandle;
-  archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
 
   // init link chunk
@@ -10016,6 +10249,7 @@ NULL,//                         password,
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->mode == ARCHIVE_MODE_READ);
   assert(fileNameList != NULL);
 
   // check for pending error
@@ -10032,7 +10266,6 @@ NULL,//                         password,
   if (deltaSourceSize != NULL) (*deltaSourceSize) = 0LL;
 
   archiveEntryInfo->archiveHandle                      = archiveHandle;
-  archiveEntryInfo->mode                               = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType                   = ARCHIVE_ENTRY_TYPE_HARDLINK;
 
   archiveEntryInfo->hardLink.deltaSourceHandleInitFlag = FALSE;
@@ -10687,6 +10920,7 @@ NULL,//                         password,
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->mode == ARCHIVE_MODE_READ);
 
   // check for pending error
   if (archiveHandle->pendingError != ERROR_NONE)
@@ -10700,7 +10934,6 @@ NULL,//                         password,
   AutoFree_init(&autoFreeList1);
 
   archiveEntryInfo->archiveHandle    = archiveHandle;
-  archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
 
   // init special chunk
@@ -11263,9 +11496,9 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
   #endif /* NDEBUG */
 
   error = ERROR_NONE;
-  switch (archiveEntryInfo->mode)
+  switch (archiveEntryInfo->archiveHandle->mode)
   {
-    case ARCHIVE_MODE_WRITE:
+    case ARCHIVE_MODE_CREATE:
       switch (archiveEntryInfo->archiveEntryType)
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
@@ -12112,6 +12345,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
   DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(archiveEntryInfo->archiveHandle->storageInfo != NULL);
   assert(archiveEntryInfo->archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveEntryInfo->archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(elementSize > 0);
 
   if (!archiveEntryInfo->archiveHandle->storageInfo->jobOptions->dryRunFlag)
@@ -12346,6 +12580,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle->storageInfo != NULL);
   assert(archiveEntryInfo->archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveEntryInfo->archiveHandle->mode == ARCHIVE_MODE_READ);
 
   switch (archiveEntryInfo->archiveEntryType)
   {
@@ -12827,9 +13062,9 @@ bool Archive_eofData(ArchiveEntryInfo *archiveEntryInfo)
   DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
 
   eofFlag = FALSE;
-  switch (archiveEntryInfo->mode)
+  switch (archiveEntryInfo->archiveHandle->mode)
   {
-    case ARCHIVE_MODE_WRITE:
+    case ARCHIVE_MODE_CREATE:
       eofFlag = TRUE;
       break;
     case ARCHIVE_MODE_READ:
@@ -12885,12 +13120,12 @@ uint64 Archive_tell(ArchiveHandle *archiveHandle)
   offset = 0LL;
   if (!archiveHandle->storageInfo->jobOptions->dryRunFlag)
   {
-    switch (archiveHandle->ioType)
+    switch (archiveHandle->mode)
     {
-      case ARCHIVE_IO_TYPE_FILE:
+      case ARCHIVE_MODE_CREATE:
         SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (archiveHandle->file.openFlag)
+          if (archiveHandle->create.openFlag)
           {
             archiveHandle->chunkIO->tell(archiveHandle->chunkIOUserData,&offset);
           }
@@ -12900,7 +13135,7 @@ uint64 Archive_tell(ArchiveHandle *archiveHandle)
           }
         }
         break;
-      case ARCHIVE_IO_TYPE_STORAGE:
+      case ARCHIVE_MODE_READ:
         archiveHandle->chunkIO->tell(archiveHandle->chunkIOUserData,&offset);
         break;
       #ifndef NDEBUG
@@ -12933,18 +13168,18 @@ Errors Archive_seek(ArchiveHandle *archiveHandle,
 
   if (!archiveHandle->storageInfo->jobOptions->dryRunFlag)
   {
-    switch (archiveHandle->ioType)
+    switch (archiveHandle->mode)
     {
-      case ARCHIVE_IO_TYPE_FILE:
+      case ARCHIVE_MODE_CREATE:
         SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (archiveHandle->file.openFlag)
+          if (archiveHandle->create.openFlag)
           {
             error = archiveHandle->chunkIO->seek(archiveHandle->chunkIOUserData,offset);
           }
         }
         break;
-      case ARCHIVE_IO_TYPE_STORAGE:
+      case ARCHIVE_MODE_READ:
         error = archiveHandle->chunkIO->seek(archiveHandle->chunkIOUserData,offset);
         break;
       #ifndef NDEBUG
@@ -12974,17 +13209,17 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle)
   size = 0LL;
   if (!archiveHandle->storageInfo->jobOptions->dryRunFlag)
   {
-    switch (archiveHandle->ioType)
+    switch (archiveHandle->mode)
     {
-      case ARCHIVE_IO_TYPE_FILE:
+      case ARCHIVE_MODE_CREATE:
         SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          size = (archiveHandle->file.openFlag)
+          size = (archiveHandle->create.openFlag)
                    ? archiveHandle->chunkIO->getSize(archiveHandle->chunkIOUserData)
                    : 0LL;
         }
         break;
-      case ARCHIVE_IO_TYPE_STORAGE:
+      case ARCHIVE_MODE_READ:
         size = archiveHandle->chunkIO->getSize(archiveHandle->chunkIOUserData);
         break;
       #ifndef NDEBUG
