@@ -274,7 +274,6 @@ LOCAL Errors getCryptPassword(Password            *password,
 
   assert(password != NULL);
   assert(archiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(jobOptions != NULL);
 
@@ -912,7 +911,6 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle)
   Errors        error;
 
   assert(archiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
