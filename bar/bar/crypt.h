@@ -141,13 +141,19 @@ typedef enum
 // crypt mode set (see CRYPT_MODE_*)
 typedef uint CryptMode;
 
+// crypt salt
+typedef struct
+{
+  byte data[CRYPT_SALT_LENGTH];
+  uint length;
+} CryptSalt;
+
 // crypt info block
 typedef struct
 {
   CryptAlgorithms  cryptAlgorithm;
   CryptMode        cryptMode;
-  byte             salt[CRYPT_SALT_LENGTH];
-  uint             saltLength;
+  CryptSalt        cryptSalt;
   uint             blockLength;
   #ifdef HAVE_GCRYPT
     gcry_cipher_hd_t gcry_cipher_hd;
@@ -322,6 +328,144 @@ INLINE bool Crypt_isSymmetricSupported(void)
   #else /* not HAVE_GCRYPT */
     return FALSE;
   #endif /* HAVE_GCRYPT */
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Crypt_getSalt
+* Purpose: set crypt salt
+* Input  : data      - buffer for salt data
+*          length    - salt length
+*          cryptSalt - crypt salt
+* Output : data - salt data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE void Crypt_getSalt(byte *data, uint length, const CryptSalt *cryptSalt);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+INLINE void Crypt_getSalt(byte *data, uint length, const CryptSalt *cryptSalt)
+{
+  assert(data != NULL);
+  assert(cryptSalt != NULL);
+
+  memCopyFast(data,length,cryptSalt->data,cryptSalt->length);
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Crypt_setSalt
+* Purpose: set crypt salt
+* Input  : cryptSalt - crypt salt
+*          data      - salt data
+*          length    - salt length
+* Output : -
+* Return : crypt salt
+* Notes  : -
+\***********************************************************************/
+
+INLINE CryptSalt *Crypt_setSalt(CryptSalt *cryptSalt, const byte *data, uint length);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+INLINE CryptSalt *Crypt_setSalt(CryptSalt *cryptSalt, const byte *data, uint length)
+{
+  assert(cryptSalt != NULL);
+  assert(data != NULL);
+
+  memCopyFast(cryptSalt->data,sizeof(cryptSalt->data),data,length);
+  cryptSalt->length = MIN(sizeof(cryptSalt->data),length);
+
+  return cryptSalt;
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Crypt_setSalt
+* Purpose: set crypt salt
+* Input  : cryptSalt - crypt salt
+*          data      - salt data
+*          length    - salt length
+* Output : -
+* Return : crypt salt
+* Notes  : -
+\***********************************************************************/
+
+INLINE CryptSalt *Crypt_clearSalt(CryptSalt *cryptSalt);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+INLINE CryptSalt *Crypt_clearSalt(CryptSalt *cryptSalt)
+{
+  assert(cryptSalt != NULL);
+
+  memClear(cryptSalt->data,sizeof(cryptSalt->data));
+  cryptSalt->length = 0;
+
+  return cryptSalt;
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Crypt_randomSalt
+* Purpose: get random crypt salt
+* Input  : cryptSalt - crypt salt
+* Output : -
+* Return : crypt salt
+* Notes  : -
+\***********************************************************************/
+
+INLINE CryptSalt *Crypt_randomSalt(CryptSalt *cryptSalt);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+INLINE CryptSalt *Crypt_randomSalt(CryptSalt *cryptSalt)
+{
+  assert(cryptSalt != NULL);
+
+  Crypt_randomize(cryptSalt->data,sizeof(cryptSalt->data));
+  cryptSalt->length = sizeof(cryptSalt->data);
+
+  return cryptSalt;
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Crypt_copySalt
+* Purpose: copy crypt salt
+* Input  : cryptSalt     - crypt salt
+*          fromCryptSalt - from crypt salt
+* Output : -
+* Return : crypt salt
+* Notes  : -
+\***********************************************************************/
+
+INLINE CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptSalt);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+INLINE CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptSalt)
+{
+  assert(cryptSalt != NULL);
+  assert(fromCryptSalt != NULL);
+
+  memCopyFast(cryptSalt->data,sizeof(cryptSalt->data),fromCryptSalt->data,fromCryptSalt->length);
+  cryptSalt->length = MIN(sizeof(cryptSalt->data),fromCryptSalt->length);
+
+  return cryptSalt;
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Crypt_equals
+* Purpose: compare crypt salts
+* Input  : cryptSalt0,cryptSalt1 - crypt salt to compare
+* Output : -
+* Return : TRUE iff equals
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Crypt_equals(CryptSalt *cryptSalt0, const CryptSalt *cryptSalt1);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+INLINE bool Crypt_equals(CryptSalt *cryptSalt0, const CryptSalt *cryptSalt1)
+{
+  assert(cryptSalt0 != NULL);
+  assert(cryptSalt1 != NULL);
+
+  return    (cryptSalt0->length == cryptSalt1->length)
+         && memEquals(cryptSalt0->data,cryptSalt1->data,cryptSalt0->length);
 }
 #endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 

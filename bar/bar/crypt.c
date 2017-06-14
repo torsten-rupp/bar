@@ -627,19 +627,19 @@ Errors __Crypt_init(const char      *__fileName__,
 #endif /* NDEBUG */
 {
   assert(cryptInfo != NULL);
-  assert(saltLength <= sizeof(cryptInfo->salt));
+  assert(saltLength <= sizeof(cryptInfo->cryptSalt.data));
 
   // init variables
   cryptInfo->cryptAlgorithm = cryptAlgorithm;
   cryptInfo->cryptMode      = cryptMode;
   if (salt != NULL)
   {
-    cryptInfo->saltLength = MIN(sizeof(cryptInfo->salt),saltLength);
-    memcpy(cryptInfo->salt,salt,cryptInfo->saltLength);
+    cryptInfo->cryptSalt.length = MIN(sizeof(cryptInfo->cryptSalt.data),saltLength);
+    memcpy(cryptInfo->cryptSalt.data,salt,cryptInfo->cryptSalt.length);
   }
   else
   {
-    cryptInfo->saltLength = 0;
+    cryptInfo->cryptSalt.length = 0;
   }
 
   // init crypt algorithm
@@ -780,15 +780,15 @@ fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,keyLength,cryptKey->dataLengt
 
 //fprintf(stderr,"%s, %d: set IV 1\n",__FILE__,__LINE__); debugDumpMemory(salt,cryptInfo->blockLength,0);
           // set salt as IV
-          if ((cryptInfo->salt != NULL) && (cryptInfo->saltLength > 0))
+          if ((cryptInfo->cryptSalt.data != NULL) && (cryptInfo->cryptSalt.length > 0))
           {
-            if (cryptInfo->saltLength < cryptInfo->blockLength)
+            if (cryptInfo->cryptSalt.length < cryptInfo->blockLength)
             {
               gcry_cipher_close(cryptInfo->gcry_cipher_hd);
               return ERROR_INVALID_SALT_LENGTH;
             }
             gcryptError = gcry_cipher_setiv(cryptInfo->gcry_cipher_hd,
-                                            cryptInfo->salt,
+                                            cryptInfo->cryptSalt.data,
                                             cryptInfo->blockLength
                                            );
             if (gcryptError != 0)
@@ -912,11 +912,11 @@ Errors Crypt_reset(CryptInfo *cryptInfo)
 
           gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
 
-          if (cryptInfo->saltLength > 0)
+          if (cryptInfo->cryptSalt.length > 0)
           {
             // set IV
             gcryptError = gcry_cipher_setiv(cryptInfo->gcry_cipher_hd,
-                                            cryptInfo->salt,
+                                            cryptInfo->cryptSalt.data,
                                             cryptInfo->blockLength
                                          );
             if (gcryptError != 0)
