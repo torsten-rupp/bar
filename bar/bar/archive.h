@@ -69,13 +69,14 @@ typedef enum
 } ArchiveEntryTypes;
 
 // archive flags
-#define ARCHIVE_FLAG_TRY_DELTA_COMPRESS  (1 << 0)   // try delta compression
-#define ARCHIVE_FLAG_TRY_BYTE_COMPRESS   (1 << 1)   // try byte compression
-#define ARCHIVE_FLAG_KEEP_DELTA_COMPRESS (1 << 2)   // keep delta compression
-#define ARCHIVE_FLAG_KEEP_BYTE_COMPRESS  (1 << 3)   // keep byte compression
-#define ARCHIVE_FLAG_KEEP_ENCRYPTION     (1 << 4)   // keep encryption
-
 #define ARCHIVE_FLAG_NONE 0
+#define ARCHIVE_FLAG_TRY_DELTA_COMPRESS   (1 <<  0)   // try delta compression (create only)
+#define ARCHIVE_FLAG_TRY_BYTE_COMPRESS    (1 <<  1)   // try byte compression (create only)
+#define ARCHIVE_FLAG_KEEP_DELTA_COMPRESS  (1 <<  2)   // keep delta compression (read only)
+#define ARCHIVE_FLAG_KEEP_BYTE_COMPRESS   (1 <<  3)   // keep byte compression (read only)
+#define ARCHIVE_FLAG_KEEP_ENCRYPTION      (1 <<  4)   // keep encryption (read only)
+#define ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS  (1 <<  5)   // skip unknown chunks (read only)
+#define ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS (1 <<  6)   // print unknown chunks (read only)
 
 /***************************** Datatypes *******************************/
 
@@ -200,6 +201,20 @@ typedef Errors(*ArchiveStoreFunction)(StorageInfo  *storageInfo,
                                       void         *userData
                                      );
 
+// archive crypt info list
+typedef struct ArchiveCryptInfoNode
+{
+  LIST_NODE_HEADER(struct ArchiveCryptInfoNode);
+
+  CryptSalt cryptSalt;                                                 // crypt salt
+  CryptKey  cryptKey;                                                  // crypt key
+} ArchiveCryptInfoNode;
+
+typedef struct
+{
+  LIST_HEADER(ArchiveCryptInfoNode);
+} ArchiveCryptInfoList;
+
 // archive handle
 typedef struct
 {
@@ -226,12 +241,13 @@ typedef struct
   void                     *getPasswordUserData;                       // user data for call back to get crypt password
   LogHandle                *logHandle;                                 // log handle
 
-  byte                     cryptSalt[CRYPT_SALT_LENGTH];               // crypt salt
+  CryptSalt                cryptSalt;                                  // crypt salt
   CryptMode                cryptMode;                                  // crypt mode; see CRYPT_MODE_....
   CryptKeyDeriveTypes      cryptKeyDeriveType;                         // key derive type; see CryptKeyDeriveTypes
 
   Semaphore                passwordLock;                               // input password lock
   CryptTypes               cryptType;                                  // crypt type (symmetric/asymmetric; see CryptTypes)
+
   CryptKey                 cryptKey;                                   // crypt key
   Password                 *cryptPassword;                             // crypt password for encryption/decryption
   bool                     cryptPasswordReadFlag;                      // TRUE iff input callback for crypt password called
@@ -239,6 +255,7 @@ typedef struct
 //TODO: use Key
   void                     *encryptedKeyData;                          // encrypted random key used for asymmetric encryption
   uint                     encryptedKeyDataLength;                     // length of encrypted random key
+  ArchiveCryptInfoList     cryptInfoList;                              // list with salt and decrypt keys
 
   void                     *signatureKeyData;                          // signature key
   uint                     signatureKeyDataLength;                     // length of signature key
@@ -1130,10 +1147,10 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 
 Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
                                    ArchiveEntryTypes *archiveEntryType,
-
+                                   CryptSalt         *cryptSalt,
+                                   CryptKey          *cryptKey,
                                    uint64            *offset,
-                                   bool              skipUnknownChunksFlag,
-                                   bool              printUnknownChunksFlag
+                                   ArchiveFlags      flags
                                   );
 
 /***********************************************************************\
