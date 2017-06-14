@@ -77,8 +77,8 @@ typedef struct
 typedef struct
 {
   StorageInfo         *storageInfo;
-  byte                cryptSalt[CRYPT_SALT_LENGTH];
   CryptMode           cryptMode;
+  CryptSalt           cryptSalt;
   CryptKeyDeriveTypes cryptKeyDeriveType;
   ArchiveEntryTypes   archiveEntryType;
   uint64              offset;
@@ -1661,10 +1661,11 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
       break;
     }
 
+//TODO: required?
     // set crypt salt, crypt key derive type, and crypt mode
-    Archive_setCryptSalt(&archiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
-    Archive_setCryptKeyDeriveType(&archiveHandle,entryMsg.cryptKeyDeriveType);
     Archive_setCryptMode(&archiveHandle,entryMsg.cryptMode);
+    Archive_setCryptSalt(&archiveHandle,entryMsg.cryptSalt.data,sizeof(entryMsg.cryptSalt.data));
+    Archive_setCryptKeyDeriveType(&archiveHandle,entryMsg.cryptKeyDeriveType);
 
     // seek to start of entry
     error = Archive_seek(&archiveHandle,entryMsg.offset);
@@ -1960,9 +1961,9 @@ NULL,  //               requestedAbortFlag,
 
     // send entry to test threads
     entryMsg.storageInfo        = &storageInfo;
-    memCopyFast(entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt),archiveHandle.cryptSalt,sizeof(archiveHandle.cryptSalt));
-    entryMsg.cryptKeyDeriveType = archiveHandle.cryptKeyDeriveType;
     entryMsg.cryptMode          = archiveHandle.cryptMode;
+    memCopyFast(&entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt),&archiveHandle.cryptSalt,sizeof(archiveHandle.cryptSalt));
+    entryMsg.cryptKeyDeriveType = archiveHandle.cryptKeyDeriveType;
     entryMsg.archiveEntryType   = archiveEntryType;
     entryMsg.offset             = offset;
     if (!MsgQueue_put(&compareInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))

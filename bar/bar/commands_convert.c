@@ -74,8 +74,8 @@ typedef struct
 typedef struct
 {
   StorageInfo         *storageInfo;
-  byte                cryptSalt[CRYPT_SALT_LENGTH];
-  uint                cryptMode;
+  CryptMode           cryptMode;
+  CryptSalt           cryptSalt;
   CryptKeyDeriveTypes cryptKeyDeriveType;
   ArchiveEntryTypes   archiveEntryType;
   uint64              offset;
@@ -1739,10 +1739,11 @@ NULL,//                         deltaSourceList,
       break;
     }
 
+//TODO: required?
     // set crypt salt, crypt key derive type, and crypt mode
-    Archive_setCryptSalt(&sourceArchiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
-    Archive_setCryptKeyDeriveType(&sourceArchiveHandle,entryMsg.cryptKeyDeriveType);
     Archive_setCryptMode(&sourceArchiveHandle,entryMsg.cryptMode);
+    Archive_setCryptSalt(&sourceArchiveHandle,entryMsg.cryptSalt.data,sizeof(entryMsg.cryptSalt.data));
+    Archive_setCryptKeyDeriveType(&sourceArchiveHandle,entryMsg.cryptKeyDeriveType);
 
     // seek to start of entry
     error = Archive_seek(&sourceArchiveHandle,entryMsg.offset);
@@ -2096,7 +2097,7 @@ CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertI
 
     // send entry to convert threads
     entryMsg.storageInfo        = &convertInfo.storageInfo;
-    memCopyFast(entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt),sourceArchiveHandle.cryptSalt,sizeof(sourceArchiveHandle.cryptSalt));
+    memCopyFast(&entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt),&sourceArchiveHandle.cryptSalt,sizeof(sourceArchiveHandle.cryptSalt));
     entryMsg.cryptKeyDeriveType = sourceArchiveHandle.cryptKeyDeriveType;
     entryMsg.cryptMode          = sourceArchiveHandle.cryptMode;
     entryMsg.archiveEntryType   = archiveEntryType;

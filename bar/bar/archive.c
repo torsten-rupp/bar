@@ -156,8 +156,7 @@ typedef struct DecryptKeyNode
 
   Password        *password;
   uint            keyLength;
-  byte            salt[CRYPT_SALT_LENGTH];
-  uint            saltLength;
+  CryptSalt       cryptSalt;
 //  CryptAlgorithms cryptAlgorithm;
   CryptKey        cryptKey;
 } DecryptKeyNode;
@@ -589,8 +588,7 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
 
   // store new key length and salt
   decryptKeyNode->keyLength  = keyLength;
-  memCopyFast(decryptKeyNode->salt,sizeof(decryptKeyNode->salt),salt,saltLength);
-  decryptKeyNode->saltLength = MIN(sizeof(decryptKeyNode->salt),saltLength);
+  Crypt_setSalt(&decryptKeyNode->cryptSalt,salt,saltLength);
 //fprintf(stderr,"%s, %d: decrypt key\n",__FILE__,__LINE__); debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLength,0);
 
   return ERROR_NONE;
@@ -636,8 +634,8 @@ LOCAL CryptKey *addDecryptKeyNode(const Password      *password,
     }
     decryptKeyNode->password   = Password_duplicate(password);
     decryptKeyNode->keyLength  = keyLength;
-    memCopyFast(decryptKeyNode->salt,sizeof(decryptKeyNode->salt),salt,saltLength);
-    decryptKeyNode->saltLength = MIN(sizeof(decryptKeyNode->salt),saltLength);
+//TODO: use Crpyt_saltInit()
+    Crypt_setSalt(&decryptKeyNode->cryptSalt,salt,saltLength);
     Crypt_initKey(&decryptKeyNode->cryptKey,CRYPT_PADDING_TYPE_NONE);
 
     // derive decrypt key from password with salt
@@ -663,8 +661,8 @@ LOCAL CryptKey *addDecryptKeyNode(const Password      *password,
   {
     // check if salt/algorithm changed => calculate new key derivation
     if (   (decryptKeyNode->keyLength != keyLength)
-        || (decryptKeyNode->saltLength != saltLength)
-        || !memEquals(decryptKeyNode->salt,salt,saltLength)
+        || (decryptKeyNode->cryptSalt.length != saltLength)
+        || !memEquals(decryptKeyNode->cryptSalt.data,salt,saltLength)
        )
     {
       // derive decrypt key from password with salt
@@ -733,8 +731,8 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
 
         // check if key length/salt change
         if (   (decryptKeyNode->keyLength != keyLength)
-            || (decryptKeyNode->saltLength != saltLength)
-            || !memEquals(decryptKeyNode->salt,salt,saltLength)
+            || (decryptKeyNode->cryptSalt.length != saltLength)
+            || !memEquals(decryptKeyNode->cryptSalt.data,salt,saltLength)
            )
         {
           if (deriveDecryptKey(decryptKeyNode,
@@ -1407,7 +1405,7 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
     return error;
   }
   assert(sizeof(archiveHandle->cryptSalt) == sizeof(chunkBAR.salt));
-  memCopyFast(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),chunkBAR.salt,sizeof(chunkBAR.salt));
+  Crypt_setSalt(&archiveHandle->cryptSalt,chunkBAR.salt,sizeof(chunkBAR.salt));
 //fprintf(stderr,"%s, %d: init crypt salt\n",__FILE__,__LINE__); debugDumpMemory(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),0);
 
   // close chunk
@@ -1586,7 +1584,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
     return error;
   }
   assert(sizeof(chunkBAR.salt) == sizeof(archiveHandle->cryptSalt));
-  memCopyFast(chunkBAR.salt,sizeof(chunkBAR.salt),archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
+  Crypt_getSalt(chunkBAR.salt,sizeof(chunkBAR.salt),&archiveHandle->cryptSalt);
 
   // init meta chunk
   error = Chunk_init(&chunkMeta.info,
@@ -4461,7 +4459,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->getPasswordUserData     = getPasswordUserData;
   archiveHandle->logHandle               = logHandle;
 
-  memClear(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
+  Crypt_clearSalt(&archiveHandle->cryptSalt);
   archiveHandle->cryptMode               = CRYPT_MODE_NONE;
   archiveHandle->cryptKeyDeriveType      = CRYPT_KEY_DERIVE_FUNCTION;
 
@@ -4502,7 +4500,7 @@ UNUSED_VARIABLE(storageInfo);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
 
   // get crypt salt
-  Crypt_randomize(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
+  Crypt_randomSalt(&archiveHandle->cryptSalt);
 
   // detect crypt block length, crypt key length
   error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms.values[0],&archiveHandle->blockLength);
@@ -4695,7 +4693,7 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   archiveHandle->getPasswordUserData     = getPasswordUserData;
   archiveHandle->logHandle               = logHandle;
 
-  memClear(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt));
+  Crypt_clearSalt(&archiveHandle->cryptSalt);
   archiveHandle->cryptMode               = CRYPT_MODE_NONE;
   archiveHandle->cryptKeyDeriveType      = CRYPT_KEY_DERIVE_FUNCTION;
 
@@ -4826,7 +4824,7 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   archiveHandle->getPasswordUserData     = fromArchiveHandle->getPasswordUserData;
   archiveHandle->logHandle               = fromArchiveHandle->logHandle;
 
-  memCopy(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),fromArchiveHandle->cryptSalt,sizeof(fromArchiveHandle->cryptSalt));
+  Crypt_copySalt(&archiveHandle->cryptSalt,&fromArchiveHandle->cryptSalt);
   archiveHandle->cryptMode               = fromArchiveHandle->cryptMode;
   archiveHandle->cryptKeyDeriveType      = fromArchiveHandle->cryptKeyDeriveType;
 
@@ -4984,7 +4982,7 @@ void Archive_setCryptSalt(ArchiveHandle *archiveHandle,
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
-  memCopyFast(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),salt,saltLength);
+  Crypt_setSalt(&archiveHandle->cryptSalt,salt,saltLength);
 }
 
 void Archive_setCryptMode(ArchiveHandle *archiveHandle,
@@ -8388,7 +8386,7 @@ asm("int3");
     }
 
     // init file entry/extended attribute/delta/data/file crypt
-fprintf(stderr,"%s, %d: ---------------------------------------- %p %d\n",__FILE__,__LINE__,decryptKey->data,decryptKey->dataLength);
+if (decryptKey!=NULL) fprintf(stderr,"%s, %d: ---------------------------------------- %p %d\n",__FILE__,__LINE__,decryptKey->data,decryptKey->dataLength);
     if (error == ERROR_NONE)
     {
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),0);

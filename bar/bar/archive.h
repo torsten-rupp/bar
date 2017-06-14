@@ -1130,6 +1130,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 
 Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
                                    ArchiveEntryTypes *archiveEntryType,
+
                                    uint64            *offset,
                                    bool              skipUnknownChunksFlag,
                                    bool              printUnknownChunksFlag
