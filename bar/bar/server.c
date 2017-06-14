@@ -13109,9 +13109,10 @@ NULL, // masterIO
     // get next file type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
+                                        NULL,  // cryptSalt
+                                        NULL,  // cryptKey
                                         NULL,  // offset
-                                        TRUE,  // skinUnknownChunksFlag
-                                        FALSE  // printUnknownChunksFlag
+                                        ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS
                                        );
     if (error == ERROR_NONE)
     {
