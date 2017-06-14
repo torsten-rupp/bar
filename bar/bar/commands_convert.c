@@ -74,8 +74,8 @@ typedef struct
 typedef struct
 {
   StorageInfo         *storageInfo;
-  CryptMode           cryptMode;
   CryptSalt           cryptSalt;
+  CryptMode           cryptMode;
   CryptKeyDeriveTypes cryptKeyDeriveType;
   ArchiveEntryTypes   archiveEntryType;
   uint64              offset;
@@ -1741,8 +1741,8 @@ NULL,//                         deltaSourceList,
 
 //TODO: required?
     // set crypt salt, crypt key derive type, and crypt mode
-    Archive_setCryptMode(&sourceArchiveHandle,entryMsg.cryptMode);
     Archive_setCryptSalt(&sourceArchiveHandle,entryMsg.cryptSalt.data,sizeof(entryMsg.cryptSalt.data));
+    Archive_setCryptMode(&sourceArchiveHandle,entryMsg.cryptMode);
     Archive_setCryptKeyDeriveType(&sourceArchiveHandle,entryMsg.cryptKeyDeriveType);
 
     // seek to start of entry
@@ -2078,9 +2078,10 @@ CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertI
     // get next archive entry type
     error = Archive_getNextArchiveEntry(&sourceArchiveHandle,
                                         &archiveEntryType,
+                                        NULL,  // cryptSalt
+                                        NULL,  // cryptKey
                                         &offset,
-                                        TRUE,
-                                        isPrintInfo(3)
+                                        ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
                                        );
     if (error != ERROR_NONE)
     {
@@ -2097,9 +2098,9 @@ CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertI
 
     // send entry to convert threads
     entryMsg.storageInfo        = &convertInfo.storageInfo;
-    memCopyFast(&entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt),&sourceArchiveHandle.cryptSalt,sizeof(sourceArchiveHandle.cryptSalt));
-    entryMsg.cryptKeyDeriveType = sourceArchiveHandle.cryptKeyDeriveType;
+    Crypt_copySalt(&entryMsg.cryptSalt,&sourceArchiveHandle.cryptSalt);
     entryMsg.cryptMode          = sourceArchiveHandle.cryptMode;
+    entryMsg.cryptKeyDeriveType = sourceArchiveHandle.cryptKeyDeriveType;
     entryMsg.archiveEntryType   = archiveEntryType;
     entryMsg.offset             = offset;
     if (!MsgQueue_put(&convertInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))

@@ -77,8 +77,8 @@ typedef struct
 typedef struct
 {
   StorageInfo         *storageInfo;
-  CryptMode           cryptMode;
   CryptSalt           cryptSalt;
+  CryptMode           cryptMode;
   CryptKeyDeriveTypes cryptKeyDeriveType;
   ArchiveEntryTypes   archiveEntryType;
   uint64              offset;
@@ -1663,8 +1663,8 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
 
 //TODO: required?
     // set crypt salt, crypt key derive type, and crypt mode
-    Archive_setCryptMode(&archiveHandle,entryMsg.cryptMode);
     Archive_setCryptSalt(&archiveHandle,entryMsg.cryptSalt.data,sizeof(entryMsg.cryptSalt.data));
+    Archive_setCryptMode(&archiveHandle,entryMsg.cryptMode);
     Archive_setCryptKeyDeriveType(&archiveHandle,entryMsg.cryptKeyDeriveType);
 
     // seek to start of entry
@@ -1944,9 +1944,10 @@ NULL,  //               requestedAbortFlag,
     // get next archive entry type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
+                                        NULL,  // cryptSalt
+                                        NULL,  // cryptKey
                                         &offset,
-                                        TRUE,
-                                        isPrintInfo(3)
+                                        ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
                                        );
     if (error != ERROR_NONE)
     {
@@ -1961,8 +1962,8 @@ NULL,  //               requestedAbortFlag,
 
     // send entry to test threads
     entryMsg.storageInfo        = &storageInfo;
+    Crypt_copySalt(&entryMsg.cryptSalt,&archiveHandle.cryptSalt);
     entryMsg.cryptMode          = archiveHandle.cryptMode;
-    memCopyFast(&entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt),&archiveHandle.cryptSalt,sizeof(archiveHandle.cryptSalt));
     entryMsg.cryptKeyDeriveType = archiveHandle.cryptKeyDeriveType;
     entryMsg.archiveEntryType   = archiveEntryType;
     entryMsg.offset             = offset;

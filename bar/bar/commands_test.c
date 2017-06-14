@@ -74,8 +74,8 @@ typedef struct
 typedef struct
 {
   StorageInfo         *storageInfo;
-  CryptMode           cryptMode;
   CryptSalt           cryptSalt;
+  CryptMode           cryptMode;
   CryptKeyDeriveTypes cryptKeyDeriveType;
   ArchiveEntryTypes   archiveEntryType;
   uint64              offset;
@@ -1071,8 +1071,8 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 
 //TODO: remove
     // set crypt salt, crypt key derive type, and crypt mode
-//    Archive_setCryptMode(&archiveHandle,entryMsg.cryptMode);
 //    Archive_setCryptSalt(&archiveHandle,entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt));
+//    Archive_setCryptMode(&archiveHandle,entryMsg.cryptMode);
 //    Archive_setCryptKeyDeriveType(&archiveHandle,entryMsg.cryptKeyDeriveType);
 
     // seek to start of entry
@@ -1348,9 +1348,10 @@ NULL,  //               requestedAbortFlag,
     // get next archive entry type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
+                                        NULL,  // cryptSalt
+                                        NULL,  // cryptKey
                                         &offset,
-                                        FALSE,
-                                        isPrintInfo(3)
+                                        isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE
                                        );
     if (error != ERROR_NONE)
     {
@@ -1364,9 +1365,9 @@ NULL,  //               requestedAbortFlag,
 
     // send entry to test threads
     entryMsg.storageInfo        = &storageInfo;
-    memCopyFast(&entryMsg.cryptSalt,sizeof(entryMsg.cryptSalt),&archiveHandle.cryptSalt,sizeof(archiveHandle.cryptSalt));
-    entryMsg.cryptKeyDeriveType = archiveHandle.cryptKeyDeriveType;
+    Crypt_copySalt(&entryMsg.cryptSalt,&archiveHandle.cryptSalt);
     entryMsg.cryptMode          = archiveHandle.cryptMode;
+    entryMsg.cryptKeyDeriveType = archiveHandle.cryptKeyDeriveType;
     entryMsg.archiveEntryType   = archiveEntryType;
     entryMsg.offset             = offset;
     if (!MsgQueue_put(&testInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))

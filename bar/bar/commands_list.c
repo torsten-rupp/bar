@@ -2245,9 +2245,10 @@ NULL, // masterSocketHandle
           // get next archive entry type
           error = Archive_getNextArchiveEntry(&archiveHandle,
                                               &archiveEntryType,
+                                              NULL,  // cryptSalt
+                                              NULL,  // cryptKey
                                               NULL,  // offset
-                                              TRUE,
-                                              TRUE
+                                              ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS
                                              );
           if (error != ERROR_NONE)
           {
