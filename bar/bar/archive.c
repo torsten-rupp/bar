@@ -149,16 +149,15 @@ typedef struct
   void                *getPasswordUserData;
 } PasswordHandle;
 
-// crypt key list
+// decrypt key list
 typedef struct DecryptKeyNode
 {
   LIST_NODE_HEADER(struct DecryptKeyNode);
 
-  Password        *password;
-  uint            keyLength;
-  CryptSalt       cryptSalt;
+  ArchiveCryptInfo archiveCryptInfo;
+  const Password   *password;
+  uint             keyLength;
 //  CryptAlgorithms cryptAlgorithm;
-  CryptKey        cryptKey;
 } DecryptKeyNode;
 
 typedef struct
@@ -184,7 +183,7 @@ typedef struct
 // list with all known decryption passwords
 LOCAL PasswordList decryptPasswordList;
 
-// list with all known crypt keys
+// list with all known decrypt keys
 LOCAL DecryptKeyList decryptKeyList;
 
 /****************************** Macros *********************************/
@@ -243,7 +242,7 @@ LOCAL void freeDecryptKeyNode(DecryptKeyNode *decryptKeyNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  Crypt_doneKey(&decryptKeyNode->cryptKey);
+  Crypt_doneKey(&decryptKeyNode->archiveCryptInfo.cryptKey);
   Password_delete(decryptKeyNode->password);
 }
 
@@ -554,8 +553,7 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
 * Input  : decryptKeyNode     - decrypt key node
 *          keyLength          - key length [bits]
 *          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
-*          salt               - salt
-*          saltLength         - salt length [bytes]
+*          cryptSalt          - crypt salt
 * Output : -
 * Return : crypt key or NULL
 * Notes  : -
@@ -564,22 +562,21 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle      *passwordHandl
 LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
                               uint                keyLength,
                               CryptKeyDeriveTypes cryptKeyDeriveType,
-                              const byte          *salt,
-                              uint                saltLength
+                              const CryptSalt     *cryptSalt
                              )
 {
   Errors error;
 
   assert(decryptKeyNode != NULL);
   assert(keyLength > 0);
+  assert(cryptSalt != NULL);
 
   // derive decrypt key from password with salt
-  error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
+  error = Crypt_deriveKey(&decryptKeyNode->archiveCryptInfo.cryptKey,
                           keyLength,
                           cryptKeyDeriveType,
                           decryptKeyNode->password,
-                          salt,
-                          saltLength
+                          cryptSalt
                          );
   if (error != ERROR_NONE)
   {
@@ -588,7 +585,7 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
 
   // store new key length and salt
   decryptKeyNode->keyLength  = keyLength;
-  Crypt_setSalt(&decryptKeyNode->cryptSalt,salt,saltLength);
+  Crypt_copySalt(&decryptKeyNode->archiveCryptInfo.cryptSalt,&cryptSalt);
 //fprintf(stderr,"%s, %d: decrypt key\n",__FILE__,__LINE__); debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLength,0);
 
   return ERROR_NONE;
@@ -600,8 +597,7 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
 * Input  : password           - password
 *          keyLength          - key length [bits]
 *          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
-*          salt               - salt
-*          saltLength         - salt length [bytes]
+*          cryptSalt          - crypt salt
 * Output : -
 * Return : crypt key or NULL
 * Notes  : It is safe to add a decrypt key at the list end. Other
@@ -611,8 +607,7 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
 LOCAL CryptKey *addDecryptKeyNode(const Password      *password,
                                   uint                keyLength,
                                   CryptKeyDeriveTypes cryptKeyDeriveType,
-                                  const byte          *salt,
-                                  uint                saltLength
+                                  const CryptSalt     *cryptSalt
                                  )
 {
   DecryptKeyNode *decryptKeyNode;
@@ -635,19 +630,18 @@ LOCAL CryptKey *addDecryptKeyNode(const Password      *password,
     decryptKeyNode->password   = Password_duplicate(password);
     decryptKeyNode->keyLength  = keyLength;
 //TODO: use Crpyt_saltInit()
-    Crypt_setSalt(&decryptKeyNode->cryptSalt,salt,saltLength);
-    Crypt_initKey(&decryptKeyNode->cryptKey,CRYPT_PADDING_TYPE_NONE);
+    Crypt_copySalt(&decryptKeyNode->archiveCryptInfo.cryptSalt,cryptSalt);
+    Crypt_initKey(&decryptKeyNode->archiveCryptInfo.cryptKey,CRYPT_PADDING_TYPE_NONE);
 
     // derive decrypt key from password with salt
     error = deriveDecryptKey(decryptKeyNode,
                              keyLength,
                              cryptKeyDeriveType,
-                             salt,
-                             saltLength
+                             cryptSalt
                             );
     if (error != ERROR_NONE)
     {
-      Crypt_doneKey(&decryptKeyNode->cryptKey);
+      Crypt_doneKey(&decryptKeyNode->archiveCryptInfo.cryptKey);
       Password_delete(decryptKeyNode->password);
       LIST_DELETE_NODE(decryptKeyNode);
       return NULL;
@@ -661,16 +655,14 @@ LOCAL CryptKey *addDecryptKeyNode(const Password      *password,
   {
     // check if salt/algorithm changed => calculate new key derivation
     if (   (decryptKeyNode->keyLength != keyLength)
-        || (decryptKeyNode->cryptSalt.length != saltLength)
-        || !memEquals(decryptKeyNode->cryptSalt.data,salt,saltLength)
+        || !Crypt_equalsSalt(&decryptKeyNode->archiveCryptInfo.cryptSalt,cryptSalt)
        )
     {
       // derive decrypt key from password with salt
       error = deriveDecryptKey(decryptKeyNode,
                                keyLength,
                                cryptKeyDeriveType,
-                               salt,
-                               saltLength
+                               cryptSalt
                               );
       if (error != ERROR_NONE)
       {
@@ -679,7 +671,7 @@ LOCAL CryptKey *addDecryptKeyNode(const Password      *password,
     }
   }
 
-  return (decryptKeyNode != NULL) ? &decryptKeyNode->cryptKey : NULL;
+  return (decryptKeyNode != NULL) ? &decryptKeyNode->archiveCryptInfo.cryptKey : NULL;
 }
 
 /***********************************************************************\
@@ -688,8 +680,7 @@ LOCAL CryptKey *addDecryptKeyNode(const Password      *password,
 * Input  : decryptKeyIterator - decrypt key iterator
 *          keyLength          - key length [bits]
 *          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
-*          salt               - salt
-*          saltLength         - salt length [bytes]
+*          cryptSalt          - crypt salt
 * Output : -
 * Return : decrypt key or NULL if no more decrypt keys
 * Notes  : Ordering of decrypt keys search:
@@ -703,9 +694,7 @@ LOCAL CryptKey *addDecryptKeyNode(const Password      *password,
 LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                                         uint                keyLength,
                                         CryptKeyDeriveTypes cryptKeyDeriveType,
-//TODO: use CryptSalt
-                                        const byte          *salt,
-                                        uint                saltLength
+                                        const CryptSalt     *cryptSalt
                                        )
 {
   SemaphoreLock  semaphoreLock;
@@ -718,6 +707,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
   assert(decryptKeyIterator != NULL);
   assert(decryptKeyIterator->archiveHandle != NULL);
   assert(decryptKeyIterator->archiveHandle->storageInfo != NULL);
+  assert(cryptSalt != NULL);
 
   decryptKey = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -732,24 +722,22 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
 
         // check if key length/salt change
         if (   (decryptKeyNode->keyLength != keyLength)
-            || (decryptKeyNode->cryptSalt.length != saltLength)
-            || !memEquals(decryptKeyNode->cryptSalt.data,salt,saltLength)
+            || !Crypt_equalsSalt(&decryptKeyNode->archiveCryptInfo.cryptSalt,cryptSalt)
            )
         {
           if (deriveDecryptKey(decryptKeyNode,
                                keyLength,
                                cryptKeyDeriveType,
-                               salt,
-                               saltLength
+                               cryptSalt
                               ) == ERROR_NONE
              )
           {
-            decryptKey = &decryptKeyNode->cryptKey;
+            decryptKey = &decryptKeyNode->archiveCryptInfo.cryptKey;
           }
         }
         else
         {
-          decryptKey = &decryptKeyNode->cryptKey;
+          decryptKey = &decryptKeyNode->archiveCryptInfo.cryptKey;
         }
       }
       else
@@ -766,8 +754,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                decryptKey = addDecryptKeyNode(decryptKeyIterator->jobCryptPassword,
                                               keyLength,
                                               cryptKeyDeriveType,
-                                              salt,
-                                              saltLength
+                                              cryptSalt
                                              );
              }
 
@@ -781,8 +768,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                decryptKey = addDecryptKeyNode(globalOptions.cryptPassword,
                                               keyLength,
                                               cryptKeyDeriveType,
-                                              salt,
-                                              saltLength
+                                              cryptSalt
                                              );
              }
 
@@ -812,8 +798,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                  decryptKey = addDecryptKeyNode(&newPassword,
                                                 keyLength,
                                                 cryptKeyDeriveType,
-                                                salt,
-                                                saltLength
+                                                cryptSalt
                                                );
                }
                Password_done(&newPassword);
@@ -847,8 +832,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
 *          getPasswordUserData - user data for get password call-back
 *          keyLength           - key length [bits]
 *          cryptKeyDeriveType  - key derive type; see CryptKeyDeriveTypes
-*          salt                - salt
-*          saltLength          - salt length [bytes]
+*          cryptSalt           - crypt salt
 * Output : decryptKeyIterator - decrypt key iterator
 * Return : decrypt key or NULL if no decrypt key
 * Notes  : -
@@ -862,8 +846,7 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator
                                          void                *getPasswordUserData,
                                          uint                keyLength,
                                          CryptKeyDeriveTypes cryptKeyDeriveType,
-                                         const byte          *salt,
-                                         uint                saltLength
+                                         const CryptSalt     *cryptSalt
                                         )
 {
   SemaphoreLock  semaphoreLock;
@@ -872,6 +855,7 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator
   assert(decryptKeyIterator != NULL);
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
+  assert(cryptSalt != NULL);
 
   decryptKey = NULL;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -886,8 +870,7 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator
     decryptKey = getNextDecryptKey(decryptKeyIterator,
                                    keyLength,
                                    cryptKeyDeriveType,
-                                   salt,
-                                   saltLength
+                                   cryptSalt
                                   );
   }
 
@@ -977,9 +960,8 @@ LOCAL Errors cryptInit(CryptInfo       *cryptInfo,
                        CryptAlgorithms *cryptAlgorithms,
                        CryptKey        *cryptKey,
                        uint            count,
-                       Password        *cryptPassword,
-                       const byte      cryptSalt,
-                       uint            cryptSaltLength
+                       const CryptSalt *cryptSalt,
+                       Password        *cryptPassword
                       )
 {
   int    i;
@@ -991,9 +973,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = Crypt_init(cryptInfo,
                        cryptAlgorithms[i],
                        CRYPT_MODE_CBC,
-                       crypyKey,
                        cryptSalt,
-                       cryptSaltLength
+                       crypyKey
                       );
     if (error != ERROR_NONE)
     {
@@ -1405,8 +1386,8 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
     Chunk_done(&chunkBAR.info);
     return error;
   }
-  assert(sizeof(archiveHandle->cryptSalt.data) >= sizeof(chunkBAR.salt));
-  Crypt_setSalt(&archiveHandle->cryptSalt,chunkBAR.salt,sizeof(chunkBAR.salt));
+  assert(sizeof(archiveHandle->archiveCryptInfo->cryptSalt.data) >= sizeof(chunkBAR.salt));
+  Crypt_setSalt(&archiveHandle->archiveCryptInfo->cryptSalt,chunkBAR.salt,sizeof(chunkBAR.salt));
 //fprintf(stderr,"%s, %d: init crypt salt\n",__FILE__,__LINE__); debugDumpMemory(archiveHandle->cryptSalt,sizeof(archiveHandle->cryptSalt),0);
 
   // close chunk
@@ -1421,7 +1402,6 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
   return ERROR_NONE;
 }
 
-//TODO: remove, replaced by Archive_readKeyEntry()
 /***********************************************************************\
 * Name   : readEncryptionKey
 * Purpose: read encryption key
@@ -1433,7 +1413,7 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors XXXreadEncryptionKey(ArchiveHandle     *archiveHandle,
+LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
                                const ChunkHeader *chunkHeader,
                                const CryptKey    *privateCryptKey
                               )
@@ -1584,8 +1564,8 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   {
     return error;
   }
-  assert(sizeof(chunkBAR.salt) == archiveHandle->cryptSalt.length);
-  Crypt_getSalt(chunkBAR.salt,sizeof(chunkBAR.salt),&archiveHandle->cryptSalt);
+  assert(sizeof(chunkBAR.salt) == archiveHandle->archiveCryptInfo->cryptSalt.length);
+  Crypt_getSalt(chunkBAR.salt,sizeof(chunkBAR.salt),&archiveHandle->archiveCryptInfo->cryptSalt);
 
   // init meta chunk
   error = Chunk_init(&chunkMeta.info,
@@ -1618,9 +1598,8 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
 //TODO: CBC, CTS?
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -4313,13 +4292,13 @@ fprintf(stderr,"%s, %d: Archive_appendDecryptKey xxxxxxxxxxxxxxxxxxxxxxxxxxxx\n"
         HALT_INSUFFICIENT_MEMORY();
       }
 //      decryptKeyNode->cryptAlgorithm = cryptAlgorithm;
+      Crypt_initKey(&decryptKeyNode->archiveCryptInfo.cryptKey,CRYPT_PADDING_TYPE_NONE);
       decryptKeyNode->password = Password_duplicate(password);
 
       // derive decrypt key from password with salt
-      Crypt_initKey(&decryptKeyNode->cryptKey,CRYPT_PADDING_TYPE_NONE);
 //TODO:
 #if 0
-      error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
+      error = Crypt_deriveKey(&decryptKeyNode->archiveCryptInfo.cryptKey,
                               keyLength,
                               password,
                               salt,
@@ -4328,8 +4307,8 @@ fprintf(stderr,"%s, %d: Archive_appendDecryptKey xxxxxxxxxxxxxxxxxxxxxxxxxxxx\n"
 //TODO: error?
       if (error != ERROR_NONE)
       {
-        Crypt_doneKey(&decryptKeyNode->cryptKey);
         Password_delete(decryptKeyNode->password);
+        Crypt_doneKey(&decryptKeyNode->archiveCryptInfo.cryptKey);
         LIST_DELETE_NODE(decryptKeyNode);
         return NULL;
       }
@@ -4344,7 +4323,7 @@ fprintf(stderr,"%s, %d: Archive_appendDecryptKey xxxxxxxxxxxxxxxxxxxxxxxxxxxx\n"
   }
   assert(decryptKeyNode != NULL);
 
-  return &decryptKeyNode->cryptKey;
+  return &decryptKeyNode->archiveCryptInfo.cryptKey;
 }
 
 bool Archive_waitDecryptPassword(Password *password, long timeout)
@@ -4460,7 +4439,9 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->getPasswordUserData     = getPasswordUserData;
   archiveHandle->logHandle               = logHandle;
 
-  Crypt_clearSalt(&archiveHandle->cryptSalt);
+//TODO
+  archiveHandle->archiveCryptInfo        = NULL;
+//  Crypt_clearSalt(&archiveHandle->cryptSalt);
   archiveHandle->cryptMode               = CRYPT_MODE_NONE;
   archiveHandle->cryptKeyDeriveType      = CRYPT_KEY_DERIVE_FUNCTION;
 
@@ -4500,8 +4481,9 @@ UNUSED_VARIABLE(storageInfo);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->create.tmpFileName,{ String_delete(archiveHandle->create.tmpFileName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
 
+//TODO
   // get crypt salt
-  Crypt_randomSalt(&archiveHandle->cryptSalt);
+//  Crypt_randomSalt(&archiveHandle->cryptSalt);
 
   // detect crypt block length, crypt key length
   error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms.values[0],&archiveHandle->blockLength);
@@ -4540,10 +4522,9 @@ UNUSED_VARIABLE(storageInfo);
       // derive crypt key from password with salt
       error = Crypt_deriveKey(&archiveHandle->cryptKey,
                               keyLength,
-                              archiveHandle->cryptKeyDeriveType,
+                              archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                               archiveHandle->cryptPassword,
-                              archiveHandle->cryptSalt.data,
-                              archiveHandle->cryptSalt.length
+                              &archiveHandle->archiveCryptInfo->cryptSalt
                              );
       if (error != ERROR_NONE)
       {
@@ -4566,9 +4547,8 @@ UNUSED_VARIABLE(storageInfo);
                                             storageInfo->jobOptions->cryptPublicKey.length,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                             CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // password
-                                            NULL,  // salt
-                                            0  // saltLength
+                                            NULL,  // cryptSalt
+                                            NULL  // password
                                            );
       if (error != ERROR_NONE)
       {
@@ -4694,7 +4674,9 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   archiveHandle->getPasswordUserData     = getPasswordUserData;
   archiveHandle->logHandle               = logHandle;
 
-  Crypt_clearSalt(&archiveHandle->cryptSalt);
+//TODO
+  archiveHandle->archiveCryptInfo        = NULL;
+//  Crypt_clearSalt(&archiveHandle->cryptSalt);
   archiveHandle->cryptMode               = CRYPT_MODE_NONE;
   archiveHandle->cryptKeyDeriveType      = CRYPT_KEY_DERIVE_FUNCTION;
 
@@ -4825,7 +4807,8 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   archiveHandle->getPasswordUserData     = fromArchiveHandle->getPasswordUserData;
   archiveHandle->logHandle               = fromArchiveHandle->logHandle;
 
-  Crypt_copySalt(&archiveHandle->cryptSalt,&fromArchiveHandle->cryptSalt);
+  archiveHandle->archiveCryptInfo        = NULL;
+//  Crypt_copySalt(&archiveHandle->cryptSalt,&fromArchiveHandle->cryptSalt);
   archiveHandle->cryptMode               = fromArchiveHandle->cryptMode;
   archiveHandle->cryptKeyDeriveType      = fromArchiveHandle->cryptKeyDeriveType;
 
@@ -4975,6 +4958,34 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,Error_getText(error),storageI
   return error;
 }
 
+void Archive_getCryptInfo(ArchiveHandle    *archiveHandle,
+                          ArchiveCryptInfo *archiveCryptInfo
+                         )
+{
+  assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
+  assert(archiveCryptInfo != NULL);
+
+  if (archiveHandle->archiveCryptInfo != NULL)
+  {
+//TODO
+//    archiveCryptInfo->cryptMode          = archiveHandle->archiveCryptInfo->cryptMode;
+    archiveCryptInfo->cryptKeyDeriveType = archiveHandle->archiveCryptInfo->cryptKeyDeriveType;
+    Crypt_setSalt(&archiveCryptInfo->cryptSalt,archiveHandle->archiveCryptInfo->cryptSalt.data,archiveHandle->archiveCryptInfo->cryptSalt.length);
+  }
+}
+
+void Archive_setCryptInfo(ArchiveHandle          *archiveHandle,
+                          const ArchiveCryptInfo *archiveCryptInfo
+                         )
+{
+  assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
+  assert(archiveCryptInfo != NULL);
+
+  archiveHandle->archiveCryptInfo = archiveCryptInfo;
+}
+
 void Archive_setCryptSalt(ArchiveHandle *archiveHandle,
                           const byte    *salt,
                           uint          saltLength
@@ -4983,7 +4994,7 @@ void Archive_setCryptSalt(ArchiveHandle *archiveHandle,
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
-  Crypt_setSalt(&archiveHandle->cryptSalt,salt,saltLength);
+  Crypt_setSalt(&archiveHandle->archiveCryptInfo->cryptSalt,salt,saltLength);
 }
 
 void Archive_setCryptMode(ArchiveHandle *archiveHandle,
@@ -5113,8 +5124,7 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle)
 #endif
 
 bool Archive_eof(ArchiveHandle *archiveHandle,
-                 bool          skipUnknownChunksFlag,
-                 bool          printUnknownChunksFlag
+                 ArchiveFlags  flags
                 )
 {
   bool           chunkHeaderFoundFlag;
@@ -5265,12 +5275,12 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
         chunkHeaderFoundFlag = TRUE;
         break;
       default:
-        if (skipUnknownChunksFlag)
+        if (IS_SET(flags,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS))
         {
           // unknown chunk -> switch to scan mode
           if (!scanFlag)
           {
-            if (printUnknownChunksFlag)
+            if (IS_SET(flags,ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS))
             {
               printWarning("Skipped unknown chunk '%s' at offset %llu in '%s'\n",
                            Chunk_idToString(chunkHeader.id),
@@ -5494,9 +5504,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -5510,9 +5519,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -5526,9 +5534,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -5542,9 +5549,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -5558,9 +5564,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -5917,9 +5922,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -5933,9 +5937,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -5949,9 +5952,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -5965,9 +5967,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -6206,9 +6207,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -6221,9 +6221,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -6451,9 +6450,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -6466,9 +6464,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -6785,9 +6782,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -6800,9 +6796,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -6815,9 +6810,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -6830,9 +6824,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -6845,9 +6838,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -6860,9 +6852,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -7149,9 +7140,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -7164,9 +7154,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 //TODO
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
                      CRYPT_MODE_CBC,
-                     &archiveHandle->cryptKey,
-                     archiveHandle->cryptSalt.data,
-                     archiveHandle->cryptSalt.length
+                     &archiveHandle->archiveCryptInfo->cryptSalt,
+                     &archiveHandle->cryptKey
                     );
   if (error != ERROR_NONE)
   {
@@ -7309,12 +7298,11 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   return ERROR_NONE;
 }
 
-Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
-                                   ArchiveEntryTypes *archiveEntryType,
-                                   CryptSalt         *cryptSalt,
-                                   CryptKey          *cryptKey,
-                                   uint64            *offset,
-                                   ArchiveFlags      flags
+Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
+                                   ArchiveEntryTypes      *archiveEntryType,
+                                   const ArchiveCryptInfo *archiveCryptInfo,
+                                   uint64                 *offset,
+                                   ArchiveFlags           flags
                                   )
 {
   Errors         error;
@@ -7361,7 +7349,6 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
 
         scanMode = FALSE;
         break;
-#if 0
       case CHUNK_ID_KEY:
         // check if private key available
         if (!isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
@@ -7378,9 +7365,8 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
                                               archiveHandle->storageInfo->jobOptions->cryptPrivateKey.length,
                                               CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                               archiveHandle->cryptKeyDeriveType,
-                                              NULL,  // password
-                                              NULL,  // salt
-                                              0  // saltLength
+                                              NULL,  // cryptSalt
+                                              NULL  // password
                                              );
         if (error == ERROR_NONE)
         {
@@ -7403,8 +7389,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
                                                 CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                                 archiveHandle->cryptKeyDeriveType,
                                                 password,
-                                                archiveHandle->cryptSalt.data,
-                                                archiveHandle->cryptSalt.length
+                                                &archiveHandle->archiveCryptInfo->cryptSalt
                                                );
           if (error == ERROR_NONE)
           {
@@ -7444,9 +7429,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
 
         scanMode = FALSE;
         break;
-#else
-      case CHUNK_ID_KEY:
-#endif
       case CHUNK_ID_FILE:
       case CHUNK_ID_IMAGE:
       case CHUNK_ID_DIRECTORY:
@@ -7495,8 +7477,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
         break;
     }
   }
-  while (   (chunkHeader.id != CHUNK_ID_KEY)
-         && (chunkHeader.id != CHUNK_ID_FILE)
+  while (   (chunkHeader.id != CHUNK_ID_FILE)
          && (chunkHeader.id != CHUNK_ID_IMAGE)
          && (chunkHeader.id != CHUNK_ID_DIRECTORY)
          && (chunkHeader.id != CHUNK_ID_LINK)
@@ -7511,7 +7492,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   {
     switch (chunkHeader.id)
     {
-      case CHUNK_ID_KEY:       (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_KEY;       break;
       case CHUNK_ID_FILE:      (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_FILE;      break;
       case CHUNK_ID_IMAGE:     (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_IMAGE;     break;
       case CHUNK_ID_DIRECTORY: (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_DIRECTORY; break;
@@ -7568,6 +7548,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   return ERROR_NONE;
 }
 
+//TODO: remove
+#if 0
 Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle)
 {
   AutoFreeList   autoFreeList;
@@ -7786,6 +7768,7 @@ asm("int3");
 
   return ERROR_NONE;
 }
+#endif
 
 #ifdef NDEBUG
   Errors Archive_readMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
@@ -7835,6 +7818,7 @@ asm("int3");
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_READ);
 
   // check for pending error
@@ -7952,8 +7936,7 @@ asm("int3");
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       keyLength,
                                       archiveHandle->cryptKeyDeriveType,
-                                      archiveHandle->cryptSalt.data,
-                                      archiveHandle->cryptSalt.length
+                                      &archiveHandle->archiveCryptInfo->cryptSalt
                                      );
     }
     passwordFlag  = (decryptKey != NULL);
@@ -7987,9 +7970,8 @@ asm("int3");
       error = Crypt_init(&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -8086,8 +8068,7 @@ asm("int3");
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
                                        keyLength,
                                        archiveHandle->cryptKeyDeriveType,
-                                       archiveHandle->cryptSalt.data,
-                                       archiveHandle->cryptSalt.length
+                                       &archiveHandle->archiveCryptInfo->cryptSalt
                                       );
       }
       else
@@ -8182,6 +8163,7 @@ asm("int3");
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_READ);
   assert(fileName != NULL);
   assert(SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms) == 4);
@@ -8355,9 +8337,8 @@ asm("int3");
                                       archiveHandle->storageInfo->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       keyLength,
-                                      archiveHandle->cryptKeyDeriveType,
-                                      archiveHandle->cryptSalt.data,
-                                      archiveHandle->cryptSalt.length
+                                      archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                      &archiveHandle->archiveCryptInfo->cryptSalt
                                      );
     }
     passwordFlag  = (decryptKey != NULL);
@@ -8396,18 +8377,16 @@ if (decryptKey!=NULL) fprintf(stderr,"%s, %d: ----------------------------------
       error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
 #else
       error = cryptInit(&archiveEntryInfo->file.chunkFileEntry.cryptInfos,
                         archiveEntryInfo->cryptAlgorithms,
                         SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms),
                         decryptKey,
-NULL,//                         password,
-                        archiveHandle->cryptSalt.data,
-                        archiveHandle->cryptSalt.length
+                        &archiveHandle->archiveCryptInfo->cryptSalt,
+NULL//                         password
                        );
 #endif
       if (error == ERROR_NONE)
@@ -8420,9 +8399,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -8434,9 +8412,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -8448,9 +8425,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -8462,9 +8438,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -8707,9 +8682,8 @@ NULL,//                         password,
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
                                        keyLength,
-                                       archiveHandle->cryptKeyDeriveType,
-                                       archiveHandle->cryptSalt.data,
-                                       archiveHandle->cryptSalt.length
+                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                       &archiveHandle->archiveCryptInfo->cryptSalt
                                       );
       }
       else
@@ -8841,6 +8815,7 @@ NULL,//                         password,
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_READ);
   assert(deviceInfo != NULL);
 
@@ -9005,9 +8980,8 @@ NULL,//                         password,
                                       archiveHandle->getPasswordFunction,
                                       archiveHandle->getPasswordUserData,
                                       keyLength,
-                                      archiveHandle->cryptKeyDeriveType,
-                                      archiveHandle->cryptSalt.data,
-                                      archiveHandle->cryptSalt.length
+                                      archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                      &archiveHandle->archiveCryptInfo->cryptSalt
                                      );
     }
     passwordFlag  = (decryptKey != NULL);
@@ -9042,9 +9016,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -9056,9 +9029,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -9070,9 +9042,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -9084,9 +9055,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -9270,9 +9240,8 @@ NULL,//                         password,
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
                                        keyLength,
-                                       archiveHandle->cryptKeyDeriveType,
-                                       archiveHandle->cryptSalt.data,
-                                       archiveHandle->cryptSalt.length
+                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                       &archiveHandle->archiveCryptInfo->cryptSalt
                                       );
       }
       else
@@ -9391,6 +9360,7 @@ NULL,//                         password,
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_READ);
 
   // check for pending error
@@ -9517,9 +9487,8 @@ NULL,//                         password,
                                       archiveHandle->storageInfo->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       keyLength,
-                                      archiveHandle->cryptKeyDeriveType,
-                                      archiveHandle->cryptSalt.data,
-                                      archiveHandle->cryptSalt.length
+                                      archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                      &archiveHandle->archiveCryptInfo->cryptSalt
                                      );
     }
     passwordFlag  = (decryptKey != NULL);
@@ -9554,9 +9523,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -9569,9 +9537,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -9726,9 +9693,8 @@ NULL,//                         password,
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
                                        keyLength,
-                                       archiveHandle->cryptKeyDeriveType,
-                                       archiveHandle->cryptSalt.data,
-                                       archiveHandle->cryptSalt.length
+                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                       &archiveHandle->archiveCryptInfo->cryptSalt
                                       );
       }
       else
@@ -9815,6 +9781,7 @@ NULL,//                         password,
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_READ);
 
   // check for pending error
@@ -9942,9 +9909,8 @@ NULL,//                         password,
                                       archiveHandle->storageInfo->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       keyLength,
-                                      archiveHandle->cryptKeyDeriveType,
-                                      archiveHandle->cryptSalt.data,
-                                      archiveHandle->cryptSalt.length
+                                      archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                      &archiveHandle->archiveCryptInfo->cryptSalt
                                      );
     }
     passwordFlag  = (decryptKey != NULL);
@@ -9978,9 +9944,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -9992,9 +9957,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -10150,9 +10114,8 @@ NULL,//                         password,
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
                                        keyLength,
-                                       archiveHandle->cryptKeyDeriveType,
-                                       archiveHandle->cryptSalt.data,
-                                       archiveHandle->cryptSalt.length
+                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                       &archiveHandle->archiveCryptInfo->cryptSalt
                                       );
       }
       else
@@ -10249,6 +10212,7 @@ NULL,//                         password,
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_READ);
   assert(fileNameList != NULL);
 
@@ -10411,9 +10375,8 @@ NULL,//                         password,
                                       archiveHandle->storageInfo->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       keyLength,
-                                      archiveHandle->cryptKeyDeriveType,
-                                      archiveHandle->cryptSalt.data,
-                                      archiveHandle->cryptSalt.length
+                                      archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                      &archiveHandle->archiveCryptInfo->cryptSalt
                                      );
     }
     passwordFlag  = (decryptKey != NULL);
@@ -10448,9 +10411,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -10462,9 +10424,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -10476,9 +10437,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -10490,9 +10450,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -10504,9 +10463,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -10518,9 +10476,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->hardLink.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -10800,9 +10757,8 @@ NULL,//                         password,
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
                                        keyLength,
-                                       archiveHandle->cryptKeyDeriveType,
-                                       archiveHandle->cryptSalt.data,
-                                       archiveHandle->cryptSalt.length
+                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                       &archiveHandle->archiveCryptInfo->cryptSalt
                                       );
       }
       else
@@ -10920,6 +10876,7 @@ NULL,//                         password,
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_READ);
 
   // check for pending error
@@ -11047,9 +11004,8 @@ NULL,//                         password,
                                       archiveHandle->storageInfo->jobOptions->cryptPassword,
                                       CALLBACK(archiveHandle->getPasswordFunction,archiveHandle->getPasswordUserData),
                                       keyLength,
-                                      archiveHandle->cryptKeyDeriveType,
-                                      archiveHandle->cryptSalt.data,
-                                      archiveHandle->cryptSalt.length
+                                      archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                      &archiveHandle->archiveCryptInfo->cryptSalt
                                      );
     }
     passwordFlag  = (decryptKey != NULL);
@@ -11086,9 +11042,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -11100,9 +11055,8 @@ NULL,//                         password,
       error = Crypt_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
                          archiveHandle->cryptMode|CRYPT_MODE_CBC,
-                         decryptKey,
-                         archiveHandle->cryptSalt.data,
-                         archiveHandle->cryptSalt.length
+                         &archiveHandle->archiveCryptInfo->cryptSalt,
+                         decryptKey
                         );
       if (error == ERROR_NONE)
       {
@@ -11260,9 +11214,8 @@ NULL,//                         password,
         // get next decrypt key
         decryptKey = getNextDecryptKey(&decryptKeyIterator,
                                        keyLength,
-                                       archiveHandle->cryptKeyDeriveType,
-                                       archiveHandle->cryptSalt.data,
-                                       archiveHandle->cryptSalt.length
+                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
+                                       &archiveHandle->archiveCryptInfo->cryptSalt
                                       );
       }
       else
@@ -14113,7 +14066,7 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------ %
   destinationName = String_new();
   StringList_init(&fileNameList);
 //uint64 t0,t1; t0 = Misc_getTimestamp();
-  while (   !Archive_eof(&archiveHandle,FALSE,FALSE)
+  while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_NONE)
          && (error == ERROR_NONE)
          && !abortedFlag
          && !serverAllocationPendingFlag
@@ -14155,8 +14108,7 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------ %
     // get next file type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
-                                        NULL,  // cryptSalt
-                                        NULL,  // cryptKey
+                                        NULL,  // archiveCryptInfo
                                         NULL,  // offset
                                         ARCHIVE_FLAG_NONE
                                        );

@@ -148,7 +148,7 @@ typedef struct
   uint length;
 } CryptSalt;
 
-// crypt info block
+// crypt info
 typedef struct
 {
   CryptAlgorithms  cryptAlgorithm;
@@ -333,11 +333,11 @@ INLINE bool Crypt_isSymmetricSupported(void)
 
 /***********************************************************************\
 * Name   : Crypt_getSalt
-* Purpose: set crypt salt
+* Purpose: get crypt salt
 * Input  : data      - buffer for salt data
-*          length    - salt length
 *          cryptSalt - crypt salt
-* Output : data - salt data
+* Output : data   - salt data
+*          length - salt length
 * Return : -
 * Notes  : -
 \***********************************************************************/
@@ -382,8 +382,6 @@ INLINE CryptSalt *Crypt_setSalt(CryptSalt *cryptSalt, const byte *data, uint len
 * Name   : Crypt_setSalt
 * Purpose: set crypt salt
 * Input  : cryptSalt - crypt salt
-*          data      - salt data
-*          length    - salt length
 * Output : -
 * Return : crypt salt
 * Notes  : -
@@ -440,6 +438,7 @@ INLINE CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryp
 {
   assert(cryptSalt != NULL);
   assert(fromCryptSalt != NULL);
+  assert(sizeof(cryptSalt->data) <= fromCryptSalt->length);
 
   memCopyFast(cryptSalt->data,sizeof(cryptSalt->data),fromCryptSalt->data,fromCryptSalt->length);
   cryptSalt->length = MIN(sizeof(cryptSalt->data),fromCryptSalt->length);
@@ -449,7 +448,7 @@ INLINE CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryp
 #endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
-* Name   : Crypt_equals
+* Name   : Crypt_equalsSalt
 * Purpose: compare crypt salts
 * Input  : cryptSalt0,cryptSalt1 - crypt salt to compare
 * Output : -
@@ -457,9 +456,9 @@ INLINE CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryp
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Crypt_equals(CryptSalt *cryptSalt0, const CryptSalt *cryptSalt1);
+INLINE bool Crypt_equalsSalt(const CryptSalt *cryptSalt0, const CryptSalt *cryptSalt1);
 #if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
-INLINE bool Crypt_equals(CryptSalt *cryptSalt0, const CryptSalt *cryptSalt1)
+INLINE bool Crypt_equalsSalt(const CryptSalt *cryptSalt0, const CryptSalt *cryptSalt1)
 {
   assert(cryptSalt0 != NULL);
   assert(cryptSalt1 != NULL);
@@ -663,9 +662,8 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 * Input  : cryptInfo      - crypt info block
 *          cryptAlgorithm - crypt algorithm to use
 *          cryptMode      - crypt mode; see CRYPT_MODE_...
+*          cryptSalt      - encryption salt (can be NULL)
 *          cryptKey       - crypt key
-*          salt           - encryption salt (can be NULL)
-*          saltLength     - encryption salt length
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -675,9 +673,8 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 Errors Crypt_init(CryptInfo       *cryptInfo,
                   CryptAlgorithms cryptAlgorithm,
                   CryptMode       cryptMode,
-                  const CryptKey  *cryptKey,
-                  const byte      *salt,
-                  uint            saltLength
+                  const CryptSalt *cryptSalt,
+                  const CryptKey  *cryptKey
                  );
 #else /* not NDEBUG */
 Errors __Crypt_init(const char      *__fileName__,
@@ -685,9 +682,8 @@ Errors __Crypt_init(const char      *__fileName__,
                     CryptInfo       *cryptInfo,
                     CryptAlgorithms cryptAlgorithm,
                     CryptMode       cryptMode,
-                    const CryptKey  *cryptKey,
-                    const byte      *salt,
-                    uint            saltLength
+                    const CryptSalt *cryptSalt,
+                    const CryptKey  *cryptKey
                    );
 #endif /* NDEBUG */
 
@@ -870,9 +866,8 @@ INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey)
 * Input  : cryptKey           - crypt key
 *          keyLength          - crypt key length [bits]
 *          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
+*          cryptSalt          - encryption salt (can be NULL)
 *          password           - password
-*          salt               - encryption salt (can be NULL)
-*          saltLength         - encryption salt length
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -881,9 +876,8 @@ INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey)
 Errors Crypt_deriveKey(CryptKey            *cryptKey,
                        uint                keyLength,
                        CryptKeyDeriveTypes cryptKeyDeriveType,
-                       const Password      *password,
-                       const byte          *salt,
-                       uint                saltLength
+                       const CryptSalt     *cryptSalt,
+                       const Password      *password
                       );
 
 /***********************************************************************\
@@ -911,10 +905,9 @@ Errors Crypt_duplicateKey(CryptKey       *cryptKey,
 *          cryptMode              - crypt mode; see CRYPT_MODE_...
 *          cryptKeyDeriveType     - key derive type; see
 *                                   CryptKeyDeriveTypes
+*          cryptSalt              - encryption salt (can be NULL)
 *          password               - password for encryption (can be
 *                                   NULL)
-*          salt                   - encryption salt (can be NULL)
-*          saltLength             - encryption salt length
 * Output : encryptedKey           - encrypted key
 *          encryptedKeyLength     - length of encrypted key [bytes]
 * Return : ERROR_NONE or error code
@@ -926,9 +919,8 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
                                      uint                *encryptedKeyDataLength,
                                      CryptMode           cryptMode,
                                      CryptKeyDeriveTypes cryptKeyDeriveType,
-                                     const Password      *password,
-                                     const byte          *salt,
-                                     uint                saltLength
+                                     const CryptSalt     *cryptSalt,
+                                     const Password      *password
                                     );
 
 /***********************************************************************\
@@ -940,9 +932,8 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
 *          cryptMode              - crypt mode; see CRYPT_MODE_...
 *          cryptKeyDeriveType     - key derive type; see
 *                                   CryptKeyDeriveTypes
+*          cryptSalt              - encryption salt (can be NULL)
 *          password               - password for decryption (can be NULL)
-*          salt                   - encryption salt (can be NULL)
-*          saltLength             - encryption salt length
 * Output : cryptKey - crypt key
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -953,9 +944,8 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
                                      uint                encryptedKeyDataLength,
                                      CryptMode           cryptMode,
                                      CryptKeyDeriveTypes cryptKeyDeriveType,
-                                     const Password      *password,
-                                     const byte          *salt,
-                                     uint                saltLength
+                                     const CryptSalt     *cryptSalt,
+                                     const Password      *password
                                     );
 
 /***********************************************************************\
@@ -966,9 +956,8 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
 *          string             - string variable
 *          cryptMode          - crypt mode; see CRYPT_MODE_...
 *          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
+*          cryptSalt          - encryption salt (can be NULL)
 *          password           - password for encryption (can be NULL)
-*          salt               - encryption salt (can be NULL)
-*          saltLength         - encryption salt length
 * Output : string - string with encrypted key (base64-encoded)
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -978,9 +967,8 @@ Errors Crypt_getPublicPrivateKeyString(CryptKey            *cryptKey,
                                        String              string,
                                        CryptMode           cryptMode,
                                        CryptKeyDeriveTypes cryptKeyDeriveType,
-                                       const Password      *password,
-                                       const byte          *salt,
-                                       uint                saltLength
+                                       const CryptSalt     *cryptSalt,
+                                       const Password      *password
                                       );
 
 /***********************************************************************\
@@ -991,9 +979,8 @@ Errors Crypt_getPublicPrivateKeyString(CryptKey            *cryptKey,
 *          string             - string with encrypted key (base64-encoded)
 *          cryptMode          - crypt mode; see CRYPT_MODE_...
 *          cryptKeyDeriveType - key derive type; see CryptKeyDeriveTypes
+*          cryptSalt          - encryption salt (can be NULL)
 *          password           - password for decryption (can be NULL)
-*          salt               - encryption salt (can be NULL)
-*          saltLength         - encryption salt length
 * Output : cryptKey - crypt key
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1003,9 +990,8 @@ Errors Crypt_setPublicPrivateKeyString(CryptKey            *cryptKey,
                                        const String        string,
                                        CryptMode           cryptMode,
                                        CryptKeyDeriveTypes cryptKeyDeriveType,
-                                       const Password      *password,
-                                       const byte          *salt,
-                                       uint                saltLength
+                                       const CryptSalt     *cryptSalt,
+                                       const Password      *password
                                       );
 
 /***********************************************************************\
@@ -1025,11 +1011,11 @@ String Crypt_getPublicPrivateKeyExponent(CryptKey *cryptKey);
 /***********************************************************************\
 * Name   : Crypt_readPublicPrivateKeyFile
 * Purpose: read key from file (base64-encoded)
-* Input  : fileName   - file name
-*          cryptMode  - crypt mode; see CRYPT_MODE_...
-*          password   - password tor decrypt key (can be NULL)
-*          salt       - encryption salt (can be NULL)
-*          saltLength - encryption salt length
+* Input  : fileName           - file name
+*          cryptMode          - crypt mode; see CRYPT_MODE_...
+*          cryptKeyDeriveType - key derive type; see
+*          cryptSalt          - encryption salt (can be NULL)
+*          password           - password tor decrypt key (can be NULL)
 * Output : cryptKey - crypt key
 * Return : ERROR_NONE or error code
 * Notes  : use own specific file format
@@ -1039,20 +1025,19 @@ Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
                                       const String        fileName,
                                       CryptMode           cryptMode,
                                       CryptKeyDeriveTypes cryptKeyDeriveType,
-                                      const Password      *password,
-                                      const byte          *salt,
-                                      uint                saltLength
+                                      const CryptSalt     *cryptSalt,
+                                      const Password      *password
                                      );
 
 /***********************************************************************\
 * Name   : Crypt_writePublicPrivateKeyFile
 * Purpose: write key to file (base64-encoded)
-* Input  : cryptKey   - crypt key
-*          fileName   - file name
-*          cryptMode  - crypt mode; see CRYPT_MODE_...
-*          password   - password to encrypt key (can be NULL)
-*          salt       - encryption salt (can be NULL)
-*          saltLength - encryption salt length
+* Input  : cryptKey           - crypt key
+*          fileName           - file name
+*          cryptMode          - crypt mode; see CRYPT_MODE_...
+*          cryptKeyDeriveType - key derive type; see
+*          cryptSalt          - encryption salt (can be NULL)
+*          password           - password to encrypt key (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : use own specific file format
@@ -1062,9 +1047,8 @@ Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
                                        const String        fileName,
                                        CryptMode           cryptMode,
                                        CryptKeyDeriveTypes cryptKeyDeriveType,
-                                       const Password      *password,
-                                       const byte          *salt,
-                                       uint                saltLength
+                                       const CryptSalt     *cryptSalt,
+                                       const Password      *password
                                       );
 
 /***********************************************************************\
