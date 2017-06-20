@@ -3299,9 +3299,8 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
                                            fileName,
                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                            CRYPT_KEY_DERIVE_NONE,
-                                           NULL,  // password
-                                           NULL,  // salt
-                                           0  // saltLength
+                                           NULL,  // cryptSalt
+                                           NULL  // password
                                           );
     if (error != ERROR_NONE)
     {
@@ -3340,9 +3339,8 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
                                             dataLength,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                             CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // password
-                                            NULL,  // salt
-                                            0  // saltLength
+                                            NULL,  // cryptSalt
+                                            NULL  // password
                                            );
       if (error != ERROR_NONE)
       {
@@ -3364,9 +3362,8 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
                                           strlen(value),
                                           CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                           CRYPT_KEY_DERIVE_NONE,
-                                          NULL,  // password
-                                          NULL,  // salt
-                                          0  // saltLength
+                                          NULL,  // cryptSalt
+                                          NULL  // password
                                          );
     if (error != ERROR_NONE)
     {
@@ -8420,9 +8417,8 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
                                             publicKeyFileName,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                             CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // password
-                                            NULL,  // salt
-                                            0  // saltLength
+                                            NULL,  // cryptSalt
+                                            NULL  // password
                                            );
     if (error != ERROR_NONE)
     {
@@ -8442,9 +8438,8 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
                                             privateKeyFileName,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                             CRYPT_KEY_DERIVE_FUNCTION,
-                                            &cryptPassword,
-                                            NULL,  // salt
-                                            0  // saltLength
+                                            NULL,  // cryptSalt
+                                            &cryptPassword
                                            );
     if (error != ERROR_NONE)
     {
@@ -8466,9 +8461,8 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
                                             data,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                             CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // password,
-                                            NULL,  // salt
-                                            0  // saltLength
+                                            NULL,  // cryptSalt
+                                            NULL  // password
                                            );
     if (error != ERROR_NONE)
     {
@@ -8488,9 +8482,8 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName)
                                             data,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                             CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // password,
-                                            NULL,  // salt
-                                            0  // saltLength
+                                            NULL,  // cryptSalt
+                                            NULL  // password
                                            );
     if (error != ERROR_NONE)
     {
@@ -8619,9 +8612,8 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
                                             publicKeyFileName,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                             CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // password
-                                            NULL,  // salt
-                                            0  // saltLength
+                                            NULL,  // cryptSalt
+                                            NULL  // password
                                            );
     if (error != ERROR_NONE)
     {
@@ -8640,9 +8632,8 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
                                             privateKeyFileName,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                             CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // password,
-                                            NULL,  // salt
-                                            0  // saltLength
+                                            NULL,  // cryptSalt
+                                            NULL  // password,
                                            );
     if (error != ERROR_NONE)
     {
@@ -8663,9 +8654,8 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
                                             keyString,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                             CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // password,
-                                            NULL,  // salt
-                                            0  // saltLength
+                                            NULL,  // cryptSalt
+                                            NULL  // password,
                                            );
     if (error != ERROR_NONE)
     {
@@ -8684,9 +8674,8 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
                                             keyString,
                                             CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                             CRYPT_KEY_DERIVE_NONE,
-                                            NULL,  // password,
-                                            NULL,  // salt
-                                            0  // saltLength
+                                            NULL,  // cryptSalt
+                                            NULL  // password
                                            );
     if (error != ERROR_NONE)
     {
