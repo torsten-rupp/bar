@@ -53,8 +53,6 @@ typedef enum
 {
   ARCHIVE_ENTRY_TYPE_NONE,
 
-  ARCHIVE_ENTRY_TYPE_KEY,
-
   ARCHIVE_ENTRY_TYPE_FILE,
   ARCHIVE_ENTRY_TYPE_IMAGE,
   ARCHIVE_ENTRY_TYPE_DIRECTORY,
@@ -80,8 +78,16 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-// archive mode set (see ARCHIVE_FLAG_*)
+// archive flag set (see ARCHIVE_FLAG_*)
 typedef uint ArchiveFlags;
+
+// archive crypt info
+typedef struct
+{
+  CryptKeyDeriveTypes cryptKeyDeriveType;
+  const CryptSalt     cryptSalt;
+  const CryptKey      cryptKey;
+} ArchiveCryptInfo;
 
 /***********************************************************************\
 * Name   : ArchiveInitFunction
@@ -201,20 +207,6 @@ typedef Errors(*ArchiveStoreFunction)(StorageInfo  *storageInfo,
                                       void         *userData
                                      );
 
-// archive crypt info list
-typedef struct ArchiveCryptInfoNode
-{
-  LIST_NODE_HEADER(struct ArchiveCryptInfoNode);
-
-  CryptSalt cryptSalt;                                                 // crypt salt
-  CryptKey  cryptKey;                                                  // crypt key
-} ArchiveCryptInfoNode;
-
-typedef struct
-{
-  LIST_HEADER(ArchiveCryptInfoNode);
-} ArchiveCryptInfoList;
-
 // archive handle
 typedef struct
 {
@@ -241,7 +233,8 @@ typedef struct
   void                     *getPasswordUserData;                       // user data for call back to get crypt password
   LogHandle                *logHandle;                                 // log handle
 
-  CryptSalt                cryptSalt;                                  // crypt salt
+  const ArchiveCryptInfo   *archiveCryptInfo;
+  CryptSalt                xcryptSalt;                                  // crypt salt
   CryptMode                cryptMode;                                  // crypt mode; see CRYPT_MODE_....
   CryptKeyDeriveTypes      cryptKeyDeriveType;                         // key derive type; see CryptKeyDeriveTypes
 
@@ -255,7 +248,6 @@ typedef struct
 //TODO: use Key
   void                     *encryptedKeyData;                          // encrypted random key used for asymmetric encryption
   uint                     encryptedKeyDataLength;                     // length of encrypted random key
-  ArchiveCryptInfoList     cryptInfoList;                              // list with salt and decrypt keys
 
   void                     *signatureKeyData;                          // signature key
   uint                     signatureKeyDataLength;                     // length of signature key
@@ -787,6 +779,34 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 /***********************************************************************\
 * Name   : Archive_setCryptSalt
 * Purpose: set new crypt salt
+* Input  : archiveHandle    - archive handle
+*          archiveCryptInfo - archive crypt info variable
+* Output : archiveCryptInfo - archive crypt info
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Archive_getCryptInfo(ArchiveHandle    *archiveHandle,
+                          ArchiveCryptInfo *archiveCryptInfo
+                         );
+
+/***********************************************************************\
+* Name   : Archive_setCryptSalt
+* Purpose: set new crypt salt
+* Input  : archiveHandle - archive handle
+*          archiveCryptInfo - archive crypt info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Archive_setCryptInfo(ArchiveHandle          *archiveHandle,
+                          const ArchiveCryptInfo *archiveCryptInfo
+                         );
+
+/***********************************************************************\
+* Name   : Archive_setCryptSalt
+* Purpose: set new crypt salt
 * Input  : archiveHandle - archive handle
 *          salt          - crypt salt
 *          saltLength    - crypt salt length
@@ -856,9 +876,8 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle);
 /***********************************************************************\
 * Name   : Archive_eof
 * Purpose: check if end-of-archive file
-* Input  : archiveHandle          - archive handle
-*          skipUnknownChunksFlag  - TRUE to skip unknown chunks
-*          printUnknownChunksFlag - TRUE to print unknown chunks
+* Input  : archiveHandle - archive handle
+*          archiveFlags  - flags; see ARCHIVE_FLAG_...
 * Output : -
 * Return : TRUE if end-of-archive, FALSE otherwise
 * Notes  : Note: on error store error and return error value in next
@@ -866,8 +885,7 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle);
 \***********************************************************************/
 
 bool Archive_eof(ArchiveHandle *archiveHandle,
-                 bool          skipUnknownChunksFlag,
-                 bool          printUnknownChunksFlag
+                 ArchiveFlags  flags
                 );
 
 /***********************************************************************\
@@ -1136,21 +1154,20 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 /***********************************************************************\
 * Name   : Archive_getNextArchiveEntry
 * Purpose: get next entry in archive
-* Input  : archiveHandle          - archive handle
-*          skipUnknownChunksFlag  - TRUE to skip unknown chunks
-*          printUnknownChunksFlag - TRUE to print unknown chunks
+* Input  : archiveHandle - archive handle
+*          archiveFlags  - flags; see ARCHIVE_FLAG_...
 * Output : archiveEntryType - archive entry type (can be NULL)
+*          archiveCryptInfo - crypt info (can be NULL)
 *          offset           - offset (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
-                                   ArchiveEntryTypes *archiveEntryType,
-                                   CryptSalt         *cryptSalt,
-                                   CryptKey          *cryptKey,
-                                   uint64            *offset,
-                                   ArchiveFlags      flags
+Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
+                                   ArchiveEntryTypes      *archiveEntryType,
+                                   const ArchiveCryptInfo *archiveCryptInfo,
+                                   uint64                 *offset,
+                                   ArchiveFlags           flags
                                   );
 
 /***********************************************************************\
@@ -1164,6 +1181,8 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
 
 Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 
+//TODO: remove
+#if 0
 /***********************************************************************\
 * Name   : Archive_readKeyEntry
 * Purpose: read key from archive
@@ -1174,6 +1193,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 \***********************************************************************/
 
 Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle);
+#endif
 
 /***********************************************************************\
 * Name   : Archive_readMetaEntry
