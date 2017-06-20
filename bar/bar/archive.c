@@ -5363,6 +5363,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveHandle->cryptKeyDataLength;z++) fprin
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->blockLength > 0);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
@@ -5786,6 +5787,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->blockLength > 0);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(deviceInfo != NULL);
@@ -6151,6 +6153,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->blockLength > 0);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
@@ -6394,6 +6397,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->blockLength > 0);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
@@ -6645,6 +6649,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->blockLength > 0);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
@@ -7084,6 +7089,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
+  assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->blockLength > 0);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
