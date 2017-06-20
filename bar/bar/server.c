@@ -13101,7 +13101,7 @@ NULL, // masterIO
 
   // list contents
   error = ERROR_NONE;
-  while (   !Archive_eof(&archiveHandle,TRUE,FALSE)
+  while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS)
          && (error == ERROR_NONE)
          && !isCommandAborted(clientInfo,id)
         )
@@ -13109,8 +13109,7 @@ NULL, // masterIO
     // get next file type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
-                                        NULL,  // cryptSalt
-                                        NULL,  // cryptKey
+                                        NULL,  // archiveCryptInfo
                                         NULL,  // offset
                                         ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS
                                        );

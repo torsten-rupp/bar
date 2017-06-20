@@ -2459,7 +2459,7 @@ NULL, // masterSocketHandle
   failError = ERROR_NONE;
   while (   ((failError == ERROR_NONE) || restoreInfo->jobOptions->noStopOnErrorFlag)
          && ((restoreInfo->isAbortedFunction == NULL) || !restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
-         && !Archive_eof(&archiveHandle,TRUE,isPrintInfo(3))
+         && !Archive_eof(&archiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE))
         )
   {
     // pause
@@ -2471,8 +2471,7 @@ NULL, // masterSocketHandle
     // get next archive entry type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
-                                        NULL,  // cryptSalt
-                                        NULL,  // cryptKey
+                                        NULL,  // archiveCryptInfo
                                         NULL,  // offset
                                         ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS
                                        );

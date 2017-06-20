@@ -76,12 +76,10 @@ typedef struct
 // entry message send to compare threads
 typedef struct
 {
-  StorageInfo         *storageInfo;
-  CryptSalt           cryptSalt;
-  CryptMode           cryptMode;
-  CryptKeyDeriveTypes cryptKeyDeriveType;
-  ArchiveEntryTypes   archiveEntryType;
-  uint64              offset;
+  StorageInfo            *storageInfo;
+  ArchiveEntryTypes      archiveEntryType;
+  const ArchiveCryptInfo *archiveCryptInfo;
+  uint64                 offset;
 } EntryMsg;
 
 /***************************** Variables *******************************/
@@ -1663,9 +1661,10 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
 
 //TODO: required?
     // set crypt salt, crypt key derive type, and crypt mode
-    Archive_setCryptSalt(&archiveHandle,entryMsg.cryptSalt.data,sizeof(entryMsg.cryptSalt.data));
-    Archive_setCryptMode(&archiveHandle,entryMsg.cryptMode);
-    Archive_setCryptKeyDeriveType(&archiveHandle,entryMsg.cryptKeyDeriveType);
+    Archive_setCryptInfo(&archiveHandle,entryMsg.archiveCryptInfo);
+//    Archive_setCryptSalt(&archiveHandle,entryMsg.archiveCryptInfo->cryptSalt.data,sizeof(entryMsg.archiveCryptInfo->cryptSalt.data));
+//    Archive_setCryptMode(&archiveHandle,entryMsg.archiveCryptInfo->cryptMode);
+//    Archive_setCryptKeyDeriveType(&archiveHandle,entryMsg.archiveCryptInfo->cryptKeyDeriveType);
 
     // seek to start of entry
     error = Archive_seek(&archiveHandle,entryMsg.offset);
@@ -1791,20 +1790,21 @@ LOCAL Errors compareArchiveContent(StorageSpecifier    *storageSpecifier,
                                    LogHandle           *logHandle
                                   )
 {
-  AutoFreeList         autoFreeList;
-  String               printableStorageName;
-  Thread               *compareThreads;
-  uint                 compareThreadCount;
-  StorageInfo          storageInfo;
-  Errors               error;
-  CryptSignatureStates allCryptSignatureState;
-  CompareInfo          compareInfo;
-  uint                 i;
-  Errors               failError;
-  ArchiveHandle        archiveHandle;
-  ArchiveEntryTypes    archiveEntryType;
-  uint64               offset;
-  EntryMsg             entryMsg;
+  AutoFreeList           autoFreeList;
+  String                 printableStorageName;
+  Thread                 *compareThreads;
+  uint                   compareThreadCount;
+  StorageInfo            storageInfo;
+  Errors                 error;
+  CryptSignatureStates   allCryptSignatureState;
+  CompareInfo            compareInfo;
+  uint                   i;
+  Errors                 failError;
+  ArchiveHandle          archiveHandle;
+  ArchiveEntryTypes      archiveEntryType;
+  const ArchiveCryptInfo *archiveCryptInfo;
+  uint64                 offset;
+  EntryMsg               entryMsg;
 
   assert(storageSpecifier != NULL);
   assert(includeEntryList != NULL);
@@ -1937,15 +1937,14 @@ NULL,  //               requestedAbortFlag,
             !isPrintInfo(1) ? "..." : ":\n"
            );
   failError = ERROR_NONE;
-  while (   !Archive_eof(&archiveHandle,TRUE,isPrintInfo(3))
+  while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE))
          && (failError == ERROR_NONE)
         )
   {
     // get next archive entry type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
-                                        NULL,  // cryptSalt
-                                        NULL,  // cryptKey
+                                        &archiveCryptInfo,
                                         &offset,
                                         ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
                                        );
@@ -1961,12 +1960,10 @@ NULL,  //               requestedAbortFlag,
     DEBUG_TESTCODE() { failError = DEBUG_TESTCODE_ERROR(); break; }
 
     // send entry to test threads
-    entryMsg.storageInfo        = &storageInfo;
-    Crypt_copySalt(&entryMsg.cryptSalt,&archiveHandle.cryptSalt);
-    entryMsg.cryptMode          = archiveHandle.cryptMode;
-    entryMsg.cryptKeyDeriveType = archiveHandle.cryptKeyDeriveType;
-    entryMsg.archiveEntryType   = archiveEntryType;
-    entryMsg.offset             = offset;
+    entryMsg.storageInfo      = &storageInfo;
+    entryMsg.archiveEntryType = archiveEntryType;
+    entryMsg.archiveCryptInfo = archiveCryptInfo;
+    entryMsg.offset           = offset;
     if (!MsgQueue_put(&compareInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
     {
       HALT_INTERNAL_ERROR("Send message to compare threads fail!");

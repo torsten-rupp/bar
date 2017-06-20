@@ -73,12 +73,10 @@ typedef struct
 // entry message send to test threads
 typedef struct
 {
-  StorageInfo         *storageInfo;
-  CryptSalt           cryptSalt;
-  CryptMode           cryptMode;
-  CryptKeyDeriveTypes cryptKeyDeriveType;
-  ArchiveEntryTypes   archiveEntryType;
-  uint64              offset;
+  StorageInfo            *storageInfo;
+  ArchiveEntryTypes      archiveEntryType;
+  const ArchiveCryptInfo *archiveCryptInfo;
+  uint64                 offset;
 } EntryMsg;
 
 /***************************** Variables *******************************/
@@ -1089,9 +1087,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 
     switch (entryMsg.archiveEntryType)
     {
-      case ARCHIVE_ENTRY_TYPE_KEY:
-        error = Archive_readKeyEntry(&archiveHandle);
-        break;
       case ARCHIVE_ENTRY_TYPE_FILE:
         error = testFileEntry(&archiveHandle,
                               testInfo->includeEntryList,
@@ -1198,20 +1193,21 @@ LOCAL Errors testArchiveContent(StorageSpecifier    *storageSpecifier,
                                 LogHandle           *logHandle
                                )
 {
-  AutoFreeList         autoFreeList;
-  String               printableStorageName;
-  Thread               *testThreads;
-  uint                 testThreadCount;
-  StorageInfo          storageInfo;
-  Errors               error;
-  CryptSignatureStates allCryptSignatureState;
-  TestInfo             testInfo;
-  uint                 i;
-  Errors               failError;
-  ArchiveHandle        archiveHandle;
-  ArchiveEntryTypes    archiveEntryType;
-  uint64               offset;
-  EntryMsg             entryMsg;
+  AutoFreeList           autoFreeList;
+  String                 printableStorageName;
+  Thread                 *testThreads;
+  uint                   testThreadCount;
+  StorageInfo            storageInfo;
+  Errors                 error;
+  CryptSignatureStates   allCryptSignatureState;
+  TestInfo               testInfo;
+  uint                   i;
+  Errors                 failError;
+  ArchiveHandle          archiveHandle;
+  ArchiveEntryTypes      archiveEntryType;
+  const ArchiveCryptInfo *archiveCryptInfo;
+  uint64                 offset;
+  EntryMsg               entryMsg;
 
   assert(storageSpecifier != NULL);
   assert(includeEntryList != NULL);
@@ -1343,13 +1339,12 @@ NULL,  //               requestedAbortFlag,
             !isPrintInfo(1) ? "..." : ":\n"
            );
   failError = ERROR_NONE;
-  while (!Archive_eof(&archiveHandle,FALSE,isPrintInfo(3)))
+  while (!Archive_eof(&archiveHandle,isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE))
   {
     // get next archive entry type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
-                                        NULL,  // cryptSalt
-                                        NULL,  // cryptKey
+                                        &archiveCryptInfo,
                                         &offset,
                                         isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE
                                        );
@@ -1364,12 +1359,10 @@ NULL,  //               requestedAbortFlag,
     }
 
     // send entry to test threads
-    entryMsg.storageInfo        = &storageInfo;
-    Crypt_copySalt(&entryMsg.cryptSalt,&archiveHandle.cryptSalt);
-    entryMsg.cryptMode          = archiveHandle.cryptMode;
-    entryMsg.cryptKeyDeriveType = archiveHandle.cryptKeyDeriveType;
-    entryMsg.archiveEntryType   = archiveEntryType;
-    entryMsg.offset             = offset;
+    entryMsg.storageInfo      = &storageInfo;
+    entryMsg.archiveEntryType = archiveEntryType;
+    entryMsg.archiveCryptInfo = archiveCryptInfo;
+    entryMsg.offset           = offset;
     if (!MsgQueue_put(&testInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
     {
       HALT_INTERNAL_ERROR("Send message to test threads fail!");

@@ -73,12 +73,10 @@ typedef struct
 // entry message send to convert threads
 typedef struct
 {
-  StorageInfo         *storageInfo;
-  CryptSalt           cryptSalt;
-  CryptMode           cryptMode;
-  CryptKeyDeriveTypes cryptKeyDeriveType;
-  ArchiveEntryTypes   archiveEntryType;
-  uint64              offset;
+  StorageInfo            *storageInfo;
+  ArchiveEntryTypes      archiveEntryType;
+  const ArchiveCryptInfo *archiveCryptInfo;
+  uint64                 offset;
 } EntryMsg;
 
 // storage message, send from convert threads -> storage thread
@@ -1741,9 +1739,10 @@ NULL,//                         deltaSourceList,
 
 //TODO: required?
     // set crypt salt, crypt key derive type, and crypt mode
-    Archive_setCryptSalt(&sourceArchiveHandle,entryMsg.cryptSalt.data,sizeof(entryMsg.cryptSalt.data));
-    Archive_setCryptMode(&sourceArchiveHandle,entryMsg.cryptMode);
-    Archive_setCryptKeyDeriveType(&sourceArchiveHandle,entryMsg.cryptKeyDeriveType);
+    Archive_setCryptInfo(&sourceArchiveHandle,entryMsg.archiveCryptInfo);
+//    Archive_setCryptSalt(&sourceArchiveHandle,entryMsg.cryptSalt.data,sizeof(entryMsg.cryptSalt.data));
+//    Archive_setCryptMode(&sourceArchiveHandle,entryMsg.cryptMode);
+//    Archive_setCryptKeyDeriveType(&sourceArchiveHandle,entryMsg.cryptKeyDeriveType);
 
     // seek to start of entry
     error = Archive_seek(&sourceArchiveHandle,entryMsg.offset);
@@ -1861,21 +1860,22 @@ LOCAL Errors convertArchive(StorageSpecifier    *storageSpecifier,
                             LogHandle           *logHandle
                            )
 {
-  AutoFreeList         autoFreeList;
-  String               printableStorageName;
-  Thread               *convertThreads;
-  uint                 convertThreadCount;
-  ConvertInfo          convertInfo;
-  Errors               error;
-  CryptSignatureStates allCryptSignatureState;
-  String               baseName;
-  Thread               storageThread;
-  uint                 i;
-  Errors               failError;
-  ArchiveHandle        sourceArchiveHandle;
-  ArchiveEntryTypes    archiveEntryType;
-  uint64               offset;
-  EntryMsg             entryMsg;
+  AutoFreeList           autoFreeList;
+  String                 printableStorageName;
+  Thread                 *convertThreads;
+  uint                   convertThreadCount;
+  ConvertInfo            convertInfo;
+  Errors                 error;
+  CryptSignatureStates   allCryptSignatureState;
+  String                 baseName;
+  Thread                 storageThread;
+  uint                   i;
+  Errors                 failError;
+  ArchiveHandle          sourceArchiveHandle;
+  ArchiveEntryTypes      archiveEntryType;
+  const ArchiveCryptInfo *archiveCryptInfo;
+  uint64                 offset;
+  EntryMsg               entryMsg;
 
   assert(storageSpecifier != NULL);
   assert(jobOptions != NULL);
@@ -2071,15 +2071,14 @@ CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertI
             !isPrintInfo(1) ? "..." : ":\n"
            );
   failError = ERROR_NONE;
-  while (   !Archive_eof(&sourceArchiveHandle,TRUE,isPrintInfo(3))
+  while (   !Archive_eof(&sourceArchiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE))
          && (failError == ERROR_NONE)
         )
   {
     // get next archive entry type
     error = Archive_getNextArchiveEntry(&sourceArchiveHandle,
                                         &archiveEntryType,
-                                        NULL,  // cryptSalt
-                                        NULL,  // cryptKey
+                                        &archiveCryptInfo,
                                         &offset,
                                         ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
                                        );
@@ -2098,11 +2097,9 @@ CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertI
 
     // send entry to convert threads
     entryMsg.storageInfo        = &convertInfo.storageInfo;
-    Crypt_copySalt(&entryMsg.cryptSalt,&sourceArchiveHandle.cryptSalt);
-    entryMsg.cryptMode          = sourceArchiveHandle.cryptMode;
-    entryMsg.cryptKeyDeriveType = sourceArchiveHandle.cryptKeyDeriveType;
-    entryMsg.archiveEntryType   = archiveEntryType;
-    entryMsg.offset             = offset;
+    entryMsg.archiveEntryType = archiveEntryType;
+    entryMsg.archiveCryptInfo = archiveCryptInfo;
+    entryMsg.offset           = offset;
     if (!MsgQueue_put(&convertInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
     {
       HALT_INTERNAL_ERROR("Send message to convert threads fail!");

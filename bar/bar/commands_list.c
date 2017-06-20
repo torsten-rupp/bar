@@ -2238,15 +2238,14 @@ NULL, // masterSocketHandle
 
         // list contents
         printArchiveName(printableStorageName,showEntriesFlag);
-        while (   !Archive_eof(&archiveHandle,TRUE,TRUE)
+        while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS)
                && (error == ERROR_NONE)
               )
         {
           // get next archive entry type
           error = Archive_getNextArchiveEntry(&archiveHandle,
                                               &archiveEntryType,
-                                              NULL,  // cryptSalt
-                                              NULL,  // cryptKey
+                                              NULL,  // archiveCryptInfo
                                               NULL,  // offset
                                               ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS
                                              );
