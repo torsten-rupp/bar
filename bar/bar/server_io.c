@@ -786,7 +786,7 @@ bool ServerIO_decryptPassword(Password       *password,
   if      (String_equalsIgnoreCaseCString(encryptType,"RSA") && Crypt_isAsymmetricSupported())
   {
 //fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
-    Crypt_keyDecrypt(&serverIO->privateKey,
+    Crypt_decryptKey(&serverIO->privateKey,
                      encryptedBuffer,
                      encryptedBufferLength,
                      encodedBuffer,
@@ -844,7 +844,7 @@ bool ServerIO_checkPassword(const ServerIO *serverIO,
   if      (String_equalsIgnoreCaseCString(encryptType,"RSA") && Crypt_isAsymmetricSupported())
   {
 //fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
-    if (Crypt_keyDecrypt(&serverIO->privateKey,
+    if (Crypt_decryptKey(&serverIO->privateKey,
                          encryptedBuffer,
                          encryptedBufferLength,
                          encodedBuffer,

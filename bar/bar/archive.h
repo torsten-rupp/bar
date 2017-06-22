@@ -82,12 +82,7 @@ typedef enum
 typedef uint ArchiveFlags;
 
 // archive crypt info
-typedef struct
-{
-  CryptKeyDeriveTypes cryptKeyDeriveType;
-  const CryptSalt     cryptSalt;
-  const CryptKey      cryptKey;
-} ArchiveCryptInfo;
+typedef struct __ArchiveCryptInfo ArchiveCryptInfo;
 
 /***********************************************************************\
 * Name   : ArchiveInitFunction
@@ -777,8 +772,8 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : Archive_setCryptSalt
-* Purpose: set new crypt salt
+* Name   : Archive_getCryptInfo
+* Purpose: get crypt info
 * Input  : archiveHandle    - archive handle
 *          archiveCryptInfo - archive crypt info variable
 * Output : archiveCryptInfo - archive crypt info
@@ -787,12 +782,12 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 \***********************************************************************/
 
 void Archive_getCryptInfo(ArchiveHandle    *archiveHandle,
-                          ArchiveCryptInfo *archiveCryptInfo
+                          const ArchiveCryptInfo **archiveCryptInfo
                          );
 
 /***********************************************************************\
-* Name   : Archive_setCryptSalt
-* Purpose: set new crypt salt
+* Name   : Archive_setCryptInfo
+* Purpose: set crypt info
 * Input  : archiveHandle - archive handle
 *          archiveCryptInfo - archive crypt info
 * Output : -
@@ -1165,7 +1160,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 
 Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
                                    ArchiveEntryTypes      *archiveEntryType,
-                                   const ArchiveCryptInfo *archiveCryptInfo,
+                                   const ArchiveCryptInfo **archiveCryptInfo,
                                    uint64                 *offset,
                                    ArchiveFlags           flags
                                   );

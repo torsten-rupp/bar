@@ -49,6 +49,8 @@
 
 /***************************** Constants *******************************/
 #define MAX_FORCE_CHECKPOINT_TIME (10LL*60LL*1000LL) // timeout for force execution of a checkpoint [ms]
+//#define CHECKPOINT_MODE           SQLITE_CHECKPOINT_RESTART
+#define CHECKPOINT_MODE           SQLITE_CHECKPOINT_TRUNCATE
 
 #if 1
   #define DEBUG_WARNING_LOCK_TIME  2ULL*1000ULL      // DEBUG only: warning lock time [ms]
@@ -861,7 +863,7 @@ LOCAL void executeCheckpoint(DatabaseHandle *databaseHandle)
 
   if (Misc_getTimestamp() > (databaseHandle->lastCheckpointTimestamp+MAX_FORCE_CHECKPOINT_TIME*US_PER_MS))
   {
-    (void)sqlite3_wal_checkpoint_v2(databaseHandle->handle,NULL,SQLITE_CHECKPOINT_RESTART,NULL,NULL);
+    (void)sqlite3_wal_checkpoint_v2(databaseHandle->handle,NULL,CHECKPOINT_MODE,NULL,NULL);
     databaseHandle->lastCheckpointTimestamp = Misc_getTimestamp();
   }
 }

@@ -332,6 +332,44 @@ INLINE bool Crypt_isSymmetricSupported(void)
 #endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
+* Name   : Crypt_initSalt
+* Purpose: init crypt salt
+* Input  : cryptSalt - crypt salt
+* Output : -
+* Return : cryptSalt
+* Notes  : -
+\***********************************************************************/
+
+INLINE CryptSalt *Crypt_initSalt(CryptSalt *cryptSalt);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+INLINE CryptSalt * Crypt_initSalt(CryptSalt *cryptSalt)
+{
+  assert(cryptSalt != NULL);
+
+  cryptSalt->length = 0;
+
+  return cryptSalt;
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Crypt_doneSalt
+* Purpose: done crypt salt
+* Input  : cryptSalt - crypt salt
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE void Crypt_doneSalt(CryptSalt *cryptSalt);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+INLINE void Crypt_doneSalt(CryptSalt *cryptSalt)
+{
+  assert(cryptSalt != NULL);
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : Crypt_getSalt
 * Purpose: get crypt salt
 * Input  : data      - buffer for salt data
@@ -1073,9 +1111,9 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
                                        );
 
 /***********************************************************************\
-* Name   : Crypt_keyEncrypt
-* Purpose: encrypt data
-* Input  : cryptKey               - crypt key
+* Name   : Crypt_encryptKey
+* Purpose: encrypt data with public/private key
+* Input  : cryptKey               - public/private crypt key
 *          buffer                 - buffer with data
 *          bufferLength           - length of data
 *          encryptBuffer          - buffer for encrypted data
@@ -1087,7 +1125,7 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
 *          small!
 \***********************************************************************/
 
-Errors Crypt_keyEncrypt(const CryptKey *cryptKey,
+Errors Crypt_encryptKey(const CryptKey *cryptKey,
                         const void     *buffer,
                         uint           bufferLength,
                         void           *encryptBuffer,
@@ -1096,9 +1134,9 @@ Errors Crypt_keyEncrypt(const CryptKey *cryptKey,
                        );
 
 /***********************************************************************\
-* Name   : Crypt_keyDecrypt
-* Purpose: decrypt data
-* Input  : cryptKey            - crypt key
+* Name   : Crypt_decryptKey
+* Purpose: decrypt data with public/private
+* Input  : cryptKey            - public/private crypt key
 *          encryptBuffer       - encrypted data
 *          encryptBufferLength - length of encrypted data
 *          buffer              - buffer for data
@@ -1109,7 +1147,7 @@ Errors Crypt_keyEncrypt(const CryptKey *cryptKey,
 * Notes  : if bufferLength==maxBufferLength buffer was to small!
 \***********************************************************************/
 
-Errors Crypt_keyDecrypt(const CryptKey *cryptKey,
+Errors Crypt_decryptKey(const CryptKey *cryptKey,
                         const void     *encryptBuffer,
                         uint           encryptBufferLength,
                         void           *buffer,
@@ -1147,7 +1185,8 @@ Errors Crypt_getRandomEncryptKey(CryptKey       *cryptKey,
 // TODO: remove?
 /***********************************************************************\
 * Name   : Crypt_getDecryptKey
-* Purpose: get decryption key
+* Purpose: get encryption/decryption key from encrypted key data and
+*          private key
 * Input  : cryptKey           - crypt key variable
 *          keyLength          - crypt key length [bits]
 *          privateKey         - private key to decrypt key

@@ -2159,7 +2159,7 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey          *publicCryptKey,
   #endif /* HAVE_GCRYPT */
 }
 
-Errors Crypt_keyEncrypt(const CryptKey *cryptKey,
+Errors Crypt_encryptKey(const CryptKey *cryptKey,
                         const void     *buffer,
                         uint           bufferLength,
                         void           *encryptBuffer,
@@ -2168,9 +2168,6 @@ Errors Crypt_keyEncrypt(const CryptKey *cryptKey,
                        )
 {
   #ifdef HAVE_GCRYPT
-//    gcry_mpi_t   n;
-//    byte         *p;
-//    ulong        z;
     Errors       error;
     gcry_error_t gcryptError;
     gcry_sexp_t  sexpData;
@@ -2191,25 +2188,6 @@ fprintf(stderr,"%s,%d: ---------------------------------\n",__FILE__,__LINE__);
 //gcry_sexp_dump(cryptKey->key);
 //fprintf(stderr,"%s,%d: %d\n",__FILE__,__LINE__,bufferLength);
 
-// TODO: required?
-#if 0
-    // create mpi from data: push data bytes into mpi by shift+add
-    n = gcry_mpi_new(0);
-    if (n == NULL)
-    {
-      return ERROR_KEY_ENCRYPT_FAIL;
-    }
-    p = (byte*)buffer;
-    for (z = 0; z < bufferLength; z++)
-    {
-      gcry_mpi_mul_ui(n,n,256);
-      gcry_mpi_add_ui(n,n,p[z]);
-    }
-gcry_mpi_dump(n);fprintf(stderr,"\n");
-#endif
-
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
     // create S-expression with data
     switch (cryptKey->cryptPaddingType)
     {
@@ -2229,7 +2207,6 @@ asm("int3");
     if (gcryptError != 0)
     {
       error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,"%s",gcry_strerror(gcryptError));
-//      gcry_mpi_release(n);
       return error;
     }
 //gcry_sexp_dump(sexpData);
@@ -2287,7 +2264,7 @@ asm("int3");
   #endif /* HAVE_GCRYPT */
 }
 
-Errors Crypt_keyDecrypt(const CryptKey *cryptKey,
+Errors Crypt_decryptKey(const CryptKey *cryptKey,
                         const void     *encryptBuffer,
                         uint           encryptBufferLength,
                         void           *buffer,
@@ -2398,11 +2375,14 @@ Errors Crypt_getRandomEncryptKey(CryptKey       *cryptKey,
     byte         *pkcs1EncodedMessage;
     byte         randomBuffer[32];
     uint         i,j;
+    Errors       error;
+#if 0
     gcry_sexp_t  sexpData;
     gcry_sexp_t  sexpEncryptData;
     const char   *encryptedData;
     size_t       encryptedDataLength;
     gcry_error_t gcryptError;
+#endif
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
@@ -2484,6 +2464,22 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 fprintf(stderr,"%s, %d: encoded pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS1_ENCODED_MESSAGE_LENGTH); debugDumpMemory(pkcs1EncodedMessage,PKCS1_ENCODED_MESSAGE_LENGTH,0);
 #endif
 
+#if 1
+    error = Crypt_encryptKey(publicKey,
+                             pkcs1EncodedMessage,
+                             PKCS1_ENCODED_MESSAGE_LENGTH,
+                             encryptedKey,
+                             encryptedKeyLength,
+                             maxEncryptedKeyLength
+                            );
+    if (error != ERROR_NONE)
+    {
+      Password_freeSecure(pkcs1EncodedMessage);
+      Password_freeSecure(data);
+      return error;
+    }
+#else
+// old
     // create S-expression with data
     gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %b))",PKCS1_ENCODED_MESSAGE_LENGTH,(char*)pkcs1EncodedMessage);
     if (gcryptError != 0)
@@ -2535,6 +2531,7 @@ fprintf(stderr,"%s, %d: encrypted pkcs1EncodedMessage %d\n",__FILE__,__LINE__,en
     memcpy(encryptedKey,encryptedData,MIN(encryptedDataLength,maxEncryptedKeyLength));
     gcry_sexp_release(sexpToken);
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(encryptBuffer,*encryptBufferLength,0);
+#endif //old
 
     // set key
     if (cryptKey->data != NULL) Password_freeSecure(cryptKey->data);
@@ -2542,8 +2539,11 @@ fprintf(stderr,"%s, %d: encrypted pkcs1EncodedMessage %d\n",__FILE__,__LINE__,en
     cryptKey->dataLength = ALIGN(keyLength,8)/8;
 
     // free resources
+#if 0
+//old
     gcry_sexp_release(sexpEncryptData);
     gcry_sexp_release(sexpData);
+#endif
     Password_freeSecure(pkcs1EncodedMessage);
 
     return ERROR_NONE;
