@@ -248,7 +248,7 @@ const MAC_ALGORITHM_SHA2_512         = 4
 # never compress/encrypted
 CHUNK BAR "BAR1" BAR
   byte[128] salt;
-  crc32  crc
+  crc32     crc
 
 CHUNK BAR "BAR0" BAR DEPRECATED
   crc32  crc
@@ -295,10 +295,10 @@ CHUNK KEY "KEY0" Key
 #
 # parent: none
 # never compress, encrypted as specified
+#TODO: multi crypt
 #CHUNK META "MTA1" Meta
 #  uint16[4] cryptAlgorithms;
 #  crc32     crc
-
 CHUNK META "MTA0" Meta
   uint16 cryptAlgorithm;
   crc32  crc
@@ -306,7 +306,7 @@ CHUNK META "MTA0" Meta
 # meta entry
 #
 # parent: MTA0
-# never compress, encrypted as specified in MTA1
+# never compress, encrypted as specified in MTA0
 CHUNK META_ENTRY "MENT" MetaEntry
   ENCRYPT
   string   userName;
@@ -324,11 +324,11 @@ CHUNK META_ENTRY "MENT" MetaEntry
 #
 # parent: none
 # never compress/encrypted
+#TODO: multi crypt
 #CHUNK FILE "FIL1" File
 #  uint16    compressAlgorithm;
 #  uint16[4] cryptAlgorithms;
 #  crc32  crc
-
 #CHUNK FILE "FIL0" File DEPRECATED
 CHUNK FILE "FIL0" File
   uint16 compressAlgorithm;
