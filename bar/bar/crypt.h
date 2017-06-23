@@ -864,6 +864,28 @@ INLINE bool Crypt_isAsymmetricSupported(void);
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Crypt_copyKey
+* Purpose: copy public/private key
+* Input  : cryptKey     - crypt key variable
+*          fromCrypyKey - from crypt key
+* Output : cryptKey - crypt key
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  void Crypt_copyKey(CryptKey       *cryptKey,
+                     const CryptKey *fromCrypyKey
+                    );
+#else /* not NDEBUG */
+  void __Crypt_copyKey(const char     *__fileName__,
+                       ulong          __lineNb__,
+                       CryptKey       *cryptKey,
+                       const CryptKey *fromCrypyKey
+                      );
+#endif /* NDEBUG */
+
+/***********************************************************************\
 * Name   : Crypt_doneKey
 * Purpose: deinitialize public/private key
 * Input  : cryptKey - crypt key

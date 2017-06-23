@@ -1280,6 +1280,47 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
 }
 
 #ifdef NDEBUG
+  void Crypt_copyKey(CryptKey       *cryptKey,
+                     const CryptKey *fromCrypyKey
+                    )
+#else /* not NDEBUG */
+  void __Crypt_copyKey(const char     *__fileName__,
+                       ulong          __lineNb__,
+                       CryptKey       *cryptKey,
+                       const CryptKey *fromCrypyKey
+                      )
+#endif /* NDEBUG */
+{
+  assert(cryptKey != NULL);
+  assert(fromCrypyKey != NULL);
+
+  cryptKey->cryptPaddingType = fromCrypyKey->cryptPaddingType;
+  #ifdef HAVE_GCRYPT
+    cryptKey->key = NULL;
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptKey);
+    UNUSED_VARIABLE(fromCrypyKey);
+  #endif /* HAVE_GCRYPT */
+
+  // copy key
+  cryptKey->data = Password_allocSecure(fromCrypyKey->dataLength);
+  if (data == NULL)
+  {
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+  memcpy(cryptKey->data,fromCrypyKey->data,fromCrypyKey->dataLength);
+  cryptKey->dataLength = fromCrypyKey->dataLength;
+
+  // 
+
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(cryptKey,sizeof(CryptKey));
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptKey,sizeof(CryptKey));
+  #endif /* NDEBUG */
+}
+
+#ifdef NDEBUG
   void Crypt_doneKey(CryptKey *cryptKey)
 #else /* not NDEBUG */
   void __Crypt_doneKey(const char        *__fileName__,
