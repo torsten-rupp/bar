@@ -1280,44 +1280,68 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
 }
 
 #ifdef NDEBUG
-  void Crypt_copyKey(CryptKey       *cryptKey,
-                     const CryptKey *fromCrypyKey
-                    )
-#else /* not NDEBUG */
-  void __Crypt_copyKey(const char     *__fileName__,
-                       ulong          __lineNb__,
-                       CryptKey       *cryptKey,
-                       const CryptKey *fromCrypyKey
+  Errors Crypt_copyKey(CryptKey       *cryptKey,
+                       const CryptKey *fromCryptKey
                       )
+#else /* not NDEBUG */
+  Errors __Crypt_copyKey(const char     *__fileName__,
+                         ulong          __lineNb__,
+                         CryptKey       *cryptKey,
+                         const CryptKey *fromCryptKey
+                        )
 #endif /* NDEBUG */
 {
-  assert(cryptKey != NULL);
-  assert(fromCrypyKey != NULL);
-
-  cryptKey->cryptPaddingType = fromCrypyKey->cryptPaddingType;
+  uint dataLength;
+  void *data;
   #ifdef HAVE_GCRYPT
-    cryptKey->key = NULL;
-  #else /* not HAVE_GCRYPT */
-    UNUSED_VARIABLE(cryptKey);
-    UNUSED_VARIABLE(fromCrypyKey);
+    gcry_error_t gcryptError;
+    gcry_sexp_t  key;
   #endif /* HAVE_GCRYPT */
 
-  // copy key
-  cryptKey->data = Password_allocSecure(fromCrypyKey->dataLength);
+  assert(cryptKey != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
+  assert(fromCryptKey != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fromCryptKey);
+
+  cryptKey->cryptPaddingType = fromCryptKey->cryptPaddingType;
+
+  // copy crypt key
+  dataLength = fromCryptKey->dataLength;
+  data       = Password_allocSecure(cryptKey->dataLength);
   if (data == NULL)
   {
     return ERROR_INSUFFICIENT_MEMORY;
   }
-  memcpy(cryptKey->data,fromCrypyKey->data,fromCrypyKey->dataLength);
-  cryptKey->dataLength = fromCrypyKey->dataLength;
+  memcpy(data,fromCryptKey->data,dataLength);
 
-  // 
+  // create S-expression with key
+  #ifdef HAVE_GCRYPT
+    gcryptError = gcry_sexp_new(&key,
+                                data,
+                                0,  // dataLength,
+                                1  // autodetect
+                               );
+    if (gcryptError != 0)
+    {
+//fprintf(stderr,"%s, %d: gcry_sexp_new cryptKey->key=%p %d %d: %s\n",__FILE__,__LINE__,cryptKey->key,cryptKey->dataLength,gcryptError,gpg_strerror(gcryptError));
+      Password_freeSecure(data);
+      return ERROR_INVALID_KEY;
+    }
+    assert(key != NULL);
+  #endif /* HAVE_GCRYPT */
 
-  #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(cryptKey,sizeof(CryptKey));
-  #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptKey,sizeof(CryptKey));
-  #endif /* NDEBUG */
+  // set key
+  if (cryptKey->data != NULL) Password_freeSecure(cryptKey->data);
+  cryptKey->data       = data;
+  cryptKey->dataLength = dataLength;
+  assert(cryptKey->data != NULL);
+  assert(cryptKey->dataLength > 0);
+  #ifdef HAVE_GCRYPT
+    if (cryptKey->key != NULL) gcry_sexp_release(cryptKey->key);
+    cryptKey->key = key;
+  #endif /* HAVE_GCRYPT */
+
+  return ERROR_NONE;
 }
 
 #ifdef NDEBUG
@@ -1430,50 +1454,6 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
-}
-
-Errors Crypt_duplicateKey(CryptKey       *cryptKey,
-                          const CryptKey *fromCryptKey
-                         )
-{
-  #ifdef HAVE_GCRYPT
-    gcry_error_t gcryptError;
-  #endif /* HAVE_GCRYPT */
-
-  assert(cryptKey != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
-  assert(fromCryptKey != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(fromCryptKey);
-
-  cryptKey->cryptPaddingType = fromCryptKey->cryptPaddingType;
-  if (cryptKey->data != NULL)
-  {
-    cryptKey->dataLength       = fromCryptKey->dataLength;
-    cryptKey->data             = Password_allocSecure(cryptKey->dataLength);
-    if (cryptKey->data == NULL)
-    {
-      return ERROR_INSUFFICIENT_MEMORY;
-    }
-    memCopyFast(cryptKey->data,cryptKey->dataLength,fromCryptKey->data,fromCryptKey->dataLength);
-
-    #ifdef HAVE_GCRYPT
-      // create S-expression with key
-      gcryptError = gcry_sexp_new(&cryptKey->key,
-                                  cryptKey->data,
-                                  0,  // dataLength,
-                                  1  // autodetect
-                                 );
-      if (gcryptError != 0)
-      {
-  fprintf(stderr,"%s, %d: gcry_sexp_new cryptKey->key=%p %d %d: %s\n",__FILE__,__LINE__,cryptKey->key,cryptKey->dataLength,gcryptError,gpg_strerror(gcryptError));
-        Password_freeSecure(cryptKey->data);
-        return ERROR_INVALID_KEY;
-      }
-      assert(cryptKey->key != NULL);
-    #endif /* HAVE_GCRYPT */
-  }
-
-  return ERROR_NONE;
 }
 
 Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
@@ -1642,7 +1622,8 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
     CryptKey         encryptKey;
     CryptInfo        cryptInfo;
     Errors           error;
-    gcry_error_t gcryptError;
+    gcry_error_t     gcryptError;
+    gcry_sexp_t      key;
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
@@ -1758,12 +1739,7 @@ fprintf(stderr,"%s, %d: decrypted private key\n",__FILE__,__LINE__); debugDumpMe
 #endif
 
     // create S-expression with key
-    if (cryptKey->key != NULL)
-    {
-      gcry_sexp_release(cryptKey->key);
-      cryptKey->key = NULL;
-    }
-    gcryptError = gcry_sexp_new(&cryptKey->key,
+    gcryptError = gcry_sexp_new(&key,
                                 data,
                                 0,  //dataLength,
                                 1  // autodetect
@@ -1774,7 +1750,7 @@ fprintf(stderr,"%s, %d: gcry_sexp_new cryptKey->key=%p %d %d: %s\n",__FILE__,__L
       Password_freeSecure(data);
       return ERROR_INVALID_KEY;
     }
-    assert(cryptKey->key != NULL);
+    assert(key != NULL);
 
     // set key
     if (cryptKey->data != NULL) Password_freeSecure(cryptKey->data);
@@ -1782,6 +1758,8 @@ fprintf(stderr,"%s, %d: gcry_sexp_new cryptKey->key=%p %d %d: %s\n",__FILE__,__L
     cryptKey->dataLength = dataLength;
     assert(cryptKey->data != NULL);
     assert(cryptKey->dataLength > 0);
+    if (cryptKey->key != NULL) gcry_sexp_release(cryptKey->key);
+    cryptKey->key = key;
 
     // free resources
 

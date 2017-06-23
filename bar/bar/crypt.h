@@ -64,8 +64,18 @@ typedef enum
 #define MAX_ASYMMETRIC_CRYPT_KEY_BITS 3072
 #define DEFAULT_ASYMMETRIC_CRYPT_KEY_BITS 2048
 
+// crypt types
+typedef enum
+{
+  CRYPT_TYPE_NONE,
+
+  CRYPT_TYPE_SYMMETRIC,
+  CRYPT_TYPE_ASYMMETRIC,
+} CryptTypes;
+
 // crypt modes
 #define CRYPT_MODE_KDF        0          // use key derivation function to generate password
+//TODO: required? Cam be default?
 #define CRYPT_MODE_SIMPLE_KEY (1 << 0)   // use simple function to generate password
 #define CRYPT_MODE_CBC        (1 << 1)   // cipher block chaining
 #define CRYPT_MODE_CTS        (1 << 2)   // cipher text stealing
@@ -102,15 +112,6 @@ typedef enum
 
   CRYPT_MAC_ALGORITHM_UNKNOW   = 0xFFFF
 } CryptMACAlgorithms;
-
-// crypt types
-typedef enum
-{
-  CRYPT_TYPE_NONE,
-
-  CRYPT_TYPE_SYMMETRIC,
-  CRYPT_TYPE_ASYMMETRIC,
-} CryptTypes;
 
 // crypt key padding types
 typedef enum
@@ -271,6 +272,7 @@ typedef struct
 
 #ifndef NDEBUG
   #define Crypt_initKey(...)  __Crypt_initKey (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_copyKey(...)  __Crypt_copyKey (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Crypt_doneKey(...)  __Crypt_doneKey (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Crypt_init(...)     __Crypt_init    (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Crypt_done(...)     __Crypt_done    (__FILE__,__LINE__, ## __VA_ARGS__)
@@ -476,10 +478,10 @@ INLINE CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryp
 {
   assert(cryptSalt != NULL);
   assert(fromCryptSalt != NULL);
-  assert(sizeof(cryptSalt->data) <= fromCryptSalt->length);
+  assert(sizeof(cryptSalt->data) >= fromCryptSalt->length);
 
-  memCopyFast(cryptSalt->data,sizeof(cryptSalt->data),fromCryptSalt->data,fromCryptSalt->length);
   cryptSalt->length = MIN(sizeof(cryptSalt->data),fromCryptSalt->length);
+  memcpy(cryptSalt->data,fromCryptSalt->data,cryptSalt->length);
 
   return cryptSalt;
 }
@@ -866,23 +868,23 @@ INLINE bool Crypt_isAsymmetricSupported(void);
 /***********************************************************************\
 * Name   : Crypt_copyKey
 * Purpose: copy public/private key
-* Input  : cryptKey     - crypt key variable
-*          fromCrypyKey - from crypt key
-* Output : cryptKey - crypt key
-* Return : -
+* Input  : cryptKey     - crypt key
+*          fromCryptKey - from crypt key
+* Output : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  void Crypt_copyKey(CryptKey       *cryptKey,
-                     const CryptKey *fromCrypyKey
-                    );
-#else /* not NDEBUG */
-  void __Crypt_copyKey(const char     *__fileName__,
-                       ulong          __lineNb__,
-                       CryptKey       *cryptKey,
-                       const CryptKey *fromCrypyKey
+  Errors Crypt_copyKey(CryptKey       *cryptKey,
+                       const CryptKey *fromCryptKey
                       );
+#else /* not NDEBUG */
+  Errors __Crypt_copyKey(const char     *__fileName__,
+                         ulong          __lineNb__,
+                         CryptKey       *cryptKey,
+                         const CryptKey *fromCryptKey
+                        );
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -939,20 +941,6 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
                        const CryptSalt     *cryptSalt,
                        const Password      *password
                       );
-
-/***********************************************************************\
-* Name   : Crypt_duplicateKey
-* Purpose: duplicate public/private key
-* Input  : cryptKey     - crypt key
-*          fromCryptKey - from crypt key
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Crypt_duplicateKey(CryptKey       *cryptKey,
-                          const CryptKey *fromCryptKey
-                         );
 
 /*---------------------------------------------------------------------*/
 
