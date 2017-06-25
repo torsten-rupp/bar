@@ -362,7 +362,7 @@ void __RingBuffer_done(const char *__fileName__, ulong __lineNb__, RingBuffer *r
         }
         else
         {
-          fprintf(stderr,"DEBUG WARNING: ring buffer %p not found in debug list at %s, line %u\n",
+          fprintf(stderr,"DEBUG WARNING: ring buffer %p not found in debug list at %s, line %lu\n",
                   ringBuffer,
                   __fileName__,
                   __lineNb__
