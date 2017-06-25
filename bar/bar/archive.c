@@ -1452,6 +1452,7 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
                                                  CRYPT_MODE_NONE,
                                                  CRYPT_KEY_DERIVE_FUNCTION
                                                 );
+  assert(addArchiveCryptInfoNode != NULL);
   archiveHandle->archiveCryptInfo = &archiveCryptInfoNode->archiveCryptInfo;
 
   return ERROR_NONE;
@@ -4550,7 +4551,7 @@ UNUSED_VARIABLE(storageInfo);
                                                  CRYPT_MODE_NONE,
                                                  CRYPT_KEY_DERIVE_FUNCTION
                                                 );
-  assert(archiveHandle->archiveCryptInfo != NULL);
+  assert(archiveCryptInfoNode != NULL);
   Crypt_randomSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
 //TODO: remove
 assert(!List_isEmpty(&archiveHandle->archiveCryptInfoList));
