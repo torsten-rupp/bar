@@ -2665,7 +2665,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString str
     #endif /* not NDEBUG */
 
     free(string->data);
-    free(string);
+    free((String)string);
   }
 }
 
