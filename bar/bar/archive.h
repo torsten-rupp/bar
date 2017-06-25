@@ -252,8 +252,9 @@ typedef struct
   void                     *getPasswordUserData;                       // user data for call back to get crypt password
   LogHandle                *logHandle;                                 // log handle
 
-  ArchiveCryptInfoList     archiveCryptInfoList;
-  const ArchiveCryptInfo   *archiveCryptInfo;
+  ArchiveCryptInfoList     archiveCryptInfoList;                       // crypt info list
+  const ArchiveCryptInfo   *archiveCryptInfo;                          // current crypt info
+//TODO: remove
   CryptMode                cryptMode;                                  // crypt mode; see CRYPT_MODE_...
   CryptKeyDeriveTypes      cryptKeyDeriveType;                         // key derive type; see CRYPT_KEY_DERIVE_...
   CryptSalt                cryptSalt;                                  // crypt salt

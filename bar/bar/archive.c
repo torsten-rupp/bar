@@ -157,7 +157,7 @@ typedef struct DecryptKeyNode
   CryptSalt        cryptSalt;
   CryptKey         cryptKey;
 //  ArchiveCryptInfo archiveCryptInfo;
-  const Password   *password;
+  Password         *password;
   uint             keyLength;
 //  CryptAlgorithms cryptAlgorithm;
 } DecryptKeyNode;
@@ -607,7 +607,7 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
   }
 
   // store new salt and key length
-  Crypt_copySalt(&decryptKeyNode->cryptSalt,&cryptSalt);
+  Crypt_copySalt(&decryptKeyNode->cryptSalt,cryptSalt);
   decryptKeyNode->keyLength  = keyLength;
 //fprintf(stderr,"%s, %d: decrypt key\n",__FILE__,__LINE__); debugDumpMemory(decryptKeyNode->cryptKey.data,decryptKeyNode->cryptKey.dataLength,0);
 
@@ -895,7 +895,7 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator  *decryptKeyIterator
 * Purpose: initialize crypt password
 * Input  : archiveHandle - archive handle
 * Output : -
-* Return : ERROR_NONE or error code
+* Return : archive crypt info node
 * Notes  : -
 \***********************************************************************/
 
@@ -919,7 +919,7 @@ LOCAL ArchiveCryptInfoNode *addArchiveCryptInfoNode(ArchiveHandle       *archive
   Crypt_initKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,CRYPT_PADDING_TYPE_NONE);
   List_append(&archiveHandle->archiveCryptInfoList,archiveCryptInfoNode);
 
-  return &archiveCryptInfoNode->archiveCryptInfo;
+  return archiveCryptInfoNode;
 }
 
 /***********************************************************************\
@@ -1448,9 +1448,11 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
   Chunk_done(&chunkBAR.info);
 
   // add new crypt info
-  archiveHandle->archiveCryptInfo = addArchiveCryptInfoNode(archiveHandle,CRYPT_MODE_NONE,CRYPT_KEY_DERIVE_FUNCTION);
-//TODO: remove
-//Crypt_keyClear(archiveHandle->cryptKey);
+  archiveCryptInfoNode = addArchiveCryptInfoNode(archiveHandle,
+                                                 CRYPT_MODE_NONE,
+                                                 CRYPT_KEY_DERIVE_FUNCTION
+                                                );
+  archiveHandle->archiveCryptInfo = &archiveCryptInfoNode->archiveCryptInfo;
 
   return ERROR_NONE;
 }
@@ -1576,8 +1578,9 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
   archiveHandle->encryptedKeyData       = encryptedKeyData;
   archiveHandle->encryptedKeyDataLength = encryptedKeyDataLength;
 
-  // store into archive crypt info
-  Crypt_copyKey(&archiveHandle->archiveCryptInfo->cryptKey,&archiveHandle->cryptKey);
+  // store key into archive crypt info
+  assert(!List_isEmpty(&archiveHandle->archiveCryptInfoList));
+  Crypt_copyKey(&archiveHandle->archiveCryptInfoList.tail->archiveCryptInfo.cryptKey,&archiveHandle->cryptKey);
 
   // free resources
 
@@ -4325,6 +4328,8 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   return passwordNode->password;
 }
 
+//TODO: remove
+#if 0
 const CryptKey *Archive_appendCryptInfo(const Password *password)
 {
   DecryptKeyNode *decryptKeyNode;
@@ -4381,6 +4386,7 @@ fprintf(stderr,"%s, %d: Archive_appendCryptInfo xxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",
 
   return &decryptKeyNode->cryptKey;
 }
+#endif
 
 bool Archive_waitDecryptPassword(Password *password, long timeout)
 {
@@ -4452,12 +4458,13 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                          )
 #endif /* NDEBUG */
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
-  uint         keyLength;
-  CryptKey     publicCryptKey;
-  bool         okFlag;
-  ulong        maxEncryptedKeyDataLength;
+  AutoFreeList         autoFreeList;
+  ArchiveCryptInfoNode *archiveCryptInfoNode;
+  Errors               error;
+  uint                 keyLength;
+  CryptKey             publicCryptKey;
+  bool                 okFlag;
+  ulong                maxEncryptedKeyDataLength;
 
   assert(archiveHandle != NULL);
   assert(storageInfo != NULL);
@@ -4538,14 +4545,17 @@ UNUSED_VARIABLE(storageInfo);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->create.tmpFileName,{ String_delete(archiveHandle->create.tmpFileName); });
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->chunkIOLock,{ Semaphore_done(&archiveHandle->chunkIOLock); });
 
-  // add new crypt info
-  archiveHandle->archiveCryptInfo = addArchiveCryptInfoNode(archiveHandle,CRYPT_MODE_NONE,CRYPT_KEY_DERIVE_FUNCTION);
+  // add new crypt info with new random crypt salt
+  archiveCryptInfoNode = addArchiveCryptInfoNode(archiveHandle,
+                                                 CRYPT_MODE_NONE,
+                                                 CRYPT_KEY_DERIVE_FUNCTION
+                                                );
   assert(archiveHandle->archiveCryptInfo != NULL);
-
-  // get new crypt salt
-  Crypt_randomSalt(&archiveHandle->archiveCryptInfo->cryptSalt);
+  Crypt_randomSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
 //TODO: remove
-Crypt_copySalt(&archiveHandle->cryptSalt,&archiveHandle->archiveCryptInfo->cryptSalt);
+assert(!List_isEmpty(&archiveHandle->archiveCryptInfoList));
+Crypt_copySalt(&archiveHandle->cryptSalt,&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
+  archiveHandle->archiveCryptInfo = &archiveCryptInfoNode->archiveCryptInfo;
 
   // detect crypt block length, crypt key length
   error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms.values[0],&archiveHandle->blockLength);
@@ -5057,6 +5067,7 @@ void Archive_setCryptInfo(ArchiveHandle          *archiveHandle,
   archiveHandle->archiveCryptInfo = archiveCryptInfo;
 }
 
+//TODO: remove
 void Archive_setCryptSalt(ArchiveHandle *archiveHandle,
                           const byte    *salt,
                           uint          saltLength
@@ -5065,7 +5076,8 @@ void Archive_setCryptSalt(ArchiveHandle *archiveHandle,
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
-  Crypt_setSalt(&archiveHandle->archiveCryptInfo->cryptSalt,salt,saltLength);
+  assert(!List_isEmpty(&archiveHandle->archiveCryptInfoList));
+  Crypt_setSalt(&archiveHandle->archiveCryptInfoList.tail->archiveCryptInfo.cryptSalt,salt,saltLength);
 }
 
 void Archive_setCryptMode(ArchiveHandle *archiveHandle,
@@ -5198,13 +5210,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                  ArchiveFlags  flags
                 )
 {
-  bool           chunkHeaderFoundFlag;
-  bool           scanFlag;
-  ChunkHeader    chunkHeader;
-  CryptKey       privateCryptKey;
-  bool           decryptedFlag;
-  PasswordHandle passwordHandle;
-  const Password *password;
+  bool        chunkHeaderFoundFlag;
+  bool        scanFlag;
+  ChunkHeader chunkHeader;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -7465,8 +7473,8 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
                                                 archiveHandle->storageInfo->jobOptions->cryptPrivateKey.length,
                                                 CRYPT_MODE_CBC|CRYPT_MODE_CTS,
                                                 archiveHandle->cryptKeyDeriveType,
-                                                password,
-                                                &archiveHandle->archiveCryptInfo->cryptSalt
+                                                &archiveHandle->archiveCryptInfo->cryptSalt,
+                                                password
                                                );
           if (error == ERROR_NONE)
           {
@@ -13742,7 +13750,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 
     while (!List_isEmpty(archiveContentList))
     {
-      archiveContentNode = List_removeFirst(archiveContentList);
+      archiveContentNode = (ArchiveContentNode*)List_removeFirst(archiveContentList);
       assert(archiveContentNode != NULL);
 
       switch (archiveContentNode->type)
@@ -14026,7 +14034,6 @@ fprintf(stderr,"%s, %d: archiveContentNode->type=%d\n",__FILE__,__LINE__,archive
   ArchiveTypes       archiveType;
   uint64             createdDateTime;
   ArchiveContentNode *archiveContentNode;
-  StringNode         *stringNode;
 
   assert(indexHandle != NULL);
   assert(storageInfo != NULL);
@@ -14432,8 +14439,6 @@ fprintf(stderr,"%s, %d: ------------------------------------------------------ %
         break;
       case ARCHIVE_ENTRY_TYPE_META:
         {
-          IndexId newEntityId;
-
           // read meta entry
           error = Archive_readMetaEntry(&archiveEntryInfo,
                                         &archiveHandle,
