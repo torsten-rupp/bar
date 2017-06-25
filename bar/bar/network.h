@@ -223,8 +223,7 @@ Errors Network_connect(SocketHandle *socketHandle,
 * Name   : Network_connectDescriptor
 * Purpose: connect to host by descriptor
 * Input  : socketType          - socket type; see SOCKET_TYPE_*
-*          hostName            - host name
-*          hostPort            - host port (host byte order)
+*          socketDescriptor    - socket descriptor
 *          loginName           - login user name
 *          password            - SSH private key password or NULL
 *          sshPublicKeyData    - SSH public key data for login or NULL
@@ -240,8 +239,6 @@ Errors Network_connect(SocketHandle *socketHandle,
 Errors Network_connectDescriptor(SocketHandle *socketHandle,
                                  int          socketDescriptor,
                                  SocketTypes  socketType,
-                                 ConstString  hostName,
-                                 uint         hostPort,
                                  ConstString  loginName,
                                  Password     *password,
                                  const void   *sshPublicKeyData,
