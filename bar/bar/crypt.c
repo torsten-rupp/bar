@@ -177,6 +177,65 @@ typedef struct
 
 /*---------------------------------------------------------------------*/
 
+CryptSalt *Crypt_initSalt(CryptSalt *cryptSalt)
+{
+  assert(cryptSalt != NULL);
+
+  cryptSalt->length = 0;
+
+  return cryptSalt;
+}
+
+void Crypt_doneSalt(CryptSalt *cryptSalt)
+{
+  assert(cryptSalt != NULL);
+}
+
+CryptSalt *Crypt_setSalt(CryptSalt *cryptSalt, const byte *data, uint length)
+{
+  assert(cryptSalt != NULL);
+  assert(data != NULL);
+
+  memCopyFast(cryptSalt->data,sizeof(cryptSalt->data),data,length);
+  cryptSalt->length = MIN(sizeof(cryptSalt->data),length);
+
+  return cryptSalt;
+}
+
+CryptSalt *Crypt_clearSalt(CryptSalt *cryptSalt)
+{
+  assert(cryptSalt != NULL);
+
+  memClear(cryptSalt->data,sizeof(cryptSalt->data));
+  cryptSalt->length = 0;
+
+  return cryptSalt;
+}
+
+CryptSalt *Crypt_randomSalt(CryptSalt *cryptSalt)
+{
+  assert(cryptSalt != NULL);
+
+  Crypt_randomize(cryptSalt->data,sizeof(cryptSalt->data));
+  cryptSalt->length = sizeof(cryptSalt->data);
+
+  return cryptSalt;
+}
+
+CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptSalt)
+{
+  assert(cryptSalt != NULL);
+  assert(fromCryptSalt != NULL);
+  assert(sizeof(cryptSalt->data) >= fromCryptSalt->length);
+
+  cryptSalt->length = MIN(sizeof(cryptSalt->data),fromCryptSalt->length);
+  memcpy(cryptSalt->data,fromCryptSalt->data,cryptSalt->length);
+
+  return cryptSalt;
+}
+
+/*---------------------------------------------------------------------*/
+
 Errors Crypt_initAll(void)
 {
   #ifdef HAVE_GCRYPT
@@ -1280,6 +1339,37 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
 }
 
 #ifdef NDEBUG
+  void Crypt_doneKey(CryptKey *cryptKey)
+#else /* not NDEBUG */
+  void __Crypt_doneKey(const char        *__fileName__,
+                       ulong             __lineNb__,
+                       CryptKey          *cryptKey
+                      )
+#endif /* NDEBUG */
+{
+  assert(cryptKey != NULL);
+
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(cryptKey,sizeof(CryptKey));
+  #else /* not NDEBUG */
+  DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptKey,sizeof(CryptKey));
+  #endif /* NDEBUG */
+
+  #ifdef HAVE_GCRYPT
+    if (cryptKey->key != NULL)
+    {
+      gcry_sexp_release(cryptKey->key);
+    }
+    if (cryptKey->data != NULL)
+    {
+      Password_freeSecure(cryptKey->data);
+    }
+  #else /* not HAVE_GCRYPT */
+    UNUSED_VARIABLE(cryptKey);
+  #endif /* HAVE_GCRYPT */
+}
+
+#ifdef NDEBUG
   Errors Crypt_copyKey(CryptKey       *cryptKey,
                        const CryptKey *fromCryptKey
                       )
@@ -1341,45 +1431,20 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
     cryptKey->key = key;
   #endif /* HAVE_GCRYPT */
 
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(cryptKey,sizeof(CryptKey));
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptKey,sizeof(CryptKey));
+  #endif /* NDEBUG */
+
   return ERROR_NONE;
 }
 
-#ifdef NDEBUG
-  void Crypt_doneKey(CryptKey *cryptKey)
-#else /* not NDEBUG */
-  void __Crypt_doneKey(const char        *__fileName__,
-                       ulong             __lineNb__,
-                       CryptKey          *cryptKey
-                      )
-#endif /* NDEBUG */
-{
-  assert(cryptKey != NULL);
-
-  #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(cryptKey,sizeof(CryptKey));
-  #else /* not NDEBUG */
-  DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptKey,sizeof(CryptKey));
-  #endif /* NDEBUG */
-
-  #ifdef HAVE_GCRYPT
-    if (cryptKey->key != NULL)
-    {
-      gcry_sexp_release(cryptKey->key);
-    }
-    if (cryptKey->data != NULL)
-    {
-      Password_freeSecure(cryptKey->data);
-    }
-  #else /* not HAVE_GCRYPT */
-    UNUSED_VARIABLE(cryptKey);
-  #endif /* HAVE_GCRYPT */
-}
-
 Errors Crypt_deriveKey(CryptKey            *cryptKey,
-                       uint                keyLength,
                        CryptKeyDeriveTypes cryptKeyDeriveType,
                        const CryptSalt     *cryptSalt,
-                       const Password      *password
+                       const Password      *password,
+                       uint                keyLength
                       )
 {
   #ifdef HAVE_GCRYPT
@@ -1535,10 +1600,10 @@ fprintf(stderr,"%s, %d: %d raw key\n",__FILE__,__LINE__,dataLength); debugDumpMe
       // initialize crypt
       Crypt_initKey(&encryptKey,CRYPT_PADDING_TYPE_NONE);
       error = Crypt_deriveKey(&encryptKey,
-                              keyLength,
                               cryptKeyDeriveType,
                               cryptSalt,
-                              password
+                              password,
+                              keyLength
                              );
       if (error != ERROR_NONE)
       {
@@ -1690,10 +1755,10 @@ fprintf(stderr,"%s, %d: encrypted private key\n",__FILE__,__LINE__); debugDumpMe
       // initialize crypt
       Crypt_initKey(&encryptKey,CRYPT_PADDING_TYPE_NONE);
       error = Crypt_deriveKey(&encryptKey,
-                              keyLength,
                               cryptKeyDeriveType,
                               cryptSalt,
-                              password
+                              password,
+                              keyLength
                              );
       if (error != ERROR_NONE)
       {

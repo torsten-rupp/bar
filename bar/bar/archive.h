@@ -82,7 +82,31 @@ typedef enum
 typedef uint ArchiveFlags;
 
 // archive crypt info
-typedef struct __ArchiveCryptInfo ArchiveCryptInfo;
+typedef struct
+{
+  CryptMode           cryptMode;                                       // crypt mode; see CRYPT_MODE_....
+  CryptKeyDeriveTypes cryptKeyDeriveType;                              // key derive type; see CRYPT_KEY_DERIVE_...
+  CryptSalt           cryptSalt;                                       // crypt salt
+  CryptKey            cryptKey;                                        // crypt key when asymmetric encrypted
+} ArchiveCryptInfo;
+
+// archive crypt info list
+typedef struct ArchiveCryptInfoNode
+{
+  LIST_NODE_HEADER(struct ArchiveCryptInfoNode);
+
+  ArchiveCryptInfo archiveCryptInfo;
+//  const Password   *password;
+  uint             keyLength;
+//  CryptAlgorithms cryptAlgorithm;
+} ArchiveCryptInfoNode;
+
+typedef struct
+{
+  LIST_HEADER(ArchiveCryptInfoNode);
+  Semaphore                  lock;
+  const ArchiveCryptInfoNode *archiveNewCryptInfoNode;   // new added decrypt key
+} ArchiveCryptInfoList;
 
 /***********************************************************************\
 * Name   : ArchiveInitFunction
@@ -228,13 +252,14 @@ typedef struct
   void                     *getPasswordUserData;                       // user data for call back to get crypt password
   LogHandle                *logHandle;                                 // log handle
 
+  ArchiveCryptInfoList     archiveCryptInfoList;
   const ArchiveCryptInfo   *archiveCryptInfo;
-  CryptSalt                xcryptSalt;                                  // crypt salt
-  CryptMode                cryptMode;                                  // crypt mode; see CRYPT_MODE_....
-  CryptKeyDeriveTypes      cryptKeyDeriveType;                         // key derive type; see CryptKeyDeriveTypes
+  CryptMode                cryptMode;                                  // crypt mode; see CRYPT_MODE_...
+  CryptKeyDeriveTypes      cryptKeyDeriveType;                         // key derive type; see CRYPT_KEY_DERIVE_...
+  CryptSalt                cryptSalt;                                  // crypt salt
 
   Semaphore                passwordLock;                               // input password lock
-  CryptTypes               cryptType;                                  // crypt type (symmetric/asymmetric; see CryptTypes)
+  CryptTypes               cryptType;                                  // crypt type (symmetric/asymmetric; see CRYPT_TYPE_...)
 
   CryptKey                 cryptKey;                                   // crypt key
   Password                 *cryptPassword;                             // crypt password for encryption/decryption
@@ -255,14 +280,14 @@ typedef struct
   ArchiveModes             mode;                                       // archive mode
   union
   {
-    // local file
+    // create (local file)
     struct
     {
       String               tmpFileName;                                // temporary archive file name
       FileHandle           tmpFileHandle;                              // temporary file handle
       bool                 openFlag;                                   // TRUE iff temporary archive file is open
     } create;
-    // local or remote storage
+    // read (local or remote storage)
     struct
     {
       String               storageFileName;                            // storage name
