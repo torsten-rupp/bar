@@ -322,7 +322,7 @@ void Crypt_doneAll(void);
 \***********************************************************************/
 
 INLINE bool Crypt_isSymmetricSupported(void);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+#if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
 INLINE bool Crypt_isSymmetricSupported(void)
 {
   #ifdef HAVE_GCRYPT
@@ -331,7 +331,7 @@ INLINE bool Crypt_isSymmetricSupported(void)
     return FALSE;
   #endif /* HAVE_GCRYPT */
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+#endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_isValidAlgorithm
@@ -376,13 +376,13 @@ bool Crypt_isValidMACAlgorithm(uint16 n);
 \***********************************************************************/
 
 INLINE bool Crypt_isValidSignatureState(CryptSignatureStates cryptSignatureState);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+#if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
 INLINE bool Crypt_isValidSignatureState(CryptSignatureStates cryptSignatureState)
 {
   return    (cryptSignatureState == CRYPT_SIGNATURE_STATE_NONE)
          || (cryptSignatureState == CRYPT_SIGNATURE_STATE_OK  );
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+#endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_algorithmToString
@@ -474,12 +474,12 @@ const char *Crypt_typeToString(CryptTypes cryptType);
 \***********************************************************************/
 
 INLINE bool Crypt_isEncrypted(CryptAlgorithms cryptAlgorithm);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+#if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
 INLINE bool Crypt_isEncrypted(CryptAlgorithms cryptAlgorithm)
 {
   return cryptAlgorithm != CRYPT_ALGORITHM_NONE;
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+#endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_randomize
@@ -555,7 +555,7 @@ void Crypt_doneSalt(CryptSalt *cryptSalt);
 \***********************************************************************/
 
 INLINE void Crypt_getSalt(byte *data, uint length, const CryptSalt *cryptSalt);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+#if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
 INLINE void Crypt_getSalt(byte *data, uint length, const CryptSalt *cryptSalt)
 {
   assert(data != NULL);
@@ -563,7 +563,7 @@ INLINE void Crypt_getSalt(byte *data, uint length, const CryptSalt *cryptSalt)
 
   memCopyFast(data,length,cryptSalt->data,cryptSalt->length);
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+#endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_setSalt
@@ -613,6 +613,25 @@ CryptSalt *Crypt_randomSalt(CryptSalt *cryptSalt);
 CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptSalt);
 
 /***********************************************************************\
+* Name   : Crypt_isSalt
+* Purpose: check if crypt salt
+* Input  : cryptSalt0,cryptSalt1 - crypt salt to compare
+* Output : -
+* Return : TRUE iff equals
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Crypt_isSalt(const CryptSalt *cryptSalt);
+#if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
+INLINE bool Crypt_isSalt(const CryptSalt *cryptSalt)
+{
+  assert(cryptSalt != NULL);
+
+  return (cryptSalt->length > 0);
+}
+#endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : Crypt_equalsSalt
 * Purpose: compare crypt salts
 * Input  : cryptSalt0,cryptSalt1 - crypt salt to compare
@@ -622,7 +641,7 @@ CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptSalt);
 \***********************************************************************/
 
 INLINE bool Crypt_equalsSalt(const CryptSalt *cryptSalt0, const CryptSalt *cryptSalt1);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+#if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
 INLINE bool Crypt_equalsSalt(const CryptSalt *cryptSalt0, const CryptSalt *cryptSalt1)
 {
   assert(cryptSalt0 != NULL);
@@ -631,7 +650,7 @@ INLINE bool Crypt_equalsSalt(const CryptSalt *cryptSalt0, const CryptSalt *crypt
   return    (cryptSalt0->length == cryptSalt1->length)
          && memEquals(cryptSalt0->data,cryptSalt1->data,cryptSalt0->length);
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+#endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
 
 /*---------------------------------------------------------------------*/
 
@@ -771,7 +790,7 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
 \***********************************************************************/
 
 INLINE bool Crypt_isAsymmetricSupported(void);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+#if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
  INLINE bool Crypt_isAsymmetricSupported(void)
 {
   #ifdef HAVE_GCRYPT
@@ -780,7 +799,7 @@ INLINE bool Crypt_isAsymmetricSupported(void);
     return FALSE;
   #endif /* HAVE_GCRYPT */
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+#endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_initKey
@@ -832,12 +851,12 @@ INLINE bool Crypt_isAsymmetricSupported(void);
 \***********************************************************************/
 
 INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+#if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
 INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey)
 {
   return cryptKey->key != NULL;
 }
-#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+#endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_copyKey
