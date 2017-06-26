@@ -1445,16 +1445,16 @@ static inline void *memCopyFast(void *p0, size_t n0, const void *p1, size_t n1)
 /***********************************************************************\
 * Name   : memEquals
 * Purpose: check if memory content equals
-* Input  : p0,p1 - memory address
-*          n     - size of memory [bytes]
+* Input  : p0,p1 - memory addresses
+*          n0,n1 - sizes [bytes]
 * Output : -
 * Return : TRUE iff memory content equals
 * Notes  : -
 \***********************************************************************/
 
-static inline bool memEquals(const void *p0, const void *p1, size_t n)
+static inline bool memEquals(const void *p0, size_t n0, const void *p1, size_t n1)
 {
-  return memcmp(p0,p1,n) == 0;
+  return (n0 == n1) && (memcmp(p0,p1,n0) == 0);
 }
 
 /*---------------------------------------------------------------------*/

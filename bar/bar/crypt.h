@@ -645,8 +645,9 @@ INLINE bool Crypt_equalsSalt(const CryptSalt *cryptSalt0, const CryptSalt *crypt
   assert(cryptSalt0 != NULL);
   assert(cryptSalt1 != NULL);
 
-  return    (cryptSalt0->length == cryptSalt1->length)
-         && memEquals(cryptSalt0->data,cryptSalt1->data,cryptSalt0->length);
+  return memEquals(cryptSalt0->data,cryptSalt0->length,
+                   cryptSalt1->data,cryptSalt1->length
+                  );
 }
 #endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
 
